@@ -41,6 +41,8 @@ export interface TicketPromo {
   descripcion: string;
   descuento: number;
   producto_id?: string;
+  tipo?: string;
+  cantidad_gratis?: number;
 }
 
 export interface TicketPago {
@@ -241,9 +243,34 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   add(pad('Cant Producto', 'Importe'));
   add(div);
 
+  // Promos que dejan una linea 100% gratis: se muestran GRATIS en la propia
+  // linea (no hay que cruzar el descuento con el producto). El producto_id de
+  // esas promos se marca como "consumido" para no repetirlo en el bloque de
+  // PROMOCIONES APLICADAS de abajo. Display-only: no altera totales.
+  const promosConDesc = (promociones ?? []).filter(p => (Number(p.descuento) || 0) > 0);
+  const descPorProducto = new Map<string, number>();
+  const gratisQtyPorProducto = new Map<string, number>();
+  for (const p of promosConDesc) {
+    if (!p.producto_id) continue;
+    descPorProducto.set(p.producto_id, (descPorProducto.get(p.producto_id) ?? 0) + (Number(p.descuento) || 0));
+    if (p.tipo === 'producto_gratis' || (Number(p.cantidad_gratis) || 0) > 0) {
+      gratisQtyPorProducto.set(p.producto_id, (gratisQtyPorProducto.get(p.producto_id) ?? 0) + (Number(p.cantidad_gratis) || 0));
+    }
+  }
+  const productosGratis = new Set<string>();
+
   for (const l of lineas) {
     const lineAmt = showTax ? l.total : (l.total - (l.iva_monto ?? 0) - (l.ieps_monto ?? 0));
-    const imp = fmt(lineAmt);
+    // ¿La promo regala la linea completa? Preferimos la cantidad gratis (senal
+    // exacta); si no viene, caemos al monto (la promo cubre todo el importe).
+    const descLinea = (showPromociones && l.producto_id) ? (descPorProducto.get(l.producto_id) ?? 0) : 0;
+    const gratisQty = (showPromociones && l.producto_id) ? (gratisQtyPorProducto.get(l.producto_id) ?? 0) : 0;
+    const esGratis = (Number(l.total) || 0) > 0 && (
+      gratisQty > 0
+        ? gratisQty >= (Number(l.cantidad) || 0) - 0.001
+        : descLinea > 0 && descLinea >= (Number(l.total) || 0) - 0.01
+    );
+    const imp = esGratis ? 'GRATIS' : fmt(lineAmt);
     const nombre = `${l.cantidad}x ${l.nombre}`;
     const maxFirst = COLS - imp.length - 1;
     if (nombre.length <= maxFirst) {
@@ -254,15 +281,29 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
       add(pad(wrapped[0], imp));
       for (let i = 1; i < wrapped.length; i++) add(wrapped[i]);
     }
-    const detParts = [`  ${fmt(l.precio)}c/u`];
-    if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA${fmt(l.iva_monto!)}`);
-    if ((l.precio_sugerido_publico ?? 0) > 0) detParts.push(`Sug ${fmt(l.precio_sugerido_publico!)}`);
-    for (const line of wrapText(detParts.join(' '), COLS)) add(line);
+    if (esGratis) {
+      // Precio original tachado + promo, para que el cliente vea el ahorro.
+      if (l.producto_id) productosGratis.add(l.producto_id);
+      const promoLinea = promosConDesc.find(p => p.producto_id === l.producto_id);
+      const antes = `Antes ${fmt(lineAmt)}`;
+      const espacioPromo = COLS - antes.length - 3; // "  " sangria + 1 espacio
+      const etiqueta = promoLinea?.descripcion && espacioPromo > 3
+        ? ` ${promoLinea.descripcion.substring(0, espacioPromo)}`
+        : '';
+      // <s> = tachado; va en linea propia (sin pad) para no romper columnas.
+      add(`  <s>${antes}</s>${etiqueta}`);
+    } else {
+      const detParts = [`  ${fmt(l.precio)}c/u`];
+      if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA${fmt(l.iva_monto!)}`);
+      if ((l.precio_sugerido_publico ?? 0) > 0) detParts.push(`Sug ${fmt(l.precio_sugerido_publico!)}`);
+      for (const line of wrapText(detParts.join(' '), COLS)) add(line);
+    }
   }
   add(div);
 
   // ── PROMOCIONES APLICADAS (bloque unificado) ──
-  const promosAplicadas = (promociones ?? []).filter(p => (Number(p.descuento) || 0) > 0);
+  // Excluye las promos ya mostradas como GRATIS en su linea (evita duplicar).
+  const promosAplicadas = promosConDesc.filter(p => !(p.producto_id && productosGratis.has(p.producto_id)));
   if (showPromociones && promosAplicadas.length > 0) {
     add('PROMOCIONES APLICADAS');
     for (const p of promosAplicadas) {

@@ -811,7 +811,7 @@ export default function PuntoVentaPage() {
   useEffect(() => {
     if (!showTicket || !lastVentaData) return;
     const timer = setTimeout(() => {
-      const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string }[];
+      const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
       const td = buildTicketDataFromVenta({
         empresa,
         venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, saldo_pendiente: lastVentaData.saldoPendiente, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
@@ -1072,7 +1072,7 @@ export default function PuntoVentaPage() {
         ieps: totals.ieps,
         descuento: totals.descuento,
         promos: promoResults.map(r => r.descripcion),
-        promoDetails: promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
+        promoDetails: promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id, tipo: r.tipo, cantidad_gratis: r.cantidad_gratis })),
         total: totals.total,
         condicionPago: condicion,
         metodoPago: metodosUsados || 'efectivo',
@@ -2038,7 +2038,7 @@ export default function PuntoVentaPage() {
                 pagos={lastVentaData.pagos ?? []}
                 productosList={productos as any}
                 onPrintTicket={() => {
-                  const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string }[];
+                  const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
                   const td = buildTicketDataFromVenta({
                     empresa,
                     venta: {
@@ -2087,7 +2087,7 @@ export default function PuntoVentaPage() {
             <div className="px-5 pb-4 pt-2 border-t border-border flex gap-2">
               <button
                 onClick={() => {
-                  const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string }[];
+                  const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
                   const td = buildTicketDataFromVenta({
                     empresa,
                     venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },

@@ -52,7 +52,7 @@ export default function RutaNuevaVenta() {
       saldoAnterior: h.saldoPendienteTotal,
       pagoAplicado: h.totalAplicarCuentas + totalPagadoAhora,
       saldoNuevo: saldoNuevoCalc > 0 ? saldoNuevoCalc : undefined,
-      promociones: h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
+      promociones: h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id, tipo: r.tipo, cantidad_gratis: r.cantidad_gratis })),
       pagos: h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: fmtDate(h.ticketInfo.fecha), referencia: (p as any).referencia ?? undefined })),
       devoluciones: h.devoluciones.map(d => ({ nombre: d.nombre, cantidad: Number(d.cantidad) || 0, motivo: d.motivo, accion: d.accion, monto: (d.precio_unitario ?? 0) * (Number(d.cantidad) || 0) })),
     };
@@ -74,7 +74,7 @@ export default function RutaNuevaVenta() {
         condicionPago={h.condicionPago} metodoPago={h.pagos.map(p => p.metodo_pago).join(', ')} montoRecibido={h.montoRecibidoNum} cambio={h.cambio}
         saldoAnterior={h.saldoPendienteTotal} pagoAplicado={h.totalAplicarCuentas}
         saldoNuevo={h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago !== 'contado' ? Math.max(0, h.totals.total - (h.pagos.reduce((a, p) => a + Number(p.monto || 0), 0))) : 0)}
-        promociones={h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id }))}
+        promociones={h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id, tipo: r.tipo, cantidad_gratis: r.cantidad_gratis }))}
         pagos={h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: h.ticketInfo.fecha }))}
         productosList={h.productos as any}
         onPrintTicket={handlePrintTicket}

@@ -59,6 +59,16 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   // a nivel de línea y no solo en el resumen "Promociones".
   const linePromos = (promoResults ?? []).filter((r) => r.producto_id === l.producto_id);
   const linePromoDesc = r2(linePromos.reduce((s, r) => s + (Number(r.descuento) || 0), 0));
+  // ¿La promo regala la linea completa? -> el subtotal se muestra GRATIS (solo
+  // en vista de detalle). Se prefiere la cantidad gratis; si no, el monto.
+  const lineGratisQty = linePromos
+    .filter((r) => r.tipo === 'producto_gratis' || (Number(r.cantidad_gratis) || 0) > 0)
+    .reduce((s, r) => s + (Number(r.cantidad_gratis) || 0), 0);
+  const lineEsGratis = readOnly && (Number(displayLineTotal) || 0) > 0 && (
+    lineGratisQty > 0
+      ? lineGratisQty >= (Number(l.cantidad) || 0) - 0.001
+      : linePromoDesc > 0 && linePromoDesc >= (Number(displayLineTotal) || 0) - 0.01
+  );
   const lineData = l as any;
   const unidadLabel = lineData.unidad_label
     || (l as any).unidades?.abreviatura
@@ -233,7 +243,12 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         : <input ref={el => setCellRef(idx, 3, el)} type="number" inputMode="decimal" className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.descuento_pct ?? ''} onChange={e => onUpdateLine(idx, 'descuento_pct', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 3)} onFocus={e => e.target.select()} min="0" max="100" step="0.1" />}
       </td>
       <td className="py-1.5 px-2 text-right font-medium">
-        {isEmpty ? '' : (
+        {isEmpty ? '' : lineEsGratis ? (
+          <div>
+            <span className="text-muted-foreground line-through font-normal text-[11px] mr-1">{money(displayLineTotal)}</span>
+            <span className="text-green-600 font-bold">GRATIS</span>
+          </div>
+        ) : (
           <div>
             <span>{money(displayLineTotal)}</span>
             {(discount > 0 || iva > 0 || ieps > 0) && <span className="block text-[10px] text-muted-foreground font-normal">base: {money(base)}</span>}

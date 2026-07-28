@@ -283,14 +283,40 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   }
   ln(divider(W));
 
+  // Promos que dejan una linea 100% gratis: se muestran GRATIS en su linea.
+  const promosConDesc = (data.promociones ?? []).filter(p => (Number(p.descuento) || 0) > 0);
+  const descPorProducto = new Map<string, number>();
+  const gratisQtyPorProducto = new Map<string, number>();
+  for (const p of promosConDesc) {
+    if (!p.producto_id) continue;
+    descPorProducto.set(p.producto_id, (descPorProducto.get(p.producto_id) ?? 0) + (Number(p.descuento) || 0));
+    if (p.tipo === 'producto_gratis' || (Number(p.cantidad_gratis) || 0) > 0) {
+      gratisQtyPorProducto.set(p.producto_id, (gratisQtyPorProducto.get(p.producto_id) ?? 0) + (Number(p.cantidad_gratis) || 0));
+    }
+  }
+  const productosGratis = new Set<string>();
+
   // ── PRODUCTOS ──
   for (const l of data.lineas) {
     const desc = `${l.cantidad}x ${clean(l.nombre)}`;
     const lineAmt = showTax ? l.total : (l.total - (l.iva_monto ?? 0) - (l.ieps_monto ?? 0));
-    const price = fmt(lineAmt);
+    const descLinea = (showPromociones && l.producto_id) ? (descPorProducto.get(l.producto_id) ?? 0) : 0;
+    const gratisQty = (showPromociones && l.producto_id) ? (gratisQtyPorProducto.get(l.producto_id) ?? 0) : 0;
+    const esGratis = (Number(l.total) || 0) > 0 && (
+      gratisQty > 0
+        ? gratisQty >= (Number(l.cantidad) || 0) - 0.001
+        : descLinea > 0 && descLinea >= (Number(l.total) || 0) - 0.01
+    );
+    const price = esGratis ? 'GRATIS' : fmt(lineAmt);
     itemLines(desc, price, W).forEach(x => ln(x));
-    // Detail: unit price (smaller, indented)
-    if (l.precio > 0) {
+    if (esGratis) {
+      // Precio original + promo, sin tachado (la impresora termica no lo tiene).
+      if (l.producto_id) productosGratis.add(l.producto_id);
+      const promoLinea = promosConDesc.find(p => p.producto_id === l.producto_id);
+      const det = `  Antes ${fmt(lineAmt)}${promoLinea?.descripcion ? ` ${clean(promoLinea.descripcion)}` : ''}`;
+      ln(clean(det).slice(0, W));
+    } else if (l.precio > 0) {
+      // Detail: unit price (smaller, indented)
       const detParts = [`  ${fmt(l.precio)}c/u`];
       if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA ${fmt(l.iva_monto!)}`);
       const det = detParts.join(' ');
@@ -300,7 +326,8 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   ln(divider(W));
 
   // ── PROMOCIONES APLICADAS (bloque unificado) ──
-  const promosAplicadas = (data.promociones ?? []).filter(p => (Number(p.descuento) || 0) > 0);
+  // Excluye las promos ya mostradas como GRATIS en su linea (evita duplicar).
+  const promosAplicadas = promosConDesc.filter(p => !(p.producto_id && productosGratis.has(p.producto_id)));
   if (showPromociones && promosAplicadas.length > 0) {
     add(BOLD_ON);
     ln('PROMOCIONES APLICADAS');

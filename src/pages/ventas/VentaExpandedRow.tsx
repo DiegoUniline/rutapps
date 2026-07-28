@@ -222,7 +222,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
           accion: d.accion,
           monto: Number(d.monto_credito ?? 0) || 0,
         })),
-        promociones: promoResults.filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
+        promociones: promoResults.filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id, tipo: r.tipo, cantidad_gratis: r.cantidad_gratis })),
       });
       await printTicket(td);
     } catch (err: any) {

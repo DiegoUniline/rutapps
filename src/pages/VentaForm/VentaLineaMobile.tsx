@@ -48,6 +48,14 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
     : '—';
   const linePromos = (promoResults ?? []).filter((rp) => rp.producto_id === l.producto_id);
   const linePromoDesc = r2(linePromos.reduce((s, rp) => s + (Number(rp.descuento) || 0), 0));
+  const lineGratisQty = linePromos
+    .filter((rp) => rp.tipo === 'producto_gratis' || (Number(rp.cantidad_gratis) || 0) > 0)
+    .reduce((s, rp) => s + (Number(rp.cantidad_gratis) || 0), 0);
+  const lineEsGratis = readOnly && (Number(displayLineTotal) || 0) > 0 && (
+    lineGratisQty > 0
+      ? lineGratisQty >= (Number(l.cantidad) || 0) - 0.001
+      : linePromoDesc > 0 && linePromoDesc >= (Number(displayLineTotal) || 0) - 0.01
+  );
 
   if (isEmpty && readOnly) return null;
 
@@ -145,7 +153,14 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground block">Total</label>
-            <span className="text-sm font-semibold">{money(displayLineTotal)}</span>
+            {lineEsGratis ? (
+              <span className="flex items-baseline gap-1">
+                <span className="text-xs text-muted-foreground line-through">{money(displayLineTotal)}</span>
+                <span className="text-sm font-bold text-green-600">GRATIS</span>
+              </span>
+            ) : (
+              <span className="text-sm font-semibold">{money(displayLineTotal)}</span>
+            )}
           </div>
         </div>
       )}

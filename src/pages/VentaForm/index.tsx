@@ -288,7 +288,7 @@ export default function VentaFormPage() {
         descuento_pct: Number((l as any).descuento_porcentaje ?? (l as any).descuento_pct ?? 0),
         producto_id: l.producto_id,
       })),
-      promociones: (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
+      promociones: (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id, tipo: r.tipo, cantidad_gratis: r.cantidad_gratis })),
       saldoNuevo: saldoPendiente > 0 ? saldoPendiente : undefined,
       pagos: (pagosData ?? []).map((p: any) => ({ metodo: (p.cobros as any)?.metodo_pago ?? 'efectivo', monto: Number(p.monto_aplicado ?? 0), fecha: fmtDate((p.cobros as any)?.fecha ?? ''), referencia: (p.cobros as any)?.referencia })),
       devoluciones: (devolucionesVenta ?? []).map((d: any) => ({

@@ -33,7 +33,7 @@ interface TicketVentaProps {
   saldoAnterior?: number;
   pagoAplicado?: number;
   saldoNuevo?: number;
-  promociones?: { descripcion: string; descuento: number; producto_id?: string }[];
+  promociones?: { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
   pagos?: { metodo: string; monto: number; fecha?: string | null; referencia?: string | null }[];
   productosList?: Array<{ id: string; nombre?: string | null; nombre_ticket?: string | null; nombre_venta?: string | null }>;
   onPrintTicket?: () => void;
@@ -302,18 +302,41 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             <div className="px-5 py-2">
               <p className="tk-section text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Productos</p>
               <div className="space-y-1">
-                {lineas.map((l, i) => (
+                {lineas.map((l, i) => {
+                  // ¿La promo regala la linea completa? -> se muestra GRATIS en
+                  // vez del precio, con el precio original tachado (sin calculos).
+                  const promosLinea = promociones.filter(p => p.producto_id && p.producto_id === l.producto_id);
+                  const gratisQty = promosLinea
+                    .filter(p => p.tipo === 'producto_gratis' || (Number(p.cantidad_gratis) || 0) > 0)
+                    .reduce((s, p) => s + (Number(p.cantidad_gratis) || 0), 0);
+                  const descLinea = promosLinea.reduce((s, p) => s + (Number(p.descuento) || 0), 0);
+                  const esGratis = !l.esCambio && (Number(l.total) || 0) > 0 && (
+                    gratisQty > 0
+                      ? gratisQty >= (Number(l.cantidad) || 0) - 0.001
+                      : descLinea > 0 && descLinea >= (Number(l.total) || 0) - 0.01
+                  );
+                  const promoGratis = promosLinea.find(p => p.tipo === 'producto_gratis' || (Number(p.cantidad_gratis) || 0) > 0) ?? promosLinea[0];
+                  return (
                   <div key={i} className={`py-0.5 ${l.esCambio ? 'opacity-60' : ''}`}>
                     <div className="flex justify-between items-baseline text-[11px]">
                       <span className="text-foreground font-medium flex-1 mr-2 truncate">
                         {l.cantidad}x {l.nombre}
                         {l.esCambio && <span className="text-muted-foreground text-[9px] ml-1 italic">(cambio)</span>}
                       </span>
-                      <span className="text-foreground font-semibold tabular-nums shrink-0">
-                        {fmt(l.total)}
-                      </span>
+                      {esGratis ? (
+                        <span className="flex items-baseline gap-1 shrink-0">
+                          <span className="text-muted-foreground line-through tabular-nums text-[9px]">{fmt(l.total)}</span>
+                          <span className="text-green-600 font-bold text-[11px]">GRATIS</span>
+                        </span>
+                      ) : (
+                        <span className="text-foreground font-semibold tabular-nums shrink-0">
+                          {fmt(l.total)}
+                        </span>
+                      )}
                     </div>
-                    {!l.esCambio && (
+                    {esGratis ? (
+                      <div className="text-[8px] text-green-600 font-medium mt-px">🎁 {promoGratis?.descripcion || 'Promoción'}</div>
+                    ) : !l.esCambio && (
                       <>
                         <div className="flex gap-2 text-[8px] text-muted-foreground mt-px flex-wrap">
                           <span>{fmt(l.precio)} c/u</span>
@@ -322,7 +345,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                           {taxMode === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
                           {(l.precio_sugerido_publico ?? 0) > 0 && <span className="text-primary font-medium">Sug. público {fmt(l.precio_sugerido_publico!)}</span>}
                         </div>
-                        {promociones.filter(p => p.producto_id && p.producto_id === l.producto_id).map((p, pi) => (
+                        {promosLinea.map((p, pi) => (
                           <div key={pi} className="flex justify-between text-[8px] mt-px">
                             <span className="text-primary flex items-center gap-0.5">🏷️ {p.descripcion}</span>
                             <span className="text-primary font-bold tabular-nums">-{fmt(p.descuento)}</span>
@@ -331,7 +354,8 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                       </>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

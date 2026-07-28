@@ -15,7 +15,7 @@ interface PdfParams {
   productosList: any[];
   entregasExistentes: any[];
   pagosData: any[];
-  promociones?: { descripcion: string; descuento: number; producto_id?: string }[];
+  promociones?: { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
   vendedorNombre?: string;
 }
 

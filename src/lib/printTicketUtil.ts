@@ -127,7 +127,7 @@ export function buildTicketDataFromVenta(params: {
   }>;
   montoRecibido?: number;
   cambio?: number;
-  promociones?: { descripcion: string; descuento: number; producto_id?: string }[];
+  promociones?: { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
   saldoAnterior?: number;
   pagoAplicado?: number;
   saldoNuevo?: number;

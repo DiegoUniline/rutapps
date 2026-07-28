@@ -426,7 +426,7 @@ export default function RutaEntregaDetalle() {
         metodoPago: (venta as any).metodo_pago ?? undefined,
         saldoNuevo: ventaSaldo > 0 ? ventaSaldo : undefined,
         promociones: ((venta as any).venta_promociones ?? []).filter((p: any) => (p.descuento ?? 0) > 0).map((p: any) => ({
-          descripcion: p.descripcion ?? p.nombre ?? '', descuento: p.descuento ?? 0, producto_id: p.producto_id,
+          descripcion: p.descripcion ?? p.nombre ?? '', descuento: p.descuento ?? 0, producto_id: p.producto_id, tipo: p.tipo, cantidad_gratis: p.cantidad_gratis,
         })),
         devoluciones: (devolucionesVenta ?? []).map((d: any) => ({
           nombre: d.producto?.nombre ?? 'Producto',
