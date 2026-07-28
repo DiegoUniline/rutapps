@@ -24,7 +24,7 @@ function isSeenLocal(messageId: string) {
 }
 
 export default function BroadcastAnnouncementModal() {
-  const { messages, isLoading, markAsRead } = useBroadcastMessages();
+  const { messages, isLoading, markAsRead, unreadCount } = useBroadcastMessages();
   const [open, setOpen] = useState(false);
 
   const latest = messages[0];
