@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { todayInTimezone } from '@/lib/utils';
 import { queueOperations } from '@/lib/syncQueue';
+import { deterministicUuid } from '@/lib/deterministicId';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { toast } from 'sonner';
 
@@ -41,14 +42,17 @@ export function useSaveDevolucion() {
       // nada). El reingreso a inventario lo hace el trigger de BD al sincronizar
       // la línea. carga_lineas se ajusta con la caché local.
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        const devId = crypto.randomUUID();
+        // Id DETERMINÍSTICO por contenido: reenviar la MISMA devolución (doble-
+        // toque, resync) coincide en id → el upsert no la duplica.
+        const firmaDev = lineas.map(l => `${l.producto_id}:${l.cantidad}:${l.accion ?? ''}:${l.motivo}`).sort().join(',');
+        const devId = await deterministicUuid('devhook', empresa.id, devolucion.cliente_id ?? '', devolucion.carga_id ?? '', devolucion.venta_id ?? '', fecha, firmaDev);
         const ops: any[] = [
           { table: 'devoluciones', operation: 'insert', data: { id: devId, ...devolucion, empresa_id: empresa.id, tipo: devolucion.tipo, fecha } },
-          ...lineas.map(l => ({
+          ...await Promise.all(lineas.map(async (l, i) => ({
             table: 'devolucion_lineas',
             operation: 'insert' as const,
-            data: { id: crypto.randomUUID(), devolucion_id: devId, producto_id: l.producto_id, cantidad: l.cantidad, motivo: l.motivo, notas: l.notas || null, accion: l.accion ?? null, monto_credito: l.monto_credito ?? 0 },
-          })),
+            data: { id: await deterministicUuid('devlinea', devId, i), devolucion_id: devId, producto_id: l.producto_id, cantidad: l.cantidad, motivo: l.motivo, notas: l.notas || null, accion: l.accion ?? null, monto_credito: l.monto_credito ?? 0 },
+          }))),
         ];
         if (devolucion.carga_id && lineas.length > 0) {
           const clTable = getOfflineTable('carga_lineas');

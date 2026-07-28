@@ -7,6 +7,7 @@ import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, CLIENTE_COLUMNS } from '@/lib/allowlist';
 import { enrichClientes, ensureCatalogsForEnrich } from '@/lib/catalogEnrich';
+import { deterministicUuid } from '@/lib/deterministicId';
 import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
@@ -154,14 +155,9 @@ export function useSaveCliente() {
           return { id: cliente.id };
         } else {
           if (!empresa?.id) throw new Error('Sin empresa');
-          // UUID local con fallback para entornos sin crypto.randomUUID
-          const newId = (typeof crypto !== 'undefined' && crypto.randomUUID)
-            ? crypto.randomUUID()
-            : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-                const r = (Math.random() * 16) | 0;
-                const v = c === 'x' ? r : (r & 0x3) | 0x8;
-                return v.toString(16);
-              });
+          // Id DETERMINÍSTICO por contenido: reenviar el mismo alta (doble-toque,
+          // resync) coincide en id → el upsert no crea un cliente duplicado.
+          const newId = await deterministicUuid('cliente', empresa.id, (clean as any).nombre ?? '', (clean as any).telefono ?? '', (clean as any).direccion ?? '');
           const record: any = { ...clean, id: newId, empresa_id: empresa.id, status: (clean as any).status || 'activo' };
           await queueOperation('clientes', 'insert', record, 'id');
           return { id: newId };

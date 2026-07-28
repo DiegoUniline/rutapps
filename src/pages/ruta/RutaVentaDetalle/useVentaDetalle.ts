@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { queueOperation, queueOperations } from '@/lib/syncQueue';
 import { getOfflineTable } from '@/lib/offlineDb';
-import { newLocalId } from '@/lib/localId';
+import { deterministicUuid } from '@/lib/deterministicId';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -212,15 +212,18 @@ export function useVentaDetalle() {
         // Offline: encola el reemplazo COMPLETO de líneas (antes se perdían los
         // cambios de productos: solo se guardaban los totales).
         const oldLineas = ((venta as any)?.venta_lineas ?? []) as any[];
+        // Ids determinísticos por (venta, posición): reintentar/reenviar la misma
+        // edición reusa los mismos ids → el upsert no duplica líneas.
+        const nuevasOps = await Promise.all(newLineas.map(async (nl, idx) => ({
+          table: 'venta_lineas' as const,
+          operation: 'insert' as const,
+          data: { id: await deterministicUuid('vlinea-edit', id!, idx), ...nl },
+        })));
         await queueOperations([
           ...oldLineas
             .filter(l => l?.id)
             .map(l => ({ table: 'venta_lineas', operation: 'delete' as const, data: { id: l.id } })),
-          ...newLineas.map(nl => ({
-            table: 'venta_lineas',
-            operation: 'insert' as const,
-            data: { id: crypto.randomUUID(), ...nl },
-          })),
+          ...nuevasOps,
           { table: 'ventas', operation: 'update' as const, data: { id: id!, ...ventaUpdate } },
         ]);
       }
@@ -255,6 +258,11 @@ export function useVentaDetalle() {
 
   // Auto-open cobrar view when ?cobrar=1 is in URL (from entrega Cobrar button)
   const autoCobrarRef = useRef(false);
+  // Guardia síncrona anti doble-cobro: setSaving re-renderiza con retraso, así
+  // que un doble-toque rápido podía disparar dos cobros (offline ya deduplica
+  // por id determinístico, pero online la RPC crearía dos). El ref bloquea de
+  // inmediato la segunda llamada.
+  const cobrarRef = useRef(false);
   useEffect(() => {
     if (autoCobrarRef.current) return;
     if (!venta) return;
@@ -287,13 +295,14 @@ export function useVentaDetalle() {
       toast.error(`Saldo a favor insuficiente. Disponible: ${fmt(saldoFavorDisp)}`);
       return;
     }
+    if (cobrarRef.current) return;   // ya hay un cobro en curso → ignora el doble-toque
+    cobrarRef.current = true;
     setSaving(true);
     try {
       if (!empresa?.id) throw new Error('Sin empresa');
       const online = typeof navigator === 'undefined' || navigator.onLine;
 
-      // Generar id local del cobro para encolar offline; cuando esté online, la RPC asigna el real.
-      const localCobroId = newLocalId();
+      const fechaCobro = todayInTimezone(empresa.zona_horaria);
       const cobroPayload = {
         empresa_id: empresa.id,
         cliente_id: clienteId,
@@ -301,17 +310,15 @@ export function useVentaDetalle() {
         monto: roundMoney(totalACobrar),
         metodo_pago: metodoPago,
         referencia: referenciaPago || null,
-        fecha: todayInTimezone(empresa.zona_horaria),
+        fecha: fechaCobro,
       };
 
-      let cobroId = localCobroId;
-
-      const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
+      const aplicaciones: { venta_id: string; monto_aplicado: number }[] = [];
       const ticketApps: { folio: string; monto: number; saldoRestante: number }[] = [];
 
       // Apply to current sale
       if (montoAplicarActual > 0) {
-        aplicaciones.push({ cobro_id: cobroId, venta_id: venta.id, monto_aplicado: roundMoney(montoAplicarActual) });
+        aplicaciones.push({ venta_id: venta.id, monto_aplicado: roundMoney(montoAplicarActual) });
         const newSaldo = roundMoney(saldoActual - montoAplicarActual);
         if (newSaldo <= 0.01 && venta.status === 'borrador') {
           if (online) {
@@ -326,11 +333,17 @@ export function useVentaDetalle() {
       // Apply to other pending sales
       for (const cuenta of cuentasPendientes) {
         if (cuenta.montoAplicar > 0) {
-          aplicaciones.push({ cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: roundMoney(cuenta.montoAplicar) });
+          aplicaciones.push({ venta_id: cuenta.id, monto_aplicado: roundMoney(cuenta.montoAplicar) });
           const newSaldo = roundMoney(cuenta.saldo_pendiente - cuenta.montoAplicar);
           ticketApps.push({ folio: cuenta.folio ?? '—', monto: roundMoney(cuenta.montoAplicar), saldoRestante: roundMoney(Math.max(0, newSaldo)) });
         }
       }
+
+      // Id DETERMINÍSTICO del cobro (mismo criterio que RutaCobrar): derivado del
+      // contenido del pago. Si se reenvía offline (doble-toque, resync) el id
+      // coincide y el upsert no duplica. Online, la RPC asigna el id real.
+      const firmaCobro = aplicaciones.map(a => `${a.venta_id}:${a.monto_aplicado}`).sort().join(',');
+      let cobroId = await deterministicUuid('cobro', empresa.id, clienteId, fechaCobro, metodoPago, roundMoney(totalACobrar), firmaCobro);
 
       if (aplicaciones.length > 0) {
         if (online) {
@@ -340,7 +353,7 @@ export function useVentaDetalle() {
             p_monto: roundMoney(totalACobrar),
             p_metodo: metodoPago,
             p_referencia: referenciaPago || null,
-            p_fecha: todayInTimezone(empresa.zona_horaria),
+            p_fecha: fechaCobro,
             p_aplicaciones: aplicaciones.map(ap => ({ venta_id: ap.venta_id, monto_aplicado: ap.monto_aplicado })),
             p_notas: null,
             p_user_id: user.id,
@@ -350,11 +363,12 @@ export function useVentaDetalle() {
         } else {
           await queueOperations([
             { table: 'cobros', operation: 'insert', data: { id: cobroId, ...cobroPayload } },
-            ...aplicaciones.map(ap => ({
+            ...await Promise.all(aplicaciones.map(async ap => ({
               table: 'cobro_aplicaciones',
               operation: 'insert' as const,
-              data: { id: newLocalId(), ...ap },
-            })),
+              // Id determinístico por (cobro, venta) → la aplicación tampoco se duplica.
+              data: { id: await deterministicUuid('capp', cobroId, ap.venta_id), cobro_id: cobroId, venta_id: ap.venta_id, monto_aplicado: ap.monto_aplicado },
+            }))),
           ]);
         }
       }
@@ -393,7 +407,7 @@ export function useVentaDetalle() {
       setView('ticket');
       toast.success(online ? '¡Cobro registrado!' : 'Cobro guardado localmente, se sincronizará');
       ['venta', 'ruta-ventas', 'ruta-stats', 'ventas', 'ruta-cuentas-pendientes', 'ruta-entrega-detalle', 'ruta-entrega-venta', 'entregas', 'entregas-list', 'ruta-entregas', 'logistica-pedidos'].forEach(k => queryClient.invalidateQueries({ queryKey: [k === 'venta' ? 'venta' : k, ...(k === 'venta' ? [id] : [])] }));
-    } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
+    } catch (err: any) { toast.error(err.message); } finally { setSaving(false); cobrarRef.current = false; }
   };
 
   const logHistorial = async (ventaId: string, accion: string, detalles: any = {}) => {

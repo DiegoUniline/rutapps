@@ -104,6 +104,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   // la siguiente venta tome un id nuevo. Antes se generaba dentro del submit, así
   // que cada reintento nacía con id nuevo → duplicados.
   const pendingVentaIdRef = useRef<string | null>(null);
+  // Mismo patrón para la devolución independiente (sin venta): id estable por
+  // operación, reusado en reintentos, limpiado al éxito.
+  const pendingDevIdRef = useRef<string | null>(null);
   const [tipoVenta, setTipoVenta] = useState<'venta_directa' | 'pedido'>('venta_directa');
   // Apartado de stock en pedidos (solo si empresa.apartar_stock_pedidos === true)
   const [pedidoAlmacenId, setPedidoAlmacenId] = useState<string | null>(null);
@@ -164,8 +167,14 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     if (!empresa || !user) return;
     const cId = clienteId || urlClienteId;
     const gps = await captureGps();
+    // Id determinístico: una visita por (cliente, usuario, tipo) atada a su venta
+    // si la hay, o al día. Reintentar no duplica la visita (ni infla el conteo
+    // del supervisor).
+    const visitaId = opts?.ventaId
+      ? await deterministicUuid('visita', empresa.id, cId, user.id, tipo, opts.ventaId)
+      : await deterministicUuid('visita', empresa.id, cId, user.id, tipo, todayLocal());
     await queueOperation('visitas', 'insert', {
-      id: crypto.randomUUID(), empresa_id: empresa.id, cliente_id: cId, user_id: user.id, tipo,
+      id: visitaId, empresa_id: empresa.id, cliente_id: cId, user_id: user.id, tipo,
       motivo: opts?.motivo || null, notas: opts?.notasVisita || null,
       gps_lat: gps?.lat ?? null, gps_lng: gps?.lng ?? null,
       venta_id: opts?.ventaId || null, fecha: new Date().toISOString(), created_at: new Date().toISOString(),
@@ -1120,7 +1129,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     savingRef.current = true;
     setSaving(true);
     try {
-      const devId = crypto.randomUUID();
+      // Id estable de la devolución: se genera una vez y se reusa en reintentos.
+      if (!pendingDevIdRef.current) pendingDevIdRef.current = crypto.randomUUID();
+      const devId = pendingDevIdRef.current;
       const cargaIdForDev = activeCarga?.id || null;
       await queueOperation('devoluciones', 'insert', {
         id: devId, empresa_id: empresa.id, user_id: user.id,
@@ -1129,11 +1140,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         fecha: todayInTimezone(empresa.zona_horaria),
         created_at: new Date().toISOString(),
       });
+      let soloDevLineaIdx = -1;
       for (const d of devoluciones) {
+        soloDevLineaIdx++;
         const montoCredito = (d.accion === 'nota_credito' || d.accion === 'devolucion_dinero')
           ? d.precio_unitario * d.cantidad : 0;
         await queueOperation('devolucion_lineas', 'insert', {
-          id: crypto.randomUUID(), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad,
+          id: await deterministicUuid('devlinea', devId, soloDevLineaIdx), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad,
           motivo: d.motivo, accion: d.accion, reemplazo_producto_id: d.reemplazo_producto_id || null,
           monto_credito: montoCredito, created_at: new Date().toISOString(),
         });
@@ -1157,6 +1170,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       }
       await saveVisita('devolucion');
       markVisited(clienteId);
+      pendingDevIdRef.current = null;   // éxito → la siguiente devolución toma id nuevo
       toast.success('¡Devolución registrada! Se sincronizará automáticamente');
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });

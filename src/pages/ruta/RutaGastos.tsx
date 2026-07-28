@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, X, Receipt } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
@@ -22,6 +22,9 @@ export default function RutaGastos() {
   const [concepto, setConcepto] = useState('');
   const [monto, setMonto] = useState('');
   const { mutate: offlineMutate, isPending: savePending } = useOfflineMutation();
+  // Id estable del gasto: se genera una vez y se reusa en reintentos → el
+  // upsert no duplica si se reenvía. Se limpia al guardar con éxito.
+  const pendingGastoIdRef = useRef<string | null>(null);
 
   const { data: gastos, isLoading, refetch } = useOfflineQuery('gastos', {
     empresa_id: empresa?.id,
@@ -52,7 +55,9 @@ export default function RutaGastos() {
   const handleSaveGasto = async () => {
     if (!concepto || !monto || !empresa || !user) return;
     try {
+      if (!pendingGastoIdRef.current) pendingGastoIdRef.current = crypto.randomUUID();
       await offlineMutate('gastos', 'insert', {
+        id: pendingGastoIdRef.current,
         empresa_id: empresa.id,
         user_id: user.id,
         vendedor_id: profile?.id ?? null,
@@ -61,6 +66,7 @@ export default function RutaGastos() {
         fecha: today,
         created_at: new Date().toISOString(),
       });
+      pendingGastoIdRef.current = null;   // éxito → el siguiente gasto toma id nuevo
       toast.success('Gasto registrado');
       refetch();
       setShowForm(false);
