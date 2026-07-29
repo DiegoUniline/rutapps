@@ -91,8 +91,17 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         }
         if (dateFrom) q = q.gte('fecha', dateFrom);
         if (dateTo) q = q.lte('fecha', dateTo);
+        if (promoIds) {
+          if (promoFilter === 'si') {
+            // Sin coincidencias: forzamos resultado vacío con un id imposible.
+            q = q.in('id', promoIds.length ? promoIds : ['00000000-0000-0000-0000-000000000000']);
+          } else if (promoIds.length) {
+            q = q.not('id', 'in', `(${promoIds.join(',')})`);
+          }
+        }
         return q;
       };
+
 
       if (fetchAll) {
         const rows = await fetchAllPages((from, to) => applyFilters(supabase.from('ventas').select(SELECT).range(from, to)));
