@@ -53,7 +53,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
   // Resumen fiscal reconstruido por venta (Subtotal gravable / Descuento / Impuestos)
   // para que la lista cuadre 1:1 con la fila expandible y el detalle.
   const resById = useMemo(() => {
-    const m: Record<string, { gravable: number; descuento: number; impuestos: number }> = {};
+    const m: Record<string, { sinImpuestos: number; descuento: number; impuestos: number }> = {};
     for (const r of items) m[r.id] = ventaResumenRow(r);
     return m;
   }, [items]);
