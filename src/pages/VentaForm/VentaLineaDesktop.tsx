@@ -44,12 +44,13 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const ieps = amounts.ieps;
   const iva = amounts.iva;
   const lineTotal = amounts.total;
-  const storedBase = Number(l.subtotal) || 0;
   const storedTotal = Number(l.total) || 0;
   const displayLineTotal = readOnly && storedTotal > 0 ? r2(storedTotal) : lineTotal;
-  const inferredDesc = readOnly && desc <= 0 && grossSubtotal > 0
-    ? Math.max(0, ((grossSubtotal - (storedBase > 0 ? Math.min(storedBase, grossSubtotal) : Math.min(displayLineTotal, grossSubtotal))) / grossSubtotal) * 100)
-    : desc;
+  // El descuento de la columna "Desc %" viene SOLO de descuento_pct (manual);
+  // la promoción se muestra aparte. Se eliminó la inferencia que comparaba el
+  // subtotal recalculado contra el guardado, porque en productos con impuesto
+  // fabricaba un descuento fantasma (p. ej. 7.4% = 1 − 1/1.08 con 8%).
+  const inferredDesc = desc;
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
   // Fallback to embedded product data from the DB join (venta_lineas → productos)
   const embeddedProd = (l as any).productos;
