@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Trash2, Gift, ChevronDown, Lock } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { cn, fmtDateTime } from '@/lib/utils';
@@ -8,6 +8,26 @@ import { ClienteLink } from '@/components/links/EntityLinks';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel, saldoRealVenta } from '@/lib/ventaCerrada';
 import { isVentaEntregadaParcial } from '@/lib/ventaEntregaParcial';
+import { computeResumenFromLineas } from '@/lib/ventaResumen';
+
+/**
+ * Resumen fiscal por venta, reconstruido VISUALMENTE desde sus líneas (misma
+ * lógica que la fila expandible y el detalle). Si la venta no trae líneas
+ * (saldo inicial, concepto), cae a los valores guardados del encabezado.
+ * No cambia ningún dato guardado.
+ */
+function ventaResumenRow(r: any): { gravable: number; descuento: number; impuestos: number } {
+  const lineas = r?.venta_lineas ?? [];
+  if (!lineas.length) {
+    return {
+      gravable: Number(r?.subtotal) || 0,
+      descuento: Number(r?.descuento_total) || 0,
+      impuestos: (Number(r?.iva_total) || 0) + (Number(r?.ieps_total) || 0),
+    };
+  }
+  const res = computeResumenFromLineas(lineas);
+  return { gravable: res.gravable, descuento: res.descuento, impuestos: res.iva + res.ieps };
+}
 
 interface Props {
   items: any[];
@@ -29,6 +49,15 @@ interface Props {
 export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget, onCancelTarget, empresaId, empresa, clientesList, columnVisibility }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const v = (key: string) => columnVisibility ? columnVisibility[key] !== false : true;
+
+  // Resumen fiscal reconstruido por venta (Subtotal gravable / Descuento / Impuestos)
+  // para que la lista cuadre 1:1 con la fila expandible y el detalle.
+  const resById = useMemo(() => {
+    const m: Record<string, { gravable: number; descuento: number; impuestos: number }> = {};
+    for (const r of items) m[r.id] = ventaResumenRow(r);
+    return m;
+  }, [items]);
+
   const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
     if (k === 'cliente') return r.clientes?.nombre ?? '';
     if (k === 'vendedor') return r.vendedores?.nombre ?? '';
@@ -36,8 +65,9 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     if (k === 'condicion') return CONDICION_LABELS[r.condicion_pago] || r.condicion_pago;
     if (k === 'tipo') return TIPO_LABELS[r.tipo] || r.tipo;
     if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
-    if (k === 'descuento') return r.descuento_total ?? 0;
-    if (k === 'iva') return r.iva_total ?? 0;
+    if (k === 'subtotal') return resById[r.id]?.gravable ?? 0;
+    if (k === 'descuento') return resById[r.id]?.descuento ?? 0;
+    if (k === 'iva') return resById[r.id]?.impuestos ?? 0;
     if (k === 'saldo') return saldoRealVenta(r);
     if (k === 'pagado') return Math.max(0, totalEfectivoVenta(r) - saldoRealVenta(r));
     return r?.[k];
@@ -62,9 +92,9 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           {v('almacen') && <SortableTh sortKey="almacen" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Almacén</SortableTh>}
           {v('condicion') && <SortableTh sortKey="condicion" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</SortableTh>}
           {v('fecha') && <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha / Hora</SortableTh>}
-          {v('subtotal') && <SortableTh sortKey="subtotal" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal</SortableTh>}
-          {v('descuento') && <SortableTh sortKey="descuento" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Descuento</SortableTh>}
-          {v('iva') && <SortableTh sortKey="iva" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">IVA</SortableTh>}
+          {v('subtotal') && <SortableTh sortKey="subtotal" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal s/imp</SortableTh>}
+          {v('descuento') && <SortableTh sortKey="descuento" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Desc. / promo</SortableTh>}
+          {v('iva') && <SortableTh sortKey="iva" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Impuestos</SortableTh>}
           {v('total') && <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</SortableTh>}
           {v('pagado') && <SortableTh sortKey="pagado" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Pagado</SortableTh>}
           {v('saldo') && <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</SortableTh>}
@@ -118,20 +148,23 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 {v('almacen') && <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.almacenes?.nombre ?? <span className="text-destructive">Sin almacén</span>}</td>}
                 {v('condicion') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[row.condicion_pago] || row.condicion_pago}</td>}
                 {v('fecha') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDateTime(row.created_at)}</td>}
-                {v('subtotal') && <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(row.subtotal)}</td>}
-                {v('descuento') && (
-                  <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
-                    {(row.descuento_total ?? 0) > 0 ? (
-                      <span className="flex items-center justify-end gap-1">
-                        <Gift className="h-3 w-3 text-primary shrink-0" />
-                        <span className="text-destructive">-{fmt(row.descuento_total)}</span>
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                )}
-                {v('iva') && <td className="py-2 px-3 text-right hidden lg:table-cell text-muted-foreground tabular-nums">{fmt(row.iva_total)}</td>}
+                {v('subtotal') && <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(resById[row.id]?.gravable ?? row.subtotal)}</td>}
+                {v('descuento') && (() => {
+                  const desc = resById[row.id]?.descuento ?? 0;
+                  return (
+                    <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+                      {desc > 0.005 ? (
+                        <span className="flex items-center justify-end gap-1">
+                          <Gift className="h-3 w-3 text-primary shrink-0" />
+                          <span className="text-destructive">-{fmt(desc)}</span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                  );
+                })()}
+                {v('iva') && <td className="py-2 px-3 text-right hidden lg:table-cell text-muted-foreground tabular-nums">{fmt(resById[row.id]?.impuestos ?? row.iva_total)}</td>}
                 {v('total') && (
                   <td className="py-2 px-3 text-right font-medium tabular-nums">
                     {isCerradaParcial(row) ? (
@@ -207,9 +240,9 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
         })}
       </tbody>
       {items.length > 0 && (() => {
-        const totSubtotal = items.reduce((s: number, r: any) => s + (r.subtotal ?? 0), 0);
-        const totDescuento = items.reduce((s: number, r: any) => s + (r.descuento_total ?? 0), 0);
-        const totIva = items.reduce((s: number, r: any) => s + (r.iva_total ?? 0), 0);
+        const totSubtotal = items.reduce((s: number, r: any) => s + (resById[r.id]?.gravable ?? 0), 0);
+        const totDescuento = items.reduce((s: number, r: any) => s + (resById[r.id]?.descuento ?? 0), 0);
+        const totIva = items.reduce((s: number, r: any) => s + (resById[r.id]?.impuestos ?? 0), 0);
         const totTotal = items.reduce((s: number, r: any) => s + totalEfectivoVenta(r), 0);
         const totSaldo = items.reduce((s: number, r: any) => s + saldoRealVenta(r), 0);
         const totPagado = items.reduce((s: number, r: any) => s + Math.max(0, totalEfectivoVenta(r) - saldoRealVenta(r)), 0);

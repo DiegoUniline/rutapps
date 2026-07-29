@@ -29,6 +29,7 @@ import { mergePdfBlobs } from '@/lib/mergePdfs';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { totalEfectivoVenta, saldoRealVenta } from '@/lib/ventaCerrada';
+import { computeResumenFromLineas } from '@/lib/ventaResumen';
 import { BulkCerrarPedidosDialog } from '@/components/venta/BulkCerrarPedidosDialog';
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
@@ -327,6 +328,20 @@ export default function VentasListPage() {
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
   const totalVentas = ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
   const totalSaldo = ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0);
+  // Desglose fiscal reconstruido desde las líneas (cuadra con la tabla y el detalle).
+  const resumenVentas = ventas.reduce((acc, v: any) => {
+    const lineas = v.venta_lineas ?? [];
+    if (lineas.length) {
+      const r = computeResumenFromLineas(lineas);
+      acc.subtotal += r.gravable; acc.descuento += r.descuento; acc.impuestos += r.iva + r.ieps;
+    } else {
+      acc.subtotal += Number(v.subtotal) || 0;
+      acc.descuento += Number(v.descuento_total) || 0;
+      acc.impuestos += (Number(v.iva_total) || 0) + (Number(v.ieps_total) || 0);
+    }
+    return acc;
+  }, { subtotal: 0, descuento: 0, impuestos: 0 });
+  const totalPagado = ventas.reduce((s, v: any) => s + Math.max(0, totalEfectivoVenta(v) - saldoRealVenta(v)), 0);
   const totalLineas = productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
   const totalCantidad = productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
 
@@ -450,8 +465,12 @@ export default function VentasListPage() {
             </>
           ) : (
             <>
-              <span><strong className="text-foreground">{total}</strong> ventas</span>
+              <span><strong className="text-foreground">{total}</strong> venta{total !== 1 ? 's' : ''}</span>
+              <span>Subtotal s/imp: <strong className="text-foreground">{fmt(resumenVentas.subtotal)}</strong></span>
+              {resumenVentas.descuento > 0.005 && <span>Descuentos: <strong className="text-destructive">-{fmt(resumenVentas.descuento)}</strong></span>}
+              <span>Impuestos: <strong className="text-foreground">{fmt(resumenVentas.impuestos)}</strong></span>
               <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
+              <span>Pagado: <strong className="text-success">{fmt(totalPagado)}</strong></span>
               {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
             </>
           )}
