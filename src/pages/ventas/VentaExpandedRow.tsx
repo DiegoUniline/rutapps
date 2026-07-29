@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Pencil, Trash2, ChevronUp, FileText, Printer, MessageCircle, Loader2, Banknote, Ban } from 'lucide-react';
+import { Pencil, Trash2, ChevronUp, FileText, Printer, MessageCircle, Loader2, Banknote, Ban, Check, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate, fmtDateTime } from '@/lib/utils';
@@ -17,7 +17,8 @@ import { toast } from 'sonner';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
 import { CerrarPedidoButton } from '@/components/venta/CerrarPedidoButton';
-import { saldoRealVenta } from '@/lib/ventaCerrada';
+import { saldoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
+import { computeResumenFromLineas } from '@/lib/ventaResumen';
 
 interface Props {
   venta: any;
@@ -136,6 +137,50 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
 
   const clienteNombre = venta.clientes?.nombre || (venta.cliente_id ? '—' : 'Público en general');
   const eId = empresaId || venta.empresa_id;
+
+  // Resumen VISUAL reconstruido desde las líneas (misma lógica que usa la lista):
+  // Subtotal sin impuestos → Descuentos → Subtotal gravable → IVA/IEPS por
+  // separado → Total. No cambia ningún dato guardado.
+  const resumen = useMemo(() => computeResumenFromLineas(lineas), [lineas]);
+  // Si hay un descuento extra de encabezado (o promo no reflejada en línea), el
+  // total reconstruido puede quedar por encima del total real; se muestra como
+  // un renglón adicional para que SIEMPRE cuadre con el Total guardado.
+  const extraDescuento = Math.max(0, Math.round((resumen.conImpuestos - (Number(venta.total) || 0)) * 100) / 100);
+  const totalReal = Number(venta.total) || 0;
+  const pagado = Math.max(0, totalEfectivoVenta(venta) - saldoRealVenta(venta));
+  const saldoPend = saldoRealVenta(venta);
+
+  // Promociones aplicadas al carrito (para el badge por línea y la tarjeta).
+  const promoResults = useMemo(() => {
+    if (!promocionesActivas || lineas.length === 0) return [] as any[];
+    const cart: CartItemForPromo[] = lineas.filter((l: any) => l.producto_id).map((l: any) => {
+      const prod: any = productosList?.find((p: any) => p.id === l.producto_id);
+      return {
+        producto_id: l.producto_id,
+        clasificacion_id: prod?.clasificacion_id ?? undefined,
+        precio_unitario: Number(l.precio_unitario) || 0,
+        cantidad: Number(l.cantidad) || 0,
+      };
+    });
+    if (cart.length === 0) return [] as any[];
+    return evaluatePromociones(promocionesActivas as any, cart, venta.cliente_id ?? undefined, undefined, (empresa as any)?.zona_horaria);
+  }, [promocionesActivas, lineas, productosList, venta.cliente_id, empresa]);
+
+  const promosConDescuento = promoResults.filter((r: any) => (Number(r.descuento) || 0) > 0 || r.tipo === 'producto_gratis');
+  // Etiqueta de promo por producto (línea gratis o con descuento).
+  const promoPorProducto = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const pr of promoResults as any[]) {
+      const pid = pr.producto_gratis_id || pr.producto_id;
+      if (!pid) continue;
+      if (pr.tipo === 'producto_gratis') {
+        map[pid] = `${pr.cantidad_gratis ?? 1}x gratis`;
+      } else if (!map[pid]) {
+        map[pid] = pr.descripcion || 'Promo';
+      }
+    }
+    return map;
+  }, [promoResults]);
 
   const handlePdf = async () => {
     setGeneratingPdf(true);
@@ -306,121 +351,200 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
             {loading ? (
               <p className="text-xs text-muted-foreground py-2">Cargando detalles...</p>
             ) : (
-              <div className="space-y-4">
-                {/* Líneas */}
-                <div>
-                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Productos</h4>
-                  <table className="w-full text-[12px]">
-                    <thead>
-                      <tr className="border-b border-border text-muted-foreground">
-                        <th className="text-left py-1 font-medium">Producto</th>
-                        <th className="text-left py-1 font-medium">Lista</th>
-                        <th className="text-right py-1 font-medium w-16">Precio</th>
-                        <th className="text-right py-1 font-medium w-14">Cant</th>
-                        {venta.tipo === 'pedido' && <th className="text-right py-1 font-medium w-16">Entreg.</th>}
-                        <th className="text-center py-1 font-medium w-10">Ud</th>
-                        <th className="text-right py-1 font-medium w-16">Monto</th>
-                        <th className="text-right py-1 font-medium w-16">Desc</th>
-                        <th className="text-right py-1 font-medium w-20">Balance</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lineas.map((l: any) => {
-                        const descMonto = (l.subtotal ?? 0) * ((l.descuento_pct ?? 0) / 100);
-                        const lp = (l as any).lista_precios;
-                        const listaLabel = l.precio_manual ? 'Manual' : (lp?.nombre ?? ventaListaNombre ?? '—');
-                        return (
-                          <tr key={l.id} className="border-b border-border/40">
-                            <td className="py-1.5"><ProductoLink id={l.producto_id}>{(l.productos as any)?.nombre ?? '—'}</ProductoLink></td>
-                            <td className="py-1.5 text-muted-foreground text-[11px]">{listaLabel}</td>
-                            <td className="text-right py-1.5 tabular-nums">{fmt(l.precio_unitario)}</td>
-                            <td className="text-right py-1.5 tabular-nums">{l.cantidad}</td>
-                            {venta.tipo === 'pedido' && (() => {
-                              const ent = entregadoPorProd[l.producto_id] ?? 0;
-                              const ped = Number(l.cantidad ?? 0);
-                              const parcial = ent > 0 && ent < ped;
-                              const completo = ent >= ped && ped > 0;
-                              return (
-                                <td className={`text-right py-1.5 tabular-nums font-medium ${completo ? 'text-success' : parcial ? 'text-warning' : 'text-muted-foreground'}`}>
-                                  {ent}
-                                </td>
-                              );
-                            })()}
-                            <td className="py-1.5 text-center text-muted-foreground">{
-                              (l as any).unidades?.abreviatura
-                              || (l as any).productos?.unidades_venta?.abreviatura
-                              || ((l.productos as any)?.es_granel ? (l.productos as any)?.unidad_granel : '')
-                              || 'Pz'
-                            }</td>
-                            <td className="text-right py-1.5 tabular-nums">{fmt(l.subtotal)}</td>
-                            <td className="text-right py-1.5 tabular-nums">{descMonto > 0 ? <span className="text-destructive">-{fmt(descMonto)}</span> : '—'}</td>
-                            <td className="text-right py-1.5 tabular-nums font-medium">{fmt(l.total)}</td>
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-4 items-start">
+                {/* Columna izquierda: productos + pagos */}
+                <div className="space-y-4 min-w-0">
+                  {/* Líneas */}
+                  <div>
+                    <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Productos</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[12px]">
+                        <thead>
+                          <tr className="border-b border-border text-muted-foreground">
+                            <th className="text-left py-1 font-medium">Producto</th>
+                            <th className="text-left py-1 font-medium">Lista</th>
+                            <th className="text-right py-1 font-medium w-16">Precio base</th>
+                            <th className="text-right py-1 font-medium w-12">Cant</th>
+                            {venta.tipo === 'pedido' && <th className="text-right py-1 font-medium w-14">Entreg.</th>}
+                            <th className="text-center py-1 font-medium w-10">Ud</th>
+                            <th className="text-right py-1 font-medium w-12">Desc</th>
+                            <th className="text-left py-1 font-medium w-20">Impuestos</th>
+                            <th className="text-right py-1 font-medium w-20">Precio final</th>
+                            <th className="text-center py-1 font-medium w-20">Promo</th>
                           </tr>
-                        );
-                      })}
-                      {lineas.length === 0 && (
-                        <tr><td colSpan={venta.tipo === 'pedido' ? 9 : 8} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-
-                  {/* Totals summary below lines */}
-                  <div className="flex justify-end mt-2">
-                    <div className="text-[12px] space-y-0.5 min-w-[200px]">
-                      <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">{fmt(venta.subtotal)}</span></div>
-                      {(venta.descuento_total ?? 0) > 0 && (
-                        <div className="flex justify-between"><span className="text-muted-foreground">Descuento</span><span className="tabular-nums text-destructive">-{fmt(venta.descuento_total)}</span></div>
-                      )}
-                      <div className="flex justify-between"><span className="text-muted-foreground">IVA</span><span className="tabular-nums">{fmt(venta.iva_total)}</span></div>
-                      <div className="flex justify-between font-bold border-t border-border pt-0.5"><span>Total</span><span className="tabular-nums">{fmt(venta.total)}</span></div>
-                      {(venta.saldo_pendiente ?? 0) > 0 && (
-                        <div className="flex justify-between text-warning font-medium"><span>Saldo pendiente</span><span className="tabular-nums">{fmt(venta.saldo_pendiente)}</span></div>
-                      )}
+                        </thead>
+                        <tbody>
+                          {lineas.map((l: any) => {
+                            const dpct = Number(l.descuento_pct) || 0;
+                            const neto = (Number(l.subtotal) || 0) * (1 - dpct / 100);
+                            const ivaP = (Number(l.iva_monto) || 0) > 0 && neto > 0 ? Math.round((Number(l.iva_monto) / neto) * 100) : 0;
+                            const iepsP = (Number(l.ieps_monto) || 0) > 0 && neto > 0 ? Math.round((Number(l.ieps_monto) / neto) * 100) : 0;
+                            const impLabel = [ivaP ? `IVA ${ivaP}%` : null, iepsP ? `IEPS ${iepsP}%` : null].filter(Boolean).join(' + ') || '—';
+                            const lp = (l as any).lista_precios;
+                            const listaLabel = l.precio_manual ? 'Manual' : (lp?.nombre ?? ventaListaNombre ?? '—');
+                            const promoLabel = promoPorProducto[l.producto_id];
+                            return (
+                              <tr key={l.id} className="border-b border-border/40">
+                                <td className="py-1.5"><ProductoLink id={l.producto_id}>{(l.productos as any)?.nombre ?? '—'}</ProductoLink></td>
+                                <td className="py-1.5 text-muted-foreground text-[11px]">{listaLabel}</td>
+                                <td className="text-right py-1.5 tabular-nums">{fmt(l.precio_unitario)}</td>
+                                <td className="text-right py-1.5 tabular-nums">{l.cantidad}</td>
+                                {venta.tipo === 'pedido' && (() => {
+                                  const ent = entregadoPorProd[l.producto_id] ?? 0;
+                                  const ped = Number(l.cantidad ?? 0);
+                                  const parcial = ent > 0 && ent < ped;
+                                  const completo = ent >= ped && ped > 0;
+                                  return (
+                                    <td className={`text-right py-1.5 tabular-nums font-medium ${completo ? 'text-success' : parcial ? 'text-warning' : 'text-muted-foreground'}`}>
+                                      {ent}
+                                    </td>
+                                  );
+                                })()}
+                                <td className="py-1.5 text-center text-muted-foreground">{
+                                  (l as any).unidades?.abreviatura
+                                  || (l as any).productos?.unidades_venta?.abreviatura
+                                  || ((l.productos as any)?.es_granel ? (l.productos as any)?.unidad_granel : '')
+                                  || 'Pz'
+                                }</td>
+                                <td className="text-right py-1.5 tabular-nums">{dpct > 0 ? <span className="text-primary font-medium">{dpct}%</span> : <span className="text-muted-foreground">0%</span>}</td>
+                                <td className="py-1.5 text-muted-foreground text-[11px] whitespace-nowrap">{impLabel}</td>
+                                <td className="text-right py-1.5 tabular-nums font-medium">{fmt(l.total)}</td>
+                                <td className="py-1.5 text-center">
+                                  {promoLabel ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary whitespace-nowrap">
+                                      <Gift className="h-3 w-3 shrink-0" />{promoLabel}
+                                    </span>
+                                  ) : <span className="text-muted-foreground">—</span>}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {lineas.length === 0 && (
+                            <tr><td colSpan={venta.tipo === 'pedido' ? 10 : 9} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
+                  </div>
+
+                  {/* Pagos */}
+                  <div>
+                    <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Pagos recibidos</h4>
+                    {pagos.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[12px]">
+                          <thead>
+                            <tr className="border-b border-border text-muted-foreground">
+                              <th className="text-left py-1 font-medium">Método</th>
+                              <th className="text-left py-1 font-medium">Cobrador</th>
+                              <th className="text-left py-1 font-medium">Referencia</th>
+                              <th className="text-left py-1 font-medium">Fecha</th>
+                              <th className="text-right py-1 font-medium">Monto</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pagos.map((p: any) => {
+                              const cobro = p.cobros as any;
+                              const cancelado = (cobro?.status ?? 'activo') === 'cancelado';
+                              return (
+                                <tr key={p.id} className={`border-b border-border/40 ${cancelado ? 'opacity-50 line-through' : ''}`}>
+                                  <td className="py-1.5 capitalize">{cobro?.metodo_pago ?? '—'}{cancelado && <span className="ml-1 text-[10px] text-destructive no-underline">(cancelado)</span>}</td>
+                                  <td className="py-1.5 text-muted-foreground">{cobradores[cobro?.user_id] ?? '—'}</td>
+                                  <td className="py-1.5 text-muted-foreground">{cobro?.referencia || '—'}</td>
+                                  <td className="py-1.5 text-muted-foreground">{fmtDate(cobro?.fecha)}</td>
+                                  <td className="py-1.5 text-right font-medium tabular-nums">{fmt(p.monto_aplicado)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t border-border font-semibold">
+                              <td colSpan={4} className="py-1.5">Total pagado</td>
+                              <td className="py-1.5 text-right text-success tabular-nums">{fmt(pagos.reduce((s: number, p: any) => s + (((p.cobros?.status ?? 'activo') !== 'cancelado') ? Number(p.monto_aplicado ?? 0) : 0), 0))}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground py-2">Sin pagos registrados</p>
+                    )}
                   </div>
                 </div>
 
-                {/* Pagos */}
-                <div>
-                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Pagos recibidos</h4>
-                  {pagos.length > 0 ? (
-                    <table className="w-full text-[12px]">
-                      <thead>
-                        <tr className="border-b border-border text-muted-foreground">
-                          <th className="text-left py-1 font-medium">Método</th>
-                          <th className="text-left py-1 font-medium">Cobrador</th>
-                          <th className="text-left py-1 font-medium">Referencia</th>
-                          <th className="text-left py-1 font-medium">Fecha</th>
-                          <th className="text-right py-1 font-medium">Monto</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pagos.map((p: any) => {
-                          const cobro = p.cobros as any;
-                          const cancelado = (cobro?.status ?? 'activo') === 'cancelado';
-                          return (
-                            <tr key={p.id} className={`border-b border-border/40 ${cancelado ? 'opacity-50 line-through' : ''}`}>
-                              <td className="py-1.5 capitalize">{cobro?.metodo_pago ?? '—'}{cancelado && <span className="ml-1 text-[10px] text-destructive no-underline">(cancelado)</span>}</td>
-                              <td className="py-1.5 text-muted-foreground">{cobradores[cobro?.user_id] ?? '—'}</td>
-                              <td className="py-1.5 text-muted-foreground">{cobro?.referencia || '—'}</td>
-                              <td className="py-1.5 text-muted-foreground">{fmtDate(cobro?.fecha)}</td>
-                              <td className="py-1.5 text-right font-medium tabular-nums">{fmt(p.monto_aplicado)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot>
-                        <tr className="border-t border-border font-semibold">
-                          <td colSpan={4} className="py-1.5">Total pagado</td>
-                          <td className="py-1.5 text-right text-success tabular-nums">{fmt(pagos.reduce((s: number, p: any) => s + (((p.cobros?.status ?? 'activo') !== 'cancelado') ? Number(p.monto_aplicado ?? 0) : 0), 0))}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  ) : (
-                    <p className="text-xs text-muted-foreground py-2">Sin pagos registrados</p>
+                {/* Columna derecha: Resumen + Promociones aplicadas */}
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-border bg-card p-3 text-[12px] space-y-1.5">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal sin impuestos</span>
+                      <span className="tabular-nums">{fmt(resumen.sinImpuestos)}</span>
+                    </div>
+                    {resumen.descuento > 0 && (
+                      <div className="flex justify-between text-primary">
+                        <span>Descuentos / promociones</span>
+                        <span className="tabular-nums">-{fmt(resumen.descuento)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal gravable</span>
+                      <span className="tabular-nums">{fmt(resumen.gravable)}</span>
+                    </div>
+                    {resumen.iva > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">IVA{resumen.ivaRate != null ? ` ${resumen.ivaRate}%` : ''}</span>
+                        <span className="tabular-nums">{fmt(resumen.iva)}</span>
+                      </div>
+                    )}
+                    {resumen.ieps > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">IEPS{resumen.iepsRate != null ? ` ${resumen.iepsRate}%` : ''}</span>
+                        <span className="tabular-nums">{fmt(resumen.ieps)}</span>
+                      </div>
+                    )}
+                    {extraDescuento > 0 && (
+                      <div className="flex justify-between text-primary">
+                        <span>Descuento adicional</span>
+                        <span className="tabular-nums">-{fmt(extraDescuento)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-border pt-1.5 font-bold text-[13px]">
+                      <span>Total</span>
+                      <span className="tabular-nums">{fmt(totalReal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Pagado</span>
+                      <span className="tabular-nums">{fmt(pagado)}</span>
+                    </div>
+                    {saldoPend > 0.005 && (
+                      <div className="flex justify-between font-medium text-warning">
+                        <span>Saldo pendiente</span>
+                        <span className="tabular-nums">{fmt(saldoPend)}</span>
+                      </div>
+                    )}
+                    {saldoPend < -0.005 && (
+                      <div className="flex justify-between font-medium text-success">
+                        <span>Saldo a favor</span>
+                        <span className="tabular-nums">{fmt(Math.abs(saldoPend))}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {promosConDescuento.length > 0 && (
+                    <div className="rounded-lg border border-border bg-card p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase">Promociones aplicadas</span>
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{promosConDescuento.length} promo</span>
+                      </div>
+                      <div className="space-y-1">
+                        {promosConDescuento.map((pr: any, i: number) => (
+                          <div key={i} className="flex items-center gap-1.5 text-[12px]">
+                            <Check className="h-3.5 w-3.5 text-success shrink-0" />
+                            <span className="text-foreground">{pr.descripcion}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
-
               </div>
             )}
           </div>

@@ -1,0 +1,74 @@
+// Reconstrucción VISUAL del resumen de una venta a partir de sus líneas.
+// No cambia ningún dato guardado: solo recalcula, para mostrar, el desglose
+//   Subtotal sin impuestos → Descuentos/promos → Subtotal gravable → IVA/IEPS → Total
+// exactamente igual en la lista y en el detalle (una sola fuente de verdad).
+//
+// Reglas:
+//  - Subtotal sin impuestos = Σ (precio × cantidad) en NETO, antes de descuentos.
+//    (venta_lineas.subtotal ya viene en neto y antes del descuento de línea.)
+//  - Descuentos/promociones = Σ (subtotal × descuento_pct) — la línea gratis
+//    (100%) queda capturada aquí, por eso el valor es NETO (sin impuesto).
+//  - Subtotal gravable = sin impuestos − descuentos.
+//  - IVA / IEPS = Σ de cada monto POR SEPARADO, con su tasa real derivada de
+//    la base que efectivamente los causa.
+//  - Total (con impuestos) = gravable + IVA + IEPS.
+
+export interface VentaLineaResumen {
+  subtotal?: number | null;
+  descuento_pct?: number | null;
+  iva_monto?: number | null;
+  ieps_monto?: number | null;
+  total?: number | null;
+}
+
+export interface VentaResumen {
+  sinImpuestos: number;
+  descuento: number;
+  gravable: number;
+  iva: number;
+  ieps: number;
+  ivaRate: number | null;
+  iepsRate: number | null;
+  /** gravable + iva + ieps (cuadra con el total real cuando no hay descuento extra de encabezado) */
+  conImpuestos: number;
+}
+
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+export function computeResumenFromLineas(lineas: VentaLineaResumen[] | null | undefined): VentaResumen {
+  let sinImpuestos = 0;
+  let descuento = 0;
+  let iva = 0;
+  let ieps = 0;
+  let ivaBase = 0;
+  let iepsBase = 0;
+
+  for (const l of lineas ?? []) {
+    const sub = Number(l.subtotal) || 0;
+    const dpct = Number(l.descuento_pct) || 0;
+    const lineDesc = sub * (dpct / 100);
+    const neto = sub - lineDesc;
+    const li = Number(l.iva_monto) || 0;
+    const le = Number(l.ieps_monto) || 0;
+
+    sinImpuestos += sub;
+    descuento += lineDesc;
+    iva += li;
+    ieps += le;
+    if (li > 0) ivaBase += neto;
+    if (le > 0) iepsBase += neto;
+  }
+
+  const gravable = sinImpuestos - descuento;
+
+  return {
+    sinImpuestos: round2(sinImpuestos),
+    descuento: round2(descuento),
+    gravable: round2(gravable),
+    iva: round2(iva),
+    ieps: round2(ieps),
+    ivaRate: ivaBase > 0 ? Math.round((iva / ivaBase) * 100) : null,
+    iepsRate: iepsBase > 0 ? Math.round((ieps / iepsBase) * 100) : null,
+    conImpuestos: round2(gravable + iva + ieps),
+  };
+}
