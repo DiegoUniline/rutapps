@@ -143,10 +143,6 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   // Subtotal sin impuestos → Descuentos → Subtotal gravable → IVA/IEPS por
   // separado → Total. No cambia ningún dato guardado.
   const resumen = useMemo(() => computeResumenFromLineas(lineas), [lineas]);
-  // Si hay un descuento extra de encabezado (o promo no reflejada en línea), el
-  // total reconstruido puede quedar por encima del total real; se muestra como
-  // un renglón adicional para que SIEMPRE cuadre con el Total guardado.
-  const extraDescuento = Math.max(0, Math.round((resumen.conImpuestos - (Number(venta.total) || 0)) * 100) / 100);
   const totalReal = Number(venta.total) || 0;
   const pagado = Math.max(0, totalEfectivoVenta(venta) - saldoRealVenta(venta));
   const saldoPend = saldoRealVenta(venta);
@@ -168,6 +164,18 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   }, [promocionesActivas, lineas, productosList, venta.cliente_id, empresa]);
 
   const promosConDescuento = promoResults.filter((r: any) => (Number(r.descuento) || 0) > 0 || r.tipo === 'producto_gratis');
+
+  // Valores de display: impuestos y gravable derivados del TOTAL real (siempre
+  // cuadran); el descuento toma el mayor entre líneas, promo en vivo, promo
+  // guardada y el del encabezado — así el "gratis" aparece aunque no esté en las
+  // líneas guardadas.
+  const ivaMontoV = Number(venta.iva_total) || 0;
+  const iepsMontoV = Number(venta.ieps_total) || 0;
+  const gravableDisp = Math.max(0, totalReal - ivaMontoV - iepsMontoV);
+  const promoLive = promoResults.reduce((s: number, pr: any) => s + (Number(pr.descuento) || 0), 0);
+  const promoAplicada = (venta.promocion_aplicada ?? []).reduce((s: number, p: any) => s + (Number(p?.descuento_aplicado) || 0), 0);
+  const descuentoDisp = Math.max(resumen.descuento, promoLive, promoAplicada, Number(venta.descuento_total) || 0);
+  const sinImpDisp = gravableDisp + descuentoDisp;
   // Etiqueta de promo por producto (línea gratis o con descuento).
   const promoPorProducto = useMemo(() => {
     const map: Record<string, string> = {};
@@ -477,34 +485,28 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                   <div className="rounded-lg border border-border bg-card p-3 text-[12px] space-y-1.5">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal sin impuestos</span>
-                      <span className="tabular-nums">{fmt(resumen.sinImpuestos)}</span>
+                      <span className="tabular-nums">{fmt(sinImpDisp)}</span>
                     </div>
-                    {resumen.descuento > 0 && (
+                    {descuentoDisp > 0.005 && (
                       <div className="flex justify-between text-primary">
                         <span>Descuentos / promociones</span>
-                        <span className="tabular-nums">-{fmt(resumen.descuento)}</span>
+                        <span className="tabular-nums">-{fmt(descuentoDisp)}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal gravable</span>
-                      <span className="tabular-nums">{fmt(resumen.gravable)}</span>
+                      <span className="tabular-nums">{fmt(gravableDisp)}</span>
                     </div>
-                    {resumen.iva > 0 && (
+                    {ivaMontoV > 0.005 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">IVA{resumen.ivaRate != null ? ` ${resumen.ivaRate}%` : ''}</span>
-                        <span className="tabular-nums">{fmt(resumen.iva)}</span>
+                        <span className="tabular-nums">{fmt(ivaMontoV)}</span>
                       </div>
                     )}
-                    {resumen.ieps > 0 && (
+                    {iepsMontoV > 0.005 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">IEPS{resumen.iepsRate != null ? ` ${resumen.iepsRate}%` : ''}</span>
-                        <span className="tabular-nums">{fmt(resumen.ieps)}</span>
-                      </div>
-                    )}
-                    {extraDescuento > 0 && (
-                      <div className="flex justify-between text-primary">
-                        <span>Descuento adicional</span>
-                        <span className="tabular-nums">-{fmt(extraDescuento)}</span>
+                        <span className="tabular-nums">{fmt(iepsMontoV)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t border-border pt-1.5 font-bold text-[13px]">

@@ -330,15 +330,16 @@ export default function VentasListPage() {
   const totalSaldo = ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0);
   // Desglose fiscal reconstruido desde las líneas (cuadra con la tabla y el detalle).
   const resumenVentas = ventas.reduce((acc, v: any) => {
-    const lineas = v.venta_lineas ?? [];
-    if (lineas.length) {
-      const r = computeResumenFromLineas(lineas);
-      acc.subtotal += r.sinImpuestos; acc.descuento += r.descuento; acc.impuestos += r.iva + r.ieps;
-    } else {
-      acc.subtotal += Number(v.subtotal) || 0;
-      acc.descuento += Number(v.descuento_total) || 0;
-      acc.impuestos += (Number(v.iva_total) || 0) + (Number(v.ieps_total) || 0);
-    }
+    const ivaMonto = Number(v.iva_total) || 0;
+    const iepsMonto = Number(v.ieps_total) || 0;
+    const impuestos = ivaMonto + iepsMonto;
+    const gravable = Math.max(0, (Number(v.total) || 0) - impuestos);
+    const lineDesc = computeResumenFromLineas(v.venta_lineas ?? []).descuento;
+    const promoAplicada = (v.promocion_aplicada ?? []).reduce((s: number, p: any) => s + (Number(p?.descuento_aplicado) || 0), 0);
+    const descuento = Math.max(lineDesc, promoAplicada, Number(v.descuento_total) || 0);
+    acc.subtotal += gravable + descuento;
+    acc.descuento += descuento;
+    acc.impuestos += impuestos;
     return acc;
   }, { subtotal: 0, descuento: 0, impuestos: 0 });
   const totalPagado = ventas.reduce((s, v: any) => s + Math.max(0, totalEfectivoVenta(v) - saldoRealVenta(v)), 0);

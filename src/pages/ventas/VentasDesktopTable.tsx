@@ -17,16 +17,18 @@ import { computeResumenFromLineas } from '@/lib/ventaResumen';
  * No cambia ningún dato guardado.
  */
 function ventaResumenRow(r: any): { sinImpuestos: number; descuento: number; impuestos: number } {
-  const lineas = r?.venta_lineas ?? [];
-  if (!lineas.length) {
-    return {
-      sinImpuestos: Number(r?.subtotal) || 0,
-      descuento: Number(r?.descuento_total) || 0,
-      impuestos: (Number(r?.iva_total) || 0) + (Number(r?.ieps_total) || 0),
-    };
-  }
-  const res = computeResumenFromLineas(lineas);
-  return { sinImpuestos: res.sinImpuestos, descuento: res.descuento, impuestos: res.iva + res.ieps };
+  const ivaMonto = Number(r?.iva_total) || 0;
+  const iepsMonto = Number(r?.ieps_total) || 0;
+  const impuestos = ivaMonto + iepsMonto;
+  const total = Number(r?.total) || 0;
+  // Gravable derivado del total real (siempre cuadra). El descuento toma el mayor
+  // entre: descuento de líneas, promo guardada (promocion_aplicada) y el del
+  // encabezado — así capta el "gratis" aunque no esté en las líneas.
+  const gravable = Math.max(0, total - impuestos);
+  const lineDesc = computeResumenFromLineas(r?.venta_lineas ?? []).descuento;
+  const promoAplicada = (r?.promocion_aplicada ?? []).reduce((s: number, p: any) => s + (Number(p?.descuento_aplicado) || 0), 0);
+  const descuento = Math.max(lineDesc, promoAplicada, Number(r?.descuento_total) || 0);
+  return { sinImpuestos: gravable + descuento, descuento, impuestos };
 }
 
 interface Props {
