@@ -39,11 +39,12 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     if (k === 'descuento') return r.descuento_total ?? 0;
     if (k === 'iva') return r.iva_total ?? 0;
     if (k === 'saldo') return saldoRealVenta(r);
+    if (k === 'pagado') return Math.max(0, totalEfectivoVenta(r) - saldoRealVenta(r));
     return r?.[k];
   });
 
   // Count visible data columns for the empty/footer colSpan
-  const dataCols = ['folio','tipo','cliente','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','saldo','status']
+  const dataCols = ['folio','tipo','cliente','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','pagado','saldo','status']
     .filter(k => v(k)).length;
   const totalCols = 1 /* checkbox */ + dataCols + 1 /* chevron */;
 
@@ -65,6 +66,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           {v('descuento') && <SortableTh sortKey="descuento" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Descuento</SortableTh>}
           {v('iva') && <SortableTh sortKey="iva" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">IVA</SortableTh>}
           {v('total') && <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</SortableTh>}
+          {v('pagado') && <SortableTh sortKey="pagado" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Pagado</SortableTh>}
           {v('saldo') && <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</SortableTh>}
           {v('status') && <SortableTh sortKey="status" sort={sort} onToggle={toggle} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</SortableTh>}
           <th className="py-2 px-2 w-8" />
@@ -141,6 +143,18 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   </td>
                 )}
 
+                {v('pagado') && (() => {
+                  const pagado = Math.max(0, totalEfectivoVenta(row) - saldoRealVenta(row));
+                  return (
+                    <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+                      {pagado > 0 ? (
+                        <span className="text-success font-medium">{fmt(pagado)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">$0.00</span>
+                      )}
+                    </td>
+                  );
+                })()}
                 {v('saldo') && (() => {
                   const saldo = saldoRealVenta(row);
                   return (
@@ -198,6 +212,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
         const totIva = items.reduce((s: number, r: any) => s + (r.iva_total ?? 0), 0);
         const totTotal = items.reduce((s: number, r: any) => s + totalEfectivoVenta(r), 0);
         const totSaldo = items.reduce((s: number, r: any) => s + saldoRealVenta(r), 0);
+        const totPagado = items.reduce((s: number, r: any) => s + Math.max(0, totalEfectivoVenta(r) - saldoRealVenta(r)), 0);
         return (
           <tfoot>
             <tr className="bg-card border-t border-border font-semibold text-[12px]">
@@ -213,6 +228,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
               {v('descuento') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums font-bold text-destructive">{totDescuento > 0 ? `-${fmt(totDescuento)}` : '—'}</td>}
               {v('iva') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums font-bold">{fmt(totIva)}</td>}
               {v('total') && <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(totTotal)}</td>}
+              {v('pagado') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-success font-bold">{fmt(totPagado)}</td>}
               {v('saldo') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-warning font-bold">{fmt(totSaldo)}</td>}
               {v('status') && <td />}
               <td />
