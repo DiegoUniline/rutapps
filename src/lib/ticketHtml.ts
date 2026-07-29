@@ -87,6 +87,8 @@ export interface TicketData {
   promociones?: TicketPromo[];
   pagos?: TicketPago[];
   devoluciones?: TicketDevolucion[];
+  /** Venta cancelada: no debe saldo (se muestra 0). */
+  cancelado?: boolean;
 }
 
 export const MOTIVO_DEVOLUCION_LABELS: Record<string, string> = {
@@ -124,9 +126,11 @@ export function getTicketTotalsSummary(data: TicketData): TicketTotalsSummary {
         : data.condicionPago !== 'contado'
           ? 0
           : totalVenta;
-  const saldo = data.saldoNuevo != null
-    ? Math.max(Number(data.saldoNuevo) || 0, 0)
-    : Math.max(totalVenta - Math.min(totalPagado, totalVenta), 0);
+  const saldo = data.cancelado
+    ? 0
+    : data.saldoNuevo != null
+      ? Math.max(Number(data.saldoNuevo) || 0, 0)
+      : Math.max(totalVenta - Math.min(totalPagado, totalVenta), 0);
 
   return { descuentoTotal, impuestosTotal, totalPagado, saldo };
 }
