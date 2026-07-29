@@ -33,25 +33,70 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
   const shownExtra = (descuento_extra_amt ?? 0) > 0 ? (descuento_extra_amt ?? 0) : 0;
   const grossSubtotal = (total || 0) - (iva_total || 0) - (ieps_total || 0) + shownLineDesc + promoTotal + shownExtra;
 
+  // Desglose fiscal (mismo que la fila expandible de la lista):
+  // Subtotal sin impuestos − Descuentos/promociones = Subtotal gravable;
+  // + IVA + IEPS (por separado) = Total.
+  const totalDescuentos = shownLineDesc + promoTotal + shownExtra;
+  const gravable = (total || 0) - (iva_total || 0) - (ieps_total || 0);
+  const pagadoAmt = saldoPendiente != null ? Math.max(0, (total || 0) - saldoPendiente) : null;
+
   return (
     <div className="flex justify-end pt-2 sticky bottom-0 bg-card pb-2">
       <div className={cn("bg-accent rounded-md p-3 space-y-1.5 text-[13px]", isMobile ? "w-full" : "w-80")}>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Subtotal</span>
+          <span className="text-muted-foreground">Subtotal sin impuestos</span>
           <span>{money(grossSubtotal)}</span>
         </div>
-        {lineDescuento > 0 && (
-          <div className="flex justify-between text-destructive">
-            <span>Descuento</span>
-            <span>-{money(lineDescuento)}</span>
+        {totalDescuentos > 0 && (
+          <div className="flex justify-between text-primary">
+            <span>Descuentos / promociones</span>
+            <span>-{money(totalDescuentos)}</span>
           </div>
         )}
-        {/* Promo results */}
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Subtotal gravable</span>
+          <span>{money(gravable)}</span>
+        </div>
+        {iva_total > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">IVA</span>
+            <span>{money(iva_total)}</span>
+          </div>
+        )}
+        {ieps_total > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">IEPS</span>
+            <span>{money(ieps_total)}</span>
+          </div>
+        )}
+        <div className="flex justify-between border-t border-border pt-2 font-semibold text-[15px]">
+          <span>Total</span>
+          <span>{money(total)}</span>
+        </div>
+        {pagadoAmt != null && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Pagado</span>
+            <span>{money(pagadoAmt)}</span>
+          </div>
+        )}
+        {saldoPendiente != null && saldoPendiente > 0 && (
+          <div className="flex justify-between pt-1">
+            <span className="text-destructive font-medium text-[13px]">Saldo pendiente</span>
+            <span className="text-destructive font-semibold text-[13px]">{money(saldoPendiente)}</span>
+          </div>
+        )}
+        {saldoPendiente != null && saldoPendiente < 0 && (
+          <div className="flex justify-between pt-1">
+            <span className="text-success font-medium text-[13px]">Saldo a favor</span>
+            <span className="text-success font-semibold text-[13px]">{money(Math.abs(saldoPendiente))}</span>
+          </div>
+        )}
+        {/* Promociones aplicadas (detalle de cada promo) */}
         {promoResults && promoResults.length > 0 && (
           <div className="space-y-1 border-t border-border pt-1.5">
             <div className="flex items-center gap-1">
               <Tag className="h-3 w-3 text-primary" />
-              <span className="text-[11px] font-semibold text-primary">Promociones</span>
+              <span className="text-[11px] font-semibold text-primary">Promociones aplicadas</span>
             </div>
             {promoResults.map((pr, i) => (
               <div key={i} className="flex items-center justify-between text-[11px]">
@@ -64,40 +109,6 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
                 )}
               </div>
             ))}
-          </div>
-        )}
-        {(descuento_extra_amt ?? 0) > 0 && (
-          <div className="flex justify-between text-destructive">
-            <span>Descuento extra</span>
-            <span>-{money(descuento_extra_amt!)}</span>
-          </div>
-        )}
-        {ieps_total > 0 && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">IEPS</span>
-            <span>{money(ieps_total)}</span>
-          </div>
-        )}
-        {iva_total > 0 && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">IVA</span>
-            <span>{money(iva_total)}</span>
-          </div>
-        )}
-        <div className="flex justify-between border-t border-border pt-2 font-semibold text-[15px]">
-          <span>Total</span>
-          <span>{money(total)}</span>
-        </div>
-        {saldoPendiente != null && saldoPendiente > 0 && (
-          <div className="flex justify-between pt-1">
-            <span className="text-destructive font-medium text-[13px]">Saldo pendiente</span>
-            <span className="text-destructive font-semibold text-[13px]">{money(saldoPendiente)}</span>
-          </div>
-        )}
-        {saldoPendiente != null && saldoPendiente < 0 && (
-          <div className="flex justify-between pt-1">
-            <span className="text-success font-medium text-[13px]">Saldo a favor</span>
-            <span className="text-success font-semibold text-[13px]">{money(Math.abs(saldoPendiente))}</span>
           </div>
         )}
       </div>
