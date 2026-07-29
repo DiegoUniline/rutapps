@@ -197,7 +197,6 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   const W = is58 ? COLS_58 : COLS_80;
   const maxPixelWidth = is58 ? 384 : 576;
 
-  const showTax = opts?.showTax ?? (data.empresa.ticket_campos?.impuestos !== false);
   const sym = getCurrencyConfig(data.empresa.moneda).symbol;
   const fmt = (n: number) => `${sym}${fmtNum(n)}`;
 
@@ -317,13 +316,9 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
       const promoLinea = promosConDesc.find(p => p.producto_id === l.producto_id);
       const det = `  Antes ${fmt(lineAmt)}${promoLinea?.descripcion ? ` ${clean(promoLinea.descripcion)}` : ''}`;
       ln(clean(det).slice(0, W));
-    } else if (l.precio > 0) {
-      // Detail: unit price (smaller, indented)
-      const detParts = [`  ${fmt(l.precio)}c/u`];
-      if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA ${fmt(l.iva_monto!)}`);
-      const det = detParts.join(' ');
-      ln(clean(det).slice(0, W));
     }
+    // Se quitó el precio unitario/base por renglón: en el ticket cada línea
+    // muestra solo su precio final (con impuestos).
   }
   ln(divider(W));
 

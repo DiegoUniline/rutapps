@@ -360,13 +360,15 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                       <div className="text-[8px] text-green-600 font-medium mt-px">🎁 {promoGratis?.descripcion || 'Promoción'}</div>
                     ) : !l.esCambio && (
                       <>
-                        <div className="flex gap-2 text-[8px] text-muted-foreground mt-px flex-wrap">
-                          <span>{fmt(l.precio)} c/u</span>
-                          {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
-                          {taxMode === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
-                          {taxMode === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
-                          {(l.precio_sugerido_publico ?? 0) > 0 && <span className="text-primary font-medium">Sug. público {fmt(l.precio_sugerido_publico!)}</span>}
-                        </div>
+                        {/* Se quitó el precio unitario/base: cada renglón muestra solo su precio final (con impuestos). */}
+                        {((l.descuento_pct ?? 0) > 0 || (taxMode === 'ambos' && ((l.iva_pct ?? 0) > 0 || (l.ieps_pct ?? 0) > 0)) || (l.precio_sugerido_publico ?? 0) > 0) && (
+                          <div className="flex gap-2 text-[8px] text-muted-foreground mt-px flex-wrap">
+                            {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
+                            {taxMode === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
+                            {taxMode === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
+                            {(l.precio_sugerido_publico ?? 0) > 0 && <span className="text-primary font-medium">Sug. público {fmt(l.precio_sugerido_publico!)}</span>}
+                          </div>
+                        )}
                         {promosLinea.map((p, pi) => (
                           <div key={pi} className="flex justify-between text-[8px] mt-px">
                             <span className="text-primary flex items-center gap-0.5">🏷️ {p.descripcion}</span>
