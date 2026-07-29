@@ -25,14 +25,15 @@ export default function ComisionesPorPagarPage() {
     queryKey: ['comisiones-por-pagar', empresa?.id, ppFechaCorte, ppSaldoFilter],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const ventasEmbed = ppSaldoFilter === 'todas'
-        ? 'ventas(folio, saldo_pendiente)'
-        : 'ventas!inner(folio, saldo_pendiente)';
+      // Embed inner siempre, para poder EXCLUIR comisiones de ventas canceladas
+      // (una comisión no debe pagarse si la venta se canceló).
+      const ventasEmbed = 'ventas!inner(folio, saldo_pendiente, status)';
       let q = supabase.from('venta_comisiones')
         .select(`id, vendedor_id, comision_monto, monto_venta, fecha_venta, venta_id, ${ventasEmbed}, vendedores:profiles!vendedor_id(nombre)`)
         .eq('empresa_id', empresa!.id)
         .eq('pagada', false)
         .is('pago_comision_id', null)
+        .neq('ventas.status', 'cancelado')
         .lte('fecha_venta', ppFechaCorte)
         .order('fecha_venta');
       if (ppSaldoFilter === 'cobradas') q = q.eq('ventas.saldo_pendiente', 0);

@@ -74,9 +74,10 @@ export default function ComisionesAvanceTab() {
       if (sinEsquema.length > 0) {
         const ids = sinEsquema.map(v => v.id);
         const { data: vc, error: vcErr } = await (supabase as any).from('venta_comisiones')
-          .select('vendedor_id, monto_venta, comision_monto, venta_id')
+          .select('vendedor_id, monto_venta, comision_monto, venta_id, ventas!inner(status)')
           .eq('empresa_id', empresa!.id)
           .in('vendedor_id', ids)
+          .neq('ventas.status', 'cancelado')
           .gte('fecha_venta', desde).lte('fecha_venta', hasta);
         if (vcErr) console.error('venta_comisiones', vcErr);
         const byVend = new Map<string, Array<{ monto_venta: number | null; comision_monto: number | null; venta_id: string }>>();
