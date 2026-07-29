@@ -80,6 +80,9 @@ export function sumCobrosActivos(v: any): number {
  * viene con el embed `cobro_aplicaciones`.
  */
 export function saldoRealVenta(v: any): number {
+  // Una venta/pedido CANCELADO no debe nada: su saldo es 0 aunque el
+  // saldo_pendiente guardado no se haya reseteado.
+  if (v?.status === 'cancelado') return 0;
   const totalReal = totalEfectivoVenta(v);
   const cobrado = sumCobrosActivos(v);
   const saldo = totalReal - cobrado;

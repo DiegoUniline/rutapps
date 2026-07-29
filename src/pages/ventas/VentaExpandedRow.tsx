@@ -247,6 +247,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
           total: venta.total,
           saldo_pendiente: venta.saldo_pendiente,
           condicion_pago: venta.condicion_pago,
+          status: venta.status,
         },
         clienteNombre,
         clienteRfc: (venta.clientes as any)?.rfc ?? null,

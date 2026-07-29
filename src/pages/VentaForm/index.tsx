@@ -281,6 +281,7 @@ export default function VentaFormPage() {
         total: totals.total,
         saldo_pendiente: saldoPendiente,
         condicion_pago: form.condicion_pago,
+        status: (form as any).status,
       },
       clienteNombre: clienteData?.nombre ?? 'Sin cliente',
       clienteRfc: (clienteData as any)?.rfc ?? null,

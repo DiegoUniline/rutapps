@@ -107,6 +107,7 @@ export function buildTicketDataFromVenta(params: {
     saldo_pendiente?: number;
     condicion_pago?: string;
     metodo_pago?: string;
+    status?: string | null;
   };
   clienteNombre: string;
   clienteRfc?: string | null;
@@ -186,5 +187,6 @@ export function buildTicketDataFromVenta(params: {
     promociones: params.promociones,
     pagos: params.pagos,
     devoluciones: params.devoluciones,
+    cancelado: venta.status === 'cancelado',
   };
 }
