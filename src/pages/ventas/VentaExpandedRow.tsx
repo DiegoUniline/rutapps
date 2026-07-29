@@ -31,9 +31,10 @@ interface Props {
   empresa?: any;
   clientesList?: any[];
   productosList?: any[];
+  colSpan?: number;
 }
 
-export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCancelTarget, onCollapse, empresaId, empresa, clientesList, productosList }: Props) {
+export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCancelTarget, onCollapse, empresaId, empresa, clientesList, productosList, colSpan = 13 }: Props) {
   const navigate = useNavigate();
   const [lineas, setLineas] = useState<any[]>([]);
   const [pagos, setPagos] = useState<any[]>([]);
@@ -297,7 +298,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   return (
     <>
       <tr>
-        <td colSpan={13} className="p-0">
+        <td colSpan={colSpan} className="p-0">
           <div className="bg-card border-b border-border px-4 py-3 space-y-3 animate-in slide-in-from-top-1 duration-200">
             {/* Header */}
             <div className="flex items-center justify-between">

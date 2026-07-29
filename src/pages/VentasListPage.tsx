@@ -333,7 +333,7 @@ export default function VentasListPage() {
     const lineas = v.venta_lineas ?? [];
     if (lineas.length) {
       const r = computeResumenFromLineas(lineas);
-      acc.subtotal += r.gravable; acc.descuento += r.descuento; acc.impuestos += r.iva + r.ieps;
+      acc.subtotal += r.sinImpuestos; acc.descuento += r.descuento; acc.impuestos += r.iva + r.ieps;
     } else {
       acc.subtotal += Number(v.subtotal) || 0;
       acc.descuento += Number(v.descuento_total) || 0;

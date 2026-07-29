@@ -16,17 +16,17 @@ import { computeResumenFromLineas } from '@/lib/ventaResumen';
  * (saldo inicial, concepto), cae a los valores guardados del encabezado.
  * No cambia ningún dato guardado.
  */
-function ventaResumenRow(r: any): { gravable: number; descuento: number; impuestos: number } {
+function ventaResumenRow(r: any): { sinImpuestos: number; descuento: number; impuestos: number } {
   const lineas = r?.venta_lineas ?? [];
   if (!lineas.length) {
     return {
-      gravable: Number(r?.subtotal) || 0,
+      sinImpuestos: Number(r?.subtotal) || 0,
       descuento: Number(r?.descuento_total) || 0,
       impuestos: (Number(r?.iva_total) || 0) + (Number(r?.ieps_total) || 0),
     };
   }
   const res = computeResumenFromLineas(lineas);
-  return { gravable: res.gravable, descuento: res.descuento, impuestos: res.iva + res.ieps };
+  return { sinImpuestos: res.sinImpuestos, descuento: res.descuento, impuestos: res.iva + res.ieps };
 }
 
 interface Props {
@@ -65,7 +65,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     if (k === 'condicion') return CONDICION_LABELS[r.condicion_pago] || r.condicion_pago;
     if (k === 'tipo') return TIPO_LABELS[r.tipo] || r.tipo;
     if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
-    if (k === 'subtotal') return resById[r.id]?.gravable ?? 0;
+    if (k === 'subtotal') return resById[r.id]?.sinImpuestos ?? 0;
     if (k === 'descuento') return resById[r.id]?.descuento ?? 0;
     if (k === 'iva') return resById[r.id]?.impuestos ?? 0;
     if (k === 'saldo') return saldoRealVenta(r);
@@ -148,7 +148,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 {v('almacen') && <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.almacenes?.nombre ?? <span className="text-destructive">Sin almacén</span>}</td>}
                 {v('condicion') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[row.condicion_pago] || row.condicion_pago}</td>}
                 {v('fecha') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDateTime(row.created_at)}</td>}
-                {v('subtotal') && <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(resById[row.id]?.gravable ?? row.subtotal)}</td>}
+                {v('subtotal') && <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(resById[row.id]?.sinImpuestos ?? row.subtotal)}</td>}
                 {v('descuento') && (() => {
                   const desc = resById[row.id]?.descuento ?? 0;
                   return (
@@ -233,6 +233,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   empresaId={empresaId}
                   empresa={empresa}
                   clientesList={clientesList}
+                  colSpan={totalCols}
                 />
               )}
             </React.Fragment>
@@ -240,7 +241,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
         })}
       </tbody>
       {items.length > 0 && (() => {
-        const totSubtotal = items.reduce((s: number, r: any) => s + (resById[r.id]?.gravable ?? 0), 0);
+        const totSubtotal = items.reduce((s: number, r: any) => s + (resById[r.id]?.sinImpuestos ?? 0), 0);
         const totDescuento = items.reduce((s: number, r: any) => s + (resById[r.id]?.descuento ?? 0), 0);
         const totIva = items.reduce((s: number, r: any) => s + (resById[r.id]?.impuestos ?? 0), 0);
         const totTotal = items.reduce((s: number, r: any) => s + totalEfectivoVenta(r), 0);
