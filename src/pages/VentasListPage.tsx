@@ -85,8 +85,11 @@ export default function VentasListPage() {
   const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
   const condicionFilter = filters.condicion_pago?.length ? filters.condicion_pago.join(',') : 'todos';
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
+  // 'si' | 'no' — solo filtra si hay una única opción seleccionada (ambas = todas).
+  const promocionFilter = (filters.promocion?.length === 1 ? filters.promocion[0] : undefined) as 'si' | 'no' | undefined;
 
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy);
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter);
+
   const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy);
   const { data: clientesList } = useClientes();
   const { data: vendedoresList } = useVendedoresForFilter();
@@ -99,28 +102,12 @@ export default function VentasListPage() {
 
   const ventasRaw = ventasData?.rows ?? [];
   const clienteFilter = filters.cliente;
-  // 'si' | 'no' — solo filtra si hay una única opción seleccionada (ambas = todas).
-  const promocionFilter = filters.promocion?.length === 1 ? filters.promocion[0] : undefined;
-
-  // venta_ids de la página que tienen promoción aplicada (señal: promocion_aplicada).
-  const pageVentaIds = useMemo(() => ventasRaw.map((v: any) => v.id), [ventasRaw]);
-  const { data: promoVentaIds } = useQuery({
-    queryKey: ['ventas-con-promo', empresa?.id, pageVentaIds],
-    enabled: !!empresa?.id && !!promocionFilter && pageVentaIds.length > 0,
-    queryFn: async () => {
-      const { data } = await supabase.from('promocion_aplicada').select('venta_id').in('venta_id', pageVentaIds);
-      return new Set((data ?? []).map((r: any) => r.venta_id as string));
-    },
-  });
 
   const ventas = useMemo(() => {
     let rows = ventasRaw;
     if (clienteFilter && clienteFilter.length > 0) rows = rows.filter(v => clienteFilter.includes(v.cliente_id ?? ''));
-    if (promocionFilter && promoVentaIds) {
-      rows = rows.filter(v => promocionFilter === 'si' ? promoVentaIds.has(v.id) : !promoVentaIds.has(v.id));
-    }
     return rows;
-  }, [ventasRaw, clienteFilter, promocionFilter, promoVentaIds]);
+  }, [ventasRaw, clienteFilter]);
 
   // Active dataset depending on view mode
   const isProductView = viewMode === 'productos';
@@ -128,7 +115,8 @@ export default function VentasListPage() {
 
   const total = isProductView
     ? (lineasData?.total ?? 0)
-    : ((clienteFilter && clienteFilter.length > 0) || promocionFilter) ? ventas.length : (ventasData?.total ?? 0);
+    : (clienteFilter && clienteFilter.length > 0) ? ventas.length : (ventasData?.total ?? 0);
+
   const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
   const to = Math.min(page * numericPageSize, total);
   const totalPages = numericPageSize > 0 ? Math.max(1, Math.ceil(total / numericPageSize)) : 1;
