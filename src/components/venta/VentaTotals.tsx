@@ -23,12 +23,22 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const lineDescuento = descuento_total - (descuento_promo ?? 0) - (descuento_extra_amt ?? 0);
 
+  // Subtotal en BRUTO (antes de descuentos/promos), reconstruido desde el Total +
+  // las rebajas que se muestran abajo. Así SIEMPRE cuadra (Subtotal − descuentos +
+  // impuestos = Total), sin importar si la venta guardó el descuento en el
+  // encabezado o solo lo tiene la promo recalculada en vivo (p. ej. líneas gratis
+  // neteadas a $0). Es solo presentación: no cambia ningún dato guardado.
+  const promoTotal = (promoResults ?? []).reduce((s, pr) => s + (Number(pr.descuento) || 0), 0);
+  const shownLineDesc = lineDescuento > 0 ? lineDescuento : 0;
+  const shownExtra = (descuento_extra_amt ?? 0) > 0 ? (descuento_extra_amt ?? 0) : 0;
+  const grossSubtotal = (total || 0) - (iva_total || 0) - (ieps_total || 0) + shownLineDesc + promoTotal + shownExtra;
+
   return (
     <div className="flex justify-end pt-2 sticky bottom-0 bg-card pb-2">
       <div className={cn("bg-accent rounded-md p-3 space-y-1.5 text-[13px]", isMobile ? "w-full" : "w-80")}>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal</span>
-          <span>{money(subtotal)}</span>
+          <span>{money(grossSubtotal)}</span>
         </div>
         {lineDescuento > 0 && (
           <div className="flex justify-between text-destructive">
