@@ -37,7 +37,7 @@ export const VENTA_COLUMNS = [
 
 export const VENTA_LINEA_COLUMNS = [
   'id','venta_id','producto_id','descripcion','cantidad','unidad_id',
-  'precio_unitario','descuento_pct','subtotal',
+  'precio_unitario','precio_unitario_sin_redondeo','descuento_pct','subtotal',
   'iva_pct','ieps_pct','iva_monto','ieps_monto','total','notas',
   'facturado','factura_cfdi_id','lista_precio_id','precio_manual',
   'presentacion_id','presentacion_nombre','presentacion_factor','paquetes','lote_id','created_at',

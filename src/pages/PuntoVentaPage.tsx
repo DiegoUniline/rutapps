@@ -955,6 +955,11 @@ export default function PuntoVentaPage() {
           descripcion: item.nombre,
           cantidad: item.cantidad,
           precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0,
+          // Precio neto crudo persistido: al recargar la venta nunca se vuelve a
+          // derivar de los impuestos (evita erosión en re-guardados).
+          precio_unitario_sin_redondeo: Number(item.precio_unitario_sin_redondeo) > 0
+            ? item.precio_unitario_sin_redondeo
+            : (item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0),
           subtotal: breakdown.subtotal,
           iva_pct: item.iva_pct,
           iva_monto: breakdown.iva,
