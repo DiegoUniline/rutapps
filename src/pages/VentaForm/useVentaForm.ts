@@ -567,10 +567,15 @@ export function useVentaForm() {
             { tiene_iva: Number(line.iva_pct) > 0, iva_pct: Number(line.iva_pct) || 0, tiene_ieps: Number(line.ieps_pct) > 0, ieps_pct: Number(line.ieps_pct) || 0 },
             gross,
           );
-          next[idx] = { ...line, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice, precio_unitario_sin_redondeo: snap.rawUnitPrice, precio_display_sin_redondeo: snap.rawDisplayPrice };
+          next[idx] = { ...line, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice, precio_unitario_sin_redondeo: snap.rawUnitPrice, precio_display_sin_redondeo: snap.rawDisplayPrice, redondeo: 'ninguno', precio_manual: true };
         } else {
-          next[idx] = { ...line, precio_unitario: gross, display_unit_price: gross };
+          // El precio manual es la nueva fuente de verdad: hay que re-anclar el
+          // neto crudo, si no `calculateSaleLineEffectivePrices` seguiría usando
+          // el `precio_unitario_sin_redondeo` de la lista de precios y el precio
+          // escrito por el usuario se perdería al recalcular la línea.
+          next[idx] = { ...line, precio_unitario: gross, display_unit_price: gross, precio_unitario_sin_redondeo: gross, precio_display_sin_redondeo: gross, redondeo: 'ninguno', precio_manual: true };
         }
+
         return next;
       });
       setDirty(true);
