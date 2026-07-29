@@ -104,7 +104,9 @@ export default function TicketVenta(props: TicketVentaProps) {
 
   const { fmt } = useCurrency();
 
-  // Desglose fiscal reconstruido desde las líneas (igual que la lista y el detalle).
+  // Desglose fiscal: impuestos desde los totales del encabezado (fiables) y el
+  // gravable derivado del total real para que SIEMPRE cuadre; el descuento se
+  // reconstruye desde las líneas (capta el "gratis").
   const resumen = computeResumenFromLineas(lineas.map(l => ({
     subtotal: l.subtotal,
     descuento_pct: l.descuento_pct,
@@ -114,6 +116,11 @@ export default function TicketVenta(props: TicketVentaProps) {
     ieps_monto: l.ieps_monto,
     total: l.total,
   })));
+  const ivaMonto = Number(iva) || 0;
+  const iepsMonto = Number(ieps) || 0;
+  const descTicket = Math.max(resumen.descuento, 0);
+  const gravableTicket = Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto);
+  const sinImpTicket = gravableTicket + descTicket;
 
   const ticketRef = useRef<HTMLDivElement>(null);
   // 'ambos' = producto + totales, 'totales' = solo totales, 'ninguno' = sin impuestos
@@ -194,11 +201,11 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
         return `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}${taxes ? ` [${taxes}]` : ''}`;
       }),
       '─'.repeat(30),
-      `Subtotal sin impuestos: ${fmt(resumen.sinImpuestos)}`,
-      ...(resumen.descuento > 0.005 ? [`Descuentos / promos: -${fmt(resumen.descuento)}`] : []),
-      `Subtotal gravable: ${fmt(resumen.gravable)}`,
-      ...(resumen.iva > 0.005 ? [`IVA: ${fmt(resumen.iva)}`] : []),
-      ...(resumen.ieps > 0.005 ? [`IEPS: ${fmt(resumen.ieps)}`] : []),
+      `Subtotal sin impuestos: ${fmt(sinImpTicket)}`,
+      ...(descTicket > 0.005 ? [`Descuentos / promos: -${fmt(descTicket)}`] : []),
+      `Subtotal gravable: ${fmt(gravableTicket)}`,
+      ...(ivaMonto > 0.005 ? [`IVA: ${fmt(ivaMonto)}`] : []),
+      ...(iepsMonto > 0.005 ? [`IEPS: ${fmt(iepsMonto)}`] : []),
       `Total: ${fmt(total)}`,
       `Pagado: ${fmt(summary.totalPagado)}`,
       `Saldo: ${fmt(summary.saldo)}`,
@@ -404,28 +411,28 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               {/* Desglose: Subtotal sin impuestos → Descuentos → Subtotal gravable → IVA/IEPS → Total */}
               <div className="tk-tot-row flex justify-between text-[10px]">
                 <span className="lbl text-muted-foreground">Subtotal sin impuestos</span>
-                <span className="val text-foreground tabular-nums">{fmt(resumen.sinImpuestos)}</span>
+                <span className="val text-foreground tabular-nums">{fmt(sinImpTicket)}</span>
               </div>
-              {resumen.descuento > 0.005 && (
+              {descTicket > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-primary font-semibold">Descuentos / promos</span>
-                  <span className="val text-primary font-bold tabular-nums">-{fmt(resumen.descuento)}</span>
+                  <span className="val text-primary font-bold tabular-nums">-{fmt(descTicket)}</span>
                 </div>
               )}
               <div className="tk-tot-row flex justify-between text-[10px]">
                 <span className="lbl text-muted-foreground">Subtotal gravable</span>
-                <span className="val text-foreground tabular-nums">{fmt(resumen.gravable)}</span>
+                <span className="val text-foreground tabular-nums">{fmt(gravableTicket)}</span>
               </div>
-              {taxMode !== 'ninguno' && resumen.iva > 0.005 && (
+              {taxMode !== 'ninguno' && ivaMonto > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground pl-2">IVA{resumen.ivaRate != null ? ` ${resumen.ivaRate}%` : ''}</span>
-                  <span className="val text-foreground tabular-nums">{fmt(resumen.iva)}</span>
+                  <span className="val text-foreground tabular-nums">{fmt(ivaMonto)}</span>
                 </div>
               )}
-              {taxMode !== 'ninguno' && resumen.ieps > 0.005 && (
+              {taxMode !== 'ninguno' && iepsMonto > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground pl-2">IEPS{resumen.iepsRate != null ? ` ${resumen.iepsRate}%` : ''}</span>
-                  <span className="val text-foreground tabular-nums">{fmt(resumen.ieps)}</span>
+                  <span className="val text-foreground tabular-nums">{fmt(iepsMonto)}</span>
                 </div>
               )}
               <div className="tk-grand flex justify-between items-baseline pt-1.5 mt-1 border-t border-dashed border-border">
