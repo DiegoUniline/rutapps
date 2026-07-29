@@ -120,7 +120,9 @@ export function buildManualSalePricingFromGross(input: TaxPricingInput, grossPri
 
 export function calculateSaleLineEffectivePrices(line: SaleLinePricingLike, sinImpuestos = false): SaleLineEffectivePrices {
   const currentUnitPrice = Number(line.precio_unitario) || 0;
-  const currentDisplayPrice = Number(line.display_unit_price) || currentUnitPrice;
+  const rawDisplay = Number(line.display_unit_price);
+  const hasDisplay = Number.isFinite(rawDisplay) && rawDisplay > 0;
+  const currentDisplayPrice = hasDisplay ? rawDisplay : currentUnitPrice;
   const descPct = Number(line.descuento_pct) || 0;
   const descFactor = Math.max(0, 1 - descPct / 100);
   const ivaPct = sinImpuestos ? 0 : Number(line.iva_pct) || 0;
@@ -137,11 +139,17 @@ export function calculateSaleLineEffectivePrices(line: SaleLinePricingLike, sinI
   const hasRawNet = Number.isFinite(rawNetSource) && rawNetSource > 0;
 
   // Fallback SOLO cuando no hay raw disponible (línea manual sin raw derivable,
-  // o datos legacy): preservamos el display actual como el bruto que el usuario
-  // ya vio y re-derivamos el neto para el multiplicador actual.
+  // o datos legacy).
   if (!hasRawNet) {
-    const displayPrice = currentDisplayPrice;
-    const unitPrice = taxMultiplier > 0 ? displayPrice / taxMultiplier : displayPrice;
+    // Sin display bruto conocido (p. ej. línea recargada desde la BD, donde
+    // `display_unit_price` no se persiste): `precio_unitario` YA es el neto,
+    // así que el bruto se reconstruye multiplicando. Si aquí se dividiera otra
+    // vez entre el multiplicador se descontarían los impuestos dos veces y el
+    // precio se erosionaría en cada guardado (IEPS/IVA restados de más).
+    const displayPrice = hasDisplay ? currentDisplayPrice : round2(currentUnitPrice * taxMultiplier);
+    const unitPrice = hasDisplay
+      ? (taxMultiplier > 0 ? displayPrice / taxMultiplier : displayPrice)
+      : currentUnitPrice;
     return {
       unitPrice,
       displayPrice,
