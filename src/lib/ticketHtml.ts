@@ -260,7 +260,11 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const productosGratis = new Set<string>();
 
   for (const l of lineas) {
-    const lineAmt = showTax ? l.total : (l.total - (l.iva_monto ?? 0) - (l.ieps_monto ?? 0));
+    // El importe de la linea SIEMPRE es el total con impuestos incluidos (bruto),
+    // igual que la columna Subtotal del sistema. El toggle de impuestos solo
+    // controla si se muestra el desglose abajo, no si se le quita IVA/IEPS a la
+    // linea (antes en "sin impuestos" mostraba el neto y no cuadraba con el saldo).
+    const lineAmt = Number(l.total) || 0;
     // ¿La promo regala la linea completa? Preferimos la cantidad gratis (senal
     // exacta); si no viene, caemos al monto (la promo cubre todo el importe).
     const descLinea = (showPromociones && l.producto_id) ? (descPorProducto.get(l.producto_id) ?? 0) : 0;
@@ -313,10 +317,17 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
 
   const summary = getTicketTotalsSummary(data);
+  // Sub total con impuestos INCLUIDOS: cuadra con los importes de las lineas
+  // (siempre en bruto) y con el Saldo. El impuesto se muestra como "incluido"
+  // (informativo), no como un cargo que se suma aparte.
+  const grossSubtotal = (Number(total) || 0) + summary.descuentoTotal;
   add('');
-  add(pad('Sub total', fmt(subtotal)));
-  if (showDescuentos) add(pad('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0)));
-  if (showImpuestos) add(pad('Impuestos', fmt(showTax ? summary.impuestosTotal : 0)));
+  add(pad('Sub total', fmt(grossSubtotal)));
+  if (showDescuentos && summary.descuentoTotal > 0) add(pad('Descuentos', `-${fmt(summary.descuentoTotal)}`));
+  if (showImpuestos) {
+    if ((ieps ?? 0) > 0) add(pad('  IEPS incluido', fmt(ieps)));
+    if ((iva ?? 0) > 0) add(pad('  IVA incluido', fmt(iva)));
+  }
   add(div);
   add(pad('Total pagado', fmt(summary.totalPagado)));
   add(pad('Saldo', fmt(summary.saldo)));

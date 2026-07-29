@@ -182,9 +182,10 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
         return `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}${taxes ? ` [${taxes}]` : ''}`;
       }),
       '─'.repeat(30),
-      `Sub total: ${fmt(subtotal)}`,
-      `Descuentos: ${summary.descuentos > 0 ? '-' : ''}${fmt(summary.descuentos)}`,
-      `Impuestos: ${fmt(summary.impuestos)}`,
+      `Sub total: ${fmt(total + summary.descuentos)}`,
+      ...(summary.descuentos > 0 ? [`Descuentos: -${fmt(summary.descuentos)}`] : []),
+      ...((ieps ?? 0) > 0 ? [`IEPS incluido: ${fmt(ieps)}`] : []),
+      ...((iva ?? 0) > 0 ? [`IVA incluido: ${fmt(iva)}`] : []),
       `Total pagado: ${fmt(summary.totalPagado)}`,
       `Saldo: ${fmt(summary.saldo)}`,
       ...(devoluciones.length > 0 ? [
@@ -386,18 +387,29 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             {(() => {
               return (
             <div className="px-5 py-2 space-y-0.5">
+              {/* Sub total con impuestos INCLUIDOS: cuadra con las lineas (bruto) y el Saldo. */}
               <div className="tk-tot-row flex justify-between text-[10px]">
                 <span className="lbl text-muted-foreground">Sub total</span>
-                <span className="val text-foreground tabular-nums">{fmt(subtotal)}</span>
+                <span className="val text-foreground tabular-nums">{fmt(total + summary.descuentos)}</span>
               </div>
-              <div className="tk-tot-row flex justify-between text-[10px]">
-                <span className="lbl text-primary font-semibold">Descuentos</span>
-                <span className="val text-primary font-bold tabular-nums">{summary.descuentos > 0 ? '-' : ''}{fmt(summary.descuentos)}</span>
-              </div>
-              <div className="tk-tot-row flex justify-between text-[10px]">
-                <span className="lbl text-muted-foreground">Impuestos</span>
-                <span className="val text-foreground tabular-nums">{fmt(taxMode !== 'ninguno' ? summary.impuestos : 0)}</span>
-              </div>
+              {summary.descuentos > 0 && (
+                <div className="tk-tot-row flex justify-between text-[10px]">
+                  <span className="lbl text-primary font-semibold">Descuentos</span>
+                  <span className="val text-primary font-bold tabular-nums">-{fmt(summary.descuentos)}</span>
+                </div>
+              )}
+              {taxMode !== 'ninguno' && (ieps ?? 0) > 0 && (
+                <div className="tk-tot-row flex justify-between text-[10px]">
+                  <span className="lbl text-muted-foreground pl-2">IEPS incluido</span>
+                  <span className="val text-foreground tabular-nums">{fmt(ieps)}</span>
+                </div>
+              )}
+              {taxMode !== 'ninguno' && (iva ?? 0) > 0 && (
+                <div className="tk-tot-row flex justify-between text-[10px]">
+                  <span className="lbl text-muted-foreground pl-2">IVA incluido</span>
+                  <span className="val text-foreground tabular-nums">{fmt(iva)}</span>
+                </div>
+              )}
               <div className="tk-grand flex justify-between items-baseline pt-1.5 mt-1 border-t border-dashed border-border">
                 <span className="text-[12px] font-bold text-foreground">Total pagado</span>
                 <span className="text-[15px] font-bold text-primary tabular-nums">{fmt(summary.totalPagado)}</span>

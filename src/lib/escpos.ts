@@ -299,7 +299,8 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   // ── PRODUCTOS ──
   for (const l of data.lineas) {
     const desc = `${l.cantidad}x ${clean(l.nombre)}`;
-    const lineAmt = showTax ? l.total : (l.total - (l.iva_monto ?? 0) - (l.ieps_monto ?? 0));
+    // Importe SIEMPRE en bruto (con impuestos incluidos), igual que el sistema.
+    const lineAmt = Number(l.total) || 0;
     const descLinea = (showPromociones && l.producto_id) ? (descPorProducto.get(l.producto_id) ?? 0) : 0;
     const gratisQty = (showPromociones && l.producto_id) ? (gratisQtyPorProducto.get(l.producto_id) ?? 0) : 0;
     const esGratis = (Number(l.total) || 0) > 0 && (
@@ -340,9 +341,14 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
 
   // ── TOTALES ──
   const summary = getTicketTotalsSummary(data);
-  ln(row('Sub total', fmt(data.subtotal), W));
-  if (showDescuentos) ln(row('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0), W));
-  if (showImpuestos) ln(row('Impuestos', fmt(showTax ? summary.impuestosTotal : 0), W));
+  // Sub total con impuestos INCLUIDOS (cuadra con las lineas en bruto y el Saldo).
+  const grossSubtotal = (Number(data.total) || 0) + summary.descuentoTotal;
+  ln(row('Sub total', fmt(grossSubtotal), W));
+  if (showDescuentos && summary.descuentoTotal > 0) ln(row('Descuentos', `-${fmt(summary.descuentoTotal)}`, W));
+  if (showImpuestos) {
+    if ((data.ieps ?? 0) > 0) ln(row('  IEPS incluido', fmt(data.ieps!), W));
+    if ((data.iva ?? 0) > 0) ln(row('  IVA incluido', fmt(data.iva!), W));
+  }
   ln(divider(W));
   add(BOLD_ON);
   ln(row('Total pagado', fmt(summary.totalPagado), W));
