@@ -228,6 +228,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
               {v('descuento') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums font-bold text-destructive">{totDescuento > 0 ? `-${fmt(totDescuento)}` : '—'}</td>}
               {v('iva') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums font-bold">{fmt(totIva)}</td>}
               {v('total') && <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(totTotal)}</td>}
+              {v('pagado') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-success font-bold">{fmt(totPagado)}</td>}
               {v('saldo') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-warning font-bold">{fmt(totSaldo)}</td>}
               {v('status') && <td />}
               <td />
