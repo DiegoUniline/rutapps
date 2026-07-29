@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Banknote, TrendingUp, Truck, Receipt, Search, Calendar as CalendarIcon, X, RotateCcw, PiggyBank } from 'lucide-react';
+import { ShoppingCart, Users, Banknote, TrendingUp, Truck, Receipt, Search, Calendar as CalendarIcon, X, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -41,7 +41,6 @@ export default function RutaDashboard() {
   const { data: gastos } = useOfflineQuery('gastos', { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
   const { data: cobros } = useOfflineQuery('cobros', allVendedores ? { empresa_id: empresa?.id } : { empresa_id: empresa?.id, user_id: vendedorUserId }, { enabled: cobrosEnabled });
   const { data: devoluciones } = useOfflineQuery('devoluciones', vendedorId ? { empresa_id: empresa?.id, vendedor_id: vendedorId } : { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
-  const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
   const clienteById = useMemo(() => {
     const m = new Map<string, any>();
@@ -151,31 +150,13 @@ export default function RutaDashboard() {
   const ventasDirectasRango = ventasActivasRango.filter((v: any) => v.tipo !== 'pedido');
   const pedidosRango = ventasActivasRango.filter((v: any) => v.tipo === 'pedido');
   const entregasFinalizadasRango = entregasFiltradas.filter((e: any) => isEntregaFinalizada(e.status));
-  // Utilidad/costo se calculan SOLO sobre ventas reales (no pedidos).
-  const ventaIdsRango = useMemo(() => ventasDirectasRango.map((v: any) => v.id).filter(Boolean), [ventasDirectasRango]);
-
-  // Costo de ventas (utilidad bruta) — venta_lineas filtradas por ventas del rango
-  const { data: ventaLineasRango } = useOfflineQuery('venta_lineas', { venta_id: ventaIdsRango }, { enabled: ventaIdsRango.length > 0 });
-  const productoCosto = useMemo(() => {
-    const m = new Map<string, number>();
-    (productos ?? []).forEach((p: any) => m.set(p.id, Number(p.costo) || 0));
-    return m;
-  }, [productos]);
-  const costoVentasRango = useMemo(() => {
-    return (ventaLineasRango ?? []).reduce((s: number, l: any) => {
-      const costo = productoCosto.get(l.producto_id) ?? 0;
-      const factor = Number(l.presentacion_factor) || 1;
-      const cantidad = Number(l.cantidad) || 0;
-      return s + costo * factor * cantidad;
-    }, 0);
-  }, [ventaLineasRango, productoCosto]);
-
+  // NOTA: en /Ruta (app de vendedores) NO se muestran ni se calculan costo,
+  // utilidad ni margen. Los vendedores solo ven precios/ventas, nunca costos ni
+  // utilidades. El costo se usa únicamente en el motor de precios (por margen),
+  // que no lo expone en pantalla.
   const totalVentasRango = ventasDirectasRango.reduce((s: number, v: any) => s + (v.total ?? 0), 0);
   const totalPedidosRango = pedidosRango.reduce((s: number, v: any) => s + (v.total ?? 0), 0);
   const totalGastosRango = gastosFiltrados.reduce((s: number, g: any) => s + (g.monto ?? 0), 0);
-  const utilidadBruta = totalVentasRango - costoVentasRango;
-  const utilidadNeta = utilidadBruta - totalGastosRango;
-  const margenPct = totalVentasRango > 0 ? (utilidadNeta / totalVentasRango) * 100 : 0;
 
   const rangoTotales = {
     ventas: totalVentasRango,
@@ -299,46 +280,6 @@ export default function RutaDashboard() {
               <KpiMini icon={Truck} label="Entregas" value={`${rangoTotales.entregas}`} color="bg-warning/10 text-warning" />
               <KpiMini icon={Banknote} label="Cobrado" value={fmt(rangoTotales.cobros)} color="bg-success/10 text-success" />
               <KpiMini icon={Receipt} label="Gastos" value={fmt(rangoTotales.gastos)} color="bg-destructive/10 text-destructive" />
-            </div>
-
-            {/* Utilidad */}
-            <div className={cn(
-              "rounded-2xl p-4 border",
-              utilidadNeta >= 0 ? "bg-success/5 border-success/30" : "bg-destructive/5 border-destructive/30"
-            )}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className={cn(
-                  "w-7 h-7 rounded-lg flex items-center justify-center",
-                  utilidadNeta >= 0 ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
-                )}>
-                  <PiggyBank className="h-4 w-4" />
-                </div>
-                <p className="text-[11px] text-muted-foreground font-medium">Utilidad del rango</p>
-              </div>
-              <div className="flex items-end justify-between gap-2">
-                <div>
-                  <p className={cn("text-[22px] font-bold leading-tight", utilidadNeta >= 0 ? "text-success" : "text-destructive")}>{fmt(utilidadNeta)}</p>
-                  <p className="text-[10px] text-muted-foreground">Margen {margenPct.toFixed(1)}%</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-muted-foreground">Utilidad bruta</p>
-                  <p className="text-[13px] font-semibold text-foreground">{fmt(utilidadBruta)}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
-                <div>
-                  <p className="text-[9px] text-muted-foreground">Ventas reales</p>
-                  <p className="text-[12px] font-bold text-foreground">{fmt(totalVentasRango)}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-muted-foreground">Costo</p>
-                  <p className="text-[12px] font-bold text-warning">{fmt(costoVentasRango)}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-muted-foreground">Gastos</p>
-                  <p className="text-[12px] font-bold text-destructive">{fmt(totalGastosRango)}</p>
-                </div>
-              </div>
             </div>
 
             {/* Totales rango */}
