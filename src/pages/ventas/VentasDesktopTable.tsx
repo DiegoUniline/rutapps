@@ -39,11 +39,12 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     if (k === 'descuento') return r.descuento_total ?? 0;
     if (k === 'iva') return r.iva_total ?? 0;
     if (k === 'saldo') return saldoRealVenta(r);
+    if (k === 'pagado') return Math.max(0, totalEfectivoVenta(r) - saldoRealVenta(r));
     return r?.[k];
   });
 
   // Count visible data columns for the empty/footer colSpan
-  const dataCols = ['folio','tipo','cliente','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','saldo','status']
+  const dataCols = ['folio','tipo','cliente','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','pagado','saldo','status']
     .filter(k => v(k)).length;
   const totalCols = 1 /* checkbox */ + dataCols + 1 /* chevron */;
 
