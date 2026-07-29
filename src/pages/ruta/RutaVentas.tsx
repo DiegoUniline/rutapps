@@ -75,8 +75,10 @@ export default function RutaVentas() {
     [enrichedTodas],
   );
 
-  const totalDirectas = ventasDirectas.reduce((s, v: any) => s + (v.total ?? 0), 0);
-  const totalPedidos = pedidos.reduce((s, v: any) => s + (v.total ?? 0), 0);
+  // Los totales muestran lo REALMENTE vendido: excluyen canceladas (la lista sí
+  // muestra la fila cancelada con su chip, pero no suma a estos totales).
+  const totalDirectas = ventasDirectas.reduce((s, v: any) => s + (v.status === 'cancelado' ? 0 : (v.total ?? 0)), 0);
+  const totalPedidos = pedidos.reduce((s, v: any) => s + (v.status === 'cancelado' ? 0 : (v.total ?? 0)), 0);
 
   const statusColors: Record<string, string> = {
     borrador: 'bg-card/50 text-muted-foreground',

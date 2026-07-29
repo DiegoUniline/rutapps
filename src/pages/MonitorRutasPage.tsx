@@ -161,6 +161,8 @@ export function MonitorContent() {
   const visits: ClientVisit[] = useMemo(() => {
     const salesByClient = new Map<string, { total: number; vendedor_id: string }>();
     (ventasHoy ?? []).forEach((v: any) => {
+      // Una venta cancelada no cuenta como venta real (monto ni "vendido").
+      if (v?.status === 'cancelado') return;
       const prev = salesByClient.get(v.cliente_id);
       salesByClient.set(v.cliente_id, {
         total: (prev?.total ?? 0) + (v.total ?? 0),
