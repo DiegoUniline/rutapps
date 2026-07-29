@@ -338,16 +338,21 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
     ieps_monto: l.ieps_monto,
     total: l.total,
   })));
-  ln(row('Subtotal sin impuestos', fmt(resumen.sinImpuestos), W));
-  if (showDescuentos && resumen.descuento > 0.005) ln(row('Descuentos/promos', `-${fmt(resumen.descuento)}`, W));
-  ln(row('Subtotal gravable', fmt(resumen.gravable), W));
+  const ivaMonto = Number(data.iva) || 0;
+  const iepsMonto = Number(data.ieps) || 0;
+  const descTicket = Math.max(resumen.descuento, summary.descuentoTotal, 0);
+  const gravableTicket = Math.max(0, (Number(data.total) || 0) - ivaMonto - iepsMonto);
+  const sinImpTicket = gravableTicket + descTicket;
   if (showImpuestos) {
-    if (resumen.iva > 0.005 || resumen.ieps > 0.005) {
-      if (resumen.iva > 0.005) ln(row('IVA', fmt(resumen.iva), W));
-      if (resumen.ieps > 0.005) ln(row('IEPS', fmt(resumen.ieps), W));
-    } else {
-      ln(row('Impuestos', fmt(0), W));
-    }
+    ln(row('Subtotal sin impuestos', fmt(sinImpTicket), W));
+    if (showDescuentos && descTicket > 0.005) ln(row('Descuentos/promos', `-${fmt(descTicket)}`, W));
+    ln(row('Subtotal gravable', fmt(gravableTicket), W));
+    if (ivaMonto > 0.005) ln(row('IVA', fmt(ivaMonto), W));
+    if (iepsMonto > 0.005) ln(row('IEPS', fmt(iepsMonto), W));
+    if (ivaMonto <= 0.005 && iepsMonto <= 0.005) ln(row('Impuestos', fmt(0), W));
+  } else {
+    ln(row('Sub total', fmt(sinImpTicket + ivaMonto + iepsMonto), W));
+    if (showDescuentos && descTicket > 0.005) ln(row('Descuentos/promos', `-${fmt(descTicket)}`, W));
   }
   ln(divider(W));
   add(BOLD_ON);

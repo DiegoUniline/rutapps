@@ -307,9 +307,10 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   add(div);
 
   const summary = getTicketTotalsSummary(data);
-  // Desglose fiscal reconstruido desde las lineas (mismo que la lista y el
-  // detalle): Subtotal sin impuestos -> Descuentos/promos -> Subtotal gravable
-  // -> IVA/IEPS por separado -> Total. Respeta el toggle de impuestos.
+  // Impuestos: se toman de los TOTALES del encabezado (data.iva/data.ieps), que
+  // llegan fiables en todos los flujos, y el gravable se deriva del total real
+  // para que SIEMPRE cuadre. El descuento se reconstruye desde las líneas (capta
+  // el "gratis" aunque no venga en el encabezado).
   const resumen = computeResumenFromLineas(lineas.map(l => ({
     subtotal: undefined,
     descuento_pct: l.descuento_pct,
@@ -319,17 +320,23 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     ieps_monto: l.ieps_monto,
     total: l.total,
   })));
+  const ivaMonto = Number(iva) || 0;
+  const iepsMonto = Number(ieps) || 0;
+  const descTicket = Math.max(resumen.descuento, summary.descuentoTotal, 0);
+  const gravableTicket = Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto);
+  const sinImpTicket = gravableTicket + descTicket;
   add('');
-  add(pad('Subtotal sin impuestos', fmt(resumen.sinImpuestos)));
-  if (showDescuentos && resumen.descuento > 0.005) add(pad('Descuentos/promos', `-${fmt(resumen.descuento)}`));
-  add(pad('Subtotal gravable', fmt(resumen.gravable)));
   if (showImpuestos) {
-    if (resumen.iva > 0.005 || resumen.ieps > 0.005) {
-      if (resumen.iva > 0.005) add(pad('IVA', fmt(resumen.iva)));
-      if (resumen.ieps > 0.005) add(pad('IEPS', fmt(resumen.ieps)));
-    } else {
-      add(pad('Impuestos', fmt(0)));
-    }
+    add(pad('Subtotal sin impuestos', fmt(sinImpTicket)));
+    if (showDescuentos && descTicket > 0.005) add(pad('Descuentos/promos', `-${fmt(descTicket)}`));
+    add(pad('Subtotal gravable', fmt(gravableTicket)));
+    if (ivaMonto > 0.005) add(pad('IVA', fmt(ivaMonto)));
+    if (iepsMonto > 0.005) add(pad('IEPS', fmt(iepsMonto)));
+    if (ivaMonto <= 0.005 && iepsMonto <= 0.005) add(pad('Impuestos', fmt(0)));
+  } else {
+    // Sin desglose: subtotal en bruto (impuestos incluidos), cuadra con el Total.
+    add(pad('Sub total', fmt(sinImpTicket + ivaMonto + iepsMonto)));
+    if (showDescuentos && descTicket > 0.005) add(pad('Descuentos/promos', `-${fmt(descTicket)}`));
   }
   add(div);
   add(pad('Total', fmt(total)));
