@@ -8,8 +8,25 @@ import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist';
 import type { Venta, VentaLinea } from '@/types';
 
+/**
+ * IDs de ventas de la empresa que traen promoción.
+ * Señales (unión): registro en `promocion_aplicada` (promo persistida) o línea
+ * regalada (precio 0 con cantidad > 0), que es como quedan las promos cuando el
+ * descuento se aplica neto en la línea y no deja registro aparte.
+ */
+async function fetchVentaIdsConPromo(empresaId: string): Promise<string[]> {
+  const [aplicadas, gratis] = await Promise.all([
+    supabase.from('promocion_aplicada').select('venta_id, ventas!inner(empresa_id)').eq('ventas.empresa_id', empresaId).limit(5000),
+    supabase.from('venta_lineas').select('venta_id').eq('empresa_id', empresaId).eq('precio_unitario', 0).gt('cantidad', 0).limit(5000),
+  ]);
+  const ids = new Set<string>();
+  for (const r of (aplicadas.data ?? []) as any[]) if (r.venta_id) ids.add(r.venta_id);
+  for (const r of (gratis.data ?? []) as any[]) if (r.venta_id) ids.add(r.venta_id);
+  return [...ids];
+}
+
 /** Paginated ventas for list views. When fetchAll=true, returns all matching rows (used for grouping). */
-export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, fetchAll = false) {
+export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, fetchAll = false, promoFilter?: 'si' | 'no') {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
@@ -19,10 +36,15 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   // Se eliminó el canal duplicado 'ventas-realtime' para reducir egress de Realtime.
 
   return useQuery({
-    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo, fetchAll],
+    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas'],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const SELECT = 'id, folio, fecha, created_at, total, subtotal, iva_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, politica_cobro, cerrado_at, cerrado_por, total_efectivo, cerrado_snapshot, vendedor_id, cliente_id, almacen_id, es_saldo_inicial, origen, clientes(nombre, rfc, telefono, direccion, colonia), vendedores:profiles!vendedor_id(nombre, telefono), almacenes(nombre), entregas(status, entrega_lineas(cantidad_pedida, cantidad_entregada)), cobro_aplicaciones(monto_aplicado, cobros!inner(status))';
+
+      // Filtro de promoción resuelto en servidor sobre TODA la empresa (no solo la página).
+      let promoIds: string[] | null = null;
+      if (promoFilter) promoIds = await fetchVentaIdsConPromo(empresa!.id);
+
 
       // Resolve search-derived id filters once (shared by both branches)
       let searchOr: string | null = null;
