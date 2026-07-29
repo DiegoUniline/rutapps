@@ -212,6 +212,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
         const totIva = items.reduce((s: number, r: any) => s + (r.iva_total ?? 0), 0);
         const totTotal = items.reduce((s: number, r: any) => s + totalEfectivoVenta(r), 0);
         const totSaldo = items.reduce((s: number, r: any) => s + saldoRealVenta(r), 0);
+        const totPagado = items.reduce((s: number, r: any) => s + Math.max(0, totalEfectivoVenta(r) - saldoRealVenta(r)), 0);
         return (
           <tfoot>
             <tr className="bg-card border-t border-border font-semibold text-[12px]">
