@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     .from('ventas')
     .select('saldo_pendiente')
     .eq('cliente_id', cliente.id)
-    .neq('estado', 'cancelado')
+    .neq('status', 'cancelado')
   const saldoActual = (ventasSaldo ?? []).reduce((s, v: any) => s + Number(v.saldo_pendiente || 0), 0)
 
   const folios = (apps ?? [])

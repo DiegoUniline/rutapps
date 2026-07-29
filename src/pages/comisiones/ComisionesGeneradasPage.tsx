@@ -36,8 +36,9 @@ export default function ComisionesGeneradasPage() {
       const { fetchAllPages } = await import('@/lib/supabasePaginate');
       return await fetchAllPages<any>((from, to) => {
         let q = supabase.from('venta_comisiones')
-          .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, pago_comision_id, ventas(folio), productos(nombre), vendedores:profiles!vendedor_id(nombre), pago_comisiones(fecha_corte, estado)')
+          .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, pago_comision_id, ventas!inner(folio, status), productos(nombre), vendedores:profiles!vendedor_id(nombre), pago_comisiones(fecha_corte, estado)')
           .eq('empresa_id', empresa!.id)
+          .neq('ventas.status', 'cancelado')
           .order('fecha_venta', { ascending: false });
         if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
         if (statusFilter === 'pendientes') q = q.eq('pagada', false);

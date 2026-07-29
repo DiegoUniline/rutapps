@@ -110,11 +110,11 @@ export function useVentaDetalle() {
     enabled: !!clienteId && !!id, networkMode: 'always',
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from('ventas').select('saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!);
+        const { data, error } = await supabase.from('ventas').select('saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!).in('status', ['borrador', 'confirmado', 'entregado', 'facturado']);
         if (error) throw error; return (data ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
       } catch {
         return (await ventasLocalesDelCliente())
-          .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.id !== id)
+          .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.id !== id && ['borrador', 'confirmado', 'entregado', 'facturado'].includes(v.status))
           .reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
       }
     },
