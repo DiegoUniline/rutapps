@@ -164,8 +164,6 @@ const div = '-'.repeat(COLS);
 
 export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
   const { empresa, folio, fecha, clienteNombre, clienteRfc, clienteTelefono, clienteDireccion, vendedorNombre, vendedorTelefono, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos, devoluciones } = data;
-  const showTax = opts?.showTax ?? (empresa.ticket_campos?.impuestos !== false);
-
   const sym = getCurrencyConfig(empresa.moneda).symbol;
   // ASCII-only formatter — no multi-byte locale chars
   const fmt = (n: number) => {
@@ -297,11 +295,10 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
         : '';
       // <s> = tachado; va en linea propia (sin pad) para no romper columnas.
       add(`  <s>${antes}</s>${etiqueta}`);
-    } else {
-      const detParts = [`  ${fmt(l.precio)}c/u`];
-      if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA${fmt(l.iva_monto!)}`);
-      if ((l.precio_sugerido_publico ?? 0) > 0) detParts.push(`Sug ${fmt(l.precio_sugerido_publico!)}`);
-      for (const line of wrapText(detParts.join(' '), COLS)) add(line);
+    } else if ((l.precio_sugerido_publico ?? 0) > 0) {
+      // Se quitó el precio unitario/base: en el ticket cada renglón muestra solo
+      // su precio final (con impuestos). Se conserva el precio sugerido si aplica.
+      for (const line of wrapText(`  Sug ${fmt(l.precio_sugerido_publico!)}`, COLS)) add(line);
     }
   }
   add(div);
