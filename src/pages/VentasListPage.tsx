@@ -94,15 +94,33 @@ export default function VentasListPage() {
   const FILTER_OPTIONS = useMemo(() => {
     const vendedorOpts = (vendedoresList ?? []).map((v: any) => ({ value: v.id, label: v.nombre }));
     const clienteOpts = (clientesList ?? []).map(c => ({ value: c.id, label: c.nombre }));
-    return [...STATIC_FILTER_OPTIONS, { key: 'vendedor', label: 'Vendedor', options: vendedorOpts }, { key: 'cliente', label: 'Cliente', options: clienteOpts }];
+    return [...STATIC_FILTER_OPTIONS, { key: 'vendedor', label: 'Vendedor', options: vendedorOpts }, { key: 'cliente', label: 'Cliente', options: clienteOpts }, { key: 'promocion', label: 'Promoción', options: [{ value: 'si', label: 'Con promoción' }, { value: 'no', label: 'Sin promoción' }] }];
   }, [vendedoresList, clientesList]);
 
   const ventasRaw = ventasData?.rows ?? [];
   const clienteFilter = filters.cliente;
+  // 'si' | 'no' — solo filtra si hay una única opción seleccionada (ambas = todas).
+  const promocionFilter = filters.promocion?.length === 1 ? filters.promocion[0] : undefined;
+
+  // venta_ids de la página que tienen promoción aplicada (señal: promocion_aplicada).
+  const pageVentaIds = useMemo(() => ventasRaw.map((v: any) => v.id), [ventasRaw]);
+  const { data: promoVentaIds } = useQuery({
+    queryKey: ['ventas-con-promo', empresa?.id, pageVentaIds],
+    enabled: !!empresa?.id && !!promocionFilter && pageVentaIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from('promocion_aplicada').select('venta_id').in('venta_id', pageVentaIds);
+      return new Set((data ?? []).map((r: any) => r.venta_id as string));
+    },
+  });
+
   const ventas = useMemo(() => {
-    if (!clienteFilter || clienteFilter.length === 0) return ventasRaw;
-    return ventasRaw.filter(v => clienteFilter.includes(v.cliente_id ?? ''));
-  }, [ventasRaw, clienteFilter]);
+    let rows = ventasRaw;
+    if (clienteFilter && clienteFilter.length > 0) rows = rows.filter(v => clienteFilter.includes(v.cliente_id ?? ''));
+    if (promocionFilter && promoVentaIds) {
+      rows = rows.filter(v => promocionFilter === 'si' ? promoVentaIds.has(v.id) : !promoVentaIds.has(v.id));
+    }
+    return rows;
+  }, [ventasRaw, clienteFilter, promocionFilter, promoVentaIds]);
 
   // Active dataset depending on view mode
   const isProductView = viewMode === 'productos';
@@ -110,7 +128,7 @@ export default function VentasListPage() {
 
   const total = isProductView
     ? (lineasData?.total ?? 0)
-    : (clienteFilter && clienteFilter.length > 0) ? ventas.length : (ventasData?.total ?? 0);
+    : ((clienteFilter && clienteFilter.length > 0) || promocionFilter) ? ventas.length : (ventasData?.total ?? 0);
   const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
   const to = Math.min(page * numericPageSize, total);
   const totalPages = numericPageSize > 0 ? Math.max(1, Math.ceil(total / numericPageSize)) : 1;
