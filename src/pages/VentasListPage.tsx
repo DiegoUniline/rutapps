@@ -85,8 +85,11 @@ export default function VentasListPage() {
   const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
   const condicionFilter = filters.condicion_pago?.length ? filters.condicion_pago.join(',') : 'todos';
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
+  // 'si' | 'no' — solo filtra si hay una única opción seleccionada (ambas = todas).
+  const promocionFilter = (filters.promocion?.length === 1 ? filters.promocion[0] : undefined) as 'si' | 'no' | undefined;
 
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy);
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter);
+
   const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy);
   const { data: clientesList } = useClientes();
   const { data: vendedoresList } = useVendedoresForFilter();
