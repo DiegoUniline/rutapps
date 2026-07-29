@@ -4,6 +4,7 @@
  */
 import { getTicketTotalsSummary, MOTIVO_DEVOLUCION_LABELS, ACCION_DEVOLUCION_LABELS, type TicketData } from './ticketHtml';
 import { getCurrencyConfig } from './currency';
+import { computeResumenFromLineas } from './ventaResumen';
 
 const COLS_58 = 32;
 const COLS_80 = 48;
@@ -326,34 +327,47 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   }
   ln(divider(W));
 
-  // ── PROMOCIONES APLICADAS (bloque unificado) ──
-  // Excluye las promos ya mostradas como GRATIS en su linea (evita duplicar).
-  const promosAplicadas = promosConDesc.filter(p => !(p.producto_id && productosGratis.has(p.producto_id)));
-  if (showPromociones && promosAplicadas.length > 0) {
-    add(BOLD_ON);
-    ln('PROMOCIONES APLICADAS');
-    add(BOLD_OFF);
-    for (const p of promosAplicadas) {
-      ln(row(`  ${clean(p.descripcion)}`, `-${fmt(p.descuento)}`, W));
-    }
-    ln(divider(W));
-  }
-
-  // ── TOTALES ──
+  // ── TOTALES (desglose fiscal reconstruido, igual que la lista y el detalle) ──
   const summary = getTicketTotalsSummary(data);
-  // Sub total con impuestos INCLUIDOS (cuadra con las lineas en bruto y el Saldo).
-  const grossSubtotal = (Number(data.total) || 0) + summary.descuentoTotal;
-  ln(row('Sub total', fmt(grossSubtotal), W));
-  if (showDescuentos && summary.descuentoTotal > 0) ln(row('Descuentos', `-${fmt(summary.descuentoTotal)}`, W));
+  const resumen = computeResumenFromLineas(data.lineas.map(l => ({
+    subtotal: undefined,
+    descuento_pct: l.descuento_pct,
+    precio_unitario: l.precio,
+    cantidad: l.cantidad,
+    iva_monto: l.iva_monto,
+    ieps_monto: l.ieps_monto,
+    total: l.total,
+  })));
+  ln(row('Subtotal sin impuestos', fmt(resumen.sinImpuestos), W));
+  if (showDescuentos && resumen.descuento > 0.005) ln(row('Descuentos/promos', `-${fmt(resumen.descuento)}`, W));
+  ln(row('Subtotal gravable', fmt(resumen.gravable), W));
   if (showImpuestos) {
-    if ((data.ieps ?? 0) > 0) ln(row('  IEPS incluido', fmt(data.ieps!), W));
-    if ((data.iva ?? 0) > 0) ln(row('  IVA incluido', fmt(data.iva!), W));
+    if (resumen.iva > 0.005 || resumen.ieps > 0.005) {
+      if (resumen.iva > 0.005) ln(row('IVA', fmt(resumen.iva), W));
+      if (resumen.ieps > 0.005) ln(row('IEPS', fmt(resumen.ieps), W));
+    } else {
+      ln(row('Impuestos', fmt(0), W));
+    }
   }
   ln(divider(W));
   add(BOLD_ON);
+  ln(row('Total', fmt(data.total), W));
   ln(row('Total pagado', fmt(summary.totalPagado), W));
   add(BOLD_OFF);
   ln(row('Saldo', fmt(summary.saldo), W));
+
+  // ── PROMOCIONES APLICADAS (al final, como la foto) ──
+  const promosAplicadas = promosConDesc.filter(p => !(p.producto_id && productosGratis.has(p.producto_id)));
+  if (showPromociones && (promosAplicadas.length > 0 || productosGratis.size > 0)) {
+    ln(divider(W));
+    add(BOLD_ON);
+    ln('PROMOCIONES APLICADAS');
+    add(BOLD_OFF);
+    for (const p of promosConDesc) {
+      ln(row(`  ${clean(p.descripcion)}`, `-${fmt(p.descuento)}`, W));
+    }
+    for (const x of wrap('(i) Los productos gratis se registran como descuento para mantener trazabilidad.', W)) ln(x);
+  }
 
   if (showRecibidoCambio && data.montoRecibido && data.montoRecibido > 0) {
     ln(row('Recibido', fmt(data.montoRecibido), W));
