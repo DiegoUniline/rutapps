@@ -25,7 +25,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!cfg) return json({ error: "Tienda no disponible" }, 404);
 
-    const normalEmail = String(email).toLowerCase().trim();
+    // Normaliza: minúsculas, sin espacios, y corrige comillas tipográficas usadas por error en vez de "@"
+    let normalEmail = String(email).toLowerCase().trim().replace(/\s+/g, "");
+    if (!normalEmail.includes("@")) {
+      normalEmail = normalEmail.replace(/[“”‘’"'`]/g, "@");
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalEmail)) {
+      return json({ error: "El correo no tiene un formato válido. Revisa que esté escrito como nombre@dominio.com" }, 400);
+    }
 
     let { data: tc } = await supabase
       .from("tienda_clientes")
@@ -43,7 +50,12 @@ Deno.serve(async (req) => {
         .ilike("email", normalEmail)
         .limit(1)
         .maybeSingle();
-      if (!cli) return json({ error: "Correo o contraseña incorrectos" }, 401);
+      if (!cli) {
+        return json({
+          error: "Este correo no está registrado en esta tienda. Pide a tu proveedor que registre tu correo o crea una cuenta nueva.",
+          code: "email_no_existe",
+        }, 404);
+      }
 
       const { data: blocked } = await supabase
         .from("tienda_clientes")
@@ -52,11 +64,14 @@ Deno.serve(async (req) => {
         .eq("cliente_id", cli.id)
         .maybeSingle();
       if (blocked && (blocked.verificado === false || blocked.password_hash === BLOCKED_HASH)) {
-        return json({ error: "Tu acceso a esta tienda fue bloqueado. Contacta al proveedor." }, 403);
+        return json({ error: "Tu acceso a esta tienda fue bloqueado. Contacta al proveedor.", code: "bloqueado" }, 403);
       }
 
       if (password !== DEFAULT_PASSWORD) {
-        return json({ error: "Correo o contraseña incorrectos" }, 401);
+        return json({
+          error: "Contraseña incorrecta. Es tu primer ingreso: usa la contraseña inicial 123456 y luego cámbiala.",
+          code: "password_inicial",
+        }, 401);
       }
 
       const password_hash = await hashPassword(DEFAULT_PASSWORD);
@@ -77,11 +92,17 @@ Deno.serve(async (req) => {
     }
 
     if (tc.verificado === false || tc.password_hash === BLOCKED_HASH) {
-      return json({ error: "Tu acceso a esta tienda fue bloqueado. Contacta al proveedor." }, 403);
+      return json({ error: "Tu acceso a esta tienda fue bloqueado. Contacta al proveedor.", code: "bloqueado" }, 403);
     }
 
     const ok = await verifyPassword(password, tc.password_hash);
-    if (!ok) return json({ error: "Correo o contraseña incorrectos" }, 401);
+    if (!ok) {
+      return json({
+        error: "Contraseña incorrecta. El correo sí existe en esta tienda; verifica tu contraseña o pide a tu proveedor que la restablezca.",
+        code: "password_incorrecta",
+      }, 401);
+    }
+
 
     await supabase.from("tienda_clientes").update({ ultimo_login: new Date().toISOString() }).eq("id", tc.id);
 
