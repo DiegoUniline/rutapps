@@ -77,6 +77,7 @@ export const VENTAS_TABLE_COLUMNS: { key: string; label: string; required?: bool
   { key: 'descuento', label: 'Descuento', defaultVisible: true },
   { key: 'iva', label: 'IVA', defaultVisible: false },
   { key: 'total', label: 'Total', required: true, defaultVisible: true },
+  { key: 'pagado', label: 'Pagado', defaultVisible: true },
   { key: 'saldo', label: 'Saldo', defaultVisible: true },
   { key: 'status', label: 'Estado', required: true, defaultVisible: true },
 ];
