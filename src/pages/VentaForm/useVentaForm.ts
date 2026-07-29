@@ -734,7 +734,7 @@ export function useVentaForm() {
       }
 
       if (isNew && autoConfirm) {
-        const saldo = finalTotals.total;
+        const saldo = headerTotals.total;
         await saveVenta.mutateAsync({ id: ventaId, status: 'confirmado', saldo_pendiente: saldo } as any);
         toast.success('Venta confirmada');
       } else { toast.success('Venta guardada'); }
