@@ -143,6 +143,18 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   </td>
                 )}
 
+                {v('pagado') && (() => {
+                  const pagado = Math.max(0, totalEfectivoVenta(row) - saldoRealVenta(row));
+                  return (
+                    <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+                      {pagado > 0 ? (
+                        <span className="text-success font-medium">{fmt(pagado)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">$0.00</span>
+                      )}
+                    </td>
+                  );
+                })()}
                 {v('saldo') && (() => {
                   const saldo = saldoRealVenta(row);
                   return (
