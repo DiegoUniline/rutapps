@@ -6,6 +6,7 @@
  * columns without flexbox issues.
  */
 import { getCurrencyConfig } from '@/lib/currency';
+import { computeResumenFromLineas } from '@/lib/ventaResumen';
 
 export interface TicketEmpresa {
   nombre: string;
@@ -305,32 +306,50 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
   add(div);
 
-  // ── PROMOCIONES APLICADAS (bloque unificado) ──
-  // Excluye las promos ya mostradas como GRATIS en su linea (evita duplicar).
-  const promosAplicadas = promosConDesc.filter(p => !(p.producto_id && productosGratis.has(p.producto_id)));
-  if (showPromociones && promosAplicadas.length > 0) {
-    add('PROMOCIONES APLICADAS');
-    for (const p of promosAplicadas) {
-      add(pad(`  ${p.descripcion}`, `-${fmt(p.descuento)}`));
-    }
-    add(div);
-  }
-
   const summary = getTicketTotalsSummary(data);
-  // Sub total con impuestos INCLUIDOS: cuadra con los importes de las lineas
-  // (siempre en bruto) y con el Saldo. El impuesto se muestra como "incluido"
-  // (informativo), no como un cargo que se suma aparte.
-  const grossSubtotal = (Number(total) || 0) + summary.descuentoTotal;
+  // Desglose fiscal reconstruido desde las lineas (mismo que la lista y el
+  // detalle): Subtotal sin impuestos -> Descuentos/promos -> Subtotal gravable
+  // -> IVA/IEPS por separado -> Total. Respeta el toggle de impuestos.
+  const resumen = computeResumenFromLineas(lineas.map(l => ({
+    subtotal: undefined,
+    descuento_pct: l.descuento_pct,
+    precio_unitario: l.precio,
+    cantidad: l.cantidad,
+    iva_monto: l.iva_monto,
+    ieps_monto: l.ieps_monto,
+    total: l.total,
+  })));
   add('');
-  add(pad('Sub total', fmt(grossSubtotal)));
-  if (showDescuentos && summary.descuentoTotal > 0) add(pad('Descuentos', `-${fmt(summary.descuentoTotal)}`));
+  add(pad('Subtotal sin impuestos', fmt(resumen.sinImpuestos)));
+  if (showDescuentos && resumen.descuento > 0.005) add(pad('Descuentos/promos', `-${fmt(resumen.descuento)}`));
+  add(pad('Subtotal gravable', fmt(resumen.gravable)));
   if (showImpuestos) {
-    if ((ieps ?? 0) > 0) add(pad('  IEPS incluido', fmt(ieps)));
-    if ((iva ?? 0) > 0) add(pad('  IVA incluido', fmt(iva)));
+    if (resumen.iva > 0.005 || resumen.ieps > 0.005) {
+      if (resumen.iva > 0.005) add(pad('IVA', fmt(resumen.iva)));
+      if (resumen.ieps > 0.005) add(pad('IEPS', fmt(resumen.ieps)));
+    } else {
+      add(pad('Impuestos', fmt(0)));
+    }
   }
   add(div);
+  add(pad('Total', fmt(total)));
   add(pad('Total pagado', fmt(summary.totalPagado)));
   add(pad('Saldo', fmt(summary.saldo)));
+
+  // ── PROMOCIONES APLICADAS (al final, como la foto) ──
+  // Excluye las promos ya mostradas como GRATIS en su linea (evita duplicar).
+  const promosAplicadas = promosConDesc.filter(p => !(p.producto_id && productosGratis.has(p.producto_id)));
+  const hayGratis = productosGratis.size > 0 || promosAplicadas.length > 0;
+  if (showPromociones && (promosAplicadas.length > 0 || productosGratis.size > 0)) {
+    add(div);
+    add('PROMOCIONES APLICADAS');
+    for (const p of promosConDesc) {
+      add(pad(`  ${p.descripcion}`.substring(0, COLS - fmt(p.descuento).length - 2), `-${fmt(p.descuento)}`));
+    }
+  }
+  if (showPromociones && hayGratis) {
+    for (const l of wrapText('(i) Los productos gratis se registran como descuento para mantener trazabilidad.', COLS)) add(l);
+  }
 
   if (showRecibidoCambio && montoRecibido != null && montoRecibido > 0) {
     add(pad('Recibido', fmt(montoRecibido)));

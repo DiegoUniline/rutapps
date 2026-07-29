@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate } from '@/lib/utils';
 import { getNombreTicket } from '@/lib/productoNombres';
+import { computeResumenFromLineas } from '@/lib/ventaResumen';
 
 interface DevolucionTicketItem {
   nombre: string;
@@ -103,6 +104,17 @@ export default function TicketVenta(props: TicketVentaProps) {
 
   const { fmt } = useCurrency();
 
+  // Desglose fiscal reconstruido desde las líneas (igual que la lista y el detalle).
+  const resumen = computeResumenFromLineas(lineas.map(l => ({
+    subtotal: l.subtotal,
+    descuento_pct: l.descuento_pct,
+    precio_unitario: l.precio,
+    cantidad: l.cantidad,
+    iva_monto: l.iva_monto,
+    ieps_monto: l.ieps_monto,
+    total: l.total,
+  })));
+
   const ticketRef = useRef<HTMLDivElement>(null);
   // 'ambos' = producto + totales, 'totales' = solo totales, 'ninguno' = sin impuestos
   const [taxMode, setTaxMode] = useState<'ambos' | 'totales' | 'ninguno'>('ambos');
@@ -182,11 +194,13 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
         return `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}${taxes ? ` [${taxes}]` : ''}`;
       }),
       '─'.repeat(30),
-      `Sub total: ${fmt(total + summary.descuentos)}`,
-      ...(summary.descuentos > 0 ? [`Descuentos: -${fmt(summary.descuentos)}`] : []),
-      ...((ieps ?? 0) > 0 ? [`IEPS incluido: ${fmt(ieps)}`] : []),
-      ...((iva ?? 0) > 0 ? [`IVA incluido: ${fmt(iva)}`] : []),
-      `Total pagado: ${fmt(summary.totalPagado)}`,
+      `Subtotal sin impuestos: ${fmt(resumen.sinImpuestos)}`,
+      ...(resumen.descuento > 0.005 ? [`Descuentos / promos: -${fmt(resumen.descuento)}`] : []),
+      `Subtotal gravable: ${fmt(resumen.gravable)}`,
+      ...(resumen.iva > 0.005 ? [`IVA: ${fmt(resumen.iva)}`] : []),
+      ...(resumen.ieps > 0.005 ? [`IEPS: ${fmt(resumen.ieps)}`] : []),
+      `Total: ${fmt(total)}`,
+      `Pagado: ${fmt(summary.totalPagado)}`,
       `Saldo: ${fmt(summary.saldo)}`,
       ...(devoluciones.length > 0 ? [
         '─'.repeat(30),
@@ -387,32 +401,40 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             {(() => {
               return (
             <div className="px-5 py-2 space-y-0.5">
-              {/* Sub total con impuestos INCLUIDOS: cuadra con las lineas (bruto) y el Saldo. */}
+              {/* Desglose: Subtotal sin impuestos → Descuentos → Subtotal gravable → IVA/IEPS → Total */}
               <div className="tk-tot-row flex justify-between text-[10px]">
-                <span className="lbl text-muted-foreground">Sub total</span>
-                <span className="val text-foreground tabular-nums">{fmt(total + summary.descuentos)}</span>
+                <span className="lbl text-muted-foreground">Subtotal sin impuestos</span>
+                <span className="val text-foreground tabular-nums">{fmt(resumen.sinImpuestos)}</span>
               </div>
-              {summary.descuentos > 0 && (
+              {resumen.descuento > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-primary font-semibold">Descuentos</span>
-                  <span className="val text-primary font-bold tabular-nums">-{fmt(summary.descuentos)}</span>
+                  <span className="lbl text-primary font-semibold">Descuentos / promos</span>
+                  <span className="val text-primary font-bold tabular-nums">-{fmt(resumen.descuento)}</span>
                 </div>
               )}
-              {taxMode !== 'ninguno' && (ieps ?? 0) > 0 && (
+              <div className="tk-tot-row flex justify-between text-[10px]">
+                <span className="lbl text-muted-foreground">Subtotal gravable</span>
+                <span className="val text-foreground tabular-nums">{fmt(resumen.gravable)}</span>
+              </div>
+              {taxMode !== 'ninguno' && resumen.iva > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-muted-foreground pl-2">IEPS incluido</span>
-                  <span className="val text-foreground tabular-nums">{fmt(ieps)}</span>
+                  <span className="lbl text-muted-foreground pl-2">IVA{resumen.ivaRate != null ? ` ${resumen.ivaRate}%` : ''}</span>
+                  <span className="val text-foreground tabular-nums">{fmt(resumen.iva)}</span>
                 </div>
               )}
-              {taxMode !== 'ninguno' && (iva ?? 0) > 0 && (
+              {taxMode !== 'ninguno' && resumen.ieps > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-muted-foreground pl-2">IVA incluido</span>
-                  <span className="val text-foreground tabular-nums">{fmt(iva)}</span>
+                  <span className="lbl text-muted-foreground pl-2">IEPS{resumen.iepsRate != null ? ` ${resumen.iepsRate}%` : ''}</span>
+                  <span className="val text-foreground tabular-nums">{fmt(resumen.ieps)}</span>
                 </div>
               )}
               <div className="tk-grand flex justify-between items-baseline pt-1.5 mt-1 border-t border-dashed border-border">
-                <span className="text-[12px] font-bold text-foreground">Total pagado</span>
-                <span className="text-[15px] font-bold text-primary tabular-nums">{fmt(summary.totalPagado)}</span>
+                <span className="text-[12px] font-bold text-foreground">Total</span>
+                <span className="text-[15px] font-bold text-primary tabular-nums">{fmt(total)}</span>
+              </div>
+              <div className="tk-tot-row flex justify-between text-[10px]">
+                <span className="lbl text-muted-foreground">Pagado</span>
+                <span className="val text-foreground tabular-nums">{fmt(summary.totalPagado)}</span>
               </div>
               <div className="tk-tot-row flex justify-between text-[10px]">
                 <span className="lbl text-muted-foreground">Saldo</span>
