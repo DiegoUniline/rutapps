@@ -4,10 +4,12 @@
 // exactamente igual en la lista y en el detalle (una sola fuente de verdad).
 //
 // Reglas:
-//  - Subtotal sin impuestos = Σ (precio × cantidad) en NETO, antes de descuentos.
-//    (venta_lineas.subtotal ya viene en neto y antes del descuento de línea.)
-//  - Descuentos/promociones = Σ (subtotal × descuento_pct) — la línea gratis
-//    (100%) queda capturada aquí, por eso el valor es NETO (sin impuesto).
+//  - base de línea = subtotal neto guardado; si la línea quedó en $0 (gratis
+//    neteada) pero tiene precio, se reconstruye desde precio_unitario × cantidad.
+//  - Subtotal sin impuestos = Σ base de línea (NETO, antes de descuentos).
+//  - Descuentos/promociones = descuento de línea (subtotal × descuento_pct) y,
+//    además, las líneas regaladas (precio > 0 pero total $0) que NO traen el
+//    descuento en descuento_pct — así el "gratis" SIEMPRE aparece como descuento.
 //  - Subtotal gravable = sin impuestos − descuentos.
 //  - IVA / IEPS = Σ de cada monto POR SEPARADO, con su tasa real derivada de
 //    la base que efectivamente los causa.
@@ -16,6 +18,8 @@
 export interface VentaLineaResumen {
   subtotal?: number | null;
   descuento_pct?: number | null;
+  precio_unitario?: number | null;
+  cantidad?: number | null;
   iva_monto?: number | null;
   ieps_monto?: number | null;
   total?: number | null;
@@ -46,12 +50,27 @@ export function computeResumenFromLineas(lineas: VentaLineaResumen[] | null | un
   for (const l of lineas ?? []) {
     const sub = Number(l.subtotal) || 0;
     const dpct = Number(l.descuento_pct) || 0;
-    const lineDesc = sub * (dpct / 100);
-    const neto = sub - lineDesc;
+    const pu = Number(l.precio_unitario) || 0;
+    const cant = Number(l.cantidad) || 0;
+    const tot = Number(l.total) || 0;
     const li = Number(l.iva_monto) || 0;
     const le = Number(l.ieps_monto) || 0;
 
-    sinImpuestos += sub;
+    // Base neta de la línea antes de descuento. Si el subtotal guardado quedó en
+    // $0 (línea gratis neteada), se reconstruye desde precio × cantidad para que
+    // el valor regalado no desaparezca del subtotal.
+    const base = sub > 0.005 ? sub : pu * cant;
+
+    // Descuento de la línea: primero el porcentaje; si no hay pero la línea salió
+    // en $0 con precio > 0, es un regalo → todo el valor de la base es descuento.
+    let lineDesc = sub * (dpct / 100);
+    if (lineDesc < 0.005 && tot < 0.005 && base > 0.005) {
+      lineDesc = base;
+    }
+
+    const neto = base - lineDesc;
+
+    sinImpuestos += base;
     descuento += lineDesc;
     iva += li;
     ieps += le;

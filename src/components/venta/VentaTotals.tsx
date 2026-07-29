@@ -41,7 +41,7 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
   const pagadoAmt = saldoPendiente != null ? Math.max(0, (total || 0) - saldoPendiente) : null;
 
   return (
-    <div className="flex justify-end pt-2 sticky bottom-0 bg-card pb-2">
+    <div className="flex justify-end pt-2 max-lg:sticky max-lg:bottom-0 lg:sticky lg:top-4 bg-card pb-2">
       <div className={cn("bg-accent rounded-md p-3 space-y-1.5 text-[13px]", isMobile ? "w-full" : "w-80")}>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal sin impuestos</span>

@@ -67,56 +67,62 @@ export function VentaLineasTab(props: Props) {
 
 
   return (
-    <div className="p-3 sm:p-4 space-y-3">
-      {isMobile ? (
-        <div className="space-y-2">
-          {lineas.map((l, idx) => (
-            <VentaLineaMobile key={idx} idx={idx} line={l} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} />
-          ))}
-        </div>
-      ) : (
-        <div>
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="border-b border-table-border text-left">
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{cerradoSnapshot?.lineas?.length ? 'Pedido / Entregado' : 'Cantidad'}</th>
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center hidden md:table-cell">Unidad</th>
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio</th>
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-center hidden md:table-cell">Impuestos</th>
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Desc %</th>
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 hidden md:table-cell">Lote</th>
-                <th className="py-2 px-2 w-8"></th>
-              </tr>
-            </thead>
-            <tbody>
+    <div className="p-3 sm:p-4">
+      {/* Tabla de líneas a la IZQUIERDA, Resumen a la DERECHA (en desktop). */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start">
+        <div className="space-y-3 min-w-0">
+          {isMobile ? (
+            <div className="space-y-2">
               {lineas.map((l, idx) => (
-                <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} />
+                <VentaLineaMobile key={idx} idx={idx} line={l} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} />
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-table-border text-left">
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{cerradoSnapshot?.lineas?.length ? 'Pedido / Entregado' : 'Cantidad'}</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center hidden md:table-cell">Unidad</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-center hidden md:table-cell">Impuestos</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Desc %</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 hidden md:table-cell">Lote</th>
+                    <th className="py-2 px-2 w-8"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineas.map((l, idx) => (
+                    <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-      {!readOnly && (
-        <div className="flex items-center justify-between">
-          <button onClick={onAddLine} className="btn-odoo-secondary text-xs">
-            <Plus className="h-3 w-3" /> Agregar producto
-          </button>
-          {setSinImpuestos && !readOnlyForm && (
-            <button onClick={() => setSinImpuestos(!sinImpuestos)} className={cn("flex items-center gap-2 rounded-md px-3 py-1.5 text-[12px] font-medium transition-all border", sinImpuestos ? "bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300" : "bg-accent/50 border-border/40 text-muted-foreground")}>
-              <ReceiptText className="h-3.5 w-3.5" />
-              Sin impuestos
-              <div className={cn("w-8 h-4 rounded-full relative transition-colors", sinImpuestos ? "bg-amber-500" : "bg-border")}>
-                <div className={cn("absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform", sinImpuestos ? "translate-x-4" : "translate-x-0.5")} />
-              </div>
-            </button>
+          {!readOnly && (
+            <div className="flex items-center justify-between">
+              <button onClick={onAddLine} className="btn-odoo-secondary text-xs">
+                <Plus className="h-3 w-3" /> Agregar producto
+              </button>
+              {setSinImpuestos && !readOnlyForm && (
+                <button onClick={() => setSinImpuestos(!sinImpuestos)} className={cn("flex items-center gap-2 rounded-md px-3 py-1.5 text-[12px] font-medium transition-all border", sinImpuestos ? "bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300" : "bg-accent/50 border-border/40 text-muted-foreground")}>
+                  <ReceiptText className="h-3.5 w-3.5" />
+                  Sin impuestos
+                  <div className={cn("w-8 h-4 rounded-full relative transition-colors", sinImpuestos ? "bg-amber-500" : "bg-border")}>
+                    <div className={cn("absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform", sinImpuestos ? "translate-x-4" : "translate-x-0.5")} />
+                  </div>
+                </button>
+              )}
+            </div>
           )}
         </div>
-      )}
-      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} currencyCode={currencyCode} />
+
+        <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} currencyCode={currencyCode} />
+      </div>
     </div>
   );
 }
