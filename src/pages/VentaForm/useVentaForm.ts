@@ -646,16 +646,14 @@ export function useVentaForm() {
         }
       }
 
-      const payload = { ...form, ...finalTotals, vendedor_id: vendedorId };
-      const saved = await saveVenta.mutateAsync(payload as any);
-      const ventaId = saved.id || form.id;
-      const linePromises: Promise<any>[] = [];
-      const lineProductoIds: string[] = [];
-      const lineTotalByProduct = new Map<string, number>();
       // Con la bandera activa, cada línea se guarda YA NETA de su promoción.
-      // `ventas.total` (y por tanto saldos y cobros) no cambia.
       const netearLineas = promoLineaHabilitado((empresa as any)?.licencia);
       const promoPendientePorProducto = new Map<string, number>(promoEffectiveByProduct);
+
+      // Pre-cálculo de líneas ANTES de guardar el encabezado: si la promoción
+      // ya viene descontada en la línea, el encabezado NO debe volver a restarla
+      // (eso provocaba un descuento doble en el total de la venta).
+      const preparadas: { producto_id: string; pricedLine: any; lineAmounts: ReturnType<typeof calculateSaleLineAmounts> }[] = [];
       for (const l of lineas) {
         if (!l.producto_id) continue;
         const pricedLine = applyEffectiveLinePricing(l, sinImpuestos) as any;
@@ -668,16 +666,48 @@ export function useVentaForm() {
             promoPendientePorProducto.set(l.producto_id, pend - aplicar);
           }
         }
-        const savedIvaPct = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
-        const savedIepsPct = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
+        preparadas.push({ producto_id: l.producto_id, pricedLine, lineAmounts });
+      }
+
+      const r2h = (n: number) => Math.round(n * 100) / 100;
+      let headerTotals: typeof finalTotals = finalTotals;
+      if (netearLineas) {
+        const sumSub = r2h(preparadas.reduce((s, p) => s + p.lineAmounts.subtotal, 0));
+        const sumIva = r2h(preparadas.reduce((s, p) => s + p.lineAmounts.iva, 0));
+        const sumIeps = r2h(preparadas.reduce((s, p) => s + p.lineAmounts.ieps, 0));
+        const sumTotalLineas = r2h(preparadas.reduce((s, p) => s + p.lineAmounts.total, 0));
+        const extraAmt = Number(finalTotals.descuento_extra_amt) || 0;
+        const promoAmt = Number(finalTotals.descuento_promo) || 0;
+        const manualDesc = r2h(Math.max(0, (Number(finalTotals.descuento_total) || 0) - promoAmt - extraAmt));
+        headerTotals = {
+          ...finalTotals,
+          subtotal: sumSub,
+          iva_total: sumIva,
+          ieps_total: sumIeps,
+          // La promoción ya está restada en las líneas: no se vuelve a restar aquí.
+          descuento_total: r2h(manualDesc + extraAmt),
+          descuento_promo: 0,
+          total: r2h(Math.max(0, sumTotalLineas - extraAmt)),
+        };
+      }
+
+      const payload = { ...form, ...headerTotals, vendedor_id: vendedorId };
+      const saved = await saveVenta.mutateAsync(payload as any);
+      const ventaId = saved.id || form.id;
+      const linePromises: Promise<any>[] = [];
+      const lineProductoIds: string[] = [];
+      const lineTotalByProduct = new Map<string, number>();
+      for (const { producto_id, pricedLine, lineAmounts } of preparadas) {
+        const savedIvaPct = sinImpuestos ? 0 : (Number(pricedLine.iva_pct) || 0);
+        const savedIepsPct = sinImpuestos ? 0 : (Number(pricedLine.ieps_pct) || 0);
         const linePayload = { ...pricedLine, venta_id: ventaId, subtotal: lineAmounts.subtotal, iva_pct: savedIvaPct, iva_monto: lineAmounts.iva, ieps_pct: savedIepsPct, ieps_monto: lineAmounts.ieps, total: lineAmounts.total };
         const clean = { ...linePayload } as any;
         delete clean.unidad_label;
         delete clean.impuestos_label;
         delete clean.productos;
         delete clean.unidades;
-        lineProductoIds.push(l.producto_id);
-        lineTotalByProduct.set(l.producto_id, (lineTotalByProduct.get(l.producto_id) ?? 0) + lineAmounts.total);
+        lineProductoIds.push(producto_id);
+        lineTotalByProduct.set(producto_id, (lineTotalByProduct.get(producto_id) ?? 0) + lineAmounts.total);
         linePromises.push(saveLinea.mutateAsync(clean));
       }
       const savedLines = await Promise.all(linePromises);
@@ -704,7 +734,7 @@ export function useVentaForm() {
       }
 
       if (isNew && autoConfirm) {
-        const saldo = finalTotals.total;
+        const saldo = headerTotals.total;
         await saveVenta.mutateAsync({ id: ventaId, status: 'confirmado', saldo_pendiente: saldo } as any);
         toast.success('Venta confirmada');
       } else { toast.success('Venta guardada'); }
