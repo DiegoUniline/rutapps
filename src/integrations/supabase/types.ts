@@ -7925,6 +7925,7 @@ export type Database = {
           paquetes: number | null
           precio_manual: boolean
           precio_unitario: number
+          precio_unitario_sin_redondeo: number | null
           presentacion_factor: number | null
           presentacion_id: string | null
           presentacion_nombre: string | null
@@ -7955,6 +7956,7 @@ export type Database = {
           paquetes?: number | null
           precio_manual?: boolean
           precio_unitario?: number
+          precio_unitario_sin_redondeo?: number | null
           presentacion_factor?: number | null
           presentacion_id?: string | null
           presentacion_nombre?: string | null
@@ -7985,6 +7987,7 @@ export type Database = {
           paquetes?: number | null
           precio_manual?: boolean
           precio_unitario?: number
+          precio_unitario_sin_redondeo?: number | null
           presentacion_factor?: number | null
           presentacion_id?: string | null
           presentacion_nombre?: string | null
@@ -8225,6 +8228,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ventas_descuadre_auditoria: {
+        Row: {
+          created_at: string
+          detalle: Json | null
+          diferencia: number | null
+          empresa_id: string | null
+          id: string
+          precio_esperado: number | null
+          precio_guardado: number | null
+          producto_id: string | null
+          tipo: string
+          venta_id: string | null
+          venta_linea_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detalle?: Json | null
+          diferencia?: number | null
+          empresa_id?: string | null
+          id?: string
+          precio_esperado?: number | null
+          precio_guardado?: number | null
+          producto_id?: string | null
+          tipo?: string
+          venta_id?: string | null
+          venta_linea_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detalle?: Json | null
+          diferencia?: number | null
+          empresa_id?: string | null
+          id?: string
+          precio_esperado?: number | null
+          precio_guardado?: number | null
+          producto_id?: string | null
+          tipo?: string
+          venta_id?: string | null
+          venta_linea_id?: string | null
+        }
+        Relationships: []
       }
       visitas: {
         Row: {
@@ -8942,6 +8987,10 @@ export type Database = {
       fn_disponible_almacen: {
         Args: { p_almacen_id: string; p_producto_id: string }
         Returns: number
+      }
+      fn_recalc_venta_header: {
+        Args: { p_venta_id: string }
+        Returns: undefined
       }
       fn_recalc_venta_saldo: {
         Args: { p_venta_id: string }
