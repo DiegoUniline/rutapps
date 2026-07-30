@@ -8,6 +8,9 @@ import type { VentaLinea } from '@/types';
 import { VentaLineaMobile } from './VentaLineaMobile';
 import { VentaLineaDesktop } from './VentaLineaDesktop';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useColumnPreferences } from '@/hooks/useColumnPreferences';
+import { ColumnVisibilityMenu } from '@/components/ColumnVisibilityMenu';
+import { VENTA_LINEAS_COLUMNS, VENTA_LINEAS_GROUP_ORDER, VENTA_LINEAS_DEFAULT_VISIBILITY, VENTA_LINEAS_PRESETS } from './ventaLineasColumns';
 
 interface Props {
   lineas: Partial<VentaLinea>[];
@@ -38,6 +41,11 @@ export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
   const { symbol } = useCurrency();
   const { readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults, currencyCode, cerradoSnapshot } = props;
+  const { visible: cols, toggleColumn, applyPreset, reset } = useColumnPreferences('venta_detalle_lineas', VENTA_LINEAS_DEFAULT_VISIBILITY);
+  // El selector de columnas aplica en el DETALLE (solo lectura). Al editar/crear
+  // se muestran las columnas estándar para no ocultar el editor de precios.
+  const effectiveCols = readOnly ? cols : VENTA_LINEAS_DEFAULT_VISIBILITY;
+  const showCol = (k: string) => effectiveCols[k] !== false;
 
   // If pedido is cerrado, scale each line by its delivered/ordered ratio so
   // Cantidad, Subtotal and Total reflect what was actually entregado.
@@ -78,31 +86,47 @@ export function VentaLineasTab(props: Props) {
               ))}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="border-b border-table-border text-left">
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{cerradoSnapshot?.lineas?.length ? 'Pedido / Entregado' : 'Cantidad'}</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center hidden md:table-cell">Unidad</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right hidden md:table-cell">IVA</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right hidden md:table-cell">IEPS</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-right">Desc man.</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right hidden md:table-cell">Desc promo</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 hidden md:table-cell">Lote</th>
-                    <th className="py-2 px-2 w-8"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineas.map((l, idx) => (
-                    <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {readOnly && (
+                <div className="flex justify-end">
+                  <ColumnVisibilityMenu
+                    columns={VENTA_LINEAS_COLUMNS}
+                    visible={cols}
+                    onToggle={toggleColumn}
+                    onApplyPreset={applyPreset}
+                    presets={VENTA_LINEAS_PRESETS}
+                    groupOrder={VENTA_LINEAS_GROUP_ORDER}
+                    onReset={reset}
+                  />
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="border-b border-table-border text-left">
+                      <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
+                      <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
+                      {showCol('cantidad') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{cerradoSnapshot?.lineas?.length ? 'Pedido / Entregado' : 'Cantidad'}</th>}
+                      {showCol('unidad') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center">Unidad</th>}
+                      {showCol('precioNeto') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio<span className="font-normal"> s/imp</span></th>}
+                      {showCol('precioBruto') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio<span className="font-normal"> c/imp</span></th>}
+                      {showCol('iva') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">IVA</th>}
+                      {showCol('ieps') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">IEPS</th>}
+                      {showCol('descMan') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-right">Desc man.</th>}
+                      {showCol('descPromo') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Desc promo</th>}
+                      <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
+                      {showCol('lote') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24">Lote</th>}
+                      <th className="py-2 px-2 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lineas.map((l, idx) => (
+                      <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} cols={effectiveCols} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           {!readOnly && (

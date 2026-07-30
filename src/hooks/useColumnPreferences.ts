@@ -56,6 +56,17 @@ export function useColumnPreferences(listKey: string, defaults: Record<string, b
     });
   }, [fullKey]);
 
+  /** Enciende exactamente las columnas de `onKeys` y apaga el resto (para presets/vistas). */
+  const applyPreset = useCallback((onKeys: string[]) => {
+    const on = new Set(onKeys);
+    setVisible(prev => {
+      const next: Record<string, boolean> = {};
+      for (const k of Object.keys(prev)) next[k] = on.has(k);
+      save(fullKey, next);
+      return next;
+    });
+  }, [fullKey]);
+
   const reset = useCallback(() => {
     setVisible(defaults);
     save(fullKey, defaults);
@@ -63,5 +74,5 @@ export function useColumnPreferences(listKey: string, defaults: Record<string, b
 
   const isVisible = useCallback((key: string) => visible[key] ?? false, [visible]);
 
-  return { visible, isVisible, toggleColumn, setAll, reset };
+  return { visible, isVisible, toggleColumn, setAll, applyPreset, reset };
 }
