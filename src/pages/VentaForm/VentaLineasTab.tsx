@@ -68,8 +68,8 @@ export function VentaLineasTab(props: Props) {
 
   return (
     <div className="p-3 sm:p-4">
-      {/* Tabla de líneas a la IZQUIERDA, Resumen a la DERECHA (en desktop). */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start">
+      {/* Tabla de líneas a lo ANCHO; la card de Resumen va DEBAJO de la tabla. */}
+      <div className="space-y-4">
         <div className="space-y-3 min-w-0">
           {isMobile ? (
             <div className="space-y-2">
@@ -87,8 +87,10 @@ export function VentaLineasTab(props: Props) {
                     <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{cerradoSnapshot?.lineas?.length ? 'Pedido / Entregado' : 'Cantidad'}</th>
                     <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center hidden md:table-cell">Unidad</th>
                     <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-center hidden md:table-cell">Impuestos</th>
-                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Desc %</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right hidden md:table-cell">IVA</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right hidden md:table-cell">IEPS</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-right">Desc man.</th>
+                    <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right hidden md:table-cell">Desc promo</th>
                     <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
                     <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 hidden md:table-cell">Lote</th>
                     <th className="py-2 px-2 w-8"></th>
@@ -121,7 +123,9 @@ export function VentaLineasTab(props: Props) {
           )}
         </div>
 
-        <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} currencyCode={currencyCode} />
+        <div className="lg:w-80 lg:ml-auto">
+          <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} currencyCode={currencyCode} />
+        </div>
       </div>
     </div>
   );

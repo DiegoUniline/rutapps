@@ -70,14 +70,23 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       ? lineGratisQty >= (Number(l.cantidad) || 0) - 0.001
       : linePromoDesc > 0 && linePromoDesc >= (Number(displayLineTotal) || 0) - 0.01
   );
-  // Desc % efectivo mostrado en la columna (solo lectura): además del descuento
-  // manual (descuento_pct), incorpora la promoción prorrateada como % del BRUTO
-  // de la línea (neto mostrado + descuento de la promo). No cambia ningún dato
-  // guardado; una línea 100% regalada muestra 100%.
-  const promoDescPct = readOnly && linePromoDesc > 0
-    ? (lineEsGratis ? 100 : r2((linePromoDesc / ((Number(displayLineTotal) || 0) + linePromoDesc || 1)) * 100))
+  // Montos de impuesto mostrados por columna. En LECTURA se usan los montos
+  // GUARDADOS (ya netos de promoción) para no mezclar el impuesto pre-promoción
+  // recalculado con el total post-promoción; en edición se usan los recalculados
+  // en vivo.
+  const ivaShown = readOnly ? (Number(l.iva_monto) || 0) : iva;
+  const iepsShown = readOnly ? (Number(l.ieps_monto) || 0) : ieps;
+  // % de la promoción prorrateada, relativo al subtotal BRUTO (pre-promoción) de
+  // la línea. Se reconstruye desde montos guardados para que sea independiente de
+  // cómo se guardó el precio_unitario (bruto en escritorio, neto en ruta):
+  //   base neta post-promo = total − IVA − IEPS ; bruto = base neta + promoción.
+  const netBaseRO = readOnly
+    ? r2((Number(displayLineTotal) || 0) - ivaShown - iepsShown)
+    : base;
+  const grossBaseForPromo = r2(netBaseRO + linePromoDesc);
+  const promoDescPct = linePromoDesc > 0
+    ? (lineEsGratis ? 100 : (grossBaseForPromo > 0 ? r2((linePromoDesc / grossBaseForPromo) * 100) : 0))
     : 0;
-  const effectiveDescPct = r2(Math.min(100, inferredDesc + promoDescPct));
   const lineData = l as any;
   const unidadLabel = lineData.unidad_label
     || (l as any).unidades?.abreviatura
@@ -222,42 +231,60 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </div>
         )}
       </td>
-      <td className="py-1.5 px-2 text-center hidden md:table-cell">
-        {isEmpty ? '' : (
-          <div className="flex flex-col items-center gap-0.5">
-          <div className="inline-flex flex-wrap gap-1 justify-center">
+      {/* IVA (columna propia): en lectura el monto en $, en edición el chip para activar/quitar */}
+      <td className="py-1.5 px-2 text-right hidden md:table-cell">
+        {isEmpty ? '' : readOnly ? (
+          ivaShown > 0
+            ? <span className="text-[12px] tabular-nums">{money(ivaShown)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.iva_pct) || 0}%</span></span>
+            : <span className="text-muted-foreground text-[11px]">—</span>
+        ) : (
+          <div className="flex flex-col items-end gap-0.5">
             <button type="button" disabled={readOnly} onClick={handleIvaToggle}
               className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer", Number(l.iva_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-card text-muted-foreground line-through opacity-60")}
               title={Number(l.iva_pct) > 0 ? "Clic para quitar IVA" : "Clic para aplicar IVA"}>
               IVA {Number(l.iva_pct) > 0 ? `${l.iva_pct}%` : ''}
             </button>
-            {(() => {
-              const p = productosList?.find((x: any) => x.id === l.producto_id);
-              const prodHasIeps = !!p && (p.tiene_ieps || Number(p.ieps_pct ?? 0) > 0);
-              const showIeps = Number(l.ieps_pct) > 0 || prodHasIeps || impuestosLabel.includes('IEPS');
-              if (!showIeps) return null;
-              return (
-                <button type="button" disabled={readOnly} onClick={handleIepsToggle}
-                  className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer", Number(l.ieps_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-card text-muted-foreground line-through opacity-60")}
-                  title={Number(l.ieps_pct) > 0 ? "Clic para quitar IEPS" : "Clic para aplicar IEPS"}>
-                  IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}
-                </button>
-              );
-            })()}
-            {Number(l.iva_pct) === 0 && Number(l.ieps_pct) === 0 && !impuestosLabel.includes('IEPS') && <span className="text-muted-foreground text-[11px]">—</span>}
-          </div>
-          {(ieps > 0 || iva > 0) && (
-            <div className="text-[9px] text-muted-foreground leading-tight tabular-nums">
-              {ieps > 0 && <span className="block">IEPS {money(ieps)}</span>}
-              {iva > 0 && <span className="block">IVA {money(iva)}</span>}
-            </div>
-          )}
+            {ivaShown > 0 && <span className="text-[9px] text-muted-foreground tabular-nums">{money(ivaShown)}</span>}
           </div>
         )}
       </td>
+      {/* IEPS (columna propia): en lectura el monto en $, en edición el chip */}
+      <td className="py-1.5 px-2 text-right hidden md:table-cell">
+        {isEmpty ? '' : (() => {
+          if (readOnly) {
+            return iepsShown > 0
+              ? <span className="text-[12px] tabular-nums">{money(iepsShown)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.ieps_pct) || 0}%</span></span>
+              : <span className="text-muted-foreground text-[11px]">—</span>;
+          }
+          const p = productosList?.find((x: any) => x.id === l.producto_id);
+          const prodHasIeps = !!p && (p.tiene_ieps || Number(p.ieps_pct ?? 0) > 0);
+          const showIeps = Number(l.ieps_pct) > 0 || prodHasIeps || impuestosLabel.includes('IEPS');
+          if (!showIeps) return <span className="text-muted-foreground text-[11px]">—</span>;
+          return (
+            <div className="flex flex-col items-end gap-0.5">
+              <button type="button" disabled={readOnly} onClick={handleIepsToggle}
+                className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer", Number(l.ieps_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-card text-muted-foreground line-through opacity-60")}
+                title={Number(l.ieps_pct) > 0 ? "Clic para quitar IEPS" : "Clic para aplicar IEPS"}>
+                IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}
+              </button>
+              {iepsShown > 0 && <span className="text-[9px] text-muted-foreground tabular-nums">{money(iepsShown)}</span>}
+            </div>
+          );
+        })()}
+      </td>
+      {/* Descuento MANUAL (descuento_pct) */}
       <td className="py-1 px-2">
-        {(readOnly || !canApplyDiscount) ? <span className="text-[12px] block text-right">{effectiveDescPct > 0 ? `${Number(effectiveDescPct.toFixed(2))}%` : '0%'}</span>
+        {(readOnly || !canApplyDiscount) ? <span className="text-[12px] block text-right">{inferredDesc > 0 ? `${Number(inferredDesc.toFixed(2))}%` : '—'}</span>
         : <input ref={el => setCellRef(idx, 3, el)} type="number" inputMode="decimal" className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.descuento_pct ?? ''} onChange={e => onUpdateLine(idx, 'descuento_pct', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 3)} onFocus={e => e.target.select()} min="0" max="100" step="0.1" />}
+      </td>
+      {/* Descuento por PROMOCIÓN (informativo, no editable) */}
+      <td className="py-1.5 px-2 text-right hidden md:table-cell">
+        {isEmpty ? '' : linePromoDesc > 0 ? (
+          <span className="text-[11px] text-primary font-medium tabular-nums">
+            −{money(linePromoDesc)}
+            {promoDescPct > 0 && <span className="text-muted-foreground text-[9px] ml-1">{Number(promoDescPct.toFixed(2))}%</span>}
+          </span>
+        ) : <span className="text-muted-foreground text-[11px]">—</span>}
       </td>
       <td className="py-1.5 px-2 text-right font-medium">
         {isEmpty ? '' : lineEsGratis ? (
@@ -268,7 +295,15 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         ) : (
           <div>
             <span>{money(displayLineTotal)}</span>
-            {(discount > 0 || iva > 0 || ieps > 0) && <span className="block text-[10px] text-muted-foreground font-normal">base: {money(base)}</span>}
+            {(() => {
+              // Base gravable mostrada bajo el total. En lectura se usa la base
+              // NETA post-promoción (total − IVA − IEPS) para que cuadre con los
+              // montos guardados y no muestre la base pre-promoción recalculada.
+              const baseShown = readOnly ? netBaseRO : base;
+              return (ivaShown > 0 || iepsShown > 0 || discount > 0 || linePromoDesc > 0)
+                ? <span className="block text-[10px] text-muted-foreground font-normal">base: {money(baseShown)}</span>
+                : null;
+            })()}
           </div>
         )}
       </td>
