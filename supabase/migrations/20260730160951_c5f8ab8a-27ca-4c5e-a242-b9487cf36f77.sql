@@ -1,0 +1,1 @@
+UPDATE public.productos SET tiene_iva = false, iva_pct = 0 WHERE empresa_id = 'c93b497a-8261-43cf-a6b7-181afb9ca974';
