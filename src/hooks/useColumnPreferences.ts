@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const PREFIX = 'col_prefs_v1_';
 
@@ -22,14 +23,25 @@ function save(key: string, value: Record<string, boolean>) {
 }
 
 /**
- * Per-user column visibility preferences persisted in localStorage.
+ * Per-user column visibility preferences.
+ *
+ * Persistencia en dos capas:
+ *  - localStorage: copia instantánea y offline (siempre disponible).
+ *  - perfil del usuario en la BD (profiles.ui_prefs): sincroniza la selección
+ *    entre dispositivos. Al iniciar sesión se adopta lo que haya en la BD.
+ *
  * @param listKey unique key for the list (e.g. "ventas")
  * @param defaults default visibility map { columnKey: boolean }
  */
 export function useColumnPreferences(listKey: string, defaults: Record<string, boolean>) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const userId = user?.id ?? 'anon';
   const fullKey = `${userId}_${listKey}`;
+  const prefKey = `cols_${listKey}`;
+  const dbPref = (profile?.ui_prefs && typeof profile.ui_prefs === 'object')
+    ? (profile.ui_prefs as Record<string, any>)[prefKey]
+    : undefined;
+  const dbPrefSig = dbPref && typeof dbPref === 'object' ? JSON.stringify(dbPref) : '';
 
   const [visible, setVisible] = useState<Record<string, boolean>>(() => load(fullKey, defaults));
 
@@ -39,22 +51,44 @@ export function useColumnPreferences(listKey: string, defaults: Record<string, b
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fullKey]);
 
+  // Adoptar la preferencia guardada en el perfil (BD) → sincroniza entre
+  // dispositivos. Solo cuando existe (un usuario que nunca la tocó conserva
+  // sus defaults / lo que tenga en localStorage).
+  useEffect(() => {
+    if (dbPrefSig) {
+      const merged = { ...defaults, ...JSON.parse(dbPrefSig) };
+      setVisible(merged);
+      save(fullKey, merged);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullKey, dbPrefSig]);
+
+  // Guarda en localStorage (instantáneo) y sincroniza a la BD (fire-and-forget:
+  // si falla o está offline, localStorage mantiene la selección).
+  const persist = useCallback((next: Record<string, boolean>) => {
+    save(fullKey, next);
+    if (userId !== 'anon') {
+      supabase.rpc('set_ui_pref', { p_key: prefKey, p_value: next as any })
+        .then(({ error }) => { if (error) console.warn('set_ui_pref:', error.message); });
+    }
+  }, [fullKey, prefKey, userId]);
+
   const toggleColumn = useCallback((key: string) => {
     setVisible(prev => {
       const next = { ...prev, [key]: !prev[key] };
-      save(fullKey, next);
+      persist(next);
       return next;
     });
-  }, [fullKey]);
+  }, [persist]);
 
   const setAll = useCallback((value: boolean) => {
     setVisible(prev => {
       const next: Record<string, boolean> = {};
       for (const k of Object.keys(prev)) next[k] = value;
-      save(fullKey, next);
+      persist(next);
       return next;
     });
-  }, [fullKey]);
+  }, [persist]);
 
   /** Enciende exactamente las columnas de `onKeys` y apaga el resto (para presets/vistas). */
   const applyPreset = useCallback((onKeys: string[]) => {
@@ -62,15 +96,16 @@ export function useColumnPreferences(listKey: string, defaults: Record<string, b
     setVisible(prev => {
       const next: Record<string, boolean> = {};
       for (const k of Object.keys(prev)) next[k] = on.has(k);
-      save(fullKey, next);
+      persist(next);
       return next;
     });
-  }, [fullKey]);
+  }, [persist]);
 
   const reset = useCallback(() => {
     setVisible(defaults);
-    save(fullKey, defaults);
-  }, [fullKey, defaults]);
+    persist(defaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persist]);
 
   const isVisible = useCallback((key: string) => visible[key] ?? false, [visible]);
 
