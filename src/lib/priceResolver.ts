@@ -150,6 +150,25 @@ export function toDisplayPrice(
  *
  * Flow: Cost → Tarifa Rule (net or gross) → Net extraction → +Taxes → Redondeo → Precio Final
  */
+/**
+ * Fallback cuando NO hay regla de precio: el `precio_principal` ES el precio
+ * FINAL (con impuestos incluidos). El neto se deriva quitándole los impuestos.
+ * Así el "Precio Final" mostrado y cobrado = precio_principal, tal cual.
+ */
+function precioPrincipalFallback(producto: ProductForPricing): ResolvedProductPricing {
+  const divisor = getTaxMultiplier(producto);
+  const finalGross = round2(producto.precio_principal ?? 0);
+  const net = divisor > 0 ? round2(finalGross / divisor) : finalGross;
+  return {
+    unitPrice: net,
+    displayPrice: finalGross,
+    rawUnitPrice: net,
+    rawDisplayPrice: finalGross,
+    basePrecio: 'con_impuestos',
+    appliedRule: null,
+  };
+}
+
 export function resolveProductPricing(
   rules: TarifaLineaRule[],
   producto: ProductForPricing,
@@ -157,45 +176,18 @@ export function resolveProductPricing(
 ): ResolvedProductPricing {
   // Short-circuit: if product uses precio_directo, skip all tarifa rules
   if (producto.usa_listas_precio === false) {
-    const fallback = round2(producto.precio_principal);
-    const fallbackDisplay = round2(fallback * getTaxMultiplier(producto));
-    return {
-      unitPrice: fallback,
-      displayPrice: fallbackDisplay,
-      rawUnitPrice: fallback,
-      rawDisplayPrice: fallback * getTaxMultiplier(producto),
-      basePrecio: 'sin_impuestos',
-      appliedRule: null,
-    };
+    return precioPrincipalFallback(producto);
   }
 
   const rule = findMatchingRule(rules, producto, listaPrecioId);
 
   if (!rule) {
-    const fallback = round2(producto.precio_principal);
-    const fallbackDisplay = round2(fallback * getTaxMultiplier(producto));
-    return {
-      unitPrice: fallback,
-      displayPrice: fallbackDisplay,
-      rawUnitPrice: fallback,
-      rawDisplayPrice: fallback * getTaxMultiplier(producto),
-      basePrecio: 'sin_impuestos',
-      appliedRule: null,
-    };
+    return precioPrincipalFallback(producto);
   }
 
   const unitPrice = calculatePrice(rule, producto);
   if (unitPrice == null) {
-    const fallback = round2(producto.precio_principal);
-    const fallbackDisplay = round2(fallback * getTaxMultiplier(producto));
-    return {
-      unitPrice: fallback,
-      displayPrice: fallbackDisplay,
-      rawUnitPrice: fallback,
-      rawDisplayPrice: fallback * getTaxMultiplier(producto),
-      basePrecio: 'sin_impuestos',
-      appliedRule: null,
-    };
+    return precioPrincipalFallback(producto);
   }
 
   const rawBase = calculateRawPrice(rule, producto) ?? producto.precio_principal;
