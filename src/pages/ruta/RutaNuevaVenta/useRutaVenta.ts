@@ -367,7 +367,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       // r.unitPrice (neto SIN redondeo), por eso el redondeo de la lista no se
       // respetaba en la app móvil.
       const snap = buildSalePricingSnapshot(pf, r);
-      return { unitPrice: snap.unitPrice, rawUnitPrice: snap.rawUnitPrice, rawDisplayPrice: snap.rawDisplayPrice, basePrecio: snap.basePrecio, redondeo: snap.redondeo };
+      return { unitPrice: snap.unitPrice, displayPrice: snap.displayPrice, rawUnitPrice: snap.rawUnitPrice, rawDisplayPrice: snap.rawDisplayPrice, basePrecio: snap.basePrecio, redondeo: snap.redondeo };
     };
   }, [tarifaLineasOffline, clienteListaPrecioId, claseMap]);
 
@@ -1212,11 +1212,30 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     };
   }), [cart, sinImpuestos]);
 
-  /** Compute the suggested (tarifa-based) price for a product */
+  /** Compute the suggested (tarifa-based) NET price for a product (para granel/almacenaje interno) */
   const getSuggestedPrice = (productoId: string): number => {
     const prod = productos?.find((p: any) => p.id === productoId);
     if (!prod) return 0;
     return resolvePricingFull(prod).unitPrice;
+  };
+
+  /**
+   * Precio sugerido FINAL (con impuestos, ya redondeado) = lo que paga el cliente.
+   * El modal de detalle trata "precio" como el final; darle el neto hacía que el
+   * input manual precargara el neto y, al aplicarlo como bruto, se erosionara el
+   * precio (89.81 en vez de 97). Este helper devuelve el bruto correcto.
+   */
+  const getSuggestedDisplayPrice = (productoId: string): number => {
+    const prod = productos?.find((p: any) => p.id === productoId);
+    if (!prod) return 0;
+    return resolvePricingFull(prod).displayPrice;
+  };
+
+  /** Precio FINAL (bruto) aplicado en la línea del carrito, o el sugerido si no está. */
+  const getLineDisplayPrice = (productoId: string): number => {
+    const item = cart.find(c => c.producto_id === productoId && !c.es_cambio);
+    if (!item) return getSuggestedDisplayPrice(productoId);
+    return r2(getSaleDisplayUnitPrice(toPosPricingItem(item, sinImpuestos)));
   };
 
   /** Set unit price manually for a product (creates the cart line if missing) */
@@ -1336,7 +1355,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     insights, bannerDismissed, setBannerDismissed,
     applySmartSuggestion, applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode,
     // Price overrides
-    getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
+    getSuggestedPrice, getSuggestedDisplayPrice, getLineDisplayPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
     // Permisos
     canChangePrice, canChangeLista, canApplyDiscount, canDoDevoluciones,
     // Descuento extra
