@@ -41,10 +41,17 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
           onChange={v => set('udem_sat_id', v || null)} format={() => findSat(unidadesSat, form.udem_sat_id ?? undefined)} />
       </div>
       <div>
-        <OdooField label="IVA %" value={form.iva_pct ?? 16} type="number" teal onChange={v => set('iva_pct', +v)} format={v => `${v ?? 16}%`} />
+        <div className="odoo-field-row">
+          <span className="odoo-field-label">Tiene IVA</span>
+          <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
+            <input type="checkbox" checked={!!form.tiene_iva} onChange={e => { const on = e.target.checked; set('tiene_iva', on); if (!on) set('iva_pct', 0); }} className="rounded border-input h-3.5 w-3.5" />
+            <span className="text-[11px] text-muted-foreground">Activar IVA en ventas</span>
+          </label>
+        </div>
+        <OdooField label="IVA %" value={form.iva_pct ?? 16} type="number" teal onChange={v => { const n = +v; set('iva_pct', n); set('tiene_iva', n > 0); }} format={v => `${v ?? 16}%`} />
         <div className="ml-[140px] -mt-1 mb-2 flex gap-2">
           {[0, 8, 16].map(rate => (
-            <button key={rate} type="button" onClick={() => set('iva_pct', rate)}
+            <button key={rate} type="button" onClick={() => { set('iva_pct', rate); set('tiene_iva', rate > 0); }}
               className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${form.iva_pct === rate ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>{rate}%</button>
           ))}
         </div>
