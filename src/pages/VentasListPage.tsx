@@ -474,35 +474,40 @@ export default function VentasListPage() {
       </div>
 
       {!activeLoading && total > 0 && (
-        <div className="flex flex-col lg:flex-row lg:items-center gap-2">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2 flex-1 min-w-0">
-            {isProductView ? (
-              <>
-                <span><strong className="text-foreground">{total}</strong> líneas</span>
-                <span>Cantidad: <strong className="text-foreground">{totalCantidad}</strong></span>
-                <span>Total: <strong className="text-foreground">{fmt(totalLineas)}</strong></span>
-              </>
-            ) : (
-              <>
-                <span><strong className="text-foreground">{total}</strong> venta{total !== 1 ? 's' : ''}</span>
-                <span>Subtotal s/imp: <strong className="text-foreground">{fmt(resumenVentas.subtotal)}</strong></span>
-                {resumenVentas.descuento > 0.005 && <span>Descuentos: <strong className="text-destructive">-{fmt(resumenVentas.descuento)}</strong></span>}
-                <span>Impuestos: <strong className="text-foreground">{fmt(resumenVentas.impuestos)}</strong></span>
-                <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
-                <span>Pagado: <strong className="text-success">{fmt(totalPagado)}</strong></span>
-                {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
-              </>
+        // Barra fija (sticky) y responsive: SIEMPRE visible al hacer scroll y
+        // se acomoda (wrap) en cualquier ancho sin scroll horizontal. La
+        // paginación baja de renglón cuando el espacio es corto.
+        <div className="sticky top-0 z-20 -mx-4 px-4 pt-1 pb-2 bg-background/95 backdrop-blur-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:gap-x-6 text-xs text-muted-foreground bg-card border border-border rounded px-3 py-2 flex-1 min-w-0">
+              {isProductView ? (
+                <>
+                  <span><strong className="text-foreground">{total}</strong> líneas</span>
+                  <span>Cantidad: <strong className="text-foreground">{totalCantidad}</strong></span>
+                  <span>Total: <strong className="text-foreground">{fmt(totalLineas)}</strong></span>
+                </>
+              ) : (
+                <>
+                  <span><strong className="text-foreground">{total}</strong> venta{total !== 1 ? 's' : ''}</span>
+                  <span>Subtotal s/imp: <strong className="text-foreground">{fmt(resumenVentas.subtotal)}</strong></span>
+                  {resumenVentas.descuento > 0.005 && <span>Descuentos: <strong className="text-destructive">-{fmt(resumenVentas.descuento)}</strong></span>}
+                  <span>Impuestos: <strong className="text-foreground">{fmt(resumenVentas.impuestos)}</strong></span>
+                  <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
+                  <span>Pagado: <strong className="text-success">{fmt(totalPagado)}</strong></span>
+                  {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
+                </>
+              )}
+            </div>
+            {!groupBy && (
+              <TablePagination
+                from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize}
+                onPageSizeChange={handlePageSizeChange}
+                onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
+                onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
+                className="shrink-0 justify-end bg-card border border-border rounded px-3 py-2"
+              />
             )}
           </div>
-          {!groupBy && (
-            <TablePagination
-              from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize}
-              onPageSizeChange={handlePageSizeChange}
-              onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
-              onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
-              className="shrink-0 lg:justify-end bg-card rounded px-3 py-2"
-            />
-          )}
         </div>
       )}
 
