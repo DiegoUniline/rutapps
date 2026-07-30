@@ -46,9 +46,12 @@ interface Props {
   clientesList?: any[];
   /** Map of column key -> visibility */
   columnVisibility?: Record<string, boolean>;
+  /** Mostrar el pie de totales dentro de la tabla. En la vista sin agrupar se
+   *  apaga porque los totales de la página van en la barra fija de abajo. */
+  showFooter?: boolean;
 }
 
-export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget, onCancelTarget, empresaId, empresa, clientesList, columnVisibility }: Props) {
+export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget, onCancelTarget, empresaId, empresa, clientesList, columnVisibility, showFooter = true }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const v = (key: string) => columnVisibility ? columnVisibility[key] !== false : true;
 
@@ -242,7 +245,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           );
         })}
       </tbody>
-      {items.length > 0 && (() => {
+      {showFooter && items.length > 0 && (() => {
         const totSubtotal = items.reduce((s: number, r: any) => s + (resById[r.id]?.sinImpuestos ?? 0), 0);
         const totDescuento = items.reduce((s: number, r: any) => s + (resById[r.id]?.descuento ?? 0), 0);
         const totIva = items.reduce((s: number, r: any) => s + (resById[r.id]?.impuestos ?? 0), 0);

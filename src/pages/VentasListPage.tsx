@@ -363,6 +363,22 @@ export default function VentasListPage() {
   const totalLineas = (!groupBy && lineasResumenAll) ? lineasResumenAll.total : productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
   const totalCantidad = (!groupBy && lineasResumenAll) ? lineasResumenAll.cantidad : productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
 
+  // Totales SOLO de la página visible (para la barra fija de abajo).
+  const pageResumen = ventas.reduce((acc, v: any) => {
+    const iva = Number(v.iva_total) || 0, ieps = Number(v.ieps_total) || 0;
+    const imp = iva + ieps;
+    const grav = Math.max(0, (Number(v.total) || 0) - imp);
+    const lineDesc = computeResumenFromLineas(v.venta_lineas ?? []).descuento;
+    const promo = (v.promocion_aplicada ?? []).reduce((s: number, p: any) => s + (Number(p?.descuento_aplicado) || 0), 0);
+    const desc = Math.max(lineDesc, promo, Number(v.descuento_total) || 0);
+    const teff = totalEfectivoVenta(v); const sal = saldoRealVenta(v);
+    acc.subtotal += grav + desc; acc.descuento += desc; acc.impuestos += imp;
+    acc.total += teff; acc.pagado += Math.max(0, teff - sal); acc.saldo += sal;
+    return acc;
+  }, { subtotal: 0, descuento: 0, impuestos: 0, total: 0, pagado: 0, saldo: 0 });
+  const pageProdTotal = productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
+  const pageProdCantidad = productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
+
   const groupLabelFn = (item: any, key: string) => {
     if (key === 'status') return STATUS_LABELS[item.status] ?? item.status;
     if (key === 'tipo') return TIPO_LABELS[item.tipo] ?? item.tipo;
@@ -390,6 +406,7 @@ export default function VentasListPage() {
         onCancelTarget={handleCancelOne}
         empresaId={empresa?.id} empresa={empresa} clientesList={clientesList}
         columnVisibility={columnVisibility}
+        showFooter={!!groupBy}
       />
     </div>
   );
@@ -538,6 +555,34 @@ export default function VentasListPage() {
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} renderSummary={(items) => (<span className="text-[11px] text-muted-foreground font-medium">{fmtCurrency(items.reduce((s: number, v: any) => s + totalEfectivoVenta(v), 0))}</span>)} />
         </>
+      )}
+
+      {/* Fila de totales FIJA al fondo de la pantalla: siempre visible al hacer
+          scroll (muestra los totales de la PÁGINA visible). Sin agrupar y en
+          escritorio. */}
+      {!activeLoading && !isMobile && !groupBy && total > 0 && (
+        <div className="sticky bottom-0 z-20 -mx-4 px-4 pt-2 pb-1 bg-background/95 backdrop-blur-sm border-t border-border">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:gap-x-6 text-xs text-muted-foreground bg-card border border-border rounded px-3 py-2">
+            <span className="font-semibold text-foreground">Página</span>
+            {isProductView ? (
+              <>
+                <span><strong className="text-foreground">{productRows.length}</strong> líneas</span>
+                <span>Cantidad: <strong className="text-foreground">{pageProdCantidad}</strong></span>
+                <span>Total: <strong className="text-foreground">{fmt(pageProdTotal)}</strong></span>
+              </>
+            ) : (
+              <>
+                <span><strong className="text-foreground">{ventas.length}</strong> venta{ventas.length !== 1 ? 's' : ''}</span>
+                <span>Subtotal s/imp: <strong className="text-foreground">{fmt(pageResumen.subtotal)}</strong></span>
+                {pageResumen.descuento > 0.005 && <span>Descuentos: <strong className="text-destructive">-{fmt(pageResumen.descuento)}</strong></span>}
+                <span>Impuestos: <strong className="text-foreground">{fmt(pageResumen.impuestos)}</strong></span>
+                <span>Total: <strong className="text-foreground">{fmt(pageResumen.total)}</strong></span>
+                <span>Pagado: <strong className="text-success">{fmt(pageResumen.pagado)}</strong></span>
+                {pageResumen.saldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(pageResumen.saldo)}</strong></span>}
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
