@@ -28,6 +28,41 @@ export interface LineaMontos {
   total: number;
 }
 
+type PromoProducto = {
+  tipo?: string | null;
+  producto_id?: string | null;
+  descuento?: number | null;
+  cantidad_gratis?: number | null;
+};
+
+/**
+ * Separa el descuento normal (en la base del motor) del regalo, cuyo descuento
+ * siempre debe valuarse al precio BRUTO unitario. Así una unidad gratis elimina
+ * también su IVA/IEPS y nunca deja impuesto colgado en la venta.
+ */
+export function separarDescuentoPromo(
+  promociones: PromoProducto[],
+  productoId: string,
+  brutoUnitario: number,
+): { descuentoRegular: number; descuentoGratisBruto: number } {
+  let descuentoRegular = 0;
+  let cantidadGratis = 0;
+
+  for (const promo of promociones) {
+    if (promo.producto_id !== productoId) continue;
+    if (promo.tipo === 'producto_gratis') {
+      cantidadGratis += Math.max(0, Number(promo.cantidad_gratis) || 0);
+    } else {
+      descuentoRegular += Math.max(0, Number(promo.descuento) || 0);
+    }
+  }
+
+  return {
+    descuentoRegular: r2(descuentoRegular),
+    descuentoGratisBruto: r2(cantidadGratis * Math.max(0, Number(brutoUnitario) || 0)),
+  };
+}
+
 /**
  * Resta `descuento` (descuento efectivo de promoción de esa línea) repartiéndolo
  * proporcionalmente entre subtotal / IVA / IEPS.

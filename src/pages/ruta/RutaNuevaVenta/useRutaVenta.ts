@@ -14,7 +14,7 @@ import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
 import { buildPromoAplicadaRows, promoPersistHabilitado } from '@/lib/promoPersist';
-import { aplicarPromoALinea, promoLineaHabilitado } from '@/lib/promoLinea';
+import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
 
 import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea, DescuentoExtraTipo } from './types';
 import { locationService } from '@/lib/locationService';
@@ -748,18 +748,24 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     const m = new Map<string, number>();
     cart.forEach(item => {
       if (item.es_cambio) return;
-      const promoDisc = promoRawByProduct.get(item.producto_id) ?? 0;
-      if (promoDisc <= 0) return;
       const pricingItem = toPosPricingItem(item, sinImpuestos);
-      const lp = buildPosLinePricing(pricingItem, promoDisc);
       const original = getOriginalLineBreakdown(item, sinImpuestos);
-      const eff = pricingItem.base_precio === 'con_impuestos'
+      const qty = Number(item.cantidad) || 0;
+      const promoParts = separarDescuentoPromo(
+        promoResults,
+        item.producto_id,
+        qty > 0 ? original.total / qty : 0,
+      );
+      if (promoParts.descuentoRegular <= 0 && promoParts.descuentoGratisBruto <= 0) return;
+      const lp = buildPosLinePricing(pricingItem, promoParts.descuentoRegular);
+      const regularEff = pricingItem.base_precio === 'con_impuestos'
         ? r2(Math.max(0, original.total - lp.finalGross))
         : lp.effectiveDiscount;
+      const eff = Math.min(original.total, regularEff + promoParts.descuentoGratisBruto);
       if (eff > 0) m.set(item.producto_id, (m.get(item.producto_id) ?? 0) + eff);
     });
     return m;
-  }, [cart, promoRawByProduct, sinImpuestos]);
+  }, [cart, promoResults, sinImpuestos]);
 
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0, descuentoPromo = 0;
