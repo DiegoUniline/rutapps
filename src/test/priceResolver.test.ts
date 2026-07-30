@@ -5,7 +5,8 @@ import { reglaPrecioFijo, reglaMargenCosto, reglaDescuento } from './fixtures/ta
 
 describe('resolveProductPrice', () => {
   it('returns precio_principal when no rules', () => {
-    expect(resolveProductPrice([], productoBasico)).toBe(10);
+    // Sin regla, precio_principal ($10) es el FINAL (con imp). Neto = 10/1.16 = 8.62.
+    expect(resolveProductPrice([], productoBasico)).toBe(8.62);
   });
 
   it('applies precio_fijo rule for specific product', () => {
@@ -59,7 +60,7 @@ describe('resolveProductPrice – placeholder rules fallback', () => {
       clasificacion_ids: ['cat-001'], producto_ids: [],
     };
     const price = resolveProductPrice([placeholderRule], productoBasico);
-    expect(price).toBe(10);
+    expect(price).toBe(8.62); // precio_principal $10 final → neto 10/1.16
   });
 });
 
@@ -104,30 +105,33 @@ describe('resolveProductPricing – display price is always Precio Final (gross 
     expect(pricing.basePrecio).toBe('con_impuestos');
   });
 
-  it('no rules: displayPrice includes taxes on precio_principal', () => {
+  it('no rules: precio_principal ES el precio final (con impuestos)', () => {
     const pricing = resolveProductPricing([], productoBasico);
-    // precio_principal = 10, displayPrice = 10 * 1.16 = 11.6
-    expect(pricing.unitPrice).toBe(10);
-    expect(pricing.displayPrice).toBe(11.6);
+    // precio_principal = 10 es el FINAL. neto = 10/1.16 = 8.62; displayPrice = 10.
+    expect(pricing.unitPrice).toBe(8.62);
+    expect(pricing.displayPrice).toBe(10);
+    expect(pricing.basePrecio).toBe('con_impuestos');
   });
 });
 
 describe('usa_listas_precio = false – always uses precio_principal', () => {
   it('ignores precio_fijo rule when usa_listas_precio is false', () => {
-    expect(resolveProductPrice([reglaPrecioFijo], { ...productoBasico, usa_listas_precio: false })).toBe(10);
+    expect(resolveProductPrice([reglaPrecioFijo], { ...productoBasico, usa_listas_precio: false })).toBe(8.62);
   });
 
   it('ignores margen_costo rule when usa_listas_precio is false', () => {
-    expect(resolveProductPrice([reglaMargenCosto], { ...productoBasico, usa_listas_precio: false })).toBe(10);
+    expect(resolveProductPrice([reglaMargenCosto], { ...productoBasico, usa_listas_precio: false })).toBe(8.62);
   });
 
   it('ignores descuento rule when usa_listas_precio is false', () => {
-    expect(resolveProductPrice([reglaDescuento], { ...productoBasico, usa_listas_precio: false })).toBe(10);
+    expect(resolveProductPrice([reglaDescuento], { ...productoBasico, usa_listas_precio: false })).toBe(8.62);
   });
 
   it('resolveProductPricing returns precio_principal with no appliedRule', () => {
+    // productoDirecto: precio_principal 20 = final; neto 20/1.16 = 17.24.
     const pricing = resolveProductPricing([reglaPrecioFijo, reglaDescuento], productoDirecto);
-    expect(pricing.unitPrice).toBe(20);
+    expect(pricing.unitPrice).toBe(17.24);
+    expect(pricing.displayPrice).toBe(20);
     expect(pricing.appliedRule).toBeNull();
   });
 
