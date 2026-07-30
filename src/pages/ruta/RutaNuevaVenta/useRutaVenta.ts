@@ -912,7 +912,41 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       const tarifaId = clienteTarifaId || selectedClienteData?.tarifa_id || null;
       const extraAmtSaved = (totals as any).descuentoExtra ?? 0;
       const extraValSaved = canApplyDiscount && descuentoExtraValor > 0 ? descuentoExtraValor : 0;
-      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: null, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+      // ── Promoción descontada EN LA LÍNEA (bandera por licencia) ──────────
+      // Cada línea se guarda ya neta de su promoción. El TOTAL de la venta NO
+      // cambia (mismo neto que ya se cobraba): solo se reparte el descuento.
+      const netearLineas = promoLineaHabilitado((empresa as any)?.licencia);
+      const promoPendiente = new Map<string, number>(promoEffectiveByProduct);
+      const brutoPorIdx: Array<{ subtotal: number; iva: number; ieps: number; total: number }> = [];
+      const netoPorIdx: Array<{ subtotal: number; iva: number; ieps: number; total: number }> = [];
+      for (const item of cart) {
+        const bruto = getOriginalLineBreakdown(item, sinImpuestos);
+        brutoPorIdx.push(bruto);
+        let neto = bruto;
+        if (netearLineas && !item.es_cambio) {
+          const pend = promoPendiente.get(item.producto_id) ?? 0;
+          if (pend > 0) {
+            const aplicar = Math.min(pend, bruto.total);
+            neto = aplicarPromoALinea(bruto, aplicar);
+            promoPendiente.set(item.producto_id, r2(pend - aplicar));
+          }
+        }
+        netoPorIdx.push(neto);
+      }
+
+      let headerSubtotal = totals.subtotal;
+      let headerIva = totals.iva;
+      let headerIeps = totals.ieps;
+      let headerDescuento = totals.descuento;
+      if (netearLineas) {
+        headerSubtotal = r2(netoPorIdx.reduce((s, b) => s + b.subtotal, 0));
+        headerIva = r2(netoPorIdx.reduce((s, b) => s + b.iva, 0));
+        headerIeps = r2(netoPorIdx.reduce((s, b) => s + b.ieps, 0));
+        // La promoción ya está restada en las líneas: no se vuelve a restar aquí.
+        headerDescuento = r2(Math.max(0, (totals.descuentoDevolucion ?? 0) + extraAmtSaved));
+      }
+
+      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: null, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: headerSubtotal, iva_total: headerIva, ieps_total: headerIeps, descuento_total: headerDescuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
 
       const promoLineIdByProduct = new Map<string, string>();
@@ -923,7 +957,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       const lineasBatch: any[] = [];
       for (let idx = 0; idx < cart.length; idx++) {
         const item = cart[idx];
-        const breakdown = getOriginalLineBreakdown(item, sinImpuestos);
+        const breakdown = netoPorIdx[idx];
         const savedIvaPct = sinImpuestos ? 0 : item.iva_pct;
         const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct;
         const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null);
@@ -932,7 +966,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         const ventaLineaId = await deterministicUuid('vlinea', ventaId, idx);
         if (!item.es_cambio) {
           if (!promoLineIdByProduct.has(item.producto_id)) promoLineIdByProduct.set(item.producto_id, ventaLineaId);
-          promoLineTotalByProduct.set(item.producto_id, (promoLineTotalByProduct.get(item.producto_id) ?? 0) + breakdown.total);
+          // Tope de seguridad con el total BRUTO (pre-promoción) de la línea.
+          promoLineTotalByProduct.set(item.producto_id, (promoLineTotalByProduct.get(item.producto_id) ?? 0) + brutoPorIdx[idx].total);
         }
         lineasBatch.push({ id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, precio_unitario_sin_redondeo: Number((item as any).precio_unitario_sin_redondeo) > 0 ? Number((item as any).precio_unitario_sin_redondeo) : (item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0), unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() });
         if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) {
