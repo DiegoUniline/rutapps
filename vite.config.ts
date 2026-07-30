@@ -12,7 +12,10 @@ function bumpAppVersion(): string {
   const versionPath = path.resolve(__dirname, "src/version.ts");
   try {
     const content = fs.readFileSync(versionPath, "utf-8");
-    const today = new Date().toISOString().slice(0, 10);
+    // Fecha + hora del build en horario de México (formato ISO-like "YYYY-MM-DD HH:mm").
+    // Es FRESCO en cada build y va horneado en el bundle, así que la versión visible
+    // cambia en cada deploy aunque el contador no se commitee de vuelta.
+    const today = new Date().toLocaleString("sv-SE", { timeZone: "America/Mexico_City" }).slice(0, 16);
     const match = content.match(/APP_VERSION\s*=\s*['"](\d+)['"]/);
     const current = match ? Number(match[1]) : 0;
     const next = String(current + 1).padStart(6, "0");
