@@ -117,6 +117,150 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   });
 }
 
+/**
+ * Resumen (totales) de ventas sobre TODO el filtro — no solo la página visible.
+ * Trae todas las filas que cumplen los filtros con un SELECT ligero (solo los
+ * campos que necesitan los totales) y las devuelve para que la página calcule
+ * el resumen con la misma lógica que las filas (totalEfectivoVenta, saldoReal,
+ * computeResumenFromLineas). La paginación es solo visual; los totales son del
+ * conjunto completo.
+ *
+ * OJO: la lógica de filtros debe mantenerse en sync con `useVentasPaginated`.
+ */
+export function useVentasResumen(search?: string, statusFilter?: string, tipoFilter?: string, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, promoFilter?: 'si' | 'no', enabled = true) {
+  const { empresa } = useAuth();
+  const { seeAll, profileId } = useDataVisibility('ventas');
+  const filterOwn = !seeAll && !!profileId;
+
+  return useQuery({
+    queryKey: ['ventas-resumen', empresa?.id, search, statusFilter, tipoFilter, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo, promoFilter ?? 'todas'],
+    enabled: !!empresa?.id && enabled,
+    queryFn: async () => {
+      // SELECT ligero: solo lo que consumen los totales (sin joins de cliente/vendedor/almacén/entregas).
+      const SELECT = 'id, total, iva_total, ieps_total, descuento_total, status, total_efectivo, cerrado_at, cerrado_snapshot, cliente_id, cobro_aplicaciones(monto_aplicado, cobros!inner(status)), venta_lineas(subtotal, descuento_pct, precio_unitario, cantidad, iva_monto, ieps_monto, total), promocion_aplicada(descuento_aplicado)';
+
+      let promoIds: string[] | null = null;
+      if (promoFilter) promoIds = await fetchVentaIdsConPromo(empresa!.id);
+
+      let searchOr: string | null = null;
+      if (search) {
+        const s = search.replace(/[%_,()]/g, '\\$&').replace(/'/g, "''");
+        const [clientesRes, vendedoresRes, almacenesRes] = await Promise.all([
+          supabase.from('clientes').select('id').eq('empresa_id', empresa!.id).ilike('nombre', `%${s}%`).limit(500),
+          supabase.from('profiles').select('id').eq('empresa_id', empresa!.id).ilike('nombre', `%${s}%`).limit(500),
+          supabase.from('almacenes').select('id').eq('empresa_id', empresa!.id).ilike('nombre', `%${s}%`).limit(500),
+        ]);
+        const clienteIds = (clientesRes.data ?? []).map((r: any) => r.id);
+        const vendedorIds = (vendedoresRes.data ?? []).map((r: any) => r.id);
+        const almacenIds = (almacenesRes.data ?? []).map((r: any) => r.id);
+        const orParts: string[] = [`folio.ilike.%${s}%`];
+        if (clienteIds.length) orParts.push(`cliente_id.in.(${clienteIds.join(',')})`);
+        if (vendedorIds.length) orParts.push(`vendedor_id.in.(${vendedorIds.join(',')})`);
+        if (almacenIds.length) orParts.push(`almacen_id.in.(${almacenIds.join(',')})`);
+        searchOr = orParts.join(',');
+      }
+
+      const applyFilters = (q: any) => {
+        q = q.eq('empresa_id', empresa!.id).eq('es_saldo_inicial', false);
+        if (filterOwn) q = q.eq('vendedor_id', profileId!);
+        if (searchOr) q = q.or(searchOr);
+        if (statusFilter && statusFilter !== 'todos') {
+          const arr = statusFilter.split(',');
+          if (arr.length > 1) q = q.in('status', arr as any); else q = q.eq('status', statusFilter as any);
+        }
+        if (tipoFilter && tipoFilter !== 'todos') {
+          const arr = tipoFilter.split(',');
+          if (arr.length > 1) q = q.in('tipo', arr as any); else q = q.eq('tipo', tipoFilter as any);
+        }
+        if (condicionFilter && condicionFilter !== 'todos') {
+          const arr = condicionFilter.split(',');
+          if (arr.length > 1) q = q.in('condicion_pago', arr as any); else q = q.eq('condicion_pago', condicionFilter as any);
+        }
+        if (vendedorFilter && vendedorFilter !== 'todos') {
+          const arr = vendedorFilter.split(',');
+          if (arr.length > 1) q = q.in('vendedor_id', arr as any); else q = q.eq('vendedor_id', vendedorFilter);
+        }
+        if (dateFrom) q = q.gte('fecha', dateFrom);
+        if (dateTo) q = q.lte('fecha', dateTo);
+        if (promoIds) {
+          if (promoFilter === 'si') q = q.in('id', promoIds.length ? promoIds : ['00000000-0000-0000-0000-000000000000']);
+          else if (promoIds.length) q = q.not('id', 'in', `(${promoIds.join(',')})`);
+        }
+        return q;
+      };
+
+      const rows = await fetchAllPages((from, to) => applyFilters(supabase.from('ventas').select(SELECT).range(from, to)));
+      return (rows ?? []) as unknown as Venta[];
+    },
+  });
+}
+
+/**
+ * Resumen (totales) de líneas de venta sobre TODO el filtro (vista Productos).
+ * Devuelve la suma de cantidad y de importe de línea del conjunto completo.
+ * OJO: mantener los filtros en sync con `useVentaLineasPaginated`.
+ */
+export function useVentaLineasResumen(search?: string, statusFilter?: string, tipoFilter?: string, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, enabled = true) {
+  const { empresa } = useAuth();
+  const { seeAll, profileId } = useDataVisibility('ventas');
+  const filterOwn = !seeAll && !!profileId;
+
+  return useQuery({
+    queryKey: ['venta-lineas-resumen', empresa?.id, search, statusFilter, tipoFilter, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo],
+    enabled: !!empresa?.id && enabled,
+    queryFn: async () => {
+      const SELECT = 'cantidad, total, ventas!inner(empresa_id, status, tipo, condicion_pago, vendedor_id, fecha, folio)';
+
+      let searchOr: string | null = null;
+      let searchEmpty = false;
+      if (search) {
+        const s = search.replace(/[%_,()]/g, '\\$&').replace(/'/g, "''");
+        const [productosRes, ventasRes] = await Promise.all([
+          supabase.from('productos').select('id').eq('empresa_id', empresa!.id).or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%`).limit(500),
+          supabase.from('ventas').select('id').eq('empresa_id', empresa!.id).ilike('folio', `%${s}%`).limit(500),
+        ]);
+        const productoIds = (productosRes.data ?? []).map((r: any) => r.id);
+        const ventaIds = (ventasRes.data ?? []).map((r: any) => r.id);
+        const orParts: string[] = [];
+        if (productoIds.length) orParts.push(`producto_id.in.(${productoIds.join(',')})`);
+        if (ventaIds.length) orParts.push(`venta_id.in.(${ventaIds.join(',')})`);
+        if (orParts.length === 0) searchEmpty = true; else searchOr = orParts.join(',');
+      }
+
+      const applyFilters = (q: any) => {
+        q = q.eq('ventas.empresa_id', empresa!.id);
+        if (filterOwn) q = q.eq('ventas.vendedor_id', profileId!);
+        if (statusFilter && statusFilter !== 'todos') {
+          const arr = statusFilter.split(',');
+          if (arr.length > 1) q = q.in('ventas.status', arr as any); else q = q.eq('ventas.status', statusFilter as any);
+        }
+        if (tipoFilter && tipoFilter !== 'todos') {
+          const arr = tipoFilter.split(',');
+          if (arr.length > 1) q = q.in('ventas.tipo', arr as any); else q = q.eq('ventas.tipo', tipoFilter as any);
+        }
+        if (condicionFilter && condicionFilter !== 'todos') {
+          const arr = condicionFilter.split(',');
+          if (arr.length > 1) q = q.in('ventas.condicion_pago', arr as any); else q = q.eq('ventas.condicion_pago', condicionFilter as any);
+        }
+        if (vendedorFilter && vendedorFilter !== 'todos') {
+          const arr = vendedorFilter.split(',');
+          if (arr.length > 1) q = q.in('ventas.vendedor_id', arr as any); else q = q.eq('ventas.vendedor_id', vendedorFilter);
+        }
+        if (dateFrom) q = q.gte('ventas.fecha', dateFrom);
+        if (dateTo) q = q.lte('ventas.fecha', dateTo);
+        if (searchEmpty) q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
+        else if (searchOr) q = q.or(searchOr);
+        return q;
+      };
+
+      const data = await fetchAllPages<any>((from, to) => applyFilters(supabase.from('venta_lineas').select(SELECT).range(from, to)));
+      let cantidad = 0, total = 0;
+      for (const r of (data ?? []) as any[]) { cantidad += Number(r.cantidad) || 0; total += Number(r.total) || 0; }
+      return { count: (data ?? []).length, cantidad, total };
+    },
+  });
+}
+
 /** Paginated product lines (venta_lineas) with header data for "Products" view. When fetchAll=true, returns all matching rows (used for grouping). */
 export function useVentaLineasPaginated(
   search?: string, statusFilter?: string, tipoFilter?: string,
