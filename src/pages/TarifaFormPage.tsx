@@ -291,12 +291,20 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
         const montoIva = r2((precioNeto + montoIeps) * ivaPct / 100);
         const precioConImpSinRedondeo = r2(precioNeto + montoIeps + montoIva);
         const precioFinal = pricing.displayPrice;
-        const ganancia = r2(precioNeto - p.costo);
 
-        // Costo con impuestos
-        const costoIeps = r2(p.costo * iepsPct / 100);
-        const costoIva = r2((p.costo + costoIeps) * ivaPct / 100);
-        const costoConImp = r2(p.costo + costoIeps + costoIva);
+        // Costo NETO real usado para el margen: si "costo incluye impuestos",
+        // se le extraen los impuestos (mismo que hace el resolver). Así la
+        // columna Costo y la ganancia/margen muestran el costo correcto.
+        const taxMultCosto = (1 + iepsPct / 100) * (1 + ivaPct / 100);
+        const costoNeto = (p.costo_incluye_impuestos && taxMultCosto > 0)
+          ? r2(p.costo / taxMultCosto)
+          : p.costo;
+        const ganancia = r2(precioNeto - costoNeto);
+
+        // Costo con impuestos (reconstruido desde el neto)
+        const costoIeps = r2(costoNeto * iepsPct / 100);
+        const costoIva = r2((costoNeto + costoIeps) * ivaPct / 100);
+        const costoConImp = r2(costoNeto + costoIeps + costoIva);
 
         // Regla label
         let reglaLabel = '—';
@@ -308,6 +316,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
 
         return {
           ...p,
+          costo: costoNeto, // costo NETO real (extraído si incluye impuestos)
           precio_regla: r2(pricing.rawUnitPrice * (basePrecio === 'con_impuestos' ? (1 + iepsPct / 100) * (1 + ivaPct / 100) : 1)),
           precio_neto: precioNeto,
           monto_ieps: montoIeps,
