@@ -319,11 +319,22 @@ Deno.serve(async (req) => {
             .insert({ user_id: newUser.user.id, empresa_id: empresaId, nombre: nombre || null, almacen_id: almacen_id || null });
         }
 
-        // Assign role if provided
+        // Assign role if provided.
+        // UPSERT por user_id: el trigger handle_new_user puede haber creado ya
+        // una fila de rol por defecto para el usuario nuevo. Un INSERT directo
+        // chocaba con la restricción user_roles_user_id_unique
+        // ("duplicate key value violates unique constraint"). Con upsert se
+        // actualiza la fila existente al rol elegido.
         if (role_id) {
-          await adminClient
+          const { error: roleErr } = await adminClient
             .from("user_roles")
-            .insert({ user_id: newUser.user.id, role_id });
+            .upsert({ user_id: newUser.user.id, role_id }, { onConflict: "user_id" });
+          if (roleErr) {
+            return new Response(JSON.stringify({ error: `No se pudo asignar el rol: ${roleErr.message}` }), {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
         }
       }
 
