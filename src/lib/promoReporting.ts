@@ -42,14 +42,47 @@ export function buildPromoReporting({ ventas, lineas, promoAplicadas }: PromoRep
     if (l.id && l.venta_id) ventaIdByLinea[l.id] = l.venta_id;
   }
 
+  // Suma de líneas por venta (para detectar si la línea YA viene neta).
+  const sumaLineasByVenta = new Map<string, number>();
+  for (const l of lineas) {
+    if (!l.venta_id) continue;
+    sumaLineasByVenta.set(l.venta_id, r2((sumaLineasByVenta.get(l.venta_id) ?? 0) + Number(l.total ?? 0)));
+  }
+  const totalByVenta = new Map<string, number>();
+  for (const v of ventas) totalByVenta.set(v.id, r2(Number(v.total ?? 0)));
+
+  // Descuento persistido por venta.
+  const promoSumByVenta = new Map<string, number>();
+  for (const p of promoAplicadas) {
+    const lid = p.venta_linea_id;
+    const monto = Number(p.descuento_aplicado ?? 0);
+    if (!lid || !(monto > 0)) continue;
+    const vid = ventaIdByLinea[lid];
+    if (!vid) continue;
+    promoSumByVenta.set(vid, r2((promoSumByVenta.get(vid) ?? 0) + monto));
+  }
+
+  /**
+   * ANTI-DOBLE-DESCUENTO: con la bandera `promo_descuento_linea` las líneas se
+   * guardan YA NETAS. En ese caso la diferencia (líneas − total) es menor que el
+   * descuento persistido, y restarlo otra vez descontaría dos veces.
+   */
+  const lineasYaNetas = (ventaId: string) => {
+    const promoSum = promoSumByVenta.get(ventaId) ?? 0;
+    if (promoSum <= 0) return false;
+    const gap = r2((sumaLineasByVenta.get(ventaId) ?? 0) - (totalByVenta.get(ventaId) ?? 0));
+    return gap < promoSum - 0.02;
+  };
+
   for (const p of promoAplicadas) {
     const lid = p.venta_linea_id;
     if (!lid) continue;
     const monto = Number(p.descuento_aplicado ?? 0);
     if (!(monto > 0)) continue;
-    descByLinea[lid] = (descByLinea[lid] ?? 0) + monto;
     const vid = ventaIdByLinea[lid];
     if (vid) ventasConDesglose.add(vid);
+    if (vid && lineasYaNetas(vid)) continue; // la línea ya trae el descuento restado
+    descByLinea[lid] = (descByLinea[lid] ?? 0) + monto;
   }
 
   // ---- Fallback prorrateado para ventas sin desglose ----

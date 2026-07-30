@@ -542,6 +542,65 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "set-user-role") {
+      const { user_id, role_id } = params as { user_id?: string; role_id?: string | null };
+      if (!user_id) {
+        return new Response(JSON.stringify({ error: "user_id requerido" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!(await callerIsAdmin())) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: isSA } = await adminClient.rpc('is_super_admin', { p_user_id: caller.id });
+      if (!isSA) {
+        // El usuario objetivo debe pertenecer a la empresa del que llama
+        const { data: targetProfile } = await adminClient
+          .from("profiles").select("empresa_id").eq("user_id", user_id).maybeSingle();
+        if (!targetProfile || targetProfile.empresa_id !== empresaId) {
+          return new Response(JSON.stringify({ error: "No autorizado" }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        // El rol debe pertenecer a la misma empresa
+        if (role_id) {
+          const { data: role } = await adminClient
+            .from("roles").select("empresa_id").eq("id", role_id).maybeSingle();
+          if (!role || role.empresa_id !== empresaId) {
+            return new Response(JSON.stringify({ error: "El rol no pertenece a tu empresa" }), {
+              status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+      }
+
+      if (role_id) {
+        const { error: roleErr } = await adminClient
+          .from("user_roles")
+          .upsert({ user_id, role_id }, { onConflict: "user_id" });
+        if (roleErr) {
+          return new Response(JSON.stringify({ ok: false, error: roleErr.message }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        const { error: delErr } = await adminClient
+          .from("user_roles").delete().eq("user_id", user_id);
+        if (delErr) {
+          return new Response(JSON.stringify({ ok: false, error: delErr.message }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
     return new Response(JSON.stringify({ error: "Acción no válida" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

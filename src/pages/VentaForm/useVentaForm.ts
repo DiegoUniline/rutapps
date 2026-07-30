@@ -8,7 +8,7 @@ import { useClientes } from '@/hooks/useClientes';
 import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
 import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplicadas } from '@/lib/promoPersist';
-import { aplicarPromoALinea, promoLineaHabilitado } from '@/lib/promoLinea';
+import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
@@ -300,8 +300,14 @@ export function useVentaForm() {
     const m = new Map<string, number>();
     lineas.forEach(l => {
       if (!l.producto_id) return;
-      const promoDisc = promoByProduct.get(l.producto_id) ?? 0;
-      if (promoDisc <= 0) return;
+      const bruto = calculateSaleLineAmounts(l as any, sinImpuestos);
+      const qty = Number(l.cantidad) || 0;
+      const promoParts = separarDescuentoPromo(
+        promoResults,
+        l.producto_id,
+        qty > 0 ? bruto.total / qty : 0,
+      );
+      if (promoParts.descuentoRegular <= 0 && promoParts.descuentoGratisBruto <= 0) return;
       const raw = rawPricingMap.get(l.producto_id);
       const pricingItem: PosPricingItem = {
         precio_unitario: Number(l.precio_unitario) || 0,
@@ -315,13 +321,14 @@ export function useVentaForm() {
         base_precio: (raw?.basePrecio ?? 'sin_impuestos') as BasePrecioMode,
         redondeo: raw?.redondeo ?? 'ninguno',
       };
-      const lp = buildPosLinePricing(pricingItem, promoDisc);
-      if (lp.effectiveDiscount > 0) {
-        m.set(l.producto_id, (m.get(l.producto_id) ?? 0) + lp.effectiveDiscount);
+      const lp = buildPosLinePricing(pricingItem, promoParts.descuentoRegular);
+      const efectivo = Math.min(bruto.total, lp.effectiveDiscount + promoParts.descuentoGratisBruto);
+      if (efectivo > 0) {
+        m.set(l.producto_id, (m.get(l.producto_id) ?? 0) + efectivo);
       }
     });
     return m;
-  }, [promoByProduct, rawPricingMap, lineas, sinImpuestos]);
+  }, [promoResults, rawPricingMap, lineas, sinImpuestos]);
 
   // Combine totals with promo discounts using buildPosLinePricing (promo before rounding)
   const finalTotals = useMemo(() => {
