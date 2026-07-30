@@ -29,12 +29,15 @@ interface Props {
   sinImpuestos?: boolean;
   onChangeLineListaPrecio?: (idx: number, selection: ListaPrecioSelection) => void;
   promoResults?: PromoResult[];
+  /** Visibilidad de columnas (detalle). Si no viene, se muestran todas. */
+  cols?: Record<string, boolean>;
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
+  const showCol = (k: string) => !cols || cols[k] !== false;
   const price = Number(l.precio_unitario) || 0;
   const desc = Number(l.descuento_pct) || 0;
   const amounts = calculateSaleLineAmounts({ ...l, precio_unitario: price } as SaleLinePricingLike, sinImpuestos);
@@ -76,6 +79,10 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   // en vivo.
   const ivaShown = readOnly ? (Number(l.iva_monto) || 0) : iva;
   const iepsShown = readOnly ? (Number(l.ieps_monto) || 0) : ieps;
+  // Precio unitario CON impuestos (para la columna opcional "Precio c/imp").
+  const ivaPctUnit = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
+  const iepsPctUnit = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
+  const priceGross = r2(price * (1 + iepsPctUnit / 100) * (1 + ivaPctUnit / 100));
   // % de la promoción prorrateada, relativo al subtotal BRUTO (pre-promoción) de
   // la línea. Se reconstruye desde montos guardados para que sea independiente de
   // cómo se guardó el precio_unitario (bruto en escritorio, neto en ruta):
@@ -147,6 +154,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </div>
         )}
       </td>
+      {showCol('cantidad') && (
       <td className="py-1 px-2">
         {readOnly ? (
           (l as any).pedido_cantidad != null ? (
@@ -167,8 +175,12 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </div>
         )}
       </td>
+      )}
 
-      <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px] hidden md:table-cell">{isEmpty ? '' : (unidadLabel || '—')}</td>
+      {showCol('unidad') && (
+      <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px]">{isEmpty ? '' : (unidadLabel || '—')}</td>
+      )}
+      {showCol('precioNeto') && (
       <td className="py-1 px-2">
         {readOnly ? <span className="text-[12px] block text-right">{money(price)}</span>
         : isEmpty ? <span></span>
@@ -231,8 +243,16 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </div>
         )}
       </td>
+      )}
+      {/* Precio CON impuestos (columna opcional, siempre informativa) */}
+      {showCol('precioBruto') && (
+      <td className="py-1 px-2 text-right">
+        {isEmpty ? '' : <span className="text-[12px] tabular-nums">{money(priceGross)}</span>}
+      </td>
+      )}
       {/* IVA (columna propia): en lectura el monto en $, en edición el chip para activar/quitar */}
-      <td className="py-1.5 px-2 text-right hidden md:table-cell">
+      {showCol('iva') && (
+      <td className="py-1.5 px-2 text-right">
         {isEmpty ? '' : readOnly ? (
           ivaShown > 0
             ? <span className="text-[12px] tabular-nums">{money(ivaShown)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.iva_pct) || 0}%</span></span>
@@ -248,8 +268,10 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </div>
         )}
       </td>
+      )}
       {/* IEPS (columna propia): en lectura el monto en $, en edición el chip */}
-      <td className="py-1.5 px-2 text-right hidden md:table-cell">
+      {showCol('ieps') && (
+      <td className="py-1.5 px-2 text-right">
         {isEmpty ? '' : (() => {
           if (readOnly) {
             return iepsShown > 0
@@ -272,13 +294,17 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           );
         })()}
       </td>
+      )}
       {/* Descuento MANUAL (descuento_pct) */}
+      {showCol('descMan') && (
       <td className="py-1 px-2">
         {(readOnly || !canApplyDiscount) ? <span className="text-[12px] block text-right">{inferredDesc > 0 ? `${Number(inferredDesc.toFixed(2))}%` : '—'}</span>
         : <input ref={el => setCellRef(idx, 3, el)} type="number" inputMode="decimal" className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.descuento_pct ?? ''} onChange={e => onUpdateLine(idx, 'descuento_pct', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 3)} onFocus={e => e.target.select()} min="0" max="100" step="0.1" />}
       </td>
+      )}
       {/* Descuento por PROMOCIÓN (informativo, no editable) */}
-      <td className="py-1.5 px-2 text-right hidden md:table-cell">
+      {showCol('descPromo') && (
+      <td className="py-1.5 px-2 text-right">
         {isEmpty ? '' : linePromoDesc > 0 ? (
           <span className="text-[11px] text-primary font-medium tabular-nums">
             −{money(linePromoDesc)}
@@ -286,6 +312,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </span>
         ) : <span className="text-muted-foreground text-[11px]">—</span>}
       </td>
+      )}
       <td className="py-1.5 px-2 text-right font-medium">
         {isEmpty ? '' : lineEsGratis ? (
           <div>
@@ -307,11 +334,13 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </div>
         )}
       </td>
-      <td className="py-1.5 px-2 hidden md:table-cell">
+      {showCol('lote') && (
+      <td className="py-1.5 px-2">
         {!isEmpty && (l as any).lote_codigo
           ? <span className="text-[11px]"><span className="font-medium">{(l as any).lote_codigo}</span></span>
           : (!isEmpty ? <span className="text-muted-foreground text-[11px]">—</span> : '')}
       </td>
+      )}
       <td className="py-1.5 px-2">
         {!readOnly && !isEmpty && <button onClick={() => onRemoveLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>}
       </td>
