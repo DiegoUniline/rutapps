@@ -47,6 +47,10 @@ interface Props {
   setItemQty: (pid: string, qty: number, esCambio?: boolean) => void;
   // Price overrides
   getSuggestedPrice: (pid: string) => number;
+  /** Precio sugerido FINAL (con impuestos) — lo que paga el cliente */
+  getSuggestedDisplayPrice: (pid: string) => number;
+  /** Precio FINAL aplicado en la línea del carrito (o sugerido si no está) */
+  getLineDisplayPrice: (pid: string) => number;
   setItemPriceManual: (pid: string, price: number) => void;
   setItemPriceFromLista: (pid: string, listaPrecioId: string | null, tarifaId: string | null, unitPrice: number, listaNombre: string) => void;
   resetItemToSuggested: (pid: string) => void;
@@ -67,7 +71,7 @@ export function StepProductos(props: Props) {
     getItemInCart, getMaxQty, getDispSigned, setStep, setCart, stockAbordo, usandoAlmacen, fmt,
     insights, bannerDismissed, setBannerDismissed,
     applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
-    getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
+    getSuggestedPrice, getSuggestedDisplayPrice, getLineDisplayPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
     canChangePrice, canChangeLista,
     apartadoActivoPedido, pedidoAlmacenId, setPedidoAlmacenId,
   } = props;
@@ -280,7 +284,9 @@ export function StepProductos(props: Props) {
           const atMax = inCart && maxQty !== Infinity && inCart.cantidad >= maxQty;
           const isManual = !!inCart?.precio_manual;
           const hasLista = !!inCart?.lista_precio_id;
-          const displayPrice = inCart?.precio_unitario ?? (p.precio_principal ?? 0);
+          // Precio a mostrar = FINAL con impuestos (bruto). Antes usaba
+          // `precio_unitario` (neto), por eso salía 89.81 en vez de 97.
+          const displayPrice = getLineDisplayPrice(p.id);
           return (
             <div key={p.id} className={`rounded-lg px-3 py-2 transition-all ${inCart ? 'bg-primary/[0.04] ring-1 ring-primary/20' : 'bg-card'}`}>
               <div className="flex items-center gap-2.5">
@@ -388,8 +394,8 @@ export function StepProductos(props: Props) {
         open={!!detalleProducto}
         onClose={() => setDetalleProducto(null)}
         producto={detalleProducto}
-        currentUnitPrice={detalleProducto ? (getItemInCart(detalleProducto.id)?.precio_unitario ?? getSuggestedPrice(detalleProducto.id)) : 0}
-        suggestedPrice={detalleProducto ? getSuggestedPrice(detalleProducto.id) : 0}
+        currentUnitPrice={detalleProducto ? getLineDisplayPrice(detalleProducto.id) : 0}
+        suggestedPrice={detalleProducto ? getSuggestedDisplayPrice(detalleProducto.id) : 0}
         isManual={!!(detalleProducto && getItemInCart(detalleProducto.id)?.precio_manual)}
         currentListaPrecioId={detalleProducto ? (getItemInCart(detalleProducto.id)?.lista_precio_id ?? null) : null}
         canEditManual={canChangePrice}
