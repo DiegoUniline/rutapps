@@ -70,6 +70,14 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       ? lineGratisQty >= (Number(l.cantidad) || 0) - 0.001
       : linePromoDesc > 0 && linePromoDesc >= (Number(displayLineTotal) || 0) - 0.01
   );
+  // Desc % efectivo mostrado en la columna (solo lectura): además del descuento
+  // manual (descuento_pct), incorpora la promoción prorrateada como % del BRUTO
+  // de la línea (neto mostrado + descuento de la promo). No cambia ningún dato
+  // guardado; una línea 100% regalada muestra 100%.
+  const promoDescPct = readOnly && linePromoDesc > 0
+    ? (lineEsGratis ? 100 : r2((linePromoDesc / ((Number(displayLineTotal) || 0) + linePromoDesc || 1)) * 100))
+    : 0;
+  const effectiveDescPct = r2(Math.min(100, inferredDesc + promoDescPct));
   const lineData = l as any;
   const unidadLabel = lineData.unidad_label
     || (l as any).unidades?.abreviatura
@@ -216,6 +224,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       </td>
       <td className="py-1.5 px-2 text-center hidden md:table-cell">
         {isEmpty ? '' : (
+          <div className="flex flex-col items-center gap-0.5">
           <div className="inline-flex flex-wrap gap-1 justify-center">
             <button type="button" disabled={readOnly} onClick={handleIvaToggle}
               className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer", Number(l.iva_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-card text-muted-foreground line-through opacity-60")}
@@ -237,10 +246,17 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             })()}
             {Number(l.iva_pct) === 0 && Number(l.ieps_pct) === 0 && !impuestosLabel.includes('IEPS') && <span className="text-muted-foreground text-[11px]">—</span>}
           </div>
+          {(ieps > 0 || iva > 0) && (
+            <div className="text-[9px] text-muted-foreground leading-tight tabular-nums">
+              {ieps > 0 && <span className="block">IEPS {money(ieps)}</span>}
+              {iva > 0 && <span className="block">IVA {money(iva)}</span>}
+            </div>
+          )}
+          </div>
         )}
       </td>
       <td className="py-1 px-2">
-        {(readOnly || !canApplyDiscount) ? <span className="text-[12px] block text-right">{inferredDesc > 0 ? `${Number(inferredDesc.toFixed(2))}%` : '0%'}</span>
+        {(readOnly || !canApplyDiscount) ? <span className="text-[12px] block text-right">{effectiveDescPct > 0 ? `${Number(effectiveDescPct.toFixed(2))}%` : '0%'}</span>
         : <input ref={el => setCellRef(idx, 3, el)} type="number" inputMode="decimal" className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.descuento_pct ?? ''} onChange={e => onUpdateLine(idx, 'descuento_pct', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 3)} onFocus={e => e.target.select()} min="0" max="100" step="0.1" />}
       </td>
       <td className="py-1.5 px-2 text-right font-medium">
