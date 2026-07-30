@@ -15,7 +15,7 @@ import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
-import { useVentasPaginated, useVentaLineasPaginated, useDeleteVenta } from '@/hooks/useVentas';
+import { useVentasPaginated, useVentaLineasPaginated, useVentasResumen, useVentaLineasResumen, useDeleteVenta } from '@/hooks/useVentas';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -92,6 +92,10 @@ export default function VentasListPage() {
   const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter);
 
   const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy);
+  // Totales sobre TODO el filtro (no solo la página). Al agrupar, la lista ya
+  // trae todas las filas (fetchAll), así que evitamos la doble consulta.
+  const { data: ventasResumenRows } = useVentasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, promocionFilter, viewMode === 'ventas' && !groupBy);
+  const { data: lineasResumenAll } = useVentaLineasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, viewMode === 'productos' && !groupBy);
   const { data: clientesList } = useClientes();
   const { data: vendedoresList } = useVendedoresForFilter();
 
@@ -110,13 +114,24 @@ export default function VentasListPage() {
     return rows;
   }, [ventasRaw, clienteFilter]);
 
+  // Filas para los TOTALES: todo el filtro. Al agrupar, `ventasRaw` ya son todas.
+  // Si no, usamos el resumen completo (fallback a la página mientras carga).
+  const resumenSource = useMemo(() => {
+    let rows: any[] = groupBy ? ventasRaw : (ventasResumenRows ?? ventasRaw);
+    if (clienteFilter && clienteFilter.length > 0) rows = rows.filter((v: any) => clienteFilter.includes(v.cliente_id ?? ''));
+    return rows;
+  }, [groupBy, ventasResumenRows, ventasRaw, clienteFilter]);
+
   // Active dataset depending on view mode
   const isProductView = viewMode === 'productos';
   const productRows = lineasData?.rows ?? [];
 
   const total = isProductView
     ? (lineasData?.total ?? 0)
-    : (clienteFilter && clienteFilter.length > 0) ? ventas.length : (ventasData?.total ?? 0);
+    : (clienteFilter && clienteFilter.length > 0)
+      // Con filtro de cliente (client-side) el conteo real es el del resumen completo.
+      ? (ventasResumenRows ? resumenSource.length : ventas.length)
+      : (ventasData?.total ?? 0);
 
   const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
   const to = Math.min(page * numericPageSize, total);
@@ -326,10 +341,11 @@ export default function VentasListPage() {
   const activeLoading = isProductView ? isLoadingLineas : isLoading;
 
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
-  const totalVentas = ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
-  const totalSaldo = ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0);
+  // Totales calculados sobre TODO el filtro (resumenSource), no solo la página.
+  const totalVentas = resumenSource.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
+  const totalSaldo = resumenSource.reduce((s, v) => s + saldoRealVenta(v as any), 0);
   // Desglose fiscal reconstruido desde las líneas (cuadra con la tabla y el detalle).
-  const resumenVentas = ventas.reduce((acc, v: any) => {
+  const resumenVentas = resumenSource.reduce((acc, v: any) => {
     const ivaMonto = Number(v.iva_total) || 0;
     const iepsMonto = Number(v.ieps_total) || 0;
     const impuestos = ivaMonto + iepsMonto;
@@ -342,9 +358,10 @@ export default function VentasListPage() {
     acc.impuestos += impuestos;
     return acc;
   }, { subtotal: 0, descuento: 0, impuestos: 0 });
-  const totalPagado = ventas.reduce((s, v: any) => s + Math.max(0, totalEfectivoVenta(v) - saldoRealVenta(v)), 0);
-  const totalLineas = productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
-  const totalCantidad = productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
+  const totalPagado = resumenSource.reduce((s, v: any) => s + Math.max(0, totalEfectivoVenta(v) - saldoRealVenta(v)), 0);
+  // Vista Productos: totales de todo el filtro (fallback a la página al agrupar/cargar).
+  const totalLineas = (!groupBy && lineasResumenAll) ? lineasResumenAll.total : productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
+  const totalCantidad = (!groupBy && lineasResumenAll) ? lineasResumenAll.cantidad : productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
 
   const groupLabelFn = (item: any, key: string) => {
     if (key === 'status') return STATUS_LABELS[item.status] ?? item.status;
@@ -441,8 +458,8 @@ export default function VentasListPage() {
           )}
           {!isMobile && (
             <ExportButton
-              onExcel={() => exportToExcel({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: totalVentas, saldo_pendiente: totalSaldo } })}
-              onPDF={() => exportToPDF({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: totalVentas, saldo_pendiente: totalSaldo } })}
+              onExcel={() => exportToExcel({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0), saldo_pendiente: ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0) } })}
+              onPDF={() => exportToPDF({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0), saldo_pendiente: ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0) } })}
             />
           )}
           <button onClick={() => navigate('/finanzas/aplicar-pagos')} className="btn-odoo-secondary shrink-0">
@@ -457,23 +474,34 @@ export default function VentasListPage() {
       </div>
 
       {!activeLoading && total > 0 && (
-        <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2">
-          {isProductView ? (
-            <>
-              <span><strong className="text-foreground">{total}</strong> líneas</span>
-              <span>Cantidad: <strong className="text-foreground">{totalCantidad}</strong></span>
-              <span>Total: <strong className="text-foreground">{fmt(totalLineas)}</strong></span>
-            </>
-          ) : (
-            <>
-              <span><strong className="text-foreground">{total}</strong> venta{total !== 1 ? 's' : ''}</span>
-              <span>Subtotal s/imp: <strong className="text-foreground">{fmt(resumenVentas.subtotal)}</strong></span>
-              {resumenVentas.descuento > 0.005 && <span>Descuentos: <strong className="text-destructive">-{fmt(resumenVentas.descuento)}</strong></span>}
-              <span>Impuestos: <strong className="text-foreground">{fmt(resumenVentas.impuestos)}</strong></span>
-              <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
-              <span>Pagado: <strong className="text-success">{fmt(totalPagado)}</strong></span>
-              {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
-            </>
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2 flex-1 min-w-0">
+            {isProductView ? (
+              <>
+                <span><strong className="text-foreground">{total}</strong> líneas</span>
+                <span>Cantidad: <strong className="text-foreground">{totalCantidad}</strong></span>
+                <span>Total: <strong className="text-foreground">{fmt(totalLineas)}</strong></span>
+              </>
+            ) : (
+              <>
+                <span><strong className="text-foreground">{total}</strong> venta{total !== 1 ? 's' : ''}</span>
+                <span>Subtotal s/imp: <strong className="text-foreground">{fmt(resumenVentas.subtotal)}</strong></span>
+                {resumenVentas.descuento > 0.005 && <span>Descuentos: <strong className="text-destructive">-{fmt(resumenVentas.descuento)}</strong></span>}
+                <span>Impuestos: <strong className="text-foreground">{fmt(resumenVentas.impuestos)}</strong></span>
+                <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
+                <span>Pagado: <strong className="text-success">{fmt(totalPagado)}</strong></span>
+                {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
+              </>
+            )}
+          </div>
+          {!groupBy && (
+            <TablePagination
+              from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize}
+              onPageSizeChange={handlePageSizeChange}
+              onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
+              onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
+              className="shrink-0 lg:justify-end bg-card rounded px-3 py-2"
+            />
           )}
         </div>
       )}
@@ -483,9 +511,6 @@ export default function VentasListPage() {
       ) : isMobile ? (
         <div className="space-y-2">
           <VentasMobileList items={pageData} clientesList={clientesList} empresaId={empresa?.id ?? ''} canDelete={canDelete} fmtCurrency={fmtCurrency} onDeleteTarget={setDeleteTarget} onCancelTarget={handleCancelOne} />
-          {total > 0 && (
-            <TablePagination from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize} onPageSizeChange={handlePageSizeChange} onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)} />
-          )}
         </div>
       ) : isProductView ? (
         <>
@@ -503,16 +528,10 @@ export default function VentasListPage() {
               </span>
             )}
           />
-          {!groupBy && total > 0 && (
-            <TablePagination from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize} onPageSizeChange={handlePageSizeChange} onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)} />
-          )}
         </>
       ) : (
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} renderSummary={(items) => (<span className="text-[11px] text-muted-foreground font-medium">{fmtCurrency(items.reduce((s: number, v: any) => s + totalEfectivoVenta(v), 0))}</span>)} />
-          {!groupBy && total > 0 && (
-            <TablePagination from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize} onPageSizeChange={handlePageSizeChange} onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)} />
-          )}
         </>
       )}
 
