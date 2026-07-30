@@ -624,11 +624,22 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       return;
     }
     const capped = cantidadBase;
-    const pf = resolvePricingFull(p);
+    // `precioUnitario` (por unidad base) viene BRUTO = precio final que ve/paga
+    // el cliente. Guardamos el neto derivado + el display bruto, para que el
+    // desglose de impuestos cuadre. Antes se guardaba el bruto como si fuera el
+    // neto y luego se le sumaban impuestos otra vez (erosión: 89.81 en vez de 97).
+    const gsnap = buildManualSalePricingFromGross(
+      { tiene_iva: p.tiene_iva ?? false, iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0, tiene_ieps: p.tiene_ieps ?? false, ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0 },
+      precioUnitario,
+    );
     const existingIdx = cart.findIndex(c => c.producto_id === p.id && !c.es_cambio);
+    // La "unidad base" (sin presentación con nombre) al precio de tarifa NO es un
+    // precio manual: es el sugerido de la lista. Solo marcamos manual cuando hay
+    // una presentación con nombre (caja/paquete, precio especial) o granel a peso.
+    const esUnidadBaseTarifa = presentacion === null && !p.es_granel;
     const lineBase: any = {
       producto_id: p.id, codigo: p.codigo, nombre: p.nombre,
-      precio_unitario: precioUnitario,
+      precio_unitario: gsnap.unitPrice,
       cantidad: capped,
       unidad: unidadBase,
       unidad_id: p.unidad_venta_id ?? undefined,
@@ -637,15 +648,15 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       tiene_ieps: p.tiene_ieps ?? false,
       ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
       es_cambio: false,
-      precio_unitario_sin_redondeo: precioUnitario,
-      precio_display_sin_redondeo: precioUnitario,
-      base_precio: pf.basePrecio,
-      redondeo: pf.redondeo,
+      precio_unitario_sin_redondeo: gsnap.rawUnitPrice,
+      precio_display_sin_redondeo: gsnap.rawDisplayPrice,
+      base_precio: gsnap.basePrecio,
+      redondeo: gsnap.redondeo,
       presentacion_id: presentacion?.id ?? null,
       presentacion_nombre: presentacion?.nombre ?? null,
       presentacion_factor: presentacion?.factor_base ?? null,
       paquetes,
-      precio_manual: !!presentacion?.id || presentacion === null,
+      precio_manual: !esUnidadBaseTarifa,
       almacen_id: apartadoActivoPedido ? pedidoAlmacenId : null,
     };
     if (existingIdx >= 0) setCart(cart.map((c, i) => i === existingIdx ? { ...c, ...lineBase } : c));
