@@ -1,0 +1,1 @@
+UPDATE public.productos SET tiene_iva = false WHERE tiene_iva = true;
