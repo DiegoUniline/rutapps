@@ -116,23 +116,18 @@ export function useUsuarios() {
       if (pinValue && updated[0].pin_code !== pinValue) {
         throw new Error('El PIN no se guardó correctamente. Vuelve a intentarlo.');
       }
-      if (editForm.role_id) {
-        // Upsert por user_id: evita el duplicado si ya existe un rol asignado
-        const { error: upsertErr } = await supabase
-          .from('user_roles')
-          .upsert(
-            { user_id: editingUser.user_id, role_id: editForm.role_id },
-            { onConflict: 'user_id' }
-          );
-        if (upsertErr) throw upsertErr;
-      } else {
-        // Sin rol: limpiar por user_id directo en la BD (no por estado local, que puede estar desfasado)
-        const { error: delErr } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', editingUser.user_id);
-        if (delErr) throw delErr;
-      }
+      // Asignación de rol vía edge function (service role): evita el bloqueo de RLS
+      // en user_roles y valida empresa del usuario y del rol en el servidor.
+      const { data: roleRes, error: roleFnErr } = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: 'set-user-role',
+          user_id: editingUser.user_id,
+          role_id: editForm.role_id || null,
+        },
+      });
+      if (roleFnErr) throw roleFnErr;
+      if (roleRes?.error) throw new Error(roleRes.error);
+
       toast.success('Usuario actualizado');
       setEditingUser(null);
       loadUsuarios();
