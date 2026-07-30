@@ -120,7 +120,7 @@ export function StepProductos(props: Props) {
         const factor = Number(pres.factor_base) || 1;
         const precioUnit = pres.precio_especial != null
           ? Number(pres.precio_especial) / factor
-          : getSuggestedPrice(prod.id);
+          : getSuggestedDisplayPrice(prod.id);
         addGranelLine(prod, {
           cantidadBase: factor,
           precioUnitario: precioUnit,
@@ -410,7 +410,7 @@ export function StepProductos(props: Props) {
         onClose={() => setGranelFor(null)}
         producto={granelFor}
         presentaciones={(allPresentaciones ?? []).filter(p => granelFor && p.producto_id === granelFor.id)}
-        precioPorUnidadBase={granelFor ? (getSuggestedPrice(granelFor.id) || (granelFor.precio_principal ?? 0)) : 0}
+        precioPorUnidadBase={granelFor ? (getSuggestedDisplayPrice(granelFor.id) || (granelFor.precio_principal ?? 0)) : 0}
         stockMax={granelFor ? (granelFor.vender_sin_stock ? Infinity : getMaxQty(granelFor.id)) : Infinity}
         onConfirm={(data) => {
           if (!granelFor) return;
