@@ -50,10 +50,22 @@ export default function ProductoDropdown({
   const updatePosition = useCallback(() => {
     if (!inputRef.current) return;
     const rect = inputRef.current.getBoundingClientRect();
+    // El dropdown necesita más ancho que la columna "Producto" (angosta) para
+    // que el nombre completo se lea sin truncarse. Lo ampliamos a un mínimo y lo
+    // recorremos a la izquierda si se saldría del borde derecho de la pantalla.
+    const MIN_WIDTH = 380;
+    const MARGIN = 8;
+    const width = Math.min(
+      Math.max(rect.width, MIN_WIDTH),
+      window.innerWidth - 2 * MARGIN,
+    );
+    let left = rect.left;
+    const maxLeft = window.innerWidth - width - MARGIN;
+    if (left > maxLeft) left = Math.max(MARGIN, maxLeft);
     setPosition({
       top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
+      left,
+      width,
     });
   }, [inputRef]);
 

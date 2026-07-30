@@ -237,14 +237,14 @@ export function useVentaForm() {
   // Build raw pricing map from tarifa for promo-before-rounding logic
   const rawPricingMap = useMemo(() => {
     const m = new Map<string, { rawUnitPrice: number; rawDisplayPrice: number; basePrecio: string; redondeo: string }>();
-    if (!tarifaRules?.length || !productosList) return m;
+    if (!productosList) return m;
     const listaPrecioId = (form as any).lista_precio_id || null;
     lineas.forEach(l => {
       if (!l.producto_id || m.has(l.producto_id)) return;
       const prod = productosList.find((p: any) => p.id === l.producto_id);
       if (!prod) return;
       const pf: ProductForPricing = { id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0, clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16), tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo, usa_listas_precio: prod.usa_listas_precio };
-      const r = resolveProductPricing(tarifaRules, pf, listaPrecioId);
+      const r = resolveProductPricing(tarifaRules ?? [], pf, listaPrecioId);
       m.set(l.producto_id, { rawUnitPrice: r.rawUnitPrice, rawDisplayPrice: r.rawDisplayPrice, basePrecio: r.basePrecio, redondeo: r.appliedRule?.redondeo ?? 'ninguno' });
     });
     return m;
@@ -394,7 +394,8 @@ export function useVentaForm() {
       }
 
       // Caso 2: la línea no tiene lista propia → reprecificar con lista/tarifa global.
-      if (!tarifaRules?.length) return l;
+      // Sin `return` temprano por falta de reglas: `resolveProductPricing` cae en
+      // el fallback (precio_principal = precio final) cuando no hay regla.
       const prod = productosList.find((p: any) => p.id === l.producto_id);
       if (!prod) return l;
       const prodForPricing: ProductForPricing = {
@@ -403,7 +404,7 @@ export function useVentaForm() {
         tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo,
         usa_listas_precio: prod.usa_listas_precio,
       };
-      const pricing = resolveProductPricing(tarifaRules, prodForPricing, formListaPrecioId);
+      const pricing = resolveProductPricing(tarifaRules ?? [], prodForPricing, formListaPrecioId);
       const snap = buildSalePricingSnapshot(prodForPricing, pricing);
       const merged: any = {
         ...l,
@@ -455,10 +456,15 @@ export function useVentaForm() {
       tiene_ieps: hasIeps, ieps_pct: iepsPct, ieps_tipo: producto.ieps_tipo,
       usa_listas_precio: producto.usa_listas_precio,
     };
-    const pricing = tarifaRules?.length ? resolveProductPricing(tarifaRules, prodForPricing, (form as any).lista_precio_id) : null;
-    const snap = pricing ? buildSalePricingSnapshot(prodForPricing, pricing) : null;
-    const finalUnitPrice = snap ? snap.unitPrice : Number(producto.precio_principal) || 0;
-    const finalDisplayPrice = snap ? snap.displayPrice : finalUnitPrice;
+    // Siempre resolvemos con el resolver: aunque la lista NO tenga reglas,
+    // `resolveProductPricing` cae en `precioPrincipalFallback`, donde
+    // `precio_principal` ES el precio FINAL (con impuestos) y el neto se deriva
+    // dividiendo. Sin este camino, un producto sin regla tomaba precio_principal
+    // como neto y le sumaba impuestos (97 → 104.76 en vez de 97).
+    const pricing = resolveProductPricing(tarifaRules ?? [], prodForPricing, (form as any).lista_precio_id);
+    const snap = buildSalePricingSnapshot(prodForPricing, pricing);
+    const finalUnitPrice = snap.unitPrice;
+    const finalDisplayPrice = snap.displayPrice;
     setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, precio_unitario_sin_redondeo: snap?.rawUnitPrice ?? finalUnitPrice, precio_display_sin_redondeo: snap?.rawDisplayPrice ?? finalDisplayPrice, base_precio: snap?.basePrecio ?? 'con_impuestos', redondeo: snap?.redondeo ?? 'ninguno', unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false, lote_id: null, lote_codigo: null } as any; return next; });
     setDirty(true);
     // Producto por lote en venta directa → pedir el lote (FEFO).
