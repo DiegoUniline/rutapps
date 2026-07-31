@@ -54,6 +54,29 @@ describe('evaluatePromociones producto_gratis', () => {
     expect(result[0]).toMatchObject({ cantidad_gratis: 2, descuento: 12.6 });
   });
 
+  it('suma disparadores distintos para una promoción por caja y respeta prioridad', () => {
+    const caja = productoGratis({
+      id: 'promo-caja',
+      nombre: 'CAJA VUALA+16PAST',
+      prioridad: 5,
+      cantidad_minima: 10,
+      cantidad_gratis: 16,
+    });
+    const result = evaluatePromociones([productoGratis(), caja], [
+      { producto_id: 'cajeta', precio_unitario: 104, cantidad: 4 },
+      { producto_id: 'chocolate', precio_unitario: 104, cantidad: 3 },
+      { producto_id: 'vainilla', precio_unitario: 104, cantidad: 3 },
+      { producto_id: 'pastelito', precio_unitario: 6.3, cantidad: 16 },
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      promocion_id: 'promo-caja',
+      cantidad_gratis: 16,
+      descuento: 100.8,
+    });
+  });
+
   it('conserva el comportamiento cuando regalo y disparador son el mismo producto', () => {
     const promo = productoGratis({
       producto_gratis_id: 'cajeta',

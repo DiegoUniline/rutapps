@@ -203,6 +203,7 @@ export function evaluatePromociones(
 
 
   const appliedNonAcumulable = new Set<string>();
+  const regalosConsumidos = new Map<string, number>();
 
   for (const promo of activePromos) {
     const matchingItems = cartItems.filter(item => {
@@ -239,14 +240,14 @@ export function evaluatePromociones(
         : [];
 
       if (freeProductId && triggerItems.length > 0) {
-        const totalGanado = triggerItems.reduce(
-          (sum, item) => sum + Math.floor(item.cantidad / compraMin) * cantGratis,
-          0,
-        );
+        const cantidadDisparadora = triggerItems.reduce((sum, item) => sum + item.cantidad, 0);
+        const totalGanado = Math.floor(cantidadDisparadora / compraMin) * cantGratis;
         const freeItemInCart = cartItems.find(
           item => item.producto_id === freeProductId && !item.es_cambio,
         );
-        const gratisReal = Math.min(totalGanado, freeItemInCart?.cantidad ?? 0);
+        const yaConsumidos = regalosConsumidos.get(freeProductId) ?? 0;
+        const regalosDisponibles = Math.max(0, (freeItemInCart?.cantidad ?? 0) - yaConsumidos);
+        const gratisReal = Math.min(totalGanado, regalosDisponibles);
 
         if (gratisReal > 0 && freeItemInCart) {
           results.push({
@@ -259,6 +260,7 @@ export function evaluatePromociones(
             producto_gratis_id: freeProductId,
             cantidad_gratis: gratisReal,
           });
+          regalosConsumidos.set(freeProductId, yaConsumidos + gratisReal);
           if (!promo.acumulable) {
             triggerItems.forEach(item => appliedNonAcumulable.add(item.producto_id));
           }
