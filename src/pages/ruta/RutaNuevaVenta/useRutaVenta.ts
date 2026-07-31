@@ -769,13 +769,20 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
 
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0, descuentoPromo = 0;
+    const pendiente = new Map<string, number>(promoEffectiveByProduct);
     cart.forEach(item => {
       if (item.es_cambio) { items += item.cantidad; return; }
       const original = getOriginalLineBreakdown(item, sinImpuestos);
+      // Prorratea el descuento de promoción sobre subtotal/IVA/IEPS para que el
+      // encabezado no muestre impuestos de la base sin descuento.
+      const rem = pendiente.get(item.producto_id) ?? 0;
+      const aplicado = rem > 0 ? Math.min(rem, original.total) : 0;
+      if (aplicado > 0) pendiente.set(item.producto_id, rem - aplicado);
+      const ajustado = aplicado > 0 ? aplicarPromoALinea(original, aplicado) : original;
       subtotal += original.subtotal;
-      iva += original.iva;
-      ieps += original.ieps;
-      descuentoPromo += promoEffectiveByProduct.get(item.producto_id) ?? 0;
+      iva += ajustado.iva;
+      ieps += ajustado.ieps;
+      descuentoPromo += aplicado;
       items += item.cantidad;
     });
     const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoPromo - descuentoDevolucion));

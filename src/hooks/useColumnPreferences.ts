@@ -22,6 +22,12 @@ function save(key: string, value: Record<string, boolean>) {
   } catch {}
 }
 
+type RpcError = { message: string } | null;
+const callRpc = supabase.rpc as unknown as (
+  fn: string,
+  args: Record<string, unknown>,
+) => PromiseLike<{ error: RpcError }>;
+
 /**
  * Per-user column visibility preferences.
  *
@@ -68,7 +74,7 @@ export function useColumnPreferences(listKey: string, defaults: Record<string, b
   const persist = useCallback((next: Record<string, boolean>) => {
     save(fullKey, next);
     if (userId !== 'anon') {
-      supabase.rpc('set_ui_pref', { p_key: prefKey, p_value: next as any })
+      callRpc('set_ui_pref', { p_key: prefKey, p_value: next })
         .then(({ error }) => { if (error) console.warn('set_ui_pref:', error.message); });
     }
   }, [fullKey, prefKey, userId]);
