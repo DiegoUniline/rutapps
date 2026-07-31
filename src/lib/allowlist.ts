@@ -40,7 +40,12 @@ export const VENTA_LINEA_COLUMNS = [
   'precio_unitario','precio_unitario_sin_redondeo','descuento_pct','subtotal',
   'iva_pct','ieps_pct','iva_monto','ieps_monto','total','notas',
   'facturado','factura_cfdi_id','lista_precio_id','precio_manual',
-  'presentacion_id','presentacion_nombre','presentacion_factor','paquetes','lote_id','created_at',
+  'presentacion_id','presentacion_nombre','presentacion_factor','paquetes','lote_id','almacen_id','created_at',
+  // Desglose completo por línea (bandera `venta_linea_desglose`).
+  'precio_lista_unitario','importe_bruto','descuento_promocion_monto','base_descuento_manual',
+  'descuento_manual_monto','descuento_total_monto','base_ieps','base_iva','impuestos_totales',
+  'descuento_manual','motivo_descuento_manual','descuento_registrado_por','promocion_id',
+  'promocion_nombre','cantidad_bonificada','es_bonificacion','objeto_impuesto',
 ] as const;
 
 export const COMPRA_COLUMNS = [
