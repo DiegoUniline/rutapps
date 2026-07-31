@@ -25,3 +25,13 @@ describe('producto_gratis con impuestos', () => {
     expect(neto).toEqual({ subtotal: 370.37, ieps: 29.63, iva: 0, total: 400 });
   });
 });
+describe('descuento de promo sobre base bruta', () => {
+  it('10% sobre 200 brutos deja total 180 con IVA proporcional', () => {
+    // 4 × $50 con IVA 16% incluido: subtotal 172.41 + IVA 27.59 = 200
+    const bruto = { subtotal: 172.41, ieps: 0, iva: 27.59, total: 200 };
+    const neto = aplicarPromoALinea(bruto, 20);
+    expect(neto.total).toBe(180);
+    expect(neto.iva).toBe(24.83);
+    expect(neto.subtotal).toBe(155.17);
+  });
+});
