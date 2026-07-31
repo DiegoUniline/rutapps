@@ -90,3 +90,39 @@ describe('evaluatePromociones producto_gratis', () => {
     expect(result[0]).toMatchObject({ cantidad_gratis: 2, descuento: 20 });
   });
 });
+
+describe('evaluatePromociones no acumulable', () => {
+  it('bloquea cualquier otra promo sobre un producto ya tomado por una no acumulable', () => {
+    const base = productoGratis();
+    const especial: Promocion = {
+      ...base,
+      id: 'test-5',
+      nombre: 'TEST 5',
+      tipo: 'precio_especial',
+      producto_gratis_id: null,
+      producto_ids: ['cereal'],
+      valor: 80,
+      cantidad_minima: 5,
+      prioridad: 10,
+      acumulable: false,
+    };
+    const acumulable: Promocion = {
+      ...base,
+      id: 'test-4',
+      nombre: 'TEST 4',
+      tipo: 'descuento_monto',
+      producto_gratis_id: null,
+      producto_ids: ['cereal'],
+      valor: 5,
+      cantidad_minima: 1,
+      prioridad: 1,
+      acumulable: true,
+    };
+    const result = evaluatePromociones([especial, acumulable], [
+      { producto_id: 'cereal', precio_unitario: 100, cantidad: 5 },
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ promocion_id: 'test-5', descuento: 100 });
+  });
+});
