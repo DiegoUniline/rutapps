@@ -24,9 +24,10 @@ export function simulatePED1950(lines: LegacyLine[]) {
     // CASO ESPECIAL PED-1950: El producto GRATIS se guardó con 0.01 pero su precio lista real es 204.00
     // Si es el producto de regalo de CLORALEX, forzamos el precio lista a 204 para ver la erosión.
     let precioLista = Number(line.precio_unitario_sin_redondeo) || Number(line.precio_unitario) || 0;
-    if (line.nombre.includes('GRATIS') && line.nombre.includes('CLORALEX')) {
-        precioLista = 204.00;
-    }
+    
+    // Si el precio lista guardado es 0.01 (como en la imagen), es porque el producto
+    // fue creado como un "dummy" de regalo sin valor real.
+    // La simulación anterior usó $204 porque es lo que vale el producto CLORALEX 1.17L normal.
 
     const dummyLine = {
       cantidad: cant,
