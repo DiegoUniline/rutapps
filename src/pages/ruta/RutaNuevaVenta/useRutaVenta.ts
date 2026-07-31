@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
 import { buildPromoAplicadaRows, promoPersistHabilitado } from '@/lib/promoPersist';
 import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
+import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 
 import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea, DescuentoExtraTipo } from './types';
 import { locationService } from '@/lib/locationService';
@@ -979,6 +980,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       // una venta de 50 productos = 1 subida al servidor, no 50 → aparece completa
       // casi al instante en admin, sin la ventana en que faltaban líneas.
       const lineasBatch: any[] = [];
+      // Desglose informativo por línea (bandera por licencia). NO altera montos.
+      const guardarDesglose = desgloseLineaHabilitado((empresa as any)?.licencia);
       for (let idx = 0; idx < cart.length; idx++) {
         const item = cart[idx];
         const breakdown = netoPorIdx[idx];
@@ -993,7 +996,25 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           // Tope de seguridad con el total BRUTO (pre-promoción) de la línea.
           promoLineTotalByProduct.set(item.producto_id, (promoLineTotalByProduct.get(item.producto_id) ?? 0) + brutoPorIdx[idx].total);
         }
-        lineasBatch.push({ id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, precio_unitario_sin_redondeo: Number((item as any).precio_unitario_sin_redondeo) > 0 ? Number((item as any).precio_unitario_sin_redondeo) : (item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0), unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() });
+        let desglose: Record<string, any> = {};
+        if (guardarDesglose) {
+          const promosLinea = promoResults.filter(p => p.producto_id === item.producto_id && Number(p.descuento) > 0);
+          const promoDominante = promosLinea.slice().sort((a, b) => Number(b.descuento || 0) - Number(a.descuento || 0))[0];
+          const cantidadBonificada = promosLinea.reduce((s, p) => s + (Number(p.cantidad_gratis) || 0), 0);
+          desglose = buildDesgloseLinea({
+            cantidad: item.cantidad,
+            precioListaUnitario: Number((item as any).precio_unitario_sin_redondeo) || item.precio_unitario,
+            breakdownBruto: brutoPorIdx[idx],
+            breakdownNeto: breakdown,
+            descuentoPromoMonto: r2(Math.max(0, brutoPorIdx[idx].total - breakdown.total)),
+            descuentoManualMonto: 0,
+            cantidadBonificada,
+            promocion: promoDominante ? { id: promoDominante.promocion_id, nombre: promoDominante.nombre } : null,
+            usuarioId: profile?.id || null,
+            objetoImpuesto: (item as any).objeto_impuesto ?? null,
+          });
+        }
+        lineasBatch.push({ id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, precio_unitario_sin_redondeo: Number((item as any).precio_unitario_sin_redondeo) > 0 ? Number((item as any).precio_unitario_sin_redondeo) : (item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0), unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, ...desglose, created_at: new Date().toISOString() });
         if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) {
           try {
             const apartTable = getOfflineTable('stock_apartado');

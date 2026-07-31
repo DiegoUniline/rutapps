@@ -7906,23 +7906,38 @@ export type Database = {
       venta_lineas: {
         Row: {
           almacen_id: string | null
+          base_descuento_manual: number | null
+          base_ieps: number | null
+          base_iva: number | null
           cantidad: number
+          cantidad_bonificada: number | null
           created_at: string
           descripcion: string | null
+          descuento_manual: boolean | null
+          descuento_manual_monto: number | null
           descuento_pct: number | null
+          descuento_promocion_monto: number | null
+          descuento_registrado_por: string | null
+          descuento_total_monto: number | null
           empresa_id: string
+          es_bonificacion: boolean | null
           factura_cfdi_id: string | null
           facturado: boolean | null
           facturado_global: boolean
           id: string
           ieps_monto: number | null
           ieps_pct: number | null
+          importe_bruto: number | null
+          impuestos_totales: number | null
           iva_monto: number | null
           iva_pct: number | null
           lista_precio_id: string | null
           lote_id: string | null
+          motivo_descuento_manual: string | null
           notas: string | null
+          objeto_impuesto: string | null
           paquetes: number | null
+          precio_lista_unitario: number | null
           precio_manual: boolean
           precio_unitario: number
           precio_unitario_sin_redondeo: number | null
@@ -7930,6 +7945,8 @@ export type Database = {
           presentacion_id: string | null
           presentacion_nombre: string | null
           producto_id: string | null
+          promocion_id: string | null
+          promocion_nombre: string | null
           subtotal: number | null
           total: number | null
           unidad_id: string | null
@@ -7937,23 +7954,38 @@ export type Database = {
         }
         Insert: {
           almacen_id?: string | null
+          base_descuento_manual?: number | null
+          base_ieps?: number | null
+          base_iva?: number | null
           cantidad?: number
+          cantidad_bonificada?: number | null
           created_at?: string
           descripcion?: string | null
+          descuento_manual?: boolean | null
+          descuento_manual_monto?: number | null
           descuento_pct?: number | null
+          descuento_promocion_monto?: number | null
+          descuento_registrado_por?: string | null
+          descuento_total_monto?: number | null
           empresa_id: string
+          es_bonificacion?: boolean | null
           factura_cfdi_id?: string | null
           facturado?: boolean | null
           facturado_global?: boolean
           id?: string
           ieps_monto?: number | null
           ieps_pct?: number | null
+          importe_bruto?: number | null
+          impuestos_totales?: number | null
           iva_monto?: number | null
           iva_pct?: number | null
           lista_precio_id?: string | null
           lote_id?: string | null
+          motivo_descuento_manual?: string | null
           notas?: string | null
+          objeto_impuesto?: string | null
           paquetes?: number | null
+          precio_lista_unitario?: number | null
           precio_manual?: boolean
           precio_unitario?: number
           precio_unitario_sin_redondeo?: number | null
@@ -7961,6 +7993,8 @@ export type Database = {
           presentacion_id?: string | null
           presentacion_nombre?: string | null
           producto_id?: string | null
+          promocion_id?: string | null
+          promocion_nombre?: string | null
           subtotal?: number | null
           total?: number | null
           unidad_id?: string | null
@@ -7968,23 +8002,38 @@ export type Database = {
         }
         Update: {
           almacen_id?: string | null
+          base_descuento_manual?: number | null
+          base_ieps?: number | null
+          base_iva?: number | null
           cantidad?: number
+          cantidad_bonificada?: number | null
           created_at?: string
           descripcion?: string | null
+          descuento_manual?: boolean | null
+          descuento_manual_monto?: number | null
           descuento_pct?: number | null
+          descuento_promocion_monto?: number | null
+          descuento_registrado_por?: string | null
+          descuento_total_monto?: number | null
           empresa_id?: string
+          es_bonificacion?: boolean | null
           factura_cfdi_id?: string | null
           facturado?: boolean | null
           facturado_global?: boolean
           id?: string
           ieps_monto?: number | null
           ieps_pct?: number | null
+          importe_bruto?: number | null
+          impuestos_totales?: number | null
           iva_monto?: number | null
           iva_pct?: number | null
           lista_precio_id?: string | null
           lote_id?: string | null
+          motivo_descuento_manual?: string | null
           notas?: string | null
+          objeto_impuesto?: string | null
           paquetes?: number | null
+          precio_lista_unitario?: number | null
           precio_manual?: boolean
           precio_unitario?: number
           precio_unitario_sin_redondeo?: number | null
@@ -7992,6 +8041,8 @@ export type Database = {
           presentacion_id?: string | null
           presentacion_nombre?: string | null
           producto_id?: string | null
+          promocion_id?: string | null
+          promocion_nombre?: string | null
           subtotal?: number | null
           total?: number | null
           unidad_id?: string | null
