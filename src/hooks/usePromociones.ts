@@ -208,7 +208,9 @@ export function evaluatePromociones(
   for (const promo of activePromos) {
     const matchingItems = cartItems.filter(item => {
       if (item.es_cambio) return false;
-      if (!promo.acumulable && appliedNonAcumulable.has(item.producto_id)) return false;
+      // Si una promoción NO acumulable ya tomó este producto, ninguna otra
+      // promoción puede aplicarse sobre él (sea acumulable o no).
+      if (appliedNonAcumulable.has(item.producto_id)) return false;
 
       switch (promo.aplica_a) {
         case 'todos':
