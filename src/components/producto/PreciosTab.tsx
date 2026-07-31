@@ -388,7 +388,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
                   {isEditing && editingCol === 'base' ? (
                       <select autoFocus className="input-odoo py-0.5 text-[12px] w-full" value={(currentVals.base_precio as string) ?? 'sin_impuestos'}
                         onChange={e => setEditVal(p => ({ ...p, base_precio: e.target.value }))} onBlur={handleBlur}>
-                        <option value="sin_impuestos">Neto — sin impuestos</option><option value="con_impuestos">Con impuestos incluidos</option>
+                        <option value="sin_impuestos">Neto — impuestos al final</option><option value="con_impuestos">Con impuestos — lo que paga el cliente</option>
                       </select>
                     ) : <span title={baseTitle} className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary`}>{baseLabel}</span>}
                   </td>
