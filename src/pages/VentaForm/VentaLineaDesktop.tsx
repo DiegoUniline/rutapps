@@ -263,8 +263,8 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       {showCol('iva') && (
       <td className="py-1.5 px-2 text-right">
         {isEmpty ? '' : readOnly ? (
-          ivaShown > 0
-            ? <span className="text-[12px] tabular-nums">{money(ivaShown)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.iva_pct) || 0}%</span></span>
+          ivaUnit > 0
+            ? <span className="text-[12px] tabular-nums">{money(ivaUnit)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.iva_pct) || 0}%</span></span>
             : <span className="text-muted-foreground text-[11px]">—</span>
         ) : (
           <div className="flex flex-col items-end gap-0.5">
@@ -273,8 +273,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
               title={Number(l.iva_pct) > 0 ? "Clic para quitar IVA" : "Clic para aplicar IVA"}>
               IVA {Number(l.iva_pct) > 0 ? `${l.iva_pct}%` : ''}
             </button>
-            {ivaShown > 0 && <span className="text-[9px] text-muted-foreground tabular-nums">{money(ivaShown)}</span>}
+            {ivaUnit > 0 && <span className="text-[9px] text-muted-foreground tabular-nums">{money(ivaUnit)}</span>}
           </div>
+
         )}
       </td>
       )}
