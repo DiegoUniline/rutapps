@@ -47,10 +47,15 @@ export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
   const { symbol } = useCurrency();
   const { readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults, currencyCode, cerradoSnapshot } = props;
-  const { visible: cols, toggleColumn, applyPreset, reset } = useColumnPreferences('venta_detalle_lineas', VENTA_LINEAS_DEFAULT_VISIBILITY);
+  const { empresa } = useAuth();
+  const showDesglose = desgloseLineaHabilitado(empresa?.licencia);
+  const defaults = { ...VENTA_LINEAS_DEFAULT_VISIBILITY, ...VENTA_LINEAS_DESGLOSE_DEFAULTS };
+  const { visible: cols, toggleColumn, applyPreset, reset } = useColumnPreferences('venta_detalle_lineas', defaults);
   // El selector de columnas aplica en el DETALLE (solo lectura). Al editar/crear
   // se muestran las columnas estándar para no ocultar el editor de precios.
-  const effectiveCols = readOnly ? cols : VENTA_LINEAS_DEFAULT_VISIBILITY;
+  const effectiveCols = readOnly
+    ? (showDesglose ? cols : { ...cols, ...VENTA_LINEAS_DESGLOSE_OFF })
+    : { ...VENTA_LINEAS_DEFAULT_VISIBILITY, ...VENTA_LINEAS_DESGLOSE_OFF };
   const showCol = (k: string) => effectiveCols[k] !== false;
 
   // If pedido is cerrado, scale each line by its delivered/ordered ratio so
