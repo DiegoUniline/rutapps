@@ -96,8 +96,17 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
             })()}
           </div>
         )}
-        <div className="mt-2 bg-accent/30 border border-accent/50 rounded px-3 py-2 text-[11px] text-muted-foreground">
-          💡 El IVA se calcula sobre el precio + IEPS (estándar fiscal mexicano). IEPS puede ser porcentaje o cuota fija por unidad.
+        <div className="mt-2 bg-blue-50/50 border border-blue-100 rounded px-3 py-2 text-[11px] text-blue-700 space-y-2">
+          <p>
+            <strong>¿Switch encendido vs apagado?</strong>
+          </p>
+          <ul className="list-disc ml-4 space-y-1">
+            <li><strong>Encendido:</strong> El sistema calcula y desglosa el impuesto en tus ventas.</li>
+            <li><strong>Apagado:</strong> El producto se vende como "Exento", ignorando cualquier porcentaje configurado.</li>
+          </ul>
+          <p className="text-[10px] opacity-80 pt-1 border-t border-blue-100">
+            💡 Nota: El IVA se calcula sobre el (Precio + IEPS), siguiendo el estándar fiscal mexicano.
+          </p>
         </div>
       </div>
     </div>
