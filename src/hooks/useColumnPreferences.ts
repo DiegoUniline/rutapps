@@ -23,7 +23,9 @@ function save(key: string, value: Record<string, boolean>) {
 }
 
 type RpcError = { message: string } | null;
-const callRpc = supabase.rpc as unknown as (
+// IMPORTANTE: `supabase.rpc` necesita su `this`; desestructurarlo rompe el cliente.
+const callRpc = ((fn: string, args: Record<string, unknown>) =>
+  (supabase as any).rpc(fn, args)) as (
   fn: string,
   args: Record<string, unknown>,
 ) => PromiseLike<{ error: RpcError }>;
