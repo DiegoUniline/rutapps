@@ -1037,11 +1037,9 @@ export default function PuntoVentaPage() {
         clienteDireccion: [(clienteTicket as any)?.direccion, (clienteTicket as any)?.colonia].filter(Boolean).join(', ') || null,
         vendedorTelefono: profile?.telefono ?? null,
         lineas: cart.map(item => {
-          const chargedLineTotal = getChargedLineTotal(item);
-          const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
-          const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item, promoRaw);
-          const grossBeforeDiscount = r2(chargedLineTotal + lp.effectiveDiscount);
+          const grossBeforeDiscount = getGrossLineTotal(item);
           const breakdown = splitFinalGross(item, grossBeforeDiscount);
+
           const prod: any = productos?.find((p: any) => p.id === item.producto_id);
           return {
             nombre: item.nombre,
