@@ -1241,10 +1241,10 @@ export default function TarifaFormPage() {
                               <td className="py-2 px-3">{getValueField()}</td>
                               <td className="py-2 px-3">
                                 <select className="input-odoo text-xs w-full" value={newLinea.base_precio}
-                                  title="Neto = el precio que capturas no trae impuestos (se suman al final). Con impuestos = el precio ya incluye IVA/IEPS (se extraen para obtener el neto)."
+                                  title="Indica si el resultado de esta regla (margen, precio fijo o descuento) ya incluye IVA/IEPS o si es neto y se le agregan los impuestos al final."
                                   onChange={e => setNewLinea(p => ({ ...p, base_precio: e.target.value as any }))}>
-                                  <option value="sin_impuestos">Neto — sin impuestos</option>
-                                  <option value="con_impuestos">Con impuestos incluidos</option>
+                                  <option value="sin_impuestos">Neto — los impuestos se agregan al final</option>
+                                  <option value="con_impuestos">Con impuestos — es lo que paga el cliente</option>
                                 </select>
                               </td>
                               <td className="py-2 px-3">
