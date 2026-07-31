@@ -290,8 +290,8 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
               <th className="th-odoo text-left">Tipo</th>
               <th className="th-odoo text-right">Valor</th>
               <th className="th-odoo text-center">Redondeo</th>
-              <th className="th-odoo text-center" title="¿El precio que capturas en esta regla ya trae impuestos incluidos o es neto (sin IVA/IEPS)?">
-                Base <span className="text-[9px] font-normal text-muted-foreground">¿c/imp?</span>
+              <th className="th-odoo text-center" title="Indica si el precio que calcula esta regla (margen, precio fijo o descuento) ya incluye IVA/IEPS, o si es neto y se le agregan los impuestos al final.">
+                Resultado <span className="text-[9px] font-normal text-muted-foreground">¿c/imp?</span>
               </th>
               <th className="th-odoo text-right">Precio s/imp</th>
               <th className="th-odoo text-right">Precio c/imp</th>
