@@ -1059,8 +1059,8 @@ export default function TarifaFormPage() {
                           
                           
                           <th className="th-odoo text-left">Cálculo</th>
-                          <th className="th-odoo text-left" title="Define si el precio o margen que capturas en esta regla ya trae impuestos incluidos (lo que ve el cliente) o si es un precio neto antes de impuestos. El sistema usa esto para calcular el precio final correctamente.">
-                            Base de precio <span className="text-[10px] text-muted-foreground font-normal">(¿incluye impuestos?)</span>
+                          <th className="th-odoo text-left" title="Indica si el precio que calcula esta regla (margen, precio fijo o descuento) ya incluye IVA/IEPS, o si es un precio neto al que se le sumarán los impuestos para obtener el precio final que paga el cliente.">
+                            Resultado <span className="text-[10px] text-muted-foreground font-normal">¿incluye impuestos?</span>
                           </th>
                           <th className="th-odoo text-right">Valor</th>
                           <th className="th-odoo text-right">Comisión %</th>
@@ -1146,16 +1146,16 @@ export default function TarifaFormPage() {
                                 </select>
                               ) : <span className="text-xs text-muted-foreground">{CALCULO_LABELS[l.tipo_calculo]}</span>}
                             </td>
-                            {/* Base de precio */}
+                            {/* Resultado de la regla: ¿incluye impuestos? */}
                             <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('base_precio')}>
                               {ec('base_precio') ? (
                                 <select autoFocus className="input-odoo text-xs w-full" value={editLinea.base_precio}
                                   onBlur={blurSave}
                                   onChange={e => setEditLinea(p => ({ ...p, base_precio: e.target.value as any }))}>
-                                  <option value="sin_impuestos">Neto — sin impuestos</option>
-                                  <option value="con_impuestos">Con impuestos incluidos</option>
+                                  <option value="sin_impuestos">Neto — los impuestos se agregan al final</option>
+                                  <option value="con_impuestos">Con impuestos — es lo que paga el cliente</option>
                                 </select>
-                              ) : <span className="text-xs text-muted-foreground" title={(l as any).base_precio === 'con_impuestos' ? 'El precio que capturas ya incluye IVA/IEPS; el sistema le extrae los impuestos para guardar el neto' : 'El precio que capturas es neto (sin IVA/IEPS); el sistema le suma los impuestos al final'}>{(l as any).base_precio === 'con_impuestos' ? 'Con impuestos' : 'Sin impuestos'}</span>}
+                              ) : <span className="text-xs text-muted-foreground" title={(l as any).base_precio === 'con_impuestos' ? 'El resultado de la regla ya incluye IVA/IEPS — es el precio final que paga el cliente. El sistema le extrae los impuestos para guardar el neto' : 'El resultado de la regla es neto (sin IVA/IEPS). El sistema le suma los impuestos al final para obtener el precio que paga el cliente'}>{(l as any).base_precio === 'con_impuestos' ? 'Con impuestos' : 'Sin impuestos'}</span>}
                             </td>
                             {/* Valor */}
                             <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('valor')}>
@@ -1241,10 +1241,10 @@ export default function TarifaFormPage() {
                               <td className="py-2 px-3">{getValueField()}</td>
                               <td className="py-2 px-3">
                                 <select className="input-odoo text-xs w-full" value={newLinea.base_precio}
-                                  title="Neto = el precio que capturas no trae impuestos (se suman al final). Con impuestos = el precio ya incluye IVA/IEPS (se extraen para obtener el neto)."
+                                  title="Indica si el resultado de esta regla (margen, precio fijo o descuento) ya incluye IVA/IEPS o si es neto y se le agregan los impuestos al final."
                                   onChange={e => setNewLinea(p => ({ ...p, base_precio: e.target.value as any }))}>
-                                  <option value="sin_impuestos">Neto — sin impuestos</option>
-                                  <option value="con_impuestos">Con impuestos incluidos</option>
+                                  <option value="sin_impuestos">Neto — los impuestos se agregan al final</option>
+                                  <option value="con_impuestos">Con impuestos — es lo que paga el cliente</option>
                                 </select>
                               </td>
                               <td className="py-2 px-3">

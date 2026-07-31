@@ -290,8 +290,8 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
               <th className="th-odoo text-left">Tipo</th>
               <th className="th-odoo text-right">Valor</th>
               <th className="th-odoo text-center">Redondeo</th>
-              <th className="th-odoo text-center" title="¿El precio que capturas en esta regla ya trae impuestos incluidos o es neto (sin IVA/IEPS)?">
-                Base <span className="text-[9px] font-normal text-muted-foreground">¿c/imp?</span>
+              <th className="th-odoo text-center" title="Indica si el precio que calcula esta regla (margen, precio fijo o descuento) ya incluye IVA/IEPS, o si es neto y se le agregan los impuestos al final.">
+                Resultado <span className="text-[9px] font-normal text-muted-foreground">¿c/imp?</span>
               </th>
               <th className="th-odoo text-right">Precio s/imp</th>
               <th className="th-odoo text-right">Precio c/imp</th>
@@ -315,7 +315,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
               const redondeoVal = ((isEditing ? (editVal.redondeo ?? linea.redondeo) : linea.redondeo) ?? 'ninguno') as string;
               const redondeoLabel = ({ arriba: '⬆ Arriba', abajo: '⬇ Abajo', cercano: '↕ Cercano', ninguno: '— Ninguno' } as Record<string, string>)[redondeoVal] ?? '— Ninguno';
               const baseLabel = basePrecio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.';
-              const baseTitle = basePrecio === 'con_impuestos' ? 'El precio que capturas ya incluye IVA/IEPS — el sistema le extrae los impuestos para guardar el neto' : 'El precio que capturas es neto (sin IVA/IEPS) — el sistema le suma los impuestos al final';
+              const baseTitle = basePrecio === 'con_impuestos' ? 'El resultado de la regla ya incluye IVA/IEPS — es el precio final que paga el cliente. El sistema le extrae los impuestos para guardar el neto' : 'El resultado de la regla es neto (sin IVA/IEPS). El sistema le suma los impuestos al final para obtener el precio que paga el cliente';
 
               const srcLinea = isEditing ? { ...linea, ...editVal } : linea;
               const pr = form.precio_principal ?? 0;
@@ -388,7 +388,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
                   {isEditing && editingCol === 'base' ? (
                       <select autoFocus className="input-odoo py-0.5 text-[12px] w-full" value={(currentVals.base_precio as string) ?? 'sin_impuestos'}
                         onChange={e => setEditVal(p => ({ ...p, base_precio: e.target.value }))} onBlur={handleBlur}>
-                        <option value="sin_impuestos">Neto — sin impuestos</option><option value="con_impuestos">Con impuestos incluidos</option>
+                        <option value="sin_impuestos">Neto — impuestos al final</option><option value="con_impuestos">Con impuestos — lo que paga el cliente</option>
                       </select>
                     ) : <span title={baseTitle} className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary`}>{baseLabel}</span>}
                   </td>
