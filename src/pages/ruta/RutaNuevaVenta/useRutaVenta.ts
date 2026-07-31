@@ -754,12 +754,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     }, 0);
   }, [devoluciones, productos, cart, sinImpuestos]);
 
-  // Descuento EFECTIVO de promoción por producto (mismo cálculo que totals)
+  // Descuento EFECTIVO de promoción por producto.
+  // El motor ya trabaja sobre el bruto cobrado, así que el descuento se aplica
+  // tal cual (topado al total de la línea). Sin dobles conversiones.
   const promoEffectiveByProduct = useMemo(() => {
     const m = new Map<string, number>();
     cart.forEach(item => {
       if (item.es_cambio) return;
-      const pricingItem = toPosPricingItem(item, sinImpuestos);
       const original = getOriginalLineBreakdown(item, sinImpuestos);
       const qty = Number(item.cantidad) || 0;
       const promoParts = separarDescuentoPromo(
@@ -767,13 +768,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         item.producto_id,
         qty > 0 ? original.total / qty : 0,
       );
-      if (promoParts.descuentoRegular <= 0 && promoParts.descuentoGratisBruto <= 0) return;
-      const lp = buildPosLinePricing(pricingItem, promoParts.descuentoRegular);
-      const regularEff = pricingItem.base_precio === 'con_impuestos'
-        ? r2(Math.max(0, original.total - lp.finalGross))
-        : lp.effectiveDiscount;
-      const eff = Math.min(original.total, regularEff + promoParts.descuentoGratisBruto);
-      if (eff > 0) m.set(item.producto_id, (m.get(item.producto_id) ?? 0) + eff);
+      const eff = Math.min(
+        original.total,
+        r2(promoParts.descuentoRegular + promoParts.descuentoGratisBruto),
+      );
+      if (eff > 0) m.set(item.producto_id, r2((m.get(item.producto_id) ?? 0) + eff));
     });
     return m;
   }, [cart, promoResults, sinImpuestos]);
@@ -784,19 +783,19 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     cart.forEach(item => {
       if (item.es_cambio) { items += item.cantidad; return; }
       const original = getOriginalLineBreakdown(item, sinImpuestos);
-      // Prorratea el descuento de promoción sobre subtotal/IVA/IEPS para que el
-      // encabezado no muestre impuestos de la base sin descuento.
+      // El encabezado se arma sumando las líneas YA netas de promoción, así
+      // siempre se cumple subtotal + IVA + IEPS = total.
       const rem = pendiente.get(item.producto_id) ?? 0;
       const aplicado = rem > 0 ? Math.min(rem, original.total) : 0;
       if (aplicado > 0) pendiente.set(item.producto_id, rem - aplicado);
       const ajustado = aplicado > 0 ? aplicarPromoALinea(original, aplicado) : original;
-      subtotal += original.subtotal;
+      subtotal += ajustado.subtotal;
       iva += ajustado.iva;
       ieps += ajustado.ieps;
       descuentoPromo += aplicado;
       items += item.cantidad;
     });
-    const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoPromo - descuentoDevolucion));
+    const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoDevolucion));
     // Solo aplica si tiene permiso y valor > 0
     const extraVal = canApplyDiscount && descuentoExtraValor > 0 ? descuentoExtraValor : 0;
     const extraAmt = extraVal > 0
@@ -806,6 +805,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     const total = r2(Math.max(0, preExtra - extraAmt));
     return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoDevolucion: r2(descuentoDevolucion), descuentoExtra: extraAmt };
   }, [cart, promoEffectiveByProduct, descuentoDevolucion, sinImpuestos, canApplyDiscount, descuentoExtraValor, descuentoExtraTipo]);
+
 
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
