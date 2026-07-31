@@ -300,8 +300,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
                 title={Number(l.ieps_pct) > 0 ? "Clic para quitar IEPS" : "Clic para aplicar IEPS"}>
                 IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}
               </button>
-              {iepsShown > 0 && <span className="text-[9px] text-muted-foreground tabular-nums">{money(iepsShown)}</span>}
+              {iepsUnit > 0 && <span className="text-[9px] text-muted-foreground tabular-nums">{money(iepsUnit)}</span>}
             </div>
+
           );
         })()}
       </td>
