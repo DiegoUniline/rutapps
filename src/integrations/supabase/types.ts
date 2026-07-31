@@ -7950,6 +7950,7 @@ export type Database = {
           subtotal: number | null
           total: number | null
           unidad_id: string | null
+          updated_at: string
           venta_id: string
         }
         Insert: {
@@ -7998,6 +7999,7 @@ export type Database = {
           subtotal?: number | null
           total?: number | null
           unidad_id?: string | null
+          updated_at?: string
           venta_id: string
         }
         Update: {
@@ -8046,6 +8048,7 @@ export type Database = {
           subtotal?: number | null
           total?: number | null
           unidad_id?: string | null
+          updated_at?: string
           venta_id?: string
         }
         Relationships: [
