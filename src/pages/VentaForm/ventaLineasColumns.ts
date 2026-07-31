@@ -38,3 +38,48 @@ export const VENTA_LINEAS_PRESETS: ColumnPreset[] = [
   { key: 'fiscal',    label: 'Fiscal (CFDI)', columns: ['cantidad', 'precioNeto', 'descMan', 'descPromo', 'iva', 'ieps'] },
   { key: 'todas',     label: 'Todas',         columns: ['cantidad', 'unidad', 'precioNeto', 'precioBruto', 'iva', 'ieps', 'descMan', 'descPromo', 'lote'] },
 ];
+
+// ── Desglose completo por línea (solo licencias con la bandera
+// `venta_linea_desglose` activa). Son columnas 100% informativas que leen los
+// campos guardados en `venta_lineas`; no recalculan nada.
+export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
+  { key: 'dPrecioLista',    label: 'Precio lista',   sub: 'unitario s/desc', group: 'Desglose' },
+  { key: 'dImporteBruto',   label: 'Importe bruto',  sub: 'antes de desc.',  group: 'Desglose' },
+  { key: 'dDescPromoMonto', label: 'Desc. promo $',                          group: 'Desglose' },
+  { key: 'dBaseDescMan',    label: 'Base desc. man.',                        group: 'Desglose' },
+  { key: 'dDescManMonto',   label: 'Desc. manual $',                         group: 'Desglose' },
+  { key: 'dDescTotal',      label: 'Desc. total $',                          group: 'Desglose' },
+  { key: 'dBaseIeps',       label: 'Base IEPS',                              group: 'Desglose' },
+  { key: 'dBaseIva',        label: 'Base IVA',                               group: 'Desglose' },
+  { key: 'dImpuestosTot',   label: 'Impuestos $',     sub: 'IVA + IEPS',     group: 'Desglose' },
+  { key: 'dPromoNombre',    label: 'Promoción',       sub: 'nombre',         group: 'Desglose' },
+  { key: 'dCantBonificada', label: 'Cant. bonificada',                       group: 'Desglose' },
+  { key: 'dEsBonificacion', label: '¿Bonificación?',                         group: 'Desglose' },
+  { key: 'dMotivoDescMan',  label: 'Motivo desc.',    sub: 'manual',         group: 'Desglose' },
+  { key: 'dObjetoImpuesto', label: 'Objeto impuesto', sub: 'SAT',            group: 'Desglose' },
+];
+
+export const VENTA_LINEAS_DESGLOSE_KEYS = VENTA_LINEAS_DESGLOSE_COLUMNS.map(c => c.key);
+
+/** Todas las columnas OFF por defecto (no cambian la vista actual de nadie). */
+export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> =
+  Object.fromEntries(VENTA_LINEAS_DESGLOSE_KEYS.map(k => [k, false]));
+
+/** Fuerza apagadas las columnas de desglose (licencias sin la bandera). */
+export const VENTA_LINEAS_DESGLOSE_OFF: Record<string, boolean> = VENTA_LINEAS_DESGLOSE_DEFAULTS;
+
+export function getVentaLineasColumns(showDesglose: boolean): ColumnDef[] {
+  return showDesglose
+    ? [...VENTA_LINEAS_COLUMNS, ...VENTA_LINEAS_DESGLOSE_COLUMNS]
+    : VENTA_LINEAS_COLUMNS;
+}
+
+export function getVentaLineasPresets(showDesglose: boolean): ColumnPreset[] {
+  if (!showDesglose) return VENTA_LINEAS_PRESETS;
+  return [
+    ...VENTA_LINEAS_PRESETS,
+    { key: 'desglose', label: 'Desglose completo', columns: ['cantidad', 'unidad', 'precioNeto', 'precioBruto', 'iva', 'ieps', 'descMan', 'descPromo', ...VENTA_LINEAS_DESGLOSE_KEYS] },
+  ];
+}
+
+export const VENTA_LINEAS_DESGLOSE_GROUP_ORDER = [...VENTA_LINEAS_GROUP_ORDER, 'Desglose'];
