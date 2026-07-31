@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
 import { buildPromoAplicadaRows, promoPersistHabilitado } from '@/lib/promoPersist';
 import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
+import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 
 import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea, DescuentoExtraTipo } from './types';
 import { locationService } from '@/lib/locationService';
