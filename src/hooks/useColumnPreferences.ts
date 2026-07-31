@@ -23,7 +23,9 @@ function save(key: string, value: Record<string, boolean>) {
 }
 
 type RpcError = { message: string } | null;
-const callRpc = supabase.rpc as unknown as (
+// IMPORTANTE: `supabase.rpc` necesita su `this`; desestructurarlo rompe el cliente.
+const callRpc = ((fn: string, args: Record<string, unknown>) =>
+  (supabase as any).rpc(fn, args)) as (
   fn: string,
   args: Record<string, unknown>,
 ) => PromiseLike<{ error: RpcError }>;
@@ -72,11 +74,19 @@ export function useColumnPreferences(listKey: string, defaults: Record<string, b
   // Guarda en localStorage (instantáneo) y sincroniza a la BD (fire-and-forget:
   // si falla o está offline, localStorage mantiene la selección).
   const persist = useCallback((next: Record<string, boolean>) => {
-    save(fullKey, next);
-    if (userId !== 'anon') {
-      callRpc('set_ui_pref', { p_key: prefKey, p_value: next })
-        .then(({ error }) => { if (error) console.warn('set_ui_pref:', error.message); });
-    }
+    // Se llama desde updaters de setState (que React puede ejecutar durante el
+    // render): diferimos el efecto para no escribir durante el render.
+    queueMicrotask(() => {
+      save(fullKey, next);
+      if (userId !== 'anon') {
+        try {
+          callRpc('set_ui_pref', { p_key: prefKey, p_value: next })
+            .then(({ error }) => { if (error) console.warn('set_ui_pref:', error.message); });
+        } catch (e) {
+          console.warn('set_ui_pref:', e);
+        }
+      }
+    });
   }, [fullKey, prefKey, userId]);
 
   const toggleColumn = useCallback((key: string) => {
