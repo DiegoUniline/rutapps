@@ -9,6 +9,7 @@ import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/
 import { supabase } from '@/lib/supabase';
 import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplicadas } from '@/lib/promoPersist';
 import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
+import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
