@@ -315,7 +315,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
               const redondeoVal = ((isEditing ? (editVal.redondeo ?? linea.redondeo) : linea.redondeo) ?? 'ninguno') as string;
               const redondeoLabel = ({ arriba: '⬆ Arriba', abajo: '⬇ Abajo', cercano: '↕ Cercano', ninguno: '— Ninguno' } as Record<string, string>)[redondeoVal] ?? '— Ninguno';
               const baseLabel = basePrecio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.';
-              const baseTitle = basePrecio === 'con_impuestos' ? 'El precio que capturas ya incluye IVA/IEPS — el sistema le extrae los impuestos para guardar el neto' : 'El precio que capturas es neto (sin IVA/IEPS) — el sistema le suma los impuestos al final';
+              const baseTitle = basePrecio === 'con_impuestos' ? 'El resultado de la regla ya incluye IVA/IEPS — es el precio final que paga el cliente. El sistema le extrae los impuestos para guardar el neto' : 'El resultado de la regla es neto (sin IVA/IEPS). El sistema le suma los impuestos al final para obtener el precio que paga el cliente';
 
               const srcLinea = isEditing ? { ...linea, ...editVal } : linea;
               const pr = form.precio_principal ?? 0;
