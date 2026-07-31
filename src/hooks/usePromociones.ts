@@ -234,8 +234,11 @@ export function evaluatePromociones(
       const cantGratis = Math.max(1, Number(promo.cantidad_gratis) || 1);
       const freeProductId = promo.producto_gratis_id;
 
-      if (freeProductId) {
-        const triggerItems = matchingItems.filter(item => item.producto_id !== freeProductId);
+      const triggerItems = freeProductId
+        ? matchingItems.filter(item => item.producto_id !== freeProductId)
+        : [];
+
+      if (freeProductId && triggerItems.length > 0) {
         const totalGanado = triggerItems.reduce(
           (sum, item) => sum + Math.floor(item.cantidad / compraMin) * cantGratis,
           0,
