@@ -36,6 +36,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
