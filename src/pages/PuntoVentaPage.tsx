@@ -709,23 +709,23 @@ export default function PuntoVentaPage() {
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0, descuento = 0, total = 0;
     cart.forEach(item => {
-      const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
-      const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item, promoRaw);
+      const grossBeforeDiscount = getGrossLineTotal(item);
       const chargedLineTotal = getChargedLineTotal(item);
-      const lineDiscount = lp.effectiveDiscount;
-      const grossBeforeDiscount = r2(chargedLineTotal + lineDiscount);
-      const breakdown = splitFinalGross(item, grossBeforeDiscount);
+      const lineDiscount = r2(grossBeforeDiscount - chargedLineTotal);
+      // El desglose se hace sobre el importe YA neto de promoción, para que el
+      // IVA/IEPS del encabezado corresponda a lo que se cobra.
+      const breakdown = splitFinalGross(item, chargedLineTotal);
 
       subtotal += breakdown.subtotal;
       iva += breakdown.iva;
       ieps += breakdown.ieps;
       descuento += lineDiscount;
-      total += grossBeforeDiscount;
+      total += chargedLineTotal;
       items += item.cantidad;
     });
-    const finalTotal = r2(Math.max(0, total - descuento));
-    return { subtotal: r2(subtotal), iva: sinImpuestos ? 0 : r2(iva), ieps: sinImpuestos ? 0 : r2(ieps), descuento: r2(descuento), total: finalTotal, items };
-  }, [cart, linePricingMap, promoRawByProduct, getChargedLineTotal, splitFinalGross, sinImpuestos]);
+    return { subtotal: r2(subtotal), iva: sinImpuestos ? 0 : r2(iva), ieps: sinImpuestos ? 0 : r2(ieps), descuento: r2(descuento), total: r2(Math.max(0, total)), items };
+  }, [cart, getGrossLineTotal, getChargedLineTotal, splitFinalGross, sinImpuestos]);
+
 
   const paySplitsComputed = useMemo(() => {
     const splits: { metodo: PayMethod; monto: number; referencia: string }[] = [];
