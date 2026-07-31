@@ -104,6 +104,9 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
             <li><strong>Encendido:</strong> El sistema calcula y desglosa el impuesto en tus ventas.</li>
             <li><strong>Apagado:</strong> El producto se vende como "Exento", ignorando cualquier porcentaje configurado.</li>
           </ul>
+          <p className="text-[10px] opacity-80 pt-1 border-t border-blue-100 italic">
+            🚨 Si apagas el switch pero el precio incluye impuestos, el sistema tratará el precio final como el precio neto (sin desglosar nada).
+          </p>
           <p className="text-[10px] opacity-80 pt-1 border-t border-blue-100">
             💡 Nota: El IVA se calcula sobre el (Precio + IEPS), siguiendo el estándar fiscal mexicano.
           </p>
