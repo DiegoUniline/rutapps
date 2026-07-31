@@ -24,12 +24,13 @@ Segundo detalle: aunque se evaluaran todas las líneas, no existe un contador gl
 unidades de regalo ya consumidas, así que podría irse al otro extremo y regalar más
 unidades de las que hay en el carrito.
 
-## Alcance del barrido (datos reales, últimos 2 días, todas las empresas)
+## Alcance del diagnóstico confirmado
 
-- **Distribuidora Tampico (Lic. 43129204)**: 118 ventas con promo de producto gratis,
-  **38 con descuento faltante**, **$1,719.50** sin descontar.
-- **Dulces Jersey (Lic. 66546670)**: 1 venta con promo, sin faltante.
-- Ninguna otra empresa tiene promos activas de "producto gratis" con regalo distinto.
+- El defecto está confirmado en el motor común y puede afectar cualquier empresa que use
+  una promoción de producto gratis con regalo distinto al disparador.
+- En Tampico ya se identificaron pedidos de hoy con descuento incompleto, incluido PED-1894.
+- Antes de corregir datos se repetirá el barrido para **hoy, usando la zona horaria de cada
+  empresa**, sin limitarlo a Tampico ni asumir que la lista actual es definitiva.
 
 ## Qué haremos
 
@@ -46,20 +47,33 @@ En `src/hooks/usePromociones.ts`, dentro del caso `producto_gratis`:
 Sin cambios en tipos de promo distintos, ni en precios, ni en impuestos, ni en el
 prorrateo por línea (`promoLinea.ts` sigue igual; recibe el descuento ya correcto).
 
-### 2. Pruebas antes de publicar
+### 2. Pruebas del motor antes de tocar ventas
 - Test unitario nuevo con el escenario exacto de PED-1894: 3 disparadores, regalo x3 a
   $6.30 → descuento $18.90, total $777.00.
 - Casos borde: regalo con menos unidades en carrito que las ganadas (se topa),
   promo acumulable, regalo igual al disparador (comportamiento actual intacto).
 - Verificación manual en Distribuidora Tampico con un pedido de prueba antes de liberar.
 
-### 3. Ventas ya emitidas
-No se tocan automáticamente. Cuando el motor esté verificado, entrego la lista de las
-38 ventas de Tampico con el faltante exacto por folio para que decidas si se corrigen
-(total y saldo) o se dejan como están.
+### 3. Corregir las ventas afectadas de hoy en todas las empresas
+Solo después de comprobar el motor:
+- Barrer todas las ventas y pedidos creados hoy, calculando por folio cuántos regalos
+  correspondían, cuántos se descontaron y el faltante exacto.
+- Corregir en una operación de base de datos controlada únicamente los registros donde
+  el descuento esperado sea mayor al aplicado; no tocar ventas correctas ni días anteriores.
+- Actualizar el descuento promocional persistido, los montos netos de las líneas afectadas,
+  impuestos, total y saldo pendiente de forma consistente, sin crear cobros, movimientos
+  de caja, inventario, entregas ni kardex.
+- Conservar el monto ya pagado. El saldo quedará como `máximo(total corregido - pagos
+  aplicados, 0)`; si los pagos superan el nuevo total, no se inventará un saldo negativo y
+  el excedente se reportará aparte para revisión.
+- Registrar antes/después por venta en auditoría para que el barrido sea verificable y
+  reversible, y entregar el listado final por empresa y folio con total anterior/correcto.
 
 ## Notas técnicas
-- Archivo único de cambio: `src/hooks/usePromociones.ts` (función `evaluatePromociones`).
+- Cambio de frontend concentrado en `src/hooks/usePromociones.ts` (función
+  `evaluatePromociones`) y su prueba unitaria.
 - El set `appliedNonAcumulable` pasa a registrar solo disparadores; el control del regalo
   se hace con un mapa `promoId|productoRegalo → unidades ya otorgadas`.
-- No se modifica base de datos, ni RPC, ni triggers, ni banderas de licencia.
+- La reparación de datos se ejecutará después, separada del cambio del motor, con alcance
+  por `empresa_id`, validación multi-tenant y auditoría. No se cambiarán reglas de precio,
+  inventario, cobros ni promociones configuradas.
