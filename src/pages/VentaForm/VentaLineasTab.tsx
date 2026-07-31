@@ -10,7 +10,13 @@ import { VentaLineaDesktop } from './VentaLineaDesktop';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
 import { ColumnVisibilityMenu } from '@/components/ColumnVisibilityMenu';
-import { VENTA_LINEAS_COLUMNS, VENTA_LINEAS_GROUP_ORDER, VENTA_LINEAS_DEFAULT_VISIBILITY, VENTA_LINEAS_PRESETS } from './ventaLineasColumns';
+import {
+  VENTA_LINEAS_GROUP_ORDER, VENTA_LINEAS_DEFAULT_VISIBILITY,
+  VENTA_LINEAS_DESGLOSE_COLUMNS, VENTA_LINEAS_DESGLOSE_DEFAULTS, VENTA_LINEAS_DESGLOSE_OFF,
+  VENTA_LINEAS_DESGLOSE_GROUP_ORDER, getVentaLineasColumns, getVentaLineasPresets,
+} from './ventaLineasColumns';
+import { useAuth } from '@/contexts/AuthContext';
+import { desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 
 interface Props {
   lineas: Partial<VentaLinea>[];
