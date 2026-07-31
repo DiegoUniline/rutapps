@@ -1059,7 +1059,9 @@ export default function TarifaFormPage() {
                           
                           
                           <th className="th-odoo text-left">Cálculo</th>
-                          <th className="th-odoo text-left">Base</th>
+                          <th className="th-odoo text-left" title="Define si el precio o margen que capturas en esta regla ya trae impuestos incluidos (lo que ve el cliente) o si es un precio neto antes de impuestos. El sistema usa esto para calcular el precio final correctamente.">
+                            Base de precio <span className="text-[10px] text-muted-foreground font-normal">(¿incluye impuestos?)</span>
+                          </th>
                           <th className="th-odoo text-right">Valor</th>
                           <th className="th-odoo text-right">Comisión %</th>
                           <th className="th-odoo text-right">Precio mín</th>
