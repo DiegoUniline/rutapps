@@ -341,6 +341,33 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           : (!isEmpty ? <span className="text-muted-foreground text-[11px]">—</span> : '')}
       </td>
       )}
+      {/* ── Desglose por línea (columnas informativas, valores GUARDADOS) ── */}
+      {(() => {
+        const d = l as any;
+        const num = (v: any) => (v == null ? null : Number(v));
+        const cell = (key: string, content: React.ReactNode) => showCol(key) ? (
+          <td key={key} className="py-1.5 px-2 text-right text-[12px] tabular-nums whitespace-nowrap">
+            {isEmpty ? '' : (content ?? <span className="text-muted-foreground text-[11px]">—</span>)}
+          </td>
+        ) : null;
+        const m = (v: any) => (num(v) == null ? null : money(Number(v)));
+        return [
+          cell('dPrecioLista', m(d.precio_lista_unitario)),
+          cell('dImporteBruto', m(d.importe_bruto)),
+          cell('dDescPromoMonto', num(d.descuento_promocion_monto) ? <span className="text-primary">−{money(Number(d.descuento_promocion_monto))}</span> : m(d.descuento_promocion_monto)),
+          cell('dBaseDescMan', m(d.base_descuento_manual)),
+          cell('dDescManMonto', m(d.descuento_manual_monto)),
+          cell('dDescTotal', m(d.descuento_total_monto)),
+          cell('dBaseIeps', m(d.base_ieps)),
+          cell('dBaseIva', m(d.base_iva)),
+          cell('dImpuestosTot', m(d.impuestos_totales)),
+          cell('dPromoNombre', d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null),
+          cell('dCantBonificada', num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null),
+          cell('dEsBonificacion', d.es_bonificacion == null ? null : <span className="text-[11px]">{d.es_bonificacion ? 'Sí' : 'No'}</span>),
+          cell('dMotivoDescMan', d.motivo_descuento_manual ? <span className="text-[11px]">{d.motivo_descuento_manual}</span> : null),
+          cell('dObjetoImpuesto', d.objeto_impuesto ? <span className="text-[11px]">{d.objeto_impuesto}</span> : null),
+        ];
+      })()}
       <td className="py-1.5 px-2">
         {!readOnly && !isEmpty && <button onClick={() => onRemoveLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>}
       </td>
