@@ -678,11 +678,12 @@ export function useVentaForm() {
       // Pre-cálculo de líneas ANTES de guardar el encabezado: si la promoción
       // ya viene descontada en la línea, el encabezado NO debe volver a restarla
       // (eso provocaba un descuento doble en el total de la venta).
-      const preparadas: { producto_id: string; pricedLine: any; lineAmounts: ReturnType<typeof calculateSaleLineAmounts> }[] = [];
+      const preparadas: { producto_id: string; pricedLine: any; lineAmounts: ReturnType<typeof calculateSaleLineAmounts>; brutoAmounts: ReturnType<typeof calculateSaleLineAmounts> }[] = [];
       for (const l of lineas) {
         if (!l.producto_id) continue;
         const pricedLine = applyEffectiveLinePricing(l, sinImpuestos) as any;
         let lineAmounts = calculateSaleLineAmounts(pricedLine as any, sinImpuestos);
+        const brutoAmounts = lineAmounts;
         if (netearLineas) {
           const pend = promoPendientePorProducto.get(l.producto_id) ?? 0;
           if (pend > 0) {
@@ -691,8 +692,9 @@ export function useVentaForm() {
             promoPendientePorProducto.set(l.producto_id, pend - aplicar);
           }
         }
-        preparadas.push({ producto_id: l.producto_id, pricedLine, lineAmounts });
+        preparadas.push({ producto_id: l.producto_id, pricedLine, lineAmounts, brutoAmounts });
       }
+
 
       const r2h = (n: number) => Math.round(n * 100) / 100;
       let headerTotals: typeof finalTotals = finalTotals;
