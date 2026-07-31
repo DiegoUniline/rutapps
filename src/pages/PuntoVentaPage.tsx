@@ -928,9 +928,29 @@ export default function PuntoVentaPage() {
 
       // 2. Insert lines
       const r2 = (n: number) => Math.round(n * 100) / 100;
+      const guardarDesglose = desgloseLineaHabilitado((empresa as any)?.licencia);
       const lineas = cart.map(item => {
         const grossBeforeDiscount = getGrossLineTotal(item);
         const breakdown = splitFinalGross(item, grossBeforeDiscount);
+
+        let desglose: Record<string, any> = {};
+        if (guardarDesglose) {
+          const promosLinea = promoResults.filter(p => p.producto_id === item.producto_id && Number(p.descuento) > 0);
+          const promoDominante = promosLinea.slice().sort((a, b) => Number(b.descuento || 0) - Number(a.descuento || 0))[0];
+          const montos = { subtotal: breakdown.subtotal, iva: breakdown.iva, ieps: breakdown.ieps, total: grossBeforeDiscount };
+          desglose = buildDesgloseLinea({
+            cantidad: item.cantidad,
+            precioListaUnitario: Number(item.precio_unitario_sin_redondeo) || Number(item.precio_unitario) || 0,
+            breakdownBruto: montos,
+            breakdownNeto: montos,
+            descuentoPromoMonto: r2(Math.max(0, grossBeforeDiscount - getChargedLineTotal(item))),
+            descuentoManualMonto: 0,
+            cantidadBonificada: promosLinea.reduce((s, p) => s + (Number(p.cantidad_gratis) || 0), 0),
+            promocion: promoDominante ? { id: promoDominante.promocion_id, nombre: promoDominante.nombre } : null,
+            usuarioId: profile?.id || null,
+            objetoImpuesto: (item as any).objeto_impuesto ?? null,
+          });
+        }
 
         return {
           venta_id: ventaId,
@@ -954,8 +974,10 @@ export default function PuntoVentaPage() {
           presentacion_nombre: (item as any).presentacion_nombre ?? null,
           presentacion_factor: (item as any).presentacion_factor ?? null,
           paquetes: (item as any).paquetes ?? null,
+          ...desglose,
         };
       });
+
       const { error: linErr } = await supabase.from('venta_lineas').insert(lineas as any);
       if (linErr) throw linErr;
 
