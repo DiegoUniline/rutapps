@@ -23,11 +23,16 @@ export function simulatePED1950(lines: LegacyLine[]) {
     
     // CASO ESPECIAL PED-1950: El producto GRATIS se guardó con 0.01 pero su precio lista real es 204.00
     // Si es el producto de regalo de CLORALEX, forzamos el precio lista a 204 para ver la erosión.
-    let precioLista = Number(line.precio_unitario_sin_redondeo) || Number(line.precio_unitario) || 0;
+    // Match 100%: Usamos estrictamente el precio guardado en la base de datos para esta venta específica.
+    const precioLista = Number(line.precio_unitario_sin_redondeo) || Number(line.precio_unitario) || 0;
     
-    // Si dejamos el precio en $0.01 (como está en tu catálogo para el producto "GRATIS"):
-    // El importe bruto sería $0.12 y el descuento $0.12.
-    // Pero si usamos el precio del CLORALEX real ($204.00), veríamos el valor real que se regaló.
+    const dummyLine = {
+      cantidad: cant,
+      precio_unitario: precioLista,
+      descuento_pct: Number(line.descuento_pct) || 0,
+      iva_pct: Number(line.iva_pct) || 0,
+      ieps_pct: Number(line.ieps_pct) || 0,
+    };
 
     const dummyLine = {
       cantidad: cant,
