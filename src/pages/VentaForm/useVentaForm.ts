@@ -724,10 +724,28 @@ export function useVentaForm() {
       const linePromises: Promise<any>[] = [];
       const lineProductoIds: string[] = [];
       const lineTotalByProduct = new Map<string, number>();
-      for (const { producto_id, pricedLine, lineAmounts } of preparadas) {
+      const guardarDesglose = desgloseLineaHabilitado((empresa as any)?.licencia);
+      for (const { producto_id, pricedLine, lineAmounts, brutoAmounts } of preparadas) {
         const savedIvaPct = sinImpuestos ? 0 : (Number(pricedLine.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(pricedLine.ieps_pct) || 0);
-        const linePayload = { ...pricedLine, venta_id: ventaId, subtotal: lineAmounts.subtotal, iva_pct: savedIvaPct, iva_monto: lineAmounts.iva, ieps_pct: savedIepsPct, ieps_monto: lineAmounts.ieps, total: lineAmounts.total };
+        let desglose: Record<string, any> = {};
+        if (guardarDesglose) {
+          const promosLinea = promoResults.filter(p => p.producto_id === producto_id && Number(p.descuento) > 0);
+          const promoDominante = promosLinea.slice().sort((a, b) => Number(b.descuento || 0) - Number(a.descuento || 0))[0];
+          desglose = buildDesgloseLinea({
+            cantidad: Number(pricedLine.cantidad) || 0,
+            precioListaUnitario: Number(pricedLine.precio_unitario_sin_redondeo) || Number(pricedLine.precio_unitario) || 0,
+            breakdownBruto: brutoAmounts,
+            breakdownNeto: lineAmounts,
+            descuentoPromoMonto: Math.max(0, Math.round((brutoAmounts.total - lineAmounts.total) * 100) / 100),
+            descuentoManualMonto: Number(brutoAmounts.discount) || 0,
+            cantidadBonificada: promosLinea.reduce((s, p) => s + (Number(p.cantidad_gratis) || 0), 0),
+            promocion: promoDominante ? { id: promoDominante.promocion_id, nombre: promoDominante.nombre } : null,
+            usuarioId: profile?.id || null,
+            objetoImpuesto: (pricedLine as any).objeto_impuesto ?? null,
+          });
+        }
+        const linePayload = { ...pricedLine, venta_id: ventaId, subtotal: lineAmounts.subtotal, iva_pct: savedIvaPct, iva_monto: lineAmounts.iva, ieps_pct: savedIepsPct, ieps_monto: lineAmounts.ieps, total: lineAmounts.total, ...desglose };
         const clean = { ...linePayload } as any;
         delete clean.unidad_label;
         delete clean.impuestos_label;
@@ -737,6 +755,7 @@ export function useVentaForm() {
         lineTotalByProduct.set(producto_id, (lineTotalByProduct.get(producto_id) ?? 0) + lineAmounts.total);
         linePromises.push(saveLinea.mutateAsync(clean));
       }
+
       const savedLines = await Promise.all(linePromises);
 
       // Registrar el desglose de promociones aplicadas (solo informativo para reportes).
