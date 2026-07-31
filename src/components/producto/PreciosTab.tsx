@@ -290,7 +290,9 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
               <th className="th-odoo text-left">Tipo</th>
               <th className="th-odoo text-right">Valor</th>
               <th className="th-odoo text-center">Redondeo</th>
-              <th className="th-odoo text-center">Base</th>
+              <th className="th-odoo text-center" title="¿El precio que capturas en esta regla ya trae impuestos incluidos o es neto (sin IVA/IEPS)?">
+                Base <span className="text-[9px] font-normal text-muted-foreground">¿c/imp?</span>
+              </th>
               <th className="th-odoo text-right">Precio s/imp</th>
               <th className="th-odoo text-right">Precio c/imp</th>
               <th className="th-odoo text-right">Ganancia $</th>
@@ -313,6 +315,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
               const redondeoVal = ((isEditing ? (editVal.redondeo ?? linea.redondeo) : linea.redondeo) ?? 'ninguno') as string;
               const redondeoLabel = ({ arriba: '⬆ Arriba', abajo: '⬇ Abajo', cercano: '↕ Cercano', ninguno: '— Ninguno' } as Record<string, string>)[redondeoVal] ?? '— Ninguno';
               const baseLabel = basePrecio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.';
+              const baseTitle = basePrecio === 'con_impuestos' ? 'El precio que capturas ya incluye IVA/IEPS — el sistema le extrae los impuestos para guardar el neto' : 'El precio que capturas es neto (sin IVA/IEPS) — el sistema le suma los impuestos al final';
 
               const srcLinea = isEditing ? { ...linea, ...editVal } : linea;
               const pr = form.precio_principal ?? 0;
@@ -382,12 +385,12 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
                     ) : <span className="inline-edit-idle text-muted-foreground">{redondeoLabel}</span>}
                   </td>
                   <td className="py-1.5 px-3 text-center" onClick={cellClick('base')}>
-                    {isEditing && editingCol === 'base' ? (
+                  {isEditing && editingCol === 'base' ? (
                       <select autoFocus className="input-odoo py-0.5 text-[12px] w-full" value={(currentVals.base_precio as string) ?? 'sin_impuestos'}
                         onChange={e => setEditVal(p => ({ ...p, base_precio: e.target.value }))} onBlur={handleBlur}>
-                        <option value="sin_impuestos">Sin impuestos</option><option value="con_impuestos">Con impuestos</option>
+                        <option value="sin_impuestos">Neto — sin impuestos</option><option value="con_impuestos">Con impuestos incluidos</option>
                       </select>
-                    ) : <span className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary`}>{baseLabel}</span>}
+                    ) : <span title={baseTitle} className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary`}>{baseLabel}</span>}
                   </td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">{cs} {precioSinImp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">{cs} {precioConImp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
