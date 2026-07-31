@@ -385,12 +385,12 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
                     ) : <span className="inline-edit-idle text-muted-foreground">{redondeoLabel}</span>}
                   </td>
                   <td className="py-1.5 px-3 text-center" onClick={cellClick('base')}>
-                    {isEditing && editingCol === 'base' ? (
+                  {isEditing && editingCol === 'base' ? (
                       <select autoFocus className="input-odoo py-0.5 text-[12px] w-full" value={(currentVals.base_precio as string) ?? 'sin_impuestos'}
                         onChange={e => setEditVal(p => ({ ...p, base_precio: e.target.value }))} onBlur={handleBlur}>
-                        <option value="sin_impuestos">Sin impuestos</option><option value="con_impuestos">Con impuestos</option>
+                        <option value="sin_impuestos">Neto — sin impuestos</option><option value="con_impuestos">Con impuestos incluidos</option>
                       </select>
-                    ) : <span className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary`}>{baseLabel}</span>}
+                    ) : <span title={baseTitle} className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary`}>{baseLabel}</span>}
                   </td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">{cs} {precioSinImp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">{cs} {precioConImp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
