@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { reconstructVentaLineasDesglose } from './src/lib/simulationBackfill';
+import { simulateBackfill } from './src/lib/simulationBackfill';
 
 const supabase = createClient(process.env.VITE_SUPABASE_URL!, process.env.VITE_SUPABASE_ANON_KEY!);
 
@@ -35,19 +35,19 @@ async function run() {
         .select('*')
         .eq('venta_id', venta.id);
 
-      // Reconstruct
-      const result = reconstructVentaLineasDesglose(venta, lineas || [], promos || []);
+      let simTotal = 0;
+      for (const line of (lineas || [])) {
+          // Attach promos to line for simulateBackfill to see them
+          const linePromos = (promos || []).filter(p => p.linea_id === line.id);
+          const breakdown = simulateBackfill({ ...line, promocion_aplicada: linePromos });
+          simTotal += breakdown.check_total_simulado;
+      }
       
-      const simTotal = result.reduce((sum, l) => sum + (l.importe_neto || 0), 0);
       const diff = Math.abs(simTotal - venta.total);
       const doubt = diff > 0.02 ? '⚠️ DUDA' : '✅ OK';
 
       console.log(`${venta.folio.padEnd(8)} | ${venta.total.toFixed(2).padStart(8)} | ${simTotal.toFixed(2).padStart(8)} | ${diff.toFixed(2)} | ${doubt}`);
       
-      if (doubt === '⚠️ DUDA') {
-          // Log details of lines to understand the doubt
-          // console.log('   Detalle de líneas para investigar...');
-      }
     } catch (e) {
       console.log(`${venta.folio.padEnd(8)} | ERROR: ${e.message}`);
     }
