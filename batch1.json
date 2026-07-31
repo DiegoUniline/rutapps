@@ -1,0 +1,4 @@
+[
+  {"cantidad":2, "descuento_pct":0, "folio":"VTA-1353", "ieps_monto":0, "ieps_pct":0, "iva_monto":0, "iva_pct":0, "linea_id":"24982fba-e90f-4263-bcd5-8fd79f29e4b0", "linea_total":1500, "precio_unitario":750, "precio_unitario_sin_redondeo":750, "promocion_aplicada":null, "subtotal":1500, "venta_id":"220aa01d-9f22-428c-b89d-5e60555f61f0"},
+  {"cantidad":1, "descuento_pct":0, "folio":"VTA-1353", "ieps_monto":0, "ieps_pct":0, "iva_monto":0, "iva_pct":0, "linea_id":"9849fe55-cbc3-4506-ad3d-c32036da7567", "linea_total":100, "precio_unitario":100, "precio_unitario_sin_redondeo":100, "promocion_aplicada":null, "subtotal":100, "venta_id":"220aa01d-9f22-428c-b89d-5e60555f61f0"}
+]
