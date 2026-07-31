@@ -284,10 +284,11 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       <td className="py-1.5 px-2 text-right">
         {isEmpty ? '' : (() => {
           if (readOnly) {
-            return iepsShown > 0
-              ? <span className="text-[12px] tabular-nums">{money(iepsShown)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.ieps_pct) || 0}%</span></span>
+            return iepsUnit > 0
+              ? <span className="text-[12px] tabular-nums">{money(iepsUnit)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.ieps_pct) || 0}%</span></span>
               : <span className="text-muted-foreground text-[11px]">—</span>;
           }
+
           const p = productosList?.find((x: any) => x.id === l.producto_id);
           const prodHasIeps = !!p && (p.tiene_ieps || Number(p.ieps_pct ?? 0) > 0);
           const showIeps = Number(l.ieps_pct) > 0 || prodHasIeps || impuestosLabel.includes('IEPS');
