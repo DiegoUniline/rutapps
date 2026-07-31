@@ -21,8 +21,6 @@ export function simulatePED1950(lines: LegacyLine[]) {
   return lines.map(line => {
     const cant = Number(line.cantidad) || 0;
     
-    // CASO ESPECIAL PED-1950: El producto GRATIS se guardó con 0.01 pero su precio lista real es 204.00
-    // Si es el producto de regalo de CLORALEX, forzamos el precio lista a 204 para ver la erosión.
     // Match 100%: Usamos estrictamente el precio guardado en la base de datos para esta venta específica.
     const precioLista = Number(line.precio_unitario_sin_redondeo) || Number(line.precio_unitario) || 0;
     
@@ -34,37 +32,32 @@ export function simulatePED1950(lines: LegacyLine[]) {
       ieps_pct: Number(line.ieps_pct) || 0,
     };
 
-    const dummyLine = {
-      cantidad: cant,
-      precio_unitario: precioLista,
-      descuento_pct: Number(line.descuento_pct) || 0,
-      iva_pct: Number(line.iva_pct) || 0,
-      ieps_pct: Number(line.ieps_pct) || 0,
-    };
-
     // 1. Cálculo Bruto (Lo que valdría sin promociones)
     const bruto = calculateSaleLineAmounts(dummyLine as any, false);
     
-    // 2. Identificar promoción
-    // En el viejo motor, el descuento de regalo NO se guardaba en promocion_aplicada si era un producto aparte.
-    // Para la simulación de PED-1950, sabemos que la línea GRATIS es un descuento del 100%.
+    // 2. Identificar descuento (Manual vs Promoción)
+    // En PED-1950 la línea "GRATIS" tiene precio 0.01 pero no hay registro de promoción en BD.
+    // Esto significa que fue un ajuste manual o un producto agregado directamente a precio mínimo.
     let promoMonto = 0;
-    if (line.nombre.includes('GRATIS')) {
-        promoMonto = bruto.total; // Todo el valor bruto es promoción
+    let manualMonto = 0;
+
+    // Si no hay registro de promoción en BD para esta línea, el descuento es MANUAL.
+    if (line.precio_unitario < precioLista) {
+        manualMonto = bruto.total - Number(line.total);
     }
 
-    // 3. Totales finales simulados vs reales
-    const totalSimulado = line.nombre.includes('GRATIS') ? 0 : Number(line.total);
+    // 3. Totales finales
+    const totalActual = Number(line.total);
 
     return {
       producto: line.nombre,
       cantidad: cant,
       precio_lista: precioLista,
       importe_bruto: bruto.total,
+      descuento_manual: manualMonto,
       descuento_promo: promoMonto,
-      total_esperado: totalSimulado,
-      total_actual_en_bd: line.total,
-      diferencia: line.total - totalSimulado
+      total_en_bd: totalActual,
+      es_regalo: line.nombre.includes('GRATIS') ? 'SI' : 'NO'
     };
   });
 }
