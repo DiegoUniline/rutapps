@@ -225,6 +225,45 @@ export function evaluatePromociones(
       }
     });
 
+    // Las promociones con regalo distinto se calculan globalmente por promo.
+    // Cada disparador aporta sus sets, pero el total se topa a las unidades del
+    // regalo que realmente están en el carrito. Esto evita tanto perder regalos
+    // cuando hay varios disparadores como descontar la misma unidad dos veces.
+    if (promo.tipo === 'producto_gratis') {
+      const compraMin = Math.max(1, Number(promo.cantidad_minima) || 1);
+      const cantGratis = Math.max(1, Number(promo.cantidad_gratis) || 1);
+      const freeProductId = promo.producto_gratis_id;
+
+      if (freeProductId) {
+        const triggerItems = matchingItems.filter(item => item.producto_id !== freeProductId);
+        const totalGanado = triggerItems.reduce(
+          (sum, item) => sum + Math.floor(item.cantidad / compraMin) * cantGratis,
+          0,
+        );
+        const freeItemInCart = cartItems.find(
+          item => item.producto_id === freeProductId && !item.es_cambio,
+        );
+        const gratisReal = Math.min(totalGanado, freeItemInCart?.cantidad ?? 0);
+
+        if (gratisReal > 0 && freeItemInCart) {
+          results.push({
+            promocion_id: promo.id,
+            nombre: promo.nombre,
+            tipo: promo.tipo,
+            producto_id: freeProductId,
+            descuento: Math.round(gratisReal * freeItemInCart.precio_unitario * 100) / 100,
+            descripcion: `${gratisReal}× gratis — ${promo.nombre}`,
+            producto_gratis_id: freeProductId,
+            cantidad_gratis: gratisReal,
+          });
+          if (!promo.acumulable) {
+            triggerItems.forEach(item => appliedNonAcumulable.add(item.producto_id));
+          }
+        }
+        continue;
+      }
+    }
+
     for (const item of matchingItems) {
       const cantMinRaw = Number(promo.cantidad_minima) || 0;
       const cantMinEffective = Math.max(0, cantMinRaw);
@@ -296,10 +335,7 @@ export function evaluatePromociones(
               cantidad_gratis: totalGratis,
             });
           }
-          if (!promo.acumulable) {
-            appliedNonAcumulable.add(item.producto_id);
-            appliedNonAcumulable.add(freeProductId);
-          }
+          if (!promo.acumulable) appliedNonAcumulable.add(item.producto_id);
           continue;
         }
       }

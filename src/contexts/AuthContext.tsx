@@ -93,12 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .select('id, user_id, nombre, empresa_id, almacen_id, telefono, estado, avatar_url, must_change_password, super_admin_override_empresa_id')
           .eq('user_id', u.id)
           .maybeSingle();
-        data = retry.data as any;
+        data = retry.data as typeof data;
         error = retry.error;
       }
 
       if (!error && data) {
-        nextProfile = data as Profile;
+        nextProfile = data as unknown as Profile;
       }
     } catch {
       // Offline / network error → fallback to local IndexedDB below
