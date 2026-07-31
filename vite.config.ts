@@ -122,15 +122,16 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            // JS/CSS: NetworkFirst para que al publicar una versión nueva los
-            // chunks frescos se descarguen de inmediato (los nombres ya llevan
-            // hash, así que el cache local sigue siendo útil como fallback).
+            // JS/CSS: CacheFirst. Los nombres llevan hash inmutable, así que el
+            // mismo nombre = mismo contenido. Una versión nueva genera nombres
+            // nuevos que el HTML (NetworkFirst) referencia y se bajan frescos.
+            // Esto evita re-descargar 2-5 MB de bundle en cada apertura.
             urlPattern: /\.(?:js|css)$/,
-            handler: 'NetworkFirst',
+            handler: 'CacheFirst',
             options: {
               cacheName: 'static-assets',
-              networkTimeoutSeconds: 3,
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              expiration: { maxEntries: 150, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
           {

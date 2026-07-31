@@ -10,6 +10,12 @@ import { APP_VERSION } from '@/version';
 
 const SYNCED_APP_VERSION_KEY = 'uniline_synced_app_version';
 
+// Versión del ESQUEMA de los datos cacheados en IndexedDB. Se sube A MANO
+// solo cuando cambia la FORMA de lo que guardamos (columnas nuevas en el
+// select de sync, tablas nuevas, etc.). Publicar código nuevo NO la mueve.
+const DATA_SCHEMA_VERSION = '1';
+const SYNCED_SCHEMA_VERSION_KEY = 'uniline_synced_schema_version';
+
 const AUTO_SYNC_KEY = 'uniline_auto_sync';
 type SyncNowResult = { ok: boolean; rowsDownloaded: number; pendingCount: number; reason?: string };
 let activeSyncPromise: Promise<SyncNowResult> | null = null;
