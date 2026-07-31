@@ -101,12 +101,12 @@ export function VentaLineasTab(props: Props) {
               {readOnly && (
                 <div className="flex justify-end">
                   <ColumnVisibilityMenu
-                    columns={VENTA_LINEAS_COLUMNS}
+                    columns={getVentaLineasColumns(showDesglose)}
                     visible={cols}
                     onToggle={toggleColumn}
                     onApplyPreset={applyPreset}
-                    presets={VENTA_LINEAS_PRESETS}
-                    groupOrder={VENTA_LINEAS_GROUP_ORDER}
+                    presets={getVentaLineasPresets(showDesglose)}
+                    groupOrder={showDesglose ? VENTA_LINEAS_DESGLOSE_GROUP_ORDER : VENTA_LINEAS_GROUP_ORDER}
                     onReset={reset}
                   />
                 </div>
