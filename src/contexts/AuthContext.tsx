@@ -80,25 +80,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let nextEmpresa: Empresa | null = null;
 
     try {
-      let { data, error } = await supabase.from('profiles')
+      const primary = await supabase.from('profiles')
         .select('id, user_id, nombre, empresa_id, almacen_id, telefono, estado, avatar_url, must_change_password, super_admin_override_empresa_id, ui_prefs')
         .eq('user_id', u.id)
         .maybeSingle();
+      let profileData: unknown = primary.data;
+      let profileError = primary.error;
 
       // Compatibilidad: si la columna ui_prefs aún no existe (frontend nuevo
       // desplegado antes de la migración), reintentar sin ella para no romper
       // el inicio de sesión.
-      if (error) {
+      if (profileError) {
         const retry = await supabase.from('profiles')
           .select('id, user_id, nombre, empresa_id, almacen_id, telefono, estado, avatar_url, must_change_password, super_admin_override_empresa_id')
           .eq('user_id', u.id)
           .maybeSingle();
-        data = retry.data as typeof data;
-        error = retry.error;
+        profileData = retry.data;
+        profileError = retry.error;
       }
 
-      if (!error && data) {
-        nextProfile = data as unknown as Profile;
+      if (!profileError && profileData) {
+        nextProfile = profileData as Profile;
       }
     } catch {
       // Offline / network error → fallback to local IndexedDB below
