@@ -276,15 +276,19 @@ export function useVentaForm() {
       .filter(l => l.producto_id && Number(l.cantidad) > 0)
       .map(l => {
         const prod = productosList?.find((p: any) => p.id === l.producto_id);
+        // Base BRUTA (con impuestos y redondeo) para que el descuento sea sobre
+        // lo que realmente paga el cliente y el IVA quede proporcional.
+        const bruto = calculateSaleLineAmounts(l as any, sinImpuestos);
+        const qty = Number(l.cantidad) || 0;
         return {
           producto_id: l.producto_id!,
           clasificacion_id: prod?.clasificacion_id ?? undefined,
-          precio_unitario: Number(l.precio_unitario) || 0,
-          cantidad: Number(l.cantidad) || 0,
+          precio_unitario: qty > 0 ? bruto.total / qty : 0,
+          cantidad: qty,
         };
       });
     return evaluatePromociones(promocionesActivas, cartForPromo, form.cliente_id ?? undefined, undefined, (empresa as any)?.zona_horaria);
-  }, [promocionesActivas, lineas, productosList, form.cliente_id]);
+  }, [promocionesActivas, lineas, productosList, form.cliente_id, sinImpuestos]);
 
   // Build per-product promo discount map
   const promoByProduct = useMemo(() => {
@@ -295,9 +299,10 @@ export function useVentaForm() {
     return m;
   }, [promoResults]);
 
-  // Descuento EFECTIVO de promoción por producto (después de impuestos/redondeo)
+  // Descuento EFECTIVO de promoción por producto (ya viene en bruto)
   const promoEffectiveByProduct = useMemo(() => {
     const m = new Map<string, number>();
+    const r2 = (n: number) => Math.round(n * 100) / 100;
     lineas.forEach(l => {
       if (!l.producto_id) return;
       const bruto = calculateSaleLineAmounts(l as any, sinImpuestos);
@@ -307,62 +312,43 @@ export function useVentaForm() {
         l.producto_id,
         qty > 0 ? bruto.total / qty : 0,
       );
-      if (promoParts.descuentoRegular <= 0 && promoParts.descuentoGratisBruto <= 0) return;
-      const raw = rawPricingMap.get(l.producto_id);
-      const pricingItem: PosPricingItem = {
-        precio_unitario: Number(l.precio_unitario) || 0,
-        precio_unitario_sin_redondeo: raw?.rawUnitPrice ?? (Number(l.precio_unitario) || 0),
-        precio_display_sin_redondeo: raw?.rawDisplayPrice ?? (Number(l.precio_unitario) || 0),
-        cantidad: Number(l.cantidad) || 1,
-        tiene_iva: sinImpuestos ? false : !!(l as any).iva_pct,
-        iva_pct: Number(l.iva_pct) || 0,
-        tiene_ieps: sinImpuestos ? false : !!(l as any).ieps_pct,
-        ieps_pct: Number(l.ieps_pct) || 0,
-        base_precio: (raw?.basePrecio ?? 'sin_impuestos') as BasePrecioMode,
-        redondeo: raw?.redondeo ?? 'ninguno',
-      };
-      const lp = buildPosLinePricing(pricingItem, promoParts.descuentoRegular);
-      const efectivo = Math.min(bruto.total, lp.effectiveDiscount + promoParts.descuentoGratisBruto);
+      const efectivo = Math.min(
+        bruto.total,
+        r2(promoParts.descuentoRegular + promoParts.descuentoGratisBruto),
+      );
       if (efectivo > 0) {
-        m.set(l.producto_id, (m.get(l.producto_id) ?? 0) + efectivo);
+        m.set(l.producto_id, r2((m.get(l.producto_id) ?? 0) + efectivo));
       }
     });
     return m;
-  }, [promoResults, rawPricingMap, lineas, sinImpuestos]);
+  }, [promoResults, lineas, sinImpuestos]);
 
-  // Impuestos que deja de causar la promoción (prorrateo por línea).
-  // Sin esto el encabezado mostraba el IVA/IEPS de la base SIN descuento.
-  const promoTaxDelta = useMemo(() => {
-    let iva = 0, ieps = 0;
-    const pendiente = new Map<string, number>(promoEffectiveByProduct);
-    lineas.forEach(l => {
-      if (!l.producto_id) return;
-      const rem = pendiente.get(l.producto_id) ?? 0;
-      if (rem <= 0) return;
-      const bruto = calculateSaleLineAmounts(l as any, sinImpuestos);
-      const aplicado = Math.min(rem, bruto.total);
-      pendiente.set(l.producto_id, rem - aplicado);
-      const ajustado = aplicarPromoALinea(bruto, aplicado);
-      iva += bruto.iva - ajustado.iva;
-      ieps += bruto.ieps - ajustado.ieps;
-    });
-    return { iva, ieps };
-  }, [promoEffectiveByProduct, lineas, sinImpuestos]);
-
-  // Combine totals with promo discounts using buildPosLinePricing (promo before rounding)
+  // Totales del encabezado sumando las líneas YA netas de promoción, para que
+  // siempre se cumpla subtotal + IVA + IEPS = total.
   const finalTotals = useMemo(() => {
     const r2 = (n: number) => Math.round(n * 100) / 100;
-    let promoEffective = 0;
-    promoEffectiveByProduct.forEach(v => { promoEffective += v; });
+    let iva = 0, ieps = 0, promoEffective = 0;
+    const pendiente = new Map<string, number>(promoEffectiveByProduct);
+    lineas.forEach(l => {
+      const bruto = calculateSaleLineAmounts(l as any, sinImpuestos);
+      const rem = l.producto_id ? (pendiente.get(l.producto_id) ?? 0) : 0;
+      const aplicado = rem > 0 ? Math.min(rem, bruto.total) : 0;
+      if (aplicado > 0 && l.producto_id) pendiente.set(l.producto_id, rem - aplicado);
+      const ajustado = aplicado > 0 ? aplicarPromoALinea(bruto, aplicado) : bruto;
+      iva += ajustado.iva;
+      ieps += ajustado.ieps;
+      promoEffective += aplicado;
+    });
     return {
       ...totals,
-      iva_total: r2(Math.max(0, totals.iva_total - promoTaxDelta.iva)),
-      ieps_total: r2(Math.max(0, totals.ieps_total - promoTaxDelta.ieps)),
+      iva_total: r2(iva),
+      ieps_total: r2(ieps),
       descuento_total: r2(totals.descuento_total + promoEffective),
       descuento_promo: r2(promoEffective),
       total: r2(Math.max(0, totals.total - promoEffective)),
     };
-  }, [totals, promoEffectiveByProduct, promoTaxDelta]);
+  }, [totals, promoEffectiveByProduct, lineas, sinImpuestos]);
+
 
 
   const displayTotals = useMemo(() => {
