@@ -203,6 +203,7 @@ export function evaluatePromociones(
 
 
   const appliedNonAcumulable = new Set<string>();
+  const regalosConsumidos = new Map<string, number>();
 
   for (const promo of activePromos) {
     const matchingItems = cartItems.filter(item => {
@@ -224,6 +225,49 @@ export function evaluatePromociones(
           return false;
       }
     });
+
+    // Las promociones con regalo distinto se calculan globalmente por promo.
+    // Cada disparador aporta sus sets, pero el total se topa a las unidades del
+    // regalo que realmente están en el carrito. Esto evita tanto perder regalos
+    // cuando hay varios disparadores como descontar la misma unidad dos veces.
+    if (promo.tipo === 'producto_gratis') {
+      const compraMin = Math.max(1, Number(promo.cantidad_minima) || 1);
+      const cantGratis = Math.max(1, Number(promo.cantidad_gratis) || 1);
+      const freeProductId = promo.producto_gratis_id;
+
+      const triggerItems = freeProductId
+        ? matchingItems.filter(item => item.producto_id !== freeProductId)
+        : [];
+
+      if (freeProductId && triggerItems.length > 0) {
+        const cantidadDisparadora = triggerItems.reduce((sum, item) => sum + item.cantidad, 0);
+        const totalGanado = Math.floor(cantidadDisparadora / compraMin) * cantGratis;
+        const freeItemInCart = cartItems.find(
+          item => item.producto_id === freeProductId && !item.es_cambio,
+        );
+        const yaConsumidos = regalosConsumidos.get(freeProductId) ?? 0;
+        const regalosDisponibles = Math.max(0, (freeItemInCart?.cantidad ?? 0) - yaConsumidos);
+        const gratisReal = Math.min(totalGanado, regalosDisponibles);
+
+        if (gratisReal > 0 && freeItemInCart) {
+          results.push({
+            promocion_id: promo.id,
+            nombre: promo.nombre,
+            tipo: promo.tipo,
+            producto_id: freeProductId,
+            descuento: Math.round(gratisReal * freeItemInCart.precio_unitario * 100) / 100,
+            descripcion: `${gratisReal}× gratis — ${promo.nombre}`,
+            producto_gratis_id: freeProductId,
+            cantidad_gratis: gratisReal,
+          });
+          regalosConsumidos.set(freeProductId, yaConsumidos + gratisReal);
+          if (!promo.acumulable) {
+            triggerItems.forEach(item => appliedNonAcumulable.add(item.producto_id));
+          }
+        }
+        continue;
+      }
+    }
 
     for (const item of matchingItems) {
       const cantMinRaw = Number(promo.cantidad_minima) || 0;
@@ -296,10 +340,7 @@ export function evaluatePromociones(
               cantidad_gratis: totalGratis,
             });
           }
-          if (!promo.acumulable) {
-            appliedNonAcumulable.add(item.producto_id);
-            appliedNonAcumulable.add(freeProductId);
-          }
+          if (!promo.acumulable) appliedNonAcumulable.add(item.producto_id);
           continue;
         }
       }
