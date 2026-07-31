@@ -1,0 +1,1 @@
+UPDATE public.feature_flags SET alcance = 'todos', updated_at = now() WHERE clave IN ('promo_descuento_linea','promo_persist');

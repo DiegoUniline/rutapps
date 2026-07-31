@@ -31,13 +31,18 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
   const promoTotal = (promoResults ?? []).reduce((s, pr) => s + (Number(pr.descuento) || 0), 0);
   const shownLineDesc = lineDescuento > 0 ? lineDescuento : 0;
   const shownExtra = (descuento_extra_amt ?? 0) > 0 ? (descuento_extra_amt ?? 0) : 0;
-  const grossSubtotal = (total || 0) - (iva_total || 0) - (ieps_total || 0) + shownLineDesc + promoTotal + shownExtra;
 
   // Desglose fiscal (mismo que la fila expandible de la lista):
   // Subtotal sin impuestos − Descuentos/promociones = Subtotal gravable;
   // + IVA + IEPS (por separado) = Total.
-  const totalDescuentos = shownLineDesc + promoTotal + shownExtra;
   const gravable = (total || 0) - (iva_total || 0) - (ieps_total || 0);
+  // El descuento de promoción se calcula sobre el precio BRUTO (con impuestos).
+  // Para el desglose sin impuestos se muestra solo su parte gravable, así el
+  // renglón "Subtotal sin impuestos" sigue cuadrando con el Total.
+  const promoNeto = (total || 0) > 0 ? promoTotal * (gravable / (total || 1)) : promoTotal;
+  const totalDescuentos = shownLineDesc + promoNeto + shownExtra;
+  const grossSubtotal = gravable + totalDescuentos;
+
   const pagadoAmt = saldoPendiente != null ? Math.max(0, (total || 0) - saldoPendiente) : null;
 
   return (

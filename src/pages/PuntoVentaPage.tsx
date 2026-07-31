@@ -434,14 +434,14 @@ export default function PuntoVentaPage() {
       return {
         producto_id: item.producto_id,
         clasificacion_id: prod?.clasificacion_id ?? undefined,
-        precio_unitario: item.base_precio === 'con_impuestos'
-          ? item.precio_display_sin_redondeo
-          : item.precio_unitario_sin_redondeo,
+        // Base BRUTA cobrada (con impuestos y redondeo): el descuento de promo
+        // es sobre lo que realmente paga el cliente.
+        precio_unitario: getDisplayUnitPrice(item),
         cantidad: item.cantidad,
       };
     });
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId ?? undefined, undefined, (empresa as any)?.zona_horaria);
-  }, [promocionesActivas, cart, productos, clienteId]);
+  }, [promocionesActivas, cart, productos, clienteId, getDisplayUnitPrice]);
 
   // Build per-product raw promo discount map
   const promoRawByProduct = useMemo(() => {
@@ -453,34 +453,19 @@ export default function PuntoVentaPage() {
     return m;
   }, [promoResultsRaw]);
 
-  // Build line pricing with promo applied before rounding
-  const linePricingMap = useMemo(() => {
-    const m = new Map<string, ReturnType<typeof buildPosLinePricing>>();
-    cart.forEach(item => {
-      m.set(item.producto_id, buildPosLinePricing(item, promoRawByProduct.get(item.producto_id) ?? 0));
-    });
-    return m;
-  }, [cart, promoRawByProduct]);
+  const getGrossLineTotal = useCallback((item: PosItem) => {
+    return r2(getDisplayUnitPrice(item) * item.cantidad);
+  }, [getDisplayUnitPrice]);
 
   const getChargedLineTotal = useCallback((item: PosItem) => {
+    const gross = getGrossLineTotal(item);
     const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
-    if (promoRaw > 0) {
-      return linePricingMap.get(item.producto_id)?.finalGross ?? buildPosLinePricing(item, promoRaw).finalGross;
-    }
+    return r2(Math.max(0, gross - Math.min(promoRaw, gross)));
+  }, [promoRawByProduct, getGrossLineTotal]);
 
-    return r2(getDisplayUnitPrice(item) * item.cantidad);
-  }, [promoRawByProduct, linePricingMap, getDisplayUnitPrice]);
+  // El descuento ya viene en bruto: no hay conversión posterior que ajustar.
+  const promoResults = promoResultsRaw;
 
-  // Adjust displayed promo discounts to match effective (post-rounding) discount
-  const promoResults = useMemo(() => {
-    return promoResultsRaw.map(pr => {
-      if (!pr.producto_id || pr.descuento <= 0) return pr;
-      const rawTotal = promoRawByProduct.get(pr.producto_id) ?? 0;
-      const effectiveTotal = linePricingMap.get(pr.producto_id)?.effectiveDiscount ?? rawTotal;
-      if (rawTotal <= 0) return pr;
-      return { ...pr, descuento: r2((pr.descuento / rawTotal) * effectiveTotal) };
-    });
-  }, [promoResultsRaw, promoRawByProduct, linePricingMap]);
 
   const promoGratis = useMemo(() => promoResults.filter(r => r.tipo === 'producto_gratis'), [promoResults]);
 
@@ -724,23 +709,23 @@ export default function PuntoVentaPage() {
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0, descuento = 0, total = 0;
     cart.forEach(item => {
-      const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
-      const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item, promoRaw);
+      const grossBeforeDiscount = getGrossLineTotal(item);
       const chargedLineTotal = getChargedLineTotal(item);
-      const lineDiscount = lp.effectiveDiscount;
-      const grossBeforeDiscount = r2(chargedLineTotal + lineDiscount);
-      const breakdown = splitFinalGross(item, grossBeforeDiscount);
+      const lineDiscount = r2(grossBeforeDiscount - chargedLineTotal);
+      // El desglose se hace sobre el importe YA neto de promoción, para que el
+      // IVA/IEPS del encabezado corresponda a lo que se cobra.
+      const breakdown = splitFinalGross(item, chargedLineTotal);
 
       subtotal += breakdown.subtotal;
       iva += breakdown.iva;
       ieps += breakdown.ieps;
       descuento += lineDiscount;
-      total += grossBeforeDiscount;
+      total += chargedLineTotal;
       items += item.cantidad;
     });
-    const finalTotal = r2(Math.max(0, total - descuento));
-    return { subtotal: r2(subtotal), iva: sinImpuestos ? 0 : r2(iva), ieps: sinImpuestos ? 0 : r2(ieps), descuento: r2(descuento), total: finalTotal, items };
-  }, [cart, linePricingMap, promoRawByProduct, getChargedLineTotal, splitFinalGross, sinImpuestos]);
+    return { subtotal: r2(subtotal), iva: sinImpuestos ? 0 : r2(iva), ieps: sinImpuestos ? 0 : r2(ieps), descuento: r2(descuento), total: r2(Math.max(0, total)), items };
+  }, [cart, getGrossLineTotal, getChargedLineTotal, splitFinalGross, sinImpuestos]);
+
 
   const paySplitsComputed = useMemo(() => {
     const splits: { metodo: PayMethod; monto: number; referencia: string }[] = [];
@@ -944,11 +929,9 @@ export default function PuntoVentaPage() {
       // 2. Insert lines
       const r2 = (n: number) => Math.round(n * 100) / 100;
       const lineas = cart.map(item => {
-        const chargedLineTotal = getChargedLineTotal(item);
-        const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
-        const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item, promoRaw);
-        const grossBeforeDiscount = r2(chargedLineTotal + lp.effectiveDiscount);
+        const grossBeforeDiscount = getGrossLineTotal(item);
         const breakdown = splitFinalGross(item, grossBeforeDiscount);
+
         return {
           venta_id: ventaId,
           producto_id: item.producto_id,
@@ -1054,11 +1037,9 @@ export default function PuntoVentaPage() {
         clienteDireccion: [(clienteTicket as any)?.direccion, (clienteTicket as any)?.colonia].filter(Boolean).join(', ') || null,
         vendedorTelefono: profile?.telefono ?? null,
         lineas: cart.map(item => {
-          const chargedLineTotal = getChargedLineTotal(item);
-          const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
-          const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item, promoRaw);
-          const grossBeforeDiscount = r2(chargedLineTotal + lp.effectiveDiscount);
+          const grossBeforeDiscount = getGrossLineTotal(item);
           const breakdown = splitFinalGross(item, grossBeforeDiscount);
+
           const prod: any = productos?.find((p: any) => p.id === item.producto_id);
           return {
             nombre: item.nombre,
