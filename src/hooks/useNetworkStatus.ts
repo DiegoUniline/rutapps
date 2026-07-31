@@ -10,6 +10,12 @@ import { APP_VERSION } from '@/version';
 
 const SYNCED_APP_VERSION_KEY = 'uniline_synced_app_version';
 
+// Versión del ESQUEMA de los datos cacheados en IndexedDB. Se sube A MANO
+// solo cuando cambia la FORMA de lo que guardamos (columnas nuevas en el
+// select de sync, tablas nuevas, etc.). Publicar código nuevo NO la mueve.
+const DATA_SCHEMA_VERSION = '1';
+const SYNCED_SCHEMA_VERSION_KEY = 'uniline_synced_schema_version';
+
 const AUTO_SYNC_KEY = 'uniline_auto_sync';
 type SyncNowResult = { ok: boolean; rowsDownloaded: number; pendingCount: number; reason?: string };
 let activeSyncPromise: Promise<SyncNowResult> | null = null;
@@ -175,32 +181,37 @@ export function useNetworkStatus() {
     }
   }, [empresa?.id, pendingCount]);
 
-  // Al actualizar el CÓDIGO de la app (nueva versión), forzar UNA descarga
-  // COMPLETA para limpiar cualquier dato viejo en caché (precios, categorías,
-  // clientes…) sin que el vendedor tenga que tocar "Descargar todo" a mano.
-  // Se corre una sola vez por versión: si tiene éxito, se guarda la versión;
-  // si falla, no se guarda y se reintenta en el próximo arranque.
+  // Al actualizar el CÓDIGO de la app (nueva versión) se hace UNA sincronización
+  // por versión. Es DELTA (no full): las tablas sin cursor (productos, tarifas…)
+  // igual se refrescan completas dentro del delta, y el historial pesado
+  // (ventas, venta_lineas, cobros, stock) se mantiene al día por cursor.
+  // Solo si cambia DATA_SCHEMA_VERSION (a mano, cuando cambia la FORMA de los
+  // datos cacheados) se fuerza la descarga COMPLETA como antes.
   useEffect(() => {
     if (!isOnline || !empresa?.id || !autoSync) return;
-    if (localStorage.getItem(SYNCED_APP_VERSION_KEY) === APP_VERSION) return;
+    const schemaChanged = localStorage.getItem(SYNCED_SCHEMA_VERSION_KEY) !== DATA_SCHEMA_VERSION;
+    const versionChanged = localStorage.getItem(SYNCED_APP_VERSION_KEY) !== APP_VERSION;
+    if (!schemaChanged && !versionChanged) return;
     let cancelled = false;
     (async () => {
       try {
         const online = await hasRealConnection();
         if (!online || cancelled) return;
-        await downloadAllData(empresa.id, true);
+        await downloadAllData(empresa.id, schemaChanged);
         if (cancelled) return;
         localStorage.setItem(SYNCED_APP_VERSION_KEY, APP_VERSION);
+        localStorage.setItem(SYNCED_SCHEMA_VERSION_KEY, DATA_SCHEMA_VERSION);
         const t = await getLastSyncTime();
         setLastSync(t);
         // Avisar a los useOfflineQuery para que reflejen los datos frescos.
         window.dispatchEvent(new Event('uniline:sync-complete'));
       } catch (e) {
-        console.warn('[app-update] refresco completo falló, se reintentará', e);
+        console.warn('[app-update] refresco falló, se reintentará', e);
       }
     })();
     return () => { cancelled = true; };
   }, [isOnline, empresa?.id, autoSync]);
+
 
   // Initial data download if cache is stale (respects autoSync & data saver)
   useEffect(() => {
