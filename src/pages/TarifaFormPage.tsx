@@ -1146,16 +1146,16 @@ export default function TarifaFormPage() {
                                 </select>
                               ) : <span className="text-xs text-muted-foreground">{CALCULO_LABELS[l.tipo_calculo]}</span>}
                             </td>
-                            {/* Base de precio */}
+                            {/* Resultado de la regla: ¿incluye impuestos? */}
                             <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('base_precio')}>
                               {ec('base_precio') ? (
                                 <select autoFocus className="input-odoo text-xs w-full" value={editLinea.base_precio}
                                   onBlur={blurSave}
                                   onChange={e => setEditLinea(p => ({ ...p, base_precio: e.target.value as any }))}>
-                                  <option value="sin_impuestos">Neto — sin impuestos</option>
-                                  <option value="con_impuestos">Con impuestos incluidos</option>
+                                  <option value="sin_impuestos">Neto — los impuestos se agregan al final</option>
+                                  <option value="con_impuestos">Con impuestos — es lo que paga el cliente</option>
                                 </select>
-                              ) : <span className="text-xs text-muted-foreground" title={(l as any).base_precio === 'con_impuestos' ? 'El precio que capturas ya incluye IVA/IEPS; el sistema le extrae los impuestos para guardar el neto' : 'El precio que capturas es neto (sin IVA/IEPS); el sistema le suma los impuestos al final'}>{(l as any).base_precio === 'con_impuestos' ? 'Con impuestos' : 'Sin impuestos'}</span>}
+                              ) : <span className="text-xs text-muted-foreground" title={(l as any).base_precio === 'con_impuestos' ? 'El resultado de la regla ya incluye IVA/IEPS — es el precio final que paga el cliente. El sistema le extrae los impuestos para guardar el neto' : 'El resultado de la regla es neto (sin IVA/IEPS). El sistema le suma los impuestos al final para obtener el precio que paga el cliente'}>{(l as any).base_precio === 'con_impuestos' ? 'Con impuestos' : 'Sin impuestos'}</span>}
                             </td>
                             {/* Valor */}
                             <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('valor')}>
