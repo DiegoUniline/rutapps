@@ -127,6 +127,9 @@ export function VentaLineasTab(props: Props) {
                       {showCol('descPromo') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Desc promo</th>}
                       <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
                       {showCol('lote') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24">Lote</th>}
+                      {VENTA_LINEAS_DESGLOSE_COLUMNS.filter(c => showCol(c.key)).map(c => (
+                        <th key={c.key} className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right whitespace-nowrap">{c.label}</th>
+                      ))}
                       <th className="py-2 px-2 w-8"></th>
                     </tr>
                   </thead>
