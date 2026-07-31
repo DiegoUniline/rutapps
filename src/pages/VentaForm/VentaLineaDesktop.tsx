@@ -79,6 +79,15 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   // en vivo.
   const ivaShown = readOnly ? (Number(l.iva_monto) || 0) : iva;
   const iepsShown = readOnly ? (Number(l.ieps_monto) || 0) : ieps;
+
+  // Ajuste visual para no confundir al usuario: si estamos en LECTURA (readOnly)
+  // y el monto parece ser un total acumulado (monto > precio * taxPct),
+  // mostramos el monto UNITARIO para que la suma (Base + IVA) coincida con el
+  // "Precio c/imp".
+  const qty = Math.max(1, Number(l.cantidad) || 1);
+  const ivaUnit = readOnly && ivaShown > (price * 1.5) ? r2(ivaShown / qty) : ivaShown;
+  const iepsUnit = readOnly && iepsShown > (price * 1.5) ? r2(iepsShown / qty) : iepsShown;
+
   // Precio unitario CON impuestos (para la columna opcional "Precio c/imp").
   const ivaPctUnit = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
   const iepsPctUnit = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
@@ -254,8 +263,8 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       {showCol('iva') && (
       <td className="py-1.5 px-2 text-right">
         {isEmpty ? '' : readOnly ? (
-          ivaShown > 0
-            ? <span className="text-[12px] tabular-nums">{money(ivaShown)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.iva_pct) || 0}%</span></span>
+          ivaUnit > 0
+            ? <span className="text-[12px] tabular-nums">{money(ivaUnit)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.iva_pct) || 0}%</span></span>
             : <span className="text-muted-foreground text-[11px]">—</span>
         ) : (
           <div className="flex flex-col items-end gap-0.5">
@@ -264,8 +273,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
               title={Number(l.iva_pct) > 0 ? "Clic para quitar IVA" : "Clic para aplicar IVA"}>
               IVA {Number(l.iva_pct) > 0 ? `${l.iva_pct}%` : ''}
             </button>
-            {ivaShown > 0 && <span className="text-[9px] text-muted-foreground tabular-nums">{money(ivaShown)}</span>}
+            {ivaUnit > 0 && <span className="text-[9px] text-muted-foreground tabular-nums">{money(ivaUnit)}</span>}
           </div>
+
         )}
       </td>
       )}
@@ -274,10 +284,11 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       <td className="py-1.5 px-2 text-right">
         {isEmpty ? '' : (() => {
           if (readOnly) {
-            return iepsShown > 0
-              ? <span className="text-[12px] tabular-nums">{money(iepsShown)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.ieps_pct) || 0}%</span></span>
+            return iepsUnit > 0
+              ? <span className="text-[12px] tabular-nums">{money(iepsUnit)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.ieps_pct) || 0}%</span></span>
               : <span className="text-muted-foreground text-[11px]">—</span>;
           }
+
           const p = productosList?.find((x: any) => x.id === l.producto_id);
           const prodHasIeps = !!p && (p.tiene_ieps || Number(p.ieps_pct ?? 0) > 0);
           const showIeps = Number(l.ieps_pct) > 0 || prodHasIeps || impuestosLabel.includes('IEPS');
@@ -289,8 +300,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
                 title={Number(l.ieps_pct) > 0 ? "Clic para quitar IEPS" : "Clic para aplicar IEPS"}>
                 IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}
               </button>
-              {iepsShown > 0 && <span className="text-[9px] text-muted-foreground tabular-nums">{money(iepsShown)}</span>}
+              {iepsUnit > 0 && <span className="text-[9px] text-muted-foreground tabular-nums">{money(iepsUnit)}</span>}
             </div>
+
           );
         })()}
       </td>
