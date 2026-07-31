@@ -709,10 +709,21 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     if (!promocionesActivas || cart.length === 0) return [] as PromoResult[];
     const cartForPromo: CartItemForPromo[] = cart.filter(c => !c.es_cambio).map(c => {
       const prod = productos?.find((p: any) => p.id === c.producto_id);
-      return { producto_id: c.producto_id, clasificacion_id: prod?.clasificacion_id ?? undefined, precio_unitario: c.precio_unitario, cantidad: c.cantidad };
+      // El motor de promociones trabaja SIEMPRE sobre el precio BRUTO cobrado
+      // (con impuestos y redondeo ya aplicados). Así un 10% de descuento es 10%
+      // de lo que paga el cliente, y el IVA queda proporcional.
+      const bruto = getOriginalLineBreakdown(c, sinImpuestos);
+      const qty = Number(c.cantidad) || 0;
+      return {
+        producto_id: c.producto_id,
+        clasificacion_id: prod?.clasificacion_id ?? undefined,
+        precio_unitario: qty > 0 ? bruto.total / qty : 0,
+        cantidad: c.cantidad,
+      };
     });
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId || undefined, (selectedCliente as any)?.zona_id || undefined, (empresa as any)?.zona_horaria);
-  }, [promocionesActivas, cart, clienteId, selectedCliente, productos]);
+  }, [promocionesActivas, cart, clienteId, selectedCliente, productos, sinImpuestos]);
+
 
   // Build a map of raw promo discount per product
   const promoRawByProduct = useMemo(() => {
