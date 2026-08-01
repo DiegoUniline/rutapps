@@ -124,6 +124,7 @@ const navItems: NavItem[] = [
       { label: 'Marcas', path: '/catalogos/marcas' },
       { label: 'Unidades', path: '/catalogos/unidades' },
       { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
+      { label: 'Consumo de datos', path: '/configuracion/consumo-datos' },
       { label: 'Proveedores', path: '/proveedores' },
     ],
   },
