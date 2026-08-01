@@ -349,8 +349,12 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   const descTicket = subtotalNetoGuardado > 0
     ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2(subtotalNetoGuardado - ((Number(data.total) || 0) - ivaMonto - iepsMonto)))
     : Math.max(resumen.descuento, summary.descuentoTotal, 0);
-  const gravableTicket = Math.max(0, (Number(data.total) || 0) - ivaMonto - iepsMonto);
-  const sinImpTicket = subtotalNetoGuardado > 0 ? subtotalNetoGuardado : gravableTicket + descTicket;
+  const sinImpTicket = subtotalNetoGuardado > 0
+    ? subtotalNetoGuardado
+    : Math.max(0, (Number(data.total) || 0) - ivaMonto - iepsMonto) + descTicket;
+  const gravableTicket = subtotalNetoGuardado > 0
+    ? Math.max(0, r2(sinImpTicket - descTicket))
+    : Math.max(0, (Number(data.total) || 0) - ivaMonto - iepsMonto);
   if (showImpuestos) {
     ln(row('Subtotal sin impuestos', fmt(sinImpTicket), W));
     if (showDescuentos && descTicket > 0.005) ln(row('Descuentos/promos', `-${fmt(descTicket)}`, W));
