@@ -68,8 +68,9 @@ const Index = () => {
       <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-sm border border-slate-200">
         <h1 className="text-xl font-bold mb-4 text-slate-800">JSON Detalle Pedido PED-0001</h1>
         <p className="mb-4 text-xs text-slate-600">
-          Orden secuencial (Compra → Descuentos → Impuestos → Total):<br/>
-          Producto, Cantidad, Unidad, Precio unitario (dPrecioLista), Importe bruto (dImporteBruto), Promoción (dPromoNombre), Desc. promo $ (dDescPromoMonto), Cant. regalo (dCantBonificada), Desc. manual $ (dDescManMonto), Desc. total $ (dDescTotal), Subtotal (dBaseDescMan), Base IEPS (dBaseIeps), IEPS $, Base IVA (dBaseIva), IVA $, Total línea
+          En src/pages/VentaForm/VentaLineaDesktop.tsx, busca el array "columnsOrder" (alrededor de línea 374-389).<br/>
+          Reordena los elementos en este orden EXACTO (sin cambiar el contenido, solo el orden de las keys):<br/>
+          1. dPrecioLista, 2. dImporteBruto, 3. dPromoNombre, 4. dDescPromoMonto, 5. dCantBonificada, 6. dDescManMonto, 7. dDescTotal, 8. dBaseDescMan, 9. dBaseIeps, 10. dBaseIva, 11. dMotivoDescMan, 12. dEsBonificacion, 13. dObjetoImpuesto
         </p>
         <pre className="p-4 bg-slate-900 text-green-400 rounded overflow-x-auto">
           {JSON.stringify(data, null, 2)}
