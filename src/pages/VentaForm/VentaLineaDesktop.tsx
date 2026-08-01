@@ -15,6 +15,7 @@ interface Props {
   lineas: Partial<VentaLinea>[];
   productosList: any[];
   readOnly: boolean;
+  pricingReady?: boolean;
   onProductSelect: (idx: number, pid: string) => void;
   onUpdateLine: (idx: number, field: string, val: any) => void;
   onRemoveLine: (idx: number) => void;
@@ -33,7 +34,7 @@ interface Props {
   cols?: Record<string, boolean>;
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -174,7 +175,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           <ProductSearchInput
             products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, formula: p.formula, precio_principal: p.precio_principal, _stock: p._stock }))}
             value={l.producto_id ?? ''} displayText={prodDisplay ? `${prodDisplay.codigo ?? ''} · ${prodDisplay.nombre}${prod?._stock != null ? ` (Stock: ${prod._stock})` : ''}`.replace(/^ · /, '') : (l.descripcion || undefined)}
-            onSelect={pid => onProductSelect(idx, pid)} onNavigate={dir => navigateCell(idx, 0, dir)} readOnly={readOnly}
+            onSelect={pid => onProductSelect(idx, pid)} onNavigate={dir => navigateCell(idx, 0, dir)} readOnly={readOnly || !pricingReady}
             registerRef={el => setCellRef(idx, 0, el)}
           />
         )}
