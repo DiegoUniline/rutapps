@@ -112,24 +112,24 @@ export function VentaLineasTab(props: Props) {
                   />
                 </div>
               )}
-              <div className="overflow-x-auto">
-                <table className="w-full text-[13px]">
+              <div className="w-full">
+                <table className="w-full table-auto text-[12px] break-words">
                   <thead>
                     <tr className="border-b border-table-border text-left">
                       <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
                       {showCol('cantidad') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{cerradoSnapshot?.lineas?.length ? 'Pedido / Entregado' : 'Cantidad'}</th>}
-                      <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
+                      <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-[18%] min-w-[120px]">Producto</th>
                       {showCol('unidad') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center">Unidad</th>}
-                      {showCol('precioBruto') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio<span className="font-normal"> c/imp</span></th>}
-                      {showCol('precioNeto') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio<span className="font-normal"> s/imp</span></th>}
-                      {showCol('iva') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">IVA</th>}
-                      {showCol('ieps') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">IEPS</th>}
-                      {showCol('descPromo') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Desc promo</th>}
+                      {showCol('precioBruto') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">Precio<span className="font-normal"> c/imp</span></th>}
+                      {showCol('precioNeto') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">Precio<span className="font-normal"> s/imp</span></th>}
+                      {showCol('iva') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">IVA</th>}
+                      {showCol('ieps') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">IEPS</th>}
+                      {showCol('descPromo') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">Desc promo</th>}
                       {showCol('descMan') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-right">Desc man.</th>}
-                      {showCol('subtotal') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Total línea</th>}
+                      {showCol('subtotal') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">Total línea</th>}
                       {showCol('lote') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24">Lote</th>}
                       {VENTA_LINEAS_DESGLOSE_COLUMNS.filter(c => showCol(c.key)).map(c => (
-                        <th key={c.key} className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right whitespace-nowrap">{c.label}</th>
+                        <th key={c.key} className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">{c.label}</th>
                       ))}
                       <th className="py-2 px-2 w-8"></th>
                     </tr>
