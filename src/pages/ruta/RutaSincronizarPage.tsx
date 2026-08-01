@@ -20,6 +20,7 @@ import {
 } from '@/lib/offlineBackup';
 import { getSyncDiagnostics, formatBytes, requestPersistentStorage, type SyncDiagnostics } from '@/lib/syncDiagnostics';
 import { refreshAppVersion } from '@/lib/appUpdate';
+import { DataUsageCard } from '@/components/DataUsageCard';
 
 export default function RutaSincronizarPage() {
   const navigate = useNavigate();
