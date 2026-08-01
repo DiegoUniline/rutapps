@@ -6518,6 +6518,7 @@ export type Database = {
           created_at: string
           empresa_id: string
           id: string
+          lote_id: string | null
           producto_id: string
           updated_at: string
           venta_id: string
@@ -6529,6 +6530,7 @@ export type Database = {
           created_at?: string
           empresa_id: string
           id?: string
+          lote_id?: string | null
           producto_id: string
           updated_at?: string
           venta_id: string
@@ -6540,12 +6542,20 @@ export type Database = {
           created_at?: string
           empresa_id?: string
           id?: string
+          lote_id?: string | null
           producto_id?: string
           updated_at?: string
           venta_id?: string
           venta_linea_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_apartado_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_apartado_venta_id_fkey"
             columns: ["venta_id"]
@@ -9094,6 +9104,21 @@ export type Database = {
       fn_disponible_almacen: {
         Args: { p_almacen_id: string; p_producto_id: string }
         Returns: number
+      }
+      fn_disponible_lotes: {
+        Args: {
+          p_almacen_id: string
+          p_excluir_venta_id?: string
+          p_producto_id: string
+        }
+        Returns: {
+          apartado: number
+          cantidad: number
+          codigo: string
+          disponible: number
+          fecha_caducidad: string
+          lote_id: string
+        }[]
       }
       fn_recalc_venta_header: {
         Args: { p_venta_id: string }
