@@ -89,10 +89,10 @@ export function VentaLineasTab(props: Props) {
 
 
   return (
-    <div className="p-3 sm:p-4">
+    <div className="min-w-0 max-w-full overflow-hidden p-3 sm:p-4">
       {/* Tabla de líneas a lo ANCHO; la card de Resumen va DEBAJO de la tabla. */}
-      <div className="space-y-4">
-        <div className="space-y-3 min-w-0">
+      <div className="min-w-0 max-w-full space-y-4">
+        <div className="min-w-0 max-w-full space-y-3">
           {isMobile ? (
             <div className="space-y-2">
               {lineas.map((l, idx) => (
@@ -113,8 +113,8 @@ export function VentaLineasTab(props: Props) {
                   />
                 </div>
               )}
-              <div className="w-full">
-                <table data-no-scroll className="w-full table-auto text-[12px] break-words">
+              <div className="w-full max-w-full overflow-x-auto overscroll-x-contain">
+                <table data-no-scroll className="w-max min-w-full table-auto text-[12px]">
                   <thead>
                     <tr className="border-b border-table-border text-left sticky top-0 z-10 bg-card">
                       <th className="py-1.5 px-2 bg-card text-muted-foreground font-medium text-[11px] w-8">#</th>
@@ -164,8 +164,10 @@ export function VentaLineasTab(props: Props) {
           )}
         </div>
 
-        <div className="lg:w-80 lg:ml-auto">
-          <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} currencyCode={currencyCode} promoTotalGuardado={readOnly ? lineas.reduce((s, l) => s + (Number((l as any).descuento_promocion_monto) || 0), 0) : null} subtotalNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const lista = Number((l as any).precio_lista_unitario); const qty = Number((l as any).cantidad) || 0; return s + (Number.isFinite(lista) ? Math.round(lista * qty * 100) / 100 : 0); }, 0) * 100) / 100 : null} descuentoNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const a = l as any; const desc = (Number(a.descuento_promocion_monto) || 0) + (Number(a.descuento_manual_monto) || 0); if (desc <= 0) return s; const divisor = (1 + (Number(a.ieps_pct) || 0) / 100) * (1 + (Number(a.iva_pct) || 0) / 100); return s + Math.round((divisor > 0 ? desc / divisor : desc) * 100) / 100; }, 0) * 100) / 100 : null} />
+        <div className="flex w-full justify-end">
+          <div className="w-full lg:w-80">
+            <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} currencyCode={currencyCode} promoTotalGuardado={readOnly ? lineas.reduce((s, l) => s + (Number((l as any).descuento_promocion_monto) || 0), 0) : null} subtotalNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const lista = Number((l as any).precio_lista_unitario); const qty = Number((l as any).cantidad) || 0; return s + (Number.isFinite(lista) ? Math.round(lista * qty * 100) / 100 : 0); }, 0) * 100) / 100 : null} descuentoNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const a = l as any; const desc = (Number(a.descuento_promocion_monto) || 0) + (Number(a.descuento_manual_monto) || 0); if (desc <= 0) return s; const divisor = (1 + (Number(a.ieps_pct) || 0) / 100) * (1 + (Number(a.iva_pct) || 0) / 100); return s + Math.round((divisor > 0 ? desc / divisor : desc) * 100) / 100; }, 0) * 100) / 100 : null} />
+          </div>
         </div>
       </div>
     </div>
