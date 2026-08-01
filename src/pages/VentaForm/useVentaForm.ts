@@ -155,6 +155,12 @@ export function useVentaForm() {
     },
   });
 
+  // Las reglas de la tarifa aún no llegan: no se puede precificar todavía.
+  // Sin esto, `resolveProductPricing` cae al fallback (precio_principal) y
+  // captura precios equivocados mientras carga el cliente / su lista.
+  const tarifaRulesLoading = !!form.tarifa_id && tarifaRules === undefined;
+  const pricingReady = !!form.cliente_id && !tarifaRulesLoading;
+
   // Entregas
   const { data: entregasExistentes } = useEntregasByPedido(!isNew && form.tipo === 'pedido' ? form.id : undefined);
   const hayEntregas = (entregasExistentes ?? []).length > 0;
@@ -381,14 +387,39 @@ export function useVentaForm() {
     return { ...line, precio_unitario: effective.unitPrice, display_unit_price: effective.displayPrice } as Partial<VentaLinea>;
   }, []);
 
+  // Cambio de cliente → cambio de lista: pedimos confirmación antes de
+  // reprecificar líneas ya capturadas (los precios manuales nunca se tocan).
+  const [pendingReprice, setPendingReprice] = useState<{ listaPrecioId: string | null; listaNombre: string; count: number; manualCount: number } | null>(null);
+  const [repriceNonce, setRepriceNonce] = useState(0);
+  const repricedListaRef = useRef<string | null | undefined>(undefined);
+
   // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines).
   // Una línea con lista_precio_id propio NO se reprecifica desde la lista/tarifa global:
   // solo se re-aplica el redondeo efectivo con el nuevo estado de impuestos.
   useEffect(() => {
     if (!productosList || readOnly) return;
+    // Espera a que carguen las reglas de la tarifa del cliente: repreciar
+    // ahora daría el fallback (precio_principal) en vez del precio de lista.
+    if (tarifaRulesLoading) return;
     const formListaPrecioId = (form as any).lista_precio_id || null;
+
+    // Si la lista cambió y ya hay líneas capturadas, no repreciar en silencio:
+    // se pregunta al usuario (ver `confirmReprice` / `dismissReprice`).
+    if (repricedListaRef.current !== undefined && repricedListaRef.current !== formListaPrecioId) {
+      const autoLines = lineas.filter(l => l.producto_id && !(l as any).precio_manual);
+      const manualLines = lineas.filter(l => l.producto_id && (l as any).precio_manual);
+      if (autoLines.length || manualLines.length) {
+        const nombre = (tarifasList ?? []).find((t: any) => t.id === form.tarifa_id)?.nombre ?? 'la nueva lista';
+        setPendingReprice({ listaPrecioId: formListaPrecioId, listaNombre: nombre, count: autoLines.length, manualCount: manualLines.length });
+        return;
+      }
+    }
+    repricedListaRef.current = formListaPrecioId;
+
     setLineas(prev => prev.map(l => {
       if (!l.producto_id) return l;
+      // Línea congelada: el usuario declinó el reprecio al cambiar de cliente.
+      if ((l as any)._precio_congelado) return l;
       if ((l as any).precio_manual) return l;
       const lineOwnLista = (l as any).lista_precio_id ?? null;
 
@@ -437,7 +468,30 @@ export function useVentaForm() {
       ) return l;
       return effective;
     }));
-  }, [tarifaRules, (form as any).lista_precio_id, sinImpuestos, applyEffectiveLinePricing, productosList, readOnly]);
+  // `lineas` se lee dentro pero NO va en deps: el map crea un array nuevo en
+  // cada corrida y provocaría un ciclo infinito de renders.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tarifaRules, tarifaRulesLoading, (form as any).lista_precio_id, sinImpuestos, applyEffectiveLinePricing, productosList, readOnly, repriceNonce]);
+
+  // Acepta el reprecio pendiente: descongela las líneas y libera el ref para
+  // que el efecto recalcule con la lista nueva.
+  const confirmReprice = useCallback(() => {
+    repricedListaRef.current = undefined;
+    setLineas(prev => prev.map(l => ((l as any)._precio_congelado ? { ...l, _precio_congelado: false } as any : l)));
+    setPendingReprice(null);
+    setRepriceNonce(n => n + 1);
+    setDirty(true);
+  }, []);
+
+  // Rechaza el reprecio: congela las líneas ya capturadas para que conserven
+  // su precio y marca la lista como atendida.
+  const dismissReprice = useCallback(() => {
+    repricedListaRef.current = (form as any).lista_precio_id || null;
+    setLineas(prev => prev.map(l => (l.producto_id ? { ...l, _precio_congelado: true } as any : l)));
+    setPendingReprice(null);
+  }, [(form as any).lista_precio_id]);
+
+
 
 
 
@@ -975,7 +1029,8 @@ export function useVentaForm() {
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
     pagosData, totalPagado, saldoPendiente, totals: displayTotals, promoResults, tarifaRules,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,
-    sinImpuestos, setSinImpuestos,
+    sinImpuestos, setSinImpuestos, pricingReady, tarifaRulesLoading,
+    pendingReprice, confirmReprice, dismissReprice,
     saveVenta, crearEntrega, PinDialog, requestPin,
     set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
     handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,

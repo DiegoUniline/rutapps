@@ -32,6 +32,7 @@ import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { nextVisitDate } from '@/lib/nextVisitDate';
+import { RepriceListaDialog } from '@/components/venta/RepriceListaDialog';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -53,7 +54,8 @@ export default function VentaFormPage() {
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
     pagosData, totalPagado, saldoPendiente, totals, promoResults,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,
-    sinImpuestos, setSinImpuestos,
+    sinImpuestos, setSinImpuestos, pricingReady,
+    pendingReprice, confirmReprice, dismissReprice,
     saveVenta, crearEntrega, PinDialog,
     set, handleProductSelect, handleSave: baseSave, handleDelete, handleStatusChange, handleAddPago,
     handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,
@@ -343,6 +345,7 @@ export default function VentaFormPage() {
   const billingEnabled = isSuperAdminEmail(user?.email);
   return (
     <div className="min-h-full">
+      <RepriceListaDialog pending={pendingReprice} onConfirm={confirmReprice} onDismiss={dismissReprice} />
       <VentaFormHeader
         isNew={isNew} folio={form.folio} clienteNombre={clienteNombre} vendedorNombre={(form as any).vendedores?.nombre ?? profile?.nombre} status={form.status}
         entregaInmediata={form.entrega_inmediata} tipo={form.tipo}
@@ -372,7 +375,7 @@ export default function VentaFormPage() {
         </div>
         <div className="bg-card border border-border rounded-md">
           <OdooTabs tabs={[
-            { key: 'lineas', label: 'Líneas de venta', content: <VentaLineasTab lineas={lineas} productosList={productosList ?? []} readOnly={readOnly} totals={totals} cerradoSnapshot={(form as any).cerrado_at ? ((form as any).cerrado_snapshot ?? null) : null} promoResults={promoResults} onProductSelect={handleProductSelect} onUpdateLine={updateLine} onRemoveLine={removeLine} onAddLine={addLine} setCellRef={setCellRef} onCellKeyDown={handleCellKeyDown} navigateCell={navigateCell} setLineas={setLineas} sinImpuestos={sinImpuestos} setSinImpuestos={setSinImpuestos} readOnlyForm={readOnly} saldoPendiente={saldoPendiente} canChangePrice={canChangePrice} canApplyDiscount={canApplyDiscount} onChangeLineListaPrecio={changeLineListaPrecio} /> },
+            { key: 'lineas', label: 'Líneas de venta', content: <VentaLineasTab lineas={lineas} pricingReady={pricingReady} productosList={productosList ?? []} readOnly={readOnly} totals={totals} cerradoSnapshot={(form as any).cerrado_at ? ((form as any).cerrado_snapshot ?? null) : null} promoResults={promoResults} onProductSelect={handleProductSelect} onUpdateLine={updateLine} onRemoveLine={removeLine} onAddLine={addLine} setCellRef={setCellRef} onCellKeyDown={handleCellKeyDown} navigateCell={navigateCell} setLineas={setLineas} sinImpuestos={sinImpuestos} setSinImpuestos={setSinImpuestos} readOnlyForm={readOnly} saldoPendiente={saldoPendiente} canChangePrice={canChangePrice} canApplyDiscount={canApplyDiscount} onChangeLineListaPrecio={changeLineListaPrecio} /> },
             ...(!isNew ? [{ key: 'pagos', label: `Pagos (${(pagosData ?? []).length})`, content: <VentaPagosTab pagos={(pagosData ?? []) as any} totalPagado={totalPagado} saldoPendiente={saldoPendiente} isMobile={isMobile} onAddPago={handleAddPago} onCancelPago={handleCancelPago} onReactivarPago={handleReactivarPago} onDeletePago={handleDeletePago} onUpdatePago={handleUpdatePago} onRealizarPago={() => setShowPago(true)} /> }] : []),
             ...(!isNew ? [{ key: 'entregas', label: `Entregas (${entregasActivas.length})`, content: <VentaEntregasTab tipo={form.tipo} lineas={lineas} productosList={(productosList ?? []).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre }))} entregasExistentes={(entregasExistentes ?? []) as any} entregasActivas={entregasActivas as any} lineDeliverySummary={lineDeliverySummary} canCreateEntrega={canCreateEntrega} fullyDelivered={fullyDelivered} remaining={remaining} isCreatingEntrega={crearEntrega.isPending} isMobile={isMobile} onCreateEntrega={async (items) => { try { const entrega = await crearEntrega.mutateAsync({ pedidoId: form.id, vendedorId: form.vendedor_id ?? undefined, clienteId: form.cliente_id ?? undefined, almacenId: form.almacen_id ?? undefined, lineas: items }); toast.success(`Entrega ${entrega.folio} creada`); } catch (e: any) { toast.error(e.message); } }} /> }] : []),
             ...(billingEnabled && !isNew ? [{ key: 'facturacion', label: `Facturas (${cfdisCount ?? 0})`, content: <div className="p-4"><CfdiHistory ventaId={form.id!} lineas={lineas} productosList={productosList ?? []} />{lineas.every(l => !l.producto_id || l.facturado) && lineas.some(l => l.facturado) && <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground mt-4"><span className="inline-block w-2 h-2 rounded-full bg-primary" />Todas las líneas facturadas</div>}</div> }] : []),

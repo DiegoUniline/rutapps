@@ -24,6 +24,7 @@ interface Props {
   lineas: Partial<VentaLinea>[];
   productosList: any[];
   readOnly: boolean;
+  pricingReady?: boolean;
   totals: { subtotal: number; descuento_total: number; iva_total: number; ieps_total: number; total: number; descuento_promo?: number; descuento_extra_amt?: number };
   promoResults?: PromoResult[];
   onProductSelect: (idx: number, pid: string) => void;
@@ -48,7 +49,7 @@ interface Props {
 export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
   const { symbol } = useCurrency();
-  const { readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults, currencyCode, cerradoSnapshot } = props;
+  const { readOnly, totals, onAddLine, pricingReady = true, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults, currencyCode, cerradoSnapshot } = props;
   const { empresa } = useAuth();
   const showDesglose = desgloseLineaHabilitado(empresa?.licencia);
   const defaults = { ...VENTA_LINEAS_DEFAULT_VISIBILITY, ...VENTA_LINEAS_DESGLOSE_DEFAULTS };
@@ -90,6 +91,11 @@ export function VentaLineasTab(props: Props) {
 
   return (
     <div className="min-w-0 max-w-full overflow-hidden p-3 sm:p-4">
+      {!readOnly && !pricingReady && (
+        <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-[12px] text-foreground">
+          Selecciona un cliente para cargar su lista de precios antes de agregar productos.
+        </div>
+      )}
       {/* Tabla de líneas a lo ANCHO; la card de Resumen va DEBAJO de la tabla. */}
       <div className="min-w-0 max-w-full space-y-4">
         <div className="min-w-0 max-w-full space-y-3">
@@ -148,7 +154,7 @@ export function VentaLineasTab(props: Props) {
 
           {!readOnly && (
             <div className="flex items-center justify-between">
-              <button onClick={onAddLine} className="btn-odoo-secondary text-xs">
+              <button onClick={onAddLine} disabled={!pricingReady} className="btn-odoo-secondary text-xs disabled:opacity-50 disabled:cursor-not-allowed">
                 <Plus className="h-3 w-3" /> Agregar producto
               </button>
               {setSinImpuestos && !readOnlyForm && (
