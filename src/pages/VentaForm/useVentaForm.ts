@@ -155,6 +155,12 @@ export function useVentaForm() {
     },
   });
 
+  // Las reglas de la tarifa aún no llegan: no se puede precificar todavía.
+  // Sin esto, `resolveProductPricing` cae al fallback (precio_principal) y
+  // captura precios equivocados mientras carga el cliente / su lista.
+  const tarifaRulesLoading = !!form.tarifa_id && tarifaRules === undefined;
+  const pricingReady = !!form.cliente_id && !tarifaRulesLoading;
+
   // Entregas
   const { data: entregasExistentes } = useEntregasByPedido(!isNew && form.tipo === 'pedido' ? form.id : undefined);
   const hayEntregas = (entregasExistentes ?? []).length > 0;
