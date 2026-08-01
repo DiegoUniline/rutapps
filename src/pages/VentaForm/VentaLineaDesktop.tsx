@@ -481,13 +481,14 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             const nombre = d.promocion_nombre as string | null;
             const gratis = Number(d.cantidad_bonificada) || 0;
             const descPromo = Number(d.descuento_promocion_monto) || 0;
-            if (!nombre && gratis <= 0 && descPromo <= 0) return null;
+            const esBonif = d.es_bonificacion === true;
+            if (!nombre && gratis <= 0 && descPromo <= 0 && !esBonif) return null;
             const partes: string[] = [];
             if (gratis > 0) partes.push(`🎁 ${gratis}x gratis`);
             if (nombre) partes.push(nombre);
-            const label = partes.join(' — ');
-            if (!label) return null;
-            return <span className="text-[11px] whitespace-nowrap">{label}</span>;
+            // Ventas antiguas no guardaban el nombre de la promoción
+            if (!partes.length) partes.push(esBonif ? '🎁 Bonificación' : '🎁 Promoción');
+            return <span className="text-[11px] whitespace-nowrap">{partes.join(' — ')}</span>;
           })() },
 
           // PASO 5: Bases e importes de impuestos
