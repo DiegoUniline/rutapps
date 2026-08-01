@@ -169,6 +169,8 @@ export default function TicketVenta(props: TicketVentaProps) {
   const ticketRef = useRef<HTMLDivElement>(null);
   // 'ambos' = producto + totales, 'totales' = solo totales, 'ninguno' = sin impuestos
   const [taxMode, setTaxMode] = useState<'ambos' | 'totales' | 'ninguno'>('ambos');
+  // Si la empresa desactivó el desglose de impuestos, se fuerza "ninguno".
+  const taxModeEff: 'ambos' | 'totales' | 'ninguno' = showImpuestos ? taxMode : 'ninguno';
 
   const pagoLabel = condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir';
   const descuentoPromos = promociones.reduce((s, p) => s + (Number(p.descuento) || 0), 0);
