@@ -20,7 +20,7 @@ const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
 /** ¿Esta licencia guarda el desglose completo por línea? */
 export function desgloseLineaHabilitado(licencia?: string | null): boolean {
-  return isFeatureEnabled('venta_linea_desglose', String(licencia ?? '').trim());
+  return true; // Liberado para todas las empresas
 }
 
 export interface VentaLineaDesglose {
