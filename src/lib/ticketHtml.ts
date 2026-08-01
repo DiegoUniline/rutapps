@@ -342,8 +342,12 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const descTicket = subtotalNetoGuardado > 0
     ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2(subtotalNetoGuardado - ((Number(total) || 0) - ivaMonto - iepsMonto)))
     : Math.max(resumen.descuento, summary.descuentoTotal, 0);
-  const gravableTicket = Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto);
-  const sinImpTicket = subtotalNetoGuardado > 0 ? subtotalNetoGuardado : gravableTicket + descTicket;
+  const sinImpTicket = subtotalNetoGuardado > 0
+    ? subtotalNetoGuardado
+    : Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto) + descTicket;
+  const gravableTicket = subtotalNetoGuardado > 0
+    ? Math.max(0, r2(sinImpTicket - descTicket))
+    : Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto);
   add('');
   if (showImpuestos) {
     add(pad('Subtotal sin impuestos', fmt(sinImpTicket)));
