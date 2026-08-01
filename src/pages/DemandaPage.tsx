@@ -363,6 +363,8 @@ export default function DemandaPage() {
             cantidad_pedida: Math.max(0, l.cantidad_pendiente),
             cantidad_entregada: 0,
             hecho: false,
+            // Lote apartado desde el pedido (si el vendedor lo eligió).
+            lote_id: l.lote_id ?? null,
           }))
         );
         if (lErr) throw lErr;
@@ -517,6 +519,7 @@ export default function DemandaPage() {
               cantidad_entregada: 0,
               hecho: false,
               almacen_origen_id: almacenId,
+              lote_id: (l as any).lote_id ?? null,
             }));
 
           let createdLines: any[] = (existingLines ?? []).map((el: any) => ({ id: el.id, producto_id: el.producto_id }));
