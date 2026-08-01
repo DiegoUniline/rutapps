@@ -194,11 +194,6 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       {showCol('unidad') && (
       <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px]">{isEmpty ? '' : (unidadLabel || '—')}</td>
       )}
-      {showCol('precioBruto') && (
-      <td className="py-1 px-2 text-right">
-        {isEmpty ? '' : <span className="text-[12px] tabular-nums">{money(priceGross)}</span>}
-      </td>
-      )}
       {showCol('precioNeto') && (
       <td className="py-1 px-2">
         {readOnly ? <span className="text-[12px] block text-right">{money(price)}</span>
@@ -261,6 +256,11 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             })()}
           </div>
         )}
+      </td>
+      )}
+      {showCol('precioBruto') && (
+      <td className="py-1 px-2 text-right">
+        {isEmpty ? '' : <span className="text-[12px] tabular-nums">{money(priceGross)}</span>}
       </td>
       )}
       {/* IVA (columna propia): en lectura el monto en $, en edición el chip para activar/quitar */}
