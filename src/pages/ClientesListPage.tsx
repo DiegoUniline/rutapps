@@ -34,6 +34,10 @@ import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePaginat
 import { ClienteLink } from '@/components/links/EntityLinks';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibilityMenu';
+import { useColumnPreferences } from '@/hooks/useColumnPreferences';
+import { fmtMoney } from '@/lib/format';
+
 
 const CLIENTES_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 10 },
