@@ -621,14 +621,24 @@ async function downloadAllDataInternal(
 /**
  * Get a summary of what's stored locally in IndexedDB.
  */
-export async function getLocalDataSummary(): Promise<{ table: string; label: string; count: number; lastSync: number | null }[]> {
+export async function getLocalDataSummary(empresaId?: string): Promise<{ table: string; label: string; count: number; lastSync: number | null }[]> {
   const results: { table: string; label: string; count: number; lastSync: number | null }[] = [];
 
   for (const table of TABLES_TO_CACHE) {
     const localTable = getOfflineTable(table);
     let count = 0;
     if (localTable) {
-      try { count = await localTable.count(); } catch { /* ignore */ }
+      try {
+        // Se cuentan SOLO los registros de la empresa activa: si el aparato
+        // tuvo otra empresa antes, sus datos no deben inflar el contador.
+        if (empresaId && table === 'empresas') {
+          count = await localTable.where('id').equals(empresaId).count();
+        } else if (empresaId && TABLES_WITH_EMPRESA.has(table)) {
+          count = await localTable.where('empresa_id').equals(empresaId).count();
+        } else {
+          count = await localTable.count();
+        }
+      } catch { /* ignore */ }
     }
     const ts = await offlineDb.cacheTimestamps.get(table);
     results.push({
