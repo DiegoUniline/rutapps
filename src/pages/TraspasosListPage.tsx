@@ -108,16 +108,16 @@ export default function TraspasosListPage() {
     empresaId: empresa?.id,
     queryKeys: [['traspasos'], ['traspaso-lineas-all']],
   });
-  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('traspasos');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
+  const { filters, groupBy, groupByLevels, dateFrom: desde, dateTo: hasta, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('traspasos');
+  const setDesde = (val: string) => setDates(val, hasta);
+  const setHasta = (val: string) => setDates(desde, val);
 
   // Detalle filter state
   const [searchD, setSearchD] = useState('');
   const [pageD, setPageD] = useState(1);
-  const { filters: filtersD, groupBy: groupByD, groupByLevels: groupByLevelsD, setFilter: setFilterD, toggleFilterValue: toggleFilterValueD, setGroupBy: setGroupByD, setGroupByLevel: setGroupByLevelD, clearFilters: clearFiltersD } = useListPreferences('traspasos-detalle');
-  const [desdeD, setDesdeD] = useState('');
-  const [hastaD, setHastaD] = useState('');
+  const { filters: filtersD, groupBy: groupByD, groupByLevels: groupByLevelsD, dateFrom: desdeD, dateTo: hastaD, setFilter: setFilterD, toggleFilterValue: toggleFilterValueD, setGroupBy: setGroupByD, setGroupByLevel: setGroupByLevelD, clearFilters: clearFiltersD, setDates: setDatesD } = useListPreferences('traspasos-detalle');
+  const setDesdeD = (val: string) => setDatesD(val, hastaD);
+  const setHastaD = (val: string) => setDatesD(desdeD, val);
 
   const { data: traspasos, isLoading } = useQuery({
     queryKey: ['traspasos', empresa?.id],
