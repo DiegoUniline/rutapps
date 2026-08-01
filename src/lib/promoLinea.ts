@@ -12,14 +12,27 @@
  *  - El prorrateo es proporcional, así que `total = subtotal + iva + ieps`.
  *  - Nunca descuenta dos veces: el descuento se resta una sola vez, en la línea.
  */
-import { isFeatureEnabled } from '@/lib/featureFlags';
+import { getFeatureFlagsCache, isFeatureEnabled } from '@/lib/featureFlags';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
-/** ¿Esta licencia guarda las líneas ya netas de promoción? */
+/**
+ * ¿Esta licencia guarda las líneas ya netas de promoción?
+ *
+ * IMPORTANTE (ruta móvil / offline): si las banderas todavía no se han
+ * cargado desde el servidor, el caché viene vacío y antes esto devolvía
+ * `false`, guardando las líneas EN BRUTO. Como el encabezado se recalcula en
+ * la BD a partir de las líneas, la promoción se perdía y quedaba un saldo
+ * fantasma exactamente igual al descuento. Con el caché vacío asumimos
+ * habilitado (la bandera está en alcance "todos").
+ */
 export function promoLineaHabilitado(licencia?: string | null): boolean {
+  const flags = getFeatureFlagsCache();
+  const cargada = flags.some((f) => f.clave === 'promo_descuento_linea');
+  if (!cargada) return true;
   return isFeatureEnabled('promo_descuento_linea', String(licencia ?? '').trim());
 }
+
 
 export interface LineaMontos {
   subtotal: number;
