@@ -16,6 +16,7 @@ import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { TablePagination } from '@/components/TablePagination';
 import { StickyListToolbar } from '@/components/StickyListToolbar';
+import { ListPage, SCROLL_AREA } from '@/components/layout/ListPage';
 import { readStoredPageSizeFor, writeStoredPageSizeFor, type PageSizeOption } from '@/hooks/useTablePagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
@@ -256,7 +257,7 @@ export default function ProductosListPage() {
   }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
-    <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+    <div className={cn(!groupBy && SCROLL_AREA)}>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-table-border">
@@ -371,9 +372,10 @@ export default function ProductosListPage() {
   );
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /> <VideoHelpButton module="productos" /></h1>
+    <ListPage>
+      <ListPage.Header title={<>Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /> <VideoHelpButton module="productos" /></>} />
 
+      <ListPage.Toolbar>
       <div className="flex border-b border-border gap-0 overflow-x-auto -mt-1">
         {[
           { key: 'activo', label: 'Activos' },
