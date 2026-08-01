@@ -71,7 +71,7 @@ export function useVentaForm() {
   // Selección de lote al vender (venta directa de producto por lote).
   const [loteParaLinea, setLoteParaLinea] = useState<{ idx: number; producto: { id: string; nombre: string } } | null>(null);
   const setLineaLote = async (idx: number, loteId: string, codigo: string) => {
-    const lineaId = (lineasRef.current?.[idx] as any)?.id as string | undefined;
+    const lineaId = (lineas[idx] as any)?.id as string | undefined;
     setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], lote_id: loteId, lote_codigo: codigo } as any; return next; });
     // Pedido ya guardado (incluso cerrado / no editable): el lote se persiste al
     // instante para que la entrega lo herede sin depender del botón Guardar.
@@ -79,8 +79,8 @@ export function useVentaForm() {
       const { error } = await (supabase.from as any)('venta_lineas').update({ lote_id: loteId }).eq('id', lineaId);
       if (error) { toast.error('No se pudo guardar el lote: ' + error.message); return; }
       toast.success(`Lote ${codigo} asignado`);
-      qc.invalidateQueries({ queryKey: ['ventas'] });
-      qc.invalidateQueries({ queryKey: ['apartado-disponible'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['apartado-disponible'] });
     } else {
       setDirty(true);
     }
