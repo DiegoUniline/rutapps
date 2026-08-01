@@ -9,8 +9,15 @@ import {
   COLUMN_SELECTS,
   UPDATED_AT_DELTA_TABLES,
   UPDATED_AT_WINDOW_TABLES,
+  TABLES_WITH_EMPRESA,
+  LS_LAST_EMPRESA,
   WINDOW_DAYS,
 } from '@/lib/offlineSync';
+
+/** empresa_id activa (la misma que usa el sync maestro). */
+function activeEmpresaId(): string | null {
+  try { return localStorage.getItem(LS_LAST_EMPRESA); } catch { return null; }
+}
 
 /** UUID v4 with fallback for environments lacking crypto.randomUUID. */
 function generateUUID(): string {
