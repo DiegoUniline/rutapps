@@ -414,11 +414,11 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                     ) : !l.esCambio && (
                       <>
                         {/* Se quitó el precio unitario/base: cada renglón muestra solo su precio final (con impuestos). */}
-                        {((l.descuento_pct ?? 0) > 0 || (taxMode === 'ambos' && ((l.iva_pct ?? 0) > 0 || (l.ieps_pct ?? 0) > 0)) || (l.precio_sugerido_publico ?? 0) > 0) && (
+                        {((l.descuento_pct ?? 0) > 0 || (taxModeEff === 'ambos' && ((l.iva_pct ?? 0) > 0 || (l.ieps_pct ?? 0) > 0)) || (l.precio_sugerido_publico ?? 0) > 0) && (
                           <div className="flex gap-2 text-[8px] text-muted-foreground mt-px flex-wrap">
                             {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
-                            {taxMode === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
-                            {taxMode === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
+                            {taxModeEff === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
+                            {taxModeEff === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
                             {(l.precio_sugerido_publico ?? 0) > 0 && <span className="text-primary font-medium">Sug. público {fmt(l.precio_sugerido_publico!)}</span>}
                           </div>
                         )}
@@ -478,13 +478,13 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                 <span className="lbl text-muted-foreground">Subtotal gravable</span>
                 <span className="val text-foreground tabular-nums">{fmt(gravableTicket)}</span>
               </div>
-              {taxMode !== 'ninguno' && iepsMonto > 0.005 && (
+              {taxModeEff !== 'ninguno' && iepsMonto > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground pl-2">IEPS{resumen.iepsRate != null ? ` ${resumen.iepsRate}%` : ''}</span>
                   <span className="val text-foreground tabular-nums">{fmt(iepsMonto)}</span>
                 </div>
               )}
-              {taxMode !== 'ninguno' && ivaMonto > 0.005 && (
+              {taxModeEff !== 'ninguno' && ivaMonto > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground pl-2">IVA{resumen.ivaRate != null ? ` ${resumen.ivaRate}%` : ''}</span>
                   <span className="val text-foreground tabular-nums">{fmt(ivaMonto)}</span>
