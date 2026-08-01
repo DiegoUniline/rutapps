@@ -374,21 +374,24 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           })() },
           { key: 'dPrecioLista', content: m(d.precio_lista_unitario) },
           { key: 'dImpuestosMonto', content: (() => {
-            // Impuesto UNITARIO sin descuento = precio unit. c/imp − precio unit. s/imp.
-            // (coherente con las columnas vecinas "Precio S/Imp." y "Precio")
+            // Impuestos UNITARIOS de LISTA (sin descuentos ni promociones):
+            // se toman del precio de lista guardado y las tasas guardadas.
             const lista = num(d.precio_lista_unitario);
-            const brutoUnit = num(d.importe_bruto) != null ? Number(d.importe_bruto) / qty : null;
-            if (lista != null && brutoUnit != null) {
-              const t = r2(brutoUnit - Number(lista));
-              return t > 0.004 ? money(t) : null;
-            }
-            // Fallback: desde los montos guardados (netos de descuento)
-            const tax = (Number(d.iva_monto) || 0) + (Number(d.ieps_monto) || 0);
-            if (tax <= 0) return null;
-            const bruto = Number(d.importe_bruto) || 0;
-            const neto = bruto - (Number(d.descuento_total_monto) || 0);
-            const scaled = neto > 0 && bruto > 0 ? tax * (bruto / neto) : tax;
-            return money(r2(scaled / qty));
+            if (lista == null) return null;
+            const iepsP = Number(d.ieps_pct) || 0;
+            const ivaP = Number(d.iva_pct) || 0;
+            const iepsU = r2(Number(lista) * (iepsP / 100));
+            const ivaU = r2((Number(lista) + iepsU) * (ivaP / 100));
+            const total = r2(iepsU + ivaU);
+            if (total <= 0) return null;
+            return (
+              <span className="text-[11px] whitespace-nowrap">
+                {money(total)}
+                {(iepsU > 0 && ivaU > 0) && (
+                  <span className="block text-[10px] text-muted-foreground">IEPS {money(iepsU)} · IVA {money(ivaU)}</span>
+                )}
+              </span>
+            );
           })() },
           { key: 'dImporteBruto', content: u(d.importe_bruto) },
           { key: 'dSubtotalBruto', content: m(d.importe_bruto) },
