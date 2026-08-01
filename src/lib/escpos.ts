@@ -335,15 +335,28 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   })));
   const ivaMonto = Number(data.iva) || 0;
   const iepsMonto = Number(data.ieps) || 0;
-  const descTicket = Math.max(resumen.descuento, summary.descuentoTotal, 0);
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const subtotalNetoGuardado = r2(data.lineas.reduce((s, l) => {
+    const lista = Number(l.precio_lista_unitario);
+    return s + (Number.isFinite(lista) ? r2(lista * (Number(l.cantidad) || 0)) : 0);
+  }, 0));
+  const descuentoNetoGuardado = r2(data.lineas.reduce((s, l) => {
+    const descuentoBruto = (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0);
+    if (descuentoBruto <= 0) return s;
+    const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
+    return s + r2(divisor > 0 ? descuentoBruto / divisor : descuentoBruto);
+  }, 0));
+  const descTicket = subtotalNetoGuardado > 0
+    ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2(subtotalNetoGuardado - ((Number(data.total) || 0) - ivaMonto - iepsMonto)))
+    : Math.max(resumen.descuento, summary.descuentoTotal, 0);
   const gravableTicket = Math.max(0, (Number(data.total) || 0) - ivaMonto - iepsMonto);
-  const sinImpTicket = gravableTicket + descTicket;
+  const sinImpTicket = subtotalNetoGuardado > 0 ? subtotalNetoGuardado : gravableTicket + descTicket;
   if (showImpuestos) {
     ln(row('Subtotal sin impuestos', fmt(sinImpTicket), W));
     if (showDescuentos && descTicket > 0.005) ln(row('Descuentos/promos', `-${fmt(descTicket)}`, W));
     ln(row('Subtotal gravable', fmt(gravableTicket), W));
-    if (ivaMonto > 0.005) ln(row('IVA', fmt(ivaMonto), W));
     if (iepsMonto > 0.005) ln(row('IEPS', fmt(iepsMonto), W));
+    if (ivaMonto > 0.005) ln(row('IVA', fmt(ivaMonto), W));
     if (ivaMonto <= 0.005 && iepsMonto <= 0.005) ln(row('Impuestos', fmt(0), W));
   } else {
     ln(row('Sub total', fmt(sinImpTicket + ivaMonto + iepsMonto), W));

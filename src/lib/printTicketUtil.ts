@@ -125,6 +125,11 @@ export function buildTicketDataFromVenta(params: {
     descuento_pct?: number;
     producto_id?: string;
     precio_sugerido_publico?: number;
+    precio_lista_unitario?: number | null;
+    descuento_promocion_monto?: number;
+    descuento_manual_monto?: number;
+    iva_pct?: number;
+    ieps_pct?: number;
   }>;
   montoRecibido?: number;
   cambio?: number;
@@ -171,6 +176,11 @@ export function buildTicketDataFromVenta(params: {
       descuento_pct: l.descuento_pct ?? 0,
       producto_id: l.producto_id,
       precio_sugerido_publico: l.precio_sugerido_publico,
+      precio_lista_unitario: l.precio_lista_unitario,
+      descuento_promocion_monto: l.descuento_promocion_monto ?? 0,
+      descuento_manual_monto: l.descuento_manual_monto ?? 0,
+      iva_pct: l.iva_pct ?? 0,
+      ieps_pct: l.ieps_pct ?? 0,
     })),
     subtotal: venta.subtotal ?? 0,
     descuento: venta.descuento_total ?? 0,

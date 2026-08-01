@@ -294,6 +294,11 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
           ieps_monto: l.ieps_monto,
           descuento_pct: l.descuento_pct,
           producto_id: l.producto_id,
+          precio_lista_unitario: l.precio_lista_unitario,
+          descuento_promocion_monto: l.descuento_promocion_monto,
+          descuento_manual_monto: l.descuento_manual_monto,
+          iva_pct: l.iva_pct,
+          ieps_pct: l.ieps_pct,
         })),
         pagos: pagos.map((p: any) => ({
           metodo: (p.cobros as any)?.metodo_pago ?? '',
