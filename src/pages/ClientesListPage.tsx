@@ -545,9 +545,10 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
 
 export default function ClientesListPage() {
   return (
-    <div className="p-4 space-y-3 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Clientes <HelpButton title={HELP.clientes.title} sections={HELP.clientes.sections} /> <VideoHelpButton module="clientes" /></h1>
+    <div className="p-4 pb-2 flex flex-col gap-3 h-full min-h-0">
+      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 shrink-0">Clientes <HelpButton title={HELP.clientes.title} sections={HELP.clientes.sections} /> <VideoHelpButton module="clientes" /></h1>
       <OdooTabs
+        fill
         tabs={[
           { key: 'activos', label: 'Activos', content: <ClientesTable forcedStatus="activo" prefsKey="clientes-activos" /> },
           { key: 'bajas', label: 'Bajas', content: <ClientesTable forcedStatus="inactivo" prefsKey="clientes-bajas" /> },
