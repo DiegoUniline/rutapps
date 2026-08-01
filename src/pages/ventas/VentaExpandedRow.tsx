@@ -413,7 +413,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                             const neto = (Number(l.subtotal) || 0) * (1 - dpct / 100);
                             const ivaP = (Number(l.iva_monto) || 0) > 0 && neto > 0 ? Math.round((Number(l.iva_monto) / neto) * 100) : 0;
                             const iepsP = (Number(l.ieps_monto) || 0) > 0 && neto > 0 ? Math.round((Number(l.ieps_monto) / neto) * 100) : 0;
-                            const impLabel = [ivaP ? 'IVA' : null, iepsP ? 'IEPS' : null].filter(Boolean).join(' + ') || '—';
+                            const impLabel = [iepsP ? 'IEPS' : null, ivaP ? 'IVA' : null].filter(Boolean).join(' + ') || '—';
                             const lp = (l as any).lista_precios;
                             const listaLabel = l.precio_manual ? 'Manual' : (lp?.nombre ?? ventaListaNombre ?? '—');
                             const promoLabel = promoPorProducto[l.producto_id];
@@ -523,16 +523,16 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                       <span className="tabular-nums">{fmt(gravableShown)}</span>
                     </div>
 
-                    {ivaMontoV > 0.005 && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">IVA</span>
-                        <span className="tabular-nums">{fmt(ivaMontoV)}</span>
-                      </div>
-                    )}
                     {iepsMontoV > 0.005 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">IEPS</span>
                         <span className="tabular-nums">{fmt(iepsMontoV)}</span>
+                      </div>
+                    )}
+                    {ivaMontoV > 0.005 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">IVA</span>
+                        <span className="tabular-nums">{fmt(ivaMontoV)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t border-border pt-1.5 font-bold text-[13px]">
