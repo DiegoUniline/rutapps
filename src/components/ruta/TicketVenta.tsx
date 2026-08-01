@@ -520,7 +520,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                 <span className="lbl text-muted-foreground">Saldo</span>
                 <span className={`val font-bold tabular-nums ${summary.saldo > 0 ? 'text-destructive' : 'text-green-600'}`}>{fmt(summary.saldo)}</span>
               </div>
-              {montoRecibido != null && montoRecibido > 0 && (
+              {showRecibidoCambio && montoRecibido != null && montoRecibido > 0 && (
                 <div className="pt-1 space-y-0.5">
                   <div className="tk-tot-row flex justify-between text-[10px]">
                     <span className="lbl text-muted-foreground">Recibido</span>
