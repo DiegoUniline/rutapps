@@ -957,8 +957,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="shrink-0"><Breadcrumb /></div>
         <main className="flex-1 min-h-0 overflow-y-auto">
           {children}
-          <UnilineFooter />
         </main>
+        <div className="shrink-0"><UnilineFooter /></div>
       </div>
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
