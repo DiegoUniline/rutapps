@@ -134,6 +134,7 @@ const TABLES_WITH_EMPRESA = new Set([
   'cobros', 'gastos', 'devoluciones', 'empresas', 'unidades',
   'tasas_iva', 'descarga_ruta', 'promociones', 'entregas', 'visitas',
   'tarifas',
+  'profiles',
   'stock_almacen',
     'stock_apartado',
   'producto_presentaciones',
