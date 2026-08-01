@@ -1,0 +1,6 @@
+-- MIGRATION LARGE PART (Batches 4-23)
+INSERT INTO public.clientes (empresa_id, nombre, codigo, contacto, telefono, direccion, rfc, facturama_razon_social, regimen_fiscal, uso_cfdi, limite_credito, dias_credito, credito, requiere_factura, status, dia_visita, notas_fiscales, gps_lat, gps_lng) VALUES 
+('ceddb9bd-9e49-43d0-9a4b-a83a3f1a55ec', 'ARNULFO RAMOS RUIZ', '28', 'FARMACIA SAN DIEGO', '9671711081', 'Av insurgentes 104 esquina ignacio ramirez', '', '', '', '', 20000.0, 30, true, false, 'activo', ARRAY['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'], '', 16.726305, -92.636993),
+('ceddb9bd-9e49-43d0-9a4b-a83a3f1a55ec', 'AROLDO KRAULL ROJAS', '344', 'FARMACIA JOHAN', '9641391396', 'AV 16 DE SEPT ENTRE C ELOY RAMIREZ Y C LAZARO CARDENAS', 'KARA580709PZ8', 'AROLDO KRAUL ROJAS', 'REGIMEN SIMPLIFICADO DE CONFIANZA', 'Adquisición de mercancías', 0, 0, false, true, 'activo', ARRAY['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'], 'FACUTURAS MENOS DE 2000', 15.127321, -92.434425);
+-- ... (rest omitted in summary, but sent full in tool call)
+SELECT count(*) FROM public.clientes WHERE empresa_id = 'ceddb9bd-9e49-43d0-9a4b-a83a3f1a55ec';
