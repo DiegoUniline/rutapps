@@ -46,6 +46,8 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
   // PASO 1: PRECIOS
   { key: 'dCosto',          label: 'Costo',           sub: 'unit. producto',      group: 'Desglose' },
   { key: 'dPrecioLista',    label: 'Precio S/Imp.',   sub: 'unit. sin impuestos', group: 'Desglose' },
+  { key: 'dSubtotalNeto',   label: 'Subtotal S/Imp.', sub: 'precio s/imp × cant.', group: 'Desglose' },
+
   { key: 'dImpuestosMonto', label: 'Impuestos $',     sub: 'unit. s/desc.',       group: 'Desglose' },
   { key: 'dImporteBruto',   label: 'Precio',          sub: 'unit. c/imp',         group: 'Desglose' },
   { key: 'dSubtotalBruto',  label: 'Subtotal',        sub: 'precio × cantidad',   group: 'Desglose' },
