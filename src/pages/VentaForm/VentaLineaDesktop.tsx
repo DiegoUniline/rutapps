@@ -397,7 +397,22 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           { key: 'dSubtotalBruto', content: m(d.importe_bruto) },
 
           // PASO 2: Descuentos
-          { key: 'dDescTotal', content: num(d.descuento_total_monto) ? <span className="text-primary">−{m(d.descuento_total_monto)}</span> : m(d.descuento_total_monto) },
+          { key: 'dDescTotal', content: (() => {
+            const promoU = (Number(d.descuento_promocion_monto) || 0) / qty;
+            const manualU = (Number(d.descuento_manual_monto) || 0) / qty;
+            const totalU = promoU + manualU;
+            if (totalU <= 0) return <span className="text-muted-foreground text-[11px]">—</span>;
+            return (
+              <div className="flex flex-col items-end gap-0">
+                <span className="text-primary font-medium">−{money(totalU)}</span>
+                <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">
+                  {promoU > 0 && `🎁 ${money(promoU)}`}
+                  {promoU > 0 && manualU > 0 && ' · '}
+                  {manualU > 0 && `✍️ ${money(manualU)}`}
+                </span>
+              </div>
+            );
+          })() },
           { key: 'dDescPromoMonto', content: num(d.descuento_promocion_monto) ? <span className="text-primary">−{u(d.descuento_promocion_monto)}</span> : u(d.descuento_promocion_monto) },
           { key: 'dCantBonificada', content: num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null },
           { key: 'dDescManMonto', content: u(d.descuento_manual_monto) },
