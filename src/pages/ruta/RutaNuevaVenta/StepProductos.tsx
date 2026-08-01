@@ -334,6 +334,12 @@ export function StepProductos(props: Props) {
                         {inCart.paquetes?.toLocaleString('es-MX')}× {inCart.presentacion_nombre} = {inCart.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })} {p.unidad_granel || 'kg'}
                       </span>
                     )}
+                    {inCart?.lote_codigo && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary font-medium max-w-[110px]">
+                        <span className="truncate">Lote {inCart.lote_codigo}</span>
+                      </span>
+                    )}
+
                   </div>
                 </div>
                 {(canChangePrice || canChangeLista) && (
