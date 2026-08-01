@@ -121,6 +121,22 @@ export default function PreciosComisionesPage() {
   const listas = data?.listas ?? [];
   const tarifaLineas = data?.tarifaLineas ?? [];
 
+  /** Reglas agrupadas por tarifa: cada lista sólo debe ver las reglas de SU tarifa. */
+  const rulesByTarifa = useMemo(() => {
+    const map = new Map<string, TarifaLineaRule[]>();
+    for (const r of tarifaLineas) {
+      const key = (r as any).tarifa_id as string;
+      if (!key) continue;
+      const arr = map.get(key) ?? [];
+      arr.push(r);
+      map.set(key, arr);
+    }
+    return map;
+  }, [tarifaLineas]);
+
+  const rulesFor = (l: ListaPrecioCol) => rulesByTarifa.get(l.tarifa_id) ?? [];
+
+
   const filtered = useMemo(() => productos.filter(p => {
     if (clasificacionFilter && p.clasificacion_id !== clasificacionFilter) return false;
     if (!search) return true;
