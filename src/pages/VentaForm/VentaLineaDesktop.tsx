@@ -373,6 +373,11 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             return c == null ? null : money(Number(c));
           })() },
           { key: 'dPrecioLista', content: m(d.precio_lista_unitario) },
+          { key: 'dSubtotalNeto', content: (() => {
+            const lista = num(d.precio_lista_unitario);
+            return lista == null ? null : money(r2(Number(lista) * qty));
+          })() },
+
           { key: 'dImpuestosMonto', content: (() => {
             // Impuestos UNITARIOS de LISTA (sin descuentos ni promociones):
             // se toman del precio de lista guardado y las tasas guardadas.
