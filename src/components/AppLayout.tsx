@@ -849,7 +849,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Desktop layout with sidebar
   return (
-    <div className="h-[100dvh] overflow-hidden flex flex-col bg-background">
+    <div className="flex-1 min-h-0 h-full overflow-hidden flex flex-col bg-background">
       <SandboxBanner />
       <NotificationRuntime bannersOnly />
       <div className="flex-1 flex min-h-0">
@@ -933,8 +933,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
-        <SuperAdminEmpresaSelector />
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        <div className="shrink-0"><SuperAdminEmpresaSelector /></div>
         <div className="h-10 flex items-center justify-end px-4 border-b border-border bg-card shrink-0 gap-2">
           <button
             onClick={applySwUpdate}
@@ -954,11 +954,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
 
         </div>
-        <Breadcrumb />
-        <main className="flex-1">
+        <div className="shrink-0"><Breadcrumb /></div>
+        <main className="flex-1 min-h-0 overflow-y-auto">
           {children}
         </main>
-        <UnilineFooter />
+        <div className="shrink-0"><UnilineFooter /></div>
       </div>
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />

@@ -8,13 +8,15 @@ interface GroupedTableWrapperProps {
   groups: GroupNode<any>[];
   renderTable: (items: any[], groupLabel?: string) => React.ReactNode;
   renderSummary?: (items: any[]) => React.ReactNode;
+  /** Cuando es true, la tabla sin agrupar ocupa la altura disponible y hace scroll interna */
+  fill?: boolean;
 }
 
-export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummary }: GroupedTableWrapperProps) {
+export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummary, fill }: GroupedTableWrapperProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   if (!groupBy) {
-    return <div className="bg-card border border-border rounded overflow-hidden">{renderTable(groups[0]?.items ?? [])}</div>;
+    return <div className={fill ? "bg-card border border-border rounded overflow-hidden flex-1 min-h-0 flex flex-col" : "bg-card border border-border rounded overflow-hidden"}>{renderTable(groups[0]?.items ?? [])}</div>;
   }
 
   const toggleGroup = (label: string) => {
@@ -67,7 +69,7 @@ export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummar
   };
 
   return (
-    <div className="space-y-3">
+    <div className={fill ? "space-y-3 flex-1 min-h-0 overflow-auto" : "space-y-3"}>
       {groups.map(g => (
         <div key={g.label} className="bg-card border border-border rounded overflow-hidden">
           {renderNode(g, '', 0)}
