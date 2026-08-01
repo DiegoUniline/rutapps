@@ -84,8 +84,8 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   // mostramos siempre los montos de impuestos UNITARIOS en las columnas de IVA/IEPS
   // para que (Neto + IVA + IEPS) = "Precio c/imp".
   const qty = Math.max(1, Number(l.cantidad) || 1);
-  const ivaUnit = readOnly ? r2(ivaShown / qty) : iva;
-  const iepsUnit = readOnly ? r2(iepsShown / qty) : ieps;
+  const ivaUnit = readOnly ? r2((Number(l.iva_monto) || 0) / qty) : iva;
+  const iepsUnit = readOnly ? r2((Number(l.ieps_monto) || 0) / qty) : ieps;
 
 
   // Precio unitario CON impuestos (para la columna opcional "Precio c/imp").
