@@ -398,17 +398,24 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
 
           // PASO 2: Descuentos
           { key: 'dDescTotal', content: (() => {
-            const promoU = (Number(d.descuento_promocion_monto) || 0) / qty;
-            const manualU = (Number(d.descuento_manual_monto) || 0) / qty;
-            const totalU = promoU + manualU;
-            if (totalU <= 0) return <span className="text-muted-foreground text-[11px]">—</span>;
+            // Descuento de LÍNEA con impuestos (lo que el cliente percibe que se
+            // le rebajó del precio final). Abajo, el equivalente SIN impuestos,
+            // que es el que realmente afecta la base gravable.
+            const promoL = Number(d.descuento_promocion_monto) || 0;
+            const manualL = Number(d.descuento_manual_monto) || 0;
+            const totalL = r2(promoL + manualL);
+            if (totalL <= 0) return <span className="text-muted-foreground text-[11px]">—</span>;
+            const iepsP = Number(d.ieps_pct) || 0;
+            const ivaP = Number(d.iva_pct) || 0;
+            const divisor = (1 + iepsP / 100) * (1 + ivaP / 100);
+            const netoL = divisor > 0 ? r2(totalL / divisor) : totalL;
             return (
               <div className="flex flex-col items-end gap-0">
-                <span className="text-primary font-medium">−{money(totalU)}</span>
+                <span className="text-primary font-medium">−{money(totalL)}</span>
                 <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">
-                  {promoU > 0 && `🎁 ${money(promoU)}`}
-                  {promoU > 0 && manualU > 0 && ' · '}
-                  {manualU > 0 && `✍️ ${money(manualU)}`}
+                  {netoL !== totalL && `${money(netoL)} s/imp`}
+                  {netoL !== totalL && (promoL > 0 && manualL > 0) && ' · '}
+                  {promoL > 0 && manualL > 0 && `🎁 ${money(promoL)} · ✍️ ${money(manualL)}`}
                 </span>
               </div>
             );
