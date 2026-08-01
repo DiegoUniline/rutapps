@@ -20,9 +20,13 @@ interface VentaTotalsProps {
    *  Cuando viene, manda sobre el cálculo en vivo para que el resumen cuadre
    *  exactamente con la columna "Descuento" de cada línea. */
   promoTotalGuardado?: number | null;
+  /** Suma de los subtotales SIN impuestos guardados en las líneas
+   *  (precio de lista × cantidad). Cuando viene, manda sobre la
+   *  reconstrucción para que el resumen cuadre al centavo con las líneas. */
+  subtotalNetoGuardado?: number | null;
 }
 
-export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt, currencyCode, promoTotalGuardado }: VentaTotalsProps) {
+export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt, currencyCode, promoTotalGuardado, subtotalNetoGuardado }: VentaTotalsProps) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const lineDescuento = descuento_total - (descuento_promo ?? 0) - (descuento_extra_amt ?? 0);
@@ -47,8 +51,12 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
   // Para el desglose sin impuestos se muestra solo su parte gravable, así el
   // renglón "Subtotal sin impuestos" sigue cuadrando con el Total.
   const promoNeto = (total || 0) > 0 ? promoTotal * (gravable / (total || 1)) : promoTotal;
-  const totalDescuentos = shownLineDesc + promoNeto + shownExtra;
-  const grossSubtotal = gravable + totalDescuentos;
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  const useGuardado = (subtotalNetoGuardado ?? 0) > 0;
+  const grossSubtotal = useGuardado ? r2(subtotalNetoGuardado as number) : r2(gravable + shownLineDesc + promoNeto + shownExtra);
+  // Con subtotal guardado, el descuento se deriva para que siempre cuadre:
+  // Subtotal − Descuentos = Subtotal gravable.
+  const totalDescuentos = useGuardado ? r2(grossSubtotal - gravable) : r2(shownLineDesc + promoNeto + shownExtra);
 
   const pagadoAmt = saldoPendiente != null ? Math.max(0, (total || 0) - saldoPendiente) : null;
 
