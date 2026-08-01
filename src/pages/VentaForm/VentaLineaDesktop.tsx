@@ -84,8 +84,8 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   // mostramos siempre los montos de impuestos UNITARIOS en las columnas de IVA/IEPS
   // para que (Neto + IVA + IEPS) = "Precio c/imp".
   const qty = Math.max(1, Number(l.cantidad) || 1);
-  const ivaUnit = readOnly ? r2(ivaShown / qty) : iva;
-  const iepsUnit = readOnly ? r2(iepsShown / qty) : ieps;
+  const ivaUnit = readOnly ? r2((Number(l.iva_monto) || 0) / qty) : iva;
+  const iepsUnit = readOnly ? r2((Number(l.ieps_monto) || 0) / qty) : ieps;
 
 
   // Precio unitario CON impuestos (para la columna opcional "Precio c/imp").
@@ -324,7 +324,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       <td className="py-1.5 px-2 text-right">
         {isEmpty ? '' : linePromoDesc > 0 ? (
           <span className="text-[11px] text-primary font-medium tabular-nums">
-            −{money(linePromoDesc)}
+            −{readOnly ? money(r2(linePromoDesc / qty)) : money(linePromoDesc)}
             {promoDescPct > 0 && <span className="text-muted-foreground text-[9px] ml-1">{Number(promoDescPct.toFixed(2))}%</span>}
           </span>
         ) : <span className="text-muted-foreground text-[11px]">—</span>}
@@ -368,16 +368,20 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </td>
         ) : null;
         const m = (v: any) => (num(v) == null ? null : money(Number(v)));
+        // Ajuste para columnas que deben ser unitarias en la tabla de líneas
+        // aunque en BD se guarden totales (para consistencia visual con el resto de la fila)
+        const u = (v: any) => (num(v) == null ? null : money(r2(Number(v) / qty)));
+
         return [
           cell('dPrecioLista', m(d.precio_lista_unitario)),
-          cell('dImporteBruto', m(d.importe_bruto)),
-          cell('dDescPromoMonto', num(d.descuento_promocion_monto) ? <span className="text-primary">−{money(Number(d.descuento_promocion_monto))}</span> : m(d.descuento_promocion_monto)),
-          cell('dBaseDescMan', m(d.base_descuento_manual)),
-          cell('dDescManMonto', m(d.descuento_manual_monto)),
-          cell('dDescTotal', m(d.descuento_total_monto)),
-          cell('dBaseIeps', m(d.base_ieps)),
-          cell('dBaseIva', m(d.base_iva)),
-          cell('dImpuestosTot', m(d.impuestos_totales)),
+          cell('dImporteBruto', u(d.importe_bruto)),
+          cell('dDescPromoMonto', num(d.descuento_promocion_monto) ? <span className="text-primary">−{u(d.descuento_promocion_monto)}</span> : u(d.descuento_promocion_monto)),
+          cell('dBaseDescMan', u(d.base_descuento_manual)),
+          cell('dDescManMonto', u(d.descuento_manual_monto)),
+          cell('dDescTotal', u(d.descuento_total_monto)),
+          cell('dBaseIeps', u(d.base_ieps)),
+          cell('dBaseIva', u(d.base_iva)),
+          cell('dImpuestosTot', u(d.impuestos_totales)),
           cell('dPromoNombre', d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null),
           cell('dCantBonificada', num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null),
           cell('dEsBonificacion', d.es_bonificacion == null ? null : <span className="text-[11px]">{d.es_bonificacion ? 'Sí' : 'No'}</span>),
