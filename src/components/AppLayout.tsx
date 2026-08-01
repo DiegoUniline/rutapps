@@ -23,7 +23,6 @@ import BroadcastBell from '@/components/BroadcastBell';
 import BroadcastAnnouncementModal from '@/components/BroadcastAnnouncementModal';
 import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
-import TiendaAnnouncementModal from '@/components/TiendaAnnouncementModal';
 import SandboxBanner from '@/components/SandboxBanner';
 import { useProductosRealtime } from '@/hooks/useData';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
@@ -814,7 +813,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         <PublicidadPopup />
-        <TiendaAnnouncementModal />
         <BroadcastAnnouncementModal />
 
         {/* Bottom navigation – app style */}
@@ -965,7 +963,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <NotificationRuntime overlaysOnly />
       <PendingInvoiceModal />
       <PublicidadPopup />
-      <TiendaAnnouncementModal />
       <BroadcastAnnouncementModal />
       <Suspense fallback={null}>
         <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
