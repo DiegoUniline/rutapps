@@ -13,8 +13,9 @@ import { ColumnVisibilityMenu } from '@/components/ColumnVisibilityMenu';
 import {
   VENTA_LINEAS_GROUP_ORDER, VENTA_LINEAS_DEFAULT_VISIBILITY,
   VENTA_LINEAS_DESGLOSE_COLUMNS, VENTA_LINEAS_DESGLOSE_DEFAULTS, VENTA_LINEAS_DESGLOSE_OFF,
-  VENTA_LINEAS_DESGLOSE_GROUP_ORDER, getVentaLineasColumns, getVentaLineasPresets,
+  VENTA_LINEAS_DESGLOSE_GROUP_ORDER, VENTA_LINEAS_NON_FINAL_OFF, getVentaLineasColumns,
 } from './ventaLineasColumns';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 
