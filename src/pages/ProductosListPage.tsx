@@ -450,6 +450,7 @@ export default function ProductosListPage() {
           </>
         }
       />
+      </ListPage.Toolbar>
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="productos" />
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
@@ -502,9 +503,9 @@ export default function ProductosListPage() {
 
 
       {isLoading ? (
-        <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 12} /></div>
+        <ListPage.Body className="p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 12} /></ListPage.Body>
       ) : isMobile ? (
-        <div className="space-y-2">
+        <ListPage.Body card={false} className="space-y-2">
           {pageData.length === 0 && (
             <div className="text-center py-12 text-muted-foreground text-sm">No hay productos. Crea el primero.</div>
           )}
@@ -532,7 +533,7 @@ export default function ProductosListPage() {
               ]}
             />
           ))}
-        </div>
+        </ListPage.Body>
       ) : (
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
@@ -576,6 +577,6 @@ export default function ProductosListPage() {
           ...(statusFilter === 'inactivo' ? [{ label: 'Eliminar', icon: Trash2, variant: 'destructive' as const, onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete }] : []),
         ]}
       />
-    </div>
+    </ListPage>
   );
 }
