@@ -226,45 +226,53 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
   const handleShare = async () => {
     // Respeta la config del ticket (ticket_campos), igual que el ticket impreso.
-    const tc = (empresa as any).ticket_campos ?? {};
     const text = [
       tc.nombre !== false ? empresa.nombre : '',
       tc.rfc !== false && empresa.rfc ? `RFC: ${empresa.rfc}` : '',
       tc.direccion !== false ? (empresa.direccion ?? '') : '',
       tc.telefono !== false && empresa.telefono ? `Tel: ${empresa.telefono}` : '',
       '─'.repeat(30),
-      `Folio: ${folio}`,
-      `Fecha: ${fecha}`,
-      `Cliente: ${clienteNombre}`,
-      `Pago: ${pagoLabel}`,
-      metodoPago ? `Método: ${metodoPago}` : '',
+      showFolio ? `Folio: ${folio}` : '',
+      showFecha ? `Fecha: ${fecha}` : '',
+      showClienteNombre ? `Cliente: ${clienteNombre}` : '',
+      showVendedorNombre && vendedorNombre ? `Vendedor: ${vendedorNombre}` : '',
+      showCondicionPago ? `Pago: ${pagoLabel}` : '',
+      showCondicionPago && metodoPago ? `Método: ${metodoPago}` : '',
       '─'.repeat(30),
       ...lineas.map(l => {
-        const taxes = [
+        const taxes = showImpuestos ? [
           (l.ieps_pct ?? 0) > 0 ? `IEPS ${l.ieps_pct}%` : '',
           (l.iva_pct ?? 0) > 0 ? `IVA ${l.iva_pct}%` : '',
-        ].filter(Boolean).join(' + ');
+        ].filter(Boolean).join(' + ') : '';
         return `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}${taxes ? ` [${taxes}]` : ''}`;
       }),
       '─'.repeat(30),
-      `Subtotal sin impuestos: ${fmt(sinImpTicket)}`,
-      ...(descTicket > 0.005 ? [`Descuentos / promos: -${fmt(descTicket)}`] : []),
-      `Subtotal gravable: ${fmt(gravableTicket)}`,
-      ...(iepsMonto > 0.005 ? [`IEPS: ${fmt(iepsMonto)}`] : []),
-      ...(ivaMonto > 0.005 ? [`IVA: ${fmt(ivaMonto)}`] : []),
+      ...(showImpuestos
+        ? [
+            `Subtotal sin impuestos: ${fmt(sinImpTicket)}`,
+            ...(showDescuentos && descTicket > 0.005 ? [`Descuentos / promos: -${fmt(descTicket)}`] : []),
+            `Subtotal gravable: ${fmt(gravableTicket)}`,
+            ...(iepsMonto > 0.005 ? [`IEPS: ${fmt(iepsMonto)}`] : []),
+            ...(ivaMonto > 0.005 ? [`IVA: ${fmt(ivaMonto)}`] : []),
+          ]
+        : [
+            `Sub total: ${fmt(subBrutoTicket)}`,
+            ...(showDescuentos && descBrutoTicket > 0.005 ? [`Descuentos / promos: -${fmt(descBrutoTicket)}`] : []),
+          ]),
       `Total: ${fmt(total)}`,
       `Pagado: ${fmt(summary.totalPagado)}`,
       `Saldo: ${fmt(summary.saldo)}`,
-      ...(devoluciones.length > 0 ? [
+      ...(showDevoluciones && devoluciones.length > 0 ? [
         '─'.repeat(30),
         'DEVOLUCIONES:',
         ...devoluciones.map(d => `  ${d.cantidad}x ${d.nombre} → ${ACCION_LABELS[d.accion] || d.accion} (${MOTIVO_LABELS[d.motivo] || d.motivo})`),
       ] : []),
-      montoRecibido ? `Recibido: ${fmt(montoRecibido)}` : '',
-      cambio && cambio > 0 ? `Cambio: ${fmt(cambio)}` : '',
+      showRecibidoCambio && montoRecibido ? `Recibido: ${fmt(montoRecibido)}` : '',
+      showRecibidoCambio && cambio && cambio > 0 ? `Cambio: ${fmt(cambio)}` : '',
       '',
       'rutapp.mx',
     ].filter(Boolean).join('\n');
+
 
     if (navigator.share) {
       try { await navigator.share({ title: `Ticket ${folio}`, text }); } catch { /* cancelled */ }
