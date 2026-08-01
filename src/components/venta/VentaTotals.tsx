@@ -16,9 +16,13 @@ interface VentaTotalsProps {
   descuento_promo?: number;
   descuento_extra_amt?: number;
   currencyCode?: string | null;
+  /** Suma de los descuentos de promoción GUARDADOS en las líneas (con impuestos).
+   *  Cuando viene, manda sobre el cálculo en vivo para que el resumen cuadre
+   *  exactamente con la columna "Descuento" de cada línea. */
+  promoTotalGuardado?: number | null;
 }
 
-export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt, currencyCode }: VentaTotalsProps) {
+export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt, currencyCode, promoTotalGuardado }: VentaTotalsProps) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const lineDescuento = descuento_total - (descuento_promo ?? 0) - (descuento_extra_amt ?? 0);
@@ -28,7 +32,10 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
   // impuestos = Total), sin importar si la venta guardó el descuento en el
   // encabezado o solo lo tiene la promo recalculada en vivo (p. ej. líneas gratis
   // neteadas a $0). Es solo presentación: no cambia ningún dato guardado.
-  const promoTotal = (promoResults ?? []).reduce((s, pr) => s + (Number(pr.descuento) || 0), 0);
+  const promoLive = (promoResults ?? []).reduce((s, pr) => s + (Number(pr.descuento) || 0), 0);
+  const promoTotal = (promoTotalGuardado ?? 0) > 0 ? (promoTotalGuardado as number) : promoLive;
+  // Factor para mostrar el detalle de cada promo alineado con lo guardado.
+  const promoFactor = promoLive > 0 ? promoTotal / promoLive : 1;
   const shownLineDesc = lineDescuento > 0 ? lineDescuento : 0;
   const shownExtra = (descuento_extra_amt ?? 0) > 0 ? (descuento_extra_amt ?? 0) : 0;
 
@@ -111,7 +118,7 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
                 </span>
                 {pr.descuento > 0 && (
                   <span className="font-bold text-primary tabular-nums shrink-0">
-                    -{money(pr.descuento)}
+                    -{money(Math.round(pr.descuento * promoFactor * 100) / 100)}
                     <span className="text-[9px] text-muted-foreground ml-1 font-normal">(c/imp)</span>
                   </span>
                 )}
