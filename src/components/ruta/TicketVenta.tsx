@@ -104,6 +104,23 @@ export default function TicketVenta(props: TicketVentaProps) {
 
   const { fmt } = useCurrency();
 
+  // Configuración del ticket (ticket_campos): se respeta en TODAS las secciones.
+  const tc = (empresa.ticket_campos ?? {}) as Record<string, boolean>;
+  const showFolio = tc.folio !== false;
+  const showFecha = tc.fecha !== false;
+  const showCondicionPago = tc.condicion_pago !== false;
+  const showClienteNombre = tc.cliente_nombre !== false;
+  const showVendedorNombre = tc.vendedor_nombre !== false;
+  const showVendedorTel = tc.vendedor_telefono !== false;
+  const showImpuestos = tc.impuestos !== false;
+  const showDescuentos = tc.descuentos !== false;
+  const showSaldoCuenta = tc.saldo_cuenta !== false;
+  const showRecibidoCambio = tc.recibido_cambio !== false;
+  const showPromociones = tc.promociones !== false;
+  const showPagosRecibidos = tc.pagos_recibidos !== false;
+  const showDevoluciones = tc.devoluciones !== false;
+  const showGracias = tc.mensaje_gracias !== false;
+
   // Desglose fiscal: impuestos desde los totales del encabezado (fiables) y el
   // gravable derivado del total real para que SIEMPRE cuadre; el descuento se
   // reconstruye desde las líneas (capta el "gratis").
