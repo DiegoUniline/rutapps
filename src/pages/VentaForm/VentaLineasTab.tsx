@@ -106,9 +106,8 @@ export function VentaLineasTab(props: Props) {
                     columns={getVentaLineasColumns(showDesglose)}
                     visible={cols}
                     onToggle={toggleColumn}
-                    onApplyPreset={applyPreset}
-                    presets={getVentaLineasPresets(showDesglose)}
-                    groupOrder={showDesglose ? VENTA_LINEAS_DESGLOSE_GROUP_ORDER : VENTA_LINEAS_GROUP_ORDER}
+                    groupOrder={showDesglose ? undefined : VENTA_LINEAS_GROUP_ORDER}
+
                     onReset={reset}
                   />
                 </div>
