@@ -69,6 +69,12 @@ export default function RutaSincronizarPage() {
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
 
+  // Limpieza inmediata de datos de otras empresas guardados en el aparato.
+  useEffect(() => {
+    if (!empresa?.id) return;
+    purgeForeignTenantData(empresa.id).then(loadSummary).catch(() => { /* ignore */ });
+  }, [empresa?.id, loadSummary]);
+
   const handleRetryFailed = async () => {
     if (!empresa?.id || !isOnline || retrying) return;
     setRetrying(true);
