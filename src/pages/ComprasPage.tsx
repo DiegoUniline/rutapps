@@ -141,11 +141,10 @@ export default function ComprasPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const { dateFrom: desde, dateTo: hasta, setDates } = useListPreferences('compras');
+  const qc = useQueryClient();
+  const { filters, groupBy, groupByLevels, dateFrom: desde, dateTo: hasta, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('compras');
   const setDesde = (val: string) => setDates(val, hasta);
   const setHasta = (val: string) => setDates(desde, val);
-  const qc = useQueryClient();
-  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('compras');
 
   // Detalle state
   const [searchD, setSearchD] = useState('');
@@ -541,6 +540,7 @@ export default function ComprasPage() {
               onGroupByLevelChange={setGroupByLevel}
               dateFrom={desde}
               dateTo={hasta}
+              onDateRangeChange={(f, t) => { setDates(f, t); setPage(1); }}
               onDateFromChange={val => { setDesde(val); setPage(1); }}
               onDateToChange={val => { setHasta(val); setPage(1); }}
             />
@@ -612,6 +612,7 @@ export default function ComprasPage() {
               onGroupByLevelChange={setGroupByLevelD}
               dateFrom={desdeD}
               dateTo={hastaD}
+              onDateRangeChange={(f, t) => setDatesD(f, t)}
               onDateFromChange={setDesdeD}
               onDateToChange={setHastaD}
             />

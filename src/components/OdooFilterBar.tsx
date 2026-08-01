@@ -35,6 +35,8 @@ interface OdooFilterBarProps {
   dateTo?: string;
   onDateFromChange?: (val: string) => void;
   onDateToChange?: (val: string) => void;
+  /** Preferred: sets both dates atomically (avoids stale-state races) */
+  onDateRangeChange?: (from: string, to: string) => void;
 }
 
 function IndependentFilterDropdown({
@@ -171,7 +173,7 @@ export function OdooFilterBar({
   groupByOptions, activeGroupBy, onGroupByChange,
   activeGroupByLevels, onGroupByLevelChange,
   onClearFilters,
-  dateFrom, dateTo, onDateFromChange, onDateToChange,
+  dateFrom, dateTo, onDateFromChange, onDateToChange, onDateRangeChange,
 }: OdooFilterBarProps) {
   const [groupOpen, setGroupOpen] = useState(false);
   const groupRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -237,11 +239,14 @@ export function OdooFilterBar({
           <>
             {/* Dates first */}
             <ResponsiveFilterCard label="Fecha" isMobile={isMobile}>
-              {onDateFromChange && onDateToChange && (
+              {(onDateRangeChange || (onDateFromChange && onDateToChange)) && (
                 <DateRangePicker
                   from={dateFrom ?? ''}
                   to={dateTo ?? ''}
-                  onChange={(f, t) => { onDateFromChange(f); onDateToChange(t); }}
+                  onChange={(f, t) => {
+                    if (onDateRangeChange) onDateRangeChange(f, t);
+                    else { onDateFromChange?.(f); onDateToChange?.(t); }
+                  }}
                 />
               )}
             </ResponsiveFilterCard>
@@ -337,7 +342,7 @@ export function OdooFilterBar({
             {/* Clear all */}
             <ResponsiveFilterCard label="Acción" isMobile={isMobile}>
               {activeCount > 0 && onClearFilters && (
-                <button onClick={() => { onClearFilters(); onDateFromChange?.(''); onDateToChange?.(''); }} className="text-[11px] text-destructive hover:underline flex items-center gap-1 shrink-0">
+                <button onClick={() => { onClearFilters(); if (onDateRangeChange) onDateRangeChange('', ''); else { onDateFromChange?.(''); onDateToChange?.(''); } }} className="text-[11px] text-destructive hover:underline flex items-center gap-1 shrink-0">
                   <X className="h-3 w-3" /> Limpiar
                 </button>
               )}

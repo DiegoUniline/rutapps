@@ -499,6 +499,7 @@ export default function TraspasosListPage() {
               onGroupByLevelChange={setGroupByLevel}
               dateFrom={desde}
               dateTo={hasta}
+              onDateRangeChange={(f, t) => setDates(f, t)}
               onDateFromChange={setDesde}
               onDateToChange={setHasta}
             />
@@ -549,6 +550,7 @@ export default function TraspasosListPage() {
               onGroupByLevelChange={setGroupByLevelD}
               dateFrom={desdeD}
               dateTo={hastaD}
+              onDateRangeChange={(f, t) => setDatesD(f, t)}
               onDateFromChange={setDesdeD}
               onDateToChange={setHastaD}
             />
