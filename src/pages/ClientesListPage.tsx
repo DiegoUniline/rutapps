@@ -307,9 +307,9 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
-    <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+    <div className={cn(!groupBy && "bg-card border border-border rounded flex-1 min-h-0 overflow-auto")}>
       <table className="w-full text-sm">
-        <thead>
+        <thead className="sticky top-0 z-10 bg-card">
           <tr className="border-b border-table-border">
             <th className="th-odoo w-10 text-center">
               <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
