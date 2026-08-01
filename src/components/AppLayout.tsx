@@ -120,6 +120,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Productos', path: '/productos' },
       { label: 'Listas de precios', path: '/listas-precio' },
+      { label: 'Precios y Comisiones', path: '/precios-comisiones' },
       { label: 'Categorías', path: '/catalogos/clasificaciones' },
       { label: 'Marcas', path: '/catalogos/marcas' },
       { label: 'Unidades', path: '/catalogos/unidades' },
@@ -456,6 +457,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const BREADCRUMB_LABELS: Record<string, string> = {
   productos: 'Productos', tarifas: 'Listas de Precios', 'listas-precio': 'Listas de Precios',
+  'precios-comisiones': 'Precios y Comisiones',
   clientes: 'Clientes', dashboard: 'Dashboard', ventas: 'Ventas', almacen: 'Almacén',
   finanzas: 'Finanzas', reportes: 'Reportes', nuevo: 'Nuevo', nueva: 'Nueva',
   demanda: 'Demanda', entregas: 'Entregas', 'reporte-entregas': 'Reporte entregas',
