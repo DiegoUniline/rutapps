@@ -346,6 +346,8 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
     const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
     return s + r2(divisor > 0 ? descuentoBruto / divisor : descuentoBruto);
   }, 0));
+  const descuentoBrutoGuardado = r2(data.lineas.reduce((s2, l) =>
+    s2 + (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0), 0));
   const descTicket = subtotalNetoGuardado > 0
     ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2(subtotalNetoGuardado - ((Number(data.total) || 0) - ivaMonto - iepsMonto)))
     : Math.max(resumen.descuento, summary.descuentoTotal, 0);
@@ -363,8 +365,13 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
     if (ivaMonto > 0.005) ln(row('IVA', fmt(ivaMonto), W));
     if (ivaMonto <= 0.005 && iepsMonto <= 0.005) ln(row('Impuestos', fmt(0), W));
   } else {
-    ln(row('Sub total', fmt(sinImpTicket + ivaMonto + iepsMonto), W));
-    if (showDescuentos && descTicket > 0.005) ln(row('Descuentos/promos', `-${fmt(descTicket)}`, W));
+    // Sin desglose: todo en bruto (con impuestos) para que Subtotal - Desc = Total.
+    const descBruto = descuentoBrutoGuardado > 0.005 ? descuentoBrutoGuardado : r2(descTicket);
+    const subBruto = descBruto > 0.005
+      ? r2((Number(data.total) || 0) + descBruto)
+      : r2(sinImpTicket + ivaMonto + iepsMonto);
+    ln(row('Sub total', fmt(subBruto), W));
+    if (showDescuentos && descBruto > 0.005) ln(row('Descuentos/promos', `-${fmt(descBruto)}`, W));
   }
   ln(divider(W));
   add(BOLD_ON);
