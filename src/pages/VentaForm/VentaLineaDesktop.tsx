@@ -368,16 +368,20 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </td>
         ) : null;
         const m = (v: any) => (num(v) == null ? null : money(Number(v)));
+        // Ajuste para columnas que deben ser unitarias en la tabla de líneas
+        // aunque en BD se guarden totales (para consistencia visual con el resto de la fila)
+        const u = (v: any) => (num(v) == null ? null : money(r2(Number(v) / qty)));
+
         return [
           cell('dPrecioLista', m(d.precio_lista_unitario)),
-          cell('dImporteBruto', m(d.importe_bruto)),
-          cell('dDescPromoMonto', num(d.descuento_promocion_monto) ? <span className="text-primary">−{money(Number(d.descuento_promocion_monto))}</span> : m(d.descuento_promocion_monto)),
-          cell('dBaseDescMan', m(d.base_descuento_manual)),
-          cell('dDescManMonto', m(d.descuento_manual_monto)),
-          cell('dDescTotal', m(d.descuento_total_monto)),
-          cell('dBaseIeps', m(d.base_ieps)),
-          cell('dBaseIva', m(d.base_iva)),
-          cell('dImpuestosTot', m(d.impuestos_totales)),
+          cell('dImporteBruto', u(d.importe_bruto)),
+          cell('dDescPromoMonto', num(d.descuento_promocion_monto) ? <span className="text-primary">−{u(d.descuento_promocion_monto)}</span> : u(d.descuento_promocion_monto)),
+          cell('dBaseDescMan', u(d.base_descuento_manual)),
+          cell('dDescManMonto', u(d.descuento_manual_monto)),
+          cell('dDescTotal', u(d.descuento_total_monto)),
+          cell('dBaseIeps', u(d.base_ieps)),
+          cell('dBaseIva', u(d.base_iva)),
+          cell('dImpuestosTot', u(d.impuestos_totales)),
           cell('dPromoNombre', d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null),
           cell('dCantBonificada', num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null),
           cell('dEsBonificacion', d.es_bonificacion == null ? null : <span className="text-[11px]">{d.es_bonificacion ? 'Sí' : 'No'}</span>),
