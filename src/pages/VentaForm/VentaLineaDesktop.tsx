@@ -32,9 +32,11 @@ interface Props {
   promoResults?: PromoResult[];
   /** Visibilidad de columnas (detalle). Si no viene, se muestran todas. */
   cols?: Record<string, boolean>;
+  /** Abre el selector de lote de la línea (productos que manejan lote). */
+  onPickLote?: (idx: number) => void;
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols, onPickLote }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -348,9 +350,23 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       )}
       {showCol('lote') && (
       <td className="py-1 px-2">
-        {!isEmpty && (l as any).lote_codigo
-          ? <span className="text-[11px]"><span className="font-medium">{(l as any).lote_codigo}</span></span>
-          : (!isEmpty ? <span className="text-muted-foreground text-[11px]">—</span> : '')}
+        {isEmpty ? '' : (() => {
+          const manejaLote = !!(prod as any)?.maneja_lote;
+          const codigo = (l as any).lote_codigo;
+          if (!manejaLote && !codigo) return <span className="text-muted-foreground text-[11px]">—</span>;
+          if (readOnly || !onPickLote) {
+            return codigo
+              ? <span className="text-[11px] font-medium">{codigo}</span>
+              : <span className="text-muted-foreground text-[11px]">—</span>;
+          }
+          return (
+            <button type="button" onClick={() => onPickLote(idx)}
+              className="text-[11px] font-medium text-primary hover:underline"
+              title="Cambiar el lote apartado para esta línea">
+              {codigo || 'Elegir lote'}
+            </button>
+          );
+        })()}
       </td>
       )}
       {/* ── Desglose por línea (columnas informativas, valores GUARDADOS) ── */}
