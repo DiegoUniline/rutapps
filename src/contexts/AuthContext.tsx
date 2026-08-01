@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { setGlobalTimezone } from '@/lib/utils';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { setObservabilityUser } from '@/lib/observability';
+import { setDataUsageIdentity } from '@/lib/dataUsage';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Empresa } from '@/types';
 
