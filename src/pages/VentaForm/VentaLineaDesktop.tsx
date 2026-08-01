@@ -372,22 +372,24 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         // aunque en BD se guarden totales (para consistencia visual con el resto de la fila)
         const u = (v: any) => (num(v) == null ? null : money(r2(Number(v) / qty)));
 
-        return [
-          cell('dPrecioLista', m(d.precio_lista_unitario)),
-          cell('dImporteBruto', u(d.importe_bruto)),
-          cell('dDescPromoMonto', num(d.descuento_promocion_monto) ? <span className="text-primary">−{u(d.descuento_promocion_monto)}</span> : u(d.descuento_promocion_monto)),
-          cell('dBaseDescMan', u(d.base_descuento_manual)),
-          cell('dDescManMonto', u(d.descuento_manual_monto)),
-          cell('dDescTotal', u(d.descuento_total_monto)),
-          cell('dBaseIeps', u(d.base_ieps)),
-          cell('dBaseIva', u(d.base_iva)),
-          cell('dImpuestosTot', u(d.impuestos_totales)),
-          cell('dPromoNombre', d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null),
-          cell('dCantBonificada', num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null),
-          cell('dEsBonificacion', d.es_bonificacion == null ? null : <span className="text-[11px]">{d.es_bonificacion ? 'Sí' : 'No'}</span>),
-          cell('dMotivoDescMan', d.motivo_descuento_manual ? <span className="text-[11px]">{d.motivo_descuento_manual}</span> : null),
-          cell('dObjetoImpuesto', d.objeto_impuesto ? <span className="text-[11px]">{d.objeto_impuesto}</span> : null),
+        const columnsOrder = [
+          { key: 'dPromoNombre', content: d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null },
+          { key: 'dCantBonificada', content: num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null },
+          { key: 'dPrecioLista', content: m(d.precio_lista_unitario) },
+          { key: 'dImporteBruto', content: u(d.importe_bruto) },
+          { key: 'dDescPromoMonto', content: num(d.descuento_promocion_monto) ? <span className="text-primary">−{u(d.descuento_promocion_monto)}</span> : u(d.descuento_promocion_monto) },
+          { key: 'dBaseDescMan', content: u(d.base_descuento_manual) },
+          { key: 'dDescManMonto', content: u(d.descuento_manual_monto) },
+          { key: 'dDescTotal', content: u(d.descuento_total_monto) },
+          { key: 'dBaseIeps', content: u(d.base_ieps) },
+          { key: 'dBaseIva', content: u(d.base_iva) },
+          { key: 'dImpuestosTot', content: u(d.impuestos_totales) },
+          { key: 'dMotivoDescMan', content: d.motivo_descuento_manual ? <span className="text-[11px]">{d.motivo_descuento_manual}</span> : null },
+          { key: 'dEsBonificacion', content: d.es_bonificacion == null ? null : <span className="text-[11px]">{d.es_bonificacion ? 'Sí' : 'No'}</span> },
+          { key: 'dObjetoImpuesto', content: d.objeto_impuesto ? <span className="text-[11px]">{d.objeto_impuesto}</span> : null },
         ];
+
+        return columnsOrder.map(col => cell(col.key, col.content));
       })()}
       <td className="py-1.5 px-2">
         {!readOnly && !isEmpty && <button onClick={() => onRemoveLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>}
