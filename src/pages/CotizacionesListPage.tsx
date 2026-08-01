@@ -12,10 +12,10 @@ import { CotizacionExpandedRow } from '@/pages/cotizaciones/CotizacionExpandedRo
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { isDateInRangeISO } from '@/lib/date-format';
 import {
-import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 const ESTADO_STYLES: Record<CotizacionEstado, string> = {
   borrador: 'bg-muted text-foreground',
