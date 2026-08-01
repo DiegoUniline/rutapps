@@ -235,7 +235,7 @@ export function useVentaForm() {
       const taxes: string[] = [];
       if (l.iva_pct > 0) taxes.push(`IVA ${l.iva_pct}%`);
       if (l.ieps_pct > 0) taxes.push(`IEPS ${l.ieps_pct}%`);
-      return { ...l, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') };
+      return { ...l, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lote_codigo: (l as any).lotes?.codigo ?? null };
     });
     const isReadOnly = existingVenta.status !== 'borrador';
     setLineas(isReadOnly ? existingLines : [...existingLines, emptyLine()]);
