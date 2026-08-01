@@ -51,10 +51,10 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
   { key: 'dSubtotalBruto',  label: 'Subtotal',        sub: 'precio × cantidad',   group: 'Desglose' },
 
   // PASO 2: DESCUENTOS
-  { key: 'dDescTotal',      label: 'Descuento',       sub: 'total $',            group: 'Desglose' },
-  { key: 'dDescPromoMonto', label: 'Desc. promo $',   sub: 'dDescPromoMonto',    group: 'Desglose' },
-  { key: 'dCantBonificada', label: 'Cant. regalo',    sub: 'dCantBonificada',    group: 'Desglose' },
-  { key: 'dDescManMonto',   label: 'Desc. manual $',  sub: 'dDescManMonto',      group: 'Desglose' },
+  { key: 'dDescTotal',      label: 'Descuento',       sub: 'promo + manual',      group: 'Desglose' },
+  { key: 'dDescPromoMonto', label: 'Desc. promo $',   sub: 'dDescPromoMonto',     group: 'Desglose' },
+  { key: 'dCantBonificada', label: 'Cant. regalo',    sub: 'dCantBonificada',     group: 'Desglose' },
+  { key: 'dDescManMonto',   label: 'Desc. manual $',  sub: 'dDescManMonto',       group: 'Desglose' },
 
   // PASO 3: TOTAL LÍNEA
   { key: 'dTotal',          label: 'Total',           sub: 'total línea',        group: 'Desglose' },
