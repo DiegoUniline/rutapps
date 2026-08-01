@@ -607,6 +607,10 @@ export default function RutaSincronizarPage() {
           )}
         </div>
 
+        {/* ── Consumo real de datos (megas por fecha) ── */}
+        <DataUsageCard origen="ruta" />
+
+
         {/* ── STEP 4: BACKUP / RESTORE ── */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="p-4">
