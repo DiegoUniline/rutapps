@@ -81,7 +81,9 @@ export const VENTA_LINEAS_DESGLOSE_KEYS = VENTA_LINEAS_DESGLOSE_COLUMNS.map(c =>
 // Visibilidad por defecto: Cantidad, Producto, Unidad, Precio S/Imp., Precio,
 // Subtotal, Descuento, Total, Impuestos (%) y Promo aplicada.
 export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> = {
+  dCosto: true,
   dPrecioLista: true,
+  dImpuestosMonto: true,
   dImporteBruto: true,
   dSubtotalBruto: true,
 
