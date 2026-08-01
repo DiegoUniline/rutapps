@@ -195,8 +195,8 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
       '─'.repeat(30),
       ...lineas.map(l => {
         const taxes = [
-          (l.iva_pct ?? 0) > 0 ? `IVA ${l.iva_pct}%` : '',
           (l.ieps_pct ?? 0) > 0 ? `IEPS ${l.ieps_pct}%` : '',
+          (l.iva_pct ?? 0) > 0 ? `IVA ${l.iva_pct}%` : '',
         ].filter(Boolean).join(' + ');
         return `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}${taxes ? ` [${taxes}]` : ''}`;
       }),
@@ -204,8 +204,8 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
       `Subtotal sin impuestos: ${fmt(sinImpTicket)}`,
       ...(descTicket > 0.005 ? [`Descuentos / promos: -${fmt(descTicket)}`] : []),
       `Subtotal gravable: ${fmt(gravableTicket)}`,
-      ...(ivaMonto > 0.005 ? [`IVA: ${fmt(ivaMonto)}`] : []),
       ...(iepsMonto > 0.005 ? [`IEPS: ${fmt(iepsMonto)}`] : []),
+      ...(ivaMonto > 0.005 ? [`IVA: ${fmt(ivaMonto)}`] : []),
       `Total: ${fmt(total)}`,
       `Pagado: ${fmt(summary.totalPagado)}`,
       `Saldo: ${fmt(summary.saldo)}`,
@@ -364,8 +364,8 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                         {((l.descuento_pct ?? 0) > 0 || (taxMode === 'ambos' && ((l.iva_pct ?? 0) > 0 || (l.ieps_pct ?? 0) > 0)) || (l.precio_sugerido_publico ?? 0) > 0) && (
                           <div className="flex gap-2 text-[8px] text-muted-foreground mt-px flex-wrap">
                             {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
-                            {taxMode === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
                             {taxMode === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
+                            {taxMode === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
                             {(l.precio_sugerido_publico ?? 0) > 0 && <span className="text-primary font-medium">Sug. público {fmt(l.precio_sugerido_publico!)}</span>}
                           </div>
                         )}
@@ -410,7 +410,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             {(() => {
               return (
             <div className="px-5 py-2 space-y-0.5">
-              {/* Desglose: Subtotal sin impuestos → Descuentos → Subtotal gravable → IVA/IEPS → Total */}
+              {/* Desglose: Subtotal sin impuestos → Descuentos → Subtotal gravable → IEPS/IVA → Total */}
               <div className="tk-tot-row flex justify-between text-[10px]">
                 <span className="lbl text-muted-foreground">Subtotal sin impuestos</span>
                 <span className="val text-foreground tabular-nums">{fmt(sinImpTicket)}</span>
@@ -425,16 +425,16 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                 <span className="lbl text-muted-foreground">Subtotal gravable</span>
                 <span className="val text-foreground tabular-nums">{fmt(gravableTicket)}</span>
               </div>
-              {taxMode !== 'ninguno' && ivaMonto > 0.005 && (
-                <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-muted-foreground pl-2">IVA{resumen.ivaRate != null ? ` ${resumen.ivaRate}%` : ''}</span>
-                  <span className="val text-foreground tabular-nums">{fmt(ivaMonto)}</span>
-                </div>
-              )}
               {taxMode !== 'ninguno' && iepsMonto > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground pl-2">IEPS{resumen.iepsRate != null ? ` ${resumen.iepsRate}%` : ''}</span>
                   <span className="val text-foreground tabular-nums">{fmt(iepsMonto)}</span>
+                </div>
+              )}
+              {taxMode !== 'ninguno' && ivaMonto > 0.005 && (
+                <div className="tk-tot-row flex justify-between text-[10px]">
+                  <span className="lbl text-muted-foreground pl-2">IVA{resumen.ivaRate != null ? ` ${resumen.ivaRate}%` : ''}</span>
+                  <span className="val text-foreground tabular-nums">{fmt(ivaMonto)}</span>
                 </div>
               )}
               <div className="tk-grand flex justify-between items-baseline pt-1.5 mt-1 border-t border-dashed border-border">

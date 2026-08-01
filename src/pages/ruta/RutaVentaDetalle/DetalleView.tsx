@@ -213,8 +213,8 @@ function TotalesCard({ venta, fmt, s, showTax, setShowTax }: { venta: any; fmt: 
       </div>
       {showTax && <TotalRow label="Subtotal" value={venta.subtotal ?? 0} fmt={fmt} s={s} />}
       {showTax && (venta.descuento_total ?? 0) > 0 && <TotalRow label="Descuento" value={-(venta.descuento_total ?? 0)} fmt={fmt} s={s} />}
-      {showTax && (venta.iva_total ?? 0) > 0 && <TotalRow label="IVA" value={venta.iva_total ?? 0} fmt={fmt} s={s} />}
       {showTax && (venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} fmt={fmt} s={s} />}
+      {showTax && (venta.iva_total ?? 0) > 0 && <TotalRow label="IVA" value={venta.iva_total ?? 0} fmt={fmt} s={s} />}
       <div className="border-t border-border pt-2 flex justify-between"><span className="text-[14px] font-bold text-foreground">Total</span><span className="text-[14px] font-bold text-foreground">{fmt(venta.total ?? 0)}</span></div>
     </div>
   );

@@ -196,8 +196,8 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
     totalRows.push({ label: 'Subtotal:', value: `${s}${fmtCurrency(pedido.subtotal)}` });
   }
 
-  if (pedido.iva_total > 0) totalRows.push({ label: 'IVA 16%:', value: `${s}${fmtCurrency(pedido.iva_total)}` });
   if (pedido.ieps_total > 0) totalRows.push({ label: 'IEPS:', value: `${s}${fmtCurrency(pedido.ieps_total)}` });
+  if (pedido.iva_total > 0) totalRows.push({ label: 'IVA 16%:', value: `${s}${fmtCurrency(pedido.iva_total)}` });
   totalRows.push({ label: 'Total:', value: `${s}${fmtCurrency(pedido.total)}`, bold: true });
   if ((pedido.saldo_pendiente ?? 0) > 0) {
     totalRows.push({ label: 'Saldo pendiente:', value: `${s}${fmtCurrency(pedido.saldo_pendiente!)}`, bold: true, red: true });
