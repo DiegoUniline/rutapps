@@ -80,13 +80,13 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const ivaShown = readOnly ? (Number(l.iva_monto) || 0) : iva;
   const iepsShown = readOnly ? (Number(l.ieps_monto) || 0) : ieps;
 
-  // Ajuste visual para no confundir al usuario: si estamos en LECTURA (readOnly)
-  // y el monto parece ser un total acumulado (monto > precio * taxPct),
-  // mostramos el monto UNITARIO para que la suma (Base + IVA) coincida con el
-  // "Precio c/imp".
+  // Ajuste visual para no confundir al usuario: en LECTURA (readOnly),
+  // mostramos siempre los montos de impuestos UNITARIOS en las columnas de IVA/IEPS
+  // para que (Neto + IVA + IEPS) = "Precio c/imp".
   const qty = Math.max(1, Number(l.cantidad) || 1);
-  const ivaUnit = readOnly && ivaShown > (price * 1.5) ? r2(ivaShown / qty) : ivaShown;
-  const iepsUnit = readOnly && iepsShown > (price * 1.5) ? r2(iepsShown / qty) : iepsShown;
+  const ivaUnit = readOnly ? r2(ivaShown / qty) : iva;
+  const iepsUnit = readOnly ? r2(iepsShown / qty) : ieps;
+
 
   // Precio unitario CON impuestos (para la columna opcional "Precio c/imp").
   const ivaPctUnit = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
