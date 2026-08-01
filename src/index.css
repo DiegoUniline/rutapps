@@ -15,6 +15,13 @@ html, body, #root {
   margin: 0;
 }
 
+/* App shell: el documento no hace scroll; los layouts reparten la altura */
+#root {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-height: 800px) and (orientation: landscape) {
   :root { font-size: 14px; }
 }
