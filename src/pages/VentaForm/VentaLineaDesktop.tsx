@@ -412,8 +412,12 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             const descNeto = descBruto > 0 && divisor > 0 ? r2(descBruto / divisor) : r2(descBruto);
             const base = r2(r2(Number(lista) * qty) - descNeto);
             if (base <= 0) return null;
-            const iepsT = r2(base * (iepsP / 100));
-            const ivaT = r2((base + iepsT) * (ivaP / 100));
+            // Se prefieren los montos GUARDADOS (anclados al total cobrado);
+            // el cálculo solo es respaldo cuando la línea no los tiene.
+            const iepsSaved = num(d.ieps_monto);
+            const ivaSaved = num(d.iva_monto);
+            const iepsT = iepsSaved != null ? r2(Number(iepsSaved)) : r2(base * (iepsP / 100));
+            const ivaT = ivaSaved != null ? r2(Number(ivaSaved)) : r2((base + iepsT) * (ivaP / 100));
             const total = r2(iepsT + ivaT);
             if (total <= 0) return null;
             return (
