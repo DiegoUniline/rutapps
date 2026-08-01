@@ -356,8 +356,9 @@ export default function VentaFormPage() {
         isSaving={saveVenta.isPending} isCreatingEntrega={crearEntrega.isPending}
         onBack={() => navigate('/ventas')} onSave={handleSave} onDelete={() => setShowDeleteConfirm(true)} onStatusChange={handleStatusChange}
         onCreateEntrega={async () => {
-          const linesToUse = remaining?.length ? remaining.map(r => ({ producto_id: r.producto_id, unidad_id: lineas.find(l => l.producto_id === r.producto_id)?.unidad_id, cantidad_pedida: r.cantidad_pendiente }))
-            : (lineas ?? []).filter(l => l.producto_id && Number(l.cantidad) > 0).map(l => ({ producto_id: l.producto_id!, unidad_id: l.unidad_id, cantidad_pedida: Number(l.cantidad) }));
+          const loteByProducto = new Map((lineas ?? []).filter(l => l.producto_id && (l as any).lote_id).map(l => [l.producto_id!, (l as any).lote_id as string]));
+          const linesToUse = remaining?.length ? remaining.map(r => ({ producto_id: r.producto_id, unidad_id: lineas.find(l => l.producto_id === r.producto_id)?.unidad_id, cantidad_pedida: r.cantidad_pendiente, lote_id: loteByProducto.get(r.producto_id) ?? null }))
+            : (lineas ?? []).filter(l => l.producto_id && Number(l.cantidad) > 0).map(l => ({ producto_id: l.producto_id!, unidad_id: l.unidad_id, cantidad_pedida: Number(l.cantidad), lote_id: (l as any).lote_id ?? null }));
           if (!linesToUse.length) { toast.error('No hay líneas pendientes'); return; }
           try { const result = await crearEntrega.mutateAsync({ pedidoId: form.id, vendedorId: form.vendedor_id, clienteId: form.cliente_id, almacenId: form.almacen_id, lineas: linesToUse }); toast.success('Entrega creada'); navigate(`/logistica/entregas/${result.id}`); } catch (e: any) { toast.error(e.message); }
         }}
