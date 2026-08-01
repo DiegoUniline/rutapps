@@ -65,15 +65,33 @@ Se filtra por el vendedor (respetando el permiso `ver_todos` / configuración "T
 
 Regla de seguridad del rollout: si por cualquier razón no se puede resolver el alcance del vendedor (permisos aún cargando, sin perfil), se cae al comportamiento actual (traer todo de la empresa) en lugar de traer de menos. Preferimos gastar datos a mostrar un saldo o un stock incompleto.
 
-### 7. Medición
-- Instrumentar el sync maestro y `useOfflineQuery` con un acumulador de bytes (tamaño de respuesta) guardado en IndexedDB, para comparar antes/después y detectar regresiones.
-- Checklist de validación antes de liberar: saldo del cliente idéntico al de escritorio, CxC total igual, stock disponible con apartados de otros vendedores, corte del día del vendedor y ticket con promociones.
+### 7. Contador real de megas por fecha (auditable en Escritorio y en Ruta)
 
+Medición real, no estimada: se envuelve el cliente de datos con un `fetch` instrumentado que suma el tamaño real de cada respuesta (`content-length`, o el largo del cuerpo cuando venga comprimido), separando **bajada** y **subida**.
+
+Qué se guarda por día:
+- Fecha (zona horaria de la empresa), usuario, empresa, origen (`ruta` o `escritorio`), MB bajados, MB subidos y número de peticiones.
+- Desglose por tabla/recurso (ventas, clientes, productos, imágenes de Storage), para ver quién se come los megas.
+
+Dónde se ve:
+- **Ruta › Sincronizar**: tarjeta "Datos consumidos" con hoy, ayer, últimos 7 días y el mes, más el top de tablas.
+- **Escritorio › Configuración (o Panel de control) › Consumo de datos**: tabla por usuario y por día, con filtro de rango de fechas y exportación a Excel. El super admin lo ve por empresa.
+
+Cómo se persiste:
+- Se acumula primero en IndexedDB (funciona sin conexión, cero costo) y se sube en un solo registro por día/usuario/origen a una tabla nueva `consumo_datos` (con `empresa_id`, RLS por empresa, y un `upsert` cada pocos minutos). El propio envío pesa unos cuantos bytes.
+- Retención de 90 días con limpieza automática, para que la tabla no crezca.
+
+- Checklist de validación antes de liberar: saldo del cliente idéntico al de escritorio, CxC total igual, stock disponible con apartados de otros vendedores, corte del día del vendedor, ticket con promociones, y el contador mostrando MB antes/después para probar la reducción.
+
+## Liberación
+
+Se libera **para todas las empresas** (no queda detrás de bandera por licencia), en dos entregas verificables:
+1. Entrega A — corte de tráfico (`useOfflineQuery` cache-first + delta + ventana, Realtime con debounce, miniaturas) + contador de megas ya visible. Se valida un día con Licencia 12324489 y Distribuidora Tampico usando el propio contador.
+2. Entrega B — alcance por vendedor (solo sus ventas/cobros/gastos/entregas), con el blindaje de stock y saldos descrito arriba.
 
 ## Detalles técnicos
 
-Archivos a tocar: `src/hooks/useOfflineData.ts` (núcleo del arreglo), `src/hooks/useData.ts` (Realtime), `src/lib/dataSaver.ts` (default móvil), `src/pages/ruta/RutaStock.tsx`, `src/components/ruta/ProductoDetalleModal.tsx`, `src/pages/ruta/RutaClienteDetalle.tsx` (miniaturas), `src/lib/offlineSync.ts` (exponer helpers de ventana/cursor para reutilizarlos en `useOfflineQuery`) y `src/pages/ruta/RutaSincronizarPage.tsx` (contador de MB).
+Archivos a tocar: `src/hooks/useOfflineData.ts` (núcleo del arreglo), `src/hooks/useData.ts` (Realtime), `src/lib/dataSaver.ts` (default móvil), `src/pages/ruta/RutaStock.tsx`, `src/components/ruta/ProductoDetalleModal.tsx`, `src/pages/ruta/RutaClienteDetalle.tsx` (miniaturas), `src/lib/offlineSync.ts` (helpers de ventana/cursor reutilizables), `src/lib/dataUsage.ts` (nuevo: medidor y acumulador), `src/pages/ruta/RutaSincronizarPage.tsx` y una vista nueva de "Consumo de datos" en escritorio.
 
-Sin cambios de base de datos: las columnas `updated_at` y sus triggers ya existen en `productos`, `clientes`, `stock_almacen`, `stock_apartado`, `ventas` y `cobros`. Cero cambios de esquema, cero riesgo para saldos o inventario: solo se toca **cuánto y cada cuándo** se descarga.
+Único cambio de base de datos: la tabla nueva `consumo_datos` (empresa_id, user_id, fecha, origen, bytes_descarga, bytes_subida, peticiones, desglose JSON) con índice por `empresa_id, fecha` y RLS por empresa. Las columnas `updated_at` que necesita el delta ya existen en `productos`, `clientes`, `stock_almacen`, `stock_apartado`, `ventas` y `cobros`. Cero cambios en tablas de negocio: no se toca ni un peso de saldos ni una pieza de inventario, solo **cuánto y cada cuándo** se descarga.
 
-Prueba primero con Licencia 12324489 y luego con Distribuidora Tampico (el caso más pesado) antes de liberar.
