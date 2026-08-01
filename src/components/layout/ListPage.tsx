@@ -23,6 +23,13 @@ import { cn } from '@/lib/utils';
 
 const ListPageContext = createContext(false);
 
+/**
+ * Clases del área desplazable. Fuente única: cualquier contenedor que deba
+ * hacer scroll dentro de un ListPage debe usar estas clases (no reescribirlas).
+ */
+export const SCROLL_AREA =
+  'flex-1 min-h-0 overflow-auto [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead]:bg-card';
+
 /** true cuando el componente está dentro de un <ListPage>. */
 export function useInListPage() {
   return useContext(ListPageContext);
