@@ -36,7 +36,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibilityMenu';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
-import { fmtMoney } from '@/lib/format';
+import { fmtMoney } from '@/lib/currency';
 
 
 const CLIENTES_COLUMNS: ExportColumn[] = [
