@@ -471,19 +471,23 @@ export function useVentaForm() {
   // `lineas` se lee dentro pero NO va en deps: el map crea un array nuevo en
   // cada corrida y provocaría un ciclo infinito de renders.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tarifaRules, tarifaRulesLoading, (form as any).lista_precio_id, sinImpuestos, applyEffectiveLinePricing, productosList, readOnly]);
+  }, [tarifaRules, tarifaRulesLoading, (form as any).lista_precio_id, sinImpuestos, applyEffectiveLinePricing, productosList, readOnly, repriceNonce]);
 
-  // Acepta el reprecio pendiente: libera el ref para que el efecto recalcule.
+  // Acepta el reprecio pendiente: descongela las líneas y libera el ref para
+  // que el efecto recalcule con la lista nueva.
   const confirmReprice = useCallback(() => {
     repricedListaRef.current = undefined;
+    setLineas(prev => prev.map(l => ((l as any)._precio_congelado ? { ...l, _precio_congelado: false } as any : l)));
     setPendingReprice(null);
+    setRepriceNonce(n => n + 1);
     setDirty(true);
   }, []);
 
-  // Rechaza el reprecio: la lista queda marcada como "ya atendida" y las
-  // líneas actuales conservan su precio.
+  // Rechaza el reprecio: congela las líneas ya capturadas para que conserven
+  // su precio y marca la lista como atendida.
   const dismissReprice = useCallback(() => {
     repricedListaRef.current = (form as any).lista_precio_id || null;
+    setLineas(prev => prev.map(l => (l.producto_id ? { ...l, _precio_congelado: true } as any : l)));
     setPendingReprice(null);
   }, [(form as any).lista_precio_id]);
 
