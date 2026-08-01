@@ -456,7 +456,15 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
             )}
             {!isMobile && (
               <>
+                <ColumnVisibilityMenu
+                  columns={CLIENTES_TABLE_COLUMNS}
+                  visible={colVisible}
+                  onToggle={toggleColumn}
+                  onShowAll={() => setAll(true)}
+                  onReset={reset}
+                />
                 <ExportButton
+
                   onExcel={() => exportToExcel({
                     fileName: 'Clientes', title: 'Catálogo de Clientes',
                     columns: CLIENTES_COLUMNS,
