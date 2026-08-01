@@ -354,16 +354,18 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           const manejaLote = !!(prod as any)?.maneja_lote;
           const codigo = (l as any).lote_codigo;
           if (!manejaLote && !codigo) return <span className="text-muted-foreground text-[11px]">—</span>;
-          if (readOnly || !onPickLote) {
+          if (!onPickLote) {
             return codigo
               ? <span className="text-[11px] font-medium">{codigo}</span>
               : <span className="text-muted-foreground text-[11px]">—</span>;
           }
+          // El lote se puede asignar/ver siempre (incluso en pedidos cerrados o
+          // no editables): se guarda al instante y la entrega lo hereda.
           return (
             <button type="button" onClick={() => onPickLote(idx)}
-              className="text-[11px] font-medium text-primary hover:underline"
-              title="Cambiar el lote apartado para esta línea">
-              {codigo || 'Elegir lote'}
+              className={cn('text-[11px] font-medium hover:underline', codigo ? 'text-primary' : 'text-amber-600')}
+              title={codigo ? 'Ver o cambiar el lote de esta línea' : 'Asignar lote a esta línea'}>
+              {codigo || 'Lotear'}
             </button>
           );
         })()}
