@@ -85,6 +85,8 @@ export const VENTA_LINEAS_DESGLOSE_KEYS = VENTA_LINEAS_DESGLOSE_COLUMNS.map(c =>
 export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> = {
   dCosto: true,
   dPrecioLista: true,
+  dSubtotalNeto: false,
+
   dImpuestosMonto: true,
   dImporteBruto: true,
   dSubtotalBruto: true,
