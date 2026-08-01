@@ -80,18 +80,23 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const ivaShown = readOnly ? (Number(l.iva_monto) || 0) : iva;
   const iepsShown = readOnly ? (Number(l.ieps_monto) || 0) : ieps;
 
-  // Ajuste visual para no confundir al usuario: si estamos en LECTURA (readOnly)
-  // y el monto parece ser un total acumulado (monto > precio * taxPct),
-  // mostramos el monto UNITARIO para que la suma (Base + IVA) coincida con el
-  // "Precio c/imp".
+  // Ajuste visual para no confundir al usuario: en LECTURA (readOnly),
+  // mostramos siempre los montos de impuestos UNITARIOS en las columnas de IVA/IEPS
+  // para que (Neto + IVA + IEPS) = "Precio c/imp".
   const qty = Math.max(1, Number(l.cantidad) || 1);
-  const ivaUnit = readOnly && ivaShown > (price * 1.5) ? r2(ivaShown / qty) : ivaShown;
-  const iepsUnit = readOnly && iepsShown > (price * 1.5) ? r2(iepsShown / qty) : iepsShown;
+  const ivaUnit = readOnly ? r2(ivaShown / qty) : iva;
+  const iepsUnit = readOnly ? r2(iepsShown / qty) : ieps;
+
 
   // Precio unitario CON impuestos (para la columna opcional "Precio c/imp").
+  // En LECTURA (readOnly) reconstruimos desde el total guardado para que
+  // coincida visualmente con el subtotal y el desglose de impuestos guardado.
   const ivaPctUnit = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
   const iepsPctUnit = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
-  const priceGross = r2(price * (1 + iepsPctUnit / 100) * (1 + ivaPctUnit / 100));
+  const priceGross = readOnly 
+    ? r2((Number(l.total) || 0) / qty)
+    : r2(price * (1 + iepsPctUnit / 100) * (1 + ivaPctUnit / 100));
+
   // % de la promoción prorrateada, relativo al subtotal BRUTO (pre-promoción) de
   // la línea. Se reconstruye desde montos guardados para que sea independiente de
   // cómo se guardó el precio_unitario (bruto en escritorio, neto en ruta):
