@@ -162,7 +162,7 @@ export function VentaLineasTab(props: Props) {
         </div>
 
         <div className="lg:w-80 lg:ml-auto">
-          <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} currencyCode={currencyCode} />
+          <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} currencyCode={currencyCode} promoTotalGuardado={readOnly ? lineas.reduce((s, l) => s + (Number((l as any).descuento_promocion_monto) || 0), 0) : null} />
         </div>
       </div>
     </div>
