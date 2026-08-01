@@ -259,6 +259,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           almacen_origen_id: l.almacen_origen_id || surtirAlmacenId,
           hecho: l.hecho,
           maneja_lote: esProductoLote(l.producto_id),
+          lote_id: l.lote_id ?? null,
         })),
         empresaId: empresa!.id,
         almacenDefaultId: surtirAlmacenId,

@@ -34,6 +34,10 @@ export interface CartItem {
   paquetes?: number | null;
   /** Almacén del que saldrá esta línea (solo pedidos con flag de apartado ON) */
   almacen_id?: string | null;
+  /** Lote apartado para esta línea (empresas con manejo de lotes) */
+  lote_id?: string | null;
+  /** Código del lote apartado (solo para mostrar) */
+  lote_codigo?: string | null;
 }
 
 export type AccionDevolucion = 'reposicion' | 'nota_credito' | 'devolucion_dinero' | 'descuento_venta';

@@ -152,7 +152,7 @@ export function useSurtirTodo() {
   return useMutation({
     mutationFn: async ({ entregaId, lineas, empresaId, almacenDefaultId }: {
       entregaId: string;
-      lineas: { id: string; producto_id: string; cantidad_pedida: number; almacen_origen_id?: string; hecho?: boolean; maneja_lote?: boolean }[];
+      lineas: { id: string; producto_id: string; cantidad_pedida: number; almacen_origen_id?: string; hecho?: boolean; maneja_lote?: boolean; lote_id?: string | null }[];
       empresaId: string;
       almacenDefaultId?: string;
     }) => {
@@ -182,7 +182,14 @@ export function useSurtirTodo() {
             const disponibles = (sl ?? [])
               .filter((r: any) => r.lotes?.activo !== false)
               .map((r: any) => ({ lote_id: r.lote_id, disponible: Number(r.cantidad) || 0, cad: r.lotes?.fecha_caducidad ?? '9999-12-31' }))
-              .sort((a: any, b: any) => String(a.cad).localeCompare(String(b.cad)));
+              .sort((a: any, b: any) => {
+                // El lote apartado desde el pedido siempre va primero; el resto por FEFO.
+                if (l.lote_id) {
+                  if (a.lote_id === l.lote_id) return -1;
+                  if (b.lote_id === l.lote_id) return 1;
+                }
+                return String(a.cad).localeCompare(String(b.cad));
+              });
             let restante = pedida;
             const asignacion: { lote_id: string; cantidad: number }[] = [];
             for (const lote of disponibles) {
@@ -395,7 +402,7 @@ export function useCrearEntrega() {
       vendedorId?: string;
       clienteId?: string;
       almacenId?: string;
-      lineas: { producto_id: string; unidad_id?: string; cantidad_pedida: number }[];
+      lineas: { producto_id: string; unidad_id?: string; cantidad_pedida: number; lote_id?: string | null }[];
     }) => {
       // Fetch client's saved route order to set orden_entrega
       let ordenEntrega = 0;
@@ -433,6 +440,8 @@ export function useCrearEntrega() {
             cantidad_pedida: l.cantidad_pedida,
             cantidad_entregada: 0,
             hecho: false,
+            // Lote apartado desde el pedido (si el vendedor lo eligió en ruta/escritorio).
+            lote_id: l.lote_id ?? null,
           }))
         );
         if (lErr) throw lErr;

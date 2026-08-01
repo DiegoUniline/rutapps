@@ -1,29 +1,28 @@
 import { useEffect, useState } from 'react';
 import { Boxes, AlertTriangle } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-
-interface LoteConStock {
-  lote_id: string;
-  codigo: string;
-  fecha_caducidad: string | null;
-  cantidad: number;
-}
+import { getLotesDisponibles, pickFefo, fmtCaducidad, type LoteDisponible } from '@/lib/lotesFefo';
 
 interface Props {
   empresaId: string;
   almacenId: string;
   producto: { id: string; nombre: string } | null;
+  /** Lote ya apartado en la línea (queda preseleccionado). */
+  loteSeleccionadoId?: string | null;
+  /** Cantidad de la línea: se usa para sugerir un lote que alcance. */
+  cantidad?: number;
+  /** Pedido en edición: su propio apartado no se descuenta del disponible. */
+  excluirVentaId?: string | null;
   onClose: () => void;
   onConfirm: (loteId: string, codigo: string) => void;
 }
 
 /**
- * Selector de lote AL VENDER: lista los lotes del producto que tienen existencia
- * en el almacén de la venta, ordenados FEFO (lo que caduca primero arriba, ya
- * pre-seleccionado). El vendedor puede cambiarlo.
+ * Selector de lote AL VENDER: lista los lotes del producto con existencia en el
+ * almacén, ya netos de lo apartado por otros pedidos, ordenados FEFO (lo que
+ * caduca primero arriba, pre-seleccionado). El vendedor puede cambiarlo.
  */
-export function LoteVentaModal({ empresaId, almacenId, producto, onClose, onConfirm }: Props) {
-  const [lotes, setLotes] = useState<LoteConStock[]>([]);
+export function LoteVentaModal({ empresaId, almacenId, producto, loteSeleccionadoId, cantidad = 0, excluirVentaId, onClose, onConfirm }: Props) {
+  const [lotes, setLotes] = useState<LoteDisponible[]>([]);
   const [sel, setSel] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -31,33 +30,16 @@ export function LoteVentaModal({ empresaId, almacenId, producto, onClose, onConf
     if (!producto || !almacenId) return;
     setLoading(true);
     (async () => {
-      // Stock por lote del producto en este almacén (solo con existencia).
-      const { data: stock } = await (supabase.from as any)('stock_lotes')
-        .select('lote_id, cantidad, lotes(codigo, fecha_caducidad, producto_id, activo)')
-        .eq('empresa_id', empresaId)
-        .eq('almacen_id', almacenId)
-        .eq('producto_id', producto.id)
-        .gt('cantidad', 0);
-      const list: LoteConStock[] = (stock ?? [])
-        .filter((r: any) => r.lotes?.activo !== false)
-        .map((r: any) => ({
-          lote_id: r.lote_id,
-          codigo: r.lotes?.codigo ?? '—',
-          fecha_caducidad: r.lotes?.fecha_caducidad ?? null,
-          cantidad: Number(r.cantidad) || 0,
-        }))
-        // FEFO: caduca primero arriba (sin caducidad al final).
-        .sort((a: LoteConStock, b: LoteConStock) =>
-          (a.fecha_caducidad ?? '9999-12-31').localeCompare(b.fecha_caducidad ?? '9999-12-31'));
+      const list = await getLotesDisponibles({ empresaId, almacenId, productoId: producto.id, excluirVentaId });
       setLotes(list);
-      setSel(list[0]?.lote_id ?? '');
+      const yaElegido = loteSeleccionadoId && list.some(l => l.lote_id === loteSeleccionadoId) ? loteSeleccionadoId : null;
+      setSel(yaElegido ?? pickFefo(list, cantidad)?.lote_id ?? '');
       setLoading(false);
     })();
-  }, [producto?.id, almacenId, empresaId]);
+  }, [producto?.id, almacenId, empresaId, loteSeleccionadoId, cantidad, excluirVentaId]);
 
   if (!producto) return null;
 
-  const fmtCad = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'sin caducidad';
   const confirmar = () => {
     const l = lotes.find(x => x.lote_id === sel);
     if (!l) return;
@@ -72,7 +54,7 @@ export function LoteVentaModal({ empresaId, almacenId, producto, onClose, onConf
             <Boxes className="h-4 w-4" /> Elegir lote
           </h3>
           <p className="text-[12px] text-muted-foreground mt-1">
-            <strong>{producto.nombre}</strong> — se sugiere el que caduca primero (FEFO).
+            <strong>{producto.nombre}</strong> — se sugiere el que caduca primero (FEFO). El disponible ya descuenta lo apartado en otros pedidos.
           </p>
         </div>
         <div className="p-5 space-y-2 max-h-[50vh] overflow-y-auto">
@@ -90,9 +72,12 @@ export function LoteVentaModal({ empresaId, almacenId, producto, onClose, onConf
                 className={`w-full text-left rounded-lg border-2 px-3 py-2 transition-colors ${on ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent/40'}`}>
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-foreground">{l.codigo}{i === 0 && <span className="ml-2 text-[10px] text-emerald-600 font-medium">FEFO</span>}</span>
-                  <span className="text-[12px] tabular-nums text-muted-foreground">{l.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })} disp.</span>
+                  <span className="text-[12px] tabular-nums text-muted-foreground">{l.disponible.toLocaleString('es-MX', { maximumFractionDigits: 3 })} disp.</span>
                 </div>
-                <div className="text-[11px] text-muted-foreground">Caduca {fmtCad(l.fecha_caducidad)}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  Caduca {fmtCaducidad(l.fecha_caducidad)}
+                  {l.apartado > 0 && <span className="ml-2">· {l.apartado.toLocaleString('es-MX', { maximumFractionDigits: 3 })} apartado</span>}
+                </div>
               </button>
             );
           })}

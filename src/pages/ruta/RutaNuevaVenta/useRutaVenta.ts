@@ -27,6 +27,7 @@ import { usePermisos } from '@/hooks/usePermisos';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { STEPS } from './types';
 import { nextVisitDate } from '@/lib/nextVisitDate';
+import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -140,6 +141,36 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const canChangeLista = isOwner || hasPermisoMovil('ruta.cambiar_lista_precio');
   const canApplyDiscount = isOwner || hasPermisoMovil('ruta.aplicar_descuento');
   const canDoDevoluciones = isOwner || hasPermisoMovil('ruta.devoluciones');
+
+  // ── Lotes: apartar el lote desde que se captura la línea (FEFO) ──────────
+  // Se resuelve para cualquier producto con `maneja_lote`, online (RPC) u
+  // offline (IndexedDB). El vendedor puede cambiarlo después en la línea.
+  useEffect(() => {
+    if (!empresa?.id) return;
+    const almacenBase = pedidoAlmacenId || profile?.almacen_id || null;
+    if (!almacenBase) return;
+    const pendientes = cart
+      .map((c, i) => ({ c, i }))
+      .filter(({ c }) => !c.es_cambio && !c.lote_id && !!productos?.find((p: any) => p.id === c.producto_id)?.maneja_lote);
+    if (pendientes.length === 0) return;
+    let cancelado = false;
+    (async () => {
+      for (const { c, i } of pendientes) {
+        const almacenId = c.almacen_id || almacenBase;
+        const lotes = await getLotesDisponibles({ empresaId: empresa.id, almacenId, productoId: c.producto_id });
+        const fefo = pickFefo(lotes, c.cantidad);
+        if (!fefo || cancelado) continue;
+        setCart(prev => {
+          const arr = [...prev];
+          if (!arr[i] || arr[i].producto_id !== c.producto_id || arr[i].lote_id) return prev;
+          arr[i] = { ...arr[i], lote_id: fefo.lote_id, lote_codigo: fefo.codigo };
+          return arr;
+        });
+      }
+    })();
+    return () => { cancelado = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.map(c => `${c.producto_id}:${c.lote_id ?? ''}`).join('|'), empresa?.id, pedidoAlmacenId, profile?.almacen_id]);
 
   useEffect(() => {
     if (!canDoDevoluciones && devoluciones.length > 0) {
@@ -1014,11 +1045,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
             objetoImpuesto: (item as any).objeto_impuesto ?? null,
           });
         }
-        lineasBatch.push({ id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, precio_unitario_sin_redondeo: Number((item as any).precio_unitario_sin_redondeo) > 0 ? Number((item as any).precio_unitario_sin_redondeo) : (item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0), unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, ...desglose, created_at: new Date().toISOString() });
+        lineasBatch.push({ id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, precio_unitario_sin_redondeo: Number((item as any).precio_unitario_sin_redondeo) > 0 ? Number((item as any).precio_unitario_sin_redondeo) : (item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0), unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, lote_id: item.lote_id ?? null, ...desglose, created_at: new Date().toISOString() });
         if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) {
           try {
             const apartTable = getOfflineTable('stock_apartado');
-            await apartTable?.put({ id: await deterministicUuid('apart', ventaLineaId), empresa_id: empresa.id, venta_id: ventaId, venta_linea_id: ventaLineaId, producto_id: item.producto_id, almacen_id: lineaAlmacenId, cantidad: item.cantidad, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+            await apartTable?.put({ id: await deterministicUuid('apart', ventaLineaId), empresa_id: empresa.id, venta_id: ventaId, venta_linea_id: ventaLineaId, producto_id: item.producto_id, almacen_id: lineaAlmacenId, lote_id: item.lote_id ?? null, cantidad: item.cantidad, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
           } catch { /* cache local; el trigger del backend crea el apartado real */ }
         }
       }

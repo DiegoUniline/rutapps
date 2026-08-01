@@ -186,6 +186,8 @@ export default function PedidoPendienteDetailPage() {
         lineas: remaining.map(r => ({
           producto_id: r.producto_id,
           cantidad_pedida: r.cantidad_pendiente,
+          // Lote apartado desde el pedido (si aplica).
+          lote_id: (lineas as any[]).find((l: any) => l.producto_id === r.producto_id)?.lote_id ?? null,
         })),
       });
       toast.success(`Entrega ${result.folio} creada`);

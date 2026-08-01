@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplicadas } from '@/lib/promoPersist';
 import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
+import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
@@ -234,7 +235,7 @@ export function useVentaForm() {
       const taxes: string[] = [];
       if (l.iva_pct > 0) taxes.push(`IVA ${l.iva_pct}%`);
       if (l.ieps_pct > 0) taxes.push(`IEPS ${l.ieps_pct}%`);
-      return { ...l, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') };
+      return { ...l, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lote_codigo: (l as any).lotes?.codigo ?? null };
     });
     const isReadOnly = existingVenta.status !== 'borrador';
     setLineas(isReadOnly ? existingLines : [...existingLines, emptyLine()]);
@@ -536,10 +537,30 @@ export function useVentaForm() {
     const finalDisplayPrice = snap.displayPrice;
     setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, precio_unitario_sin_redondeo: snap?.rawUnitPrice ?? finalUnitPrice, precio_display_sin_redondeo: snap?.rawDisplayPrice ?? finalDisplayPrice, base_precio: snap?.basePrecio ?? 'con_impuestos', redondeo: snap?.redondeo ?? 'ninguno', unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false, lote_id: null, lote_codigo: null } as any; return next; });
     setDirty(true);
-    // Producto por lote en venta directa → pedir el lote (FEFO).
-    if ((producto as any).maneja_lote && form.tipo === 'venta_directa') {
-      setLoteParaLinea({ idx, producto: { id: productoId, nombre: producto.nombre } });
+    // Producto por lote: se aparta el lote desde que se captura la línea.
+    // Venta directa → se pide el lote (sale stock de inmediato).
+    // Pedido → se asigna FEFO automáticamente (se puede cambiar en la columna Lote).
+    if ((producto as any).maneja_lote) {
+      if (form.tipo === 'venta_directa') {
+        setLoteParaLinea({ idx, producto: { id: productoId, nombre: producto.nombre } });
+      } else if (form.almacen_id && empresa?.id) {
+        const almacenId = form.almacen_id;
+        const empresaId = empresa.id;
+        const ventaId = (form as any).id ?? null;
+        (async () => {
+          const lotes = await getLotesDisponibles({ empresaId, almacenId, productoId, excluirVentaId: ventaId });
+          const fefo = pickFefo(lotes, 1);
+          if (!fefo) return;
+          setLineas(prev => {
+            const arr = [...prev];
+            if (!arr[idx] || arr[idx].producto_id !== productoId || (arr[idx] as any).lote_id) return prev;
+            arr[idx] = { ...arr[idx], lote_id: fefo.lote_id, lote_codigo: fefo.codigo } as any;
+            return arr;
+          });
+        })();
+      }
     }
+
   };
 
   // Cambio de lista de precios a nivel de línea: usamos el snapshot ya calculado
@@ -806,6 +827,10 @@ export function useVentaForm() {
         delete clean.impuestos_label;
         delete clean.productos;
         delete clean.unidades;
+        // `lote_codigo` es solo para mostrar en la UI; la columna real es lote_id.
+        delete clean.lote_codigo;
+        delete clean.lotes;
+
         lineProductoIds.push(producto_id);
         lineTotalByProduct.set(producto_id, (lineTotalByProduct.get(producto_id) ?? 0) + lineAmounts.total);
         linePromises.push(saveLinea.mutateAsync(clean));

@@ -38,6 +38,8 @@ const TABLES_TO_CACHE = [
   'lista_precios',
   'zonas',
   'almacenes',
+  'lotes',
+  'stock_lotes',
 ] as const;
 
 type CacheTable = typeof TABLES_TO_CACHE[number];
@@ -65,6 +67,8 @@ export const MOBILE_QUICK_SYNC_TABLES: readonly CacheTable[] = [
   'descarga_ruta',
   'descarga_ruta_lineas',
   'visitas',
+  'lotes',
+  'stock_lotes',
 ];
 
 const PAGE_TIMEOUT_MS = 18000;
@@ -89,6 +93,8 @@ export const COLUMN_SELECTS: Record<string, string> = {
   lista_precios: 'id,empresa_id,tarifa_id,nombre,es_principal,activa,share_token,share_activo,created_at',
   zonas: 'id,empresa_id,nombre,activo,created_at',
   almacenes: 'id,empresa_id,nombre,activo,es_merma,created_at',
+  lotes: 'id,empresa_id,producto_id,codigo,fecha_caducidad,activo,updated_at',
+  stock_lotes: 'id,empresa_id,almacen_id,producto_id,lote_id,cantidad,updated_at',
 };
 
 
@@ -125,6 +131,8 @@ export const TABLE_LABELS: Record<string, string> = {
   lista_precios: 'Listas de precios',
   zonas: 'Zonas',
   almacenes: 'Almacenes',
+  lotes: 'Lotes',
+  stock_lotes: 'Stock por lote',
 };
 
 
@@ -141,6 +149,8 @@ export const TABLES_WITH_EMPRESA = new Set([
   'lista_precios',
   'zonas',
   'almacenes',
+  'lotes',
+  'stock_lotes',
 ]);
 
 
@@ -184,6 +194,8 @@ const NO_DELTA_TABLES = new Set([
   'profiles',
   'cliente_pedido_sugerido',
   'promociones',
+  'lotes',
+  'stock_lotes',
 ]);
 
 // Tablas grandes con delta REAL por `updated_at` (mantenido por trigger en BD,
@@ -419,9 +431,24 @@ async function downloadAllDataInternal(
   // Antes de bajar nada: fuera cualquier dato de otra empresa.
   await purgeForeignTenantData(empresaId);
 
+  // Las tablas de lotes solo se descargan en empresas que manejan lotes; en las
+  // demás serían megas tirados a la basura.
+  let manejaLotes = false;
+  try {
+    const empLocal: any = await getOfflineTable('empresas')?.get(empresaId);
+    if (empLocal && 'maneja_lotes' in empLocal) {
+      manejaLotes = !!empLocal.maneja_lotes;
+    } else {
+      const { data } = await (supabase.from as any)('empresas').select('maneja_lotes').eq('id', empresaId).maybeSingle();
+      manejaLotes = !!data?.maneja_lotes;
+    }
+  } catch { /* sin señal: se omiten los lotes en esta pasada */ }
+  const effectiveTables = (manejaLotes
+    ? tablesToCache
+    : tablesToCache.filter(t => t !== 'lotes' && t !== 'stock_lotes')) as readonly CacheTable[];
 
   // Initialize progress
-  const progress: SyncProgress[] = tablesToCache.map(table => ({
+  const progress: SyncProgress[] = effectiveTables.map(table => ({
     table,
     label: TABLE_LABELS[table] || table,
     status: 'waiting',
@@ -433,8 +460,9 @@ async function downloadAllDataInternal(
 
   // Process tables sequentially for progress visibility (parallel within batches)
   const BATCH_SIZE = 4;
-  for (let i = 0; i < tablesToCache.length; i += BATCH_SIZE) {
-    const batch = tablesToCache.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < effectiveTables.length; i += BATCH_SIZE) {
+    const batch = effectiveTables.slice(i, i + BATCH_SIZE);
+
 
     await Promise.all(batch.map(async (table) => {
       const idx = tablesToCache.indexOf(table);

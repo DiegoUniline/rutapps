@@ -44,6 +44,7 @@ interface Props {
   canChangePrice?: boolean;
   canApplyDiscount?: boolean;
   onChangeLineListaPrecio?: (idx: number, selection: import('@/components/venta/ListaPrecioPicker').ListaPrecioSelection) => void;
+  onPickLote?: (idx: number) => void;
 }
 
 export function VentaLineasTab(props: Props) {
