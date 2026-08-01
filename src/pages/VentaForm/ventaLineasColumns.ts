@@ -43,16 +43,16 @@ export const VENTA_LINEAS_PRESETS: ColumnPreset[] = [
 // Columnas 100% informativas que leen los campos guardados en `venta_lineas`.
 // ORDEN SECUENCIAL: Compra → Descuentos → Impuestos → Total
 export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
-  // PASO 1: IMPORTE BRUTO (Compra original)
-  { key: 'dPrecioLista',    label: 'Precio unitario', sub: 'dPrecioLista',       group: 'Desglose' },
-  { key: 'dImporteBruto',   label: 'Importe bruto',   sub: 'dImporteBruto',      group: 'Desglose' },
+  // PASO 1: PRECIOS
+  { key: 'dImporteBruto',   label: 'Precio',              sub: 'unit. c/imp',    group: 'Desglose' },
+  { key: 'dPrecioLista',    label: 'Precio S/Impuestos',  sub: 'unit. lista',    group: 'Desglose' },
 
   // PASO 2: DESCUENTOS
   { key: 'dPromoNombre',    label: 'Promoción',       sub: 'dPromoNombre',       group: 'Desglose' },
   { key: 'dDescPromoMonto', label: 'Desc. promo $',   sub: 'dDescPromoMonto',    group: 'Desglose' },
   { key: 'dCantBonificada', label: 'Cant. regalo',    sub: 'dCantBonificada',    group: 'Desglose' },
   { key: 'dDescManMonto',   label: 'Desc. manual $',  sub: 'dDescManMonto',      group: 'Desglose' },
-  { key: 'dDescTotal',      label: 'Desc. total $',   sub: 'dDescTotal',         group: 'Desglose' },
+  { key: 'dDescTotal',      label: 'Descuento',       sub: 'total $',            group: 'Desglose' },
 
   // PASO 3: SUBTOTAL NETO (Gravable)
   { key: 'dBaseDescMan',    label: 'Subtotal',        sub: 'dBaseDescMan',       group: 'Desglose' },
@@ -64,7 +64,7 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
   { key: 'dIvaMontoUnit',   label: 'IVA $',           sub: 'monto',              group: 'Desglose' },
 
   // PASO 5: TOTAL LÍNEA
-  { key: 'dTotal',          label: 'Total línea',     sub: 'total',              group: 'Desglose' },
+  { key: 'dTotal',          label: 'Total',           sub: 'total línea',        group: 'Desglose' },
 
   // ADICIONALES
   { key: 'dMotivoDescMan',  label: 'Motivo desc.',    sub: 'manual',             group: 'Desglose' },
@@ -74,32 +74,27 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
 
 export const VENTA_LINEAS_DESGLOSE_KEYS = VENTA_LINEAS_DESGLOSE_COLUMNS.map(c => c.key);
 
-// Visibilidad por defecto del desglose: Orden secuencial, solo lo más relevante
+// Visibilidad por defecto: vista simple (Cantidad, Producto, Unidad, Precio,
+// Precio S/Impuestos, Descuento, Total). El resto se enciende manualmente.
 export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> = {
-  // PASO 1: Compra
-  dPrecioLista: true,
   dImporteBruto: true,
+  dPrecioLista: true,
 
-  // PASO 2: Descuentos
-  dPromoNombre: true,
-  dDescPromoMonto: true,
-  dCantBonificada: true,
+  dPromoNombre: false,
+  dDescPromoMonto: false,
+  dCantBonificada: false,
   dDescManMonto: false,
   dDescTotal: true,
 
-  // PASO 3: Subtotal
-  dBaseDescMan: true,
+  dBaseDescMan: false,
 
-  // PASO 4: Impuestos
-  dBaseIeps: true,
-  dIepsMontoUnit: true,
-  dBaseIva: true,
-  dIvaMontoUnit: true,
+  dBaseIeps: false,
+  dIepsMontoUnit: false,
+  dBaseIva: false,
+  dIvaMontoUnit: false,
 
-  // PASO 5: Total
   dTotal: true,
 
-  // Adicionales
   dMotivoDescMan: false,
   dEsBonificacion: false,
   dObjetoImpuesto: false,
