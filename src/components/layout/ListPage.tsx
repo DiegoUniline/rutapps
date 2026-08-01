@@ -30,6 +30,9 @@ const ListPageContext = createContext(false);
 export const SCROLL_AREA =
   'flex-1 min-h-0 overflow-auto [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead]:bg-card';
 
+/** Tarjeta de tabla desplazable (card + área de scroll). */
+export const TABLE_CARD = `bg-card border border-border rounded ${SCROLL_AREA}`;
+
 /** true cuando el componente está dentro de un <ListPage>. */
 export function useInListPage() {
   return useContext(ListPageContext);
@@ -48,7 +51,7 @@ function ListPageRoot({ children, className, flush }: ListPageProps) {
       <div
         data-listpage=""
         className={cn(
-          'flex flex-col h-full min-h-0 overflow-hidden gap-3',
+          'flex flex-col h-full min-h-0 overflow-hidden gap-3 [&>*]:shrink-0',
           !flush && 'p-4 pb-2',
           className,
         )}
