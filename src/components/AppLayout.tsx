@@ -954,11 +954,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
 
         </div>
-        <Breadcrumb />
-        <main className="flex-1">
+        <div className="shrink-0"><Breadcrumb /></div>
+        <main className="flex-1 min-h-0 overflow-y-auto">
           {children}
+          <UnilineFooter />
         </main>
-        <UnilineFooter />
       </div>
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
