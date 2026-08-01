@@ -15,6 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 const ESTADO_STYLES: Record<CotizacionEstado, string> = {
   borrador: 'bg-muted text-foreground',
@@ -60,7 +61,7 @@ export default function CotizacionesListPage() {
   }, [data, search, estadoFilter, dateFrom, dateTo]);
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
+    <ListPage>
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-foreground">Cotizaciones</h1>
         <Button onClick={() => navigate('/cotizaciones/nuevo')} size="sm">
@@ -98,8 +99,8 @@ export default function CotizacionesListPage() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className={TABLE_CARD}>
+        <div>
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
@@ -196,6 +197,6 @@ export default function CotizacionesListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ListPage>
   );
 }

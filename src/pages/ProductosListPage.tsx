@@ -16,6 +16,7 @@ import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { TablePagination } from '@/components/TablePagination';
 import { StickyListToolbar } from '@/components/StickyListToolbar';
+import { ListPage, SCROLL_AREA } from '@/components/layout/ListPage';
 import { readStoredPageSizeFor, writeStoredPageSizeFor, type PageSizeOption } from '@/hooks/useTablePagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
@@ -256,7 +257,7 @@ export default function ProductosListPage() {
   }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
-    <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+    <div className={cn(!groupBy && SCROLL_AREA)}>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-table-border">
@@ -371,9 +372,10 @@ export default function ProductosListPage() {
   );
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /> <VideoHelpButton module="productos" /></h1>
+    <ListPage>
+      <ListPage.Header title={<>Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /> <VideoHelpButton module="productos" /></>} />
 
+      <ListPage.Toolbar>
       <div className="flex border-b border-border gap-0 overflow-x-auto -mt-1">
         {[
           { key: 'activo', label: 'Activos' },
@@ -448,6 +450,7 @@ export default function ProductosListPage() {
           </>
         }
       />
+      </ListPage.Toolbar>
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="productos" />
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
@@ -500,9 +503,9 @@ export default function ProductosListPage() {
 
 
       {isLoading ? (
-        <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 12} /></div>
+        <ListPage.Body className="p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 12} /></ListPage.Body>
       ) : isMobile ? (
-        <div className="space-y-2">
+        <ListPage.Body card={false} className="space-y-2">
           {pageData.length === 0 && (
             <div className="text-center py-12 text-muted-foreground text-sm">No hay productos. Crea el primero.</div>
           )}
@@ -530,7 +533,7 @@ export default function ProductosListPage() {
               ]}
             />
           ))}
-        </div>
+        </ListPage.Body>
       ) : (
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
@@ -574,6 +577,6 @@ export default function ProductosListPage() {
           ...(statusFilter === 'inactivo' ? [{ label: 'Eliminar', icon: Trash2, variant: 'destructive' as const, onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete }] : []),
         ]}
       />
-    </div>
+    </ListPage>
   );
 }

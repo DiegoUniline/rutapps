@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 import { generarAjusteInventarioPdf } from '@/lib/ajusteInventarioPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import * as XLSX from 'xlsx';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 interface ProductRow {
   id: string;
@@ -519,7 +520,7 @@ export default function AjustesInventarioPage() {
   };
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <ListPage scroll>
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
@@ -1125,6 +1126,6 @@ export default function AjustesInventarioPage() {
         caption="Ajuste de inventario"
         tipo="ajuste"
       />
-    </div>
+    </ListPage>
   );
 }

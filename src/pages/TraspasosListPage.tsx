@@ -22,6 +22,7 @@ import { fmtDate, fmtNum, cn } from '@/lib/utils';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { toast } from 'sonner';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -438,7 +439,7 @@ export default function TraspasosListPage() {
   );
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
+    <ListPage scroll>
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Traspasos <HelpButton title={HELP.traspasos.title} sections={HELP.traspasos.sections} /> <VideoHelpButton module="traspasos" /></h1>
 
       {/* KPIs */}
@@ -609,6 +610,6 @@ export default function TraspasosListPage() {
           { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => setBulkDeleteOpen(true) },
         ]}
       />
-    </div>
+    </ListPage>
   );
 }

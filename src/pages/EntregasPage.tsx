@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 /* ─── Data ──────────────────────────────────────────── */
 
@@ -270,7 +271,7 @@ export default function EntregasPage() {
   const totalMonto = entregas?.reduce((s, e) => s + ((e as any).total ?? 0), 0) ?? 0;
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <ListPage scroll>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Truck className="h-5 w-5" /> Entregas
@@ -532,6 +533,6 @@ export default function EntregasPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </ListPage>
   );
 }

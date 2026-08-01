@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import BulkEntregasActionsDialog, { type BulkAction } from '@/components/entregas/BulkEntregasActionsDialog';
 import PedidosTabs from '@/components/PedidosTabs';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive'; className?: string }> = {
   borrador: { label: 'Borrador', variant: 'secondary' },
@@ -396,7 +397,7 @@ export default function EntregaListPage() {
   };
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <ListPage scroll>
       {cargarProgress && (
         <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-3">
@@ -851,6 +852,6 @@ export default function EntregaListPage() {
           onDone={() => { setBulkAction(null); setSelectedIds(new Set()); }}
         />
       )}
-    </div>
+    </ListPage>
   );
 }

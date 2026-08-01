@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 interface ReasignState {
   almacenId: string;
@@ -156,7 +157,7 @@ export default function AlmacenesPage() {
   const reasignOptions = activeItems.filter(a => a.id !== reasign?.almacenId);
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <ListPage>
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Warehouse className="h-5 w-5" /> Almacenes
       </h1>
@@ -173,7 +174,7 @@ export default function AlmacenesPage() {
         </button>
       </div>
 
-      <div className="bg-card border border-border rounded overflow-x-auto">
+      <div className={TABLE_CARD}>
         {isLoading ? (
           <div className="p-4"><TableSkeleton rows={4} cols={3} /></div>
         ) : (
@@ -310,6 +311,6 @@ export default function AlmacenesPage() {
           </div>
         </div>
       )}
-    </div>
+    </ListPage>
   );
 }

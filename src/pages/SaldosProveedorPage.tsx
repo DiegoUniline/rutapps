@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { useListPreferences } from '@/hooks/useListPreferences';
 import { CxPTabs } from '@/components/CxPTabs';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 /* ── types ── */
 type MetodoPago = 'efectivo' | 'transferencia' | 'tarjeta';
@@ -221,7 +222,7 @@ export default function SaldosProveedorPage() {
      ═══════════════════════════════════════════ */
   if (selectedId && selected && payView) {
     return (
-      <div className="p-4 space-y-3 min-h-full">
+      <ListPage>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setPayView(false)}>
             <ArrowLeft className="h-4 w-4" />
@@ -298,7 +299,7 @@ export default function SaldosProveedorPage() {
         </div>
 
         {/* Purchases table */}
-        <div className="bg-card border border-border rounded overflow-x-auto">
+        <div className={TABLE_CARD}>
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-table-border text-left">
@@ -423,7 +424,7 @@ export default function SaldosProveedorPage() {
           <h3 className="text-sm font-semibold mb-2 text-destructive flex items-center gap-2">
             <CreditCard className="h-4 w-4" /> Compras con saldo pendiente ({comprasPendientes.length})
           </h3>
-          <div className="bg-card border border-border rounded overflow-x-auto">
+          <div className={TABLE_CARD}>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -462,7 +463,7 @@ export default function SaldosProveedorPage() {
             <h3 className="text-sm font-semibold mb-2 text-success flex items-center gap-2">
               <FileText className="h-4 w-4" /> Compras liquidadas ({comprasPagadas.length})
             </h3>
-            <div className="bg-card border border-border rounded overflow-x-auto">
+            <div className={TABLE_CARD}>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -536,7 +537,7 @@ export default function SaldosProveedorPage() {
         onDateToChange={setHasta}
       />
 
-      <div className="bg-card border border-border rounded overflow-x-auto">
+      <div className={TABLE_CARD}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -583,6 +584,6 @@ export default function SaldosProveedorPage() {
           )}
         </Table>
       </div>
-    </div>
+    </ListPage>
   );
 }

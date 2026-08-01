@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProveedores } from '@/hooks/useData';
 import { fmtMoney } from '@/lib/currency';
 import { getNombreCompra } from '@/lib/productoNombres';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 type Modo = 'producto' | 'maximo' | 'medio' | 'minimo' | 'cobertura';
 
@@ -202,7 +203,7 @@ export default function ComprasSugeridasPage() {
   };
 
   return (
-    <div className="p-4 min-h-full space-y-4">
+    <ListPage scroll>
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
@@ -370,6 +371,6 @@ export default function ComprasSugeridasPage() {
           </div>
         ))
       )}
-    </div>
+    </ListPage>
   );
 }

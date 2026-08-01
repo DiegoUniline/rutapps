@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import PedidosTabs from '@/components/PedidosTabs';
 import { BulkCerrarPedidosDialog } from '@/components/venta/BulkCerrarPedidosDialog';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 // ─── Data hooks ────────────────────────────────────────────
 
@@ -765,7 +766,7 @@ export default function DemandaPage() {
   }, 0);
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <ListPage scroll>
       <PedidosTabs />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
@@ -1402,6 +1403,6 @@ export default function DemandaPage() {
         fmt={(n) => fmt(n)}
         onDone={() => setSelectedIds(new Set())}
       />
-    </div>
+    </ListPage>
   );
 }

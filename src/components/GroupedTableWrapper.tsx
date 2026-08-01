@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { GroupNode } from '@/hooks/useListPreferences';
+import { useInListPage, SCROLL_AREA } from '@/components/layout/ListPage';
 
 interface GroupedTableWrapperProps {
   groupBy: string;
@@ -12,11 +13,14 @@ interface GroupedTableWrapperProps {
   fill?: boolean;
 }
 
-export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummary, fill }: GroupedTableWrapperProps) {
+export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummary, fill: fillProp }: GroupedTableWrapperProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Dentro de <ListPage> el modo "fill" es el comportamiento por defecto.
+  const inListPage = useInListPage();
+  const fill = fillProp ?? inListPage;
 
   if (!groupBy) {
-    return <div className={fill ? "bg-card border border-border rounded overflow-hidden flex-1 min-h-0 flex flex-col" : "bg-card border border-border rounded overflow-hidden"}>{renderTable(groups[0]?.items ?? [])}</div>;
+    return <div className={cn("bg-card border border-border rounded overflow-hidden", fill && "flex-1 min-h-0 flex flex-col")}>{renderTable(groups[0]?.items ?? [])}</div>;
   }
 
   const toggleGroup = (label: string) => {
@@ -69,7 +73,7 @@ export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummar
   };
 
   return (
-    <div className={fill ? "space-y-3 flex-1 min-h-0 overflow-auto" : "space-y-3"}>
+    <div className={cn("space-y-3", fill && SCROLL_AREA)}>
       {groups.map(g => (
         <div key={g.label} className="bg-card border border-border rounded overflow-hidden">
           {renderNode(g, '', 0)}

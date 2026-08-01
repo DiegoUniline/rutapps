@@ -1,5 +1,6 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { useInListPage } from '@/components/layout/ListPage';
 
 interface OdooTab {
   key: string;
@@ -15,7 +16,9 @@ interface OdooTabsProps {
   fill?: boolean;
 }
 
-export function OdooTabs({ tabs, defaultTab, activeTab, fill }: OdooTabsProps) {
+export function OdooTabs({ tabs, defaultTab, activeTab, fill: fillProp }: OdooTabsProps) {
+  const inListPage = useInListPage();
+  const fill = fillProp ?? inListPage;
   const [active, setActive] = useState(activeTab ?? defaultTab ?? tabs[0]?.key);
 
   useEffect(() => {

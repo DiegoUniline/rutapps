@@ -14,6 +14,7 @@ import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { TablePagination } from '@/components/TablePagination';
 import { StickyListToolbar } from '@/components/StickyListToolbar';
+import { ListPage } from '@/components/layout/ListPage';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
@@ -307,7 +308,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
-    <div className={cn(!groupBy && "bg-card border border-border rounded flex-1 min-h-0 overflow-auto")}>
+    <div className={cn(!groupBy && "flex-1 min-h-0 overflow-auto")}>
       <table className="w-full text-sm">
         <thead className="sticky top-0 z-10 bg-card">
           <tr className="border-b border-table-border">
@@ -367,8 +368,8 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   );
 
   return (
-    <div className="flex flex-col gap-3 h-full min-h-0">
-      <div className="shrink-0 flex flex-col gap-3">
+    <ListPage flush className="gap-3">
+      <ListPage.Toolbar>
       {(sinVendedorCount ?? 0) > 0 && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -438,7 +439,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           </>
         }
       />
-      </div>
+      </ListPage.Toolbar>
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="clientes" />
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
@@ -490,7 +491,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
       {isLoading ? (
         <div className="bg-card border border-border rounded p-4 shrink-0"><TableSkeleton rows={8} cols={isMobile ? 3 : 7} /></div>
       ) : isMobile ? (
-        <div className="space-y-2 flex-1 min-h-0 overflow-auto">
+        <ListPage.Body card={false} className="space-y-2">
           {pageData.length === 0 && (
             <div className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</div>
           )}
@@ -512,11 +513,9 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
               ]}
             />
           ))}
-        </div>
+        </ListPage.Body>
       ) : (
-        <div className="flex-1 min-h-0 flex flex-col">
-          <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} fill />
-        </div>
+        <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
       )}
 
 
@@ -541,22 +540,21 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           ...(forcedStatus === 'inactivo' ? [{ label: 'Eliminar', icon: Trash2, variant: 'destructive' as const, onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete }] : []),
         ]}
       />
-    </div>
+    </ListPage>
   );
 }
 
 export default function ClientesListPage() {
   return (
-    <div className="p-4 pb-2 flex flex-col gap-3 h-full min-h-0">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 shrink-0">Clientes <HelpButton title={HELP.clientes.title} sections={HELP.clientes.sections} /> <VideoHelpButton module="clientes" /></h1>
+    <ListPage>
+      <ListPage.Header title={<>Clientes <HelpButton title={HELP.clientes.title} sections={HELP.clientes.sections} /> <VideoHelpButton module="clientes" /></>} />
       <OdooTabs
-        fill
         tabs={[
           { key: 'activos', label: 'Activos', content: <ClientesTable forcedStatus="activo" prefsKey="clientes-activos" /> },
           { key: 'bajas', label: 'Bajas', content: <ClientesTable forcedStatus="inactivo" prefsKey="clientes-bajas" /> },
           { key: 'zonas', label: 'Zonas', content: <CatalogCRUD title="Zonas" tableName="zonas" queryKey="zonas" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
         ]}
       />
-    </div>
+    </ListPage>
   );
 }

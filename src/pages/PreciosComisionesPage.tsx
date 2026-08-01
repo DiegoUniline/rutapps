@@ -12,6 +12,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { resolveProductPricing, type ProductForPricing, type TarifaLineaRule } from '@/lib/priceResolver';
 import { round2 } from '@/lib/salePricing';
 import { cn } from '@/lib/utils';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 interface ProductoPrecioRow extends ProductForPricing {
   codigo: string;
@@ -145,7 +146,7 @@ export default function PreciosComisionesPage() {
   }), [productos, search, clasificacionFilter]);
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
+    <ListPage>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Percent className="h-4 w-4 text-primary" /> Precios y Comisiones
@@ -218,7 +219,7 @@ export default function PreciosComisionesPage() {
         </div>
       ) : (
         /* ─── Desktop: matrix table ─── */
-        <div className="bg-card border border-border rounded overflow-x-auto">
+        <div className={TABLE_CARD}>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
@@ -291,6 +292,6 @@ export default function PreciosComisionesPage() {
           </table>
         </div>
       )}
-    </div>
+    </ListPage>
   );
 }
