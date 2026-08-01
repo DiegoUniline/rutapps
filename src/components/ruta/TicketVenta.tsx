@@ -294,6 +294,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
       </div>
 
       {/* Tax display mode selector */}
+      {showImpuestos && (
       <div className="px-4 pt-3 flex items-center justify-center gap-1">
         <span className="text-[11px] text-muted-foreground mr-1">Impuestos:</span>
         {([['ambos', 'Producto + Total'], ['totales', 'Solo total'], ['ninguno', 'No mostrar']] as const).map(([val, label]) => (
@@ -422,7 +423,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                             {(l.precio_sugerido_publico ?? 0) > 0 && <span className="text-primary font-medium">Sug. público {fmt(l.precio_sugerido_publico!)}</span>}
                           </div>
                         )}
-                        {promosLinea.map((p, pi) => (
+                        {showPromociones && promosLinea.map((p, pi) => (
                           <div key={pi} className="flex justify-between text-[8px] mt-px">
                             <span className="text-primary flex items-center gap-0.5">🏷️ {p.descripcion}</span>
                             <span className="text-primary font-bold tabular-nums">-{fmt(p.descuento)}</span>
@@ -437,7 +438,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             </div>
 
             {/* Devoluciones section */}
-            {devoluciones.length > 0 && (
+            {showDevoluciones && devoluciones.length > 0 && (
               <>
                 <div className="tk-dash mx-5 border-t border-dashed border-border" />
                 <div className="px-5 py-2">
@@ -586,7 +587,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
             {/* Footer */}
             <div className="tk-footer px-5 py-2.5 border-t border-dashed border-border text-center">
-              <p className="text-[8px] text-muted-foreground">Gracias por su compra</p>
+              {showGracias && <p className="text-[8px] text-muted-foreground">Gracias por su compra</p>}
               {((empresa as any).ticket_campos?.notas_ticket !== false) && empresa.notas_ticket && <p className="text-[8px] text-muted-foreground">{empresa.notas_ticket}</p>}
               <p className="text-[8px] text-muted-foreground">rutapp.mx</p>
             </div>
