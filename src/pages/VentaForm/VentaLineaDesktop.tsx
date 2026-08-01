@@ -368,7 +368,24 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
 
         const columnsOrder = [
           // PASO 1: Precios
+          { key: 'dCosto', content: (() => {
+            const c = num((prodDisplay as any)?.costo);
+            return c == null ? null : money(Number(c));
+          })() },
           { key: 'dPrecioLista', content: m(d.precio_lista_unitario) },
+          { key: 'dImpuestosMonto', content: (() => {
+            // Impuestos totales de la línea SIN descuento: se re-escalan los
+            // montos guardados (netos de descuento) al importe bruto.
+            const ivaM = Number(d.iva_monto) || 0;
+            const iepsM = Number(d.ieps_monto) || 0;
+            const tax = r2(ivaM + iepsM);
+            if (tax <= 0) return null;
+            const bruto = Number(d.importe_bruto) || 0;
+            const descT = Number(d.descuento_total_monto) || 0;
+            const neto = r2(bruto - descT);
+            const scaled = neto > 0 && bruto > 0 ? r2(tax * (bruto / neto)) : tax;
+            return money(scaled);
+          })() },
           { key: 'dImporteBruto', content: u(d.importe_bruto) },
           { key: 'dSubtotalBruto', content: m(d.importe_bruto) },
 
@@ -396,7 +413,22 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             ].filter(Boolean);
             return parts.length ? <span className="text-[11px]">{parts.join(' · ')}</span> : null;
           })() },
-          { key: 'dPromoNombre', content: d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null },
+          { key: 'dPromoNombre', content: (() => {
+            const nombre = d.promocion_nombre as string | null;
+            const gratis = Number(d.cantidad_bonificada) || 0;
+            const descPromo = Number(d.descuento_promocion_monto) || 0;
+            if (!nombre && gratis <= 0 && descPromo <= 0) return null;
+            const partes: string[] = [];
+            if (gratis > 0) partes.push(`🎁 ${gratis}x gratis`);
+            if (nombre) partes.push(nombre);
+            const label = partes.join(' — ');
+            return (
+              <span className="text-[11px] whitespace-nowrap">
+                {label}
+                {descPromo > 0 && <span className="text-primary"> · −{money(r2(descPromo))}</span>}
+              </span>
+            );
+          })() },
 
           // PASO 5: Bases e importes de impuestos
           { key: 'dBaseDescMan', content: u(d.base_descuento_manual) },

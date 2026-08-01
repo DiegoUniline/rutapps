@@ -44,7 +44,9 @@ export const VENTA_LINEAS_PRESETS: ColumnPreset[] = [
 // ORDEN SECUENCIAL: Compra → Descuentos → Impuestos → Total
 export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
   // PASO 1: PRECIOS
+  { key: 'dCosto',          label: 'Costo',           sub: 'unit. producto',      group: 'Desglose' },
   { key: 'dPrecioLista',    label: 'Precio S/Imp.',   sub: 'unit. sin impuestos', group: 'Desglose' },
+  { key: 'dImpuestosMonto', label: 'Impuestos $',     sub: 'total s/desc.',       group: 'Desglose' },
   { key: 'dImporteBruto',   label: 'Precio',          sub: 'unit. c/imp',         group: 'Desglose' },
   { key: 'dSubtotalBruto',  label: 'Subtotal',        sub: 'precio × cantidad',   group: 'Desglose' },
 
@@ -79,7 +81,9 @@ export const VENTA_LINEAS_DESGLOSE_KEYS = VENTA_LINEAS_DESGLOSE_COLUMNS.map(c =>
 // Visibilidad por defecto: Cantidad, Producto, Unidad, Precio S/Imp., Precio,
 // Subtotal, Descuento, Total, Impuestos (%) y Promo aplicada.
 export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> = {
+  dCosto: true,
   dPrecioLista: true,
+  dImpuestosMonto: true,
   dImporteBruto: true,
   dSubtotalBruto: true,
 
