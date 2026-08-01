@@ -206,6 +206,28 @@ export function useOfflineQuery<T = any>(
           await localTable.bulkPut(serverData);
         }
 
+        // BLINDAJE DE SALDOS: además de la ventana de 30 días, siempre se
+        // traen TODAS las ventas con saldo pendiente (sin importar su fecha),
+        // para que el estado de cuenta y la cobranza nunca queden cortos.
+        if (table === 'ventas' && (deltaCursor || windowColumn) && localTable) {
+          const pendKey = 'ventas:pendientes';
+          const lastPend = lastServerFetchAt.get(pendKey) ?? 0;
+          if (Date.now() - lastPend > 10 * 60_000) {
+            try {
+              const pendientes = await fetchAllPages((from, to) => {
+                let q = (supabase.from as any)('ventas')
+                  .select(selectCols)
+                  .gt('saldo_pendiente', 0)
+                  .neq('status', 'cancelado');
+                if (filters?.empresa_id) q = q.eq('empresa_id', filters.empresa_id);
+                return q.range(from, to);
+              });
+              if (pendientes.length > 0) await localTable.bulkPut(pendientes);
+              lastServerFetchAt.set(pendKey, Date.now());
+            } catch { /* se reintenta luego; la ventana ya trajo lo reciente */ }
+          }
+        }
+
         if (deltaCursor || windowColumn) {
           // Descarga parcial: la verdad completa vive en IndexedDB.
           const merged = await readLocal();
