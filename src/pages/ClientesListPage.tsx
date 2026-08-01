@@ -263,6 +263,12 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const [importOpen, setImportOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences(prefsKey);
   const { vendedores, zonas } = useDynamicFilterOptions();
+  const { visible: colVisible, toggleColumn, setAll, reset } = useColumnPreferences('clientes', CLIENTES_DEFAULT_COLUMNS);
+  const activeColumns = useMemo(
+    () => CLIENTES_TABLE_COLUMNS.filter(c => c.required || colVisible[c.key]),
+    [colVisible],
+  );
+
 
   // Count active clients without vendedor
   const { data: sinVendedorCount } = useQuery({
