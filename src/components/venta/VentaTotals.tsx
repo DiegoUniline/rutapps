@@ -69,18 +69,19 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
           <span className="text-muted-foreground">Subtotal gravable</span>
           <span>{money(gravable)}</span>
         </div>
-        {iva_total > 0 && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">IVA</span>
-            <span>{money(iva_total)}</span>
-          </div>
-        )}
         {ieps_total > 0 && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">IEPS</span>
             <span>{money(ieps_total)}</span>
           </div>
         )}
+        {iva_total > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">IVA</span>
+            <span>{money(iva_total)}</span>
+          </div>
+        )}
+
         <div className="flex justify-between border-t border-border pt-2 font-semibold text-[15px]">
           <span>Total</span>
           <span>{money(total)}</span>
