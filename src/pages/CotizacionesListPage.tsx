@@ -1,6 +1,7 @@
 import { useState, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCotizaciones, useDeleteCotizacion, type Cotizacion, type CotizacionEstado } from '@/hooks/useCotizaciones';
+import { useListPreferences } from '@/hooks/useListPreferences';
 import { formatCurrency } from '@/lib/currency';
 import { Plus, Trash2, FileText, Send, ShoppingCart, Search, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
