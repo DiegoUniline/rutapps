@@ -13,6 +13,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
+import { ListPage, SCROLL_AREA } from '@/components/layout/ListPage';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
 import { useVentasPaginated, useVentaLineasPaginated, useVentasResumen, useVentaLineasResumen, useDeleteVenta } from '@/hooks/useVentas';
@@ -400,7 +401,7 @@ export default function VentasListPage() {
   const productGroups = useMemo(() => groupData(productRows, groupBy, groupLabelFn, groupByLevels, groupSortKeyFn, groupSortDir), [productRows, groupBy, groupByLevels, groupSortDir]);
 
   const renderTable = (items: any[]) => (
-    <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+    <div className={cn(!groupBy && SCROLL_AREA)}>
       <VentasDesktopTable
         items={items} selected={selected} allSelected={allSelected} canDelete={canDelete}
         fmt={fmt} onToggleAll={toggleAll} onToggleOne={toggleOne} onDeleteTarget={setDeleteTarget}
@@ -413,9 +414,10 @@ export default function VentasListPage() {
   );
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Ventas <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} /> <VideoHelpButton module="ventas" /></h1>
+    <ListPage>
+      <ListPage.Header title={<>Ventas <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} /> <VideoHelpButton module="ventas" /></>} />
 
+      <ListPage.Toolbar>
       {!isMobile && (
         <div className="border-b border-border -mx-4 px-4 sm:mx-0 sm:px-0">
           <nav className="flex gap-6" role="tablist" aria-label="Vista de ventas">
@@ -529,20 +531,21 @@ export default function VentasListPage() {
           </div>
         </div>
       )}
+      </ListPage.Toolbar>
 
       {activeLoading ? (
-        <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 10} /></div>
+        <ListPage.Body className="p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 10} /></ListPage.Body>
       ) : isMobile ? (
-        <div className="space-y-2">
+        <ListPage.Body card={false} className="space-y-2">
           <VentasMobileList items={pageData} clientesList={clientesList} empresaId={empresa?.id ?? ''} canDelete={canDelete} fmtCurrency={fmtCurrency} onDeleteTarget={setDeleteTarget} onCancelTarget={handleCancelOne} />
-        </div>
+        </ListPage.Body>
       ) : isProductView ? (
         <>
           <GroupedTableWrapper
             groupBy={groupBy}
             groups={productGroups}
             renderTable={(items) => (
-              <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+              <div className={cn(!groupBy && SCROLL_AREA)}>
                 <VentasProductosTable items={items} fmt={fmt} />
               </div>
             )}
@@ -674,6 +677,6 @@ export default function VentasListPage() {
 
 
       <PinDialog />
-    </div>
+    </ListPage>
   );
 }
