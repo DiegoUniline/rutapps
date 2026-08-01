@@ -81,9 +81,50 @@ const GROUP_BY_OPTIONS = [
   { value: 'dia_visita', label: 'Día de visita' },
 ];
 
+const dash = (v: any) => (v === null || v === undefined || v === '' ? '—' : String(v));
+
+/** Todas las columnas disponibles en la tabla de clientes. */
+const CLIENTES_TABLE_COLUMNS: (ColumnDef & {
+  align?: 'left' | 'center' | 'right';
+  render: (c: any) => React.ReactNode;
+})[] = [
+  { key: 'codigo', label: 'Código', render: c => <span className="font-mono text-xs">{dash(c.codigo)}</span> },
+  { key: 'nombre', label: 'Nombre', required: true, render: c => <ClienteLink id={c.id}>{c.nombre}</ClienteLink> },
+  { key: 'contacto', label: 'Contacto', render: c => dash(c.contacto) },
+  {
+    key: 'dia_visita', label: 'Días de visita',
+    render: c => (c.dia_visita?.length > 0
+      ? c.dia_visita.map((d: string) => (DIAS_LABEL[d.toLowerCase()] ?? d).slice(0, 3)).join(', ')
+      : '—'),
+  },
+  { key: 'telefono', label: 'Teléfono', render: c => dash(c.telefono) },
+  { key: 'lada', label: 'Lada', render: c => dash(c.lada) },
+  { key: 'email', label: 'Email', render: c => dash(c.email) },
+  { key: 'direccion', label: 'Dirección', render: c => dash(c.direccion) },
+  { key: 'colonia', label: 'Colonia', render: c => dash(c.colonia) },
+  { key: 'zona', label: 'Zona', render: c => dash(c.zonas?.nombre) },
+  { key: 'vendedor', label: 'Vendedor', render: c => dash(c.vendedores?.nombre) },
+  { key: 'cobrador', label: 'Cobrador', render: c => dash(c.cobradores?.nombre) },
+  { key: 'tarifa', label: 'Lista de precios', render: c => dash(c.tarifas?.nombre) },
+  { key: 'credito', label: 'Crédito', align: 'center', render: c => (c.credito ? 'Sí' : 'No') },
+  { key: 'limite_credito', label: 'Límite crédito', align: 'right', render: c => fmtMoney(Number(c.limite_credito ?? 0)) },
+  { key: 'dias_credito', label: 'Días crédito', align: 'right', render: c => dash(c.dias_credito) },
+  { key: 'frecuencia', label: 'Frecuencia', render: c => dash(c.frecuencia) },
+  { key: 'orden', label: 'Orden', align: 'right', render: c => dash(c.orden) },
+  { key: 'gps', label: 'GPS', render: c => (c.gps_lat && c.gps_lng ? `${Number(c.gps_lat).toFixed(5)}, ${Number(c.gps_lng).toFixed(5)}` : '—') },
+  { key: 'status', label: 'Status', align: 'center', render: c => <StatusChip status={c.status ?? 'activo'} /> },
+];
+
+/** Por defecto: las columnas que ya se mostraban. */
+const CLIENTES_DEFAULT_COLUMNS: Record<string, boolean> = CLIENTES_TABLE_COLUMNS.reduce((acc, col) => {
+  acc[col.key] = ['codigo', 'nombre', 'contacto', 'dia_visita', 'telefono', 'zona', 'vendedor', 'tarifa', 'status'].includes(col.key);
+  return acc;
+}, {} as Record<string, boolean>);
+
 function getNumericPageSize(ps: PageSizeOption): number {
   return ps === 'all' ? 10000 : ps;
 }
+
 
 function useDynamicFilterOptions() {
   const { empresa } = useAuth();
