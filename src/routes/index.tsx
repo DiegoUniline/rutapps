@@ -67,6 +67,10 @@ const Index = () => {
     <div className="p-8 bg-slate-50 min-h-screen font-mono text-sm overflow-auto">
       <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-sm border border-slate-200">
         <h1 className="text-xl font-bold mb-4 text-slate-800">JSON Detalle Pedido PED-0001</h1>
+        <p className="mb-4 text-xs text-slate-600">
+          Orden secuencial (Compra → Descuentos → Impuestos → Total):<br/>
+          Producto, Cantidad, Unidad, Precio unitario (dPrecioLista), Importe bruto (dImporteBruto), Promoción (dPromoNombre), Desc. promo $ (dDescPromoMonto), Cant. regalo (dCantBonificada), Desc. manual $ (dDescManMonto), Desc. total $ (dDescTotal), Subtotal (dBaseDescMan), Base IEPS (dBaseIeps), IEPS $, Base IVA (dBaseIva), IVA $, Total línea
+        </p>
         <pre className="p-4 bg-slate-900 text-green-400 rounded overflow-x-auto">
           {JSON.stringify(data, null, 2)}
         </pre>

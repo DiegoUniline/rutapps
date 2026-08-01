@@ -367,22 +367,23 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </td>
         ) : null;
         const m = (v: any) => (num(v) == null ? null : money(Number(v)));
-        // Ajuste para columnas que deben ser unitarias en la tabla de líneas
-        // aunque en BD se guarden totales (para consistencia visual con el resto de la fila)
         const u = (v: any) => (num(v) == null ? null : money(r2(Number(v) / qty)));
 
+        // ORDEN SECUENCIAL SOLICITADO: Producto, Cantidad, Unidad (ya están arriba)
+        // Luego: Precio unitario, Importe bruto, Promoción, Desc promo, Cant regalo, Desc manual, Desc total, Subtotal, Base IEPS, IEPS, Base IVA, IVA, Total línea
         const columnsOrder = [
-          { key: 'dPromoNombre', content: d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null },
-          { key: 'dCantBonificada', content: num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null },
           { key: 'dPrecioLista', content: m(d.precio_lista_unitario) },
           { key: 'dImporteBruto', content: u(d.importe_bruto) },
+          { key: 'dPromoNombre', content: d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null },
           { key: 'dDescPromoMonto', content: num(d.descuento_promocion_monto) ? <span className="text-primary">−{u(d.descuento_promocion_monto)}</span> : u(d.descuento_promocion_monto) },
-          { key: 'dBaseDescMan', content: u(d.base_descuento_manual) },
+          { key: 'dCantBonificada', content: num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null },
           { key: 'dDescManMonto', content: u(d.descuento_manual_monto) },
           { key: 'dDescTotal', content: u(d.descuento_total_monto) },
+          { key: 'dBaseDescMan', content: u(d.base_descuento_manual) },
           { key: 'dBaseIeps', content: u(d.base_ieps) },
+          { key: 'dIepsMontoUnit', content: u(d.ieps_monto) },
           { key: 'dBaseIva', content: u(d.base_iva) },
-          { key: 'dImpuestosTot', content: u(d.impuestos_totales) },
+          { key: 'dIvaMontoUnit', content: u(d.iva_monto) },
           { key: 'dMotivoDescMan', content: d.motivo_descuento_manual ? <span className="text-[11px]">{d.motivo_descuento_manual}</span> : null },
           { key: 'dEsBonificacion', content: d.es_bonificacion == null ? null : <span className="text-[11px]">{d.es_bonificacion ? 'Sí' : 'No'}</span> },
           { key: 'dObjetoImpuesto', content: d.objeto_impuesto ? <span className="text-[11px]">{d.objeto_impuesto}</span> : null },
