@@ -1,0 +1,1 @@
+UPDATE public.profiles SET ui_prefs = '{"cols_ventas": {"iva": true, "subtotal": true, "descuento": true, "pagado": true, "saldo": true}}'::jsonb WHERE user_id = '36e34ef5-6f48-4dc6-87f9-bbed93f4619e';
