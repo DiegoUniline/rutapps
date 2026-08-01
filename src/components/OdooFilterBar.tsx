@@ -239,11 +239,14 @@ export function OdooFilterBar({
           <>
             {/* Dates first */}
             <ResponsiveFilterCard label="Fecha" isMobile={isMobile}>
-              {onDateFromChange && onDateToChange && (
+              {(onDateRangeChange || (onDateFromChange && onDateToChange)) && (
                 <DateRangePicker
                   from={dateFrom ?? ''}
                   to={dateTo ?? ''}
-                  onChange={(f, t) => { onDateFromChange(f); onDateToChange(t); }}
+                  onChange={(f, t) => {
+                    if (onDateRangeChange) onDateRangeChange(f, t);
+                    else { onDateFromChange?.(f); onDateToChange?.(t); }
+                  }}
                 />
               )}
             </ResponsiveFilterCard>
