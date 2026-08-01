@@ -374,17 +374,20 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           })() },
           { key: 'dPrecioLista', content: m(d.precio_lista_unitario) },
           { key: 'dImpuestosMonto', content: (() => {
-            // Impuestos totales de la línea SIN descuento: se re-escalan los
-            // montos guardados (netos de descuento) al importe bruto.
-            const ivaM = Number(d.iva_monto) || 0;
-            const iepsM = Number(d.ieps_monto) || 0;
-            const tax = r2(ivaM + iepsM);
+            // Impuesto UNITARIO sin descuento = precio unit. c/imp − precio unit. s/imp.
+            // (coherente con las columnas vecinas "Precio S/Imp." y "Precio")
+            const lista = num(d.precio_lista_unitario);
+            const brutoUnit = num(d.importe_bruto) != null ? Number(d.importe_bruto) / qty : null;
+            if (lista != null && brutoUnit != null) {
+              const t = r2(brutoUnit - Number(lista));
+              return t > 0.004 ? money(t) : null;
+            }
+            // Fallback: desde los montos guardados (netos de descuento)
+            const tax = (Number(d.iva_monto) || 0) + (Number(d.ieps_monto) || 0);
             if (tax <= 0) return null;
             const bruto = Number(d.importe_bruto) || 0;
-            const descT = Number(d.descuento_total_monto) || 0;
-            const neto = r2(bruto - descT);
+            const neto = bruto - (Number(d.descuento_total_monto) || 0);
             const scaled = neto > 0 && bruto > 0 ? tax * (bruto / neto) : tax;
-            // Impuesto UNITARIO (sin descuento)
             return money(r2(scaled / qty));
           })() },
           { key: 'dImporteBruto', content: u(d.importe_bruto) },
