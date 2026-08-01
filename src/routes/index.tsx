@@ -1,1 +1,1 @@
-export default function Index() { return <body>que hiciste? He actualizado el texto en src/routes/index.tsx según lo solicitado. que hiciste aqui?</body>; }
+export default function Index() { return <body>explicame esta pormocion porfavro para entenderla</body>; }
