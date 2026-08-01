@@ -5717,6 +5717,7 @@ export type Database = {
           pin_code: string | null
           super_admin_override_empresa_id: string | null
           telefono: string | null
+          ui_prefs: Json
           user_id: string
         }
         Insert: {
@@ -5735,6 +5736,7 @@ export type Database = {
           pin_code?: string | null
           super_admin_override_empresa_id?: string | null
           telefono?: string | null
+          ui_prefs?: Json
           user_id: string
         }
         Update: {
@@ -5753,6 +5755,7 @@ export type Database = {
           pin_code?: string | null
           super_admin_override_empresa_id?: string | null
           telefono?: string | null
+          ui_prefs?: Json
           user_id?: string
         }
         Relationships: [
@@ -9329,6 +9332,10 @@ export type Database = {
           cliente_id: string
           saldo: number
         }[]
+      }
+      set_ui_pref: {
+        Args: { p_key: string; p_value: Json }
+        Returns: undefined
       }
       stock_a_la_fecha: {
         Args: { p_empresa_id: string; p_fecha: string }
