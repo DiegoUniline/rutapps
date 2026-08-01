@@ -24,7 +24,7 @@ export const VENTA_LINEAS_DEFAULT_VISIBILITY: Record<string, boolean> = {
   cantidad: true,
   unidad: true,
   precioNeto: true,
-  precioBruto: false,
+  precioBruto: true, // Activado por defecto
   iva: true,
   ieps: true,
   descMan: true,
@@ -63,7 +63,7 @@ export const VENTA_LINEAS_DESGLOSE_KEYS = VENTA_LINEAS_DESGLOSE_COLUMNS.map(c =>
 
 /** Todas las columnas OFF por defecto (no cambian la vista actual de nadie). */
 export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> =
-  Object.fromEntries(VENTA_LINEAS_DESGLOSE_KEYS.map(k => [k, false]));
+  Object.fromEntries(VENTA_LINEAS_DESGLOSE_KEYS.map(k => [k, true])); // Ahora visibles por defecto
 
 /** Fuerza apagadas las columnas de desglose (licencias sin la bandera). */
 export const VENTA_LINEAS_DESGLOSE_OFF: Record<string, boolean> = VENTA_LINEAS_DESGLOSE_DEFAULTS;
