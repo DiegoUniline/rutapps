@@ -523,16 +523,16 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                       <span className="tabular-nums">{fmt(gravableShown)}</span>
                     </div>
 
-                    {ivaMontoV > 0.005 && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">IVA</span>
-                        <span className="tabular-nums">{fmt(ivaMontoV)}</span>
-                      </div>
-                    )}
                     {iepsMontoV > 0.005 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">IEPS</span>
                         <span className="tabular-nums">{fmt(iepsMontoV)}</span>
+                      </div>
+                    )}
+                    {ivaMontoV > 0.005 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">IVA</span>
+                        <span className="tabular-nums">{fmt(ivaMontoV)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t border-border pt-1.5 font-bold text-[13px]">
