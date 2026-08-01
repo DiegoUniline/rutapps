@@ -43,7 +43,7 @@ export default function LotesPage() {
   const [edit, setEdit] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [vista, setVista] = useState<'lote' | 'almacen'>('lote');
+  const [vista, setVista] = useState<'matriz' | 'lote' | 'almacen'>('matriz');
   const [search, setSearch] = useState('');
   const [almacenFilters, setAlmacenFilters] = useState<Set<string>>(new Set()); // vacío = todos
   const toggleAlmacen = (id: string) => setAlmacenFilters(prev => {
