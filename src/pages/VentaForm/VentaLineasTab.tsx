@@ -50,7 +50,7 @@ export function VentaLineasTab(props: Props) {
   const { empresa } = useAuth();
   const showDesglose = desgloseLineaHabilitado(empresa?.licencia);
   const defaults = { ...VENTA_LINEAS_DEFAULT_VISIBILITY, ...VENTA_LINEAS_DESGLOSE_DEFAULTS };
-  const { visible: cols, toggleColumn, applyPreset, reset } = useColumnPreferences('venta_detalle_lineas', defaults);
+  const { visible: cols, toggleColumn, applyPreset, reset } = useColumnPreferences('venta_detalle_lineas_v2', defaults);
   const NORMAL_COLS_OFF = { precioNeto: false, precioBruto: false, iva: false, ieps: false, descMan: false, descPromo: false, subtotal: false, lote: false };
   const effectiveCols = readOnly
     ? (showDesglose ? { ...cols, ...NORMAL_COLS_OFF } : { ...cols, ...VENTA_LINEAS_DESGLOSE_OFF })
