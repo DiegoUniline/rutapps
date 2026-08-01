@@ -120,7 +120,7 @@ export const VENTA_LINEAS_DESGLOSE_OFF: Record<string, boolean> =
 // El resto quedan ocultas (no se muestran ni se pueden encender).
 export const VENTA_LINEAS_FINAL_KEYS = [
   'cantidad', 'producto', 'unidad',
-  'dCosto', 'dPrecioLista', 'dImpuestosMonto', 'dImporteBruto', 'dSubtotalBruto',
+  'dCosto', 'dPrecioLista', 'dSubtotalNeto', 'dImpuestosMonto', 'dImporteBruto', 'dSubtotalBruto',
   'dDescTotal', 'dTotal', 'dImpuestosPct', 'dPromoNombre',
 ];
 
