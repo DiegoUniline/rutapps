@@ -35,6 +35,8 @@ interface OdooFilterBarProps {
   dateTo?: string;
   onDateFromChange?: (val: string) => void;
   onDateToChange?: (val: string) => void;
+  /** Preferred: sets both dates atomically (avoids stale-state races) */
+  onDateRangeChange?: (from: string, to: string) => void;
 }
 
 function IndependentFilterDropdown({
