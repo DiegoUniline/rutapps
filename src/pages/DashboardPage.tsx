@@ -1045,6 +1045,7 @@ export default function DashboardPage() {
             <KpiCard title="Cartera" value={money(kpis.totalCartera)} subtitle={`${kpis.clientesMorosos} clientes`} icon={CreditCard} color="bg-[hsl(var(--warning))]" />
             <KpiCard title="Compras" value={money(kpis.totalCompras)} subtitle={`Pendiente: ${money(kpis.saldoProveedores)}`} icon={Package} color="bg-[hsl(var(--chart-3))]" trend={calcTrend(kpis.totalCompras, prevKpis.compras)} />
             <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={`Utilidad: ${money(kpis.utilidadBruta)}`} icon={DollarSign} color={kpis.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} trend={calcTrend(kpis.totalGastos, prevKpis.gastos)} />
+            <KpiCard title="Utilidad" value={money(estadoResultados.utilidadBruta)} subtitle={`Costo: ${money(estadoResultados.costo)} · Margen ${estadoResultados.margenPct.toFixed(1)}%`} icon={TrendingUp} color={estadoResultados.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} />
             <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito · ${devolucionesPct.toFixed(1)}% s/venta`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
             <KpiExtras
               efectividadPct={kpisExtra.efectividadPct}
