@@ -34,6 +34,10 @@ import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePaginat
 import { ClienteLink } from '@/components/links/EntityLinks';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibilityMenu';
+import { useColumnPreferences } from '@/hooks/useColumnPreferences';
+import { fmtMoney } from '@/lib/currency';
+
 
 const CLIENTES_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 10 },
@@ -81,9 +85,50 @@ const GROUP_BY_OPTIONS = [
   { value: 'dia_visita', label: 'Día de visita' },
 ];
 
+const dash = (v: any) => (v === null || v === undefined || v === '' ? '—' : String(v));
+
+/** Todas las columnas disponibles en la tabla de clientes. */
+const CLIENTES_TABLE_COLUMNS: (ColumnDef & {
+  align?: 'left' | 'center' | 'right';
+  render: (c: any) => React.ReactNode;
+})[] = [
+  { key: 'codigo', label: 'Código', render: c => <span className="font-mono text-xs">{dash(c.codigo)}</span> },
+  { key: 'nombre', label: 'Nombre', required: true, render: c => <ClienteLink id={c.id}>{c.nombre}</ClienteLink> },
+  { key: 'contacto', label: 'Contacto', render: c => dash(c.contacto) },
+  {
+    key: 'dia_visita', label: 'Días de visita',
+    render: c => (c.dia_visita?.length > 0
+      ? c.dia_visita.map((d: string) => (DIAS_LABEL[d.toLowerCase()] ?? d).slice(0, 3)).join(', ')
+      : '—'),
+  },
+  { key: 'telefono', label: 'Teléfono', render: c => dash(c.telefono) },
+  { key: 'lada', label: 'Lada', render: c => dash(c.lada) },
+  { key: 'email', label: 'Email', render: c => dash(c.email) },
+  { key: 'direccion', label: 'Dirección', render: c => dash(c.direccion) },
+  { key: 'colonia', label: 'Colonia', render: c => dash(c.colonia) },
+  { key: 'zona', label: 'Zona', render: c => dash(c.zonas?.nombre) },
+  { key: 'vendedor', label: 'Vendedor', render: c => dash(c.vendedores?.nombre) },
+  { key: 'cobrador', label: 'Cobrador', render: c => dash(c.cobradores?.nombre) },
+  { key: 'tarifa', label: 'Lista de precios', render: c => dash(c.tarifas?.nombre) },
+  { key: 'credito', label: 'Crédito', align: 'center', render: c => (c.credito ? 'Sí' : 'No') },
+  { key: 'limite_credito', label: 'Límite crédito', align: 'right', render: c => fmtMoney(Number(c.limite_credito ?? 0)) },
+  { key: 'dias_credito', label: 'Días crédito', align: 'right', render: c => dash(c.dias_credito) },
+  { key: 'frecuencia', label: 'Frecuencia', render: c => dash(c.frecuencia) },
+  { key: 'orden', label: 'Orden', align: 'right', render: c => dash(c.orden) },
+  { key: 'gps', label: 'GPS', render: c => (c.gps_lat && c.gps_lng ? `${Number(c.gps_lat).toFixed(5)}, ${Number(c.gps_lng).toFixed(5)}` : '—') },
+  { key: 'status', label: 'Status', align: 'center', render: c => <StatusChip status={c.status ?? 'activo'} /> },
+];
+
+/** Por defecto: las columnas que ya se mostraban. */
+const CLIENTES_DEFAULT_COLUMNS: Record<string, boolean> = CLIENTES_TABLE_COLUMNS.reduce((acc, col) => {
+  acc[col.key] = ['codigo', 'nombre', 'contacto', 'dia_visita', 'telefono', 'zona', 'vendedor', 'tarifa', 'status'].includes(col.key);
+  return acc;
+}, {} as Record<string, boolean>);
+
 function getNumericPageSize(ps: PageSizeOption): number {
   return ps === 'all' ? 10000 : ps;
 }
+
 
 function useDynamicFilterOptions() {
   const { empresa } = useAuth();
@@ -218,6 +263,12 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const [importOpen, setImportOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences(prefsKey);
   const { vendedores, zonas } = useDynamicFilterOptions();
+  const { visible: colVisible, toggleColumn, setAll, reset } = useColumnPreferences('clientes', CLIENTES_DEFAULT_COLUMNS);
+  const activeColumns = useMemo(
+    () => CLIENTES_TABLE_COLUMNS.filter(c => c.required || colVisible[c.key]),
+    [colVisible],
+  );
+
 
   // Count active clients without vendedor
   const { data: sinVendedorCount } = useQuery({
@@ -315,21 +366,17 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
             <th className="th-odoo w-10 text-center">
               <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
             </th>
-            <th className="th-odoo text-left">Código</th>
-            <th className="th-odoo text-left">Nombre</th>
-            <th className="th-odoo text-left hidden md:table-cell">Contacto</th>
-            <th className="th-odoo text-left">Días de visita</th>
-            <th className="th-odoo text-left hidden lg:table-cell">Teléfono</th>
-            <th className="th-odoo text-left hidden lg:table-cell">Zona</th>
-            <th className="th-odoo text-left hidden xl:table-cell">Vendedor</th>
-            <th className="th-odoo text-left hidden xl:table-cell">Lista de precios</th>
-            <th className="th-odoo text-center">Status</th>
+            {activeColumns.map(col => (
+              <th key={col.key} className={cn('th-odoo whitespace-nowrap', col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left')}>
+                {col.label}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
             <tr>
-              <td colSpan={10} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
+              <td colSpan={activeColumns.length + 1} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
             </tr>
           )}
           {items.map((c: any) => (
@@ -344,28 +391,25 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
               <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(c.id); }}>
                 <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="rounded border-input" />
               </td>
-              <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
-              <td className="py-1.5 px-3 font-medium"><ClienteLink id={c.id}>{c.nombre}</ClienteLink></td>
-              <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
-              <td className="py-1.5 px-3 text-muted-foreground">
-                {c.dia_visita?.length > 0
-                  ? c.dia_visita.map((d: string) => (DIAS_LABEL[d.toLowerCase()] ?? d).slice(0, 3)).join(', ')
-                  : '—'}
-              </td>
-
-              <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.zonas?.nombre ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{c.vendedores?.nombre ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{c.tarifas?.nombre ?? '—'}</td>
-              <td className="py-1.5 px-3 text-center">
-                <StatusChip status={c.status ?? 'activo'} />
-              </td>
+              {activeColumns.map(col => (
+                <td
+                  key={col.key}
+                  className={cn(
+                    'py-1.5 px-3',
+                    col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : '',
+                    col.key === 'nombre' ? 'font-medium' : 'text-muted-foreground',
+                  )}
+                >
+                  {col.render(c)}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
+
 
   return (
     <ListPage flush className="gap-3">
@@ -412,7 +456,15 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
             )}
             {!isMobile && (
               <>
+                <ColumnVisibilityMenu
+                  columns={CLIENTES_TABLE_COLUMNS}
+                  visible={colVisible}
+                  onToggle={toggleColumn}
+                  onShowAll={() => setAll(true)}
+                  onReset={reset}
+                />
                 <ExportButton
+
                   onExcel={() => exportToExcel({
                     fileName: 'Clientes', title: 'Catálogo de Clientes',
                     columns: CLIENTES_COLUMNS,
