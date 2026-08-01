@@ -72,7 +72,7 @@ const CHILD_IN_CHUNK_SIZE = 80;
 
 
 // Minimal column selects per table to reduce payload size
-const COLUMN_SELECTS: Record<string, string> = {
+export const COLUMN_SELECTS: Record<string, string> = {
   clientes: 'id,empresa_id,vendedor_id,cobrador_id,nombre,codigo,telefono,email,direccion,colonia,cp,gps_lat,gps_lng,status,credito,limite_credito,dias_credito,dia_visita,frecuencia,tarifa_id,lista_id,lista_precio_id,zona_id,orden,rfc,regimen_fiscal,uso_cfdi,contacto,notas,notas_fiscales,requiere_factura,foto_url,foto_fachada_url,created_at,updated_at,fecha_alta,facturama_id,facturama_rfc,facturama_razon_social,facturama_regimen_fiscal,facturama_uso_cfdi,facturama_cp,facturama_correo_facturacion',
   productos: 'id,empresa_id,codigo,clave_alterna,nombre,formula,nombre_compra,nombre_venta,nombre_ticket,precio_principal,costo,cantidad,min,max,status,unidad_venta_id,unidad_compra_id,marca_id,clasificacion_id,lista_id,codigo_sat,udem_sat_id,imagen_url,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,se_puede_vender,se_puede_comprar,se_puede_inventariar,vender_sin_stock,permitir_descuento,tiene_comision,tipo_comision,pct_comision,monto_maximo,es_combo,factor_conversion,costo_incluye_impuestos,usa_listas_precio,es_granel,unidad_granel,almacenes,proveedor_preferido_id,created_at,updated_at',
   venta_lineas: 'id,venta_id,producto_id,descripcion,cantidad,unidad_id,precio_unitario,descuento_pct,subtotal,iva_pct,ieps_pct,iva_monto,ieps_monto,total,notas,facturado,almacen_id,presentacion_id,presentacion_nombre,presentacion_factor,paquetes,lista_precio_id,precio_manual,created_at',
@@ -193,7 +193,7 @@ const NO_DELTA_TABLES = new Set([
 // Deben tener empresa_id y ser de primer nivel (no hijas), para poder validar
 // borrados con un conteo barato. productos/clientes/stock_almacen/stock_apartado
 // cumplen y reciben la columna updated_at + trigger en la migración.
-const UPDATED_AT_DELTA_TABLES = new Set([
+export const UPDATED_AT_DELTA_TABLES = new Set([
   'productos',
   'clientes',
   'stock_almacen',
@@ -206,11 +206,11 @@ const UPDATED_AT_DELTA_TABLES = new Set([
 // trigger) y su updated_at sube, así el móvil deja de mostrar "adeudo fantasma".
 // Igual con cancelaciones de cobros. Requieren updated_at + trigger (migración
 // 20260727120000). No usan chequeo de conteo (están acotadas por ventana).
-const UPDATED_AT_WINDOW_TABLES = new Set([
+export const UPDATED_AT_WINDOW_TABLES = new Set([
   'ventas',
   'cobros',
 ]);
-const WINDOW_DAYS = 30;
+export const WINDOW_DAYS = 30;
 
 // Las tablas "full" (NO_DELTA sin updated_at) no se re-descargan en cada sync de
 // 30s: se refrescan como mucho cada esta ventana (un "Descargar todo" las fuerza).

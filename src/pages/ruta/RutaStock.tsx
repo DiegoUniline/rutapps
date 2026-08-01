@@ -6,6 +6,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
 import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
+import { thumbUrl } from '@/lib/imageThumb';
 
 export default function RutaStock() {
   const { empresa, profile } = useAuth();
@@ -134,7 +135,7 @@ export default function RutaStock() {
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 rounded bg-accent flex items-center justify-center shrink-0 overflow-hidden">
                           {p.imagen_url ? (
-                            <img src={p.imagen_url} alt="" className="w-full h-full object-cover" />
+                            <img src={thumbUrl(p.imagen_url, 96)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                           ) : (
                             <Package className="h-3.5 w-3.5 text-accent-foreground" />
                           )}

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { setGlobalTimezone } from '@/lib/utils';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { setObservabilityUser } from '@/lib/observability';
+import { setDataUsageIdentity } from '@/lib/dataUsage';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Empresa } from '@/types';
 
@@ -246,6 +247,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, [loadUserData]);
+
+  // Identidad para el medidor de consumo de datos (solo mide, no cambia nada).
+  useEffect(() => {
+    setDataUsageIdentity(empresa?.id, user?.id);
+  }, [empresa?.id, user?.id]);
 
   const signOut = async () => { await supabase.auth.signOut(); };
 

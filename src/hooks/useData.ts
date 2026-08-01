@@ -55,10 +55,16 @@ export function useProductosRealtime() {
       })
       .subscribe();
 
+    // Una venta de N renglones dispara N eventos: se agrupan en UNA sola
+    // invalidación para no re-descargar listas pesadas N veces (ahorro de datos).
+    let ventasTimer: ReturnType<typeof setTimeout> | undefined;
     const invalidateVentas = () => {
-      qc.invalidateQueries({ queryKey: ['ventas'] });
-      qc.invalidateQueries({ queryKey: ['ventas-list'] });
-      qc.invalidateQueries({ queryKey: ['venta-lineas'] });
+      if (ventasTimer) clearTimeout(ventasTimer);
+      ventasTimer = setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ['ventas'] });
+        qc.invalidateQueries({ queryKey: ['ventas-list'] });
+        qc.invalidateQueries({ queryKey: ['venta-lineas'] });
+      }, 2500);
     };
 
     const ventasCh = supabase
@@ -91,6 +97,7 @@ export function useProductosRealtime() {
       supabase.removeChannel(ventasCh);
       supabase.removeChannel(ventaLineasCh);
       supabase.removeChannel(almacenesCh);
+      if (ventasTimer) clearTimeout(ventasTimer);
     };
   }, [qc, empresaId]);
 }

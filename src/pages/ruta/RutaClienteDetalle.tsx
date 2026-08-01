@@ -17,6 +17,7 @@ import { confirmDialog } from '@/lib/confirm';
 import { compressPhoto } from '@/lib/imageCompressor';
 import { supabase } from '@/lib/supabase';
 import type { Cliente, FrecuenciaVisita } from '@/types';
+import { thumbUrl } from '@/lib/imageThumb';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const FRECUENCIAS: { value: FrecuenciaVisita; label: string }[] = [
@@ -193,7 +194,7 @@ export default function RutaClienteDetalle() {
                   )}
                 >
                   {url ? (
-                    <img src={url} alt={label} className="w-full h-full object-cover" />
+                    <img src={thumbUrl(url, 320, 60)} alt={label} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                   ) : (
                     <div className="flex flex-col items-center gap-1 text-muted-foreground text-[11px]">
                       <Camera className="h-6 w-6" />

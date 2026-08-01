@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { useCurrency } from '@/hooks/useCurrency';
 import { cn } from '@/lib/utils';
+import { thumbUrl } from '@/lib/imageThumb';
 
 interface ListaOption {
   lista_precio_id: string | null;
@@ -175,8 +176,10 @@ export function ProductoDetalleModal({
             <div className="aspect-[16/9] w-full rounded-xl overflow-hidden bg-accent/40 flex items-center justify-center">
               {fotoUrl && !imgError ? (
                 <img
-                  src={fotoUrl}
+                  src={thumbUrl(fotoUrl, 640, 65)}
                   alt={producto.nombre}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-contain"
                   onError={() => setImgError(true)}
                 />

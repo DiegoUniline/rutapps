@@ -20,6 +20,7 @@ import {
 } from '@/lib/offlineBackup';
 import { getSyncDiagnostics, formatBytes, requestPersistentStorage, type SyncDiagnostics } from '@/lib/syncDiagnostics';
 import { refreshAppVersion } from '@/lib/appUpdate';
+import { DataUsageCard } from '@/components/DataUsageCard';
 
 export default function RutaSincronizarPage() {
   const navigate = useNavigate();
@@ -606,6 +607,10 @@ export default function RutaSincronizarPage() {
             </div>
           )}
         </div>
+
+        {/* ── Consumo real de datos (megas por fecha) ── */}
+        <DataUsageCard origen="ruta" />
+
 
         {/* ── STEP 4: BACKUP / RESTORE ── */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden">

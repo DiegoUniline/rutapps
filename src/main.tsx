@@ -5,9 +5,13 @@ import App from "./App.tsx";
 import "./index.css";
 import { startAutoBackup, restoreFromStorageBackup } from "./lib/offlineBackup";
 import { initObservability } from "./lib/observability";
+import { installDataUsageMeter } from "./lib/dataUsage";
 
 // Monitoreo de errores en producción (no-op si no hay VITE_SENTRY_DSN).
 initObservability();
+
+// Medidor real de megas consumidos (por fecha, Ruta y Escritorio).
+installDataUsageMeter();
 
 // Start auto-backup of pending sync items & restore if needed
 restoreFromStorageBackup().then(count => {
