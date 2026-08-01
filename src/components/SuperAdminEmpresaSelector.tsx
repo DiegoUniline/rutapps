@@ -132,8 +132,8 @@ export default function SuperAdminEmpresaSelector() {
   // Override active: keep a LOUD red bar (safety).
   // Default state: a tiny, discreet pill so it doesn't show up in screen recordings.
   const wrapperClass = isOverridden
-    ? 'flex items-center gap-2 px-3 py-2 bg-destructive text-destructive-foreground border-b-2 border-destructive shadow-md'
-    : 'flex items-center gap-1 px-2 py-0.5 opacity-40 hover:opacity-100 transition-opacity';
+    ? 'flex w-full min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-1 px-2 py-1.5 sm:px-3 sm:py-2 bg-destructive text-destructive-foreground border-b-2 border-destructive shadow-md'
+    : 'flex min-w-0 max-w-full items-center gap-1 px-2 py-0.5 opacity-40 hover:opacity-100 transition-opacity';
 
   return (
     <div className={wrapperClass}>
@@ -143,8 +143,9 @@ export default function SuperAdminEmpresaSelector() {
         <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
       )}
       {isOverridden && (
-        <span className="text-[11px] font-bold whitespace-nowrap">
-          ⚠ VIENDO OTRA EMPRESA:
+        <span className="text-[10px] sm:text-[11px] font-bold whitespace-nowrap">
+          <span className="hidden sm:inline">⚠ VIENDO OTRA EMPRESA:</span>
+          <span className="sm:hidden">⚠ OTRA EMPRESA:</span>
         </span>
       )}
 
@@ -154,8 +155,8 @@ export default function SuperAdminEmpresaSelector() {
             type="button"
             className={
               isOverridden
-                ? 'h-7 rounded-md border px-2 text-xs font-semibold flex items-center gap-1.5 min-w-[180px] max-w-xs justify-between border-destructive-foreground/40 bg-destructive-foreground/10 text-destructive-foreground hover:bg-destructive-foreground/20'
-                : 'h-5 rounded px-1.5 text-[10px] text-muted-foreground/70 hover:text-foreground flex items-center gap-1 max-w-[140px]'
+                ? 'h-7 rounded-md border px-2 text-xs font-semibold flex items-center gap-1.5 flex-1 min-w-0 sm:min-w-[180px] max-w-full sm:max-w-xs justify-between border-destructive-foreground/40 bg-destructive-foreground/10 text-destructive-foreground hover:bg-destructive-foreground/20'
+                : 'h-5 rounded px-1.5 text-[10px] text-muted-foreground/70 hover:text-foreground flex items-center gap-1 min-w-0 max-w-[140px]'
             }
           >
             <span className="truncate">{currentEmpresa?.nombre || '—'}</span>
@@ -163,7 +164,7 @@ export default function SuperAdminEmpresaSelector() {
           </button>
         </PopoverTrigger>
 
-        <PopoverContent className="w-[380px] p-0" align="start">
+        <PopoverContent className="w-[min(380px,calc(100vw-1.5rem))] max-w-[380px] p-0" align="start" collisionPadding={8}>
           {/* Search */}
           <div className="p-2 border-b">
             <div className="relative">
