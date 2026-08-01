@@ -31,9 +31,9 @@ export default function SuperAdminMobileBar() {
   if (!isSuperAdmin) return null;
 
   return (
-    <div className="bg-amber-500/10 border-b border-amber-500/30 px-2 py-1.5 flex items-center gap-2">
+    <div className="bg-amber-500/10 border-b border-amber-500/30 px-2 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 w-full min-w-0 overflow-hidden">
       <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase shrink-0">SA</span>
-      <div className="shrink-0">
+      <div className="min-w-0 flex-1 basis-full sm:basis-auto">
         <SuperAdminEmpresaSelector />
       </div>
       <select
