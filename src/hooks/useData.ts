@@ -97,6 +97,7 @@ export function useProductosRealtime() {
       supabase.removeChannel(ventasCh);
       supabase.removeChannel(ventaLineasCh);
       supabase.removeChannel(almacenesCh);
+      if (ventasTimer) clearTimeout(ventasTimer);
     };
   }, [qc, empresaId]);
 }
