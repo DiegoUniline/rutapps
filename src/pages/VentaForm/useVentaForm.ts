@@ -827,6 +827,9 @@ export function useVentaForm() {
         delete clean.impuestos_label;
         delete clean.productos;
         delete clean.unidades;
+        // `lote_codigo` es solo para mostrar en la UI; la columna real es lote_id.
+        delete clean.lote_codigo;
+
         lineProductoIds.push(producto_id);
         lineTotalByProduct.set(producto_id, (lineTotalByProduct.get(producto_id) ?? 0) + lineAmounts.total);
         linePromises.push(saveLinea.mutateAsync(clean));
