@@ -566,7 +566,7 @@ export default function VentasListPage() {
           scroll (muestra los totales de la PÁGINA visible). Sin agrupar y en
           escritorio. */}
       {!activeLoading && !isMobile && !groupBy && total > 0 && (
-        <div className="sticky bottom-0 z-20 -mx-4 px-4 pt-2 pb-1 bg-background/95 backdrop-blur-sm border-t border-border">
+        <ListPage.Footer className="-mx-4 px-4 pt-2 pb-1 bg-background/95 backdrop-blur-sm border-t border-border">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:gap-x-6 text-xs text-muted-foreground bg-card border border-border rounded px-3 py-2">
             <span className="font-semibold text-foreground">Página</span>
             {isProductView ? (
@@ -587,7 +587,7 @@ export default function VentasListPage() {
               </>
             )}
           </div>
-        </div>
+        </ListPage.Footer>
       )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
