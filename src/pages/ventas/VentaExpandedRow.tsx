@@ -174,8 +174,27 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   const gravableDisp = Math.max(0, totalReal - ivaMontoV - iepsMontoV);
   const promoLive = promoResults.reduce((s: number, pr: any) => s + (Number(pr.descuento) || 0), 0);
   const promoAplicada = (venta.promocion_aplicada ?? []).reduce((s: number, p: any) => s + (Number(p?.descuento_aplicado) || 0), 0);
-  const descuentoDisp = Math.max(resumen.descuento, promoLive, promoAplicada, Number(venta.descuento_total) || 0);
-  const sinImpDisp = gravableDisp + descuentoDisp;
+  // Desglose guardado en las líneas (mismas fórmulas que el detalle de la venta),
+  // para que la fila expandida muestre exactamente los mismos importes.
+  const r2v = (n: number) => Math.round(n * 100) / 100;
+  const subtotalNetoGuardado = r2v(lineas.reduce((s: number, l: any) => {
+    const lista = Number(l.precio_lista_unitario);
+    const qty = Number(l.cantidad) || 0;
+    return s + (Number.isFinite(lista) ? r2v(lista * qty) : 0);
+  }, 0));
+  const descuentoNetoGuardado = r2v(lineas.reduce((s: number, l: any) => {
+    const desc = (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0);
+    if (desc <= 0) return s;
+    const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
+    return s + r2v(divisor > 0 ? desc / divisor : desc);
+  }, 0));
+  const usarGuardado = subtotalNetoGuardado > 0;
+  const descuentoDisp = usarGuardado
+    ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2v(subtotalNetoGuardado - gravableDisp))
+    : Math.max(resumen.descuento, promoLive, promoAplicada, Number(venta.descuento_total) || 0);
+  const sinImpDisp = usarGuardado ? subtotalNetoGuardado : gravableDisp + descuentoDisp;
+  const gravableShown = usarGuardado ? r2v(sinImpDisp - descuentoDisp) : gravableDisp;
+
   // Etiqueta de promo por producto (línea gratis o con descuento).
   const promoPorProducto = useMemo(() => {
     const map: Record<string, string> = {};
@@ -311,16 +330,8 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
           <div className="bg-card border-b border-border px-4 py-3 space-y-3 animate-in slide-in-from-top-1 duration-200">
             {/* Header: pegado al borde izquierdo aunque la tabla tenga scroll horizontal */}
             <div className="sticky left-0 w-fit max-w-full space-y-2">
-              <div className="flex items-center gap-3 flex-wrap min-w-0">
-                <span className="font-mono text-sm font-bold">{venta.folio || venta.id.slice(0, 8)}</span>
-                <StatusChip status={venta.status} />
-                <span className="text-muted-foreground text-xs">{clienteNombre}</span>
-                <span className="text-muted-foreground text-xs">•</span>
-                <span className="text-muted-foreground text-xs">{fmtDateTime(venta.created_at)}</span>
-                <span className="text-muted-foreground text-xs">•</span>
-                <span className="text-muted-foreground text-xs">{CONDICION_LABELS[venta.condicion_pago] || venta.condicion_pago}</span>
-              </div>
               <div className="flex items-center gap-1.5 flex-wrap">
+
 
 
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={handlePdf} disabled={generatingPdf}>
@@ -368,7 +379,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                 <div className="space-y-4 min-w-0">
                   {/* Líneas */}
                   <div>
-                    <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Productos</h4>
+                    
                     <div className="overflow-x-auto">
                       <table className="w-full text-[12px]">
                         <thead>
@@ -498,8 +509,9 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                     )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal gravable</span>
-                      <span className="tabular-nums">{fmt(gravableDisp)}</span>
+                      <span className="tabular-nums">{fmt(gravableShown)}</span>
                     </div>
+
                     {ivaMontoV > 0.005 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">IVA{resumen.ivaRate != null ? ` ${resumen.ivaRate}%` : ''}</span>
