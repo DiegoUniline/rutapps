@@ -247,6 +247,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [loadUserData]);
 
+  // Identidad para el medidor de consumo de datos (solo mide, no cambia nada).
+  useEffect(() => {
+    setDataUsageIdentity(empresa?.id, user?.id);
+  }, [empresa?.id, user?.id]);
+
   const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
