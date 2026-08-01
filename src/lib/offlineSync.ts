@@ -129,11 +129,12 @@ export const TABLE_LABELS: Record<string, string> = {
 
 
 // Tables that have empresa_id for filtering
-const TABLES_WITH_EMPRESA = new Set([
+export const TABLES_WITH_EMPRESA = new Set([
   'clientes', 'productos', 'vendedores', 'cargas', 'ventas',
   'cobros', 'gastos', 'devoluciones', 'empresas', 'unidades',
   'tasas_iva', 'descarga_ruta', 'promociones', 'entregas', 'visitas',
   'tarifas',
+  'profiles',
   'stock_almacen',
     'stock_apartado',
   'producto_presentaciones',
@@ -336,7 +337,7 @@ export async function downloadAllData(
   return task;
 }
 
-const LS_LAST_EMPRESA = 'offline-empresa-id';
+export const LS_LAST_EMPRESA = 'offline-empresa-id';
 
 /**
  * AISLAMIENTO MULTI-EMPRESA EN EL DISPOSITIVO.

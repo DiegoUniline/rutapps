@@ -9,8 +9,15 @@ import {
   COLUMN_SELECTS,
   UPDATED_AT_DELTA_TABLES,
   UPDATED_AT_WINDOW_TABLES,
+  TABLES_WITH_EMPRESA,
+  LS_LAST_EMPRESA,
   WINDOW_DAYS,
 } from '@/lib/offlineSync';
+
+/** empresa_id activa (la misma que usa el sync maestro). */
+function activeEmpresaId(): string | null {
+  try { return localStorage.getItem(LS_LAST_EMPRESA); } catch { return null; }
+}
 
 /** UUID v4 with fallback for environments lacking crypto.randomUUID. */
 function generateUUID(): string {
@@ -185,6 +192,16 @@ export function useOfflineQuery<T = any>(
               }
             });
           }
+
+          // BLINDAJE MULTI-EMPRESA + AHORRO DE DATOS: si la tabla tiene
+          // empresa_id y la pantalla no lo filtró, se inyecta la empresa
+          // activa (antes se bajaba la tabla global de todos los inquilinos).
+          if (TABLES_WITH_EMPRESA.has(table) && table !== 'empresas' && !filters?.empresa_id) {
+            const emp = activeEmpresaId();
+            if (emp) query = query.eq('empresa_id', emp);
+          }
+
+
 
           if (deltaCursor) {
             query = query.gt('updated_at', deltaCursor);
