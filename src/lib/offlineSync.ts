@@ -431,9 +431,24 @@ async function downloadAllDataInternal(
   // Antes de bajar nada: fuera cualquier dato de otra empresa.
   await purgeForeignTenantData(empresaId);
 
+  // Las tablas de lotes solo se descargan en empresas que manejan lotes; en las
+  // demás serían megas tirados a la basura.
+  let manejaLotes = false;
+  try {
+    const empLocal: any = await getOfflineTable('empresas')?.get(empresaId);
+    if (empLocal && 'maneja_lotes' in empLocal) {
+      manejaLotes = !!empLocal.maneja_lotes;
+    } else {
+      const { data } = await (supabase.from as any)('empresas').select('maneja_lotes').eq('id', empresaId).maybeSingle();
+      manejaLotes = !!data?.maneja_lotes;
+    }
+  } catch { /* sin señal: se omiten los lotes en esta pasada */ }
+  const effectiveTables = (manejaLotes
+    ? tablesToCache
+    : tablesToCache.filter(t => t !== 'lotes' && t !== 'stock_lotes')) as readonly CacheTable[];
 
   // Initialize progress
-  const progress: SyncProgress[] = tablesToCache.map(table => ({
+  const progress: SyncProgress[] = effectiveTables.map(table => ({
     table,
     label: TABLE_LABELS[table] || table,
     status: 'waiting',
@@ -445,8 +460,9 @@ async function downloadAllDataInternal(
 
   // Process tables sequentially for progress visibility (parallel within batches)
   const BATCH_SIZE = 4;
-  for (let i = 0; i < tablesToCache.length; i += BATCH_SIZE) {
-    const batch = tablesToCache.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < effectiveTables.length; i += BATCH_SIZE) {
+    const batch = effectiveTables.slice(i, i + BATCH_SIZE);
+
 
     await Promise.all(batch.map(async (table) => {
       const idx = tablesToCache.indexOf(table);
