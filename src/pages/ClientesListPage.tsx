@@ -360,21 +360,17 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
             <th className="th-odoo w-10 text-center">
               <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
             </th>
-            <th className="th-odoo text-left">Código</th>
-            <th className="th-odoo text-left">Nombre</th>
-            <th className="th-odoo text-left hidden md:table-cell">Contacto</th>
-            <th className="th-odoo text-left">Días de visita</th>
-            <th className="th-odoo text-left hidden lg:table-cell">Teléfono</th>
-            <th className="th-odoo text-left hidden lg:table-cell">Zona</th>
-            <th className="th-odoo text-left hidden xl:table-cell">Vendedor</th>
-            <th className="th-odoo text-left hidden xl:table-cell">Lista de precios</th>
-            <th className="th-odoo text-center">Status</th>
+            {activeColumns.map(col => (
+              <th key={col.key} className={cn('th-odoo whitespace-nowrap', col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left')}>
+                {col.label}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
             <tr>
-              <td colSpan={10} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
+              <td colSpan={activeColumns.length + 1} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
             </tr>
           )}
           {items.map((c: any) => (
@@ -389,28 +385,25 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
               <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(c.id); }}>
                 <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="rounded border-input" />
               </td>
-              <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
-              <td className="py-1.5 px-3 font-medium"><ClienteLink id={c.id}>{c.nombre}</ClienteLink></td>
-              <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
-              <td className="py-1.5 px-3 text-muted-foreground">
-                {c.dia_visita?.length > 0
-                  ? c.dia_visita.map((d: string) => (DIAS_LABEL[d.toLowerCase()] ?? d).slice(0, 3)).join(', ')
-                  : '—'}
-              </td>
-
-              <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.zonas?.nombre ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{c.vendedores?.nombre ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{c.tarifas?.nombre ?? '—'}</td>
-              <td className="py-1.5 px-3 text-center">
-                <StatusChip status={c.status ?? 'activo'} />
-              </td>
+              {activeColumns.map(col => (
+                <td
+                  key={col.key}
+                  className={cn(
+                    'py-1.5 px-3',
+                    col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : '',
+                    col.key === 'nombre' ? 'font-medium' : 'text-muted-foreground',
+                  )}
+                >
+                  {col.render(c)}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
+
 
   return (
     <ListPage flush className="gap-3">
