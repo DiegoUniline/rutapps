@@ -206,10 +206,10 @@ export default function CobranzaPage() {
       })
       .catch(() => undefined);
   }, [empresa?.id, empresa?.licencia, isLoading, cobros?.length]);
-  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cobranza');
+  const { filters, groupBy, groupByLevels, dateFrom, dateTo, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('cobranza');
   const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const setDateFrom = (val: string) => setDates(val, dateTo);
+  const setDateTo = (val: string) => setDates(dateFrom, val);
   const [editCobro, setEditCobro] = useState<any | null>(null);
   const [cancelCobro, setCancelCobro] = useState<any | null>(null);
   const [cancelling, setCancelling] = useState(false);

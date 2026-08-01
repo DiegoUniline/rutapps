@@ -141,17 +141,18 @@ export default function ComprasPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
+  const { dateFrom: desde, dateTo: hasta, setDates } = useListPreferences('compras');
+  const setDesde = (val: string) => setDates(val, hasta);
+  const setHasta = (val: string) => setDates(desde, val);
   const qc = useQueryClient();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('compras');
 
   // Detalle state
   const [searchD, setSearchD] = useState('');
   const [pageD, setPageD] = useState(1);
-  const { filters: filtersD, groupBy: groupByD, groupByLevels: groupByLevelsD, setFilter: setFilterD, toggleFilterValue: toggleFilterValueD, setGroupBy: setGroupByD, setGroupByLevel: setGroupByLevelD, clearFilters: clearFiltersD } = useListPreferences('compras-detalle');
-  const [desdeD, setDesdeD] = useState('');
-  const [hastaD, setHastaD] = useState('');
+  const { filters: filtersD, groupBy: groupByD, groupByLevels: groupByLevelsD, dateFrom: desdeD, dateTo: hastaD, setFilter: setFilterD, toggleFilterValue: toggleFilterValueD, setGroupBy: setGroupByD, setGroupByLevel: setGroupByLevelD, clearFilters: clearFiltersD, setDates: setDatesD } = useListPreferences('compras-detalle');
+  const setDesdeD = (val: string) => setDatesD(val, hastaD);
+  const setHastaD = (val: string) => setDatesD(desdeD, val);
 
   const statusFilter = filters.status ?? [];
   const { data: compras, isLoading } = useCompras(search, statusFilter, empresa?.id);

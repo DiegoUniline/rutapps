@@ -1,6 +1,7 @@
 import { useState, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCotizaciones, useDeleteCotizacion, type Cotizacion, type CotizacionEstado } from '@/hooks/useCotizaciones';
+import { useListPreferences } from '@/hooks/useListPreferences';
 import { formatCurrency } from '@/lib/currency';
 import { Plus, Trash2, FileText, Send, ShoppingCart, Search, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -39,8 +40,9 @@ export default function CotizacionesListPage() {
   const del = useDeleteCotizacion();
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<CotizacionEstado | 'todas'>('todas');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const { dateFrom, dateTo, setDates } = useListPreferences('cotizaciones');
+  const setDateFrom = (val: string) => setDates(val, dateTo);
+  const setDateTo = (val: string) => setDates(dateFrom, val);
   const [toDelete, setToDelete] = useState<Cotizacion | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 

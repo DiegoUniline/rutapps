@@ -5,6 +5,8 @@ export interface ListPreferences {
   groupBy: string;
   /** Multi-level groupBy: [primary, secondary, tertiary] */
   groupByLevels?: string[];
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 const STORAGE_PREFIX = 'list_prefs_v2_';
@@ -74,7 +76,15 @@ export function useListPreferences(listKey: string) {
 
   const clearFilters = useCallback(() => {
     setPrefs(prev => {
-      const next = { ...prev, filters: {} };
+      const next = { ...prev, filters: {}, dateFrom: '', dateTo: '' };
+      save(listKey, next);
+      return next;
+    });
+  }, [listKey]);
+
+  const setDates = useCallback((from: string, to: string) => {
+    setPrefs(prev => {
+      const next = { ...prev, dateFrom: from, dateTo: to };
       save(listKey, next);
       return next;
     });
@@ -84,11 +94,14 @@ export function useListPreferences(listKey: string) {
     filters: prefs.filters,
     groupBy: prefs.groupBy,
     groupByLevels: prefs.groupByLevels ?? (prefs.groupBy ? [prefs.groupBy] : []),
+    dateFrom: prefs.dateFrom ?? '',
+    dateTo: prefs.dateTo ?? '',
     setFilter,
     toggleFilterValue,
     setGroupBy,
     setGroupByLevel,
     clearFilters,
+    setDates,
   };
 }
 
