@@ -337,30 +337,37 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
             {/* Sale details */}
             <div className="px-5 py-2 space-y-0.5 text-[10px]">
-              <div className="flex gap-4">
-                <span><span className="font-bold text-foreground">Folio </span><span className="text-muted-foreground font-mono">{folio}</span></span>
-                <span><span className="font-bold text-foreground">Fecha </span><span className="text-muted-foreground">{fecha}</span></span>
-              </div>
-              <div>
-                <span className="font-bold text-foreground">Cliente </span><span className="text-muted-foreground">{clienteNombre}</span>
-              </div>
-              {vendedorNombre && (
+              {(showFolio || showFecha) && (
+                <div className="flex gap-4">
+                  {showFolio && <span><span className="font-bold text-foreground">Folio </span><span className="text-muted-foreground font-mono">{folio}</span></span>}
+                  {showFecha && <span><span className="font-bold text-foreground">Fecha </span><span className="text-muted-foreground">{fecha}</span></span>}
+                </div>
+              )}
+              {showClienteNombre && (
+                <div>
+                  <span className="font-bold text-foreground">Cliente </span><span className="text-muted-foreground">{clienteNombre}</span>
+                </div>
+              )}
+              {vendedorNombre && showVendedorNombre && (
                 <div>
                   <span className="font-bold text-foreground">Vendedor </span><span className="text-muted-foreground">{vendedorNombre}</span>
                 </div>
               )}
-              {vendedorTelefono && (empresa.ticket_campos as any)?.vendedor_telefono !== false && (
+              {vendedorTelefono && showVendedorTel && (
                 <div>
                   <span className="font-bold text-foreground">Tel. vend. </span><span className="text-muted-foreground">{vendedorTelefono}</span>
                 </div>
               )}
-              <div className="flex gap-4">
-                <span><span className="font-bold text-foreground">Pago </span><span className="text-muted-foreground">{pagoLabel}</span></span>
-                {metodoPago && (
-                  <span><span className="font-bold text-foreground">Método </span><span className="text-muted-foreground capitalize">{metodoPago}</span></span>
-                )}
-              </div>
+              {showCondicionPago && (
+                <div className="flex gap-4">
+                  <span><span className="font-bold text-foreground">Pago </span><span className="text-muted-foreground">{pagoLabel}</span></span>
+                  {metodoPago && (
+                    <span><span className="font-bold text-foreground">Método </span><span className="text-muted-foreground capitalize">{metodoPago}</span></span>
+                  )}
+                </div>
+              )}
             </div>
+
 
             <div className="tk-dash mx-5 border-t border-dashed border-border" />
 
