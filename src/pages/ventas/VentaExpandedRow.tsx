@@ -517,8 +517,9 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                     )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal gravable</span>
-                      <span className="tabular-nums">{fmt(gravableDisp)}</span>
+                      <span className="tabular-nums">{fmt(gravableShown)}</span>
                     </div>
+
                     {ivaMontoV > 0.005 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">IVA{resumen.ivaRate != null ? ` ${resumen.ivaRate}%` : ''}</span>
