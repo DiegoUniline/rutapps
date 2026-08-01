@@ -569,7 +569,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             ) : null}
 
             {/* Pagos recibidos */}
-            {pagos.length > 0 && (
+            {showPagosRecibidos && pagos.length > 0 && (
               <>
                 <div className="tk-dash mx-5 border-t border-dashed border-border" />
                 <div className="px-5 py-2 space-y-0.5">
