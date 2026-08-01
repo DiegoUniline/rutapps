@@ -336,6 +336,48 @@ export async function downloadAllData(
   return task;
 }
 
+const LS_LAST_EMPRESA = 'offline-empresa-id';
+
+/**
+ * AISLAMIENTO MULTI-EMPRESA EN EL DISPOSITIVO.
+ *
+ * IndexedDB es una sola base por navegador: si el usuario (típicamente un
+ * super admin) entra a otra empresa, los registros de la empresa anterior se
+ * quedaban guardados en el dispositivo. Eso inflaba los contadores ("2,052
+ * clientes" cuando la empresa solo tiene 1), ocupaba espacio y era una fuga de
+ * datos entre inquilinos.
+ *
+ * Aquí se borra TODO lo que no pertenezca a la empresa activa. Si el cambio de
+ * empresa es detectado, también se limpian las tablas hijas (que no llevan
+ * `empresa_id`) y los cursores de sincronización, para bajar todo limpio.
+ */
+export async function purgeForeignTenantData(empresaId: string): Promise<void> {
+  if (!empresaId) return;
+  let previous: string | null = null;
+  try { previous = localStorage.getItem(LS_LAST_EMPRESA); } catch { /* ignore */ }
+  const empresaChanged = previous !== null && previous !== empresaId;
+
+  for (const table of TABLES_TO_CACHE) {
+    const localTable = getOfflineTable(table);
+    if (!localTable) continue;
+    try {
+      if (table === 'empresas') {
+        await localTable.where('id').notEqual(empresaId).delete();
+      } else if (TABLES_WITH_EMPRESA.has(table)) {
+        await localTable.where('empresa_id').notEqual(empresaId).delete();
+      } else if (empresaChanged) {
+        // Tablas hijas sin empresa_id (líneas, aplicaciones, etc.)
+        await localTable.clear();
+      }
+    } catch { /* una tabla no debe romper la limpieza completa */ }
+  }
+
+  if (empresaChanged) {
+    try { await offlineDb.cacheTimestamps.clear(); } catch { /* ignore */ }
+  }
+  try { localStorage.setItem(LS_LAST_EMPRESA, empresaId); } catch { /* ignore */ }
+}
+
 async function downloadAllDataInternal(
   empresaId: string,
   forceFullSync: boolean,
@@ -343,6 +385,10 @@ async function downloadAllDataInternal(
   tablesToCache: readonly CacheTable[],
 ): Promise<DownloadResult> {
   let totalRows = 0;
+
+  // Antes de bajar nada: fuera cualquier dato de otra empresa.
+  await purgeForeignTenantData(empresaId);
+
 
   // Initialize progress
   const progress: SyncProgress[] = tablesToCache.map(table => ({
