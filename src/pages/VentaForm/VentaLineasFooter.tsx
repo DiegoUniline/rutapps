@@ -38,7 +38,7 @@ export function VentaLineasFooter({ lineas, cols, currencyCode, label = 'Totales
   const totBaseIva = sum(l => n(l.base_iva));
   const totBaseDescMan = sum(l => n(l.base_descuento_manual));
 
-  const cellCls = 'py-2 px-2 text-right text-[12px] font-semibold tabular-nums whitespace-nowrap';
+  const cellCls = 'py-2 px-2 bg-card text-right text-[12px] font-semibold tabular-nums whitespace-nowrap';
   const val = (v: number, fmtFn: (x: number) => string = money) =>
     v ? fmtFn(v) : <span className="text-muted-foreground font-normal">—</span>;
 
@@ -64,25 +64,25 @@ export function VentaLineasFooter({ lineas, cols, currencyCode, label = 'Totales
 
   return (
     <tfoot>
-      <tr className="border-t-2 border-table-border bg-muted/40">
-        <td className="py-2 px-2" />
+      <tr className="border-t-2 border-table-border bg-card sticky bottom-0 z-10 shadow-[0_-1px_0_0_hsl(var(--border))]">
+        <td className="py-2 px-2 bg-card" />
         {showCol('cantidad') && <td className={cellCls}>{totCantidad ? totCantidad : '—'}</td>}
-        <td className="py-2 px-2 text-[12px] font-semibold">{label}</td>
-        {showCol('unidad') && <td className="py-2 px-2" />}
-        {showCol('precioBruto') && <td className="py-2 px-2" />}
-        {showCol('precioNeto') && <td className="py-2 px-2" />}
+        <td className="py-2 px-2 bg-card text-[12px] font-semibold whitespace-nowrap">{label}</td>
+        {showCol('unidad') && <td className="py-2 px-2 bg-card" />}
+        {showCol('precioBruto') && <td className="py-2 px-2 bg-card" />}
+        {showCol('precioNeto') && <td className="py-2 px-2 bg-card" />}
         {showCol('iva') && <td className={cellCls}>{val(totIva)}</td>}
         {showCol('ieps') && <td className={cellCls}>{val(totIeps)}</td>}
         {showCol('descPromo') && <td className={cellCls}>{val(totPromo)}</td>}
-        {showCol('descMan') && <td className="py-2 px-2" />}
+        {showCol('descMan') && <td className="py-2 px-2 bg-card" />}
         {showCol('subtotal') && <td className={cellCls}>{val(totTotal)}</td>}
-        {showCol('lote') && <td className="py-2 px-2" />}
+        {showCol('lote') && <td className="py-2 px-2 bg-card" />}
         {VENTA_LINEAS_DESGLOSE_COLUMNS.filter(c => showCol(c.key)).map(c => (
           <td key={c.key} className={cellCls}>
             {desgloseTotals[c.key] ?? ''}
           </td>
         ))}
-        <td className="py-2 px-2" />
+        <td className="py-2 px-2 bg-card" />
       </tr>
     </tfoot>
   );
