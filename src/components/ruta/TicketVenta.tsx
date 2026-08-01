@@ -464,20 +464,38 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               return (
             <div className="px-5 py-2 space-y-0.5">
               {/* Desglose: Subtotal sin impuestos → Descuentos → Subtotal gravable → IEPS/IVA → Total */}
-              <div className="tk-tot-row flex justify-between text-[10px]">
-                <span className="lbl text-muted-foreground">Subtotal sin impuestos</span>
-                <span className="val text-foreground tabular-nums">{fmt(sinImpTicket)}</span>
-              </div>
-              {descTicket > 0.005 && (
-                <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-primary font-semibold">Descuentos / promos</span>
-                  <span className="val text-primary font-bold tabular-nums">-{fmt(descTicket)}</span>
-                </div>
+              {showImpuestos ? (
+                <>
+                  <div className="tk-tot-row flex justify-between text-[10px]">
+                    <span className="lbl text-muted-foreground">Subtotal sin impuestos</span>
+                    <span className="val text-foreground tabular-nums">{fmt(sinImpTicket)}</span>
+                  </div>
+                  {showDescuentos && descTicket > 0.005 && (
+                    <div className="tk-tot-row flex justify-between text-[10px]">
+                      <span className="lbl text-primary font-semibold">Descuentos / promos</span>
+                      <span className="val text-primary font-bold tabular-nums">-{fmt(descTicket)}</span>
+                    </div>
+                  )}
+                  <div className="tk-tot-row flex justify-between text-[10px]">
+                    <span className="lbl text-muted-foreground">Subtotal gravable</span>
+                    <span className="val text-foreground tabular-nums">{fmt(gravableTicket)}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="tk-tot-row flex justify-between text-[10px]">
+                    <span className="lbl text-muted-foreground">Sub total</span>
+                    <span className="val text-foreground tabular-nums">{fmt(subBrutoTicket)}</span>
+                  </div>
+                  {showDescuentos && descBrutoTicket > 0.005 && (
+                    <div className="tk-tot-row flex justify-between text-[10px]">
+                      <span className="lbl text-primary font-semibold">Descuentos / promos</span>
+                      <span className="val text-primary font-bold tabular-nums">-{fmt(descBrutoTicket)}</span>
+                    </div>
+                  )}
+                </>
               )}
-              <div className="tk-tot-row flex justify-between text-[10px]">
-                <span className="lbl text-muted-foreground">Subtotal gravable</span>
-                <span className="val text-foreground tabular-nums">{fmt(gravableTicket)}</span>
-              </div>
+
               {taxModeEff !== 'ninguno' && iepsMonto > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground pl-2">IEPS{resumen.iepsRate != null ? ` ${resumen.iepsRate}%` : ''}</span>
