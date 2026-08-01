@@ -14,19 +14,22 @@
  */
 import { supabase } from '@/lib/supabase';
 import type { PromoResult } from '@/hooks/usePromociones';
-import { isFeatureEnabled } from '@/lib/featureFlags';
+import { getFeatureFlagsCache, isFeatureEnabled } from '@/lib/featureFlags';
 
 /**
  * El alcance se administra desde Panel Master > "Funciones en pruebas"
- * (bandera `promo_persist`). Las licencias de respaldo se usan solo si aún
- * no se han cargado las banderas desde el servidor.
+ * (bandera `promo_persist`). Si las banderas aún no se cargaron (ruta móvil
+ * offline) se asume habilitado, porque la bandera está en alcance "todos".
  */
 const LICENCIAS_FALLBACK = new Set<string>(['12324489']);
 
 export function promoPersistHabilitado(licencia?: string | null): boolean {
   const lic = String(licencia ?? '').trim();
+  const flags = getFeatureFlagsCache();
+  if (!flags.some((f) => f.clave === 'promo_persist')) return true;
   return isFeatureEnabled('promo_persist', lic) || LICENCIAS_FALLBACK.has(lic);
 }
+
 
 
 export type PromoAplicadaRow = {
