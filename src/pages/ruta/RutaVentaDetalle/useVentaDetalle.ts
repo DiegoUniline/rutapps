@@ -560,9 +560,17 @@ export function useVentaDetalle() {
         nombre: l.productos?.nombre ?? l.descripcion ?? '—',
         cantidad: l.cantidad,
         precio: l.precio_unitario ?? 0,
+        subtotal: l.subtotal ?? undefined,
         total: l.total ?? 0,
         iva_monto: l.iva_monto ?? 0,
         ieps_monto: l.ieps_monto ?? 0,
+        iva_pct: l.iva_pct ?? 0,
+        ieps_pct: l.ieps_pct ?? 0,
+        // Columnas de desglose: sin ellas el ticket recalculaba el subtotal desde
+        // el total con impuestos y quedaba distinto al ticket de escritorio.
+        precio_lista_unitario: l.precio_lista_unitario ?? null,
+        descuento_promocion_monto: l.descuento_promocion_monto ?? 0,
+        descuento_manual_monto: l.descuento_manual_monto ?? 0,
         descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
         producto_id: l.producto_id,
       })),

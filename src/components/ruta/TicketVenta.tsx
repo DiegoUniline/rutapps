@@ -20,7 +20,7 @@ interface TicketVentaProps {
   clienteNombre: string;
   vendedorNombre?: string;
   vendedorTelefono?: string | null;
-  lineas: { nombre: string; cantidad: number; precio: number; subtotal?: number; iva_pct?: number; iva_monto?: number; ieps_pct?: number; ieps_monto?: number; descuento_pct?: number; total: number; esCambio?: boolean; producto_id?: string; precio_sugerido_publico?: number }[];
+  lineas: { nombre: string; cantidad: number; precio: number; subtotal?: number; iva_pct?: number; iva_monto?: number; ieps_pct?: number; ieps_monto?: number; descuento_pct?: number; precio_lista_unitario?: number | null; descuento_promocion_monto?: number; descuento_manual_monto?: number; total: number; esCambio?: boolean; producto_id?: string; precio_sugerido_publico?: number }[];
   subtotal: number;
   iva: number;
   ieps?: number;
@@ -118,9 +118,27 @@ export default function TicketVenta(props: TicketVentaProps) {
   })));
   const ivaMonto = Number(iva) || 0;
   const iepsMonto = Number(ieps) || 0;
-  const descTicket = Math.max(resumen.descuento, 0);
-  const gravableTicket = Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto);
-  const sinImpTicket = gravableTicket + descTicket;
+  const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+  // Mismo criterio que el ticket de escritorio: si hay desglose guardado, el
+  // subtotal sin impuestos sale de precio de lista × cantidad (no del total).
+  const subtotalNetoGuardado = r2(lineas.reduce((s, l: any) => {
+    const lista = Number(l.precio_lista_unitario);
+    return s + (Number.isFinite(lista) ? r2(lista * (Number(l.cantidad) || 0)) : 0);
+  }, 0));
+  const descuentoNetoGuardado = r2(lineas.reduce((s, l: any) => {
+    const bruto = (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0);
+    if (bruto <= 0) return s;
+    const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
+    return s + r2(divisor > 0 ? bruto / divisor : bruto);
+  }, 0));
+  const netoTotal = Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto);
+  const descTicket = subtotalNetoGuardado > 0
+    ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2(subtotalNetoGuardado - netoTotal))
+    : Math.max(resumen.descuento, 0);
+  const sinImpTicket = subtotalNetoGuardado > 0 ? subtotalNetoGuardado : netoTotal + descTicket;
+  const gravableTicket = subtotalNetoGuardado > 0
+    ? Math.max(0, r2(sinImpTicket - descTicket))
+    : netoTotal;
 
   const ticketRef = useRef<HTMLDivElement>(null);
   // 'ambos' = producto + totales, 'totales' = solo totales, 'ninguno' = sin impuestos
