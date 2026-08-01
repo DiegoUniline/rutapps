@@ -65,8 +65,9 @@ export default function VentasListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSizeOption>(readStoredPageSize);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const { filters, groupBy, groupByLevels, dateFrom, dateTo, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('ventas');
+  const setDateFrom = (val: string) => setDates(val, dateTo);
+  const setDateTo = (val: string) => setDates(dateFrom, val);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkPrinting, setBulkPrinting] = useState(false);
@@ -77,7 +78,7 @@ export default function VentasListPage() {
   const [bulkCancelling, setBulkCancelling] = useState(false);
   const [bulkCloseOpen, setBulkCloseOpen] = useState(false);
   const { requestPin, PinDialog } = usePinAuth();
-  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
+  
 
   const { visible: columnVisibility, toggleColumn, setAll, reset } = useColumnPreferences('ventas', VENTAS_DEFAULT_COLUMN_VISIBILITY);
 
