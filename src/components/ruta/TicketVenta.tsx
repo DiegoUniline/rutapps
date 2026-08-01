@@ -104,6 +104,23 @@ export default function TicketVenta(props: TicketVentaProps) {
 
   const { fmt } = useCurrency();
 
+  // Configuración del ticket (ticket_campos): se respeta en TODAS las secciones.
+  const tc = (empresa.ticket_campos ?? {}) as Record<string, boolean>;
+  const showFolio = tc.folio !== false;
+  const showFecha = tc.fecha !== false;
+  const showCondicionPago = tc.condicion_pago !== false;
+  const showClienteNombre = tc.cliente_nombre !== false;
+  const showVendedorNombre = tc.vendedor_nombre !== false;
+  const showVendedorTel = tc.vendedor_telefono !== false;
+  const showImpuestos = tc.impuestos !== false;
+  const showDescuentos = tc.descuentos !== false;
+  const showSaldoCuenta = tc.saldo_cuenta !== false;
+  const showRecibidoCambio = tc.recibido_cambio !== false;
+  const showPromociones = tc.promociones !== false;
+  const showPagosRecibidos = tc.pagos_recibidos !== false;
+  const showDevoluciones = tc.devoluciones !== false;
+  const showGracias = tc.mensaje_gracias !== false;
+
   // Desglose fiscal: impuestos desde los totales del encabezado (fiables) y el
   // gravable derivado del total real para que SIEMPRE cuadre; el descuento se
   // reconstruye desde las líneas (capta el "gratis").
@@ -139,10 +156,21 @@ export default function TicketVenta(props: TicketVentaProps) {
   const gravableTicket = subtotalNetoGuardado > 0
     ? Math.max(0, r2(sinImpTicket - descTicket))
     : netoTotal;
+  // Modo sin desglose de impuestos: todo en bruto para que Subtotal − Desc = Total.
+  const descuentoBrutoGuardado = r2(lineas.reduce((s, l: any) =>
+    s + (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0), 0));
+  const descBrutoTicket = descuentoBrutoGuardado > 0.005 ? descuentoBrutoGuardado : r2(descTicket);
+  const subBrutoTicket = descBrutoTicket > 0.005
+    ? r2((Number(total) || 0) + descBrutoTicket)
+    : r2(sinImpTicket + ivaMonto + iepsMonto);
+
+
 
   const ticketRef = useRef<HTMLDivElement>(null);
   // 'ambos' = producto + totales, 'totales' = solo totales, 'ninguno' = sin impuestos
   const [taxMode, setTaxMode] = useState<'ambos' | 'totales' | 'ninguno'>('ambos');
+  // Si la empresa desactivó el desglose de impuestos, se fuerza "ninguno".
+  const taxModeEff: 'ambos' | 'totales' | 'ninguno' = showImpuestos ? taxMode : 'ninguno';
 
   const pagoLabel = condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir';
   const descuentoPromos = promociones.reduce((s, p) => s + (Number(p.descuento) || 0), 0);
@@ -198,45 +226,53 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
   const handleShare = async () => {
     // Respeta la config del ticket (ticket_campos), igual que el ticket impreso.
-    const tc = (empresa as any).ticket_campos ?? {};
     const text = [
       tc.nombre !== false ? empresa.nombre : '',
       tc.rfc !== false && empresa.rfc ? `RFC: ${empresa.rfc}` : '',
       tc.direccion !== false ? (empresa.direccion ?? '') : '',
       tc.telefono !== false && empresa.telefono ? `Tel: ${empresa.telefono}` : '',
       '─'.repeat(30),
-      `Folio: ${folio}`,
-      `Fecha: ${fecha}`,
-      `Cliente: ${clienteNombre}`,
-      `Pago: ${pagoLabel}`,
-      metodoPago ? `Método: ${metodoPago}` : '',
+      showFolio ? `Folio: ${folio}` : '',
+      showFecha ? `Fecha: ${fecha}` : '',
+      showClienteNombre ? `Cliente: ${clienteNombre}` : '',
+      showVendedorNombre && vendedorNombre ? `Vendedor: ${vendedorNombre}` : '',
+      showCondicionPago ? `Pago: ${pagoLabel}` : '',
+      showCondicionPago && metodoPago ? `Método: ${metodoPago}` : '',
       '─'.repeat(30),
       ...lineas.map(l => {
-        const taxes = [
+        const taxes = showImpuestos ? [
           (l.ieps_pct ?? 0) > 0 ? `IEPS ${l.ieps_pct}%` : '',
           (l.iva_pct ?? 0) > 0 ? `IVA ${l.iva_pct}%` : '',
-        ].filter(Boolean).join(' + ');
+        ].filter(Boolean).join(' + ') : '';
         return `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}${taxes ? ` [${taxes}]` : ''}`;
       }),
       '─'.repeat(30),
-      `Subtotal sin impuestos: ${fmt(sinImpTicket)}`,
-      ...(descTicket > 0.005 ? [`Descuentos / promos: -${fmt(descTicket)}`] : []),
-      `Subtotal gravable: ${fmt(gravableTicket)}`,
-      ...(iepsMonto > 0.005 ? [`IEPS: ${fmt(iepsMonto)}`] : []),
-      ...(ivaMonto > 0.005 ? [`IVA: ${fmt(ivaMonto)}`] : []),
+      ...(showImpuestos
+        ? [
+            `Subtotal sin impuestos: ${fmt(sinImpTicket)}`,
+            ...(showDescuentos && descTicket > 0.005 ? [`Descuentos / promos: -${fmt(descTicket)}`] : []),
+            `Subtotal gravable: ${fmt(gravableTicket)}`,
+            ...(iepsMonto > 0.005 ? [`IEPS: ${fmt(iepsMonto)}`] : []),
+            ...(ivaMonto > 0.005 ? [`IVA: ${fmt(ivaMonto)}`] : []),
+          ]
+        : [
+            `Sub total: ${fmt(subBrutoTicket)}`,
+            ...(showDescuentos && descBrutoTicket > 0.005 ? [`Descuentos / promos: -${fmt(descBrutoTicket)}`] : []),
+          ]),
       `Total: ${fmt(total)}`,
       `Pagado: ${fmt(summary.totalPagado)}`,
       `Saldo: ${fmt(summary.saldo)}`,
-      ...(devoluciones.length > 0 ? [
+      ...(showDevoluciones && devoluciones.length > 0 ? [
         '─'.repeat(30),
         'DEVOLUCIONES:',
         ...devoluciones.map(d => `  ${d.cantidad}x ${d.nombre} → ${ACCION_LABELS[d.accion] || d.accion} (${MOTIVO_LABELS[d.motivo] || d.motivo})`),
       ] : []),
-      montoRecibido ? `Recibido: ${fmt(montoRecibido)}` : '',
-      cambio && cambio > 0 ? `Cambio: ${fmt(cambio)}` : '',
+      showRecibidoCambio && montoRecibido ? `Recibido: ${fmt(montoRecibido)}` : '',
+      showRecibidoCambio && cambio && cambio > 0 ? `Cambio: ${fmt(cambio)}` : '',
       '',
       'rutapp.mx',
     ].filter(Boolean).join('\n');
+
 
     if (navigator.share) {
       try { await navigator.share({ title: `Ticket ${folio}`, text }); } catch { /* cancelled */ }
@@ -266,6 +302,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
       </div>
 
       {/* Tax display mode selector */}
+      {showImpuestos && (
       <div className="px-4 pt-3 flex items-center justify-center gap-1">
         <span className="text-[11px] text-muted-foreground mr-1">Impuestos:</span>
         {([['ambos', 'Producto + Total'], ['totales', 'Solo total'], ['ninguno', 'No mostrar']] as const).map(([val, label]) => (
@@ -275,6 +312,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
           </button>
         ))}
       </div>
+      )}
 
       <div className="flex-1 p-4 flex flex-col items-center">
         <div className="w-full max-w-sm bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
@@ -311,30 +349,37 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
             {/* Sale details */}
             <div className="px-5 py-2 space-y-0.5 text-[10px]">
-              <div className="flex gap-4">
-                <span><span className="font-bold text-foreground">Folio </span><span className="text-muted-foreground font-mono">{folio}</span></span>
-                <span><span className="font-bold text-foreground">Fecha </span><span className="text-muted-foreground">{fecha}</span></span>
-              </div>
-              <div>
-                <span className="font-bold text-foreground">Cliente </span><span className="text-muted-foreground">{clienteNombre}</span>
-              </div>
-              {vendedorNombre && (
+              {(showFolio || showFecha) && (
+                <div className="flex gap-4">
+                  {showFolio && <span><span className="font-bold text-foreground">Folio </span><span className="text-muted-foreground font-mono">{folio}</span></span>}
+                  {showFecha && <span><span className="font-bold text-foreground">Fecha </span><span className="text-muted-foreground">{fecha}</span></span>}
+                </div>
+              )}
+              {showClienteNombre && (
+                <div>
+                  <span className="font-bold text-foreground">Cliente </span><span className="text-muted-foreground">{clienteNombre}</span>
+                </div>
+              )}
+              {vendedorNombre && showVendedorNombre && (
                 <div>
                   <span className="font-bold text-foreground">Vendedor </span><span className="text-muted-foreground">{vendedorNombre}</span>
                 </div>
               )}
-              {vendedorTelefono && (empresa.ticket_campos as any)?.vendedor_telefono !== false && (
+              {vendedorTelefono && showVendedorTel && (
                 <div>
                   <span className="font-bold text-foreground">Tel. vend. </span><span className="text-muted-foreground">{vendedorTelefono}</span>
                 </div>
               )}
-              <div className="flex gap-4">
-                <span><span className="font-bold text-foreground">Pago </span><span className="text-muted-foreground">{pagoLabel}</span></span>
-                {metodoPago && (
-                  <span><span className="font-bold text-foreground">Método </span><span className="text-muted-foreground capitalize">{metodoPago}</span></span>
-                )}
-              </div>
+              {showCondicionPago && (
+                <div className="flex gap-4">
+                  <span><span className="font-bold text-foreground">Pago </span><span className="text-muted-foreground">{pagoLabel}</span></span>
+                  {metodoPago && (
+                    <span><span className="font-bold text-foreground">Método </span><span className="text-muted-foreground capitalize">{metodoPago}</span></span>
+                  )}
+                </div>
+              )}
             </div>
+
 
             <div className="tk-dash mx-5 border-t border-dashed border-border" />
 
@@ -379,15 +424,15 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                     ) : !l.esCambio && (
                       <>
                         {/* Se quitó el precio unitario/base: cada renglón muestra solo su precio final (con impuestos). */}
-                        {((l.descuento_pct ?? 0) > 0 || (taxMode === 'ambos' && ((l.iva_pct ?? 0) > 0 || (l.ieps_pct ?? 0) > 0)) || (l.precio_sugerido_publico ?? 0) > 0) && (
+                        {((l.descuento_pct ?? 0) > 0 || (taxModeEff === 'ambos' && ((l.iva_pct ?? 0) > 0 || (l.ieps_pct ?? 0) > 0)) || (l.precio_sugerido_publico ?? 0) > 0) && (
                           <div className="flex gap-2 text-[8px] text-muted-foreground mt-px flex-wrap">
                             {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
-                            {taxMode === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
-                            {taxMode === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
+                            {taxModeEff === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
+                            {taxModeEff === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
                             {(l.precio_sugerido_publico ?? 0) > 0 && <span className="text-primary font-medium">Sug. público {fmt(l.precio_sugerido_publico!)}</span>}
                           </div>
                         )}
-                        {promosLinea.map((p, pi) => (
+                        {showPromociones && promosLinea.map((p, pi) => (
                           <div key={pi} className="flex justify-between text-[8px] mt-px">
                             <span className="text-primary flex items-center gap-0.5">🏷️ {p.descripcion}</span>
                             <span className="text-primary font-bold tabular-nums">-{fmt(p.descuento)}</span>
@@ -402,7 +447,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             </div>
 
             {/* Devoluciones section */}
-            {devoluciones.length > 0 && (
+            {showDevoluciones && devoluciones.length > 0 && (
               <>
                 <div className="tk-dash mx-5 border-t border-dashed border-border" />
                 <div className="px-5 py-2">
@@ -429,27 +474,45 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               return (
             <div className="px-5 py-2 space-y-0.5">
               {/* Desglose: Subtotal sin impuestos → Descuentos → Subtotal gravable → IEPS/IVA → Total */}
-              <div className="tk-tot-row flex justify-between text-[10px]">
-                <span className="lbl text-muted-foreground">Subtotal sin impuestos</span>
-                <span className="val text-foreground tabular-nums">{fmt(sinImpTicket)}</span>
-              </div>
-              {descTicket > 0.005 && (
-                <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-primary font-semibold">Descuentos / promos</span>
-                  <span className="val text-primary font-bold tabular-nums">-{fmt(descTicket)}</span>
-                </div>
+              {showImpuestos ? (
+                <>
+                  <div className="tk-tot-row flex justify-between text-[10px]">
+                    <span className="lbl text-muted-foreground">Subtotal sin impuestos</span>
+                    <span className="val text-foreground tabular-nums">{fmt(sinImpTicket)}</span>
+                  </div>
+                  {showDescuentos && descTicket > 0.005 && (
+                    <div className="tk-tot-row flex justify-between text-[10px]">
+                      <span className="lbl text-primary font-semibold">Descuentos / promos</span>
+                      <span className="val text-primary font-bold tabular-nums">-{fmt(descTicket)}</span>
+                    </div>
+                  )}
+                  <div className="tk-tot-row flex justify-between text-[10px]">
+                    <span className="lbl text-muted-foreground">Subtotal gravable</span>
+                    <span className="val text-foreground tabular-nums">{fmt(gravableTicket)}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="tk-tot-row flex justify-between text-[10px]">
+                    <span className="lbl text-muted-foreground">Sub total</span>
+                    <span className="val text-foreground tabular-nums">{fmt(subBrutoTicket)}</span>
+                  </div>
+                  {showDescuentos && descBrutoTicket > 0.005 && (
+                    <div className="tk-tot-row flex justify-between text-[10px]">
+                      <span className="lbl text-primary font-semibold">Descuentos / promos</span>
+                      <span className="val text-primary font-bold tabular-nums">-{fmt(descBrutoTicket)}</span>
+                    </div>
+                  )}
+                </>
               )}
-              <div className="tk-tot-row flex justify-between text-[10px]">
-                <span className="lbl text-muted-foreground">Subtotal gravable</span>
-                <span className="val text-foreground tabular-nums">{fmt(gravableTicket)}</span>
-              </div>
-              {taxMode !== 'ninguno' && iepsMonto > 0.005 && (
+
+              {taxModeEff !== 'ninguno' && iepsMonto > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground pl-2">IEPS{resumen.iepsRate != null ? ` ${resumen.iepsRate}%` : ''}</span>
                   <span className="val text-foreground tabular-nums">{fmt(iepsMonto)}</span>
                 </div>
               )}
-              {taxMode !== 'ninguno' && ivaMonto > 0.005 && (
+              {taxModeEff !== 'ninguno' && ivaMonto > 0.005 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground pl-2">IVA{resumen.ivaRate != null ? ` ${resumen.ivaRate}%` : ''}</span>
                   <span className="val text-foreground tabular-nums">{fmt(ivaMonto)}</span>
@@ -467,7 +530,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                 <span className="lbl text-muted-foreground">Saldo</span>
                 <span className={`val font-bold tabular-nums ${summary.saldo > 0 ? 'text-destructive' : 'text-green-600'}`}>{fmt(summary.saldo)}</span>
               </div>
-              {montoRecibido != null && montoRecibido > 0 && (
+              {showRecibidoCambio && montoRecibido != null && montoRecibido > 0 && (
                 <div className="pt-1 space-y-0.5">
                   <div className="tk-tot-row flex justify-between text-[10px]">
                     <span className="lbl text-muted-foreground">Recibido</span>
@@ -486,7 +549,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             })()}
 
             {/* Balance / Saldo */}
-            {true ? (
+            {showSaldoCuenta ? (
               <>
                 <div className="tk-dash mx-5 border-t border-dashed border-border" />
                 <div className="px-5 py-2 space-y-0.5">
@@ -516,7 +579,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             ) : null}
 
             {/* Pagos recibidos */}
-            {pagos.length > 0 && (
+            {showPagosRecibidos && pagos.length > 0 && (
               <>
                 <div className="tk-dash mx-5 border-t border-dashed border-border" />
                 <div className="px-5 py-2 space-y-0.5">
@@ -533,7 +596,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
             {/* Footer */}
             <div className="tk-footer px-5 py-2.5 border-t border-dashed border-border text-center">
-              <p className="text-[8px] text-muted-foreground">Gracias por su compra</p>
+              {showGracias && <p className="text-[8px] text-muted-foreground">Gracias por su compra</p>}
               {((empresa as any).ticket_campos?.notas_ticket !== false) && empresa.notas_ticket && <p className="text-[8px] text-muted-foreground">{empresa.notas_ticket}</p>}
               <p className="text-[8px] text-muted-foreground">rutapp.mx</p>
             </div>
