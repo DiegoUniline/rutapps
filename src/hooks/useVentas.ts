@@ -89,8 +89,8 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
           if (arr.length > 1) q = q.in('vendedor_id', arr as any);
           else q = q.eq('vendedor_id', vendedorFilter);
         }
-        if (dateFrom) q = q.gte('fecha', dateFrom);
-        if (dateTo) q = q.lte('fecha', dateTo);
+        if (dateFrom) q = q.gte('fecha', dateFrom + 'T00:00:00');
+        if (dateTo) q = q.lte('fecha', dateTo + 'T23:59:59');
         if (promoIds) {
           if (promoFilter === 'si') {
             // Sin coincidencias: forzamos resultado vacío con un id imposible.
@@ -180,8 +180,8 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
           const arr = vendedorFilter.split(',');
           if (arr.length > 1) q = q.in('vendedor_id', arr as any); else q = q.eq('vendedor_id', vendedorFilter);
         }
-        if (dateFrom) q = q.gte('fecha', dateFrom);
-        if (dateTo) q = q.lte('fecha', dateTo);
+        if (dateFrom) q = q.gte('fecha', dateFrom + 'T00:00:00');
+        if (dateTo) q = q.lte('fecha', dateTo + 'T23:59:59');
         if (promoIds) {
           if (promoFilter === 'si') q = q.in('id', promoIds.length ? promoIds : ['00000000-0000-0000-0000-000000000000']);
           else if (promoIds.length) q = q.not('id', 'in', `(${promoIds.join(',')})`);
@@ -246,8 +246,8 @@ export function useVentaLineasResumen(search?: string, statusFilter?: string, ti
           const arr = vendedorFilter.split(',');
           if (arr.length > 1) q = q.in('ventas.vendedor_id', arr as any); else q = q.eq('ventas.vendedor_id', vendedorFilter);
         }
-        if (dateFrom) q = q.gte('ventas.fecha', dateFrom);
-        if (dateTo) q = q.lte('ventas.fecha', dateTo);
+        if (dateFrom) q = q.gte('ventas.fecha', dateFrom + 'T00:00:00');
+        if (dateTo) q = q.lte('ventas.fecha', dateTo + 'T23:59:59');
         if (searchEmpty) q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
         else if (searchOr) q = q.or(searchOr);
         return q;
@@ -318,8 +318,8 @@ export function useVentaLineasPaginated(
           if (arr.length > 1) q = q.in('ventas.vendedor_id', arr as any);
           else q = q.eq('ventas.vendedor_id', vendedorFilter);
         }
-        if (dateFrom) q = q.gte('ventas.fecha', dateFrom);
-        if (dateTo) q = q.lte('ventas.fecha', dateTo);
+        if (dateFrom) q = q.gte('ventas.fecha', dateFrom + 'T00:00:00');
+        if (dateTo) q = q.lte('ventas.fecha', dateTo + 'T23:59:59');
         if (searchEmpty) q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
         else if (searchOr) q = q.or(searchOr);
         return q;
