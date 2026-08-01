@@ -1,0 +1,43 @@
+-- Backfill: promociones registradas pero NO netadas en la línea (Lic. 19085904)
+WITH afectadas AS (
+  SELECT pa.venta_linea_id,
+         SUM(pa.descuento_aplicado)::numeric AS desc_promo,
+         MIN(pa.promocion_id::text)::uuid    AS promocion_id
+  FROM public.promocion_aplicada pa
+  JOIN public.ventas v ON v.id = pa.venta_id
+  WHERE v.empresa_id = 'a2305cca-06ea-4ad2-872c-274f9d2d9495'
+    AND pa.venta_linea_id IS NOT NULL
+  GROUP BY pa.venta_linea_id
+),
+calc AS (
+  SELECT vl.id,
+         a.desc_promo,
+         a.promocion_id,
+         pr.nombre AS promocion_nombre,
+         vl.total AS total_bruto,
+         ROUND(vl.total - a.desc_promo, 2) AS nuevo_total,
+         ROUND(COALESCE(vl.iva_monto,0)  * (vl.total - a.desc_promo) / NULLIF(vl.total,0), 2) AS nuevo_iva,
+         ROUND(COALESCE(vl.ieps_monto,0) * (vl.total - a.desc_promo) / NULLIF(vl.total,0), 2) AS nuevo_ieps
+  FROM public.venta_lineas vl
+  JOIN afectadas a ON a.venta_linea_id = vl.id
+  LEFT JOIN public.promociones pr ON pr.id = a.promocion_id
+  WHERE COALESCE(vl.descuento_promocion_monto,0) < a.desc_promo - 0.005
+    AND vl.total > a.desc_promo
+)
+UPDATE public.venta_lineas vl
+SET importe_bruto              = COALESCE(vl.importe_bruto, c.total_bruto),
+    descuento_promocion_monto  = c.desc_promo,
+    descuento_total_monto      = ROUND(COALESCE(vl.descuento_manual_monto,0) + c.desc_promo, 2),
+    promocion_id               = COALESCE(vl.promocion_id, c.promocion_id),
+    promocion_nombre           = COALESCE(vl.promocion_nombre, c.promocion_nombre),
+    total                      = c.nuevo_total,
+    iva_monto                  = c.nuevo_iva,
+    ieps_monto                 = c.nuevo_ieps,
+    subtotal                   = ROUND(c.nuevo_total - c.nuevo_iva - c.nuevo_ieps, 2),
+    base_iva                   = ROUND(c.nuevo_total - c.nuevo_iva - c.nuevo_ieps, 2),
+    base_ieps                  = ROUND(c.nuevo_total - c.nuevo_iva - c.nuevo_ieps, 2),
+    precio_unitario            = CASE WHEN vl.cantidad > 0
+                                      THEN ROUND((c.nuevo_total - c.nuevo_iva - c.nuevo_ieps) / vl.cantidad, 6)
+                                      ELSE vl.precio_unitario END
+FROM calc c
+WHERE vl.id = c.id;
