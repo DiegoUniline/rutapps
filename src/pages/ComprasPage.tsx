@@ -612,6 +612,7 @@ export default function ComprasPage() {
               onGroupByLevelChange={setGroupByLevelD}
               dateFrom={desdeD}
               dateTo={hastaD}
+              onDateRangeChange={(f, t) => setDatesD(f, t)}
               onDateFromChange={setDesdeD}
               onDateToChange={setHastaD}
             />

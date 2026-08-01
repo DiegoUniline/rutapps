@@ -627,6 +627,7 @@ export default function CobranzaPage() {
         onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); pagination.resetPage(); }}
         dateFrom={dateFrom}
         dateTo={dateTo}
+        onDateRangeChange={(f, t) => { setDates(f, t); pagination.resetPage(); }}
         onDateFromChange={v => { setDateFrom(v); pagination.resetPage(); }}
         onDateToChange={v => { setDateTo(v); pagination.resetPage(); }}
       />
