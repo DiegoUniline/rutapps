@@ -118,7 +118,7 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
                 </span>
                 {pr.descuento > 0 && (
                   <span className="font-bold text-primary tabular-nums shrink-0">
-                    -{money(pr.descuento)}
+                    -{money(Math.round(pr.descuento * promoFactor * 100) / 100)}
                     <span className="text-[9px] text-muted-foreground ml-1 font-normal">(c/imp)</span>
                   </span>
                 )}
