@@ -128,7 +128,14 @@ class OfflineDatabase extends Dexie {
     this.version(11).stores({
       stock_apartado: 'id, empresa_id, almacen_id, producto_id, venta_id, venta_linea_id',
     });
+    // v12: lotes + existencia por lote para poder apartar lote desde la ruta
+    // (FEFO) aun sin señal. Solo se llenan en empresas con maneja_lotes.
+    this.version(12).stores({
+      lotes: 'id, empresa_id, producto_id, activo, fecha_caducidad',
+      stock_lotes: 'id, empresa_id, almacen_id, producto_id, lote_id',
+    });
   }
+
 }
 
 
