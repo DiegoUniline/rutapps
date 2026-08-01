@@ -156,6 +156,15 @@ export default function TicketVenta(props: TicketVentaProps) {
   const gravableTicket = subtotalNetoGuardado > 0
     ? Math.max(0, r2(sinImpTicket - descTicket))
     : netoTotal;
+  // Modo sin desglose de impuestos: todo en bruto para que Subtotal − Desc = Total.
+  const descuentoBrutoGuardado = r2(lineas.reduce((s, l: any) =>
+    s + (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0), 0));
+  const descBrutoTicket = descuentoBrutoGuardado > 0.005 ? descuentoBrutoGuardado : r2(descTicket);
+  const subBrutoTicket = descBrutoTicket > 0.005
+    ? r2((Number(total) || 0) + descBrutoTicket)
+    : r2(sinImpTicket + ivaMonto + iepsMonto);
+
+
 
   const ticketRef = useRef<HTMLDivElement>(null);
   // 'ambos' = producto + totales, 'totales' = solo totales, 'ninguno' = sin impuestos
