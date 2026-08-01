@@ -174,8 +174,27 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   const gravableDisp = Math.max(0, totalReal - ivaMontoV - iepsMontoV);
   const promoLive = promoResults.reduce((s: number, pr: any) => s + (Number(pr.descuento) || 0), 0);
   const promoAplicada = (venta.promocion_aplicada ?? []).reduce((s: number, p: any) => s + (Number(p?.descuento_aplicado) || 0), 0);
-  const descuentoDisp = Math.max(resumen.descuento, promoLive, promoAplicada, Number(venta.descuento_total) || 0);
-  const sinImpDisp = gravableDisp + descuentoDisp;
+  // Desglose guardado en las líneas (mismas fórmulas que el detalle de la venta),
+  // para que la fila expandida muestre exactamente los mismos importes.
+  const r2v = (n: number) => Math.round(n * 100) / 100;
+  const subtotalNetoGuardado = r2v(lineas.reduce((s: number, l: any) => {
+    const lista = Number(l.precio_lista_unitario);
+    const qty = Number(l.cantidad) || 0;
+    return s + (Number.isFinite(lista) ? r2v(lista * qty) : 0);
+  }, 0));
+  const descuentoNetoGuardado = r2v(lineas.reduce((s: number, l: any) => {
+    const desc = (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0);
+    if (desc <= 0) return s;
+    const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
+    return s + r2v(divisor > 0 ? desc / divisor : desc);
+  }, 0));
+  const usarGuardado = subtotalNetoGuardado > 0;
+  const descuentoDisp = usarGuardado
+    ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2v(subtotalNetoGuardado - gravableDisp))
+    : Math.max(resumen.descuento, promoLive, promoAplicada, Number(venta.descuento_total) || 0);
+  const sinImpDisp = usarGuardado ? subtotalNetoGuardado : gravableDisp + descuentoDisp;
+  const gravableShown = usarGuardado ? r2v(sinImpDisp - descuentoDisp) : gravableDisp;
+
   // Etiqueta de promo por producto (línea gratis o con descuento).
   const promoPorProducto = useMemo(() => {
     const map: Record<string, string> = {};
