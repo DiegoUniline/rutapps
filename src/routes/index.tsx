@@ -1,1 +1,1 @@
-export default function Index() { return <body>ya desplegue para todas empresas las columnas extras ayudame a validar</body>; }
+export default function Index() { return <body>He actualizado el texto solicitado en la ruta principal. yo jamas he solicitado esto</body>; }
