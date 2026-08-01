@@ -2107,6 +2107,56 @@ export type Database = {
           },
         ]
       }
+      consumo_datos: {
+        Row: {
+          bytes_descarga: number
+          bytes_subida: number
+          created_at: string
+          desglose: Json
+          empresa_id: string
+          fecha: string
+          id: string
+          origen: string
+          peticiones: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bytes_descarga?: number
+          bytes_subida?: number
+          created_at?: string
+          desglose?: Json
+          empresa_id: string
+          fecha: string
+          id?: string
+          origen?: string
+          peticiones?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bytes_descarga?: number
+          bytes_subida?: number
+          created_at?: string
+          desglose?: Json
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          origen?: string
+          peticiones?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumo_datos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conteo_entradas: {
         Row: {
           cantidad: number
@@ -9167,6 +9217,7 @@ export type Database = {
       }
       is_sandbox_empresa: { Args: { p_empresa_id: string }; Returns: boolean }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
+      limpiar_consumo_datos_antiguo: { Args: never; Returns: undefined }
       log_venta_historial: {
         Args: {
           _accion: string
