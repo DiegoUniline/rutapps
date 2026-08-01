@@ -89,9 +89,14 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
 
 
   // Precio unitario CON impuestos (para la columna opcional "Precio c/imp").
+  // En LECTURA (readOnly) reconstruimos desde el total guardado para que
+  // coincida visualmente con el subtotal y el desglose de impuestos guardado.
   const ivaPctUnit = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
   const iepsPctUnit = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
-  const priceGross = r2(price * (1 + iepsPctUnit / 100) * (1 + ivaPctUnit / 100));
+  const priceGross = readOnly 
+    ? r2((Number(l.total) || 0) / qty)
+    : r2(price * (1 + iepsPctUnit / 100) * (1 + ivaPctUnit / 100));
+
   // % de la promoción prorrateada, relativo al subtotal BRUTO (pre-promoción) de
   // la línea. Se reconstruye desde montos guardados para que sea independiente de
   // cómo se guardó el precio_unitario (bruto en escritorio, neto en ruta):
