@@ -253,13 +253,15 @@ export default function SuperAdminEmpresaSelector() {
       {isOverridden && (
         <button
           onClick={() => handleSelect('')}
-          className="ml-auto flex items-center gap-1 px-2 py-1 rounded bg-destructive-foreground text-destructive text-[11px] font-bold hover:opacity-90"
+          className="shrink-0 sm:ml-auto flex items-center gap-1 px-2 py-1 rounded bg-destructive-foreground text-destructive text-[10px] sm:text-[11px] font-bold hover:opacity-90 whitespace-nowrap"
           title="Volver a mi empresa"
         >
-          <X className="h-3 w-3" />
-          Volver a mi empresa
+          <X className="h-3 w-3 shrink-0" />
+          <span className="hidden sm:inline">Volver a mi empresa</span>
+          <span className="sm:hidden">Volver</span>
         </button>
       )}
+
     </div>
   );
 }
