@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { downloadAllData, getLocalDataSummary, getFailedTables, retryFailedTables, type SyncProgress } from '@/lib/offlineSync';
+import { downloadAllData, purgeForeignTenantData, getLocalDataSummary, getFailedTables, retryFailedTables, type SyncProgress } from '@/lib/offlineSync';
 import { getPendingCount, getDeadLetterCount, retryDeadLetters, processSyncQueue } from '@/lib/syncQueue';
 import { offlineDb } from '@/lib/offlineDb';
 import { cn } from '@/lib/utils';
@@ -59,12 +59,13 @@ export default function RutaSincronizarPage() {
 
   // Load local data summary
   const loadSummary = useCallback(async () => {
-    const summary = await getLocalDataSummary();
+    // Solo la empresa activa: nunca se cuentan datos de otro inquilino.
+    const summary = await getLocalDataSummary(empresa?.id);
     setLocalSummary(summary);
     const dl = await getDeadLetterCount();
     setDeadLetters(dl);
     try { setFailedTables(await getFailedTables()); } catch { /* ignore */ }
-  }, []);
+  }, [empresa?.id]);
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
 
