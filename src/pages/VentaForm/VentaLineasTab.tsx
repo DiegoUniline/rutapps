@@ -123,8 +123,8 @@ export function VentaLineasTab(props: Props) {
                       {showCol('precioNeto') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio<span className="font-normal"> s/imp</span></th>}
                       {showCol('iva') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">IVA</th>}
                       {showCol('ieps') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">IEPS</th>}
-                      {showCol('descMan') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-right">Desc man.</th>}
                       {showCol('descPromo') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Desc promo</th>}
+                      {showCol('descMan') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-right">Desc man.</th>}
                       {showCol('subtotal') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Total línea</th>}
                       {showCol('lote') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24">Lote</th>}
                       {VENTA_LINEAS_DESGLOSE_COLUMNS.filter(c => showCol(c.key)).map(c => (
