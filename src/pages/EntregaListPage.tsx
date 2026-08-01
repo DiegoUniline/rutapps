@@ -397,7 +397,7 @@ export default function EntregaListPage() {
   };
 
   return (
-    <ListPage>
+    <ListPage scroll>
       {cargarProgress && (
         <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-3">

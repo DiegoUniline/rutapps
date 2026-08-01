@@ -43,15 +43,21 @@ interface ListPageProps {
   className?: string;
   /** Quita el padding por defecto (útil para vistas a sangre completa). */
   flush?: boolean;
+  /**
+   * Modo compatible: la página entera hace scroll (comportamiento previo).
+   * Úsalo sólo en vistas que aún no tienen un único contenedor desplazable.
+   */
+  scroll?: boolean;
 }
 
-function ListPageRoot({ children, className, flush }: ListPageProps) {
+function ListPageRoot({ children, className, flush, scroll }: ListPageProps) {
   return (
     <ListPageContext.Provider value={true}>
       <div
         data-listpage=""
         className={cn(
-          'flex flex-col h-full min-h-0 overflow-hidden gap-3 [&>*]:shrink-0',
+          'flex flex-col h-full min-h-0 gap-3 [&>*]:shrink-0',
+          scroll ? 'overflow-y-auto' : 'overflow-hidden',
           !flush && 'p-4 pb-2',
           className,
         )}

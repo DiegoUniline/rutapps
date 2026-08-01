@@ -203,7 +203,7 @@ export default function ComprasSugeridasPage() {
   };
 
   return (
-    <ListPage>
+    <ListPage scroll>
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">

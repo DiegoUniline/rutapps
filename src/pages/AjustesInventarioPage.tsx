@@ -520,7 +520,7 @@ export default function AjustesInventarioPage() {
   };
 
   return (
-    <ListPage>
+    <ListPage scroll>
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">

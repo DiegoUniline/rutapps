@@ -99,8 +99,8 @@ export default function CotizacionesListPage() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className={TABLE_CARD}>
+        <div>
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>

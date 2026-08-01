@@ -439,7 +439,7 @@ export default function TraspasosListPage() {
   );
 
   return (
-    <ListPage>
+    <ListPage scroll>
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Traspasos <HelpButton title={HELP.traspasos.title} sections={HELP.traspasos.sections} /> <VideoHelpButton module="traspasos" /></h1>
 
       {/* KPIs */}

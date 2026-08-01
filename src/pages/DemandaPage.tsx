@@ -766,7 +766,7 @@ export default function DemandaPage() {
   }, 0);
 
   return (
-    <ListPage>
+    <ListPage scroll>
       <PedidosTabs />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
