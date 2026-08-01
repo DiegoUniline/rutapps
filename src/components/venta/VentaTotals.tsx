@@ -24,9 +24,11 @@ interface VentaTotalsProps {
    *  (precio de lista × cantidad). Cuando viene, manda sobre la
    *  reconstrucción para que el resumen cuadre al centavo con las líneas. */
   subtotalNetoGuardado?: number | null;
+  /** Suma de los descuentos SIN impuestos guardados en las líneas. */
+  descuentoNetoGuardado?: number | null;
 }
 
-export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt, currencyCode, promoTotalGuardado, subtotalNetoGuardado }: VentaTotalsProps) {
+export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt, currencyCode, promoTotalGuardado, subtotalNetoGuardado, descuentoNetoGuardado }: VentaTotalsProps) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const lineDescuento = descuento_total - (descuento_promo ?? 0) - (descuento_extra_amt ?? 0);
@@ -56,7 +58,11 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
   const grossSubtotal = useGuardado ? r2(subtotalNetoGuardado as number) : r2(gravable + shownLineDesc + promoNeto + shownExtra);
   // Con subtotal guardado, el descuento se deriva para que siempre cuadre:
   // Subtotal − Descuentos = Subtotal gravable.
-  const totalDescuentos = useGuardado ? r2(grossSubtotal - gravable) : r2(shownLineDesc + promoNeto + shownExtra);
+  const totalDescuentos = useGuardado
+    ? r2((descuentoNetoGuardado ?? 0) > 0 ? (descuentoNetoGuardado as number) : grossSubtotal - gravable)
+    : r2(shownLineDesc + promoNeto + shownExtra);
+  // Con datos guardados, el gravable se deriva de las líneas para que la resta cuadre.
+  const gravableShown = useGuardado ? r2(grossSubtotal - totalDescuentos) : gravable;
 
   const pagadoAmt = saldoPendiente != null ? Math.max(0, (total || 0) - saldoPendiente) : null;
 
@@ -75,7 +81,7 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
         )}
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal gravable</span>
-          <span>{money(gravable)}</span>
+          <span>{money(gravableShown)}</span>
         </div>
         {ieps_total > 0 && (
           <div className="flex justify-between">
