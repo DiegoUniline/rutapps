@@ -367,9 +367,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         const u = (v: any) => (num(v) == null ? null : money(r2(Number(v) / qty)));
 
         const columnsOrder = [
-          // PASO 1: Compra original
-          { key: 'dPrecioLista', content: m(d.precio_lista_unitario) },
+          // PASO 1: Precios
           { key: 'dImporteBruto', content: u(d.importe_bruto) },
+          { key: 'dPrecioLista', content: m(d.precio_lista_unitario) },
 
           // PASO 2: Descuentos
           { key: 'dPromoNombre', content: d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null },
