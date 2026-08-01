@@ -146,7 +146,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
 
   return (
     <tr className={cn("border-b border-table-border transition-colors group", isEmpty ? "bg-transparent" : "hover:bg-table-hover")}>
-      <td className="py-1.5 px-2 text-muted-foreground text-xs">{isEmpty ? '' : idx + 1}</td>
+      <td className="py-1 px-2 text-muted-foreground text-xs">{isEmpty ? '' : idx + 1}</td>
       {showCol('cantidad') && (
       <td className="py-1 px-2">
         {readOnly ? (
@@ -191,7 +191,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         )}
       </td>
       {showCol('unidad') && (
-      <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px]">{isEmpty ? '' : (unidadLabel || '—')}</td>
+      <td className="py-1 px-2 text-center text-muted-foreground text-[12px]">{isEmpty ? '' : (unidadLabel || '—')}</td>
       )}
       {showCol('precioBruto') && (
       <td className="py-1 px-2 text-right">
@@ -264,7 +264,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       )}
       {/* IVA (columna propia) */}
       {showCol('iva') && (
-      <td className="py-1.5 px-2 text-right">
+      <td className="py-1 px-2 text-right">
         {isEmpty ? '' : readOnly ? (
           ivaUnit > 0
             ? <span className="text-[12px] tabular-nums">{money(ivaUnit)}<span className="text-muted-foreground text-[9px] ml-1">{Number(l.iva_pct) || 0}%</span></span>
@@ -283,7 +283,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       )}
       {/* IEPS (columna propia) */}
       {showCol('ieps') && (
-      <td className="py-1.5 px-2 text-right">
+      <td className="py-1 px-2 text-right">
         {isEmpty ? '' : (() => {
           if (readOnly) {
             return iepsUnit > 0
@@ -309,7 +309,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       )}
       {/* Descuento por PROMOCIÓN (informativo) */}
       {showCol('descPromo') && (
-      <td className="py-1.5 px-2 text-right">
+      <td className="py-1 px-2 text-right">
         {isEmpty ? '' : linePromoDesc > 0 ? (
           <span className="text-[11px] text-primary font-medium tabular-nums">
             −{readOnly ? money(r2(linePromoDesc / qty)) : money(linePromoDesc)}
@@ -326,7 +326,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       </td>
       )}
       {showCol('subtotal') && (
-      <td className="py-1.5 px-2 text-right font-medium">
+      <td className="py-1 px-2 text-right font-medium">
         {isEmpty ? '' : lineEsGratis ? (
           <div>
             <span className="text-muted-foreground line-through font-normal text-[11px] mr-1">{money(displayLineTotal)}</span>
@@ -346,7 +346,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       </td>
       )}
       {showCol('lote') && (
-      <td className="py-1.5 px-2">
+      <td className="py-1 px-2">
         {!isEmpty && (l as any).lote_codigo
           ? <span className="text-[11px]"><span className="font-medium">{(l as any).lote_codigo}</span></span>
           : (!isEmpty ? <span className="text-muted-foreground text-[11px]">—</span> : '')}
@@ -357,7 +357,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         const d = l as any;
         const num = (v: any) => (v == null ? null : Number(v));
         const cell = (key: string, content: React.ReactNode) => showCol(key) ? (
-          <td key={key} className="py-1.5 px-2 text-right text-[12px] tabular-nums whitespace-nowrap">
+          <td key={key} className="py-1 px-2 text-right text-[12px] tabular-nums whitespace-nowrap">
             {isEmpty ? '' : (content ?? <span className="text-muted-foreground text-[11px]">—</span>)}
           </td>
         ) : null;
@@ -508,7 +508,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
 
         return columnsOrder.map(col => cell(col.key, col.content));
       })()}
-      <td className="py-1.5 px-2">
+      <td className="py-1 px-2">
         {!readOnly && !isEmpty && <button onClick={() => onRemoveLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>}
       </td>
     </tr>
