@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface ListPreferences {
   filters: Record<string, string[]>;
@@ -25,8 +26,21 @@ function save(key: string, prefs: ListPreferences) {
   } catch {}
 }
 
-export function useListPreferences(listKey: string) {
+export function useListPreferences(baseKey: string) {
+  const { user } = useAuth();
+  /** Preferences are persisted per user in this browser */
+  const listKey = `${user?.id ?? 'anon'}_${baseKey}`;
   const [prefs, setPrefs] = useState<ListPreferences>(() => load(listKey));
+
+  // Reload preferences when the signed-in user changes
+  const loadedKey = useRef(listKey);
+  useEffect(() => {
+    if (loadedKey.current !== listKey) {
+      loadedKey.current = listKey;
+      setPrefs(load(listKey));
+    }
+  }, [listKey]);
+
 
   const setFilter = useCallback((filterKey: string, values: string[]) => {
     setPrefs(prev => {
