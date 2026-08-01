@@ -308,9 +308,9 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
     <>
       <tr>
         <td colSpan={colSpan} className="p-0">
-          <div className="bg-card border-b border-border px-4 py-3 space-y-3 animate-in slide-in-from-top-1 duration-200 sticky left-0 w-full max-w-[100vw]">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="bg-card border-b border-border px-4 py-3 space-y-3 animate-in slide-in-from-top-1 duration-200">
+            {/* Header: pegado al borde izquierdo aunque la tabla tenga scroll horizontal */}
+            <div className="sticky left-0 w-fit max-w-full space-y-2">
               <div className="flex items-center gap-3 flex-wrap min-w-0">
                 <span className="font-mono text-sm font-bold">{venta.folio || venta.id.slice(0, 8)}</span>
                 <StatusChip status={venta.status} />
@@ -320,7 +320,8 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                 <span className="text-muted-foreground text-xs">•</span>
                 <span className="text-muted-foreground text-xs">{CONDICION_LABELS[venta.condicion_pago] || venta.condicion_pago}</span>
               </div>
-              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+              <div className="flex items-center gap-1.5 flex-wrap">
+
 
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={handlePdf} disabled={generatingPdf}>
                   {generatingPdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
