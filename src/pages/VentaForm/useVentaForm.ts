@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplicadas } from '@/lib/promoPersist';
 import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
+import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
@@ -548,7 +549,7 @@ export function useVentaForm() {
         const ventaId = (form as any).id ?? null;
         (async () => {
           const lotes = await getLotesDisponibles({ empresaId, almacenId, productoId, excluirVentaId: ventaId });
-          const fefo = pickFefo(lotes, Number(next?.cantidad) || 1);
+          const fefo = pickFefo(lotes, 1);
           if (!fefo) return;
           setLineas(prev => {
             const arr = [...prev];
