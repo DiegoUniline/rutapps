@@ -387,12 +387,35 @@ export function useVentaForm() {
     return { ...line, precio_unitario: effective.unitPrice, display_unit_price: effective.displayPrice } as Partial<VentaLinea>;
   }, []);
 
+  // Cambio de cliente → cambio de lista: pedimos confirmación antes de
+  // reprecificar líneas ya capturadas (los precios manuales nunca se tocan).
+  const [pendingReprice, setPendingReprice] = useState<{ listaPrecioId: string | null; listaNombre: string; count: number; manualCount: number } | null>(null);
+  const repricedListaRef = useRef<string | null | undefined>(undefined);
+
   // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines).
   // Una línea con lista_precio_id propio NO se reprecifica desde la lista/tarifa global:
   // solo se re-aplica el redondeo efectivo con el nuevo estado de impuestos.
   useEffect(() => {
     if (!productosList || readOnly) return;
+    // Espera a que carguen las reglas de la tarifa del cliente: repreciar
+    // ahora daría el fallback (precio_principal) en vez del precio de lista.
+    if (tarifaRulesLoading) return;
     const formListaPrecioId = (form as any).lista_precio_id || null;
+
+    // Si la lista cambió y ya hay líneas capturadas, no repreciar en silencio:
+    // se pregunta al usuario (ver `confirmReprice` / `dismissReprice`).
+    if (repricedListaRef.current !== undefined && repricedListaRef.current !== formListaPrecioId) {
+      const autoLines = lineas.filter(l => l.producto_id && !(l as any).precio_manual);
+      const manualLines = lineas.filter(l => l.producto_id && (l as any).precio_manual);
+      if (autoLines.length || manualLines.length) {
+        const nombre = (tarifasList ?? []).find((t: any) => t.id === form.tarifa_id)?.nombre ?? 'la nueva lista';
+        setPendingReprice({ listaPrecioId: formListaPrecioId, listaNombre: nombre, count: autoLines.length, manualCount: manualLines.length });
+        return;
+      }
+    }
+    repricedListaRef.current = formListaPrecioId;
+    setPendingReprice(null);
+
     setLineas(prev => prev.map(l => {
       if (!l.producto_id) return l;
       if ((l as any).precio_manual) return l;
