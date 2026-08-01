@@ -478,15 +478,17 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             return parts.length ? <span className="text-[11px]">{parts.join(' · ')}</span> : null;
           })() },
           { key: 'dPromoNombre', content: (() => {
-            const nombre = d.promocion_nombre as string | null;
-            const gratis = Number(d.cantidad_bonificada) || 0;
-            const descPromo = Number(d.descuento_promocion_monto) || 0;
+            // Nombre guardado en la línea; si falta (ventas antiguas) se toma
+            // del motor de promociones aplicado a esta línea.
+            const nombreVivo = linePromos.map(r => (r as any).nombre || (r as any).promocion_nombre).filter(Boolean)[0] as string | undefined;
+            const nombre = (d.promocion_nombre as string | null) || nombreVivo || null;
+            const gratis = (Number(d.cantidad_bonificada) || 0) || lineGratisQty;
+            const descPromo = (Number(d.descuento_promocion_monto) || 0) || linePromoDesc;
             const esBonif = d.es_bonificacion === true;
             if (!nombre && gratis <= 0 && descPromo <= 0 && !esBonif) return null;
             const partes: string[] = [];
             if (gratis > 0) partes.push(`🎁 ${gratis}x gratis`);
             if (nombre) partes.push(nombre);
-            // Ventas antiguas no guardaban el nombre de la promoción
             if (!partes.length) partes.push(esBonif ? '🎁 Bonificación' : '🎁 Promoción');
             return <span className="text-[11px] whitespace-nowrap">{partes.join(' — ')}</span>;
           })() },
