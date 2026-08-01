@@ -111,22 +111,30 @@ export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> = {
 export const VENTA_LINEAS_DESGLOSE_OFF: Record<string, boolean> = 
   Object.fromEntries(VENTA_LINEAS_DESGLOSE_KEYS.map(k => [k, false]));
 
-export function getVentaLineasColumns(showDesglose: boolean): ColumnDef[] {
-  return showDesglose
-    ? [...VENTA_LINEAS_COLUMNS, ...VENTA_LINEAS_DESGLOSE_COLUMNS]
-    : VENTA_LINEAS_COLUMNS;
-}
+// ── Columnas FINALES ──
+// Únicas columnas que se ofrecen en el selector cuando el desglose está activo.
+// El resto quedan ocultas (no se muestran ni se pueden encender).
+export const VENTA_LINEAS_FINAL_KEYS = [
+  'cantidad', 'producto', 'unidad',
+  'dCosto', 'dPrecioLista', 'dImpuestosMonto', 'dImporteBruto', 'dSubtotalBruto',
+  'dDescTotal', 'dTotal', 'dImpuestosPct', 'dPromoNombre',
+];
 
-export function getVentaLineasPresets(showDesglose: boolean): ColumnPreset[] {
-  const presets = [...VENTA_LINEAS_PRESETS];
-  if (showDesglose) {
-    presets.push({
-      key: 'desglose_audit',
-      label: 'Auditoría Total',
-      columns: ['cantidad', 'dPrecioLista', 'dImporteBruto', 'dPromoNombre', 'dDescTotal', 'dBaseDescMan', 'dBaseIeps', 'dBaseIva']
-    });
-  }
-  return presets;
+/** Fuerza en `false` toda columna que no esté en el set final. */
+export const VENTA_LINEAS_NON_FINAL_OFF: Record<string, boolean> = Object.fromEntries(
+  [...VENTA_LINEAS_COLUMNS, ...VENTA_LINEAS_DESGLOSE_COLUMNS]
+    .map(c => c.key)
+    .filter(k => !VENTA_LINEAS_FINAL_KEYS.includes(k))
+    .map(k => [k, false]),
+);
+
+export function getVentaLineasColumns(showDesglose: boolean): ColumnDef[] {
+  const all = [...VENTA_LINEAS_COLUMNS, ...VENTA_LINEAS_DESGLOSE_COLUMNS];
+  if (!showDesglose) return VENTA_LINEAS_COLUMNS;
+  return VENTA_LINEAS_FINAL_KEYS
+    .map(k => all.find(c => c.key === k))
+    .filter((c): c is ColumnDef => !!c);
 }
 
 export const VENTA_LINEAS_DESGLOSE_GROUP_ORDER = VENTA_LINEAS_GROUP_ORDER;
+
