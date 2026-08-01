@@ -148,6 +148,7 @@ const ComisionesPorPagarPage = lazy(() => import("@/pages/comisiones/ComisionesP
 const ComisionesRecibosPage = lazy(() => import("@/pages/comisiones/ComisionesRecibosPage"));
 const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicialPage"));
 const HomologacionCatalogoPage = lazy(() => import("@/pages/configuracion/HomologacionCatalogoPage"));
+const ConsumoDatosPage = lazy(() => import("@/pages/configuracion/ConsumoDatosPage"));
 const TerminosPage = lazy(() => import("@/pages/TerminosPage"));
 const PrivacidadPage = lazy(() => import("@/pages/PrivacidadPage"));
 const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage"));
