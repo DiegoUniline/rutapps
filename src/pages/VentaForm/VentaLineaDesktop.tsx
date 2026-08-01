@@ -399,19 +399,28 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             return lista == null ? null : money(r2(Number(lista) * qty));
           })() },
           { key: 'dImpuestosTotal', content: (() => {
+            // Impuestos TOTALES de la línea: se calculan sobre la base gravable
+            // real (precio de lista × cantidad − descuentos sin impuestos) y se
+            // redondean al final, no por pieza.
             const lista = num(d.precio_lista_unitario);
             if (lista == null) return null;
             const iepsP = Number(d.ieps_pct) || 0;
             const ivaP = Number(d.iva_pct) || 0;
-            const iepsU = r2(Number(lista) * (iepsP / 100));
-            const ivaU = r2((Number(lista) + iepsU) * (ivaP / 100));
-            const total = r2((iepsU + ivaU) * qty);
+            if (iepsP <= 0 && ivaP <= 0) return null;
+            const divisor = (1 + iepsP / 100) * (1 + ivaP / 100);
+            const descBruto = (Number(d.descuento_promocion_monto) || 0) + (Number(d.descuento_manual_monto) || 0);
+            const descNeto = descBruto > 0 && divisor > 0 ? r2(descBruto / divisor) : r2(descBruto);
+            const base = r2(r2(Number(lista) * qty) - descNeto);
+            if (base <= 0) return null;
+            const iepsT = r2(base * (iepsP / 100));
+            const ivaT = r2((base + iepsT) * (ivaP / 100));
+            const total = r2(iepsT + ivaT);
             if (total <= 0) return null;
             return (
               <span className="text-[11px] whitespace-nowrap">
                 {money(total)}
-                {(iepsU > 0 && ivaU > 0) && (
-                  <span className="block text-[10px] text-muted-foreground">IEPS {money(r2(iepsU * qty))} · IVA {money(r2(ivaU * qty))}</span>
+                {(iepsT > 0 && ivaT > 0) && (
+                  <span className="block text-[10px] text-muted-foreground">IEPS {money(iepsT)} · IVA {money(ivaT)}</span>
                 )}
               </span>
             );
