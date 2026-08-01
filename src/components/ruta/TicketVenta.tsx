@@ -304,6 +304,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
           </button>
         ))}
       </div>
+      )}
 
       <div className="flex-1 p-4 flex flex-col items-center">
         <div className="w-full max-w-sm bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
