@@ -3,12 +3,12 @@ import type { ColumnDef, ColumnPreset } from '@/components/ColumnVisibilityMenu'
 // Columnas configurables de la tabla de líneas en el DETALLE de la venta (escritorio).
 // `#`, la casilla de acciones y las columnas `required` no se pueden ocultar.
 export const VENTA_LINEAS_COLUMNS: ColumnDef[] = [
-  { key: 'producto',    label: 'Producto',     required: true, group: 'Básicas' },
   { key: 'cantidad',    label: 'Cantidad',                     group: 'Básicas' },
+  { key: 'producto',    label: 'Producto',     required: true, group: 'Básicas' },
   { key: 'unidad',      label: 'Unidad',                       group: 'Básicas' },
   { key: 'lote',        label: 'Lote',                         group: 'Logística' },
-  { key: 'precioNeto',  label: 'Precio s/imp', sub: 'neto unitario',   group: 'Precio' },
   { key: 'precioBruto', label: 'Precio c/imp', sub: 'bruto unitario',  group: 'Precio' },
+  { key: 'precioNeto',  label: 'Precio s/imp', sub: 'neto unitario',   group: 'Precio' },
   { key: 'descMan',     label: 'Desc man.',    sub: 'manual %',        group: 'Descuentos' },
   { key: 'descPromo',   label: 'Desc promo',   sub: 'promoción $',     group: 'Descuentos' },
   { key: 'iva',         label: 'IVA',          sub: 'monto en $',      group: 'Impuestos' },

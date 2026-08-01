@@ -119,8 +119,8 @@ export function VentaLineasTab(props: Props) {
                       {showCol('cantidad') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{cerradoSnapshot?.lineas?.length ? 'Pedido / Entregado' : 'Cantidad'}</th>}
                       <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
                       {showCol('unidad') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center">Unidad</th>}
-                      {showCol('precioNeto') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio<span className="font-normal"> s/imp</span></th>}
                       {showCol('precioBruto') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio<span className="font-normal"> c/imp</span></th>}
+                      {showCol('precioNeto') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio<span className="font-normal"> s/imp</span></th>}
                       {showCol('iva') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">IVA</th>}
                       {showCol('ieps') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">IEPS</th>}
                       {showCol('descMan') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-right">Desc man.</th>}
