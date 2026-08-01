@@ -317,19 +317,8 @@ export function useSaveTarifa() {
         (clean as any).empresa_id = empresa.id;
         const { data, error } = await supabase.from('tarifas').insert(clean as any).select('id, nombre').single();
         if (error) throw error;
-        // Auto-create default principal lista_precios so the tarifa appears in "Listas de Precios"
-        const { error: lpErr } = await supabase.from('lista_precios').insert({
-          tarifa_id: data.id,
-          empresa_id: empresa.id,
-          nombre: data.nombre,
-          es_principal: true,
-          activa: true,
-        } as any);
-        if (lpErr) {
-          // Rollback the tarifa so the user can retry cleanly instead of leaving an orphan
-          await supabase.from('tarifas').delete().eq('id', data.id);
-          throw lpErr;
-        }
+        // La lista_precios principal la crea el trigger `trg_ensure_lista_precios_principal`
+        // en la base de datos. No insertar aquí: duplicaba la lista.
         return data;
       }
     },
