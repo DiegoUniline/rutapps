@@ -193,6 +193,16 @@ export function useOfflineQuery<T = any>(
             });
           }
 
+          // BLINDAJE MULTI-EMPRESA + AHORRO DE DATOS: si la tabla tiene
+          // empresa_id y la pantalla no lo filtró, se inyecta la empresa
+          // activa (antes se bajaba la tabla global de todos los inquilinos).
+          if (TABLES_WITH_EMPRESA.has(table) && table !== 'empresas' && !filters?.empresa_id) {
+            const emp = activeEmpresaId();
+            if (emp) query = query.eq('empresa_id', emp);
+          }
+
+
+
           if (deltaCursor) {
             query = query.gt('updated_at', deltaCursor);
           } else if (windowColumn) {
