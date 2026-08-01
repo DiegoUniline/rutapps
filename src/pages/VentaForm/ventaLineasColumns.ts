@@ -46,10 +46,10 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
   // PASO 1: PRECIOS
   { key: 'dCosto',          label: 'Costo',           sub: 'unit. producto',      group: 'Desglose' },
   { key: 'dPrecioLista',    label: 'Precio S/Imp.',   sub: 'unit. sin impuestos', group: 'Desglose' },
-  { key: 'dSubtotalNeto',   label: 'Subtotal S/Imp.', sub: 'precio s/imp × cant.', group: 'Desglose' },
-
   { key: 'dImpuestosMonto', label: 'Impuestos $',     sub: 'unit. s/desc.',       group: 'Desglose' },
   { key: 'dImporteBruto',   label: 'Precio',          sub: 'unit. c/imp',         group: 'Desglose' },
+  { key: 'dSubtotalNeto',   label: 'Subtotal S/Imp.', sub: 'precio s/imp × cant.', group: 'Desglose' },
+  { key: 'dImpuestosTotal', label: 'Impuestos tot.',  sub: 'impuestos × cant.',   group: 'Desglose' },
   { key: 'dSubtotalBruto',  label: 'Subtotal',        sub: 'precio × cantidad',   group: 'Desglose' },
 
   // PASO 2: DESCUENTOS
@@ -85,10 +85,10 @@ export const VENTA_LINEAS_DESGLOSE_KEYS = VENTA_LINEAS_DESGLOSE_COLUMNS.map(c =>
 export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> = {
   dCosto: true,
   dPrecioLista: true,
-  dSubtotalNeto: false,
-
   dImpuestosMonto: true,
   dImporteBruto: true,
+  dSubtotalNeto: false,
+  dImpuestosTotal: false,
   dSubtotalBruto: true,
 
   dDescTotal: true,
@@ -120,7 +120,7 @@ export const VENTA_LINEAS_DESGLOSE_OFF: Record<string, boolean> =
 // El resto quedan ocultas (no se muestran ni se pueden encender).
 export const VENTA_LINEAS_FINAL_KEYS = [
   'cantidad', 'producto', 'unidad',
-  'dCosto', 'dPrecioLista', 'dSubtotalNeto', 'dImpuestosMonto', 'dImporteBruto', 'dSubtotalBruto',
+  'dCosto', 'dPrecioLista', 'dImpuestosMonto', 'dImporteBruto', 'dSubtotalNeto', 'dImpuestosTotal', 'dSubtotalBruto',
   'dDescTotal', 'dTotal', 'dImpuestosPct', 'dPromoNombre',
 ];
 

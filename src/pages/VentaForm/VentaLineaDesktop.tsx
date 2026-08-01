@@ -373,11 +373,6 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             return c == null ? null : money(Number(c));
           })() },
           { key: 'dPrecioLista', content: m(d.precio_lista_unitario) },
-          { key: 'dSubtotalNeto', content: (() => {
-            const lista = num(d.precio_lista_unitario);
-            return lista == null ? null : money(r2(Number(lista) * qty));
-          })() },
-
           { key: 'dImpuestosMonto', content: (() => {
             // Impuestos UNITARIOS de LISTA (sin descuentos ni promociones):
             // se toman del precio de lista guardado y las tasas guardadas.
@@ -399,6 +394,28 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             );
           })() },
           { key: 'dImporteBruto', content: u(d.importe_bruto) },
+          { key: 'dSubtotalNeto', content: (() => {
+            const lista = num(d.precio_lista_unitario);
+            return lista == null ? null : money(r2(Number(lista) * qty));
+          })() },
+          { key: 'dImpuestosTotal', content: (() => {
+            const lista = num(d.precio_lista_unitario);
+            if (lista == null) return null;
+            const iepsP = Number(d.ieps_pct) || 0;
+            const ivaP = Number(d.iva_pct) || 0;
+            const iepsU = r2(Number(lista) * (iepsP / 100));
+            const ivaU = r2((Number(lista) + iepsU) * (ivaP / 100));
+            const total = r2((iepsU + ivaU) * qty);
+            if (total <= 0) return null;
+            return (
+              <span className="text-[11px] whitespace-nowrap">
+                {money(total)}
+                {(iepsU > 0 && ivaU > 0) && (
+                  <span className="block text-[10px] text-muted-foreground">IEPS {money(r2(iepsU * qty))} · IVA {money(r2(ivaU * qty))}</span>
+                )}
+              </span>
+            );
+          })() },
           { key: 'dSubtotalBruto', content: m(d.importe_bruto) },
 
           // PASO 2: Descuentos
