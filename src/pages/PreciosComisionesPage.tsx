@@ -184,7 +184,7 @@ export default function PreciosComisionesPage() {
               <div className="text-[11px] text-muted-foreground font-mono mb-2">{p.codigo}</div>
               {p.usa_listas_precio === false ? (
                 (() => {
-                  const c = resolveCell(p, null, tarifaLineas);
+                  const c = resolveCell(p, null, []);
                   return (
                     <div className="text-[12px] flex items-center justify-between border-t border-border pt-1.5">
                       <span className="text-muted-foreground">Precio directo (no usa listas)</span>
@@ -195,7 +195,7 @@ export default function PreciosComisionesPage() {
               ) : (
                 <div className="space-y-1">
                   {listas.map(l => {
-                    const c = resolveCell(p, l.id, tarifaLineas);
+                    const c = resolveCell(p, l.id, rulesFor(l));
                     return (
                       <div key={l.id} className="text-[12px] flex items-center justify-between border-t border-border pt-1.5">
                         <span className="text-muted-foreground flex items-center gap-1 truncate">
@@ -247,7 +247,7 @@ export default function PreciosComisionesPage() {
                 <tr><td colSpan={1 + listas.length * 2} className="text-center py-12 text-muted-foreground text-sm">No hay productos.</td></tr>
               )}
               {filtered.map(p => {
-                const directo = p.usa_listas_precio === false ? resolveCell(p, null, tarifaLineas) : null;
+                const directo = p.usa_listas_precio === false ? resolveCell(p, null, []) : null;
                 return (
                   <tr key={p.id} className="border-b border-table-border hover:bg-table-hover">
                     <td className="py-1.5 px-3 sticky left-0 bg-card z-[1]">
@@ -268,7 +268,7 @@ export default function PreciosComisionesPage() {
                       </td>
                     ) : (
                       listas.map(l => {
-                        const c = resolveCell(p, l.id, tarifaLineas);
+                        const c = resolveCell(p, l.id, rulesFor(l));
                         return (
                           <Fragment key={l.id}>
                             <td className="py-1.5 px-3 text-right border-l border-table-border font-mono text-odoo-teal font-semibold text-[13px]">{fmt(c.precio)}</td>
