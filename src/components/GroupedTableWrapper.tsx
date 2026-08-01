@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { GroupNode } from '@/hooks/useListPreferences';
+import { useInListPage } from '@/components/layout/ListPage';
 
 interface GroupedTableWrapperProps {
   groupBy: string;
@@ -12,8 +13,11 @@ interface GroupedTableWrapperProps {
   fill?: boolean;
 }
 
-export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummary, fill }: GroupedTableWrapperProps) {
+export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummary, fill: fillProp }: GroupedTableWrapperProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Dentro de <ListPage> el modo "fill" es el comportamiento por defecto.
+  const inListPage = useInListPage();
+  const fill = fillProp ?? inListPage;
 
   if (!groupBy) {
     return <div className={fill ? "bg-card border border-border rounded overflow-hidden flex-1 min-h-0 flex flex-col" : "bg-card border border-border rounded overflow-hidden"}>{renderTable(groups[0]?.items ?? [])}</div>;
