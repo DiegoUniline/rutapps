@@ -75,7 +75,7 @@ export const VENTAS_TABLE_COLUMNS: { key: string; label: string; required?: bool
   { key: 'fecha', label: 'Fecha / Hora', defaultVisible: true },
   { key: 'subtotal', label: 'Subtotal', defaultVisible: true },
   { key: 'descuento', label: 'Descuento', defaultVisible: true },
-  { key: 'iva', label: 'IVA', defaultVisible: false },
+  { key: 'iva', label: 'IVA', defaultVisible: true },
   { key: 'total', label: 'Total', required: true, defaultVisible: true },
   { key: 'pagado', label: 'Pagado', defaultVisible: true },
   { key: 'saldo', label: 'Saldo', defaultVisible: true },
