@@ -65,7 +65,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
       const [lRes, pRes, tRes, cRes, plRes] = await Promise.all([
         supabase
           .from('venta_lineas')
-          .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, productos(nombre, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
+          .select('id, cantidad, precio_unitario, precio_lista_unitario, descuento_pct, descuento_promocion_monto, descuento_manual_monto, subtotal, iva_pct, iva_monto, ieps_pct, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, productos(nombre, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
           .eq('venta_id', venta.id)
           .order('created_at'),
         supabase
@@ -174,10 +174,20 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   const gravableDisp = Math.max(0, totalReal - ivaMontoV - iepsMontoV);
   const promoLive = promoResults.reduce((s: number, pr: any) => s + (Number(pr.descuento) || 0), 0);
   const promoAplicada = (venta.promocion_aplicada ?? []).reduce((s: number, p: any) => s + (Number(p?.descuento_aplicado) || 0), 0);
-  // Mismas fórmulas que el detalle de la venta (VentaTotals, modo edición):
-  // el descuento de promoción se guarda CON impuestos, así que se muestra solo
-  // su parte gravable; Subtotal sin impuestos = gravable + descuentos.
+  // Mismas columnas y mismo orden de redondeo que VentaLineasTab/VentaTotals:
+  // precio_lista_unitario × cantidad por línea, redondeado antes de sumar.
   const r2v = (n: number) => Math.round(n * 100) / 100;
+  const subtotalNetoGuardado = r2v(lineas.reduce((s: number, l: any) => {
+    const lista = Number(l.precio_lista_unitario);
+    const qty = Number(l.cantidad) || 0;
+    return s + (Number.isFinite(lista) ? r2v(lista * qty) : 0);
+  }, 0));
+  const descuentoNetoGuardado = r2v(lineas.reduce((s: number, l: any) => {
+    const desc = (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0);
+    if (desc <= 0) return s;
+    const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
+    return s + r2v(divisor > 0 ? desc / divisor : desc);
+  }, 0));
   const promoGuardado = r2v(lineas.reduce((s: number, l: any) => s + (Number(l.descuento_promocion_monto) || 0), 0));
   const promoTotalBruto = promoGuardado > 0 ? promoGuardado : Math.max(promoLive, promoAplicada);
   const promoNeto = totalReal > 0 ? r2v(promoTotalBruto * (gravableDisp / totalReal)) : promoTotalBruto;
@@ -188,9 +198,12 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
     return s + r2v(divisor > 0 ? desc / divisor : desc);
   }, 0));
   const descuentoCalc = r2v(promoNeto + manualNeto);
-  const descuentoDisp = descuentoCalc > 0 ? descuentoCalc : Math.max(0, resumen.descuento);
-  const sinImpDisp = r2v(gravableDisp + descuentoDisp);
-  const gravableShown = gravableDisp;
+  const usarGuardado = subtotalNetoGuardado > 0;
+  const sinImpDisp = usarGuardado ? subtotalNetoGuardado : r2v(gravableDisp + descuentoCalc);
+  const descuentoDisp = usarGuardado
+    ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2v(sinImpDisp - gravableDisp))
+    : (descuentoCalc > 0 ? descuentoCalc : Math.max(0, resumen.descuento));
+  const gravableShown = usarGuardado ? r2v(sinImpDisp - descuentoDisp) : gravableDisp;
 
 
   // Etiqueta de promo por producto (línea gratis o con descuento).
