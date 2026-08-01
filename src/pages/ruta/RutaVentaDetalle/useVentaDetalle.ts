@@ -585,11 +585,22 @@ export function useVentaDetalle() {
       pagoAplicado: totalPagado,
       saldoNuevo: (saldoAnterior + saldoPendiente) > 0 ? (saldoAnterior + saldoPendiente) : undefined,
       pagos,
-      // Opción B: el ticket usa los montos ya congelados en la venta (subtotal, descuento_total,
-      // total, saldo_pendiente). NO se recalculan promociones al imprimir, por lo que reimprimir
-      // un ticket viejo siempre coincide con la pantalla aunque la promo ya haya vencido.
-      // El desglose por nombre de promoción se mostrará cuando se persista en promocion_aplicada (Opción A).
-      promociones: [],
+      // Promociones: se toman de lo YA PERSISTIDO en las líneas (promocion_nombre +
+      // descuento_promocion_monto), agrupadas por promoción. No se reevalúa el motor,
+      // así una reimpresión vieja siempre coincide con lo cobrado.
+      promociones: (() => {
+        const map = new Map<string, { descripcion: string; descuento: number; producto_id?: string }>();
+        for (const l of lineasVenta) {
+          const nombre = (l as any).promocion_nombre;
+          const monto = Number((l as any).descuento_promocion_monto) || 0;
+          if (!nombre || monto <= 0.005) continue;
+          const key = (l as any).promocion_id ?? nombre;
+          const prev = map.get(key);
+          if (prev) prev.descuento += monto;
+          else map.set(key, { descripcion: nombre, descuento: monto, producto_id: l.producto_id ?? undefined });
+        }
+        return Array.from(map.values()).map(p => ({ ...p, descuento: Math.round(p.descuento * 100) / 100 }));
+      })(),
       devoluciones: (devolucionesVenta ?? []).map((d: any) => ({
         nombre: d.producto?.nombre ?? 'Producto',
         cantidad: Number(d.cantidad) || 0,
