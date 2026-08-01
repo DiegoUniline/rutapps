@@ -374,7 +374,6 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
 
           // PASO 2: Descuentos
           { key: 'dDescTotal', content: num(d.descuento_total_monto) ? <span className="text-primary">−{m(d.descuento_total_monto)}</span> : m(d.descuento_total_monto) },
-          { key: 'dPromoNombre', content: d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null },
           { key: 'dDescPromoMonto', content: num(d.descuento_promocion_monto) ? <span className="text-primary">−{u(d.descuento_promocion_monto)}</span> : u(d.descuento_promocion_monto) },
           { key: 'dCantBonificada', content: num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null },
           { key: 'dDescManMonto', content: u(d.descuento_manual_monto) },
@@ -382,7 +381,24 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           // PASO 3: Total línea
           { key: 'dTotal', content: d.total != null ? money(Number(d.total)) : null },
 
-          // PASO 4: Bases e impuestos
+          // PASO 4: Impuestos (%) y promoción
+          { key: 'dImpuestosPct', content: (() => {
+            const pct = (monto: any, base: any) => {
+              const b = Number(base) || 0; const mo = Number(monto) || 0;
+              if (b <= 0 || mo <= 0) return null;
+              return Math.round((mo / b) * 1000) / 10;
+            };
+            const ieps = pct(d.ieps_monto, d.base_ieps);
+            const iva = pct(d.iva_monto, d.base_iva);
+            const parts = [
+              ieps != null ? `IEPS ${ieps}%` : null,
+              iva != null ? `IVA ${iva}%` : null,
+            ].filter(Boolean);
+            return parts.length ? <span className="text-[11px]">{parts.join(' · ')}</span> : null;
+          })() },
+          { key: 'dPromoNombre', content: d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null },
+
+          // PASO 5: Bases e importes de impuestos
           { key: 'dBaseDescMan', content: u(d.base_descuento_manual) },
           { key: 'dBaseIeps', content: u(d.base_ieps) },
           { key: 'dIepsMontoUnit', content: d.ieps_monto ? u(d.ieps_monto) : null },

@@ -50,7 +50,6 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
 
   // PASO 2: DESCUENTOS
   { key: 'dDescTotal',      label: 'Descuento',       sub: 'total $',            group: 'Desglose' },
-  { key: 'dPromoNombre',    label: 'Promoción',       sub: 'dPromoNombre',       group: 'Desglose' },
   { key: 'dDescPromoMonto', label: 'Desc. promo $',   sub: 'dDescPromoMonto',    group: 'Desglose' },
   { key: 'dCantBonificada', label: 'Cant. regalo',    sub: 'dCantBonificada',    group: 'Desglose' },
   { key: 'dDescManMonto',   label: 'Desc. manual $',  sub: 'dDescManMonto',      group: 'Desglose' },
@@ -58,7 +57,11 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
   // PASO 3: TOTAL LÍNEA
   { key: 'dTotal',          label: 'Total',           sub: 'total línea',        group: 'Desglose' },
 
-  // PASO 4: BASES E IMPUESTOS
+  // PASO 4: IMPUESTOS (%) Y PROMOCIÓN
+  { key: 'dImpuestosPct',   label: 'Impuestos',       sub: '% aplicado',         group: 'Desglose' },
+  { key: 'dPromoNombre',    label: 'Promo aplicada',  sub: 'nombre',             group: 'Desglose' },
+
+  // PASO 5: BASES E IMPORTES DE IMPUESTOS
   { key: 'dBaseDescMan',    label: 'Base neta',       sub: 'dBaseDescMan',       group: 'Desglose' },
   { key: 'dBaseIeps',       label: 'Base IEPS',       sub: 'dBaseIeps',          group: 'Desglose' },
   { key: 'dIepsMontoUnit',  label: 'IEPS $',          sub: 'monto',              group: 'Desglose' },
@@ -74,19 +77,21 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
 export const VENTA_LINEAS_DESGLOSE_KEYS = VENTA_LINEAS_DESGLOSE_COLUMNS.map(c => c.key);
 
 // Visibilidad por defecto: Cantidad, Producto, Unidad, Precio S/Imp., Precio,
-// Subtotal, Descuento y Total. El resto se enciende manualmente.
+// Subtotal, Descuento, Total, Impuestos (%) y Promo aplicada.
 export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> = {
   dPrecioLista: true,
   dImporteBruto: true,
   dSubtotalBruto: true,
 
   dDescTotal: true,
-  dPromoNombre: false,
   dDescPromoMonto: false,
   dCantBonificada: false,
   dDescManMonto: false,
 
   dTotal: true,
+
+  dImpuestosPct: true,
+  dPromoNombre: true,
 
   dBaseDescMan: false,
   dBaseIeps: false,
