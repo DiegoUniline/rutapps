@@ -348,6 +348,11 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const gravableTicket = subtotalNetoGuardado > 0
     ? Math.max(0, r2(sinImpTicket - descTicket))
     : Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto);
+  // Descuento BRUTO (con impuestos), para el modo "sin desglose de impuestos":
+  // ahí el subtotal va en bruto, así que el descuento también debe ir en bruto
+  // para que Subtotal − Descuentos = Total.
+  const descuentoBrutoGuardado = r2(lineas.reduce((s, l) =>
+    s + (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0), 0));
   add('');
   if (showImpuestos) {
     add(pad('Subtotal sin impuestos', fmt(sinImpTicket)));
@@ -357,9 +362,15 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     if (ivaMonto > 0.005) add(pad('IVA', fmt(ivaMonto)));
     if (ivaMonto <= 0.005 && iepsMonto <= 0.005) add(pad('Impuestos', fmt(0)));
   } else {
-    // Sin desglose: subtotal en bruto (impuestos incluidos), cuadra con el Total.
-    add(pad('Sub total', fmt(sinImpTicket + ivaMonto + iepsMonto)));
-    if (showDescuentos && descTicket > 0.005) add(pad('Descuentos/promos', `-${fmt(descTicket)}`));
+    // Sin desglose: todo en bruto (impuestos incluidos), cuadra con el Total.
+    const descBruto = descuentoBrutoGuardado > 0.005
+      ? descuentoBrutoGuardado
+      : r2(descTicket + (descTicket > 0 ? 0 : 0));
+    const subBruto = descBruto > 0.005
+      ? r2((Number(total) || 0) + descBruto)
+      : r2(sinImpTicket + ivaMonto + iepsMonto);
+    add(pad('Sub total', fmt(subBruto)));
+    if (showDescuentos && descBruto > 0.005) add(pad('Descuentos/promos', `-${fmt(descBruto)}`));
   }
   add(div);
   add(pad('Total', fmt(total)));
@@ -369,7 +380,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   // ── PROMOCIONES APLICADAS (al final, como la foto) ──
   // Excluye las promos ya mostradas como GRATIS en su linea (evita duplicar).
   const promosAplicadas = promosConDesc.filter(p => !(p.producto_id && productosGratis.has(p.producto_id)));
-  const hayGratis = productosGratis.size > 0 || promosAplicadas.length > 0;
+  const hayGratis = productosGratis.size > 0;
   if (showPromociones && (promosAplicadas.length > 0 || productosGratis.size > 0)) {
     add(div);
     add('PROMOCIONES APLICADAS');
