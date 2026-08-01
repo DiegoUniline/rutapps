@@ -113,7 +113,7 @@ export function VentaLineasTab(props: Props) {
                 </div>
               )}
               <div className="w-full">
-                <table className="w-full table-auto text-[12px] break-words">
+                <table data-no-scroll className="w-full table-auto text-[12px] break-words">
                   <thead>
                     <tr className="border-b border-table-border text-left sticky top-0 z-10 bg-card">
                       <th className="py-1.5 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
