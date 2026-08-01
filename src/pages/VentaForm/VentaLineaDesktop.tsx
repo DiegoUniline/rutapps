@@ -383,8 +383,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             const bruto = Number(d.importe_bruto) || 0;
             const descT = Number(d.descuento_total_monto) || 0;
             const neto = r2(bruto - descT);
-            const scaled = neto > 0 && bruto > 0 ? r2(tax * (bruto / neto)) : tax;
-            return money(scaled);
+            const scaled = neto > 0 && bruto > 0 ? tax * (bruto / neto) : tax;
+            // Impuesto UNITARIO (sin descuento)
+            return money(r2(scaled / qty));
           })() },
           { key: 'dImporteBruto', content: u(d.importe_bruto) },
           { key: 'dSubtotalBruto', content: m(d.importe_bruto) },
@@ -422,12 +423,8 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             if (gratis > 0) partes.push(`🎁 ${gratis}x gratis`);
             if (nombre) partes.push(nombre);
             const label = partes.join(' — ');
-            return (
-              <span className="text-[11px] whitespace-nowrap">
-                {label}
-                {descPromo > 0 && <span className="text-primary"> · −{money(r2(descPromo))}</span>}
-              </span>
-            );
+            if (!label) return null;
+            return <span className="text-[11px] whitespace-nowrap">{label}</span>;
           })() },
 
           // PASO 5: Bases e importes de impuestos
