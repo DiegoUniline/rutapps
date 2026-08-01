@@ -226,8 +226,8 @@ export default function ComprasPage() {
     if (provF && provF.length > 0) list = list.filter((c: any) => provF.includes(c.proveedor_id));
     const almF = filters.almacen;
     if (almF && almF.length > 0) list = list.filter((c: any) => almF.includes(c.almacen_id));
-    if (desde) list = list.filter((c: any) => (c.fecha ?? '') >= desde);
-    if (hasta) list = list.filter((c: any) => (c.fecha ?? '') <= hasta);
+    if (desde) list = list.filter((c: any) => (c.fecha ?? '').slice(0, 10) >= desde);
+    if (hasta) list = list.filter((c: any) => (c.fecha ?? '').slice(0, 10) <= hasta);
     return list;
   }, [compras, filters, desde, hasta]);
 
@@ -300,8 +300,8 @@ export default function ComprasPage() {
         l.proveedor.toLowerCase().includes(s)
       );
     }
-    if (desdeD) list = list.filter(l => (l.fecha ?? '') >= desdeD);
-    if (hastaD) list = list.filter(l => (l.fecha ?? '') <= hastaD);
+    if (desdeD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) >= desdeD);
+    if (hastaD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) <= hastaD);
     return list;
   }, [lineasRaw, searchD, filtersD.status, desdeD, hastaD]);
 

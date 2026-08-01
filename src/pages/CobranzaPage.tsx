@@ -326,8 +326,8 @@ export default function CobranzaPage() {
       const q = search.toLowerCase();
       list = list.filter(c => (c.clientes as any)?.nombre?.toLowerCase().includes(q) || c.referencia?.toLowerCase().includes(q));
     }
-    if (dateFrom) list = list.filter(c => c.fecha >= dateFrom);
-    if (dateTo) list = list.filter(c => c.fecha <= dateTo);
+    if (dateFrom) list = list.filter(c => (c.fecha ?? '').slice(0, 10) >= dateFrom);
+    if (dateTo) list = list.filter(c => (c.fecha ?? '').slice(0, 10) <= dateTo);
     return list;
   }, [cobros, filters, search, dateFrom, dateTo]);
 
