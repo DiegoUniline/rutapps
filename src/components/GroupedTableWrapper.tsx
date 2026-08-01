@@ -8,9 +8,11 @@ interface GroupedTableWrapperProps {
   groups: GroupNode<any>[];
   renderTable: (items: any[], groupLabel?: string) => React.ReactNode;
   renderSummary?: (items: any[]) => React.ReactNode;
+  /** Cuando es true, la tabla sin agrupar ocupa la altura disponible y hace scroll interna */
+  fill?: boolean;
 }
 
-export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummary }: GroupedTableWrapperProps) {
+export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummary, fill }: GroupedTableWrapperProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   if (!groupBy) {
