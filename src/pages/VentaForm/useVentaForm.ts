@@ -390,6 +390,7 @@ export function useVentaForm() {
   // Cambio de cliente → cambio de lista: pedimos confirmación antes de
   // reprecificar líneas ya capturadas (los precios manuales nunca se tocan).
   const [pendingReprice, setPendingReprice] = useState<{ listaPrecioId: string | null; listaNombre: string; count: number; manualCount: number } | null>(null);
+  const [repriceNonce, setRepriceNonce] = useState(0);
   const repricedListaRef = useRef<string | null | undefined>(undefined);
 
   // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines).
@@ -414,10 +415,11 @@ export function useVentaForm() {
       }
     }
     repricedListaRef.current = formListaPrecioId;
-    setPendingReprice(null);
 
     setLineas(prev => prev.map(l => {
       if (!l.producto_id) return l;
+      // Línea congelada: el usuario declinó el reprecio al cambiar de cliente.
+      if ((l as any)._precio_congelado) return l;
       if ((l as any).precio_manual) return l;
       const lineOwnLista = (l as any).lista_precio_id ?? null;
 
