@@ -438,6 +438,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           </>
         }
       />
+      </div>
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="clientes" />
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
