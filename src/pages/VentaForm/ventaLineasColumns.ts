@@ -63,6 +63,9 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
   { key: 'dBaseIva',        label: 'Base IVA',        sub: 'dBaseIva',          group: 'Desglose' },
   { key: 'dIvaMontoUnit',   label: 'IVA $',           sub: 'monto',              group: 'Desglose' },
 
+  // PASO 5: TOTAL LÍNEA
+  { key: 'dTotal',          label: 'Total línea',     sub: 'total',              group: 'Desglose' },
+
   // ADICIONALES
   { key: 'dMotivoDescMan',  label: 'Motivo desc.',    sub: 'manual',             group: 'Desglose' },
   { key: 'dEsBonificacion', label: '¿Es regalo?',     sub: 'boolean',            group: 'Desglose' },
@@ -92,6 +95,9 @@ export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> = {
   dIepsMontoUnit: true,
   dBaseIva: true,
   dIvaMontoUnit: true,
+
+  // PASO 5: Total
+  dTotal: true,
 
   // Adicionales
   dMotivoDescMan: false,

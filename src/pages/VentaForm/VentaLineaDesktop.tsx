@@ -330,6 +330,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         ) : <span className="text-muted-foreground text-[11px]">—</span>}
       </td>
       )}
+      {showCol('subtotal') && (
       <td className="py-1.5 px-2 text-right font-medium">
         {isEmpty ? '' : lineEsGratis ? (
           <div>
@@ -340,9 +341,6 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           <div>
             <span>{money(displayLineTotal)}</span>
             {(() => {
-              // Base gravable mostrada bajo el total. En lectura se usa la base
-              // NETA post-promoción (total − IVA − IEPS) para que cuadre con los
-              // montos guardados y no muestre la base pre-promoción recalculada.
               const baseShown = readOnly ? netBaseRO : base;
               return (ivaShown > 0 || iepsShown > 0 || discount > 0 || linePromoDesc > 0)
                 ? <span className="block text-[10px] text-muted-foreground font-normal">base: {money(baseShown)}</span>
@@ -351,6 +349,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </div>
         )}
       </td>
+      )}
       {showCol('lote') && (
       <td className="py-1.5 px-2">
         {!isEmpty && (l as any).lote_codigo
@@ -392,6 +391,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           { key: 'dIepsMontoUnit', content: d.ieps_monto ? u(d.ieps_monto) : null },
           { key: 'dBaseIva', content: u(d.base_iva) },
           { key: 'dIvaMontoUnit', content: d.iva_monto ? u(d.iva_monto) : null },
+
+          // PASO 5: Total línea
+          { key: 'dTotal', content: d.total != null ? money(Number(d.total)) : null },
 
           // Adicionales
           { key: 'dMotivoDescMan', content: d.motivo_descuento_manual ? <span className="text-[11px]">{d.motivo_descuento_manual}</span> : null },

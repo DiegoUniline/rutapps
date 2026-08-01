@@ -53,8 +53,9 @@ export function VentaLineasTab(props: Props) {
   const { visible: cols, toggleColumn, applyPreset, reset } = useColumnPreferences('venta_detalle_lineas', defaults);
   // El selector de columnas aplica en el DETALLE (solo lectura). Al editar/crear
   // se muestran las columnas estándar para no ocultar el editor de precios.
+  const NORMAL_COLS_OFF = { precioNeto: false, precioBruto: false, iva: false, ieps: false, descMan: false, descPromo: false, subtotal: false, lote: false };
   const effectiveCols = readOnly
-    ? (showDesglose ? cols : { ...cols, ...VENTA_LINEAS_DESGLOSE_OFF })
+    ? (showDesglose ? { ...cols, ...NORMAL_COLS_OFF } : { ...cols, ...VENTA_LINEAS_DESGLOSE_OFF })
     : { ...VENTA_LINEAS_DEFAULT_VISIBILITY, ...VENTA_LINEAS_DESGLOSE_OFF };
   const showCol = (k: string) => effectiveCols[k] !== false;
 
@@ -125,7 +126,7 @@ export function VentaLineasTab(props: Props) {
                       {showCol('ieps') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">IEPS</th>}
                       {showCol('descMan') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-right">Desc man.</th>}
                       {showCol('descPromo') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Desc promo</th>}
-                      <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
+                      {showCol('subtotal') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Total línea</th>}
                       {showCol('lote') && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24">Lote</th>}
                       {VENTA_LINEAS_DESGLOSE_COLUMNS.filter(c => showCol(c.key)).map(c => (
                         <th key={c.key} className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right whitespace-nowrap">{c.label}</th>
