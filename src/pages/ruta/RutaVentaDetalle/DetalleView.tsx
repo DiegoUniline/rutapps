@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, RotateCcw, Lock } from 'lucide-react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, RotateCcw, Lock, ChevronRight } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { phoneWithLada } from '@/lib/phoneWithLada';
@@ -8,6 +8,7 @@ import { usePermisos } from '@/hooks/usePermisos';
 import { statusColors } from './types';
 import { useLotesPorReferencia, type LoteRef } from '@/hooks/useLotesPorReferencia';
 import { PedidoEntregaResumen } from '@/components/venta/PedidoEntregaResumen';
+import { VentaLineaDesgloseModal } from '@/components/venta/VentaLineaDesgloseModal';
 
 interface Props {
   venta: any;
@@ -43,6 +44,8 @@ export function DetalleView(p: Props) {
   const { hasPermisoMovil } = usePermisos();
   const [showTax, setShowTax] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedLinea, setSelectedLinea] = useState<any | null>(null);
+  const [showLineaModal, setShowLineaModal] = useState(false);
   const canCancelar = hasPermisoMovil('ruta.cancelar_venta');
   const showCancelChip = canCancelar && (p.venta.status === 'confirmado' || p.venta.status === 'entregado' || p.venta.status === 'borrador');
   const { data: lotesVenta } = useLotesPorReferencia(p.venta?.id, ['venta', 'venta_lote']);
@@ -55,7 +58,7 @@ export function DetalleView(p: Props) {
         <PedidoEntregaResumen venta={p.venta} fmt={p.fmt} />
         <TotalCard venta={p.venta} fmt={p.fmt} s={s} />
         <InfoCard venta={p.venta} clienteNombre={p.clienteNombre} vendedorNombre={p.vendedorNombre} />
-        <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} lotes={lotesVenta} />
+        <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} lotes={lotesVenta} onLineaClick={(linea) => { setSelectedLinea(linea); setShowLineaModal(true); }} />
         <TotalesCard venta={p.venta} fmt={p.fmt} s={s} showTax={showTax} setShowTax={setShowTax} />
         {p.venta.notas && <div className="bg-card border border-border rounded-xl p-4"><p className="text-[11px] text-muted-foreground mb-1">Notas</p><p className="text-[13px] text-foreground">{p.venta.notas}</p></div>}
         {/* Historial: se muestra solo como pestaña dentro del detalle completo de la venta */}
@@ -68,6 +71,12 @@ export function DetalleView(p: Props) {
         lineas={p.lineas}
         saving={p.saving}
         handleCancelar={p.handleCancelar}
+        fmt={p.fmt}
+      />
+      <VentaLineaDesgloseModal
+        open={showLineaModal}
+        onClose={() => setShowLineaModal(false)}
+        linea={selectedLinea}
         fmt={p.fmt}
       />
       <DocumentPreviewModal open={p.showEcPreview} onClose={() => p.setShowEcPreview(false)} pdfBlob={p.ecPdfBlob} fileName={`Estado-Cuenta-${p.clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={p.empresa?.id ?? ''} defaultPhone={phoneWithLada(p.clienteData?.telefono, p.clienteData?.lada, (p.empresa as any)?.lada || '52')} caption={`Estado de cuenta - ${p.clienteNombre}`} tipo="estado_cuenta" />
@@ -157,7 +166,8 @@ function InfoCard({ venta, clienteNombre, vendedorNombre }: { venta: any; client
   );
 }
 
-function ProductosCard({ lineas, fmt, s, lotes }: { lineas: any[]; fmt: (n: number) => string; s: string; lotes?: Record<string, LoteRef[]> }) {
+function ProductosCard({ lineas, fmt, s, lotes, onLineaClick }: { lineas: any[]; fmt: (n: number) => string; s: string; lotes?: Record<string, LoteRef[]>; onLineaClick?: (linea: any) => void }) {
+  const hasDesglose = lineas.some(l => l.precio_lista_unitario != null);
   return (
     <div>
       <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5"><Package className="h-4 w-4 text-muted-foreground" /> Productos ({lineas.length})</h2>
@@ -165,8 +175,25 @@ function ProductosCard({ lineas, fmt, s, lotes }: { lineas: any[]; fmt: (n: numb
         {lineas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin productos</p>}
         {lineas.map((l: any) => {
           const ls = lotes?.[l.producto_id];
+          const hasLineDesglose = l.precio_lista_unitario != null;
           return (
-          <div key={l.id} className="p-3"><div className="flex items-start justify-between gap-2"><div className="flex-1 min-w-0"><p className="text-[13px] font-medium text-foreground truncate">{l.productos?.nombre ?? l.descripcion ?? '—'}</p><p className="text-[11px] text-muted-foreground">{l.cantidad} × {fmt(l.precio_unitario ?? 0)}{l.unidades?.abreviatura ? ` / ${l.unidades.abreviatura}` : ''}</p>{ls && ls.length > 0 && <p className="text-[11px] text-amber-600">Lote: {ls.map(x => x.codigo).join(', ')}</p>}</div><p className="text-[14px] font-bold text-foreground shrink-0">{fmt(l.total ?? 0)}</p></div></div>
+          <button
+            key={l.id}
+            onClick={() => onLineaClick?.(l)}
+            className="w-full p-3 hover:bg-accent/40 transition-colors text-left"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-medium text-foreground truncate">{l.productos?.nombre ?? l.descripcion ?? '—'}</p>
+                <p className="text-[11px] text-muted-foreground">{l.cantidad} × {fmt(l.precio_unitario ?? 0)}{l.unidades?.abreviatura ? ` / ${l.unidades.abreviatura}` : ''}</p>
+                {ls && ls.length > 0 && <p className="text-[11px] text-amber-600">Lote: {ls.map(x => x.codigo).join(', ')}</p>}
+              </div>
+              <div className="flex items-center gap-2">
+                <p className="text-[14px] font-bold text-foreground shrink-0">{fmt(l.total ?? 0)}</p>
+                {hasLineDesglose && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+              </div>
+            </div>
+          </button>
           );
         })}
       </div>
