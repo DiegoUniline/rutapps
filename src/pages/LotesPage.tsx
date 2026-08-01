@@ -213,6 +213,19 @@ export default function LotesPage() {
     .map(g => ({ ...g, items: g.items.filter(it => matchSearchVenc(it.lote)) }))
     .filter(g => g.items.length > 0);
 
+  // Matriz: columnas = almacenes/rutas con existencia en los lotes visibles.
+  const matrizCols = (() => {
+    const conStock = new Set<string>();
+    lotesVisibles.forEach(l => (stockDetalle?.get(l.id) ?? []).forEach(d => { if (d.cantidad !== 0) conStock.add(d.almacen_id); }));
+    return almacenesList.filter(a => conStock.has(a.id) && (almacenFilters.size === 0 || almacenFilters.has(a.id)));
+  })();
+  const cantidadEn = (loteId: string, almacenId: string) =>
+    (stockDetalle?.get(loteId) ?? []).find(d => d.almacen_id === almacenId)?.cantidad ?? 0;
+  const nQty = (n: number) => n.toLocaleString('es-MX', { maximumFractionDigits: 3 });
+  const totalesCol = new Map<string, number>();
+  matrizCols.forEach(c => totalesCol.set(c.id, lotesVisibles.reduce((s, l) => s + cantidadEn(l.id, c.id), 0)));
+  const totalGeneral = lotesVisibles.reduce((s, l) => s + stockDe(l.id), 0);
+
   const openNew = () => setEdit({ ...emptyEdit });
   const openEdit = (l: LoteRow) => setEdit({
     id: l.id,
@@ -386,6 +399,10 @@ export default function LotesPage() {
 
       {/* Switch de vista */}
       <div className="flex gap-1 bg-accent/40 p-1 rounded-lg w-fit">
+        <button onClick={() => setVista('matriz')}
+          className={cn("px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors", vista === 'matriz' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>
+          Matriz
+        </button>
         <button onClick={() => setVista('lote')}
           className={cn("px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors", vista === 'lote' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>
           Por lote
@@ -395,6 +412,78 @@ export default function LotesPage() {
           Por almacén / ruta
         </button>
       </div>
+
+      {vista === 'matriz' && (
+        <div className="bg-card border border-border rounded overflow-x-auto">
+          {isLoading ? (
+            <div className="p-4"><TableSkeleton rows={5} cols={6} /></div>
+          ) : lotesVisibles.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              {(lotes?.length ?? 0) === 0 ? 'Aún no hay lotes. Crea el primero con "Nuevo lote".' : 'Ningún lote coincide con los filtros.'}
+            </div>
+          ) : (
+            <table className="text-sm min-w-full">
+              <thead>
+                <tr className="border-b border-table-border">
+                  <th className="th-odoo text-left sticky left-0 z-20 bg-card min-w-[220px]">Producto</th>
+                  <th className="th-odoo text-left w-32">Lote</th>
+                  <th className="th-odoo text-left w-36">Vence</th>
+                  {matrizCols.map(c => (
+                    <th key={c.id} className="th-odoo text-right whitespace-nowrap min-w-[110px]">
+                      <span className="inline-flex items-center gap-1 justify-end">
+                        {c.tipo === 'ruta' ? <Truck className="h-3 w-3 text-amber-500" /> : <Warehouse className="h-3 w-3 text-primary" />}
+                        {c.nombre}
+                      </span>
+                    </th>
+                  ))}
+                  <th className="th-odoo text-right w-24 bg-muted/40">Total</th>
+                  <th className="th-odoo w-12 text-right">·</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lotesVisibles.map(l => {
+                  const est = estadoVencimiento(l.fecha_caducidad);
+                  return (
+                    <tr key={l.id} className="border-b border-table-border hover:bg-table-hover transition-colors group">
+                      <td className="py-1.5 px-3 sticky left-0 z-10 bg-card group-hover:bg-table-hover">
+                        <div className="text-foreground">{l.productos?.nombre ?? '—'}</div>
+                        {l.productos?.codigo && <div className="text-[11px] text-muted-foreground">{l.productos.codigo}</div>}
+                      </td>
+                      <td className={cn("py-1.5 px-3 font-medium", estaVencido(l.fecha_caducidad) ? 'text-destructive' : 'text-foreground')}>{l.codigo}</td>
+                      <td className={cn("py-1.5 px-3 text-[12px]", est.clase)}>{est.texto}</td>
+                      {matrizCols.map(c => {
+                        const q = cantidadEn(l.id, c.id);
+                        return (
+                          <td key={c.id} className={cn("py-1.5 px-3 text-right tabular-nums", q === 0 ? 'text-muted-foreground/40' : q < 0 ? 'text-destructive font-medium' : 'text-foreground')}>
+                            {q === 0 ? '—' : nQty(q)}
+                          </td>
+                        );
+                      })}
+                      <td className="py-1.5 px-3 text-right tabular-nums font-semibold bg-muted/30">{nQty(stockDe(l.id))}</td>
+                      <td className="py-1.5 px-3 text-right">
+                        <button className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(l)} title="Editar">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-border bg-muted/40 font-semibold">
+                  <td className="py-2 px-3 sticky left-0 z-10 bg-muted/40 text-foreground">Total ({lotesVisibles.length} lotes)</td>
+                  <td /><td />
+                  {matrizCols.map(c => (
+                    <td key={c.id} className="py-2 px-3 text-right tabular-nums text-foreground">{nQty(totalesCol.get(c.id) ?? 0)}</td>
+                  ))}
+                  <td className="py-2 px-3 text-right tabular-nums text-foreground">{nQty(totalGeneral)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+      )}
 
       {vista === 'lote' && (
       <div className="bg-card border border-border rounded overflow-x-auto">
