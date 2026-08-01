@@ -73,7 +73,7 @@ const Index = () => {
           1. dPrecioLista, 2. dImporteBruto, 3. dPromoNombre, 4. dDescPromoMonto, 5. dCantBonificada, 6. dDescManMonto, 7. dDescTotal, 8. dBaseDescMan, 9. dBaseIeps, 10. dBaseIva, 11. dMotivoDescMan, 12. dEsBonificacion, 13. dObjetoImpuesto
         </p>
         <div className="mb-4 p-4 bg-blue-50 text-blue-800 rounded-lg border border-blue-100">
-          y cuando le cobrara por ejemplo a botanas don nacho un mes o proporcional?
+          si en este caso se trabaja la refgla de descuento sobre el precio de venta como tal y ahi viene el descuento y el porcentaje de comisio dque se paga por cada una
         </div>
         <pre className="p-4 bg-slate-900 text-green-400 rounded overflow-x-auto">
           {JSON.stringify(data, null, 2)}
