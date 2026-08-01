@@ -308,7 +308,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
-    <div className={cn(!groupBy && "bg-card border border-border rounded flex-1 min-h-0 overflow-auto")}>
+    <div className={cn(!groupBy && "flex-1 min-h-0 overflow-auto")}>
       <table className="w-full text-sm">
         <thead className="sticky top-0 z-10 bg-card">
           <tr className="border-b border-table-border">
@@ -491,7 +491,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
       {isLoading ? (
         <div className="bg-card border border-border rounded p-4 shrink-0"><TableSkeleton rows={8} cols={isMobile ? 3 : 7} /></div>
       ) : isMobile ? (
-        <div className="space-y-2 flex-1 min-h-0 overflow-auto">
+        <ListPage.Body card={false} className="space-y-2">
           {pageData.length === 0 && (
             <div className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</div>
           )}
@@ -513,11 +513,9 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
               ]}
             />
           ))}
-        </div>
+        </ListPage.Body>
       ) : (
-        <div className="flex-1 min-h-0 flex flex-col">
-          <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} fill />
-        </div>
+        <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
       )}
 
 
