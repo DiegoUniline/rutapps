@@ -372,17 +372,27 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         const u = (v: any) => (num(v) == null ? null : money(r2(Number(v) / qty)));
 
         const columnsOrder = [
-          { key: 'dPromoNombre', content: d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null },
-          { key: 'dCantBonificada', content: num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null },
+          // PASO 1: Compra original
           { key: 'dPrecioLista', content: m(d.precio_lista_unitario) },
           { key: 'dImporteBruto', content: u(d.importe_bruto) },
+
+          // PASO 2: Descuentos
+          { key: 'dPromoNombre', content: d.promocion_nombre ? <span className="text-[11px]">{d.promocion_nombre}</span> : null },
           { key: 'dDescPromoMonto', content: num(d.descuento_promocion_monto) ? <span className="text-primary">−{u(d.descuento_promocion_monto)}</span> : u(d.descuento_promocion_monto) },
-          { key: 'dBaseDescMan', content: u(d.base_descuento_manual) },
+          { key: 'dCantBonificada', content: num(d.cantidad_bonificada) != null ? String(Number(d.cantidad_bonificada)) : null },
           { key: 'dDescManMonto', content: u(d.descuento_manual_monto) },
           { key: 'dDescTotal', content: u(d.descuento_total_monto) },
+
+          // PASO 3: Subtotal neto
+          { key: 'dBaseDescMan', content: u(d.base_descuento_manual) },
+
+          // PASO 4: Impuestos (base + monto)
           { key: 'dBaseIeps', content: u(d.base_ieps) },
+          { key: 'dIepsMontoUnit', content: d.ieps_monto ? u(d.ieps_monto) : null },
           { key: 'dBaseIva', content: u(d.base_iva) },
-          { key: 'dImpuestosTot', content: u(d.impuestos_totales) },
+          { key: 'dIvaMontoUnit', content: d.iva_monto ? u(d.iva_monto) : null },
+
+          // Adicionales
           { key: 'dMotivoDescMan', content: d.motivo_descuento_manual ? <span className="text-[11px]">{d.motivo_descuento_manual}</span> : null },
           { key: 'dEsBonificacion', content: d.es_bonificacion == null ? null : <span className="text-[11px]">{d.es_bonificacion ? 'Sí' : 'No'}</span> },
           { key: 'dObjetoImpuesto', content: d.objeto_impuesto ? <span className="text-[11px]">{d.objeto_impuesto}</span> : null },
