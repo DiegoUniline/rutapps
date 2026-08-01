@@ -379,7 +379,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                 <div className="space-y-4 min-w-0">
                   {/* Líneas */}
                   <div>
-                    <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Productos</h4>
+                    
                     <div className="overflow-x-auto">
                       <table className="w-full text-[12px]">
                         <thead>
