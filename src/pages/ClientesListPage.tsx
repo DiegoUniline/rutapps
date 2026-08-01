@@ -514,9 +514,9 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           ))}
         </div>
       ) : (
-        <>
-          <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
-        </>
+        <div className="flex-1 min-h-0 flex flex-col">
+          <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} fill />
+        </div>
       )}
 
 
