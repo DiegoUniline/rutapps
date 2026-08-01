@@ -51,11 +51,9 @@ export function VentaLineasTab(props: Props) {
   const showDesglose = desgloseLineaHabilitado(empresa?.licencia);
   const defaults = { ...VENTA_LINEAS_DEFAULT_VISIBILITY, ...VENTA_LINEAS_DESGLOSE_DEFAULTS };
   const { visible: cols, toggleColumn, applyPreset, reset } = useColumnPreferences('venta_detalle_lineas', defaults);
-  // El selector de columnas aplica en el DETALLE (solo lectura): se respeta
-  // EXACTAMENTE lo que el usuario elija en el menú. Al editar/crear se muestran
-  // las columnas estándar para no ocultar el editor de precios.
+  const NORMAL_COLS_OFF = { precioNeto: false, precioBruto: false, iva: false, ieps: false, descMan: false, descPromo: false, subtotal: false, lote: false };
   const effectiveCols = readOnly
-    ? (showDesglose ? cols : { ...cols, ...VENTA_LINEAS_DESGLOSE_OFF })
+    ? (showDesglose ? { ...cols, ...NORMAL_COLS_OFF } : { ...cols, ...VENTA_LINEAS_DESGLOSE_OFF })
     : { ...VENTA_LINEAS_DEFAULT_VISIBILITY, ...VENTA_LINEAS_DESGLOSE_OFF };
   const showCol = (k: string) => effectiveCols[k] !== false;
 
