@@ -44,8 +44,31 @@ Y `ventas` se pide con **4 llaves de caché distintas** (RutaVentas, RutaCobrar,
 - Activar "Ahorro de datos" por defecto para perfiles de ruta (hoy está apagado), lo que ya salta el fetch al servidor cuando hay datos locales y espacia los intervalos.
 - Mostrar en Ruta › Sincronizar un contador de **MB descargados** por sesión y en el mes, para poder medir la mejora con datos reales.
 
-### 5. Medición
+### 5. Alcance: solo `/Ruta`, el escritorio no se toca
+Verificado: `useOfflineQuery` solo lo usan las pantallas de `/Ruta` (más tres consumidores compartidos: `useClienteInsights`, `useSaldoFavor`, `VentaCobroQuickModal`). El escritorio usa React Query con `select` explícitos y paginación propia, así que **no se ve afectado**. Aun así, el cambio se activa detrás de bandera y solo para rutas `/ruta/*`, para que un problema nunca pueda tocar POS ni administración.
+
+### 6. Traer solo los datos del vendedor (sin romper stock ni saldos)
+Filtrar por vendedor lo **operativo**, y mantener completo lo que es **de la empresa**:
+
+Se filtra por el vendedor (respetando el permiso `ver_todos` / configuración "Todos vs Solo propios"):
+- `ventas` de los últimos 30 días → `vendedor_id = él`
+- `cobros` → `user_id = él`; `gastos` → los suyos
+- `entregas` / `entrega_lineas` → las asignadas a su ruta
+- `devoluciones`, `visitas` → las suyas
+- `clientes` → su cartera (`vendedor_id` o `cobrador_id`) cuando la empresa está en modo "propios"
+
+**Nunca se filtra por vendedor (blindaje de stock y saldos):**
+- `stock_almacen` y `stock_apartado`: se filtran por **almacén** (su camioneta + los almacenes configurados en Apartado de stock), nunca por vendedor. Los apartados de OTROS vendedores deben seguir bajando, o el disponible se calcularía de más y vendería sin existencia.
+- `productos`, `tarifas`, `tarifa_lineas`, `lista_precios`, `promociones`, `unidades`, `almacenes`, `empresas`: catálogo completo de la empresa (son chicos y definen precios/impuestos).
+- **Saldos**: además de sus ventas de 30 días, siempre se descarga la lista de **todas las ventas con `saldo_pendiente > 0` de sus clientes, sin ventana de fecha y sin filtrar por vendedor**, con columnas mínimas. Medido hoy: en Distribuidora Tampico son 1,230 filas (~289 KB en BD, ~100–150 KB con columnas mínimas) contra 4,660 del histórico completo. Así el estado de cuenta y la cobranza siguen exactos aunque la venta la haya hecho otro vendedor o sea de hace un año.
+- La validación de crédito en el punto de venta móvil sigue consultando en vivo al servidor (como hoy), no depende del caché.
+
+Regla de seguridad del rollout: si por cualquier razón no se puede resolver el alcance del vendedor (permisos aún cargando, sin perfil), se cae al comportamiento actual (traer todo de la empresa) en lugar de traer de menos. Preferimos gastar datos a mostrar un saldo o un stock incompleto.
+
+### 7. Medición
 - Instrumentar el sync maestro y `useOfflineQuery` con un acumulador de bytes (tamaño de respuesta) guardado en IndexedDB, para comparar antes/después y detectar regresiones.
+- Checklist de validación antes de liberar: saldo del cliente idéntico al de escritorio, CxC total igual, stock disponible con apartados de otros vendedores, corte del día del vendedor y ticket con promociones.
+
 
 ## Detalles técnicos
 
