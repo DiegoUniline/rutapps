@@ -357,19 +357,48 @@ export async function purgeForeignTenantData(empresaId: string): Promise<void> {
   try { previous = localStorage.getItem(LS_LAST_EMPRESA); } catch { /* ignore */ }
   const empresaChanged = previous !== null && previous !== empresaId;
 
+  // 1) Tablas de primer nivel: fuera todo lo que no sea de la empresa activa.
   for (const table of TABLES_TO_CACHE) {
     const localTable = getOfflineTable(table);
     if (!localTable) continue;
     try {
       if (table === 'empresas') {
         await localTable.where('id').notEqual(empresaId).delete();
-      } else if (TABLES_WITH_EMPRESA.has(table)) {
-        await localTable.where('empresa_id').notEqual(empresaId).delete();
-      } else if (empresaChanged) {
-        // Tablas hijas sin empresa_id (líneas, aplicaciones, etc.)
-        await localTable.clear();
+      } else if (CHILD_SCOPES[table]) {
+        continue; // se limpian abajo por su padre
+      } else {
+        // Filtro por empresa_id aunque la tabla no esté en TABLES_WITH_EMPRESA
+        // (ej. profiles): se borran las filas de otros inquilinos.
+        const foreignIds: any[] = [];
+        await localTable.toCollection().each((row: any) => {
+          if (row && 'empresa_id' in row && row.empresa_id && row.empresa_id !== empresaId) {
+            foreignIds.push(row.id);
+          }
+        });
+        if (foreignIds.length > 0) await localTable.bulkDelete(foreignIds);
+        else if (empresaChanged) await localTable.clear();
       }
     } catch { /* una tabla no debe romper la limpieza completa */ }
+  }
+
+  // 2) Tablas hijas (líneas, aplicaciones, reglas…): se borran las filas
+  // huérfanas, es decir cuyo padre ya no existe localmente tras el paso 1.
+  for (const table of TABLES_TO_CACHE) {
+    const scope = CHILD_SCOPES[table];
+    if (!scope) continue;
+    const localTable = getOfflineTable(table);
+    const parentTable = getOfflineTable(scope.parentTable);
+    if (!localTable || !parentTable) continue;
+    try {
+      const parentIds = new Set<string>();
+      await parentTable.toCollection().each((row: any) => { if (row?.id) parentIds.add(row.id); });
+      const orphanIds: any[] = [];
+      await localTable.toCollection().each((row: any) => {
+        const fk = row?.[scope.foreignKey];
+        if (!fk || !parentIds.has(fk)) orphanIds.push(row.id);
+      });
+      if (orphanIds.length > 0) await localTable.bulkDelete(orphanIds);
+    } catch { /* ignore */ }
   }
 
   if (empresaChanged) {
