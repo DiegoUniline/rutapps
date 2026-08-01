@@ -1,0 +1,1 @@
+UPDATE public.feature_flags SET alcance = 'todos' WHERE clave = 'venta_linea_desglose';
