@@ -536,10 +536,30 @@ export function useVentaForm() {
     const finalDisplayPrice = snap.displayPrice;
     setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, precio_unitario_sin_redondeo: snap?.rawUnitPrice ?? finalUnitPrice, precio_display_sin_redondeo: snap?.rawDisplayPrice ?? finalDisplayPrice, base_precio: snap?.basePrecio ?? 'con_impuestos', redondeo: snap?.redondeo ?? 'ninguno', unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false, lote_id: null, lote_codigo: null } as any; return next; });
     setDirty(true);
-    // Producto por lote en venta directa → pedir el lote (FEFO).
-    if ((producto as any).maneja_lote && form.tipo === 'venta_directa') {
-      setLoteParaLinea({ idx, producto: { id: productoId, nombre: producto.nombre } });
+    // Producto por lote: se aparta el lote desde que se captura la línea.
+    // Venta directa → se pide el lote (sale stock de inmediato).
+    // Pedido → se asigna FEFO automáticamente (se puede cambiar en la columna Lote).
+    if ((producto as any).maneja_lote) {
+      if (form.tipo === 'venta_directa') {
+        setLoteParaLinea({ idx, producto: { id: productoId, nombre: producto.nombre } });
+      } else if (form.almacen_id && empresa?.id) {
+        const almacenId = form.almacen_id;
+        const empresaId = empresa.id;
+        const ventaId = (form as any).id ?? null;
+        (async () => {
+          const lotes = await getLotesDisponibles({ empresaId, almacenId, productoId, excluirVentaId: ventaId });
+          const fefo = pickFefo(lotes, Number(next?.cantidad) || 1);
+          if (!fefo) return;
+          setLineas(prev => {
+            const arr = [...prev];
+            if (!arr[idx] || arr[idx].producto_id !== productoId || (arr[idx] as any).lote_id) return prev;
+            arr[idx] = { ...arr[idx], lote_id: fefo.lote_id, lote_codigo: fefo.codigo } as any;
+            return arr;
+          });
+        })();
+      }
     }
+
   };
 
   // Cambio de lista de precios a nivel de línea: usamos el snapshot ya calculado
