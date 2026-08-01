@@ -50,7 +50,7 @@ export default function CotizacionesListPage() {
     const q = search.trim().toLowerCase();
     return (data ?? []).filter(c => {
       if (estadoFilter !== 'todas' && c.estado !== estadoFilter) return false;
-      if ((dateFrom || dateTo) && !isDateInRangeISO(c.fecha, dateFrom, dateTo)) return false;
+      if ((dateFrom || dateTo) && !isDateInRangeISO((c.fecha || '').slice(0, 10), dateFrom, dateTo)) return false;
       if (!q) return true;
       return (
         (c.folio || '').toLowerCase().includes(q) ||

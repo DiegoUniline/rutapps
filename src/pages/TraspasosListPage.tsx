@@ -179,8 +179,8 @@ export default function TraspasosListPage() {
         getDestinoLabel(t).toLowerCase().includes(s)
       );
     }
-    if (desde) list = list.filter((t: any) => (t.fecha ?? '') >= desde);
-    if (hasta) list = list.filter((t: any) => (t.fecha ?? '') <= hasta);
+    if (desde) list = list.filter((t: any) => (t.fecha ?? '').slice(0, 10) >= desde);
+    if (hasta) list = list.filter((t: any) => (t.fecha ?? '').slice(0, 10) <= hasta);
     return list;
   }, [traspasos, search, filters.status, filters.tipo, desde, hasta]);
 
@@ -254,8 +254,8 @@ export default function TraspasosListPage() {
         l.destino.toLowerCase().includes(s)
       );
     }
-    if (desdeD) list = list.filter(l => (l.fecha ?? '') >= desdeD);
-    if (hastaD) list = list.filter(l => (l.fecha ?? '') <= hastaD);
+    if (desdeD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) >= desdeD);
+    if (hastaD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) <= hastaD);
     return list;
   }, [lineasRaw, searchD, filtersD.status, filtersD.tipo, desdeD, hastaD]);
 
