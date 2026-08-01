@@ -324,7 +324,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       <td className="py-1.5 px-2 text-right">
         {isEmpty ? '' : linePromoDesc > 0 ? (
           <span className="text-[11px] text-primary font-medium tabular-nums">
-            −{money(linePromoDesc)}
+            −{readOnly ? money(r2(linePromoDesc / qty)) : money(linePromoDesc)}
             {promoDescPct > 0 && <span className="text-muted-foreground text-[9px] ml-1">{Number(promoDescPct.toFixed(2))}%</span>}
           </span>
         ) : <span className="text-muted-foreground text-[11px]">—</span>}
