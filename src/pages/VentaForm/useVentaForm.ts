@@ -466,7 +466,26 @@ export function useVentaForm() {
       ) return l;
       return effective;
     }));
-  }, [tarifaRules, (form as any).lista_precio_id, sinImpuestos, applyEffectiveLinePricing, productosList, readOnly]);
+  // `lineas` se lee dentro pero NO va en deps: el map crea un array nuevo en
+  // cada corrida y provocaría un ciclo infinito de renders.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tarifaRules, tarifaRulesLoading, (form as any).lista_precio_id, sinImpuestos, applyEffectiveLinePricing, productosList, readOnly]);
+
+  // Acepta el reprecio pendiente: libera el ref para que el efecto recalcule.
+  const confirmReprice = useCallback(() => {
+    repricedListaRef.current = undefined;
+    setPendingReprice(null);
+    setDirty(true);
+  }, []);
+
+  // Rechaza el reprecio: la lista queda marcada como "ya atendida" y las
+  // líneas actuales conservan su precio.
+  const dismissReprice = useCallback(() => {
+    repricedListaRef.current = (form as any).lista_precio_id || null;
+    setPendingReprice(null);
+  }, [(form as any).lista_precio_id]);
+
+
 
 
 
