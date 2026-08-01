@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 export default function ListasPrecioListPage() {
   const navigate = useNavigate();
@@ -80,7 +81,7 @@ export default function ListasPrecioListPage() {
 
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
+    <ListPage>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Listas de Precios <VideoHelpButton module="tarifas" /></h1>
         <button onClick={() => navigate('/tarifas/nueva')} className="btn-odoo-primary shrink-0">
@@ -143,7 +144,7 @@ export default function ListasPrecioListPage() {
         </div>
       ) : (
         /* ─── Desktop: table layout ─── */
-        <div className="bg-card border border-border rounded overflow-x-auto">
+        <div className={TABLE_CARD}>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
@@ -268,6 +269,6 @@ export default function ListasPrecioListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ListPage>
   );
 }

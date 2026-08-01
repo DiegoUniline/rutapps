@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 const PAGE_SIZE = 50;
 
@@ -48,7 +49,7 @@ export default function ProveedoresListPage() {
   const pageData = proveedores?.slice(from - 1, to) ?? [];
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
+    <ListPage>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground">Proveedores</h1>
         {canCreate && (
@@ -71,7 +72,7 @@ export default function ProveedoresListPage() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded overflow-x-auto">
+      <div className={TABLE_CARD}>
         {isLoading ? (
           <div className="p-4"><TableSkeleton rows={6} cols={6} /></div>
         ) : (
@@ -120,6 +121,6 @@ export default function ProveedoresListPage() {
           onPrev={() => setPage(p => Math.max(1, p - 1))}
           onNext={() => setPage(p => p + 1)} />
       )}
-    </div>
+    </ListPage>
   );
 }

@@ -9,6 +9,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 interface AlmacenStock { almacen_id: string; nombre: string; tipo: string; cantidad: number; }
 
@@ -285,7 +286,7 @@ export default function LotesPage() {
   }, { vencidos: 0, porVencer: 0 });
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <ListPage>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Boxes className="h-5 w-5" /> Lotes
@@ -414,7 +415,7 @@ export default function LotesPage() {
       </div>
 
       {vista === 'matriz' && (
-        <div className="bg-card border border-border rounded overflow-x-auto">
+        <div className={TABLE_CARD}>
           {isLoading ? (
             <div className="p-4"><TableSkeleton rows={5} cols={6} /></div>
           ) : lotesVisibles.length === 0 ? (
@@ -486,7 +487,7 @@ export default function LotesPage() {
       )}
 
       {vista === 'lote' && (
-      <div className="bg-card border border-border rounded overflow-x-auto">
+      <div className={TABLE_CARD}>
         {isLoading ? (
           <div className="p-4"><TableSkeleton rows={5} cols={6} /></div>
         ) : (
@@ -678,6 +679,6 @@ export default function LotesPage() {
           </div>
         </div>
       )}
-    </div>
+    </ListPage>
   );
 }

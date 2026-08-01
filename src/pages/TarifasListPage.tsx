@@ -8,6 +8,7 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { useTarifas } from '@/hooks/useData';
 import { cn } from '@/lib/utils';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 const tipoLabel: Record<string, string> = { general: 'General', por_cliente: 'Por Cliente', por_ruta: 'Por Ruta' };
 
@@ -29,7 +30,7 @@ export default function TarifasListPage() {
   };
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
+    <ListPage>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Tarifas <HelpButton title={HELP.tarifas.title} sections={HELP.tarifas.sections} /></h1>
         <button onClick={() => navigate('/tarifas/nueva')} className="btn-odoo-primary shrink-0">
@@ -39,7 +40,7 @@ export default function TarifasListPage() {
 
       <OdooFilterBar search={search} onSearchChange={setSearch} placeholder="Buscar tarifa..." />
 
-      <div className="bg-card border border-border rounded overflow-x-auto">
+      <div className={TABLE_CARD}>
         {isLoading ? (
           <div className="p-4"><TableSkeleton rows={5} cols={5} /></div>
         ) : (
@@ -95,6 +96,6 @@ export default function TarifasListPage() {
           </>
         )}
       </div>
-    </div>
+    </ListPage>
   );
 }

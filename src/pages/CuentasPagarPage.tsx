@@ -15,6 +15,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
 import { useListPreferences } from '@/hooks/useListPreferences';
 import { CxPTabs } from '@/components/CxPTabs';
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -125,7 +126,7 @@ export default function CuentasPagarPage() {
   }));
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
+    <ListPage>
       <CxPTabs />
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <TrendingDown className="h-5 w-5" /> Cuentas por pagar
@@ -176,7 +177,7 @@ export default function CuentasPagarPage() {
         />
       </div>
 
-      <div className="bg-card border border-border rounded overflow-x-auto">
+      <div className={TABLE_CARD}>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-table-border">
@@ -250,6 +251,6 @@ export default function CuentasPagarPage() {
           />
         )}
       </div>
-    </div>
+    </ListPage>
   );
 }

@@ -12,6 +12,7 @@ import { CotizacionExpandedRow } from '@/pages/cotizaciones/CotizacionExpandedRo
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { isDateInRangeISO } from '@/lib/date-format';
 import {
+import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
@@ -60,7 +61,7 @@ export default function CotizacionesListPage() {
   }, [data, search, estadoFilter, dateFrom, dateTo]);
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
+    <ListPage>
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-foreground">Cotizaciones</h1>
         <Button onClick={() => navigate('/cotizaciones/nuevo')} size="sm">
@@ -196,6 +197,6 @@ export default function CotizacionesListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ListPage>
   );
 }
