@@ -17,6 +17,9 @@ import { toast } from 'sonner';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
 import { CerrarPedidoButton } from '@/components/venta/CerrarPedidoButton';
+import { AdminEditVentaDialog } from '@/components/venta/AdminEditVentaDialog';
+import { usePermisos } from '@/hooks/usePermisos';
+
 import { saldoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
 
