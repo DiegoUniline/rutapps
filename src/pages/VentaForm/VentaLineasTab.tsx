@@ -58,7 +58,15 @@ export function VentaLineasTab(props: Props) {
   const NORMAL_COLS_OFF = { precioNeto: false, precioBruto: false, iva: false, ieps: false, descMan: false, descPromo: false, subtotal: false, lote: false };
   // Si alguna línea es de un producto que maneja lote, la columna Lote se
   // muestra siempre (también en pedidos cerrados) para poder lotear desde aquí.
-  const hayLotes = (props.lineas ?? []).some(l => !!(props.productosList ?? []).find((p: any) => p.id === l.producto_id)?.maneja_lote);
+  // La columna Lote se muestra si algún producto maneja lote o si la línea ya
+  // trae lote guardado (evita depender del catálogo en caché tras activar lotes).
+  const hayLotes = (props.lineas ?? []).some(l =>
+    !!(props.productosList ?? []).find((p: any) => p.id === l.producto_id)?.maneja_lote
+    || !!(l as any).lote_id || !!(l as any).lote_codigo,
+  ) || (!!(empresa as any)?.maneja_lotes && (props.lineas ?? []).some(l => {
+    const p: any = (props.productosList ?? []).find((x: any) => x.id === l.producto_id);
+    return !!l.producto_id && (!p || p.maneja_lote === undefined);
+  }));
   const effectiveColsBase = readOnly
     ? (showDesglose ? { ...cols, ...NORMAL_COLS_OFF, ...VENTA_LINEAS_NON_FINAL_OFF } : { ...cols, ...VENTA_LINEAS_DESGLOSE_OFF })
     : { ...VENTA_LINEAS_DEFAULT_VISIBILITY, ...VENTA_LINEAS_DESGLOSE_OFF };
