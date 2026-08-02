@@ -68,7 +68,7 @@ export function RepararPromocionesButton() {
       <button
         type="button"
         onClick={() => { setResult(null); setOpen(true); }}
-        className="btn-odoo shrink-0"
+        className="btn-odoo-secondary shrink-0 whitespace-nowrap"
         title="Reparar promociones (solo super admin)"
       >
         <Wand2 className="h-3.5 w-3.5" /> Actualizar promos
