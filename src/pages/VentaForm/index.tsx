@@ -33,6 +33,7 @@ import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { nextVisitDate } from '@/lib/nextVisitDate';
 import { RepriceListaDialog } from '@/components/venta/RepriceListaDialog';
+import { AdminEditVentaDialog } from '@/components/venta/AdminEditVentaDialog';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -368,7 +369,18 @@ export default function VentaFormPage() {
         onFacturar={() => setShowFacturaDrawer(true)}
         onDevolucion={!isNew ? () => setShowDevolucion(true) : undefined}
       />
-      {!isNew && <div className="px-5 pt-3"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>}
+      {!isNew && (
+        <div className="px-5 pt-3 flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-[240px]"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>
+          {form.status !== 'cancelado' && (
+            <AdminEditVentaDialog
+              venta={form}
+              lineas={lineas.filter(l => l.producto_id)}
+              onSaved={() => { queryClient.invalidateQueries({ queryKey: ['venta', form.id] }); queryClient.invalidateQueries({ queryKey: ['ventas'] }); }}
+            />
+          )}
+        </div>
+      )}
       <div className="p-3 sm:p-5 space-y-4 max-w-[1200px]">
         <div className="bg-card border border-border rounded-md p-5">
           {readOnly && <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />Esta venta está {form.status} y no se puede editar.</div>}
