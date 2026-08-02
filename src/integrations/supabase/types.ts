@@ -9127,6 +9127,7 @@ export type Database = {
           lote_id: string
         }[]
       }
+      fn_netear_linea_promo: { Args: { _linea_id: string }; Returns: undefined }
       fn_recalc_venta_header: {
         Args: { p_venta_id: string }
         Returns: undefined
