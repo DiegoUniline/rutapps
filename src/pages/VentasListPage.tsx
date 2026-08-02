@@ -32,6 +32,8 @@ import { usePinAuth } from '@/hooks/usePinAuth';
 import { totalEfectivoVenta, saldoRealVenta } from '@/lib/ventaCerrada';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
 import { BulkCerrarPedidosDialog } from '@/components/venta/BulkCerrarPedidosDialog';
+import { RepararPromocionesButton } from '@/components/venta/RepararPromocionesButton';
+
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
