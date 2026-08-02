@@ -52,7 +52,7 @@ export function LoteReceptionModal({ empresaId, producto, piezas, onClose, onCon
 
   if (!producto) return null;
 
-  const fmtCad = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'sin caducidad';
+  const fmtCad = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'sin caducidad';
 
   const confirmar = async () => {
     if (saving) return;

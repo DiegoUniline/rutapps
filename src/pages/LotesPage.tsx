@@ -148,7 +148,7 @@ export default function LotesPage() {
       .sort((a, b) => (a.tipo === b.tipo ? a.nombre.localeCompare(b.nombre) : a.tipo === 'almacen' ? -1 : 1));
   })();
 
-  const fmtFecha = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const fmtFecha = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const estaVencido = (d: string | null) => !!d && new Date(d + 'T00:00:00') < hoy;
   const DIAS_POR_VENCER = 30; // umbral "próximo a vencer"
