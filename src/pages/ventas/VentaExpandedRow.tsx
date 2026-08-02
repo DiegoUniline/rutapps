@@ -39,7 +39,6 @@ interface Props {
 export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCancelTarget, onCollapse, empresaId, empresa, clientesList, productosList, colSpan = 13 }: Props) {
   const navigate = useNavigate();
   const { hasPermiso } = usePermisos();
-  const canEditar = hasPermiso('ventas', 'editar');
 
   const [lineas, setLineas] = useState<any[]>([]);
   const [pagos, setPagos] = useState<any[]>([]);
