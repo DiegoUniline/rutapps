@@ -392,7 +392,11 @@ export async function generateDifasurVentaPdf(
       const precioUnit = Number(l.precio_unitario) || 0;
       const importe = Number(l.total) || cantidad * precioUnit;
       const ivaMonto = Number(l.iva_monto) || 0;
-      const lotesInfo = lotesPorProducto[l.producto_id] ?? [];
+      const lotesInfo = [...(lotesPorProducto[l.producto_id] ?? [])];
+      // Lote asignado directamente en la línea del pedido
+      if (l.lotes?.codigo && !lotesInfo.find((x) => x.codigo === l.lotes.codigo)) {
+        lotesInfo.push({ codigo: l.lotes.codigo, caducidad: l.lotes.fecha_caducidad });
+      }
       const loteStr = lotesInfo.map((x) => x.codigo).join(', ');
       const cadStr = lotesInfo
         .map((x) => (x.caducidad ? fmtDate(x.caducidad) : ''))
