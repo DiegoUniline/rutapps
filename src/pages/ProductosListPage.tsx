@@ -195,6 +195,9 @@ export default function ProductosListPage() {
       toast.success(`${ids.length} producto${ids.length !== 1 ? 's' : ''} ${value ? 'ahora manejan lote' : 'ya no manejan lote'}`);
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['productos-page'] });
+      qc.invalidateQueries({ queryKey: ['productos-select'] });
+      qc.invalidateQueries({ queryKey: ['pos-productos'] });
       qc.invalidateQueries({ queryKey: ['productos-ajuste'] });
     } catch (e: any) {
       toast.error(e?.message || 'Error al actualizar');
