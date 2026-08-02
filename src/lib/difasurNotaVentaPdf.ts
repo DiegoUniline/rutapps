@@ -41,7 +41,7 @@ const fmtDate = (d?: string | null) => {
   try {
     const dt = new Date(d.length <= 10 ? d + 'T12:00:00' : d);
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `${pad(dt.getMonth() + 1)}/${pad(dt.getDate())}/${dt.getFullYear()}`;
+    return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()}`;
   } catch { return d; }
 };
 
