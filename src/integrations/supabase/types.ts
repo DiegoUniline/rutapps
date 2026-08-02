@@ -8959,6 +8959,17 @@ export type Database = {
         }
         Returns: number
       }
+      admin_reparar_promociones: {
+        Args: { _desde?: string; _empresa_id?: string }
+        Returns: {
+          descuento: number
+          empresa: string
+          folio: string
+          total_anterior: number
+          total_nuevo: number
+          venta_id: string
+        }[]
+      }
       admin_sync_duplicados: {
         Args: never
         Returns: {
@@ -9135,6 +9146,10 @@ export type Database = {
       fn_recalc_venta_saldo: {
         Args: { p_venta_id: string }
         Returns: undefined
+      }
+      fn_reevaluar_promos_venta: {
+        Args: { _venta_id: string }
+        Returns: number
       }
       generar_recibo_volumen: {
         Args: {

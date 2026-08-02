@@ -17,6 +17,9 @@ import { toast } from 'sonner';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
 import { CerrarPedidoButton } from '@/components/venta/CerrarPedidoButton';
+import { AdminEditVentaDialog } from '@/components/venta/AdminEditVentaDialog';
+import { usePermisos } from '@/hooks/usePermisos';
+
 import { saldoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
 
@@ -36,6 +39,9 @@ interface Props {
 
 export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCancelTarget, onCollapse, empresaId, empresa, clientesList, productosList, colSpan = 13 }: Props) {
   const navigate = useNavigate();
+  const { hasPermiso } = usePermisos();
+  const canEditar = hasPermiso('ventas', 'editar');
+
   const [lineas, setLineas] = useState<any[]>([]);
   const [pagos, setPagos] = useState<any[]>([]);
   const [cobradores, setCobradores] = useState<Record<string, string>>({});
@@ -371,6 +377,10 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => navigate(`/ventas/${venta.id}`)}>
                   <Pencil className="h-3 w-3" /> Editar
                 </Button>
+                {canEditar && venta.status !== 'cancelado' && (
+                  <AdminEditVentaDialog venta={venta} lineas={lineas} onSaved={() => setReloadKey(k => k + 1)} />
+                )}
+
                 {onCancelTarget && canDelete && venta.status !== 'borrador' && venta.status !== 'cancelado' && (
                   <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive" onClick={() => onCancelTarget(venta.id)}>
                     <Ban className="h-3 w-3" /> Cancelar
