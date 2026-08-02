@@ -104,7 +104,7 @@ export function AdminEditVentaDialog({ venta, lineas, onSaved }: Props) {
         .from('ventas')
         .update({
           fecha: fecha || venta.fecha,
-          condicion_pago: condicion,
+          condicion_pago: condicion as 'contado' | 'credito' | 'por_definir',
           notas: notas || null,
         })
         .eq('id', venta.id);
