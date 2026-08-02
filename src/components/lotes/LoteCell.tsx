@@ -1,7 +1,7 @@
 import type { LoteRef } from '@/hooks/useLotesPorReferencia';
 
 const fmtCad = (d: string | null) =>
-  d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' }) : 'sin cad.';
+  d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: '2-digit' }) : 'sin cad.';
 
 /**
  * Celda de "Lote" reutilizable para tablas de detalle (venta, merma, devolución…).

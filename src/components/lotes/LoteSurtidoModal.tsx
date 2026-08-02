@@ -69,7 +69,7 @@ export function LoteSurtidoModal({ empresaId, almacenId, producto, cantidadObjet
 
   if (!producto) return null;
 
-  const fmtCad = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'sin caducidad';
+  const fmtCad = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'sin caducidad';
   const totalAsignado = lotes.reduce((s, l) => s + (Number(asign[l.lote_id]) || 0), 0);
   const excedeAlguno = lotes.some(l => (Number(asign[l.lote_id]) || 0) > l.disponible);
   // El total no puede superar el stock general del almacén (lo que valida el RPC),

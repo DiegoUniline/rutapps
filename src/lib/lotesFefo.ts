@@ -117,4 +117,4 @@ export function pickFefo(lotes: LoteDisponible[], cantidad = 0): LoteDisponible 
 }
 
 export const fmtCaducidad = (d: string | null) =>
-  d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'sin caducidad';
+  d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'sin caducidad';
