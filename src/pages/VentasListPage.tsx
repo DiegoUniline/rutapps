@@ -483,9 +483,11 @@ export default function VentasListPage() {
               onPDF={() => exportToPDF({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0), saldo_pendiente: ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0) } })}
             />
           )}
+          <RepararPromocionesButton />
           <button onClick={() => navigate('/finanzas/aplicar-pagos')} className="btn-odoo-secondary shrink-0">
             <Banknote className="h-3.5 w-3.5" /> Aplicar pagos
           </button>
+
           {canCreate && (
             <button onClick={() => navigate('/ventas/nuevo')} className="btn-odoo-primary shrink-0">
               <Plus className="h-3.5 w-3.5" /> Nueva venta
