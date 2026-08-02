@@ -345,7 +345,7 @@ export async function generateDifasurVentaPdf(
       *,
       clientes(nombre, codigo, telefono, direccion, rfc, colonia, cp, facturama_razon_social, contacto, zonas:zonas!zona_id(nombre)),
       vendedores:profiles!vendedor_id(nombre),
-      venta_lineas(id, producto_id, descripcion, cantidad, precio_unitario, iva_monto, total, productos(codigo, nombre, nombre_venta, nombre_ticket, precio_sugerido_publico))
+      venta_lineas(id, producto_id, descripcion, cantidad, precio_unitario, iva_monto, total, lote_id, lotes:lotes!lote_id(codigo, fecha_caducidad), productos(codigo, nombre, nombre_venta, nombre_ticket, precio_sugerido_publico))
     `)
     .eq('id', ventaId)
     .single();
