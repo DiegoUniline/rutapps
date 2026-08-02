@@ -31,8 +31,10 @@ export function BulkActionsBar({ count, onClear, actions, noun = 'elemento', pos
 
   return (
     <div className={cn(
-      'fixed left-1/2 -translate-x-1/2 z-50 max-w-[calc(100vw-2rem)]',
-      position === 'top' ? 'top-4' : 'bottom-4'
+      'fixed left-1/2 -translate-x-1/2 z-[70] max-w-[calc(100vw-2rem)] pointer-events-auto',
+      position === 'top'
+        ? 'top-[calc(6.5rem+env(safe-area-inset-top,0px))] md:top-14'
+        : 'bottom-4'
     )}>
 
       <div className="bg-foreground text-background rounded-full shadow-2xl flex items-center gap-1 pl-4 pr-1.5 py-1.5 border border-foreground/20">
