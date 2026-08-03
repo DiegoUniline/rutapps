@@ -7,7 +7,8 @@ import { BRAND, CURRENCIES, PLANS, fmtCur } from '@/lib/marketing-content';
 
 const FAQ = [
   { q: '¿Hay contrato o permanencia?', a: 'No. Cancelas cuando quieras desde el panel. Sin penalizaciones.' },
-  { q: '¿Qué incluye la prueba gratis?', a: '7 días con todos los módulos abiertos, sin tarjeta de crédito.' },
+  { q: '¿Qué incluye la prueba gratis?', a: '7 días con todos los módulos abiertos. Sí se registra una tarjeta al crear la cuenta, pero no se cobra nada hasta el día 8; si cancelas antes, no hay cargo. La prueba no incluye capacitación en vivo: durante esos días te apoyas con los videotutoriales.' },
+  { q: '¿Incluye capacitación?', a: 'Sí, al contratar un plan: Individual 30 minutos, Equipo 1 hora y Empresa 2 horas de capacitación en vivo. Durante la prueba gratis la guía es únicamente con videotutoriales.' },
   { q: '¿Puedo agregar más usuarios?', a: 'Sí. Cada usuario adicional cuesta $300 MXN/mes y se prorratea al periodo en curso.' },
   { q: '¿La IA tiene costo extra?', a: 'No. La IA está incluida en todos los planes.' },
   { q: '¿Funciona sin internet?', a: 'Sí. La app móvil opera 100% offline y sincroniza cuando vuelve la señal.' },
@@ -21,7 +22,7 @@ export default function PreciosPage() {
     <MarketingShell>
       <Seo
         title="Precios — Rutapp"
-        description="Planes desde $450 MXN/mes. 7 días gratis, sin tarjeta. IA, app móvil offline y todos los módulos incluidos. Cancela cuando quieras."
+        description="Planes desde $450 MXN/mes. 7 días gratis, sin cobro hasta el día 8. IA, app móvil offline y todos los módulos incluidos. Cancela cuando quieras."
         path="/precios"
         jsonLd={[{
           '@context': 'https://schema.org', '@type': 'FAQPage',
@@ -35,7 +36,7 @@ export default function PreciosPage() {
           <h1 className="mt-2 text-[32px] md:text-[48px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
             Simple. Sin sorpresas.
           </h1>
-          <p className="mt-3 text-[15px]" style={{ color: BRAND.muted }}>7 días gratis · cancela cuando quieras</p>
+          <p className="mt-3 text-[15px]" style={{ color: BRAND.muted }}>7 días gratis · cancela cuando quieras · el cobro empieza el día 8</p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5">
             {CURRENCIES.map(c => {
@@ -73,7 +74,7 @@ export default function PreciosPage() {
                 Empezar gratis
               </Link>
               <ul className="mt-5 space-y-2 flex-1">
-                {['Acceso completo a los 10 módulos','App móvil offline','IA incluida','Tienda en línea','Soporte por WhatsApp','Actualizaciones automáticas'].map(f => (
+                {['Acceso completo a los 10 módulos','App móvil offline','IA incluida','Tienda en línea','Soporte por WhatsApp','Actualizaciones automáticas', p.capacitacion].map(f => (
                   <li key={f} className="flex items-center gap-2 text-[13px]" style={{ color: BRAND.ink2 }}>
                     <Check className="h-3.5 w-3.5 shrink-0" style={{ color: BRAND.primary }} strokeWidth={3} /> {f}
                   </li>
@@ -103,7 +104,7 @@ export default function PreciosPage() {
       <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20" style={{ background: BRAND.ink }}>
         <div className="max-w-[800px] mx-auto text-center text-white">
           <h2 className="text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
-            Empieza hoy. Sin tarjeta.
+            Empieza hoy. Sin cobro hasta el día 8.
           </h2>
           <Link to="/signup" className="mt-6 inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-[14.5px] text-white"
             style={{ background: BRAND.primary }}>

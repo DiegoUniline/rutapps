@@ -386,7 +386,7 @@ export default function LandingPage() {
             <Reveal variant="fade" delay={260}>
               <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] md:text-[12.5px]" style={{ color: BRAND.muted }}>
                 <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> 7 días gratis</span>
-                <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Sin tarjeta</span>
+                <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> No se cobra hasta el día 8</span>
                 <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Listo en días</span>
               </div>
             </Reveal>
@@ -804,7 +804,7 @@ export default function LandingPage() {
                   Iniciar sesión
                 </Link>
               </div>
-              <p className="mt-5 text-[12.5px] text-white/55">7 días gratis · sin tarjeta</p>
+              <p className="mt-5 text-[12.5px] text-white/55">7 días gratis · registras tarjeta y el cobro empieza hasta el día 8</p>
             </div>
           </div>
         </Reveal>

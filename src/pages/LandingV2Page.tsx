@@ -219,7 +219,7 @@ function PreciosSection() {
           Simple. Sin sorpresas.
         </h2>
         <p className="mt-3 text-[14px]" style={{ color: BRAND.ink2 }}>
-          7 días gratis · cancela cuando quieras · sin tarjeta al registrarte.
+          7 días gratis · cancela cuando quieras · registras tarjeta, el cobro empieza el día 8.
         </p>
         {/* Multi-moneda switcher */}
         <div className="mt-6 inline-flex flex-wrap items-center justify-center gap-1 p-1 rounded-full border bg-white shadow-sm" style={{ borderColor: BRAND.line }}>
@@ -353,7 +353,7 @@ export default function LandingV2Page() {
               <CTAGhost to="#unicas">Ver lo que nadie tiene</CTAGhost>
             </div>
             <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[12px]" style={{ color: BRAND.muted }}>
-              <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Sin tarjeta</span>
+              <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> No se cobra hasta el día 8</span>
               <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Listo en minutos</span>
               <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Soporte en español</span>
             </div>
@@ -868,7 +868,7 @@ export default function LandingV2Page() {
             </a>
           </motion.div>
           <p className="mt-5 text-[12.5px] text-white/60">
-            7 días gratis · sin tarjeta al registrarte · si decides quedarte, cobramos el día 8.
+            7 días gratis · registras tu tarjeta al inicio · si decides quedarte, cobramos hasta el día 8.
           </p>
         </div>
       </section>

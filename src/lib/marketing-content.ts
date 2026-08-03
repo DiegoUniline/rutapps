@@ -104,9 +104,9 @@ export const fmtCur = (mxn: number, c: typeof CURRENCIES[number]) => {
 };
 
 export const PLANS = [
-  { slug: 'individual', name: 'Individual', price: 450, users: 1, popular: false },
-  { slug: 'equipo', name: 'Equipo', price: 900, users: 3, popular: true },
-  { slug: 'empresa', name: 'Empresa', price: 1500, users: 5, popular: false },
+  { slug: 'individual', name: 'Individual', price: 450, users: 1, popular: false, capacitacion: '30 min de capacitación al contratar' },
+  { slug: 'equipo', name: 'Equipo', price: 900, users: 3, popular: true, capacitacion: '1 hora de capacitación al contratar' },
+  { slug: 'empresa', name: 'Empresa', price: 1500, users: 5, popular: false, capacitacion: '2 horas de capacitación al contratar' },
 ];
 
 export const GIROS = [
