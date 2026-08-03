@@ -416,7 +416,12 @@ export default function SignupPage() {
       if (selectedPlanSlug) {
         try { localStorage.setItem(SELECTED_PLAN_KEY, selectedPlanSlug); } catch {}
       }
-      const planQuery = selectedPlanSlug ? `?plan=${encodeURIComponent(selectedPlanSlug)}` : '';
+      try { localStorage.setItem(SELECTED_PERIOD_KEY, billingPeriod); } catch {}
+      const qs = new URLSearchParams();
+      if (selectedPlanSlug) qs.set('plan', selectedPlanSlug);
+      qs.set('periodo', billingPeriod);
+      const planQuery = `?${qs.toString()}`;
+
       // After signUp the user is already authenticated; send them to capture card.
       // If session is not yet ready, redirect to /login which will then route to /completar-registro via the guard.
       const { data: { session } } = await supabase.auth.getSession();
