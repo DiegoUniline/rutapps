@@ -1976,6 +1976,7 @@ export type Database = {
           created_at: string
           factor_conversion: number
           id: string
+          lote_id: string | null
           piezas_total: number | null
           precio_unitario: number
           producto_id: string | null
@@ -1989,6 +1990,7 @@ export type Database = {
           created_at?: string
           factor_conversion?: number
           id?: string
+          lote_id?: string | null
           piezas_total?: number | null
           precio_unitario?: number
           producto_id?: string | null
@@ -2002,6 +2004,7 @@ export type Database = {
           created_at?: string
           factor_conversion?: number
           id?: string
+          lote_id?: string | null
           piezas_total?: number | null
           precio_unitario?: number
           producto_id?: string | null
@@ -2014,6 +2017,13 @@ export type Database = {
             columns: ["compra_id"]
             isOneToOne: false
             referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compra_lineas_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
             referencedColumns: ["id"]
           },
           {
@@ -2034,11 +2044,13 @@ export type Database = {
           dias_credito: number | null
           empresa_id: string
           fecha: string
+          fecha_vencimiento: string | null
           folio: string | null
           id: string
           iva_total: number | null
           notas: string | null
           notas_pago: string | null
+          numero_factura: string | null
           proveedor_id: string | null
           saldo_pendiente: number | null
           status: string
@@ -2053,11 +2065,13 @@ export type Database = {
           dias_credito?: number | null
           empresa_id: string
           fecha?: string
+          fecha_vencimiento?: string | null
           folio?: string | null
           id?: string
           iva_total?: number | null
           notas?: string | null
           notas_pago?: string | null
+          numero_factura?: string | null
           proveedor_id?: string | null
           saldo_pendiente?: number | null
           status?: string
@@ -2072,11 +2086,13 @@ export type Database = {
           dias_credito?: number | null
           empresa_id?: string
           fecha?: string
+          fecha_vencimiento?: string | null
           folio?: string | null
           id?: string
           iva_total?: number | null
           notas?: string | null
           notas_pago?: string | null
+          numero_factura?: string | null
           proveedor_id?: string | null
           saldo_pendiente?: number | null
           status?: string
