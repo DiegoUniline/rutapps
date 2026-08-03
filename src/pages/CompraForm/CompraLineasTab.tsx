@@ -8,21 +8,25 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { getNombreCompra } from '@/lib/productoNombres';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoteReceptionModal } from '@/components/lotes/LoteReceptionModal';
+import { CompraLineaLotesDialog } from '@/components/lotes/CompraLineaLotesDialog';
 
 interface Props {
   lineas: Partial<CompraLinea>[];
   productosList: any[] | undefined;
   isEditable: boolean;
   puedeRecibir: boolean;
+  compraId?: string;
+  almacenId?: string | null;
   updateLinea: (idx: number, key: string, val: any) => void;
   addLine: () => void;
   removeLine: (idx: number) => void;
   onRecibirLinea: (lineaId: string, loteId?: string | null) => void;
+  onLoteChanged?: () => void;
 }
 
-export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibir, updateLinea, addLine, removeLine, onRecibirLinea }: Props) {
+export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibir, compraId, almacenId, updateLinea, addLine, removeLine, onRecibirLinea, onLoteChanged }: Props) {
   const { fmt } = useCurrency();
-  const { empresa } = useAuth();
+  const { empresa, user } = useAuth();
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickIdx, setQuickIdx] = useState<number | null>(null);
   const [quickName, setQuickName] = useState('');
@@ -30,9 +34,20 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
   const [loteFor, setLoteFor] = useState<{ lineaId: string; producto: { id: string; nombre: string }; piezas: number } | null>(null);
   // Asignación de lote desde la línea (antes de recibir).
   const [loteAsignar, setLoteAsignar] = useState<{ idx: number; producto: { id: string; nombre: string }; piezas: number } | null>(null);
+  // Loteo con cantidades (carga stock vía trigger).
+  const [loteoLinea, setLoteoLinea] = useState<{ lineaId: string; producto: { id: string; nombre: string }; piezasTotal: number } | null>(null);
   const manejaLotes = !!(empresa as any)?.maneja_lotes;
   const lineaManejaLote = (line: any) => !!(line.productos?.maneja_lote ?? productosList?.find((p: any) => p.id === line.producto_id)?.maneja_lote);
+  const abrirLoteo = (line: any) => {
+    const factor = Number(line._factor_conversion) || 1;
+    setLoteoLinea({
+      lineaId: line.id,
+      producto: { id: line.producto_id, nombre: line.productos?.nombre ?? 'Producto' },
+      piezasTotal: (Number(line.cantidad) || 0) * factor,
+    });
+  };
   const abrirAsignarLote = (idx: number, line: any) => {
+
     const prod = productosList?.find((p: any) => p.id === line.producto_id);
     if (!line.producto_id) return;
     const factor = Number(line._factor_conversion) || 1;
