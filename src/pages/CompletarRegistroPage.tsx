@@ -68,7 +68,16 @@ export default function CompletarRegistroPage() {
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('mensual');
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>(() => {
+    const fromUrl = searchParams.get('periodo') as BillingPeriod | null;
+    if (fromUrl && fromUrl in PERIOD_DISCOUNT) return fromUrl;
+    try {
+      const saved = localStorage.getItem('rutapp_billing_period') as BillingPeriod | null;
+      if (saved && saved in PERIOD_DISCOUNT) return saved;
+    } catch { /* ignore */ }
+    return 'mensual';
+  });
+
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
