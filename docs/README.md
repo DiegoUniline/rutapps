@@ -8,6 +8,8 @@ Guía completa para un programador que entra al proyecto por primera vez.
 | [02 · Esquema de base de datos](./02-ESQUEMA-BASE-DE-DATOS.md) | **Autogenerado.** Las 153 tablas, cada campo, tipo, nulabilidad, llaves foráneas y quién referencia a quién. Funciones RPC y enums. |
 | [03 · Mapa de rutas](./03-MAPA-DE-RUTAS.md) | **Autogenerado.** Cada URL → componente → archivo donde nace la vista. |
 | [04 · Flujos de negocio](./04-FLUJOS-DE-NEGOCIO.md) | Cómo funciona por dentro: precios, impuestos, promociones, venta, inventario, lotes, cobranza, ruta móvil offline, facturación. |
+| [05 · Llaves y seguridad](./05-SEGURIDAD-Y-LLAVES.md) | Llave primaria y únicos de cada tabla, estado de RLS, todas las políticas por tabla con su alcance (empresa / usuario / super admin / público), grants y reglas de seguridad no negociables. |
+
 
 ## Regenerar la documentación automática
 
