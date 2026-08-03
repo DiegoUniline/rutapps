@@ -940,6 +940,28 @@ export default function ConfiguracionPage() {
             )}
           </div>
 
+          {/* Lotes y caducidades */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Building2 className="h-4 w-4" /> Lotes y caducidades
+            </h3>
+            <div className="flex items-start justify-between gap-4 py-2">
+              <div className="flex-1">
+                <div className="text-[13px] font-medium text-foreground">
+                  Esta empresa maneja lotes
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Al activarlo se habilitan los lotes y fechas de caducidad: podrás lotear en compras, asignar lotes en pedidos y ventas (uno o varios por línea) y ver el stock por lote. Si está apagado, el sistema trabaja solo con stock por almacén.
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Después, en cada producto puedes indicar si ese producto en particular maneja lote.
+                </p>
+              </div>
+              <Switch checked={manejaLotes} onCheckedChange={setManejaLotes} />
+            </div>
+          </div>
+
+
           {/* Apartado de stock en pedidos */}
           <div className="bg-card border border-border rounded-lg p-5">
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
