@@ -249,7 +249,7 @@ export default function CompletarRegistroPage() {
                       >
                         <div className="text-sm font-bold capitalize">{p}</div>
                         <div className="text-[10px] text-muted-foreground mt-0.5">
-                          {p === 'mensual' ? 'Cobro cada mes' : p === 'semestral' ? 'Cobro cada mes' : 'Cobro cada mes'}
+                          {p === 'mensual' ? 'Cobro cada mes' : `Cobro cada ${PERIOD_MONTHS[p]} meses`}
                         </div>
                         {disc > 0 && (
                           <span className="absolute -top-2 -right-2 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
@@ -261,8 +261,18 @@ export default function CompletarRegistroPage() {
                   })}
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Semestral y Anual aplican descuento permanente en cada cobro mensual mientras mantengas tu suscripción activa.
+                  {PERIOD_DISCOUNT[billingPeriod] > 0 ? (
+                    <>
+                      El descuento de <strong>-{PERIOD_DISCOUNT[billingPeriod]}%</strong> se aplica al precio de <strong>cada mes</strong>
+                      {' '}({fmtMoney(calcMonthly(selectedPlan, quantity))} → {fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))} / mes),
+                      pero <strong>el cobro se realiza en una sola exhibición por {PERIOD_MONTHS[billingPeriod]} meses</strong>:{' '}
+                      <strong>{fmtMoney(calcCargoPorPeriodo(selectedPlan, quantity, billingPeriod))} MXN</strong> cada {PERIOD_MONTHS[billingPeriod]} meses.
+                    </>
+                  ) : (
+                    <>Se cobra {fmtMoney(calcMonthly(selectedPlan, quantity))} MXN cada mes. Semestral y Anual reducen el precio mensual (-10% / -15%) y el cobro se hace por todo el periodo contratado.</>
+                  )}
                 </p>
+
               </div>
             )}
 
