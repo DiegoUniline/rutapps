@@ -413,6 +413,7 @@ export default function ConfiguracionPage() {
   const [apartadoSoloConStock, setApartadoSoloConStock] = useState(false);
   const [apartadoAlmacenesIds, setApartadoAlmacenesIds] = useState<string[]>([]);
   const [politicaCobro, setPoliticaCobro] = useState<'pedido' | 'entregado'>('pedido');
+  const [manejaLotes, setManejaLotes] = useState(false);
 
   // Reset initialized when empresa changes (e.g. super admin switches)
   const empresaId = empresa?.id;
