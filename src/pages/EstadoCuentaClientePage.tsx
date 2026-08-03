@@ -1,3 +1,4 @@
+import { pagadoRealVenta } from '@/lib/ventaCerrada';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -131,7 +132,7 @@ function useClienteDetalle(clienteId: string | null) {
       const [ventasRes, cobrosRes] = await Promise.all([
         supabase
           .from('ventas')
-          .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status')
+          .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, cobro_aplicaciones(monto_aplicado, cobros!inner(status))')
           .eq('empresa_id', empresa!.id)
           .eq('cliente_id', clienteId!)
           .neq('status', 'cancelado')
@@ -338,7 +339,7 @@ export default function EstadoCuentaClientePage() {
                     <TableCell className="text-[12px]">{fmtDate(v.fecha)}</TableCell>
                     <TableCell><Badge variant="outline" className="text-[10px]">{v.condicion_pago}</Badge></TableCell>
                     <TableCell className="text-right text-[12px]">{fmt(v.total ?? 0)}</TableCell>
-                    <TableCell className="text-right text-[12px] text-success">{fmt((v.total ?? 0) - (v.saldo_pendiente ?? 0))}</TableCell>
+                    <TableCell className="text-right text-[12px] text-success">{fmt(pagadoRealVenta(v))}</TableCell>
                     <TableCell className="text-right font-bold text-success">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
                   </TableRow>
                 ))}
@@ -348,7 +349,7 @@ export default function EstadoCuentaClientePage() {
               </TableBody>
               {ventasPendientes.length > 0 && (() => {
                 const t = ventasPendientes.reduce((s, v) => s + (v.total ?? 0), 0);
-                const p = ventasPendientes.reduce((s, v) => s + ((v.total ?? 0) - (v.saldo_pendiente ?? 0)), 0);
+                const p = ventasPendientes.reduce((s, v) => s + pagadoRealVenta(v), 0);
                 const sp = ventasPendientes.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
                 return (
                   <TableFooter>
