@@ -88,3 +88,20 @@ export function saldoRealVenta(v: any): number {
   const saldo = totalReal - cobrado;
   return saldo > 0 ? saldo : 0;
 }
+
+/**
+ * Monto REALMENTE pagado de una venta. Siempre sale de los cobros aplicados,
+ * NUNCA de `total - saldo_pendiente`: en pedidos con política "cobrar lo
+ * entregado" el saldo guardado puede ser 0 sin que exista ningún pago, y
+ * derivarlo del saldo hacía que se vieran como pagados.
+ *
+ * Requiere el embed `cobro_aplicaciones(monto_aplicado, cobros!inner(status))`.
+ * Si no viene el embed, devuelve 0 (no se puede afirmar que haya pago).
+ */
+export function pagadoRealVenta(v: any): number {
+  if (!v || v.status === 'cancelado') return 0;
+  if (!Array.isArray(v.cobro_aplicaciones)) return 0;
+  const pagado = sumCobrosActivos(v);
+  return pagado > 0 ? pagado : 0;
+}
+
