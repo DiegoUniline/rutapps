@@ -531,6 +531,7 @@ export default function ConfiguracionPage() {
         apartado_almacenes_ids: apartarStockPedidos ? apartadoAlmacenesIds : [],
         apartado_solo_con_stock: apartarStockPedidos ? apartadoSoloConStock : false,
         politica_cobro: politicaCobro,
+        maneja_lotes: manejaLotes,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
