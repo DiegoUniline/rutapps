@@ -333,6 +333,21 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
           }}
         />
       )}
+      {loteoLinea && empresa?.id && compraId && (
+        <CompraLineaLotesDialog
+          open
+          empresaId={empresa.id}
+          compraId={compraId}
+          lineaId={loteoLinea.lineaId}
+          almacenId={almacenId ?? null}
+          producto={loteoLinea.producto}
+          piezasTotal={loteoLinea.piezasTotal}
+          userId={user?.id}
+          onClose={() => setLoteoLinea(null)}
+          onChanged={() => onLoteChanged?.()}
+        />
+      )}
     </div>
+
   );
 }
