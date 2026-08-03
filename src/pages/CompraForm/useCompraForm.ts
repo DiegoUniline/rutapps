@@ -11,7 +11,7 @@ import { emptyLine, calcLineTotals, type CompraLinea } from './types';
 import { confirmDialog as confirmAsync } from '@/lib/confirm';
 
 function useCompra(id?: string) {
-  return useQuery({ queryKey: ['compra', id], queryFn: async () => { const { data, error } = await supabase.from('compras').select('*, proveedores(nombre), almacenes(nombre), compra_lineas(*, productos(id, codigo, nombre, nombre_compra, costo, maneja_lote))').eq('id', id!).single(); if (error) throw error; return data; }, enabled: !!id });
+  return useQuery({ queryKey: ['compra', id], queryFn: async () => { const { data, error } = await supabase.from('compras').select('*, proveedores(nombre), almacenes(nombre), compra_lineas(*, productos(id, codigo, nombre, nombre_compra, costo, maneja_lote), lotes(codigo))').eq('id', id!).single(); if (error) throw error; return data; }, enabled: !!id });
 }
 
 function usePagosCompra(compraId?: string) {
@@ -49,7 +49,7 @@ export function useCompraForm() {
           // Prefer factor guardado en la línea; si es legacy (NULL/0) cae al del producto
           const factorPersistido = Number(cl.factor_conversion);
           const factor = factorPersistido > 0 ? factorPersistido : (prod?.factor_conversion ?? 1);
-          return { ...cl, _tiene_iva: prod?.tiene_iva ?? false, _iva_pct: prod?.iva_pct ?? 16, _tiene_ieps: prod?.tiene_ieps ?? false, _ieps_pct: prod?.ieps_pct ?? 0, _ieps_tipo: prod?.ieps_tipo ?? 'porcentaje', _unidad_compra: prod?.unidades_compra?.abreviatura ?? prod?.unidades_venta?.abreviatura ?? 'pz', _factor_conversion: factor, _piezas_total: (cl.cantidad ?? 1) * factor };
+          return { ...cl, _tiene_iva: prod?.tiene_iva ?? false, _iva_pct: prod?.iva_pct ?? 16, _tiene_ieps: prod?.tiene_ieps ?? false, _ieps_pct: prod?.ieps_pct ?? 0, _ieps_tipo: prod?.ieps_tipo ?? 'porcentaje', _unidad_compra: prod?.unidades_compra?.abreviatura ?? prod?.unidades_venta?.abreviatura ?? 'pz', _factor_conversion: factor, _piezas_total: (cl.cantidad ?? 1) * factor, _lote_codigo: cl.lotes?.codigo ?? null };
         });
         setLineas(enrichedLines);
       }
@@ -72,6 +72,25 @@ export function useCompraForm() {
       if (key === 'proveedor_id' && val && f.condicion_pago === 'credito' && proveedoresList) {
         const prov = proveedoresList.find((p: any) => p.id === val) as any;
         if (prov?.dias_credito) updated.dias_credito = prov.dias_credito;
+      }
+      // Crédito: días y fecha de vencimiento se mantienen sincronizados entre sí.
+      const baseFecha = updated.fecha || todayLocal();
+      const addDays = (iso: string, d: number) => {
+        const dt = new Date(iso + 'T12:00:00');
+        dt.setDate(dt.getDate() + d);
+        return dt.toISOString().slice(0, 10);
+      };
+      const diffDays = (iso: string) => {
+        const a = new Date(baseFecha + 'T12:00:00').getTime();
+        const b = new Date(iso + 'T12:00:00').getTime();
+        return Math.max(0, Math.round((b - a) / 86400000));
+      };
+      if (key === 'fecha_vencimiento' && val) {
+        updated.dias_credito = diffDays(val);
+      } else if (['dias_credito', 'condicion_pago', 'proveedor_id', 'fecha'].includes(key)) {
+        if (updated.condicion_pago === 'credito') {
+          updated.fecha_vencimiento = addDays(baseFecha, Number(updated.dias_credito) || 0);
+        }
       }
       return updated;
     });
@@ -101,7 +120,7 @@ export function useCompraForm() {
     if (!form.almacen_id) { toast.error('Selecciona un almacén destino'); return; }
     try {
       const totalPagado = pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0;
-      const compraData = { empresa_id: empresa.id, proveedor_id: form.proveedor_id || null, almacen_id: form.almacen_id || null, fecha: form.fecha, condicion_pago: form.condicion_pago, dias_credito: form.condicion_pago === 'credito' ? (form.dias_credito ?? 0) : 0, status: form.status, subtotal: totals.subtotal, iva_total: totals.iva_total, total: totals.total, saldo_pendiente: Math.max(0, totals.total - totalPagado), notas: form.notas || null, notas_pago: form.notas_pago || null };
+      const compraData = { empresa_id: empresa.id, proveedor_id: form.proveedor_id || null, almacen_id: form.almacen_id || null, fecha: form.fecha, condicion_pago: form.condicion_pago, dias_credito: form.condicion_pago === 'credito' ? (form.dias_credito ?? 0) : 0, status: form.status, subtotal: totals.subtotal, iva_total: totals.iva_total, total: totals.total, saldo_pendiente: Math.max(0, totals.total - totalPagado), notas: form.notas || null, notas_pago: form.notas_pago || null, numero_factura: form.numero_factura || null, fecha_vencimiento: form.condicion_pago === 'credito' ? (form.fecha_vencimiento || null) : null };
       let compraId = form.id;
       if (isNew) { const { data, error } = await supabase.from('compras').insert(compraData as any).select().single(); if (error) throw error; compraId = (data as any).id; } else { const { empresa_id, ...updateData } = compraData; const { error } = await supabase.from('compras').update(updateData as any).eq('id', compraId); if (error) throw error; await supabase.from('compra_lineas').delete().eq('compra_id', compraId); }
       const validLines = lineas.filter(l => l.producto_id);
@@ -109,7 +128,7 @@ export function useCompraForm() {
         const rows = validLines.map(l => {
           const factor = Number(l._factor_conversion) > 0 ? Number(l._factor_conversion) : 1;
           const cantidad = l.cantidad ?? 1;
-          return { compra_id: compraId, producto_id: l.producto_id!, cantidad, precio_unitario: l.precio_unitario ?? 0, subtotal: l.subtotal ?? 0, total: l.total ?? 0, factor_conversion: factor, piezas_total: cantidad * factor };
+          return { compra_id: compraId, producto_id: l.producto_id!, cantidad, precio_unitario: l.precio_unitario ?? 0, subtotal: l.subtotal ?? 0, total: l.total ?? 0, factor_conversion: factor, piezas_total: cantidad * factor, lote_id: l.lote_id ?? null };
         });
         const { error } = await supabase.from('compra_lineas').insert(rows as any); if (error) throw error;
       }
@@ -176,8 +195,9 @@ export function useCompraForm() {
     if (!pendientes.length) { toast.info('No hay mercancía pendiente por recibir'); return; }
     // Los productos por lote se reciben uno por uno (para capturar el lote).
     // "Recibir todo" solo procesa los que NO manejan lote.
-    const conLote = pendientes.filter(l => (l as any).productos?.maneja_lote);
-    const sinLote = pendientes.filter(l => !(l as any).productos?.maneja_lote);
+    // Las líneas que ya traen lote asignado se pueden recibir automáticamente.
+    const conLote = pendientes.filter(l => (l as any).productos?.maneja_lote && !l.lote_id);
+    const sinLote = pendientes.filter(l => !(l as any).productos?.maneja_lote || l.lote_id);
     if (!sinLote.length) {
       toast.info('Todos los pendientes manejan lote: recíbelos uno por uno con el botón "Recibir" de cada línea para asignar su lote.');
       return;
@@ -192,7 +212,7 @@ export function useCompraForm() {
           p_compra_id: form.id,
           p_folio: form.folio ?? form.id.slice(0, 8),
           p_user_id: user?.id,
-          p_lote_id: null,
+          p_lote_id: l.lote_id ?? null,
         });
         if (error) throw new Error(error.message);
       }

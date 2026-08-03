@@ -15,7 +15,13 @@ interface Props {
   piezas: number;
   onClose: () => void;
   /** Devuelve el lote elegido/creado para recibir la mercancía. */
-  onConfirm: (loteId: string) => void;
+  onConfirm: (loteId: string, codigo?: string) => void;
+  /** Texto del botón de confirmar (por defecto: recibir). */
+  confirmLabel?: string;
+  /** Título del modal. */
+  title?: string;
+  /** Descripción opcional; si no se pasa se muestra la de recepción. */
+  descripcion?: string;
 }
 
 /**
@@ -23,7 +29,7 @@ interface Props {
  * Permite elegir un lote existente del producto o crear uno nuevo
  * (código, caducidad, fabricación, costo).
  */
-export function LoteReceptionModal({ empresaId, producto, piezas, onClose, onConfirm }: Props) {
+export function LoteReceptionModal({ empresaId, producto, piezas, onClose, onConfirm, confirmLabel, title, descripcion }: Props) {
   const [mode, setMode] = useState<'existente' | 'nuevo'>('nuevo');
   const [lotes, setLotes] = useState<LoteOpt[]>([]);
   const [loteId, setLoteId] = useState('');
@@ -58,7 +64,7 @@ export function LoteReceptionModal({ empresaId, producto, piezas, onClose, onCon
     if (saving) return;
     if (mode === 'existente') {
       if (!loteId) { toast.error('Elige un lote'); return; }
-      onConfirm(loteId);
+      onConfirm(loteId, lotes.find(l => l.id === loteId)?.codigo);
       return;
     }
     // Crear lote nuevo
@@ -74,7 +80,7 @@ export function LoteReceptionModal({ empresaId, producto, piezas, onClose, onCon
         costo: costo.trim() ? Number(costo) : null,
       }).select('id').single();
       if (error) throw error;
-      onConfirm((data as any).id);
+      onConfirm((data as any).id, codigo.trim());
     } catch (err: any) {
       if (String(err?.message ?? '').includes('uq_lote')) {
         toast.error('Ya existe ese lote (código + caducidad) para este producto. Elígelo en "Lote existente".');
@@ -91,10 +97,10 @@ export function LoteReceptionModal({ empresaId, producto, piezas, onClose, onCon
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="p-5 border-b border-border">
           <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-            <Boxes className="h-4 w-4" /> Asignar lote
+            <Boxes className="h-4 w-4" /> {title ?? 'Asignar lote'}
           </h3>
           <p className="text-[12px] text-muted-foreground mt-1">
-            Vas a recibir <strong>{piezas}</strong> pza(s) de <strong>{producto.nombre}</strong>. Indica a qué lote entran.
+            {descripcion ?? <>Vas a recibir <strong>{piezas}</strong> pza(s) de <strong>{producto.nombre}</strong>. Indica a qué lote entran.</>}
           </p>
         </div>
 
@@ -148,7 +154,7 @@ export function LoteReceptionModal({ empresaId, producto, piezas, onClose, onCon
         <div className="p-5 border-t border-border flex gap-2 justify-end">
           <button onClick={onClose} className="btn-odoo text-sm" disabled={saving}>Cancelar</button>
           <button onClick={confirmar} className="btn-odoo-primary text-sm" disabled={saving}>
-            {saving ? 'Guardando…' : 'Recibir en este lote'}
+            {saving ? 'Guardando…' : (confirmLabel ?? 'Recibir en este lote')}
           </button>
         </div>
       </div>

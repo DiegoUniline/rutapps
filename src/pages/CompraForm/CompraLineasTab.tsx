@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X, PackageCheck } from 'lucide-react';
+import { Plus, X, PackageCheck, Boxes } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
 import QuickProductDialog from '@/components/QuickProductDialog';
 import { Switch } from '@/components/ui/switch';
@@ -28,10 +28,22 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
   const [quickName, setQuickName] = useState('');
   // Recepción por lote: línea pendiente de asignar lote.
   const [loteFor, setLoteFor] = useState<{ lineaId: string; producto: { id: string; nombre: string }; piezas: number } | null>(null);
+  // Asignación de lote desde la línea (antes de recibir).
+  const [loteAsignar, setLoteAsignar] = useState<{ idx: number; producto: { id: string; nombre: string }; piezas: number } | null>(null);
+  const manejaLotes = !!(empresa as any)?.maneja_lotes;
+  const lineaManejaLote = (line: any) => !!(line.productos?.maneja_lote ?? productosList?.find((p: any) => p.id === line.producto_id)?.maneja_lote);
+  const abrirAsignarLote = (idx: number, line: any) => {
+    const prod = productosList?.find((p: any) => p.id === line.producto_id);
+    if (!line.producto_id) return;
+    const factor = Number(line._factor_conversion) || 1;
+    setLoteAsignar({ idx, producto: { id: line.producto_id, nombre: line.productos?.nombre ?? prod?.nombre ?? 'Producto' }, piezas: (Number(line.cantidad) || 0) * factor });
+  };
 
   // Al recibir una línea: si el producto maneja lote, abrir el modal; si no, recibir directo.
   const recibirLinea = (line: any, pendiente: number) => {
-    if (line.productos?.maneja_lote) {
+    if (line.lote_id) {
+      onRecibirLinea(line.id, line.lote_id);
+    } else if (lineaManejaLote(line)) {
       setLoteFor({ lineaId: line.id, producto: { id: line.producto_id, nombre: line.productos?.nombre ?? 'Producto' }, piezas: pendiente });
     } else {
       onRecibirLinea(line.id);
@@ -60,6 +72,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
             <th className="th-odoo text-center w-28">Recibido</th>
             <th className="th-odoo text-right w-28">Costo</th><th className="th-odoo text-center w-14">IVA</th>
             <th className="th-odoo text-center w-14">IEPS</th><th className="th-odoo text-right w-24">Total</th>
+            {manejaLotes && <th className="th-odoo text-left w-32">Lote</th>}
             {(isEditable || puedeRecibir) && <th className="th-odoo w-8"></th>}
           </tr></thead>
           <tbody>
@@ -104,6 +117,25 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                   <td className="py-1.5 px-3 text-center"><div className="flex flex-col items-center gap-0.5"><Switch checked={line._tiene_iva ?? false} onCheckedChange={v => updateLinea(idx, '_tiene_iva', v)} disabled={!isEditable} className="scale-75" />{line._tiene_iva && <span className="text-[10px] text-muted-foreground">{line._iva_pct}%</span>}</div></td>
                   <td className="py-1.5 px-3 text-center"><div className="flex flex-col items-center gap-0.5"><Switch checked={line._tiene_ieps ?? false} onCheckedChange={v => updateLinea(idx, '_tiene_ieps', v)} disabled={!isEditable} className="scale-75" />{line._tiene_ieps && <span className="text-[10px] text-muted-foreground">{iepsLabel}</span>}</div></td>
                   <td className="py-1.5 px-3 text-right font-medium text-sm tabular-nums">{fmt(line.total ?? 0)}</td>
+                  {manejaLotes && (
+                    <td className="py-1.5 px-2">
+                      {!line.producto_id || !lineaManejaLote(line) ? (
+                        <span className="text-[11px] text-muted-foreground">—</span>
+                      ) : !isEditable ? (
+                        <span className="text-[11px] text-foreground">{line._lote_codigo || '—'}</span>
+
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => abrirAsignarLote(idx, line)}
+                          className={'inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border transition-colors ' + (line.lote_id ? 'border-border bg-muted text-foreground hover:bg-accent' : 'border-dashed border-primary/50 text-primary hover:bg-primary/5')}
+                          title="Elegir o crear el lote de esta línea"
+                        >
+                          <Boxes className="h-3 w-3" /> {line._lote_codigo || (line.lote_id ? 'Lote asignado' : 'Elegir lote')}
+                        </button>
+                      )}
+                    </td>
+                  )}
                   {(isEditable || puedeRecibir) && (
                     <td className="py-1.5 px-2">
                       {isEditable && <button onClick={() => removeLine(idx)} className="text-destructive hover:text-destructive/80" title="Eliminar línea"><X className="h-3.5 w-3.5" /></button>}
@@ -187,6 +219,18 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                   {line._tiene_ieps && <span className="text-[10px] text-muted-foreground">{iepsLabel}</span>}
                 </div>
               </div>
+              {manejaLotes && isEditable && line.producto_id && lineaManejaLote(line) && (
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border">
+                  <span className="text-[10px] uppercase text-muted-foreground">Lote</span>
+                  <button
+                    type="button"
+                    onClick={() => abrirAsignarLote(idx, line)}
+                    className={'inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border ' + (line.lote_id ? 'border-border bg-muted text-foreground' : 'border-dashed border-primary/50 text-primary')}
+                  >
+                    <Boxes className="h-3 w-3" /> {line._lote_codigo || (line.lote_id ? 'Lote asignado' : 'Elegir lote')}
+                  </button>
+                </div>
+              )}
               {line.id && (
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border">
                   <span className="text-[10px] uppercase text-muted-foreground">Recibido</span>
@@ -229,6 +273,23 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
           if (prod.factor_conversion) updateLinea(quickIdx, '_factor_conversion', prod.factor_conversion);
         }}
       />
+      {loteAsignar && empresa?.id && (
+        <LoteReceptionModal
+          empresaId={empresa.id}
+          producto={loteAsignar.producto}
+          piezas={loteAsignar.piezas}
+          title="Elegir o crear lote"
+          confirmLabel="Usar este lote"
+          descripcion={`Selecciona el lote al que entrarán las piezas de ${loteAsignar.producto.nombre}. Puedes crear uno nuevo.`}
+          onClose={() => setLoteAsignar(null)}
+          onConfirm={(loteId, codigo) => {
+            const idx = loteAsignar.idx;
+            setLoteAsignar(null);
+            updateLinea(idx, 'lote_id', loteId);
+            updateLinea(idx, '_lote_codigo', codigo ?? null);
+          }}
+        />
+      )}
       {loteFor && empresa?.id && (
         <LoteReceptionModal
           empresaId={empresa.id}
