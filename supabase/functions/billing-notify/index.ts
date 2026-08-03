@@ -210,7 +210,14 @@ async function sendWA(
 /* ─── Admin copy: WhatsApp + email to internal team ─── */
 interface AdminCopyPayload {
   evento: "cobro_exitoso" | "cobro_fallido";
+  empresaId?: string;
   empresa?: string;
+  empresaEmail?: string;
+  empresaTelefono?: string;
+  licencia?: string;
+  duenoNombre?: string;
+  duenoEmail?: string;
+  duenoTelefono?: string;
   clienteNombre?: string;
   clienteEmail?: string;
   clienteTelefono?: string;
@@ -219,6 +226,49 @@ interface AdminCopyPayload {
   invoiceUrl?: string | null;
   fecha?: string;
   detalle?: string;
+}
+
+/** Datos de contacto de la empresa cliente (empresa + dueño) para las alertas admin. */
+async function getEmpresaContacto(
+  supabase: ReturnType<typeof createClient>,
+  empresaId: string
+): Promise<Partial<AdminCopyPayload>> {
+  try {
+    const { data: emp } = await supabase
+      .from("empresas")
+      .select("nombre, email, telefono, lada, licencia, owner_user_id")
+      .eq("id", empresaId)
+      .maybeSingle();
+    if (!emp) return {};
+
+    let duenoNombre = "";
+    let duenoEmail = "";
+    let duenoTelefono = "";
+    if (emp.owner_user_id) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("nombre, telefono")
+        .eq("user_id", emp.owner_user_id)
+        .maybeSingle();
+      duenoNombre = prof?.nombre || "";
+      duenoTelefono = prof?.telefono || "";
+      const { data: userData } = await supabase.auth.admin.getUserById(emp.owner_user_id);
+      duenoEmail = userData?.user?.email || "";
+    }
+
+    return {
+      empresa: emp.nombre || undefined,
+      empresaEmail: emp.email || undefined,
+      empresaTelefono: emp.telefono ? `${emp.lada || ""}${emp.telefono}` : undefined,
+      licencia: emp.licencia || undefined,
+      duenoNombre: duenoNombre || undefined,
+      duenoEmail: duenoEmail || undefined,
+      duenoTelefono: duenoTelefono || undefined,
+    };
+  } catch (e) {
+    console.error("getEmpresaContacto error:", e);
+    return {};
+  }
 }
 
 async function notifyAdmins(
