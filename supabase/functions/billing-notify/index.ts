@@ -210,7 +210,14 @@ async function sendWA(
 /* ─── Admin copy: WhatsApp + email to internal team ─── */
 interface AdminCopyPayload {
   evento: "cobro_exitoso" | "cobro_fallido";
+  empresaId?: string;
   empresa?: string;
+  empresaEmail?: string;
+  empresaTelefono?: string;
+  licencia?: string;
+  duenoNombre?: string;
+  duenoEmail?: string;
+  duenoTelefono?: string;
   clienteNombre?: string;
   clienteEmail?: string;
   clienteTelefono?: string;
@@ -221,18 +228,72 @@ interface AdminCopyPayload {
   detalle?: string;
 }
 
+/** Datos de contacto de la empresa cliente (empresa + dueño) para las alertas admin. */
+async function getEmpresaContacto(
+  supabase: ReturnType<typeof createClient>,
+  empresaId: string
+): Promise<Partial<AdminCopyPayload>> {
+  try {
+    const { data: emp } = await supabase
+      .from("empresas")
+      .select("nombre, email, telefono, lada, licencia, owner_user_id")
+      .eq("id", empresaId)
+      .maybeSingle();
+    if (!emp) return {};
+
+    let duenoNombre = "";
+    let duenoEmail = "";
+    let duenoTelefono = "";
+    if (emp.owner_user_id) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("nombre, telefono")
+        .eq("user_id", emp.owner_user_id)
+        .maybeSingle();
+      duenoNombre = prof?.nombre || "";
+      duenoTelefono = prof?.telefono || "";
+      const { data: userData } = await supabase.auth.admin.getUserById(emp.owner_user_id);
+      duenoEmail = userData?.user?.email || "";
+    }
+
+    return {
+      empresa: emp.nombre || undefined,
+      empresaEmail: emp.email || undefined,
+      empresaTelefono: emp.telefono ? `${emp.lada || ""}${emp.telefono}` : undefined,
+      licencia: emp.licencia || undefined,
+      duenoNombre: duenoNombre || undefined,
+      duenoEmail: duenoEmail || undefined,
+      duenoTelefono: duenoTelefono || undefined,
+    };
+  } catch (e) {
+    console.error("getEmpresaContacto error:", e);
+    return {};
+  }
+}
+
 async function notifyAdmins(
   supabase: ReturnType<typeof createClient>,
   waToken: string | undefined,
-  payload: AdminCopyPayload
+  payloadIn: AdminCopyPayload
 ) {
+  // Enriquecer con datos de la empresa cliente (nombre, correo principal, dueño, teléfono)
+  const extra = payloadIn.empresaId ? await getEmpresaContacto(supabase, payloadIn.empresaId) : {};
+  const payload: AdminCopyPayload = { ...extra, ...payloadIn, empresa: payloadIn.empresa || extra.empresa };
+
   const isFail = payload.evento === "cobro_fallido";
   const title = isFail ? "⚠️ *Cobro FALLIDO — Rutapp*" : "✅ *Cobro exitoso — Rutapp*";
   const lines = [
     title,
     "",
     `*Empresa:* ${payload.empresa || "—"}`,
-    `*Cliente:* ${payload.clienteNombre || "—"}`,
+    `*Licencia:* ${payload.licencia || "—"}`,
+    `*Correo principal:* ${payload.empresaEmail || "—"}`,
+    `*Tel. empresa:* ${payload.empresaTelefono || "—"}`,
+    `*Dueño:* ${payload.duenoNombre || "—"}`,
+    `*Correo dueño:* ${payload.duenoEmail || "—"}`,
+    `*Tel. dueño:* ${payload.duenoTelefono || "—"}`,
+    "",
+    `*Contacto de pago:* ${payload.clienteNombre || "—"}`,
     `*Email:* ${payload.clienteEmail || "—"}`,
     `*Teléfono:* ${payload.clienteTelefono || "—"}`,
     `*Monto:* ${payload.monto || "—"}`,
@@ -772,6 +833,7 @@ Deno.serve(async (req) => {
           }
           await notifyAdmins(supabase, waToken, {
             evento: "cobro_exitoso",
+            empresaId: profile.empresa_id,
             empresa: empresaNombre,
             clienteNombre: profile.nombre || "",
             clienteEmail: inv.customer_email || "",
@@ -795,6 +857,7 @@ Deno.serve(async (req) => {
           }
           await notifyAdmins(supabase, waToken, {
             evento: "cobro_fallido",
+            empresaId: profile.empresa_id,
             empresa: empresaNombre,
             clienteNombre: profile.nombre || "",
             clienteEmail: inv.customer_email || "",
