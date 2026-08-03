@@ -30,7 +30,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
-import { cn, todayInTimezone } from '@/lib/utils';
+import { cn, todayInTimezone, zonedDayRangeISO } from '@/lib/utils';
+import { tocaVisitaPorFrecuencia } from '@/lib/frecuenciaVisita';
+
 import { useCurrency } from '@/hooks/useCurrency';
 import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, InfoWindow, Marker } from '@react-google-maps/api';
@@ -174,13 +176,22 @@ export default function SupervisorDashboardPage() {
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).range(from, to)),
   });
 
+  const visitasRange = useMemo(() => zonedDayRangeISO(desde, empresa?.zona_horaria, hasta), [desde, hasta, empresa?.zona_horaria]);
+
   const { data: visitasHoy } = useQuery({
     queryKey: ['supervisor-visitas-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
+    // Antes se usaba `${desde}T00:00:00-12:00` (12:00 UTC) junto con
+    // `${hasta}T23:59:59+12:00` (11:59 UTC): un rango INVERTIDO que en filtros
+    // de un solo día devolvía cero visitas, por eso las visitas sin venta nunca
+    // marcaban al cliente como visitado. Ahora se usan los límites reales del
+    // día en la zona horaria de la empresa.
     queryFn: async () => fetchAllPages<any>((from, to) =>
       supabase.from('visitas')
         .select('id, user_id, cliente_id, tipo, motivo, gps_lat, gps_lng, created_at, clientes(nombre, gps_lat, gps_lng)')
-        .eq('empresa_id', empresa!.id).gte('fecha', `${desde}T00:00:00-12:00`).lte('fecha', `${hasta}T23:59:59+12:00`).order('created_at', { ascending: false }).range(from, to)),
+        .eq('empresa_id', empresa!.id).gte('fecha', visitasRange.start).lte('fecha', visitasRange.end).order('created_at', { ascending: false }).range(from, to)),
   });
+
+
 
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
@@ -195,9 +206,34 @@ export default function SupervisorDashboardPage() {
   const { data: clientesAsignados } = useQuery({
     queryKey: ['supervisor-clientes-asignados', empresa?.id], enabled: !!empresa?.id,
     queryFn: async () => fetchAllPages<any>((from, to) =>
-      supabase.from('clientes').select('id, nombre, vendedor_id, gps_lat, gps_lng, dia_visita, orden')
+      supabase.from('clientes').select('id, nombre, vendedor_id, gps_lat, gps_lng, dia_visita, orden, frecuencia')
         .eq('empresa_id', empresa!.id).eq('status', 'activo').range(from, to)),
   });
+
+  // Última visita registrada por cliente (40 días atrás) para respetar la
+  // frecuencia quincenal/mensual: un cliente quincenal no debe listarse ni
+  // contar como pendiente la semana que no le toca.
+  const { data: visitasPrevias } = useQuery({
+    queryKey: ['supervisor-visitas-previas', empresa?.id, desde], enabled: !!empresa?.id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const inicio = new Date(new Date(`${desde}T12:00:00`).getTime() - 40 * 86400000).toISOString();
+      return fetchAllPages<any>((from, to) =>
+        supabase.from('visitas').select('cliente_id, fecha')
+          .eq('empresa_id', empresa!.id).gte('fecha', inicio).lt('fecha', visitasRange.start).range(from, to));
+    },
+  });
+
+  const ultimaVisitaPorCliente = useMemo(() => {
+    const map = new Map<string, string>();
+    (visitasPrevias ?? []).forEach((v: any) => {
+      if (!v.cliente_id || !v.fecha) return;
+      const prev = map.get(v.cliente_id);
+      if (!prev || v.fecha > prev) map.set(v.cliente_id, v.fecha);
+    });
+    return map;
+  }, [visitasPrevias]);
+
 
   const { data: ventasRecientes } = useQuery({
     queryKey: ['supervisor-ventas-recientes', empresa?.id], enabled: !!empresa?.id,
@@ -440,14 +476,16 @@ export default function SupervisorDashboardPage() {
     (clientesAsignados ?? []).forEach((c) => {
       const sid = sellerIdMap.get(c.vendedor_id) ?? c.vendedor_id;
       if (!assignedPerSeller[sid]) assignedPerSeller[sid] = { total: 0, visited: 0 };
-      // check if client is scheduled for today
+      // check if client is scheduled for today (día + frecuencia)
       const dv: string[] = (c.dia_visita ?? []).map((d: string) => normDia(d));
-      if (soloHoy && !dv.some((d) => d === diaHoyLabel)) return;
+      const tocaFrecuencia = tocaVisitaPorFrecuencia(c.frecuencia, ultimaVisitaPorCliente.get(c.id) ?? null, desde);
+      if (soloHoy && (!dv.some((d) => d === diaHoyLabel) || !tocaFrecuencia)) return;
       assignedPerSeller[sid].total++;
       if (visitedIds.has(c.id)) assignedPerSeller[sid].visited++;
     });
     return assignedPerSeller;
-  }, [clientesAsignados, filteredVisitas, filteredVentas, sellerIdMap, soloHoy, diaHoyLabel]);
+  }, [clientesAsignados, filteredVisitas, filteredVentas, sellerIdMap, soloHoy, diaHoyLabel, ultimaVisitaPorCliente, desde]);
+
 
   const sellerRows = useMemo(() => {
     return (vendedores ?? []).map((s) => ({
@@ -471,7 +509,8 @@ export default function SupervisorDashboardPage() {
         const ls = lastSaleByClient[c.id];
         const dias = ls ? Math.floor((todayDate.getTime() - new Date(`${ls.ultima}T12:00:00`).getTime()) / 86400000) : null;
         const dv: string[] = (c.dia_visita ?? []).map((d: string) => normDia(d));
-        return { id: c.id, nombre: c.nombre, vendedor_id: sid, vendedorNombre: sellerNameMap.get(sid) ?? 'Sin asignar', visitado: visitedIds.has(c.id), visitaHoy: dv.some((d) => d === diaHoyLabel), gps_lat: c.gps_lat, gps_lng: c.gps_lng, ultimaVisitaFecha: ls?.ultima ?? null, ultimaVisitaValor: ls?.total ?? 0, diasSinComprar: dias, orden: c.orden ?? null };
+        const tocaFrecuencia = tocaVisitaPorFrecuencia(c.frecuencia, ultimaVisitaPorCliente.get(c.id) ?? null, desde);
+        return { id: c.id, nombre: c.nombre, vendedor_id: sid, vendedorNombre: sellerNameMap.get(sid) ?? 'Sin asignar', visitado: visitedIds.has(c.id), visitaHoy: dv.some((d) => d === diaHoyLabel) && tocaFrecuencia, frecuencia: c.frecuencia ?? null, gps_lat: c.gps_lat, gps_lng: c.gps_lng, ultimaVisitaFecha: ls?.ultima ?? null, ultimaVisitaValor: ls?.total ?? 0, diasSinComprar: dias, orden: c.orden ?? null };
       })
       .filter((c) => {
         if (selectedAliases && !selectedAliases.includes(c.vendedor_id)) return false;
@@ -482,7 +521,8 @@ export default function SupervisorDashboardPage() {
         return true;
       })
       .sort((a, b) => { if (a.visitado !== b.visitado) return a.visitado ? 1 : -1; return (b.diasSinComprar ?? 999) - (a.diasSinComprar ?? 999); });
-  }, [visitasHoy, ventasHoy, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedAliases, soloHoy, visitFilter, diaHoyLabel]);
+  }, [visitasHoy, ventasHoy, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedAliases, soloHoy, visitFilter, diaHoyLabel, ultimaVisitaPorCliente, desde]);
+
 
   // Comparisons vs yesterday / last week
   const comparisons = useMemo(() => {
