@@ -6649,7 +6649,7 @@ export type Database = {
           {
             foreignKeyName: "stock_apartado_venta_linea_id_fkey"
             columns: ["venta_linea_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "venta_lineas"
             referencedColumns: ["id"]
           },
@@ -8049,6 +8049,91 @@ export type Database = {
           },
         ]
       }
+      venta_linea_lotes: {
+        Row: {
+          almacen_id: string | null
+          cantidad: number
+          created_at: string
+          empresa_id: string
+          id: string
+          lote_id: string
+          producto_id: string
+          updated_at: string
+          user_id: string | null
+          venta_id: string
+          venta_linea_id: string
+        }
+        Insert: {
+          almacen_id?: string | null
+          cantidad?: number
+          created_at?: string
+          empresa_id: string
+          id?: string
+          lote_id: string
+          producto_id: string
+          updated_at?: string
+          user_id?: string | null
+          venta_id: string
+          venta_linea_id: string
+        }
+        Update: {
+          almacen_id?: string | null
+          cantidad?: number
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          lote_id?: string
+          producto_id?: string
+          updated_at?: string
+          user_id?: string | null
+          venta_id?: string
+          venta_linea_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venta_linea_lotes_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_linea_lotes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_linea_lotes_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_linea_lotes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_linea_lotes_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_linea_lotes_venta_linea_id_fkey"
+            columns: ["venta_linea_id"]
+            isOneToOne: false
+            referencedRelation: "venta_lineas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venta_lineas: {
         Row: {
           almacen_id: string | null
@@ -9233,6 +9318,10 @@ export type Database = {
       fn_reevaluar_promos_venta: {
         Args: { _venta_id: string }
         Returns: number
+      }
+      fn_sync_apartado_linea: {
+        Args: { p_linea_id: string }
+        Returns: undefined
       }
       generar_recibo_volumen: {
         Args: {
