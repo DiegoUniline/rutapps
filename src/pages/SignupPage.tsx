@@ -418,7 +418,7 @@ export default function SignupPage() {
         description="Regístrate en Rutapp y prueba gratis 7 días el ERP de venta en ruta: inventario, cobranza, rutas optimizadas y facturación CFDI 4.0."
         path="/signup"
       />
-      <Card className="w-full max-w-3xl shadow-xl">
+      <Card className="w-full max-w-3xl shadow-xl my-auto">
         <CardHeader className="text-center">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="h-4 w-4" /> Volver al inicio
