@@ -19,6 +19,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { VentaCheckoutModal } from '@/components/venta/VentaCheckoutModal';
 import { LoteVentaModal } from '@/components/lotes/LoteVentaModal';
+import { VentaLineaLotesDialog } from '@/components/lotes/VentaLineaLotesDialog';
 import { toast } from 'sonner';
 import type { StatusVenta } from '@/types';
 import { useVentaForm, VENTA_STEPS_FULL, VENTA_STEPS_INMEDIATA } from './useVentaForm';
@@ -451,7 +452,7 @@ export default function VentaFormPage() {
           onClose={() => h.setLoteParaLinea(null)}
           onChanged={({ loteId, label }) => {
             const idx = h.loteParaLinea!.idx;
-            h.setLineas((prev: any[]) => {
+            setLineas((prev: any[]) => {
               const next = [...prev];
               if (next[idx]) next[idx] = { ...next[idx], lote_id: loteId, lote_codigo: label };
               return next;
