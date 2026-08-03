@@ -24,7 +24,7 @@ export function useCompraForm() {
   const isNew = id === 'nueva';
   const { empresa, user } = useAuth();
   const qc = useQueryClient();
-  const { data: existingCompra, isLoading } = useCompra(isNew ? undefined : id);
+  const { data: existingCompra, isLoading, refetch: refetchCompraQuery } = useCompra(isNew ? undefined : id);
   const { data: pagos } = usePagosCompra(isNew ? undefined : id);
   const { data: proveedoresList } = useProveedores();
   const { data: productosList } = useProductosForSelect();
@@ -308,5 +308,15 @@ export function useCompraForm() {
     requestPin, PinDialog, updateField, updateLinea, addLine, removeLine,
     handleSave, handleDelete, handleStatusChange, handleCancel, handleSavePago,
     recibirLineaPendiente, recibirTodoPendiente,
+    refetchCompra: async () => {
+      await Promise.all([
+        refetchCompraQuery(),
+        qc.invalidateQueries({ queryKey: ['compras'] }),
+        qc.invalidateQueries({ queryKey: ['inventario'] }),
+        qc.invalidateQueries({ queryKey: ['productos'] }),
+        qc.invalidateQueries({ queryKey: ['stock-almacen'] }),
+        qc.invalidateQueries({ queryKey: ['lotes'] }),
+      ]);
+    },
   };
 }
