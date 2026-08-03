@@ -7,7 +7,8 @@ import { BRAND, CURRENCIES, PLANS, fmtCur } from '@/lib/marketing-content';
 
 const FAQ = [
   { q: '¿Hay contrato o permanencia?', a: 'No. Cancelas cuando quieras desde el panel. Sin penalizaciones.' },
-  { q: '¿Qué incluye la prueba gratis?', a: '7 días con todos los módulos abiertos, sin tarjeta de crédito.' },
+  { q: '¿Qué incluye la prueba gratis?', a: '7 días con todos los módulos abiertos. Sí se registra una tarjeta al crear la cuenta, pero no se cobra nada hasta el día 8; si cancelas antes, no hay cargo. La prueba no incluye capacitación en vivo: durante esos días te apoyas con los videotutoriales.' },
+  { q: '¿Incluye capacitación?', a: 'Sí, al contratar un plan: Individual 30 minutos, Equipo 1 hora y Empresa 2 horas de capacitación en vivo. Durante la prueba gratis la guía es únicamente con videotutoriales.' },
   { q: '¿Puedo agregar más usuarios?', a: 'Sí. Cada usuario adicional cuesta $300 MXN/mes y se prorratea al periodo en curso.' },
   { q: '¿La IA tiene costo extra?', a: 'No. La IA está incluida en todos los planes.' },
   { q: '¿Funciona sin internet?', a: 'Sí. La app móvil opera 100% offline y sincroniza cuando vuelve la señal.' },
