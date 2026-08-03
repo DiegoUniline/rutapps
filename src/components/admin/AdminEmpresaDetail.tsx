@@ -759,7 +759,25 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                 ))}
               </div>
             )}
+
+            <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40">
+              <div>
+                <p className="text-sm font-medium">Maneja lotes y caducidades</p>
+                <p className="text-xs text-muted-foreground">Activa el control de lotes en compras, inventario y ventas.</p>
+              </div>
+              <Switch
+                checked={!!empresa?.maneja_lotes}
+                onCheckedChange={async (v) => {
+                  const { error } = await supabase.from('empresas')
+                    .update({ maneja_lotes: v })
+                    .eq('id', empresaId);
+                  if (error) toast.error(error.message);
+                  else { toast.success(v ? 'Lotes activados' : 'Lotes desactivados'); load(); }
+                }}
+              />
+            </div>
           </CardContent>
+
         </Card>
 
         {/* Suscripción (40%) */}
