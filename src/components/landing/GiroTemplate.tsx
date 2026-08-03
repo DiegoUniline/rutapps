@@ -80,7 +80,7 @@ export function GiroTemplate(p: GiroPageProps) {
               <MessageCircle className="w-4 h-4" /> WhatsApp
             </a>
           </div>
-          <p className="mt-3 text-xs text-slate-500">Sin tarjeta · Funciona offline · CFDI 4.0</p>
+          <p className="mt-3 text-xs text-slate-500">Sin cobro hasta el día 8 · Funciona offline · CFDI 4.0</p>
         </section>
 
         {/* Prueba social compacta */}
@@ -139,7 +139,7 @@ export function GiroTemplate(p: GiroPageProps) {
         {/* CTA Final */}
         <section className="bg-primary text-primary-foreground py-16">
           <div className="container mx-auto px-4 text-center max-w-2xl">
-            <h2 className="text-3xl md:text-4xl font-bold">Empieza hoy. Sin tarjeta. Sin instalar nada.</h2>
+            <h2 className="text-3xl md:text-4xl font-bold">Empieza hoy. Sin cobro hasta el día 8. Sin instalar nada.</h2>
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               <Link to="/signup" className="px-6 py-3 rounded-lg bg-white text-primary font-semibold">Probar gratis</Link>
               <a href={wa} target="_blank" rel="noopener" className="px-6 py-3 rounded-lg bg-[#25D366] text-white font-semibold inline-flex items-center justify-center gap-2">

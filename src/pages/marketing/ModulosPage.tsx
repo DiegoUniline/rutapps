@@ -71,7 +71,7 @@ export default function ModulosPage() {
           <h2 className="text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
             ¿Listo para controlar tu distribuidora?
           </h2>
-          <p className="mt-3 text-[14.5px] text-white/70">7 días gratis · sin tarjeta</p>
+          <p className="mt-3 text-[14.5px] text-white/70">7 días gratis · el cobro empieza hasta el día 8</p>
           <Link to="/signup" className="mt-6 inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-[14.5px] text-white"
             style={{ background: BRAND.primary }}>
             Empezar gratis <ArrowRight className="h-4 w-4" />
