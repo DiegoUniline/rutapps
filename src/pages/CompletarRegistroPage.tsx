@@ -39,6 +39,12 @@ const PERIOD_DISCOUNT: Record<BillingPeriod, number> = {
   anual: 15,
 };
 
+const PERIOD_MONTHS: Record<BillingPeriod, number> = {
+  mensual: 1,
+  semestral: 6,
+  anual: 12,
+};
+
 function calcMonthly(plan: PlanRow, qty: number) {
   const extras = Math.max(0, qty - (plan.usuarios_incluidos || 0));
   return Number(plan.precio_base || 0) + extras * Number(plan.precio_extra_usuario || 0);
@@ -49,6 +55,11 @@ function calcTotalWithPeriod(plan: PlanRow, qty: number, period: BillingPeriod) 
   const disc = PERIOD_DISCOUNT[period];
   return disc > 0 ? monthly * (1 - disc / 100) : monthly;
 }
+
+function calcCargoPorPeriodo(plan: PlanRow, qty: number, period: BillingPeriod) {
+  return calcTotalWithPeriod(plan, qty, period) * PERIOD_MONTHS[period];
+}
+
 
 export default function CompletarRegistroPage() {
   const navigate = useNavigate();
