@@ -22,7 +22,7 @@ export default function PreciosPage() {
     <MarketingShell>
       <Seo
         title="Precios — Rutapp"
-        description="Planes desde $450 MXN/mes. 7 días gratis, sin tarjeta. IA, app móvil offline y todos los módulos incluidos. Cancela cuando quieras."
+        description="Planes desde $450 MXN/mes. 7 días gratis, sin cobro hasta el día 8. IA, app móvil offline y todos los módulos incluidos. Cancela cuando quieras."
         path="/precios"
         jsonLd={[{
           '@context': 'https://schema.org', '@type': 'FAQPage',
@@ -36,7 +36,7 @@ export default function PreciosPage() {
           <h1 className="mt-2 text-[32px] md:text-[48px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
             Simple. Sin sorpresas.
           </h1>
-          <p className="mt-3 text-[15px]" style={{ color: BRAND.muted }}>7 días gratis · cancela cuando quieras</p>
+          <p className="mt-3 text-[15px]" style={{ color: BRAND.muted }}>7 días gratis · cancela cuando quieras · el cobro empieza el día 8</p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5">
             {CURRENCIES.map(c => {
@@ -74,7 +74,7 @@ export default function PreciosPage() {
                 Empezar gratis
               </Link>
               <ul className="mt-5 space-y-2 flex-1">
-                {['Acceso completo a los 10 módulos','App móvil offline','IA incluida','Tienda en línea','Soporte por WhatsApp','Actualizaciones automáticas'].map(f => (
+                {['Acceso completo a los 10 módulos','App móvil offline','IA incluida','Tienda en línea','Soporte por WhatsApp','Actualizaciones automáticas', p.capacitacion].map(f => (
                   <li key={f} className="flex items-center gap-2 text-[13px]" style={{ color: BRAND.ink2 }}>
                     <Check className="h-3.5 w-3.5 shrink-0" style={{ color: BRAND.primary }} strokeWidth={3} /> {f}
                   </li>
@@ -104,7 +104,7 @@ export default function PreciosPage() {
       <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20" style={{ background: BRAND.ink }}>
         <div className="max-w-[800px] mx-auto text-center text-white">
           <h2 className="text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
-            Empieza hoy. Sin tarjeta.
+            Empieza hoy. Sin cobro hasta el día 8.
           </h2>
           <Link to="/signup" className="mt-6 inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-[14.5px] text-white"
             style={{ background: BRAND.primary }}>
