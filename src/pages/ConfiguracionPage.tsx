@@ -474,6 +474,7 @@ export default function ConfiguracionPage() {
     setApartadoAlmacenesIds(Array.isArray((config as any).apartado_almacenes_ids) ? (config as any).apartado_almacenes_ids : []);
     setApartadoSoloConStock(!!(config as any).apartado_solo_con_stock);
     setPoliticaCobro(((config as any).politica_cobro === 'entregado') ? 'entregado' : 'pedido');
+    setManejaLotes(!!(config as any).maneja_lotes);
     setLogoFile(null);
     setInitialized(true);
     setInitializedForId(config.id);
