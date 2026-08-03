@@ -341,8 +341,12 @@ export default function CompletarRegistroPage() {
                     <li>• <strong>Hoy:</strong> capturas tu tarjeta (no se cobra nada).</li>
                     <li>• <strong>7 días:</strong> usas Rutapp completo y gratis.</li>
                     <li>
-                      • <strong>El {format(chargeDate, 'd \'de\' MMMM', { locale: es })}</strong> se cobra automáticamente <strong>{fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))}</strong> y arranca tu mes de servicio.
+                      • <strong>El {format(chargeDate, 'd \'de\' MMMM', { locale: es })}</strong> se cobra automáticamente <strong>{fmtMoney(calcCargoPorPeriodo(selectedPlan, quantity, billingPeriod))}</strong>
+                      {PERIOD_MONTHS[billingPeriod] > 1
+                        ? <> por los <strong>{PERIOD_MONTHS[billingPeriod]} meses</strong> contratados y arranca tu servicio.</>
+                        : <> y arranca tu mes de servicio.</>}
                     </li>
+
                     <li>• Puedes cancelar en cualquier momento desde tu panel.</li>
                   </ul>
                 </div>
