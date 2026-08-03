@@ -27,6 +27,16 @@ interface SignupPlanRow {
 }
 
 const SELECTED_PLAN_KEY = 'rutapp_selected_plan';
+const SELECTED_PERIOD_KEY = 'rutapp_billing_period';
+
+type BillingPeriod = 'mensual' | 'semestral' | 'anual';
+
+const PERIOD_OPTIONS: { value: BillingPeriod; label: string; months: number; discount: number }[] = [
+  { value: 'mensual', label: 'Mensual', months: 1, discount: 0 },
+  { value: 'semestral', label: 'Semestral', months: 6, discount: 10 },
+  { value: 'anual', label: 'Anual', months: 12, discount: 15 },
+];
+
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const COUNTRY_CODES = [
