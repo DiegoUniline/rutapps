@@ -1968,6 +1968,70 @@ export type Database = {
           },
         ]
       }
+      compra_linea_lotes: {
+        Row: {
+          almacen_id: string | null
+          compra_id: string
+          compra_linea_id: string
+          created_at: string
+          empresa_id: string
+          id: string
+          lote_id: string
+          piezas: number
+          producto_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          almacen_id?: string | null
+          compra_id: string
+          compra_linea_id: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          lote_id: string
+          piezas: number
+          producto_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          almacen_id?: string | null
+          compra_id?: string
+          compra_linea_id?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          lote_id?: string
+          piezas?: number
+          producto_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compra_linea_lotes_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compra_linea_lotes_compra_linea_id_fkey"
+            columns: ["compra_linea_id"]
+            isOneToOne: false
+            referencedRelation: "compra_lineas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compra_linea_lotes_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compra_lineas: {
         Row: {
           cantidad: number
@@ -1977,6 +2041,7 @@ export type Database = {
           factor_conversion: number
           id: string
           lote_id: string | null
+          piezas_loteadas: number
           piezas_total: number | null
           precio_unitario: number
           producto_id: string | null
@@ -1991,6 +2056,7 @@ export type Database = {
           factor_conversion?: number
           id?: string
           lote_id?: string | null
+          piezas_loteadas?: number
           piezas_total?: number | null
           precio_unitario?: number
           producto_id?: string | null
@@ -2005,6 +2071,7 @@ export type Database = {
           factor_conversion?: number
           id?: string
           lote_id?: string | null
+          piezas_loteadas?: number
           piezas_total?: number | null
           precio_unitario?: number
           producto_id?: string | null
