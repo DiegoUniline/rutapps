@@ -241,18 +241,19 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                   {line._tiene_ieps && <span className="text-[10px] text-muted-foreground">{iepsLabel}</span>}
                 </div>
               </div>
-              {manejaLotes && isEditable && line.producto_id && lineaManejaLote(line) && (
+              {manejaLotes && line.producto_id && lineaManejaLote(line) && line.id && (
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border">
-                  <span className="text-[10px] uppercase text-muted-foreground">Lote</span>
+                  <span className="text-[10px] uppercase text-muted-foreground">Lotes</span>
                   <button
                     type="button"
-                    onClick={() => abrirAsignarLote(idx, line)}
-                    className={'inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border ' + (line.lote_id ? 'border-border bg-muted text-foreground' : 'border-dashed border-primary/50 text-primary')}
+                    onClick={() => abrirLoteo(line)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border border-dashed border-primary/50 text-primary"
                   >
-                    <Boxes className="h-3 w-3" /> {line._lote_codigo || (line.lote_id ? 'Lote asignado' : 'Elegir lote')}
+                    <Boxes className="h-3 w-3" /> {(Number((line as any).piezas_loteadas) || 0).toLocaleString('es-MX')} / {totalPz.toLocaleString('es-MX')}
                   </button>
                 </div>
               )}
+
               {line.id && (
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border">
                   <span className="text-[10px] uppercase text-muted-foreground">Recibido</span>
