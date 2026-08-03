@@ -413,6 +413,7 @@ export default function ConfiguracionPage() {
   const [apartadoSoloConStock, setApartadoSoloConStock] = useState(false);
   const [apartadoAlmacenesIds, setApartadoAlmacenesIds] = useState<string[]>([]);
   const [politicaCobro, setPoliticaCobro] = useState<'pedido' | 'entregado'>('pedido');
+  const [manejaLotes, setManejaLotes] = useState(false);
 
   // Reset initialized when empresa changes (e.g. super admin switches)
   const empresaId = empresa?.id;
@@ -473,13 +474,14 @@ export default function ConfiguracionPage() {
     setApartadoAlmacenesIds(Array.isArray((config as any).apartado_almacenes_ids) ? (config as any).apartado_almacenes_ids : []);
     setApartadoSoloConStock(!!(config as any).apartado_solo_con_stock);
     setPoliticaCobro(((config as any).politica_cobro === 'entregado') ? 'entregado' : 'pedido');
+    setManejaLotes(!!(config as any).maneja_lotes);
     setLogoFile(null);
     setInitialized(true);
     setInitializedForId(config.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configId, initialized]);
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || apartarStockPedidos !== !!((config as any)?.apartar_stock_pedidos) || apartadoSoloConStock !== !!((config as any)?.apartado_solo_con_stock) || JSON.stringify([...apartadoAlmacenesIds].sort()) !== JSON.stringify([...(((config as any)?.apartado_almacenes_ids ?? []) as string[])].sort()) || politicaCobro !== (((config as any)?.politica_cobro === 'entregado') ? 'entregado' : 'pedido') || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || apartarStockPedidos !== !!((config as any)?.apartar_stock_pedidos) || apartadoSoloConStock !== !!((config as any)?.apartado_solo_con_stock) || JSON.stringify([...apartadoAlmacenesIds].sort()) !== JSON.stringify([...(((config as any)?.apartado_almacenes_ids ?? []) as string[])].sort()) || politicaCobro !== (((config as any)?.politica_cobro === 'entregado') ? 'entregado' : 'pedido') || manejaLotes !== !!((config as any)?.maneja_lotes) || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
@@ -529,6 +531,7 @@ export default function ConfiguracionPage() {
         apartado_almacenes_ids: apartarStockPedidos ? apartadoAlmacenesIds : [],
         apartado_solo_con_stock: apartarStockPedidos ? apartadoSoloConStock : false,
         politica_cobro: politicaCobro,
+        maneja_lotes: manejaLotes,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
@@ -936,6 +939,28 @@ export default function ConfiguracionPage() {
               </div>
             )}
           </div>
+
+          {/* Lotes y caducidades */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Building2 className="h-4 w-4" /> Lotes y caducidades
+            </h3>
+            <div className="flex items-start justify-between gap-4 py-2">
+              <div className="flex-1">
+                <div className="text-[13px] font-medium text-foreground">
+                  Esta empresa maneja lotes
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Al activarlo se habilitan los lotes y fechas de caducidad: podrás lotear en compras, asignar lotes en pedidos y ventas (uno o varios por línea) y ver el stock por lote. Si está apagado, el sistema trabaja solo con stock por almacén.
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Después, en cada producto puedes indicar si ese producto en particular maneja lote.
+                </p>
+              </div>
+              <Switch checked={manejaLotes} onCheckedChange={setManejaLotes} />
+            </div>
+          </div>
+
 
           {/* Apartado de stock en pedidos */}
           <div className="bg-card border border-border rounded-lg p-5">
