@@ -361,8 +361,10 @@ export default function CompletarRegistroPage() {
                 <span className="text-xs leading-relaxed">
                   Acepto que inicio mis 7 días de prueba gratis. Entiendo que el{' '}
                   <strong>{format(chargeDate, 'd \'de\' MMMM \'de\' yyyy', { locale: es })}</strong> se cobrará automáticamente{' '}
-                  <strong>{fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))} MXN</strong> a mi tarjeta por el plan{' '}
-                  <strong>{selectedPlan.nombre}</strong>, y que <strong>ese primer cargo no es reembolsable</strong>. Puedo cancelar en cualquier momento desde mi panel.
+                  <strong>{fmtMoney(calcCargoPorPeriodo(selectedPlan, quantity, billingPeriod))} MXN</strong> a mi tarjeta por el plan{' '}
+                  <strong>{selectedPlan.nombre}</strong> en modalidad <strong>{billingPeriod}</strong>
+                  {PERIOD_MONTHS[billingPeriod] > 1 && <> (cobro por {PERIOD_MONTHS[billingPeriod]} meses por adelantado)</>}, y que <strong>ese primer cargo no es reembolsable</strong>. Puedo cancelar en cualquier momento desde mi panel.
+
                 </span>
               </label>
 
