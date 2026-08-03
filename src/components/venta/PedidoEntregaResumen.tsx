@@ -40,6 +40,20 @@ export function PedidoEntregaResumen({ venta, fmt }: Props) {
     },
   });
 
+  const { data: cobrosAplicados } = useQuery({
+    queryKey: ['cobros-aplicados-venta', venta?.id],
+    enabled: !!venta?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('cobro_aplicaciones')
+        .select('monto_aplicado, cobros!inner(status)')
+        .eq('venta_id', venta.id);
+      return (data ?? []).reduce((s: number, a: any) => (
+        a?.cobros?.status && a.cobros.status !== 'activo' ? s : s + (Number(a.monto_aplicado) || 0)
+      ), 0);
+    },
+  });
+
   const isCerrado = isCerradaParcial(venta);
   const ventaLineas = (venta?.venta_lineas ?? []) as any[];
   const activas = (entregas ?? []).filter((e: any) => e.status !== 'cancelado');
@@ -68,7 +82,9 @@ export function PedidoEntregaResumen({ venta, fmt }: Props) {
     pzasEntregadas += ent;
   }
   const totalPedido = Number(venta?.total ?? 0);
-  const cobrado = Math.max(0, totalPedido - Number(venta?.saldo_pendiente ?? 0));
+  // Cobrado = cobros realmente aplicados (nunca total - saldo_pendiente:
+  // en pedidos que se cobran a lo entregado el saldo puede ser 0 sin pagos).
+  const cobrado = Math.max(0, Number(cobrosAplicados ?? 0));
   const hayFaltante = pzasEntregadas + 0.0001 < pzasPedidas;
   const esParcial = hechas.length > 0 && hayFaltante;
 

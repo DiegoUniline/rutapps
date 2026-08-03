@@ -1,3 +1,4 @@
+import { pagadoRealVenta } from '@/lib/ventaCerrada';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HelpButton from '@/components/HelpButton';
@@ -57,7 +58,7 @@ function useCuentasCobrar() {
       try {
         const { data, error } = await supabase
           .from('ventas')
-          .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, cliente_id, vendedor_id, clientes(id, nombre, codigo), vendedores:profiles!vendedor_id(nombre)')
+          .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, cliente_id, vendedor_id, clientes(id, nombre, codigo), vendedores:profiles!vendedor_id(nombre), cobro_aplicaciones(monto_aplicado, cobros!inner(status))')
           .eq('empresa_id', empresa!.id)
           .gt('saldo_pendiente', 0)
           .neq('status', 'cancelado')
@@ -303,7 +304,7 @@ export default function CuentasCobrarPage() {
           </TableHeader>
           <TableBody>
             {filtered.map(v => {
-              const pagado = (v.total ?? 0) - (v.saldo_pendiente ?? 0);
+              const pagado = pagadoRealVenta(v);
               const esSaldo = v.es_saldo_inicial === true;
               const canDelete = esSaldo && (v.saldo_pendiente ?? 0) === (v.total ?? 0);
               return (
@@ -356,7 +357,7 @@ export default function CuentasCobrarPage() {
           </TableBody>
           {!!filtered.length && (() => {
             const sumTotal = filtered.reduce((s, v) => s + (v.total ?? 0), 0);
-            const sumPagado = filtered.reduce((s, v) => s + ((v.total ?? 0) - (v.saldo_pendiente ?? 0)), 0);
+            const sumPagado = filtered.reduce((s, v) => s + pagadoRealVenta(v), 0);
             const sumPend = filtered.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
             return (
               <TableFooter>
