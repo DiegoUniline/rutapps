@@ -106,7 +106,7 @@ function useCompras(search: string, statusFilter: string[], empresaId?: string) 
     queryFn: async () => {
       let q = supabase
         .from('compras')
-        .select('*, proveedores(nombre), almacenes(nombre)')
+        .select('*, proveedores(nombre), almacenes(nombre), compra_lineas(cantidad, factor_conversion, piezas_loteadas, productos(maneja_lote))')
         .eq('empresa_id', empresaId!)
         .order('fecha', { ascending: false });
       if (statusFilter && statusFilter.length > 0) q = q.in('status', statusFilter);
@@ -123,6 +123,20 @@ function useCompras(search: string, statusFilter: string[], empresaId?: string) 
       return filtered;
     },
   });
+}
+
+function LoteadoChip({ compra }: { compra: any }) {
+  const lineas = (compra.compra_lineas ?? []).filter((l: any) => l.productos?.maneja_lote);
+  if (!lineas.length) return <span className="text-xxs text-muted-foreground">—</span>;
+  const total = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0) * (Number(l.factor_conversion) || 1), 0);
+  const loteado = lineas.reduce((s: number, l: any) => s + (Number(l.piezas_loteadas) || 0), 0);
+  const pct = total > 0 ? Math.round((loteado / total) * 100) : 0;
+  return (
+    <span className={cn("text-xxs font-semibold px-2 py-0.5 rounded-full tabular-nums",
+      pct >= 100 ? "bg-success/10 text-success" : pct > 0 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground")}>
+      {pct >= 100 ? '100% loteado' : `${pct}%`}
+    </span>
+  );
 }
 
 export default function ComprasPage() {
@@ -344,16 +358,19 @@ export default function ComprasPage() {
             <th className="th-odoo text-left">Proveedor</th>
             <th className="th-odoo text-left hidden md:table-cell">Almacén</th>
             <th className="th-odoo text-left">Fecha</th>
+            <th className="th-odoo text-left hidden lg:table-cell">Factura</th>
+            <th className="th-odoo text-left hidden lg:table-cell">Vence</th>
             <th className="th-odoo text-center hidden sm:table-cell">Condición</th>
             <th className="th-odoo text-right">Total</th>
             <th className="th-odoo text-right hidden sm:table-cell">Saldo</th>
+            <th className="th-odoo text-center hidden md:table-cell">Loteado</th>
             <th className="th-odoo text-center">Estado</th>
             <th className="th-odoo w-8" />
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
-            <tr><td colSpan={10} className="text-center py-12 text-muted-foreground text-sm">No hay compras.</td></tr>
+            <tr><td colSpan={13} className="text-center py-12 text-muted-foreground text-sm">No hay compras.</td></tr>
           )}
           {items.map((c: any) => {
             const isExpanded = expandedId === c.id;
@@ -374,6 +391,8 @@ export default function ComprasPage() {
                   <td className="py-1.5 px-3 font-medium">{c.proveedores?.nombre ?? '—'}</td>
                   <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.almacenes?.nombre ?? '—'}</td>
                   <td className="py-1.5 px-3">{fmtDate(c.fecha)}</td>
+                  <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.numero_factura || '—'}</td>
+                  <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.fecha_vencimiento ? fmtDate(c.fecha_vencimiento) : '—'}</td>
                   <td className="py-1.5 px-3 hidden sm:table-cell text-center">
                     <span className={cn(
                       "text-xxs font-medium px-2 py-0.5 rounded-full",
@@ -390,6 +409,7 @@ export default function ComprasPage() {
                       <span className="text-muted-foreground">{fmt(0)}</span>
                     )}
                   </td>
+                  <td className="py-1.5 px-3 text-center hidden md:table-cell"><LoteadoChip compra={c} /></td>
                   <td className="py-1.5 px-3 text-center">
                     <StatusChip status={c.status} />
                   </td>
@@ -401,7 +421,7 @@ export default function ComprasPage() {
                   <CompraExpandedRow
                     key={`exp-${c.id}`}
                     compra={c}
-                    colSpan={10}
+                    colSpan={13}
                     fmt={fmt}
                     onCollapse={() => setExpandedId(null)}
                   />
@@ -413,10 +433,10 @@ export default function ComprasPage() {
         {items.length > 0 && (
           <tfoot>
             <tr className="bg-card border-t border-border font-semibold text-[12px]">
-              <td colSpan={6} className="py-2 px-3 text-muted-foreground">{items.length} compras</td>
+              <td colSpan={8} className="py-2 px-3 text-muted-foreground">{items.length} compras</td>
               <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(items.reduce((s: number, c: any) => s + (c.total ?? 0), 0))}</td>
               <td className="py-2 px-3 text-right hidden sm:table-cell tabular-nums text-destructive font-bold">{fmt(items.reduce((s: number, c: any) => s + (c.saldo_pendiente ?? 0), 0))}</td>
-              <td colSpan={2} />
+              <td colSpan={3} />
             </tr>
           </tfoot>
         )}
