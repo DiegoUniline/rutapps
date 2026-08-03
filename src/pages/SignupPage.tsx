@@ -457,7 +457,7 @@ export default function SignupPage() {
         description="Regístrate en Rutapp y prueba gratis 7 días el ERP de venta en ruta: inventario, cobranza, rutas optimizadas y facturación CFDI 4.0."
         path="/signup"
       />
-      <Card className="w-full max-w-3xl shadow-xl my-auto">
+      <Card className="w-full max-w-3xl lg:max-w-6xl shadow-xl my-auto">
         <CardHeader className="text-center">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="h-4 w-4" /> Volver al inicio
@@ -465,7 +465,11 @@ export default function SignupPage() {
           <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-14 w-14 mx-auto mb-2 rounded-xl object-contain" />
           <h1 className="text-2xl font-black">Crear cuenta en Rutapp</h1>
           <p className="text-sm text-muted-foreground">7 días de prueba gratis · Se requiere tarjeta para activar la cuenta</p>
-
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {/* Columna izquierda: plan y cobro */}
+          <div className="text-left space-y-0">
           {/* Plan selector */}
           {plans.length > 0 && (
             <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-left">
@@ -586,9 +590,10 @@ export default function SignupPage() {
 
             </ul>
           </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSignup} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+          </div>
+
+          {/* Columna derecha: formulario */}
+          <form onSubmit={handleSignup} className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 content-start text-left">
             {/* Name */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Tu nombre</Label>
@@ -743,6 +748,7 @@ export default function SignupPage() {
               ¿Ya tienes cuenta? <Link to="/login" className="text-primary font-medium hover:underline">Iniciar sesión</Link>
             </p>
           </form>
+          </div>
         </CardContent>
       </Card>
 
