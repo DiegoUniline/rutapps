@@ -136,7 +136,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                     <td className="py-1.5 px-2">
                       {!line.producto_id || !lineaManejaLote(line) ? (
                         <span className="text-[11px] text-muted-foreground">—</span>
-                      ) : !isEditable && line.id ? (
+                      ) : line.id ? (
                         (() => {
                           const loteadoPz = Number((line as any).piezas_loteadas) || 0;
                           const full = totalPz > 0 && loteadoPz >= totalPz;
@@ -145,24 +145,16 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                               type="button"
                               onClick={() => abrirLoteo(line)}
                               className={'inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold border transition-colors ' + (full ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'border-dashed border-primary/50 text-primary hover:bg-primary/5')}
-                              title="Lotear piezas (carga stock automáticamente)"
+                              title="Lotear piezas: elige uno o varios lotes y cuántas piezas de cada uno"
                             >
                               <Boxes className="h-3 w-3" /> {loteadoPz.toLocaleString('es-MX')} / {totalPz.toLocaleString('es-MX')}
                             </button>
                           );
                         })()
-                      ) : !isEditable ? (
-                        <span className="text-[11px] text-foreground">{line._lote_codigo || '—'}</span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => abrirAsignarLote(idx, line)}
-                          className={'inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border transition-colors ' + (line.lote_id ? 'border-border bg-muted text-foreground hover:bg-accent' : 'border-dashed border-primary/50 text-primary hover:bg-primary/5')}
-                          title="Elegir o crear el lote de esta línea"
-                        >
-                          <Boxes className="h-3 w-3" /> {line._lote_codigo || (line.lote_id ? 'Lote asignado' : 'Elegir lote')}
-                        </button>
+                        <span className="text-[11px] text-muted-foreground" title="Guarda la compra para poder lotear esta línea">Guarda para lotear</span>
                       )}
+
 
                     </td>
                   )}
@@ -249,18 +241,19 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                   {line._tiene_ieps && <span className="text-[10px] text-muted-foreground">{iepsLabel}</span>}
                 </div>
               </div>
-              {manejaLotes && isEditable && line.producto_id && lineaManejaLote(line) && (
+              {manejaLotes && line.producto_id && lineaManejaLote(line) && line.id && (
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border">
-                  <span className="text-[10px] uppercase text-muted-foreground">Lote</span>
+                  <span className="text-[10px] uppercase text-muted-foreground">Lotes</span>
                   <button
                     type="button"
-                    onClick={() => abrirAsignarLote(idx, line)}
-                    className={'inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border ' + (line.lote_id ? 'border-border bg-muted text-foreground' : 'border-dashed border-primary/50 text-primary')}
+                    onClick={() => abrirLoteo(line)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border border-dashed border-primary/50 text-primary"
                   >
-                    <Boxes className="h-3 w-3" /> {line._lote_codigo || (line.lote_id ? 'Lote asignado' : 'Elegir lote')}
+                    <Boxes className="h-3 w-3" /> {(Number((line as any).piezas_loteadas) || 0).toLocaleString('es-MX')} / {totalPz.toLocaleString('es-MX')}
                   </button>
                 </div>
               )}
+
               {line.id && (
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border">
                   <span className="text-[10px] uppercase text-muted-foreground">Recibido</span>
