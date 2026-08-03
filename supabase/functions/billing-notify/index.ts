@@ -274,15 +274,26 @@ async function getEmpresaContacto(
 async function notifyAdmins(
   supabase: ReturnType<typeof createClient>,
   waToken: string | undefined,
-  payload: AdminCopyPayload
+  payloadIn: AdminCopyPayload
 ) {
+  // Enriquecer con datos de la empresa cliente (nombre, correo principal, dueño, teléfono)
+  const extra = payloadIn.empresaId ? await getEmpresaContacto(supabase, payloadIn.empresaId) : {};
+  const payload: AdminCopyPayload = { ...extra, ...payloadIn, empresa: payloadIn.empresa || extra.empresa };
+
   const isFail = payload.evento === "cobro_fallido";
   const title = isFail ? "⚠️ *Cobro FALLIDO — Rutapp*" : "✅ *Cobro exitoso — Rutapp*";
   const lines = [
     title,
     "",
     `*Empresa:* ${payload.empresa || "—"}`,
-    `*Cliente:* ${payload.clienteNombre || "—"}`,
+    `*Licencia:* ${payload.licencia || "—"}`,
+    `*Correo principal:* ${payload.empresaEmail || "—"}`,
+    `*Tel. empresa:* ${payload.empresaTelefono || "—"}`,
+    `*Dueño:* ${payload.duenoNombre || "—"}`,
+    `*Correo dueño:* ${payload.duenoEmail || "—"}`,
+    `*Tel. dueño:* ${payload.duenoTelefono || "—"}`,
+    "",
+    `*Contacto de pago:* ${payload.clienteNombre || "—"}`,
     `*Email:* ${payload.clienteEmail || "—"}`,
     `*Teléfono:* ${payload.clienteTelefono || "—"}`,
     `*Monto:* ${payload.monto || "—"}`,
