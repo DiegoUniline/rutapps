@@ -602,7 +602,7 @@ export default function SignupPage() {
             </div>
 
             {/* Email — full width */}
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email</Label>
               <Input
                 type="email"
@@ -615,7 +615,7 @@ export default function SignupPage() {
             </div>
 
             {/* Phone — full width */}
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Teléfono</Label>
               <div className="flex gap-2">
                 <Select
@@ -689,7 +689,7 @@ export default function SignupPage() {
             </div>
 
             {/* Cupón / Referido */}
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label className="flex items-center gap-2"><Tag className="h-4 w-4" /> Código de cupón <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
               <div className="flex gap-2 items-center">
                 <Input
@@ -707,7 +707,7 @@ export default function SignupPage() {
             </div>
 
             {/* Terms & Privacy — full width */}
-            <div className="space-y-3 pt-2 border-t md:col-span-2">
+            <div className="space-y-3 pt-2 border-t sm:col-span-2">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-start gap-2">
                   <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={v => setAcceptedTerms(v === true)} />
@@ -734,12 +734,12 @@ export default function SignupPage() {
               </Button>
             </div>
 
-            <Button type="submit" disabled={loading || !isFormReady} className="w-full md:col-span-2" size="lg">
+            <Button type="submit" disabled={loading || !isFormReady} className="w-full sm:col-span-2" size="lg">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Crear mi cuenta
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground md:col-span-2">
+            <p className="text-center text-sm text-muted-foreground sm:col-span-2">
               ¿Ya tienes cuenta? <Link to="/login" className="text-primary font-medium hover:underline">Iniciar sesión</Link>
             </p>
           </form>
