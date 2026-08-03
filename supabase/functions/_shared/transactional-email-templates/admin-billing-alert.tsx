@@ -17,6 +17,12 @@ import type { TemplateEntry } from './registry.ts'
 interface Props {
   evento: 'cobro_exitoso' | 'cobro_fallido' | string
   empresa?: string
+  empresaEmail?: string
+  empresaTelefono?: string
+  licencia?: string
+  duenoNombre?: string
+  duenoEmail?: string
+  duenoTelefono?: string
   clienteNombre?: string
   clienteEmail?: string
   clienteTelefono?: string
@@ -37,6 +43,12 @@ const isFail = (e: string) => e === 'cobro_fallido'
 const Email = ({
   evento,
   empresa,
+  empresaEmail,
+  empresaTelefono,
+  licencia,
+  duenoNombre,
+  duenoEmail,
+  duenoTelefono,
   clienteNombre,
   clienteEmail,
   clienteTelefono,
@@ -94,7 +106,15 @@ const Email = ({
           {/* Details card */}
           <Section style={card}>
             <Row label="🏢 Empresa" value={empresa || '—'} />
-            <Row label="👤 Cliente" value={clienteNombre || '—'} />
+            <Row label="🔑 Licencia" value={licencia || '—'} />
+            <Row label="✉️ Correo principal" value={empresaEmail || '—'} />
+            <Row label="☎️ Tel. empresa" value={empresaTelefono || '—'} />
+            <Hr style={hr} />
+            <Row label="👑 Dueño" value={duenoNombre || '—'} />
+            <Row label="✉️ Correo dueño" value={duenoEmail || '—'} />
+            <Row label="📱 Tel. dueño" value={duenoTelefono || '—'} />
+            <Hr style={hr} />
+            <Row label="👤 Contacto de pago" value={clienteNombre || '—'} />
             <Row label="✉️ Email" value={clienteEmail || '—'} />
             <Row label="📱 Teléfono" value={clienteTelefono || '—'} />
             <Hr style={hr} />
@@ -133,6 +153,12 @@ export const template = {
   previewData: {
     evento: 'cobro_exitoso',
     empresa: 'Empresa Demo',
+    empresaEmail: 'contacto@demo.com',
+    empresaTelefono: '+528111234567',
+    licencia: '12324489',
+    duenoNombre: 'María López',
+    duenoEmail: 'maria@demo.com',
+    duenoTelefono: '+528117654321',
     clienteNombre: 'Juan Pérez',
     clienteEmail: 'juan@demo.com',
     clienteTelefono: '+521234567890',
