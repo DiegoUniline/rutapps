@@ -123,7 +123,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                         <span className="text-[11px] text-muted-foreground">—</span>
                       ) : !isEditable ? (
                         <span className="text-[11px] text-foreground">{line._lote_codigo || '—'}</span>
-                        <span className="text-[11px] text-muted-foreground">—</span>
+
                       ) : (
                         <button
                           type="button"
