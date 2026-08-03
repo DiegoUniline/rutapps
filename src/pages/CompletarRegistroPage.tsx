@@ -39,6 +39,12 @@ const PERIOD_DISCOUNT: Record<BillingPeriod, number> = {
   anual: 15,
 };
 
+const PERIOD_MONTHS: Record<BillingPeriod, number> = {
+  mensual: 1,
+  semestral: 6,
+  anual: 12,
+};
+
 function calcMonthly(plan: PlanRow, qty: number) {
   const extras = Math.max(0, qty - (plan.usuarios_incluidos || 0));
   return Number(plan.precio_base || 0) + extras * Number(plan.precio_extra_usuario || 0);
@@ -50,6 +56,11 @@ function calcTotalWithPeriod(plan: PlanRow, qty: number, period: BillingPeriod) 
   return disc > 0 ? monthly * (1 - disc / 100) : monthly;
 }
 
+function calcCargoPorPeriodo(plan: PlanRow, qty: number, period: BillingPeriod) {
+  return calcTotalWithPeriod(plan, qty, period) * PERIOD_MONTHS[period];
+}
+
+
 export default function CompletarRegistroPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -57,7 +68,16 @@ export default function CompletarRegistroPage() {
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('mensual');
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>(() => {
+    const fromUrl = searchParams.get('periodo') as BillingPeriod | null;
+    if (fromUrl && fromUrl in PERIOD_DISCOUNT) return fromUrl;
+    try {
+      const saved = localStorage.getItem('rutapp_billing_period') as BillingPeriod | null;
+      if (saved && saved in PERIOD_DISCOUNT) return saved;
+    } catch { /* ignore */ }
+    return 'mensual';
+  });
+
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -229,7 +249,7 @@ export default function CompletarRegistroPage() {
                       >
                         <div className="text-sm font-bold capitalize">{p}</div>
                         <div className="text-[10px] text-muted-foreground mt-0.5">
-                          {p === 'mensual' ? 'Cobro cada mes' : p === 'semestral' ? 'Cobro cada mes' : 'Cobro cada mes'}
+                          {p === 'mensual' ? 'Cobro cada mes' : `Cobro cada ${PERIOD_MONTHS[p]} meses`}
                         </div>
                         {disc > 0 && (
                           <span className="absolute -top-2 -right-2 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
@@ -241,8 +261,18 @@ export default function CompletarRegistroPage() {
                   })}
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Semestral y Anual aplican descuento permanente en cada cobro mensual mientras mantengas tu suscripción activa.
+                  {PERIOD_DISCOUNT[billingPeriod] > 0 ? (
+                    <>
+                      El descuento de <strong>-{PERIOD_DISCOUNT[billingPeriod]}%</strong> se aplica al precio de <strong>cada mes</strong>
+                      {' '}({fmtMoney(calcMonthly(selectedPlan, quantity))} → {fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))} / mes),
+                      pero <strong>el cobro se realiza en una sola exhibición por {PERIOD_MONTHS[billingPeriod]} meses</strong>:{' '}
+                      <strong>{fmtMoney(calcCargoPorPeriodo(selectedPlan, quantity, billingPeriod))} MXN</strong> cada {PERIOD_MONTHS[billingPeriod]} meses.
+                    </>
+                  ) : (
+                    <>Se cobra {fmtMoney(calcMonthly(selectedPlan, quantity))} MXN cada mes. Semestral y Anual reducen el precio mensual (-10% / -15%) y el cobro se hace por todo el periodo contratado.</>
+                  )}
                 </p>
+
               </div>
             )}
 
@@ -311,8 +341,12 @@ export default function CompletarRegistroPage() {
                     <li>• <strong>Hoy:</strong> capturas tu tarjeta (no se cobra nada).</li>
                     <li>• <strong>7 días:</strong> usas Rutapp completo y gratis.</li>
                     <li>
-                      • <strong>El {format(chargeDate, 'd \'de\' MMMM', { locale: es })}</strong> se cobra automáticamente <strong>{fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))}</strong> y arranca tu mes de servicio.
+                      • <strong>El {format(chargeDate, 'd \'de\' MMMM', { locale: es })}</strong> se cobra automáticamente <strong>{fmtMoney(calcCargoPorPeriodo(selectedPlan, quantity, billingPeriod))}</strong>
+                      {PERIOD_MONTHS[billingPeriod] > 1
+                        ? <> por los <strong>{PERIOD_MONTHS[billingPeriod]} meses</strong> contratados y arranca tu servicio.</>
+                        : <> y arranca tu mes de servicio.</>}
                     </li>
+
                     <li>• Puedes cancelar en cualquier momento desde tu panel.</li>
                   </ul>
                 </div>
@@ -327,8 +361,10 @@ export default function CompletarRegistroPage() {
                 <span className="text-xs leading-relaxed">
                   Acepto que inicio mis 7 días de prueba gratis. Entiendo que el{' '}
                   <strong>{format(chargeDate, 'd \'de\' MMMM \'de\' yyyy', { locale: es })}</strong> se cobrará automáticamente{' '}
-                  <strong>{fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))} MXN</strong> a mi tarjeta por el plan{' '}
-                  <strong>{selectedPlan.nombre}</strong>, y que <strong>ese primer cargo no es reembolsable</strong>. Puedo cancelar en cualquier momento desde mi panel.
+                  <strong>{fmtMoney(calcCargoPorPeriodo(selectedPlan, quantity, billingPeriod))} MXN</strong> a mi tarjeta por el plan{' '}
+                  <strong>{selectedPlan.nombre}</strong> en modalidad <strong>{billingPeriod}</strong>
+                  {PERIOD_MONTHS[billingPeriod] > 1 && <> (cobro por {PERIOD_MONTHS[billingPeriod]} meses por adelantado)</>}, y que <strong>ese primer cargo no es reembolsable</strong>. Puedo cancelar en cualquier momento desde mi panel.
+
                 </span>
               </label>
 

@@ -27,6 +27,16 @@ interface SignupPlanRow {
 }
 
 const SELECTED_PLAN_KEY = 'rutapp_selected_plan';
+const SELECTED_PERIOD_KEY = 'rutapp_billing_period';
+
+type BillingPeriod = 'mensual' | 'semestral' | 'anual';
+
+const PERIOD_OPTIONS: { value: BillingPeriod; label: string; months: number; discount: number }[] = [
+  { value: 'mensual', label: 'Mensual', months: 1, discount: 0 },
+  { value: 'semestral', label: 'Semestral', months: 6, discount: 10 },
+  { value: 'anual', label: 'Anual', months: 12, discount: 15 },
+];
+
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const COUNTRY_CODES = [
@@ -64,6 +74,16 @@ export default function SignupPage() {
   const [partnerRef, setPartnerRef] = useState<string>('');
   const [plans, setPlans] = useState<SignupPlanRow[]>([]);
   const [selectedPlanSlug, setSelectedPlanSlug] = useState<string>('');
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>(() => {
+    const fromUrl = searchParams.get('periodo') as BillingPeriod | null;
+    if (fromUrl && PERIOD_OPTIONS.some(o => o.value === fromUrl)) return fromUrl;
+    try {
+      const saved = localStorage.getItem(SELECTED_PERIOD_KEY) as BillingPeriod | null;
+      if (saved && PERIOD_OPTIONS.some(o => o.value === saved)) return saved;
+    } catch { /* ignore */ }
+    return 'mensual';
+  });
+
 
   // Capture ?ref= from URL or localStorage
   useEffect(() => {
@@ -106,7 +126,21 @@ export default function SignupPage() {
     setSearchParams(next, { replace: true });
   }
 
+  function handleSelectPeriod(period: BillingPeriod) {
+    setBillingPeriod(period);
+    try { localStorage.setItem(SELECTED_PERIOD_KEY, period); } catch { /* ignore */ }
+    const next = new URLSearchParams(searchParams);
+    next.set('periodo', period);
+    setSearchParams(next, { replace: true });
+  }
+
   const selectedPlan = plans.find(p => p.slug === selectedPlanSlug) || null;
+  const periodCfg = PERIOD_OPTIONS.find(o => o.value === billingPeriod) || PERIOD_OPTIONS[0];
+  const planMensualBase = Number(selectedPlan?.precio_base || 0);
+  const mensualConDescuento = planMensualBase * (1 - periodCfg.discount / 100);
+  const totalPorCobro = mensualConDescuento * periodCfg.months;
+  const fmtMXN = (n: number) => `$${Math.round(n).toLocaleString('es-MX')}`;
+
 
 
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -382,7 +416,12 @@ export default function SignupPage() {
       if (selectedPlanSlug) {
         try { localStorage.setItem(SELECTED_PLAN_KEY, selectedPlanSlug); } catch {}
       }
-      const planQuery = selectedPlanSlug ? `?plan=${encodeURIComponent(selectedPlanSlug)}` : '';
+      try { localStorage.setItem(SELECTED_PERIOD_KEY, billingPeriod); } catch {}
+      const qs = new URLSearchParams();
+      if (selectedPlanSlug) qs.set('plan', selectedPlanSlug);
+      qs.set('periodo', billingPeriod);
+      const planQuery = `?${qs.toString()}`;
+
       // After signUp the user is already authenticated; send them to capture card.
       // If session is not yet ready, redirect to /login which will then route to /completar-registro via the guard.
       const { data: { session } } = await supabase.auth.getSession();
@@ -472,6 +511,51 @@ export default function SignupPage() {
                   );
                 })}
               </div>
+
+              {/* Periodo de contratación */}
+              <div className="mt-4">
+                <div className="text-xs font-semibold text-foreground mb-2">Periodo de contratación</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {PERIOD_OPTIONS.map(opt => {
+                    const isSel = opt.value === billingPeriod;
+                    return (
+                      <button
+                        type="button"
+                        key={opt.value}
+                        onClick={() => handleSelectPeriod(opt.value)}
+                        className={cn(
+                          'relative rounded-lg border p-2 text-center transition-all bg-card hover:border-primary',
+                          isSel ? 'border-primary ring-2 ring-primary shadow-md' : 'border-border'
+                        )}
+                      >
+                        {opt.discount > 0 && (
+                          <span className="absolute -top-2 -right-2 rounded-full bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5">
+                            -{opt.discount}%
+                          </span>
+                        )}
+                        <div className="text-xs font-bold text-foreground">{opt.label}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {opt.months === 1 ? 'Cobro cada mes' : `Cobro cada ${opt.months} meses`}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedPlan && (
+                  <div className="mt-2 rounded-md bg-card border border-border p-2 text-[11px] text-muted-foreground">
+                    {periodCfg.discount > 0 ? (
+                      <>
+                        El descuento de <strong className="text-emerald-600">-{periodCfg.discount}%</strong> se aplica a{' '}
+                        <strong className="text-foreground">cada mes</strong> ({fmtMXN(planMensualBase)} → {fmtMXN(mensualConDescuento)} MXN/mes),
+                        pero <strong className="text-foreground">el cobro se hace en una sola exhibición por {periodCfg.months} meses</strong>:{' '}
+                        <strong className="text-foreground">{fmtMXN(totalPorCobro)} MXN</strong> cada {periodCfg.months} meses.
+                      </>
+                    ) : (
+                      <>Se cobra <strong className="text-foreground">{fmtMXN(planMensualBase)} MXN cada mes</strong>. Contratando semestral o anual el precio mensual baja 10% o 15%, y el cobro se hace por todo el periodo.</>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -489,10 +573,17 @@ export default function SignupPage() {
               ) : (
                 <li><strong className="text-foreground">$300 MXN por usuario al mes</strong> (planes semestral -10% y anual -15%).</li>
               )}
+              <li>
+                Elegiste <strong className="text-foreground">{periodCfg.label}</strong>: el descuento aplica al precio de cada mes y{' '}
+                {periodCfg.months === 1
+                  ? 'el cargo se realiza mes a mes.'
+                  : `el cargo se realiza completo por los ${periodCfg.months} meses contratados.`}
+              </li>
               <li>En el siguiente paso capturas tu tarjeta y confirmas tu plan. <strong className="text-foreground">No se cobra nada durante los 7 días de prueba.</strong></li>
-              <li>Al terminar la prueba se realiza el primer cargo automático según el plan elegido.</li>
+              <li>Al terminar la prueba se realiza el primer cargo automático según el plan y periodo elegido.</li>
               <li>Puedes cancelar antes del día 7 desde tu cuenta sin ningún cargo.</li>
               <li><strong className="text-foreground">Si no capturas la tarjeta, la cuenta no se activa</strong> y no podrás acceder al sistema.</li>
+
             </ul>
           </div>
         </CardHeader>
