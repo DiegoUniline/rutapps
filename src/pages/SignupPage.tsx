@@ -74,6 +74,16 @@ export default function SignupPage() {
   const [partnerRef, setPartnerRef] = useState<string>('');
   const [plans, setPlans] = useState<SignupPlanRow[]>([]);
   const [selectedPlanSlug, setSelectedPlanSlug] = useState<string>('');
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>(() => {
+    const fromUrl = searchParams.get('periodo') as BillingPeriod | null;
+    if (fromUrl && PERIOD_OPTIONS.some(o => o.value === fromUrl)) return fromUrl;
+    try {
+      const saved = localStorage.getItem(SELECTED_PERIOD_KEY) as BillingPeriod | null;
+      if (saved && PERIOD_OPTIONS.some(o => o.value === saved)) return saved;
+    } catch { /* ignore */ }
+    return 'mensual';
+  });
+
 
   // Capture ?ref= from URL or localStorage
   useEffect(() => {
