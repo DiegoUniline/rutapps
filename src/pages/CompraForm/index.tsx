@@ -38,9 +38,14 @@ export default function CompraFormPage() {
           <div><label className="label-odoo">Fecha</label><OdooDatePicker value={h.form.fecha ?? ''} onChange={val => h.updateField('fecha', val)} /></div>
           <div><label className="label-odoo">Condición de pago</label>{h.isEditable ? <SearchableSelect options={[{ value: 'contado', label: 'Contado' }, { value: 'credito', label: 'Crédito' }]} value={h.form.condicion_pago ?? 'contado'} onChange={val => h.updateField('condicion_pago', val)} placeholder="Seleccionar..." /> : <div className="text-[13px] py-1.5 px-1 text-foreground capitalize">{h.form.condicion_pago}</div>}</div>
         </div>
-        {h.form.condicion_pago === 'credito' && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4"><div><label className="label-odoo">Días de crédito</label><input type="number" className="input-odoo w-full" value={h.form.dias_credito ?? 0} onChange={e => h.updateField('dias_credito', Number(e.target.value))} disabled={!h.isEditable} /></div></div>
-        )}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {h.form.condicion_pago === 'credito' && (<>
+            <div><label className="label-odoo">Días de crédito</label><input type="number" min={0} className="input-odoo w-full" value={h.form.dias_credito ?? 0} onChange={e => h.updateField('dias_credito', Math.max(0, Number(e.target.value) || 0))} disabled={!h.isEditable} /></div>
+            <div><label className="label-odoo">Fecha de vencimiento</label>{h.isEditable ? <OdooDatePicker value={h.form.fecha_vencimiento ?? ''} onChange={val => h.updateField('fecha_vencimiento', val)} /> : <div className="text-[13px] py-1.5 px-1 text-foreground">{h.form.fecha_vencimiento ?? '—'}</div>}</div>
+          </>)}
+          <div><label className="label-odoo">Número de factura</label><input className="input-odoo w-full" value={h.form.numero_factura ?? ''} onChange={e => h.updateField('numero_factura', e.target.value)} placeholder="Ej. A-12345" disabled={!h.isEditable} /></div>
+          <div><label className="label-odoo">Notas</label><input className="input-odoo w-full" value={h.form.notas ?? ''} onChange={e => h.updateField('notas', e.target.value)} placeholder="Notas de la compra" disabled={!h.isEditable} /></div>
+        </div>
       </div>
 
       <OdooTabs activeTab={activeTab} tabs={[

@@ -121,6 +121,9 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                     <td className="py-1.5 px-2">
                       {!line.producto_id || !lineaManejaLote(line) ? (
                         <span className="text-[11px] text-muted-foreground">—</span>
+                      ) : !isEditable ? (
+                        <span className="text-[11px] text-foreground">{line._lote_codigo || '—'}</span>
+                        <span className="text-[11px] text-muted-foreground">—</span>
                       ) : (
                         <button
                           type="button"
@@ -216,7 +219,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                   {line._tiene_ieps && <span className="text-[10px] text-muted-foreground">{iepsLabel}</span>}
                 </div>
               </div>
-              {manejaLotes && line.producto_id && lineaManejaLote(line) && (
+              {manejaLotes && isEditable && line.producto_id && lineaManejaLote(line) && (
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border">
                   <span className="text-[10px] uppercase text-muted-foreground">Lote</span>
                   <button
