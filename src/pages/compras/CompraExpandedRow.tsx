@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Pencil, ChevronUp } from 'lucide-react';
+import { Pencil, ChevronUp, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate, fmtNum } from '@/lib/utils';
@@ -9,6 +9,9 @@ import { getNombreCompra } from '@/lib/productoNombres';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { useLotesPorReferencia } from '@/hooks/useLotesPorReferencia';
 import { LoteCell } from '@/components/lotes/LoteCell';
+import { useAuth } from '@/contexts/AuthContext';
+import { downloadOrdenCompraPdf, downloadOrdenCompraExcel } from '@/lib/ordenCompraPdf';
+import { toast } from 'sonner';
 
 interface Props {
   compra: any;
@@ -19,9 +22,29 @@ interface Props {
 
 export function CompraExpandedRow({ compra, colSpan, fmt, onCollapse }: Props) {
   const navigate = useNavigate();
+  const { empresa } = useAuth();
   const [lineas, setLineas] = useState<any[]>([]);
   const [pagos, setPagos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
+
+  // Descarga individual: antes solo existía el export masivo de la lista, que
+  // juntaba todas las órdenes en un mismo documento.
+  const exportar = async (tipo: 'pdf' | 'excel') => {
+    if (!empresa?.id) return;
+    setExporting(tipo);
+    try {
+      const ok = tipo === 'pdf'
+        ? await downloadOrdenCompraPdf(compra.id, empresa.id)
+        : await downloadOrdenCompraExcel(compra.id, empresa.id);
+      if (!ok) toast.error('No se encontró la orden de compra');
+    } catch (e: any) {
+      toast.error(e?.message ?? 'No se pudo generar el documento');
+    } finally {
+      setExporting(null);
+    }
+  };
+
 
   useEffect(() => {
     let cancelled = false;
@@ -65,9 +88,16 @@ export function CompraExpandedRow({ compra, colSpan, fmt, onCollapse }: Props) {
               <span className="text-muted-foreground text-xs">{compra.condicion_pago === 'credito' ? 'Crédito' : 'Contado'}</span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled={exporting !== null} onClick={() => exportar('pdf')}>
+                {exporting === 'pdf' ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />} PDF
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled={exporting !== null} onClick={() => exportar('excel')}>
+                {exporting === 'excel' ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileSpreadsheet className="h-3 w-3" />} Excel
+              </Button>
               <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => navigate(`/almacen/compras/${compra.id}`)}>
                 <Pencil className="h-3 w-3" /> Editar
               </Button>
+
               <button onClick={onCollapse} className="p-1 rounded hover:bg-accent text-muted-foreground">
                 <ChevronUp className="h-4 w-4" />
               </button>

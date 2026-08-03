@@ -1,7 +1,12 @@
-import { ArrowLeft, Save, Trash2, Ban, CheckCircle2, PackageCheck, AlertTriangle, DollarSign } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Save, Trash2, Ban, CheckCircle2, PackageCheck, AlertTriangle, DollarSign, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAuth } from '@/contexts/AuthContext';
+import { downloadOrdenCompraPdf, downloadOrdenCompraExcel } from '@/lib/ordenCompraPdf';
+import { toast } from 'sonner';
+
 
 interface Props {
   form: Record<string, any>;
@@ -37,15 +42,50 @@ export function CompraHeader(p: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {!p.isNew && p.form.id && <ExportarOrdenCompra compraId={p.form.id} />}
           {p.form.status === 'borrador' && !p.isNew && <button onClick={p.handleDelete} className="btn-odoo-icon text-destructive"><Trash2 className="h-4 w-4" /></button>}
           {p.isEditable && <button onClick={p.handleSave} disabled={!p.dirty && !p.isNew} className="btn-odoo-primary gap-1"><Save className="h-3.5 w-3.5" /> Guardar</button>}
         </div>
+
       </div>
       {!p.isNew && <StatusBar {...p} />}
       <ConfirmDialog {...p} />
     </>
   );
 }
+
+/** Descarga individual de la orden de compra (PDF B/N o Excel). */
+function ExportarOrdenCompra({ compraId }: { compraId: string }) {
+  const { empresa } = useAuth();
+  const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
+
+  const exportar = async (tipo: 'pdf' | 'excel') => {
+    if (!empresa?.id) return;
+    setExporting(tipo);
+    try {
+      const ok = tipo === 'pdf'
+        ? await downloadOrdenCompraPdf(compraId, empresa.id)
+        : await downloadOrdenCompraExcel(compraId, empresa.id);
+      if (!ok) toast.error('No se encontró la orden de compra');
+    } catch (e: any) {
+      toast.error(e?.message ?? 'No se pudo generar el documento');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  return (
+    <>
+      <button onClick={() => exportar('pdf')} disabled={exporting !== null} className="btn-odoo gap-1" title="Descargar orden de compra en PDF">
+        {exporting === 'pdf' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />} PDF
+      </button>
+      <button onClick={() => exportar('excel')} disabled={exporting !== null} className="btn-odoo gap-1" title="Descargar orden de compra en Excel">
+        {exporting === 'excel' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />} Excel
+      </button>
+    </>
+  );
+}
+
 
 function StatusBar(p: Props) {
   const { fmt } = useCurrency();

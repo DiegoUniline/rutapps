@@ -71,6 +71,44 @@ export function todayInTimezone(tz?: string | null): string {
   }
 }
 
+/** Minutos de desfase (UTC+X) que tiene `tz` en el instante `date`. */
+function tzOffsetMinutes(date: Date, tz: string): number {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+  const parts = Object.fromEntries(dtf.formatToParts(date).map(p => [p.type, p.value])) as Record<string, string>;
+  const asUTC = Date.UTC(
+    Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+    Number(parts.hour) % 24, Number(parts.minute), Number(parts.second),
+  );
+  return (asUTC - date.getTime()) / 60000;
+}
+
+/**
+ * Instante UTC (ISO) del inicio/fin de un día 'yyyy-mm-dd' en una zona horaria.
+ * Sirve para filtrar columnas timestamptz por "día local de la empresa".
+ */
+export function zonedDayRangeISO(ymd: string, tz?: string | null, endYmd?: string): { start: string; end: string } {
+  const zone = tz || 'America/Mexico_City';
+  const toInstant = (ymdStr: string, endOfDay: boolean): Date => {
+    const [y, m, d] = ymdStr.split('-').map(Number);
+    const naive = Date.UTC(y, m - 1, d, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0);
+    let guess = new Date(naive);
+    for (let i = 0; i < 2; i++) {
+      const off = tzOffsetMinutes(guess, zone);
+      guess = new Date(naive - off * 60000);
+    }
+    return guess;
+  };
+  try {
+    return { start: toInstant(ymd, false).toISOString(), end: toInstant(endYmd ?? ymd, true).toISOString() };
+  } catch {
+    return { start: `${ymd}T00:00:00Z`, end: `${endYmd ?? ymd}T23:59:59Z` };
+  }
+}
+
 /**
  * Suma días a una fecha 'yyyy-mm-dd' sin drift por zona horaria.
  * (Evita el bug de mezclar setDate local con toISOString UTC.)

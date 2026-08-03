@@ -20,6 +20,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useClienteOrdenRuta, swapOrdenRuta, useInvalidateOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
+import { tocaVisitaPorFrecuencia, etiquetaFrecuencia } from '@/lib/frecuenciaVisita';
+
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
@@ -73,6 +75,36 @@ export default function RutaClientes() {
     },
     staleTime: 30_000,
   });
+
+  // Última visita previa por cliente (40 días) para respetar la frecuencia
+  // quincenal/mensual. Si falla o está offline, el mapa queda vacío y el
+  // cliente se muestra (comportamiento anterior, nunca oculta de más).
+  const { data: visitasPrevias } = useQuery({
+    queryKey: ['ruta-visitas-previas', empresa?.id, todayStr],
+    enabled: !!empresa?.id,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const inicio = new Date(new Date(`${todayStr}T12:00:00`).getTime() - 40 * 86400000).toISOString();
+      const { data } = await supabase
+        .from('visitas')
+        .select('cliente_id, fecha')
+        .eq('empresa_id', empresa!.id)
+        .gte('fecha', inicio)
+        .lt('fecha', `${todayStr}T00:00:00`);
+      return data ?? [];
+    },
+  });
+
+  const ultimaVisitaPorCliente = useMemo(() => {
+    const map = new Map<string, string>();
+    (visitasPrevias ?? []).forEach((v: any) => {
+      if (!v.cliente_id || !v.fecha) return;
+      const prev = map.get(v.cliente_id);
+      if (!prev || v.fecha > prev) map.set(v.cliente_id, v.fecha);
+    });
+    return map;
+  }, [visitasPrevias]);
+
 
   // Realtime: invalida visitas cuando hay cambios (reemplaza refetchInterval 60s).
   useRealtimeInvalidate({ table: 'visitas', empresaId: empresa?.id, queryKeys: [['ruta-visitas-hoy', empresa?.id, todayStr]] });
@@ -225,6 +257,13 @@ export default function RutaClientes() {
     return true;
   });
 
+  // Frecuencia: un cliente quincenal/mensual solo entra a la lista de visitas
+  // cuando ya pasó su intervalo desde la última visita registrada. Antes solo
+  // se miraba `dia_visita`, por eso los quincenales salían cada 8 días.
+  const tocaHoy = useCallback((c: any) => (
+    tocaVisitaPorFrecuencia(c.frecuencia, ultimaVisitaPorCliente.get(c.id) ?? null, todayStr)
+  ), [ultimaVisitaPorCliente, todayStr]);
+
   const filtered = myClientes.filter((c: any) => {
     if (search) {
       const s = search.toLowerCase();
@@ -233,7 +272,7 @@ export default function RutaClientes() {
     }
     if (modo === 'visitas') {
       if (visited.has(c.id)) return false;
-      return clienteTieneDia(c, diaFiltro);
+      return clienteTieneDia(c, diaFiltro) && tocaHoy(c);
     }
     if (modo === 'visitados') {
       return visited.has(c.id);
@@ -253,8 +292,9 @@ export default function RutaClientes() {
   const visitadosCount = myClientes.filter((c: any) => visited.has(c.id)).length;
   const pendientesCount = myClientes.filter((c: any) => {
     if (visited.has(c.id)) return false;
-    return clienteTieneDia(c, diaFiltro);
+    return clienteTieneDia(c, diaFiltro) && tocaHoy(c);
   }).length;
+
   const clienteById = useMemo(() => new Map((clientes ?? []).map((c: any) => [c.id, c])), [clientes]);
   const paradasNavegablesCount = useMemo(() => {
     const clientesDelDia = myClientes.filter((c: any) => c.gps_lat && c.gps_lng && clienteTieneDia(c, diaFiltro)).length;
@@ -443,9 +483,9 @@ export default function RutaClientes() {
                       <MapPin className="h-2.5 w-2.5 shrink-0" />{c.direccion}{c.colonia ? `, ${c.colonia}` : ''}
                     </p>
                   )}
-                  {modo === 'todos' && c.dia_visita && c.dia_visita.length > 0 && (
+                  {modo === 'todos' && (c.dia_visita?.length > 0 || etiquetaFrecuencia(c.frecuencia)) && (
                     <div className="flex gap-0.5 mt-0.5 flex-wrap">
-                      {c.dia_visita.map((d: string) => (
+                      {(c.dia_visita ?? []).map((d: string) => (
                         <span key={d} className={cn(
                           "text-[9px] px-1 py-px rounded-full font-medium capitalize",
                           clienteTieneDia({ dia_visita: [d] }, diaHoy) ? "bg-primary/10 text-primary" : "bg-card border border-border text-muted-foreground"
@@ -453,8 +493,14 @@ export default function RutaClientes() {
                           {d.slice(0, 3)}
                         </span>
                       ))}
+                      {etiquetaFrecuencia(c.frecuencia) && (
+                        <span className="text-[9px] px-1 py-px rounded-full font-medium bg-card border border-border text-muted-foreground">
+                          {etiquetaFrecuencia(c.frecuencia)}
+                        </span>
+                      )}
                     </div>
                   )}
+
                 </div>
 
                 {modo !== 'visitados' && (
