@@ -15,11 +15,13 @@ export interface CompraLinea {
   _unidad_compra: string;
   _factor_conversion: number;
   _piezas_total: number;
-  productos?: { id: string; codigo: string; nombre: string; nombre_compra?: string | null; costo: number };
+  lote_id?: string | null;
+  _lote_codigo?: string | null;
+  productos?: { id: string; codigo: string; nombre: string; nombre_compra?: string | null; costo: number; maneja_lote?: boolean };
 }
 
 export function emptyLine(): Partial<CompraLinea> {
-  return { cantidad: 1, cantidad_recibida: 0, precio_unitario: 0, subtotal: 0, total: 0, _tiene_iva: false, _iva_pct: 16, _tiene_ieps: false, _ieps_pct: 0, _ieps_tipo: 'porcentaje', _unidad_compra: '', _factor_conversion: 1, _piezas_total: 1 };
+  return { cantidad: 1, cantidad_recibida: 0, precio_unitario: 0, subtotal: 0, total: 0, _tiene_iva: false, _iva_pct: 16, _tiene_ieps: false, _ieps_pct: 0, _ieps_tipo: 'porcentaje', _unidad_compra: '', _factor_conversion: 1, _piezas_total: 1, lote_id: null, _lote_codigo: null };
 }
 
 export function calcLineTotals(line: Partial<CompraLinea>) {
