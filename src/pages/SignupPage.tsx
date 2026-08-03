@@ -412,13 +412,13 @@ export default function SignupPage() {
     form.password === confirmPassword;
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center p-6 bg-card pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))]">
+    <div className="flex-1 min-h-0 h-full w-full overflow-y-auto overscroll-contain flex flex-col items-center justify-start md:justify-center p-4 sm:p-6 bg-card pt-[max(1rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
       <Seo
         title="Crear cuenta · Rutapp"
         description="Regístrate en Rutapp y prueba gratis 7 días el ERP de venta en ruta: inventario, cobranza, rutas optimizadas y facturación CFDI 4.0."
         path="/signup"
       />
-      <Card className="w-full max-w-3xl shadow-xl">
+      <Card className="w-full max-w-3xl shadow-xl my-auto">
         <CardHeader className="text-center">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="h-4 w-4" /> Volver al inicio
