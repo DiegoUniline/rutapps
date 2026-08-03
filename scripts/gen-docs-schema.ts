@@ -23,7 +23,7 @@ function parseSection(header: string, isView: boolean): Table[] {
   while (i < lines.length) {
     const l = lines[i];
     if (l.trim() === '}' && indentOf(l) === baseIndent) break;
-    const m = l.match(/^\s{8}(\w+): \{$/);
+    const m = l.match(/^\s{6}(\w+): \{$/);
     if (m) {
       const tbl: Table = { name: m[1], cols: [], rels: [], isView };
       // Row block
@@ -33,11 +33,11 @@ function parseSection(header: string, isView: boolean): Table[] {
       let inInsert = false;
       while (j < lines.length) {
         const t = lines[j];
-        if (t.match(/^\s{8}\}$/)) break;
-        if (t.match(/^\s{10}Row: \{$/)) { inRow = true; j++; continue; }
-        if (t.match(/^\s{10}Insert: \{$/)) { inInsert = true; j++; continue; }
-        if (t.match(/^\s{10}Relationships: \[$/)) { inRels = true; j++; continue; }
-        if (t.match(/^\s{10}(\}|\])$/)) { inRow = false; inRels = false; inInsert = false; j++; continue; }
+        if (t.match(/^\s{6}\}$/)) break;
+        if (t.match(/^\s{8}Row: \{$/)) { inRow = true; j++; continue; }
+        if (t.match(/^\s{8}Insert: \{$/)) { inInsert = true; j++; continue; }
+        if (t.match(/^\s{8}Relationships: \[$/)) { inRels = true; j++; continue; }
+        if (t.match(/^\s{8}(\}|\])$/)) { inRow = false; inRels = false; inInsert = false; j++; continue; }
         if (inRow) {
           const c = t.trim().match(/^([\w"]+)(\??): (.+)$/);
           if (c) {
