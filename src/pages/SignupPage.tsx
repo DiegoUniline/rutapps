@@ -126,7 +126,21 @@ export default function SignupPage() {
     setSearchParams(next, { replace: true });
   }
 
+  function handleSelectPeriod(period: BillingPeriod) {
+    setBillingPeriod(period);
+    try { localStorage.setItem(SELECTED_PERIOD_KEY, period); } catch { /* ignore */ }
+    const next = new URLSearchParams(searchParams);
+    next.set('periodo', period);
+    setSearchParams(next, { replace: true });
+  }
+
   const selectedPlan = plans.find(p => p.slug === selectedPlanSlug) || null;
+  const periodCfg = PERIOD_OPTIONS.find(o => o.value === billingPeriod) || PERIOD_OPTIONS[0];
+  const planMensualBase = Number(selectedPlan?.precio_base || 0);
+  const mensualConDescuento = planMensualBase * (1 - periodCfg.discount / 100);
+  const totalPorCobro = mensualConDescuento * periodCfg.months;
+  const fmtMXN = (n: number) => `$${Math.round(n).toLocaleString('es-MX')}`;
+
 
 
   const [sendingOtp, setSendingOtp] = useState(false);
