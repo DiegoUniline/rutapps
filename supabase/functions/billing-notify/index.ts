@@ -833,6 +833,7 @@ Deno.serve(async (req) => {
           }
           await notifyAdmins(supabase, waToken, {
             evento: "cobro_exitoso",
+            empresaId: profile.empresa_id,
             empresa: empresaNombre,
             clienteNombre: profile.nombre || "",
             clienteEmail: inv.customer_email || "",
@@ -856,6 +857,7 @@ Deno.serve(async (req) => {
           }
           await notifyAdmins(supabase, waToken, {
             evento: "cobro_fallido",
+            empresaId: profile.empresa_id,
             empresa: empresaNombre,
             clienteNombre: profile.nombre || "",
             clienteEmail: inv.customer_email || "",
