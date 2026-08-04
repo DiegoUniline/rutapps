@@ -18,7 +18,18 @@ Deno.serve(async (req) => {
     return { status: r.status, body: j };
   };
 
-  const { send, number } = payload;
+  const { send, number, exists } = payload;
+  if (exists) {
+    const r = await fetch(`${EVOLUTION_URL.replace(/\/$/, "")}/chat/whatsappNumbersExists/${instance}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: EVOLUTION_KEY },
+      body: JSON.stringify({ numbers: exists }),
+    });
+    return new Response(JSON.stringify({ status: r.status, body: await r.text() }, null, 2), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   if (send && number) {
     const r = await fetch(`${EVOLUTION_URL.replace(/\/$/, "")}/message/sendText/${instance}`, {
       method: "POST",
