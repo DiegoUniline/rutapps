@@ -5,6 +5,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { cn, fmtDate } from '@/lib/utils';
 import { Percent, DollarSign, FileText } from 'lucide-react';
 import { useAllListasPrecios } from '@/hooks/useData';
+import { useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
