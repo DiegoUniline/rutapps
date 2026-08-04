@@ -17,6 +17,7 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { TablePagination } from '@/components/TablePagination';
 import { StickyListToolbar } from '@/components/StickyListToolbar';
 import { ListPage, SCROLL_AREA } from '@/components/layout/ListPage';
+import { StatusCountCards } from '@/components/StatusCountCards';
 import { readStoredPageSizeFor, writeStoredPageSizeFor, type PageSizeOption } from '@/hooks/useTablePagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
@@ -379,6 +380,7 @@ export default function ProductosListPage() {
       <ListPage.Header title={<>Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /> <VideoHelpButton module="productos" /></>} />
 
       <ListPage.Toolbar>
+      <StatusCountCards tabla="productos" />
       <div className="flex border-b border-border gap-0 overflow-x-auto -mt-1">
         {[
           { key: 'activo', label: 'Activos' },
