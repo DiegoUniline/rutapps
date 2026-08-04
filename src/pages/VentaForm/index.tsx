@@ -19,6 +19,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { VentaCheckoutModal } from '@/components/venta/VentaCheckoutModal';
 import { LoteVentaModal } from '@/components/lotes/LoteVentaModal';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { VentaLineaLotesDialog } from '@/components/lotes/VentaLineaLotesDialog';
 import { toast } from 'sonner';
 import type { StatusVenta } from '@/types';
@@ -49,6 +50,7 @@ export default function VentaFormPage() {
   const [checkoutSaving, setCheckoutSaving] = useState(false);
   const [showDevolucion, setShowDevolucion] = useState(false);
   const h = useVentaForm();
+  const manejaLotesEmpresa = useManejaLotes();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading,
     profile, user, empresa, navigate, queryClient,
@@ -438,7 +440,7 @@ export default function VentaFormPage() {
       <PinDialog />
 
       {/* Línea ya guardada → asignación de uno o varios lotes */}
-      {h.loteParaLinea && empresa?.id && form.id && (lineas[h.loteParaLinea.idx] as any)?.id && (
+      {manejaLotesEmpresa && h.loteParaLinea && empresa?.id && form.id && (lineas[h.loteParaLinea.idx] as any)?.id && (
         <VentaLineaLotesDialog
           open
           empresaId={empresa.id}
@@ -462,7 +464,7 @@ export default function VentaFormPage() {
       )}
 
       {/* Línea sin guardar (venta directa) → selector simple FEFO */}
-      {h.loteParaLinea && empresa?.id && form.almacen_id && !(lineas[h.loteParaLinea.idx] as any)?.id && (
+      {manejaLotesEmpresa && h.loteParaLinea && empresa?.id && form.almacen_id && !(lineas[h.loteParaLinea.idx] as any)?.id && (
         <LoteVentaModal
           empresaId={empresa.id}
           almacenId={form.almacen_id as string}

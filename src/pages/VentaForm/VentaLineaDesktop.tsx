@@ -4,6 +4,7 @@ import { formatCurrency } from '@/lib/currency';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { ListaPrecioPicker, type ListaPrecioSelection } from '@/components/venta/ListaPrecioPicker';
 import { cn } from '@/lib/utils';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
 import type { PromoResult } from '@/hooks/usePromociones';
@@ -38,6 +39,7 @@ interface Props {
 
 export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols, onPickLote }: Props) {
   const { fmt } = useCurrency();
+  const manejaLotesEmpresa = useManejaLotes();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const showCol = (k: string) => !cols || cols[k] !== false;
@@ -351,7 +353,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       {showCol('lote') && (
       <td className="py-1 px-2">
         {isEmpty ? '' : (() => {
-          const manejaLote = !!(prod as any)?.maneja_lote;
+          const manejaLote = manejaLotesEmpresa && !!(prod as any)?.maneja_lote;
           const codigo = (l as any).lote_codigo;
           if (!manejaLote && !codigo) return <span className="text-muted-foreground text-[11px]">—</span>;
           if (!onPickLote) {
