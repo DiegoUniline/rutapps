@@ -138,6 +138,33 @@ async function resolveOrCreate(
   return created.id;
 }
 
+// ─── Resolver de usuario (vendedor/cobrador) ────────────────────
+// clientes.vendedor_id y clientes.cobrador_id apuntan a public.profiles,
+// por eso NO se pueden crear en las tablas vendedores/cobradores.
+async function resolveProfile(
+  nombre: string | number | undefined | null,
+  empresaId: string,
+  cache: Map<string, string | null>,
+): Promise<string | null> {
+  if (nombre == null) return null;
+  const nombreStr = String(nombre).trim();
+  if (!nombreStr) return null;
+  const key = nombreStr.toLowerCase();
+  if (cache.has(key)) return cache.get(key)!;
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, nombre')
+    .eq('empresa_id', empresaId)
+    .ilike('nombre', nombreStr)
+    .limit(1);
+
+  const id = data && data.length > 0 ? data[0].id : null;
+  cache.set(key, id);
+  return id;
+}
+
+
 // ─── Map header names to keys ───────────────────────────────────
 function mapHeaders(row: Record<string, any>, columns: ImportColumn[]): Record<string, any> {
   const mapped: Record<string, any> = {};
@@ -253,6 +280,8 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
 export async function importClients(rows: Record<string, any>[], empresaId: string): Promise<ImportResult> {
   const result: ImportResult = { total: rows.length, created: 0, updated: 0, errors: [] };
   const cache = new Map<string, Map<string, string>>();
+  const profileCache = new Map<string, string | null>();
+
 
   for (let i = 0; i < rows.length; i++) {
     const raw = mapHeaders(rows[i], CLIENT_IMPORT_COLUMNS);
@@ -266,8 +295,8 @@ export async function importClients(rows: Record<string, any>[], empresaId: stri
 
       // Resolve catalogs
       const zona_id = await resolveOrCreate('zonas', raw.zona, empresaId, cache);
-      const vendedor_id = await resolveOrCreate('vendedores', raw.vendedor, empresaId, cache);
-      const cobrador_id = await resolveOrCreate('cobradores', raw.cobrador, empresaId, cache);
+      const vendedor_id = await resolveProfile(raw.vendedor, empresaId, profileCache);
+      const cobrador_id = await resolveProfile(raw.cobrador, empresaId, profileCache);
       const lista_id = await resolveOrCreate('listas', raw.lista, empresaId, cache);
 
       const clientData: any = {
