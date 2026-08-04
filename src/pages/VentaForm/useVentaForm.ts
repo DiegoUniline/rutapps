@@ -805,7 +805,13 @@ export function useVentaForm() {
         };
       }
 
-      const payload = { ...form, ...headerTotals, vendedor_id: vendedorId };
+      const payload = {
+        ...form,
+        ...headerTotals,
+        vendedor_id: vendedorId,
+        // "Registrado por": se fija al crear y nunca se sobrescribe después.
+        ...(isNew ? { creado_por: profile?.id ?? null } : {}),
+      };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
       const linePromises: Promise<any>[] = [];
