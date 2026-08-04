@@ -713,7 +713,7 @@ export function useDashboardHoy(vendedorId?: string) {
       const visitasRows = (vRes.data ?? []) as any[];
       const entregasRows = (eRes.data ?? []) as any[];
       const ventasRows = (sRes.data ?? []) as any[];
-      const cobrosRows = (cRes.data ?? []) as any[];
+      const cobrosRows = await filtrarCobrosDeVentasCanceladas(((cRes.data ?? []) as any[]));
       const gastosRows = (gRes.data ?? []) as any[];
 
       const vendedoresActivos = new Set(visitasRows.map(v => v.user_id).filter(Boolean));
