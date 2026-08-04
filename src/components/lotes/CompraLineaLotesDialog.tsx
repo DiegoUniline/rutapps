@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Boxes, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -29,6 +30,12 @@ interface Props {
  * Cada asignación carga el stock al almacén y al lote mediante trigger en base de datos.
  */
 export function CompraLineaLotesDialog({ open, empresaId, compraId, lineaId, almacenId, producto, piezasTotal, userId, onClose, onChanged }: Props) {
+  const qc = useQueryClient();
+  /** Refresca las vistas que dependen del stock por lote (Lotes, inventario, kardex). */
+  const invalidarStock = useCallback(() => {
+    ['stock-lotes', 'lotes', 'lotes-almacenes', 'stock_almacen', 'inventario', 'productos', 'kardex-ubicacion', 'apartado-disponible']
+      .forEach(k => qc.invalidateQueries({ queryKey: [k] }));
+  }, [qc]);
   const [lotes, setLotes] = useState<LoteOpt[]>([]);
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -84,6 +91,7 @@ export function CompraLineaLotesDialog({ open, empresaId, compraId, lineaId, alm
       toast.success(`${qty} pieza(s) loteadas y cargadas a stock`);
       setCodigo(''); setCaducidad(''); setFabricacion(''); setLoteId(''); setMode('existente');
       await load();
+      invalidarStock();
       onChanged();
     } catch (err: any) {
       toast.error(err.message || 'No se pudo lotear');
@@ -97,6 +105,7 @@ export function CompraLineaLotesDialog({ open, empresaId, compraId, lineaId, alm
       if (error) throw error;
       toast.success('Loteo revertido (stock descontado)');
       await load();
+      invalidarStock();
       onChanged();
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
