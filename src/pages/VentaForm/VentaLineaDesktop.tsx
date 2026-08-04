@@ -39,6 +39,7 @@ interface Props {
 
 export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols, onPickLote }: Props) {
   const { fmt } = useCurrency();
+  const manejaLotesEmpresa = useManejaLotes();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const showCol = (k: string) => !cols || cols[k] !== false;
