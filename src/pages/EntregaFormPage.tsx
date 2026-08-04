@@ -5,6 +5,7 @@ import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText,
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { Badge } from '@/components/ui/badge';
 import { LoteSurtidoModal } from '@/components/lotes/LoteSurtidoModal';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { LotesAsignadosModal } from '@/components/lotes/LotesAsignadosModal';
 import { Button } from '@/components/ui/button';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -96,7 +97,8 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const allLinesDone = lineas.length > 0 && lineas.every((l: any) => l.hecho);
 
   // Producto que maneja lote → al surtir se pide de qué lotes (FEFO).
-  const esProductoLote = (pid: string) => !!(productosList?.find((p: any) => p.id === pid) as any)?.maneja_lote;
+  const manejaLotes = useManejaLotes();
+  const esProductoLote = (pid: string) => manejaLotes && !!(productosList?.find((p: any) => p.id === pid) as any)?.maneja_lote;
   const getLineaAlmacenOrigenId = (linea: any) => (linea?.almacen_origen_id || form.almacen_id || '') as string;
   const [surtirLoteFor, setSurtirLoteFor] = useState<{ idx: number; producto: { id: string; nombre: string }; cantidad: number } | null>(null);
   const [verLotesFor, setVerLotesFor] = useState<{ producto: { id: string; nombre: string } } | null>(null);
