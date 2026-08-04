@@ -63,7 +63,7 @@ async function resolveWhatsAppNumber(instanceName: string, num: string): Promise
   const variants = phoneVariants(num);
   if (variants.length === 1) return num;
   try {
-    const r = await evo(`/chat/whatsappNumbersExists/${instanceName}`, {
+    const r = await evo(`/chat/whatsappNumbers/${instanceName}`, {
       method: "POST",
       body: JSON.stringify({ numbers: variants }),
     });

@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
   const { send, number, exists } = payload;
   if (exists) {
-    const r = await fetch(`${EVOLUTION_URL.replace(/\/$/, "")}/chat/whatsappNumbersExists/${instance}`, {
+    const r = await fetch(`${EVOLUTION_URL.replace(/\/$/, "")}/chat/whatsappNumbers/${instance}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: EVOLUTION_KEY },
       body: JSON.stringify({ numbers: exists }),
