@@ -96,3 +96,6 @@ verify_jwt = false
 
 [functions.cotizacion-publica]
 verify_jwt = false
+
+[functions.wa-evo-debug]
+verify_jwt = false
