@@ -77,13 +77,39 @@ export function useDashboardVentaLineasIS(range: DateRange, vendedorId?: string)
   });
 }
 
+/** Quita los cobros cuyas aplicaciones apuntan únicamente a ventas canceladas. */
+async function filtrarCobrosDeVentasCanceladas<T extends { id: string }>(cobros: T[]): Promise<T[]> {
+  if (!cobros.length) return cobros;
+  const ids = cobros.map((c) => c.id);
+  const apps: any[] = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const { data } = await supabase
+      .from('cobro_aplicaciones')
+      .select('cobro_id, ventas!inner(status)')
+      .in('cobro_id', chunk);
+    apps.push(...((data ?? []) as any[]));
+  }
+  if (!apps.length) return cobros;
+  const total = new Map<string, number>();
+  const canceladas = new Map<string, number>();
+  apps.forEach((a: any) => {
+    total.set(a.cobro_id, (total.get(a.cobro_id) ?? 0) + 1);
+    if (a.ventas?.status === 'cancelado') canceladas.set(a.cobro_id, (canceladas.get(a.cobro_id) ?? 0) + 1);
+  });
+  return cobros.filter((c) => {
+    const t = total.get(c.id) ?? 0;
+    return t === 0 || (canceladas.get(c.id) ?? 0) < t;
+  });
+}
+
 export function useDashboardCobros(range: DateRange, vendedorId?: string) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['dashboard-cobros', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      return fetchAllPages((from, to) => {
+      const rows = await fetchAllPages((from, to) => {
         const q = supabase
           .from('cobros')
           .select('id, fecha, monto, metodo_pago, cliente_id')
@@ -94,9 +120,11 @@ export function useDashboardCobros(range: DateRange, vendedorId?: string) {
           .range(from, to);
         return q;
       });
+      return filtrarCobrosDeVentasCanceladas(rows as any[]);
     },
   });
 }
+
 
 export function useDashboardCompras(range: DateRange) {
   const { empresa } = useAuth();
@@ -685,7 +713,7 @@ export function useDashboardHoy(vendedorId?: string) {
       const visitasRows = (vRes.data ?? []) as any[];
       const entregasRows = (eRes.data ?? []) as any[];
       const ventasRows = (sRes.data ?? []) as any[];
-      const cobrosRows = (cRes.data ?? []) as any[];
+      const cobrosRows = await filtrarCobrosDeVentasCanceladas(((cRes.data ?? []) as any[]));
       const gastosRows = (gRes.data ?? []) as any[];
 
       const vendedoresActivos = new Set(visitasRows.map(v => v.user_id).filter(Boolean));
