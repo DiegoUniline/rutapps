@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
 
 export interface LoteRef { codigo: string; fecha_caducidad: string | null; cantidad: number; }
 
@@ -10,9 +11,10 @@ export interface LoteRef { codigo: string; fecha_caducidad: string | null; canti
  * producto. Devuelve {} si el producto no maneja lote / no hay lotes.
  */
 export function useLotesPorReferencia(referenciaId?: string, referenciaTipos: string[] = []) {
+  const manejaLotes = useManejaLotes();
   return useQuery({
     queryKey: ['lotes-por-referencia', referenciaId, referenciaTipos.join(',')],
-    enabled: !!referenciaId && referenciaTipos.length > 0,
+    enabled: manejaLotes && !!referenciaId && referenciaTipos.length > 0,
     staleTime: 30_000,
     queryFn: async (): Promise<Record<string, LoteRef[]>> => {
       const { data: mvs } = await (supabase.from as any)('movimientos_inventario')

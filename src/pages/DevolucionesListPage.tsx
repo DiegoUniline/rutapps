@@ -102,7 +102,7 @@ export default function DevolucionesListPage() {
   // Lote con el que reingresó cada producto devuelto (FEFO-in), por devolución+producto.
   const { data: loteMapDev = {} } = useQuery({
     queryKey: ['devoluciones-lotes', empresa?.id],
-    enabled: !!empresa?.id,
+    enabled: manejaLotes && !!empresa?.id,
     queryFn: async () => {
       const { data: mvs } = await (supabase as any).from('movimientos_inventario')
         .select('referencia_id, producto_id, lote_id')
