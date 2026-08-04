@@ -295,8 +295,8 @@ export async function importClients(rows: Record<string, any>[], empresaId: stri
 
       // Resolve catalogs
       const zona_id = await resolveOrCreate('zonas', raw.zona, empresaId, cache);
-      const vendedor_id = await resolveOrCreate('vendedores', raw.vendedor, empresaId, cache);
-      const cobrador_id = await resolveOrCreate('cobradores', raw.cobrador, empresaId, cache);
+      const vendedor_id = await resolveProfile(raw.vendedor, empresaId, profileCache);
+      const cobrador_id = await resolveProfile(raw.cobrador, empresaId, profileCache);
       const lista_id = await resolveOrCreate('listas', raw.lista, empresaId, cache);
 
       const clientData: any = {
