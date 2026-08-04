@@ -256,11 +256,3 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
     </div>
   );
 }
-      <div className="space-y-3">
-        <div><label className="label-odoo label-required">Almacén</label>{renderAlmacen()}</div>
-        {renderDescuentoExtra()}
-        {renderSaldo()}
-      </div>
-    </div>
-  );
-}
