@@ -10,6 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
+import { Navigate } from 'react-router-dom';
 
 interface AlmacenStock { almacen_id: string; nombre: string; tipo: string; cantidad: number; }
 
@@ -38,6 +40,7 @@ interface EditState {
 const emptyEdit: EditState = { producto_id: '', codigo: '', fecha_caducidad: '', fecha_fabricacion: '', costo: '', notas: '' };
 
 export default function LotesPage() {
+  const manejaLotes = useManejaLotes();
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
