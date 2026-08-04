@@ -360,5 +360,11 @@ export async function importClients(rows: Record<string, any>[], empresaId: stri
     }
   }
 
+  if (usuariosNoEncontrados.size > 0) {
+    result.warnings = [
+      `Estos vendedores/cobradores no existen como usuarios y los clientes se importaron sin asignar: ${[...usuariosNoEncontrados].join(', ')}. Créalos en Usuarios y reasígnalos.`,
+    ];
+  }
+
   return result;
 }
