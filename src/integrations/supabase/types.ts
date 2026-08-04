@@ -8351,6 +8351,7 @@ export type Database = {
           comision_volumen_pago_id: string | null
           concepto: string | null
           condicion_pago: Database["public"]["Enums"]["condicion_pago"]
+          creado_por: string | null
           created_at: string
           descuento_extra: number
           descuento_extra_motivo: string | null
@@ -8391,6 +8392,7 @@ export type Database = {
           comision_volumen_pago_id?: string | null
           concepto?: string | null
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
+          creado_por?: string | null
           created_at?: string
           descuento_extra?: number
           descuento_extra_motivo?: string | null
@@ -8431,6 +8433,7 @@ export type Database = {
           comision_volumen_pago_id?: string | null
           concepto?: string | null
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
+          creado_por?: string | null
           created_at?: string
           descuento_extra?: number
           descuento_extra_motivo?: string | null
@@ -8482,6 +8485,13 @@ export type Database = {
             columns: ["comision_volumen_pago_id"]
             isOneToOne: false
             referencedRelation: "pago_comisiones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
