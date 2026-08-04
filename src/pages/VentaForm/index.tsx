@@ -19,6 +19,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { VentaCheckoutModal } from '@/components/venta/VentaCheckoutModal';
 import { LoteVentaModal } from '@/components/lotes/LoteVentaModal';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { VentaLineaLotesDialog } from '@/components/lotes/VentaLineaLotesDialog';
 import { toast } from 'sonner';
 import type { StatusVenta } from '@/types';
@@ -49,6 +50,7 @@ export default function VentaFormPage() {
   const [checkoutSaving, setCheckoutSaving] = useState(false);
   const [showDevolucion, setShowDevolucion] = useState(false);
   const h = useVentaForm();
+  const manejaLotesEmpresa = useManejaLotes();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading,
     profile, user, empresa, navigate, queryClient,
