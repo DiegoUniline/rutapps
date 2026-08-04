@@ -4,7 +4,8 @@ const EVOLUTION_URL = Deno.env.get("EVOLUTION_API_URL") ?? "";
 const EVOLUTION_KEY = Deno.env.get("EVOLUTION_API_KEY") ?? "";
 
 Deno.serve(async (req) => {
-  const { instance } = await req.json().catch(() => ({ instance: "" }));
+  const payload: any = await req.json().catch(() => ({}));
+  const instance = payload.instance;
   if (!instance) return new Response(JSON.stringify({ error: "instance requerido" }), { status: 400 });
 
   const call = async (path: string) => {
@@ -17,7 +18,7 @@ Deno.serve(async (req) => {
     return { status: r.status, body: j };
   };
 
-  const { send, number } = await req.clone().json().catch(() => ({} as any));
+  const { send, number } = payload;
   if (send && number) {
     const r = await fetch(`${EVOLUTION_URL.replace(/\/$/, "")}/message/sendText/${instance}`, {
       method: "POST",
