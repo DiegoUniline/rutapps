@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { Navigate } from 'react-router-dom';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 interface AlmacenStock { almacen_id: string; nombre: string; tipo: string; cantidad: number; }
 
@@ -81,13 +82,12 @@ export default function LotesPage() {
     queryKey: ['lotes', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await (supabase.from as any)('lotes')
+      return fetchAllPages<LoteRow>((from, to) => (supabase.from as any)('lotes')
         .select('id, producto_id, codigo, fecha_caducidad, fecha_fabricacion, costo, notas, activo, productos(nombre, codigo)')
         .eq('empresa_id', empresa!.id)
         .eq('activo', true)
-        .order('fecha_caducidad', { ascending: true, nullsFirst: false });
-      if (error) throw error;
-      return (data ?? []) as LoteRow[];
+        .order('fecha_caducidad', { ascending: true, nullsFirst: false })
+        .range(from, to));
     },
   });
 
@@ -111,14 +111,16 @@ export default function LotesPage() {
     queryKey: ['stock-lotes', empresa?.id, almacenesMap?.size ?? 0],
     enabled: !!empresa?.id && !!almacenesMap,
     queryFn: async () => {
-      const { data, error } = await (supabase.from as any)('stock_lotes')
-        .select('lote_id, almacen_id, cantidad')
-        .eq('empresa_id', empresa!.id);
-      if (error) throw error;
+      const data = await fetchAllPages<{ lote_id: string; almacen_id: string; cantidad: number }>((from, to) =>
+        (supabase.from as any)('stock_lotes')
+          .select('lote_id, almacen_id, cantidad')
+          .eq('empresa_id', empresa!.id)
+          .range(from, to),
+      );
       const total = new Map<string, number>();
       const detalle = new Map<string, AlmacenStock[]>();
       const rows: { lote_id: string; almacen_id: string; cantidad: number }[] = [];
-      (data ?? []).forEach((r: any) => {
+      data.forEach(r => {
         const q = Number(r.cantidad ?? 0);
         total.set(r.lote_id, (total.get(r.lote_id) ?? 0) + q);
         if (q !== 0) {
