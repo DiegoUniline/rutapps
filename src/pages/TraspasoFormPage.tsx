@@ -21,6 +21,7 @@ import { usePinAuth } from '@/hooks/usePinAuth';
 import { confirmDialog as confirmAsync } from '@/lib/confirm';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { TraspasoLineaLotesDialog } from '@/components/lotes/TraspasoLineaLotesDialog';
+import { Button } from '@/components/ui/button';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
