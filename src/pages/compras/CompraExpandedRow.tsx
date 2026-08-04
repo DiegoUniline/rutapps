@@ -71,6 +71,7 @@ export function CompraExpandedRow({ compra, colSpan, fmt, onCollapse }: Props) {
     return () => { cancelled = true; };
   }, [compra.id]);
 
+  const manejaLotes = useManejaLotes();
   const { data: lotesMap } = useLotesPorReferencia(compra.id, ['compra']);
   const totalPagado = pagos.reduce((s, p) => s + (p.monto ?? 0), 0);
 

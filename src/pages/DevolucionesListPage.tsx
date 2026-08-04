@@ -1,6 +1,7 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { RotateCcw, Filter, X, Search, Settings2 } from 'lucide-react';
@@ -23,6 +24,7 @@ const ACCIONES = ['reposicion','nota_credito','descuento_venta','devolucion_dine
 export default function DevolucionesListPage() {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
+  const manejaLotes = useManejaLotes();
   const navigate = useNavigate();
   const { hasPermiso } = usePermisos();
   const canConfig = hasPermiso('ventas.devoluciones', 'editar');

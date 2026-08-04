@@ -40,6 +40,7 @@ export function TraspasoExpandedRow({ traspaso, colSpan, origenLabel, destinoLab
     return () => { cancelled = true; };
   }, [traspaso.id]);
 
+  const manejaLotes = useManejaLotes();
   const { data: lotesMap } = useLotesPorReferencia(traspaso.id, ['traspaso']);
   const totalCant = lineas.reduce((s, l) => s + (l.cantidad ?? 0), 0);
 

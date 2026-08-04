@@ -56,6 +56,7 @@ export default function MermasPage() {
 
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const { data: detalle } = useMerma(detalleId ?? undefined);
+  const manejaLotes = useManejaLotes();
   const { data: lotesMerma } = useLotesPorReferencia(detalleId ?? undefined, ['merma_lote']);
 
   const totalCosto = useMemo(() => lineas.reduce((s, l) => s + l.cantidad * l.costo_unitario, 0), [lineas]);
