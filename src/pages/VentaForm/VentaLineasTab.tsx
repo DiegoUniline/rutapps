@@ -125,7 +125,7 @@ export function VentaLineasTab(props: Props) {
               {readOnly && (
                 <div className="flex justify-end">
                   <ColumnVisibilityMenu
-                    columns={getVentaLineasColumns(showDesglose)}
+                    columns={getVentaLineasColumns(showDesglose).filter(c => manejaLotes || c.key !== 'lote')}
                     visible={cols}
                     onToggle={toggleColumn}
                     groupOrder={showDesglose ? undefined : VENTA_LINEAS_GROUP_ORDER}
