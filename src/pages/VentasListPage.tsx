@@ -275,8 +275,16 @@ export default function VentasListPage() {
       } catch (e: any) {
         toast.error(`Algunas entregas no se pudieron revertir: ${e.message}`);
       }
-      // 2) Desligar pagos aplicados (los cobros quedan como saldo a favor del cliente)
+      // 2) Desligar pagos aplicados y cancelar cobros huérfanos
+      const { data: apps } = await supabase.from('cobro_aplicaciones').select('cobro_id').in('venta_id', ids);
+      const cobroIds = [...new Set((apps ?? []).map(a => a.cobro_id))];
       await supabase.from('cobro_aplicaciones').delete().in('venta_id', ids);
+      for (const cid of cobroIds) {
+        const { data: remaining } = await supabase.from('cobro_aplicaciones').select('id').eq('cobro_id', cid).limit(1);
+        if (!remaining || remaining.length === 0) {
+          await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cid);
+        }
+      }
       // 3) Marcar ventas como canceladas
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' } as any).in('id', ids);
       if (error) throw error;
@@ -318,8 +326,16 @@ export default function VentasListPage() {
           } catch (e: any) {
             toast.error(`Algunas entregas no se pudieron revertir: ${e.message}`);
           }
-          // 2) Desligar pagos aplicados
+          // 2) Desligar pagos aplicados y cancelar cobros huérfanos
+          const { data: apps } = await supabase.from('cobro_aplicaciones').select('cobro_id').eq('venta_id', id);
+          const cobroIds = [...new Set((apps ?? []).map(a => a.cobro_id))];
           await supabase.from('cobro_aplicaciones').delete().eq('venta_id', id);
+          for (const cid of cobroIds) {
+            const { data: remaining } = await supabase.from('cobro_aplicaciones').select('id').eq('cobro_id', cid).limit(1);
+            if (!remaining || remaining.length === 0) {
+              await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cid);
+            }
+          }
           // 3) Marcar venta como cancelada
           const { error } = await supabase.from('ventas').update({ status: 'cancelado' } as any).eq('id', id);
           if (error) throw error;
