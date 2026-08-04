@@ -138,6 +138,33 @@ async function resolveOrCreate(
   return created.id;
 }
 
+// ─── Resolver de usuario (vendedor/cobrador) ────────────────────
+// clientes.vendedor_id y clientes.cobrador_id apuntan a public.profiles,
+// por eso NO se pueden crear en las tablas vendedores/cobradores.
+async function resolveProfile(
+  nombre: string | number | undefined | null,
+  empresaId: string,
+  cache: Map<string, string | null>,
+): Promise<string | null> {
+  if (nombre == null) return null;
+  const nombreStr = String(nombre).trim();
+  if (!nombreStr) return null;
+  const key = nombreStr.toLowerCase();
+  if (cache.has(key)) return cache.get(key)!;
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, nombre')
+    .eq('empresa_id', empresaId)
+    .ilike('nombre', nombreStr)
+    .limit(1);
+
+  const id = data && data.length > 0 ? data[0].id : null;
+  cache.set(key, id);
+  return id;
+}
+
+
 // ─── Map header names to keys ───────────────────────────────────
 function mapHeaders(row: Record<string, any>, columns: ImportColumn[]): Record<string, any> {
   const mapped: Record<string, any> = {};
