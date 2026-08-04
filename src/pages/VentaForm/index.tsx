@@ -438,7 +438,7 @@ export default function VentaFormPage() {
       <PinDialog />
 
       {/* Línea ya guardada → asignación de uno o varios lotes */}
-      {h.loteParaLinea && empresa?.id && form.id && (lineas[h.loteParaLinea.idx] as any)?.id && (
+      {manejaLotesEmpresa && h.loteParaLinea && empresa?.id && form.id && (lineas[h.loteParaLinea.idx] as any)?.id && (
         <VentaLineaLotesDialog
           open
           empresaId={empresa.id}
@@ -462,7 +462,7 @@ export default function VentaFormPage() {
       )}
 
       {/* Línea sin guardar (venta directa) → selector simple FEFO */}
-      {h.loteParaLinea && empresa?.id && form.almacen_id && !(lineas[h.loteParaLinea.idx] as any)?.id && (
+      {manejaLotesEmpresa && h.loteParaLinea && empresa?.id && form.almacen_id && !(lineas[h.loteParaLinea.idx] as any)?.id && (
         <LoteVentaModal
           empresaId={empresa.id}
           almacenId={form.almacen_id as string}
