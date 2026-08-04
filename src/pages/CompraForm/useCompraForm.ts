@@ -196,8 +196,9 @@ export function useCompraForm() {
     // Los productos por lote se reciben uno por uno (para capturar el lote).
     // "Recibir todo" solo procesa los que NO manejan lote.
     // Las líneas que ya traen lote asignado se pueden recibir automáticamente.
-    const conLote = pendientes.filter(l => (l as any).productos?.maneja_lote && !l.lote_id);
-    const sinLote = pendientes.filter(l => !(l as any).productos?.maneja_lote || l.lote_id);
+    const manejaLotesEmpresa = !!(empresa as any)?.maneja_lotes;
+    const conLote = pendientes.filter(l => manejaLotesEmpresa && (l as any).productos?.maneja_lote && !l.lote_id);
+    const sinLote = pendientes.filter(l => !manejaLotesEmpresa || !(l as any).productos?.maneja_lote || l.lote_id);
     if (!sinLote.length) {
       toast.info('Todos los pendientes manejan lote: recíbelos uno por uno con el botón "Recibir" de cada línea para asignar su lote.');
       return;
