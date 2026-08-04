@@ -1,0 +1,1 @@
+update public.whatsapp_config set evolution_phone_number = '5214521424290' where empresa_id = '0c28d110-100c-47e4-a8ea-3d6a97ad2861';
