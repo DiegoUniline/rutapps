@@ -91,6 +91,7 @@ export function CompraLineaLotesDialog({ open, empresaId, compraId, lineaId, alm
       toast.success(`${qty} pieza(s) loteadas y cargadas a stock`);
       setCodigo(''); setCaducidad(''); setFabricacion(''); setLoteId(''); setMode('existente');
       await load();
+      invalidarStock();
       onChanged();
     } catch (err: any) {
       toast.error(err.message || 'No se pudo lotear');
@@ -104,6 +105,7 @@ export function CompraLineaLotesDialog({ open, empresaId, compraId, lineaId, alm
       if (error) throw error;
       toast.success('Loteo revertido (stock descontado)');
       await load();
+      invalidarStock();
       onChanged();
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
