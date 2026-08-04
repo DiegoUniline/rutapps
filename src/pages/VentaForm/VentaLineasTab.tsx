@@ -19,6 +19,7 @@ import {
 
 import { useAuth } from '@/contexts/AuthContext';
 import { desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
 
 interface Props {
   lineas: Partial<VentaLinea>[];
@@ -60,13 +61,14 @@ export function VentaLineasTab(props: Props) {
   // muestra siempre (también en pedidos cerrados) para poder lotear desde aquí.
   // La columna Lote se muestra si algún producto maneja lote o si la línea ya
   // trae lote guardado (evita depender del catálogo en caché tras activar lotes).
-  const hayLotes = (props.lineas ?? []).some(l =>
+  const manejaLotes = useManejaLotes();
+  const hayLotes = manejaLotes && ((props.lineas ?? []).some(l =>
     !!(props.productosList ?? []).find((p: any) => p.id === l.producto_id)?.maneja_lote
     || !!(l as any).lote_id || !!(l as any).lote_codigo,
   ) || (!!(empresa as any)?.maneja_lotes && (props.lineas ?? []).some(l => {
     const p: any = (props.productosList ?? []).find((x: any) => x.id === l.producto_id);
     return !!l.producto_id && (!p || p.maneja_lote === undefined);
-  }));
+  })));
   const effectiveColsBase = readOnly
     ? (showDesglose ? { ...cols, ...NORMAL_COLS_OFF, ...VENTA_LINEAS_NON_FINAL_OFF } : { ...cols, ...VENTA_LINEAS_DESGLOSE_OFF })
     : { ...VENTA_LINEAS_DEFAULT_VISIBILITY, ...VENTA_LINEAS_DESGLOSE_OFF };
@@ -123,7 +125,7 @@ export function VentaLineasTab(props: Props) {
               {readOnly && (
                 <div className="flex justify-end">
                   <ColumnVisibilityMenu
-                    columns={getVentaLineasColumns(showDesglose)}
+                    columns={getVentaLineasColumns(showDesglose).filter(c => manejaLotes || c.key !== 'lote')}
                     visible={cols}
                     onToggle={toggleColumn}
                     groupOrder={showDesglose ? undefined : VENTA_LINEAS_GROUP_ORDER}

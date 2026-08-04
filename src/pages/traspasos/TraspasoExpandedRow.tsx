@@ -8,6 +8,7 @@ import { fmtDate, fmtNum } from '@/lib/utils';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { useLotesPorReferencia } from '@/hooks/useLotesPorReferencia';
 import { LoteCell } from '@/components/lotes/LoteCell';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
 
 interface Props {
   traspaso: any;
@@ -39,6 +40,7 @@ export function TraspasoExpandedRow({ traspaso, colSpan, origenLabel, destinoLab
     return () => { cancelled = true; };
   }, [traspaso.id]);
 
+  const manejaLotes = useManejaLotes();
   const { data: lotesMap } = useLotesPorReferencia(traspaso.id, ['traspaso']);
   const totalCant = lineas.reduce((s, l) => s + (l.cantidad ?? 0), 0);
 
@@ -75,7 +77,7 @@ export function TraspasoExpandedRow({ traspaso, colSpan, origenLabel, destinoLab
                   <tr className="border-b border-border text-muted-foreground">
                     <th className="text-left py-1 font-medium">Código</th>
                     <th className="text-left py-1 font-medium">Producto</th>
-                    <th className="text-left py-1 font-medium">Lote</th>
+                    {manejaLotes && <th className="text-left py-1 font-medium">Lote</th>}
                     <th className="text-right py-1 font-medium w-20">Cantidad</th>
                   </tr>
                 </thead>
@@ -84,7 +86,7 @@ export function TraspasoExpandedRow({ traspaso, colSpan, origenLabel, destinoLab
                     <tr key={l.id} className="border-b border-border/40">
                       <td className="py-1.5 font-mono text-[11px] text-muted-foreground">{(l.productos as any)?.codigo ?? ''}</td>
                       <td className="py-1.5"><ProductoLink id={l.producto_id}>{(l.productos as any)?.nombre ?? '—'}</ProductoLink></td>
-                      <td className="py-1.5"><LoteCell lotes={lotesMap?.[l.producto_id]} /></td>
+                      {manejaLotes && <td className="py-1.5"><LoteCell lotes={lotesMap?.[l.producto_id]} /></td>}
                       <td className="text-right py-1.5 tabular-nums font-medium">{fmtNum(l.cantidad)}</td>
                     </tr>
                   ))}

@@ -146,7 +146,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   // Se resuelve para cualquier producto con `maneja_lote`, online (RPC) u
   // offline (IndexedDB). El vendedor puede cambiarlo después en la línea.
   useEffect(() => {
-    if (!empresa?.id) return;
+    if (!empresa?.id || !(empresa as any)?.maneja_lotes) return;
     const almacenBase = pedidoAlmacenId || profile?.almacen_id || null;
     if (!almacenBase) return;
     const pendientes = cart

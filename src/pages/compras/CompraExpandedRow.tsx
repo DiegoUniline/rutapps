@@ -9,6 +9,7 @@ import { getNombreCompra } from '@/lib/productoNombres';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { useLotesPorReferencia } from '@/hooks/useLotesPorReferencia';
 import { LoteCell } from '@/components/lotes/LoteCell';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadOrdenCompraPdf, downloadOrdenCompraExcel } from '@/lib/ordenCompraPdf';
 import { toast } from 'sonner';
@@ -70,6 +71,7 @@ export function CompraExpandedRow({ compra, colSpan, fmt, onCollapse }: Props) {
     return () => { cancelled = true; };
   }, [compra.id]);
 
+  const manejaLotes = useManejaLotes();
   const { data: lotesMap } = useLotesPorReferencia(compra.id, ['compra']);
   const totalPagado = pagos.reduce((s, p) => s + (p.monto ?? 0), 0);
 
@@ -115,7 +117,7 @@ export function CompraExpandedRow({ compra, colSpan, fmt, onCollapse }: Props) {
                     <tr className="border-b border-border text-muted-foreground">
                       <th className="text-left py-1 font-medium">Código</th>
                       <th className="text-left py-1 font-medium">Producto</th>
-                      <th className="text-left py-1 font-medium">Lote</th>
+                      {manejaLotes && <th className="text-left py-1 font-medium">Lote</th>}
                       <th className="text-right py-1 font-medium w-16">Cant</th>
                       <th className="text-right py-1 font-medium w-20">P. Unit.</th>
                       <th className="text-right py-1 font-medium w-20">Subtotal</th>
@@ -127,7 +129,7 @@ export function CompraExpandedRow({ compra, colSpan, fmt, onCollapse }: Props) {
                       <tr key={l.id} className="border-b border-border/40">
                         <td className="py-1.5 font-mono text-[11px] text-muted-foreground">{(l.productos as any)?.codigo ?? ''}</td>
                         <td className="py-1.5"><ProductoLink id={l.producto_id}>{getNombreCompra(l.productos as any)}</ProductoLink></td>
-                        <td className="py-1.5"><LoteCell lotes={lotesMap?.[l.producto_id]} /></td>
+                        {manejaLotes && <td className="py-1.5"><LoteCell lotes={lotesMap?.[l.producto_id]} /></td>}
                         <td className="text-right py-1.5 tabular-nums">{fmtNum(l.cantidad)}</td>
                         <td className="text-right py-1.5 tabular-nums">{fmt(l.precio_unitario)}</td>
                         <td className="text-right py-1.5 tabular-nums">{fmt(l.subtotal)}</td>

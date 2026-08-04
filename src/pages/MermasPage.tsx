@@ -7,6 +7,7 @@ import { useAlmacenes, useProductosForSelect } from '@/hooks/useData';
 import { useMermas, useMermaMotivos, useRegistrarMerma, useCancelarMerma, useMerma } from '@/hooks/useMermas';
 import { useLotesPorReferencia } from '@/hooks/useLotesPorReferencia';
 import { LoteCell } from '@/components/lotes/LoteCell';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,6 +56,7 @@ export default function MermasPage() {
 
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const { data: detalle } = useMerma(detalleId ?? undefined);
+  const manejaLotes = useManejaLotes();
   const { data: lotesMerma } = useLotesPorReferencia(detalleId ?? undefined, ['merma_lote']);
 
   const totalCosto = useMemo(() => lineas.reduce((s, l) => s + l.cantidad * l.costo_unitario, 0), [lineas]);
@@ -390,7 +392,7 @@ export default function MermasPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Producto</TableHead>
-                    <TableHead>Lote</TableHead>
+                    {manejaLotes && <TableHead>Lote</TableHead>}
                     <TableHead className="text-right">Cantidad</TableHead>
                     <TableHead className="text-right">Costo</TableHead>
                     <TableHead className="text-right">Precio venta</TableHead>
@@ -401,7 +403,7 @@ export default function MermasPage() {
                   {((detalle as any).merma_lineas ?? []).map((l: any) => (
                     <TableRow key={l.id}>
                       <TableCell>{l.productos?.nombre}</TableCell>
-                      <TableCell><LoteCell lotes={lotesMerma?.[l.producto_id]} /></TableCell>
+                      {manejaLotes && <TableCell><LoteCell lotes={lotesMerma?.[l.producto_id]} /></TableCell>}
                       <TableCell className="text-right">{fmtNum(l.cantidad)} {l.productos?.unidad_granel || ''}</TableCell>
                       <TableCell className="text-right">{fmtMoney(l.costo_unitario)}</TableCell>
                       <TableCell className="text-right">{fmtMoney(l.precio_venta_unitario)}</TableCell>

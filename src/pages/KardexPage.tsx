@@ -92,7 +92,8 @@ export default function KardexPage() {
   const fechaHasta = searchParams.get('fh') ?? '';
   const filterTipo = searchParams.get('ft') ?? 'todos';
   const search = searchParams.get('q') ?? '';
-  const loteId = searchParams.get('lote') ?? '';
+  const manejaLotes = useManejaLotes();
+  const loteId = manejaLotes ? (searchParams.get('lote') ?? '') : '';
 
   const setAlmacenId = (v: string) => updateParam('alm', v);
   // Al cambiar de producto se limpia el filtro de lote (los lotes son por producto).
@@ -477,7 +478,7 @@ export default function KardexPage() {
                 ))}
               </optgroup>
             </select>
-            {productoId && (lotesProducto?.length ?? 0) > 0 && (
+            {manejaLotes && productoId && (lotesProducto?.length ?? 0) > 0 && (
               <select
                 className="h-8 text-[12px] border border-border rounded px-2 bg-background"
                 value={loteId}
@@ -520,7 +521,7 @@ export default function KardexPage() {
                 <tr className="border-b border-border">
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Fecha</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Producto</th>
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Lote</th>
+                  {manejaLotes && <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Lote</th>}
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen</th>
@@ -536,9 +537,9 @@ export default function KardexPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={13} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
+                  <tr><td colSpan={manejaLotes ? 13 : 12} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={13} className="py-8 text-center text-[12px] text-muted-foreground">
+                  <tr><td colSpan={manejaLotes ? 13 : 12} className="py-8 text-center text-[12px] text-muted-foreground">
                     {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                   </td></tr>
                 ) : (
@@ -565,6 +566,7 @@ export default function KardexPage() {
                           <div className="truncate font-medium" title={prodInfo?.nombre ?? ''}>{prodInfo?.nombre ?? '—'}</div>
                           <div className="text-[10px] text-muted-foreground truncate">{prodInfo?.codigo ?? ''}</div>
                         </td>
+                        {manejaLotes && (
                         <td className="py-1.5 px-3 text-[12px] max-w-[140px]">
                           {row.lote_id && lote ? (
                             <>
@@ -575,6 +577,7 @@ export default function KardexPage() {
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
+                        )}
                         <td className="py-1.5 px-3">
                           <span className={cn("flex items-center gap-1 text-[12px] font-medium", cfg.color)}>
                             <Icon className="h-3.5 w-3.5" />
