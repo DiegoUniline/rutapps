@@ -288,6 +288,8 @@ export default function LotesPage() {
     return a;
   }, { vencidos: 0, porVencer: 0 });
 
+  if (!manejaLotes) return <Navigate to="/" replace />;
+
   return (
     <ListPage>
       <div className="flex items-center justify-between">

@@ -537,9 +537,9 @@ export default function KardexPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={13} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
+                  <tr><td colSpan={manejaLotes ? 13 : 12} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={13} className="py-8 text-center text-[12px] text-muted-foreground">
+                  <tr><td colSpan={manejaLotes ? 13 : 12} className="py-8 text-center text-[12px] text-muted-foreground">
                     {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                   </td></tr>
                 ) : (
