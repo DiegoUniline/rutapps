@@ -28,8 +28,27 @@ interface Props {
 export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, canApplyDiscount = true, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
-  const { empresa } = useAuth();
+  const { empresa, profile } = useAuth();
   const { data: listasPrecios } = useAllListasPrecios(empresa?.id);
+  const { data: vendedoresList } = useVendedores();
+
+  const vendedorOptions = (vendedoresList ?? []).map((v: any) => ({ value: v.id, label: v.nombre }));
+  const vendedorNombre = (form as any).vendedores?.nombre
+    ?? vendedorOptions.find(v => v.value === form.vendedor_id)?.label
+    ?? '—';
+  const registradoPorId = (form as any).creado_por ?? (isNew ? profile?.id : null);
+  const registradoPor = vendedorOptions.find(v => v.value === registradoPorId)?.label
+    ?? (registradoPorId === profile?.id ? profile?.nombre : null)
+    ?? '—';
+
+  const renderVendedor = () => readOnly
+    ? <div className="text-[13px] py-1.5 px-1 text-foreground">{vendedorNombre}</div>
+    : <SearchableSelect options={vendedorOptions} value={form.vendedor_id ?? ''} onChange={val => set('vendedor_id', val || null)} placeholder="Buscar vendedor..." />;
+
+  const renderRegistradoPor = () => (
+    <div className="text-[13px] py-1.5 px-1 text-muted-foreground">{registradoPor}</div>
+  );
+
 
   const condicionBtns = [
     { value: 'contado', label: 'Contado' },
