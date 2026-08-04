@@ -16,6 +16,7 @@ export interface ImportResult {
   created: number;
   updated: number;
   errors: { row: number; message: string }[];
+  warnings?: string[];
 }
 
 export interface ImportColumn {
