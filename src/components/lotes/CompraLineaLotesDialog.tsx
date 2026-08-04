@@ -30,6 +30,12 @@ interface Props {
  * Cada asignación carga el stock al almacén y al lote mediante trigger en base de datos.
  */
 export function CompraLineaLotesDialog({ open, empresaId, compraId, lineaId, almacenId, producto, piezasTotal, userId, onClose, onChanged }: Props) {
+  const qc = useQueryClient();
+  /** Refresca las vistas que dependen del stock por lote (Lotes, inventario, kardex). */
+  const invalidarStock = useCallback(() => {
+    ['stock-lotes', 'lotes', 'lotes-almacenes', 'stock_almacen', 'inventario', 'productos', 'kardex-ubicacion', 'apartado-disponible']
+      .forEach(k => qc.invalidateQueries({ queryKey: [k] }));
+  }, [qc]);
   const [lotes, setLotes] = useState<LoteOpt[]>([]);
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [loading, setLoading] = useState(false);
