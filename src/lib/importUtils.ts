@@ -280,6 +280,8 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
 export async function importClients(rows: Record<string, any>[], empresaId: string): Promise<ImportResult> {
   const result: ImportResult = { total: rows.length, created: 0, updated: 0, errors: [] };
   const cache = new Map<string, Map<string, string>>();
+  const profileCache = new Map<string, string | null>();
+
 
   for (let i = 0; i < rows.length; i++) {
     const raw = mapHeaders(rows[i], CLIENT_IMPORT_COLUMNS);
