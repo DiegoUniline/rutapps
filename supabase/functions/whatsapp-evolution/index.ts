@@ -47,6 +47,35 @@ async function normalizePhone(admin: any, empresa_id: string, phone: string): Pr
   return digits;
 }
 
+/** Variantes MX: 52XXXXXXXXXX <-> 521XXXXXXXXXX (WhatsApp usa el 1 en México). */
+function phoneVariants(num: string): string[] {
+  const out = [num];
+  if (/^52\d{10}$/.test(num)) out.push("521" + num.slice(2));
+  if (/^521\d{10}$/.test(num)) out.push("52" + num.slice(3));
+  return out;
+}
+
+/**
+ * Devuelve el número tal cual lo conoce WhatsApp. Si la verificación falla,
+ * regresa el primer candidato (con el "1" en México) para no bloquear el envío.
+ */
+async function resolveWhatsAppNumber(instanceName: string, num: string): Promise<string> {
+  const variants = phoneVariants(num);
+  if (variants.length === 1) return num;
+  try {
+    const r = await evo(`/chat/whatsappNumbers/${instanceName}`, {
+      method: "POST",
+      body: JSON.stringify({ numbers: variants }),
+    });
+    const arr = Array.isArray(r.body) ? r.body : [];
+    const hit = arr.find((x: any) => x?.exists);
+    const jid = hit?.jid ?? hit?.number;
+    if (jid) return String(jid).split("@")[0].replace(/\D/g, "");
+  } catch { /* ignore */ }
+  // Fallback: en México WhatsApp usa 521
+  return variants.find((v) => /^521\d{10}$/.test(v)) ?? num;
+}
+
 function json(status: number, data: unknown) {
   return new Response(JSON.stringify(data), {
     status,
@@ -146,9 +175,11 @@ Deno.serve(async (req) => {
         let phone: string | null = null;
         if (state === "open") {
           const info = await evo(`/instance/fetchInstances?instanceName=${instanceName}`, { method: "GET" });
-          const arr = Array.isArray(info.body) ? info.body : [];
-          const first = arr[0];
-          phone = first?.ownerJid?.split("@")[0] ?? first?.number ?? null;
+          const raw = info.body as any;
+          const arr = Array.isArray(raw) ? raw : (Array.isArray(raw?.instances) ? raw.instances : []);
+          const first = arr.find((x: any) => (x?.name ?? x?.instance?.instanceName) === instanceName) ?? arr[0];
+          const ownerJid = first?.ownerJid ?? first?.instance?.owner ?? null;
+          phone = ownerJid ? String(ownerJid).split("@")[0] : (first?.number ?? null);
           await upsertCfg({
             evolution_status: "conectado",
             evolution_phone_number: phone,
@@ -174,7 +205,7 @@ Deno.serve(async (req) => {
       case "send-text": {
         const { phone, message, tipo, referencia_id } = body as any;
         if (!phone || !message) return json(400, { error: "phone y message requeridos" });
-        const normalized = await normalizePhone(admin, empresa_id, phone);
+        const normalized = await resolveWhatsAppNumber(instanceName, await normalizePhone(admin, empresa_id, phone));
         const r = await evo(`/message/sendText/${instanceName}`, {
           method: "POST",
           body: JSON.stringify({ number: normalized, text: message }),
@@ -191,7 +222,7 @@ Deno.serve(async (req) => {
       case "send-media": {
         const { phone, url, fileName, caption, mediaType, tipo, referencia_id } = body as any;
         if (!phone || !url) return json(400, { error: "phone y url requeridos" });
-        const normalized = await normalizePhone(admin, empresa_id, phone);
+        const normalized = await resolveWhatsAppNumber(instanceName, await normalizePhone(admin, empresa_id, phone));
         const mediaKind = mediaType || (String(fileName || url).match(/\.(jpg|jpeg|png|webp)$/i) ? "image" : "document");
         const r = await evo(`/message/sendMedia/${instanceName}`, {
           method: "POST",
