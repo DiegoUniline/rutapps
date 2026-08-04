@@ -779,7 +779,7 @@ export default function DashboardPage() {
   const { data: gastosPrev } = useDashboardGastos(prevRange, vendedorId || undefined);
   const prevKpis = useMemo(() => {
     const v = (ventasPrev ?? []).reduce((s, r) => s + Number(r.total ?? 0), 0);
-    const c = (cobrosPrev ?? []).reduce((s, r) => s + Number(r.monto ?? 0), 0);
+    const c = (cobrosPrev ?? []).reduce((s, r: any) => s + Number(r.monto_efectivo ?? r.monto ?? 0), 0);
     const co = (comprasPrev ?? []).reduce((s, r) => s + Number(r.total ?? 0), 0);
     const g = (gastosPrev ?? []).reduce((s, r) => s + Number(r.monto ?? 0), 0);
     const n = (ventasPrev ?? []).length;
@@ -840,7 +840,7 @@ export default function DashboardPage() {
     const pedidos = (ventas ?? []).filter(v => v.tipo === 'pedido').length;
     const ventasDirectas = numVentas - pedidos;
 
-    const totalCobrado = (cobros ?? []).reduce((s, c) => s + Number(c.monto ?? 0), 0);
+    const totalCobrado = (cobros ?? []).reduce((s, c: any) => s + Number(c.monto_efectivo ?? c.monto ?? 0), 0);
     const totalCartera = (cartera ?? []).reduce((s, v) => s + Number(v.saldo_pendiente ?? 0), 0);
     const clientesMorosos = new Set((cartera ?? []).map(v => v.cliente_id)).size;
 
@@ -915,7 +915,7 @@ export default function DashboardPage() {
 
   const metaMesData = useMemo(() => {
     const ventasMes = (ventasMesData ?? []).reduce((s, v: any) => s + Number(v.total || 0), 0);
-    const cobradoMes = (cobrosMesData ?? []).reduce((s, c: any) => s + Number(c.monto || 0), 0);
+    const cobradoMes = (cobrosMesData ?? []).reduce((s, c: any) => s + Number(c.monto_efectivo ?? c.monto || 0), 0);
     const gastosMes = (gastosMesData ?? []).reduce((s, g: any) => s + Number(g.monto || 0), 0);
     const comprasMes = (comprasMesData ?? []).reduce((s, c: any) => s + Number(c.total || 0), 0);
     const margenMonto = ventasMes - comprasMes;

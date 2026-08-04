@@ -83,7 +83,7 @@ export function useDashboardCobros(range: DateRange, vendedorId?: string) {
     queryKey: ['dashboard-cobros', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      return fetchAllPages((from, to) => {
+      const cobros = await fetchAllPages((from, to) => {
         const q = supabase
           .from('cobros')
           .select('id, fecha, monto, metodo_pago, cliente_id')
@@ -94,6 +94,23 @@ export function useDashboardCobros(range: DateRange, vendedorId?: string) {
           .range(from, to);
         return q;
       });
+      if (!cobros || cobros.length === 0) return cobros;
+      const apps = await fetchAllPages((from, to) =>
+        supabase
+          .from('cobro_aplicaciones')
+          .select('cobro_id, monto_aplicado, ventas!inner(status)')
+          .in('cobro_id', cobros.map(c => c.id))
+          .neq('ventas.status', 'cancelado' as any)
+          .range(from, to)
+      );
+      const activeByCobro = new Map<string, number>();
+      (apps ?? []).forEach((a: any) => {
+        activeByCobro.set(a.cobro_id, (activeByCobro.get(a.cobro_id) || 0) + Number(a.monto_aplicado || 0));
+      });
+      return cobros.map(c => ({
+        ...c,
+        monto_efectivo: activeByCobro.get(c.id) ?? c.monto,
+      }));
     },
   });
 }
@@ -657,11 +674,12 @@ export function useDashboardHoy(vendedorId?: string) {
       const ventasQ = vendedorId ? baseVentas.eq('vendedor_id', vendedorId) : baseVentas;
 
       const cobrosQ = supabase
-        .from('cobros')
-        .select('id, monto', { count: 'exact' })
-        .eq('empresa_id', eid)
-        .neq('status', 'cancelado')
-        .eq('fecha', today);
+        .from('cobro_aplicaciones')
+        .select('cobro_id, monto_aplicado, cobros!inner(empresa_id, status, fecha), ventas!inner(status)')
+        .eq('cobros.empresa_id', eid)
+        .neq('cobros.status', 'cancelado')
+        .eq('cobros.fecha', today)
+        .neq('ventas.status', 'cancelado' as any);
 
       const pedidosBase = supabase
         .from('ventas')
@@ -692,7 +710,8 @@ export function useDashboardHoy(vendedorId?: string) {
       const entregasHechas = entregasRows.filter(e => e.status === 'hecho').length;
       const entregasTotales = entregasRows.length;
       const ventasTotal = ventasRows.reduce((s, v) => s + Number(v.total ?? 0), 0);
-      const cobrosTotal = cobrosRows.reduce((s, c) => s + Number(c.monto ?? 0), 0);
+      const uniqueCobros = new Set(cobrosRows.map((c: any) => c.cobro_id));
+      const cobrosTotal = cobrosRows.reduce((s, c: any) => s + Number(c.monto_aplicado ?? 0), 0);
       const gastosTotal = gastosRows.reduce((s, g) => s + Number(g.monto ?? 0), 0);
 
       return {
@@ -704,7 +723,7 @@ export function useDashboardHoy(vendedorId?: string) {
         ventasTotal,
         ventasCount: ventasRows.length,
         cobrosTotal,
-        cobrosCount: cobrosRows.length,
+        cobrosCount: uniqueCobros.size,
         pedidosPendientes: pRes.count ?? (pRes.data?.length ?? 0),
         gastosTotal,
         gastosCount: gastosRows.length,

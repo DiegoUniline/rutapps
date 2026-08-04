@@ -45,10 +45,11 @@ export function useDashboardEquipo(range: DateRange, metaMes: number) {
           .select('venta_id, cantidad, total, productos(costo), ventas!inner(vendedor_id, empresa_id, fecha, status)')
           .eq('ventas.empresa_id', eId).gte('ventas.fecha', fromIso).lte('ventas.fecha', toIso)
           .neq('ventas.status', 'cancelado').range(from, to)),
-        fetchAllPages((from, to) => sb.from('cobros')
-          .select('monto, fecha, user_id')
-          .eq('empresa_id', eId).neq('status', 'cancelado')
-          .gte('fecha', fromIso).lte('fecha', toIso).range(from, to)),
+        fetchAllPages((from, to) => sb.from('cobro_aplicaciones')
+          .select('monto_aplicado, cobros!inner(user_id, empresa_id, status, fecha), ventas!inner(status)')
+          .eq('cobros.empresa_id', eId).neq('cobros.status', 'cancelado')
+          .neq('ventas.status', 'cancelado' as any)
+          .gte('cobros.fecha', fromIso).lte('cobros.fecha', toIso).range(from, to)),
         fetchAllPages((from, to) => sb.from('ventas')
           .select('vendedor_id, saldo_pendiente, fecha_vencimiento, fecha')
           .eq('empresa_id', eId).eq('condicion_pago', 'credito').gt('saldo_pendiente', 0)
@@ -92,7 +93,7 @@ export function useDashboardEquipo(range: DateRange, metaMes: number) {
         const ventasV = (ventasRes ?? []).filter((x: any) => x.vendedor_id === vId);
         const venta = ventasV.reduce((s, x: any) => s + Number(x.total || 0), 0);
         const margen = ventasV.reduce((s, x: any) => s + (margenPorVenta.get(x.id) || 0), 0);
-        const cobrado = (cobrosRes ?? []).filter((c: any) => c.user_id === vId).reduce((s, c: any) => s + Number(c.monto || 0), 0);
+        const cobrado = (cobrosRes ?? []).filter((c: any) => c.cobros?.user_id === vId).reduce((s, c: any) => s + Number(c.monto_aplicado || 0), 0);
         const carteraVencida = (carteraRes ?? [])
           .filter((c: any) => c.vendedor_id === vId && c.fecha_vencimiento && new Date(c.fecha_vencimiento) < today)
           .reduce((s, c: any) => s + Number(c.saldo_pendiente || 0), 0);

@@ -39,7 +39,7 @@ export default function TabCartera({ range, ventasMes, ventas, cobros, money }: 
       }, 0);
       const cobrado = (cobros ?? []).reduce((s, c: any) => {
         const f = new Date(c.fecha);
-        return f >= w && f <= wEnd ? s + Number(c.monto || 0) : s;
+        return f >= w && f <= wEnd ? s + Number(c.monto_efectivo ?? c.monto || 0) : s;
       }, 0);
       return { semana: format(w, "d MMM", { locale: es }), vendido, cobrado };
     });
