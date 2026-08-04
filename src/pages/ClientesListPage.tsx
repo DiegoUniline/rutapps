@@ -15,6 +15,7 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { TablePagination } from '@/components/TablePagination';
 import { StickyListToolbar } from '@/components/StickyListToolbar';
 import { ListPage } from '@/components/layout/ListPage';
+import { StatusCountCards } from '@/components/StatusCountCards';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
@@ -600,6 +601,7 @@ export default function ClientesListPage() {
   return (
     <ListPage>
       <ListPage.Header title={<>Clientes <HelpButton title={HELP.clientes.title} sections={HELP.clientes.sections} /> <VideoHelpButton module="clientes" /></>} />
+      <div className="px-4 pt-1"><StatusCountCards tabla="clientes" /></div>
       <OdooTabs
         tabs={[
           { key: 'activos', label: 'Activos', content: <ClientesTable forcedStatus="activo" prefsKey="clientes-activos" /> },
