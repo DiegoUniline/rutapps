@@ -54,6 +54,7 @@ export function useVentaForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { profile, user, empresa } = useAuth();
+  const manejaLotes = !!(empresa as any)?.maneja_lotes;
   const isNew = id === 'nuevo';
   const { data: existingVenta, isLoading } = useVenta(isNew ? undefined : id);
   const saveVenta = useSaveVenta();
@@ -551,7 +552,7 @@ export function useVentaForm() {
     // Producto por lote: se aparta el lote desde que se captura la línea.
     // Venta directa → se pide el lote (sale stock de inmediato).
     // Pedido → se asigna FEFO automáticamente (se puede cambiar en la columna Lote).
-    if ((producto as any).maneja_lote) {
+    if (manejaLotes && (producto as any).maneja_lote) {
       if (form.tipo === 'venta_directa') {
         setLoteParaLinea({ idx, producto: { id: productoId, nombre: producto.nombre } });
       } else if (form.almacen_id && empresa?.id) {
@@ -700,7 +701,7 @@ export function useVentaForm() {
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); savingRef.current = false; return; }
     if (!form.almacen_id) { toast.error('Selecciona un almacén'); savingRef.current = false; return; }
     // Venta directa: los productos por lote exigen lote elegido en la línea.
-    if (form.tipo === 'venta_directa') {
+    if (manejaLotes && form.tipo === 'venta_directa') {
       const faltaLote = lineas.some(l => {
         if (!l.producto_id || Number(l.cantidad) <= 0) return false;
         const prod = productosList?.find((p: any) => p.id === l.producto_id) as any;
