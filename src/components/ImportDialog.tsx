@@ -279,6 +279,15 @@ export function ImportDialog({ open, onOpenChange, type }: ImportDialogProps) {
               </div>
             )}
 
+            {result.warnings && result.warnings.length > 0 && (
+              <div className="bg-warning/10 rounded-lg p-3 max-h-40 overflow-y-auto">
+                <p className="text-xs font-medium text-warning mb-1">Avisos:</p>
+                {result.warnings.map((w, i) => (
+                  <p key={i} className="text-xs text-warning/90">{w}</p>
+                ))}
+              </div>
+            )}
+
             <div className="flex justify-end">
               <button onClick={() => handleClose(false)} className="btn-odoo-primary">
                 Cerrar

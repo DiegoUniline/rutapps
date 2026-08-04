@@ -16,6 +16,7 @@ export interface ImportResult {
   created: number;
   updated: number;
   errors: { row: number; message: string }[];
+  warnings?: string[];
 }
 
 export interface ImportColumn {
@@ -278,9 +279,11 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
 
 // ─── Import Clients ────────────────────────────────────────────
 export async function importClients(rows: Record<string, any>[], empresaId: string): Promise<ImportResult> {
-  const result: ImportResult = { total: rows.length, created: 0, updated: 0, errors: [] };
+  const result: ImportResult = { total: rows.length, created: 0, updated: 0, errors: [], warnings: [] };
   const cache = new Map<string, Map<string, string>>();
   const profileCache = new Map<string, string | null>();
+  const usuariosNoEncontrados = new Set<string>();
+
 
 
   for (let i = 0; i < rows.length; i++) {
@@ -297,6 +300,12 @@ export async function importClients(rows: Record<string, any>[], empresaId: stri
       const zona_id = await resolveOrCreate('zonas', raw.zona, empresaId, cache);
       const vendedor_id = await resolveProfile(raw.vendedor, empresaId, profileCache);
       const cobrador_id = await resolveProfile(raw.cobrador, empresaId, profileCache);
+      if (!vendedor_id && raw.vendedor != null && String(raw.vendedor).trim()) {
+        usuariosNoEncontrados.add(String(raw.vendedor).trim());
+      }
+      if (!cobrador_id && raw.cobrador != null && String(raw.cobrador).trim()) {
+        usuariosNoEncontrados.add(String(raw.cobrador).trim());
+      }
       const lista_id = await resolveOrCreate('listas', raw.lista, empresaId, cache);
 
       const clientData: any = {
@@ -349,6 +358,12 @@ export async function importClients(rows: Record<string, any>[], empresaId: stri
     } catch (err: any) {
       result.errors.push({ row: rowNum, message: err.message || 'Error desconocido' });
     }
+  }
+
+  if (usuariosNoEncontrados.size > 0) {
+    result.warnings = [
+      `Estos vendedores/cobradores no existen como usuarios y los clientes se importaron sin asignar: ${[...usuariosNoEncontrados].join(', ')}. Créalos en Usuarios y reasígnalos.`,
+    ];
   }
 
   return result;
