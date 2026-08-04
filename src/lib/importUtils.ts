@@ -300,6 +300,12 @@ export async function importClients(rows: Record<string, any>[], empresaId: stri
       const zona_id = await resolveOrCreate('zonas', raw.zona, empresaId, cache);
       const vendedor_id = await resolveProfile(raw.vendedor, empresaId, profileCache);
       const cobrador_id = await resolveProfile(raw.cobrador, empresaId, profileCache);
+      if (!vendedor_id && raw.vendedor != null && String(raw.vendedor).trim()) {
+        usuariosNoEncontrados.add(String(raw.vendedor).trim());
+      }
+      if (!cobrador_id && raw.cobrador != null && String(raw.cobrador).trim()) {
+        usuariosNoEncontrados.add(String(raw.cobrador).trim());
+      }
       const lista_id = await resolveOrCreate('listas', raw.lista, empresaId, cache);
 
       const clientData: any = {
