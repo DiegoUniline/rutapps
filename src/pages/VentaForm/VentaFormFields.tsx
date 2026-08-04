@@ -247,6 +247,16 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
         <div><label className="label-odoo">Folio</label><div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Se asigna al guardar' : '—')}</div></div>
       </div>
       <div className="space-y-3">
+        <div><label className="label-odoo">Vendedor</label>{renderVendedor()}</div>
+        <div><label className="label-odoo">Registrado por</label>{renderRegistradoPor()}</div>
+        <div><label className="label-odoo label-required">Almacén</label>{renderAlmacen()}</div>
+        {renderDescuentoExtra()}
+        {renderSaldo()}
+      </div>
+    </div>
+  );
+}
+      <div className="space-y-3">
         <div><label className="label-odoo label-required">Almacén</label>{renderAlmacen()}</div>
         {renderDescuentoExtra()}
         {renderSaldo()}
