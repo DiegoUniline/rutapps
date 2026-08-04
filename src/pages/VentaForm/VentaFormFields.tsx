@@ -5,6 +5,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { cn, fmtDate } from '@/lib/utils';
 import { Percent, DollarSign, FileText } from 'lucide-react';
 import { useAllListasPrecios } from '@/hooks/useData';
+import { useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
@@ -27,8 +28,27 @@ interface Props {
 export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, canApplyDiscount = true, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
-  const { empresa } = useAuth();
+  const { empresa, profile } = useAuth();
   const { data: listasPrecios } = useAllListasPrecios(empresa?.id);
+  const { data: vendedoresList } = useVendedores();
+
+  const vendedorOptions = (vendedoresList ?? []).map((v: any) => ({ value: v.id, label: v.nombre }));
+  const vendedorNombre = (form as any).vendedores?.nombre
+    ?? vendedorOptions.find(v => v.value === form.vendedor_id)?.label
+    ?? '—';
+  const registradoPorId = (form as any).creado_por ?? (isNew ? profile?.id : null);
+  const registradoPor = vendedorOptions.find(v => v.value === registradoPorId)?.label
+    ?? (registradoPorId === profile?.id ? profile?.nombre : null)
+    ?? '—';
+
+  const renderVendedor = () => readOnly
+    ? <div className="text-[13px] py-1.5 px-1 text-foreground">{vendedorNombre}</div>
+    : <SearchableSelect options={vendedorOptions} value={form.vendedor_id ?? ''} onChange={val => set('vendedor_id', val || null)} placeholder="Buscar vendedor..." />;
+
+  const renderRegistradoPor = () => (
+    <div className="text-[13px] py-1.5 px-1 text-muted-foreground">{registradoPor}</div>
+  );
+
 
   const condicionBtns = [
     { value: 'contado', label: 'Contado' },
@@ -227,6 +247,8 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
         <div><label className="label-odoo">Folio</label><div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Se asigna al guardar' : '—')}</div></div>
       </div>
       <div className="space-y-3">
+        <div><label className="label-odoo">Vendedor</label>{renderVendedor()}</div>
+        <div><label className="label-odoo">Registrado por</label>{renderRegistradoPor()}</div>
         <div><label className="label-odoo label-required">Almacén</label>{renderAlmacen()}</div>
         {renderDescuentoExtra()}
         {renderSaldo()}

@@ -32,7 +32,7 @@ export const VENTA_COLUMNS = [
   'status','tipo','condicion_pago','notas','concepto','origen',
   'cliente_id','vendedor_id','tarifa_id','almacen_id','entrega_inmediata',
   'pedido_origen_id','requiere_factura','es_saldo_inicial',
-  'turno_id','comision_volumen_pago_id','created_at',
+  'turno_id','comision_volumen_pago_id','created_at','creado_por',
 ] as const;
 
 export const VENTA_LINEA_COLUMNS = [
