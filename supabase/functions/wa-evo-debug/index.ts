@@ -17,6 +17,19 @@ Deno.serve(async (req) => {
     return { status: r.status, body: j };
   };
 
+  const { send, number } = await req.clone().json().catch(() => ({} as any));
+  if (send && number) {
+    const r = await fetch(`${EVOLUTION_URL.replace(/\/$/, "")}/message/sendText/${instance}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: EVOLUTION_KEY },
+      body: JSON.stringify({ number, text: String(send) }),
+    });
+    const t = await r.text();
+    return new Response(JSON.stringify({ sendStatus: r.status, sendBody: t }, null, 2), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const state = await call(`/instance/connectionState/${instance}`);
   const fetched = await call(`/instance/fetchInstances?instanceName=${instance}`);
   const all = await call(`/instance/fetchInstances`);
