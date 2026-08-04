@@ -279,9 +279,11 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
 
 // ─── Import Clients ────────────────────────────────────────────
 export async function importClients(rows: Record<string, any>[], empresaId: string): Promise<ImportResult> {
-  const result: ImportResult = { total: rows.length, created: 0, updated: 0, errors: [] };
+  const result: ImportResult = { total: rows.length, created: 0, updated: 0, errors: [], warnings: [] };
   const cache = new Map<string, Map<string, string>>();
   const profileCache = new Map<string, string | null>();
+  const usuariosNoEncontrados = new Set<string>();
+
 
 
   for (let i = 0; i < rows.length; i++) {
