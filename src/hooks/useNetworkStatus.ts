@@ -4,9 +4,12 @@ import { getPendingCount, getDeadLetterCount, processSyncQueue } from '@/lib/syn
 import { downloadAllData, getLastSyncTime, isCacheStale, MOBILE_QUICK_SYNC_TABLES } from '@/lib/offlineSync';
 import { verifySyncedItems } from '@/lib/syncVerify';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
+import { setSyncScope } from '@/lib/syncScope';
 import { getSyncConfig, isDataSaverEnabled, setDataSaverMode } from '@/lib/dataSaver';
 import { hasRealConnection } from '@/lib/connectivity';
 import { APP_VERSION } from '@/version';
+
 
 const SYNCED_APP_VERSION_KEY = 'uniline_synced_app_version';
 
@@ -35,7 +38,22 @@ export function useNetworkStatus() {
     const saved = localStorage.getItem(AUTO_SYNC_KEY);
     return saved === null ? true : saved === 'true';
   });
-  const { empresa } = useAuth();
+  const { empresa, profile, user } = useAuth();
+  const { seeAll: seeAllClientes, clientesVisibilidad } = useDataVisibility('clientes');
+
+  // Ámbito de sincronización para el motor offline (no vive dentro de React).
+  useEffect(() => {
+    setSyncScope({
+      licencia: (empresa as any)?.licencia ?? null,
+      vendedorId: profile?.id ?? null,
+      userId: user?.id ?? null,
+      // Solo se filtra por vendedor cuando la empresa trabaja con "solo propios"
+      // y el usuario no tiene permiso de ver todos.
+      seeAll: seeAllClientes || clientesVisibilidad !== 'propios',
+    });
+  }, [empresa, profile?.id, user?.id, seeAllClientes, clientesVisibilidad]);
+
+
 
   const setAutoSync = useCallback((value: boolean) => {
     setAutoSyncState(value);

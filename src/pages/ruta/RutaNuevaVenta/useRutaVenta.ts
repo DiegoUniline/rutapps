@@ -12,8 +12,10 @@ import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type 
 import { buildManualSalePricingFromGross, buildSalePricingSnapshot, getDisplayUnitPrice as getSaleDisplayUnitPrice, getTaxMultiplier } from '@/lib/salePricing';
 import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
-import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
+import { usePromocionesActivas, evaluatePromociones, getPendingProductoGratis, type CartItemForPromo, type PromoResult, type PendingProductoGratis } from '@/hooks/usePromociones';
 import { buildPromoAplicadaRows, promoPersistHabilitado } from '@/lib/promoPersist';
+import { promosAutoHabilitado } from '@/lib/promoAuto';
+
 import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 
@@ -409,6 +411,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     if (cart.length === 0 || !productos) return;
     setCart(prev => prev.map(item => {
       if (item.es_cambio) return item;
+      // Un precio editado a mano por el vendedor NO se pisa al cambiar de
+      // cliente/tarifa: era una sobrescritura silenciosa.
+      if ((item as any).precio_manual) return item;
+
+
       const prod = productos.find((p: any) => p.id === item.producto_id);
       if (!prod) return item;
       const pf = resolvePricingFull(prod);
@@ -756,6 +763,51 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId || undefined, (selectedCliente as any)?.zona_id || undefined, (empresa as any)?.zona_horaria);
   }, [promocionesActivas, cart, clienteId, selectedCliente, productos, sinImpuestos]);
 
+  // ── Promociones de PRODUCTO GRATIS pendientes ────────────────────────────
+  // El motor solo rebaja el regalo si ya está en el carrito. Aquí detectamos
+  // los que faltan para (a) agregarlos solos y (b) impedir cobrar mal.
+  const pendingGratis = useMemo(() => {
+    if (!promocionesActivas || cart.length === 0) return [] as PendingProductoGratis[];
+    const items: CartItemForPromo[] = cart.filter(c => !c.es_cambio).map(c => ({
+      producto_id: c.producto_id,
+      clasificacion_id: productos?.find((p: any) => p.id === c.producto_id)?.clasificacion_id ?? undefined,
+      precio_unitario: Number(c.precio_unitario) || 0,
+      cantidad: Number(c.cantidad) || 0,
+    }));
+    return getPendingProductoGratis(
+      promocionesActivas, items, clienteId || undefined,
+      (selectedCliente as any)?.zona_id || undefined, (empresa as any)?.zona_horaria,
+    );
+  }, [promocionesActivas, cart, clienteId, selectedCliente, productos, empresa]);
+
+  const autoPromosOn = promosAutoHabilitado((empresa as any)?.licencia);
+
+  // Agrega solo el producto de bonificación con la cantidad faltante (topada al
+  // stock disponible). El motor de promociones lo netea a $0 en el siguiente
+  // render, así que el vendedor ya no tiene que acordarse de agregarlo.
+  useEffect(() => {
+    if (!autoPromosOn || pendingGratis.length === 0) return;
+    for (const pend of pendingGratis) {
+      const prod = productos?.find((p: any) => p.id === pend.gratis_producto_id);
+      if (!prod) continue;
+      const enCarrito = cart.find(c => c.producto_id === pend.gratis_producto_id && !c.es_cambio)?.cantidad ?? 0;
+      const deseada = enCarrito + pend.cantidad_gratis_faltante;
+      const maxQty = getMaxQty(pend.gratis_producto_id);
+      const objetivo = Math.min(deseada, maxQty);
+      if (objetivo <= enCarrito) continue; // sin stock a bordo para el regalo
+      if (enCarrito > 0) {
+        setItemQty(pend.gratis_producto_id, objetivo);
+      } else {
+        addToCart(prod);
+        if (objetivo > 1) setItemQty(pend.gratis_producto_id, objetivo);
+      }
+      return; // un ajuste por render; el efecto vuelve a correr con el carrito nuevo
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPromosOn, pendingGratis, productos]);
+
+
+
 
   // Build a map of raw promo discount per product
   const promoRawByProduct = useMemo(() => {
@@ -921,6 +973,17 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       try { refetchPromos(); } catch { /* ignore */ }
       return;
     }
+    // Promoción de producto gratis que no se pudo aplicar (regalo sin stock a
+    // bordo). Guardar así cobraría de más: se bloquea con el detalle.
+    if (autoPromosOn && pendingGratis.length > 0) {
+      const nombres = pendingGratis.map(p => {
+        const prod = productos?.find((x: any) => x.id === p.gratis_producto_id);
+        return `${p.promocion_nombre}: faltan ${p.cantidad_gratis_faltante} de ${prod?.nombre ?? 'producto'}`;
+      }).join(' · ');
+      toast.error(`Promoción sin aplicar — ${nombres}. Agrega el producto de regalo o quita la promoción.`);
+      return;
+    }
+
     savingRef.current = true;
     setSaving(true);
 
@@ -1479,6 +1542,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
     currentStepIdx, routeSteps, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
     addToCart, addGranelLine, updateQty, removeFromCart, getItemInCart, getMaxQty, getDispSigned, setItemQty,
+    pendingGratis, autoPromosOn,
+
     addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
     handleSave, saveSoloDevolucion, setSoloDevolucion,

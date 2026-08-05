@@ -5,6 +5,8 @@
  */
 import { offlineDb, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
+import { getSyncScope, syncV2Habilitado, vendedorScopeActivo } from './syncScope';
+
 
 const TABLES_TO_CACHE = [
   'clientes',
@@ -102,6 +104,42 @@ export const COLUMN_SELECTS: Record<string, string> = {
   ruta_sesiones: 'id,empresa_id,vendedor_id,vehiculo_id,carga_id,fecha,inicio_at,fin_at,km_inicio,km_fin,km_recorridos,lat_inicio,lng_inicio,lat_fin,lng_fin,foto_inicio_url,foto_fin_url,notas_inicio,notas_fin,status,created_at,updated_at',
   vehiculos: 'id,empresa_id,alias,placa,marca,modelo,anio,tipo,capacidad_kg,km_actual,foto_url,vendedor_default_id,status,notas,created_at,updated_at',
 };
+
+/**
+ * Columnas explícitas de las tablas PESADAS que hoy bajan con `select *`.
+ *
+ * Solo se usan cuando la licencia tiene activa la bandera `ruta_sync_v2`; sin
+ * la bandera el comportamiento es idéntico al actual (`*`). Cada lista incluye
+ * todas las columnas que la app móvil y los tickets/PDF realmente leen.
+ */
+export const COLUMN_SELECTS_V2: Record<string, string> = {
+  ventas: 'id,empresa_id,folio,tipo,status,cliente_id,vendedor_id,condicion_pago,tarifa_id,almacen_id,fecha,fecha_entrega,entrega_inmediata,notas,subtotal,descuento_total,iva_total,ieps_total,total,saldo_pendiente,pedido_origen_id,requiere_factura,descuento_extra,descuento_extra_tipo,es_saldo_inicial,concepto,fecha_vencimiento,origen,politica_cobro,cerrado_at,total_efectivo,cerrado_snapshot,creado_por,created_at,updated_at',
+  cobros: 'id,empresa_id,cliente_id,monto,fecha,metodo_pago,referencia,notas,user_id,status,created_at,updated_at',
+  visitas: 'id,empresa_id,cliente_id,user_id,tipo,motivo,notas,gps_lat,gps_lng,fecha,venta_id,created_at',
+  entregas: 'id,empresa_id,folio,pedido_id,vendedor_id,cliente_id,almacen_id,fecha,status,notas,vendedor_ruta_id,fecha_asignacion,fecha_carga,orden_entrega,fecha_entrega,motivo_no_entrega,created_at,updated_at',
+  devoluciones: 'id,empresa_id,vendedor_id,cliente_id,carga_id,tipo,fecha,notas,user_id,venta_id,almacen_destino_id,reembolso_efectivo,reembolso_metodo,created_at',
+  gastos: 'id,empresa_id,vendedor_id,user_id,fecha,concepto,monto,foto_url,notas,venta_id,devolucion_id,metodo_pago,created_at',
+  cargas: 'id,empresa_id,vendedor_id,fecha,status,notas,almacen_id,repartidor_id,almacen_destino_id,created_at',
+  descarga_ruta: 'id,empresa_id,carga_id,vendedor_id,user_id,fecha,status,efectivo_esperado,efectivo_entregado,diferencia_efectivo,notas,aprobado_por,fecha_aprobacion,notas_supervisor,fecha_inicio,fecha_fin,descargo_camion,almacen_destino_id,created_at',
+};
+
+/**
+ * Filtrado POR VENDEDOR. Solo aplica con `ruta_sync_v2` y cuando el usuario no
+ * tiene permiso de "ver todos": en ese caso la app ya le oculta los datos de
+ * los demás, así que descargarlos era puro gasto de megas.
+ *
+ * `nullable: true` = también se bajan las filas sin vendedor asignado (clientes
+ * huérfanos), para que nadie pierda acceso a un cliente que sí puede atender.
+ */
+const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' | 'user'; nullable?: boolean }> = {
+  clientes: { column: 'vendedor_id', source: 'vendedor', nullable: true },
+  ventas: { column: 'vendedor_id', source: 'vendedor' },
+  visitas: { column: 'user_id', source: 'user' },
+  gastos: { column: 'vendedor_id', source: 'vendedor' },
+  devoluciones: { column: 'vendedor_id', source: 'vendedor' },
+};
+
+
 
 
 // Friendly names for UI display
@@ -239,10 +277,16 @@ export const UPDATED_AT_WINDOW_TABLES = new Set([
   'cobros',
 ]);
 export const WINDOW_DAYS = 30;
+/** Ventana de historial: 15 días con `ruta_sync_v2`, 30 sin la bandera. */
+const WINDOW_DAYS_V2 = 15;
+const windowDays = () => (syncV2Habilitado() ? WINDOW_DAYS_V2 : WINDOW_DAYS);
 
 // Las tablas "full" (NO_DELTA sin updated_at) no se re-descargan en cada sync de
 // 30s: se refrescan como mucho cada esta ventana (un "Descargar todo" las fuerza).
 const FULL_TABLE_REFRESH_MS = 5 * 60 * 1000; // 5 min
+const FULL_TABLE_REFRESH_MS_V2 = 15 * 60 * 1000; // 15 min con ruta_sync_v2
+const fullRefreshMs = () => (syncV2Habilitado() ? FULL_TABLE_REFRESH_MS_V2 : FULL_TABLE_REFRESH_MS);
+
 
 // Respaldo de reconciliación de borrados en tablas con delta por updated_at:
 // aunque el chequeo por conteo ya los detecta, cada tanto forzamos una descarga
@@ -261,6 +305,9 @@ const CHILD_SCOPES: Partial<Record<CacheTable, { parentTable: CacheTable; foreig
 };
 
 const activeDownloads = new Map<string, Promise<DownloadResult>>();
+/** Cadena global: con `ruta_sync_v2` solo corre UNA sincronización a la vez. */
+let globalSyncChain: Promise<unknown> = Promise.resolve();
+
 
 function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
@@ -358,11 +405,24 @@ export async function downloadAllData(
   const active = activeDownloads.get(lockKey);
   if (active) return active;
 
-  const task = downloadAllDataInternal(empresaId, forceFullSync, onProgress, tablesToCache)
-    .finally(() => activeDownloads.delete(lockKey));
+  // CANDADO GLOBAL (`ruta_sync_v2`): además de no repetir la MISMA descarga,
+  // se evita que dos sincronizaciones DISTINTAS corran a la vez (era ~1/3 del
+  // tráfico desperdiciado). La segunda espera a que termine la primera y
+  // entonces arranca, así ninguna se pierde.
+  const run = async (): Promise<DownloadResult> => {
+    if (syncV2Habilitado()) {
+      const previous = globalSyncChain;
+      try { await previous; } catch { /* un fallo previo no bloquea al siguiente */ }
+    }
+    return downloadAllDataInternal(empresaId, forceFullSync, onProgress, tablesToCache);
+  };
+
+  const task = run().finally(() => activeDownloads.delete(lockKey));
   activeDownloads.set(lockKey, task);
+  globalSyncChain = task.catch(() => undefined);
   return task;
 }
+
 
 export const LS_LAST_EMPRESA = 'offline-empresa-id';
 
@@ -495,14 +555,17 @@ async function downloadAllDataInternal(
         // cada sync de 30s; si se refrescaron hace poco, se saltan. Un
         // "Descargar todo" (forceFullSync) siempre las baja.
         if (!forceFullSync && isNoDelta && cacheEntry?.lastSuccessAt
-            && (nowMs - cacheEntry.lastSuccessAt) < FULL_TABLE_REFRESH_MS) {
+            && (nowMs - cacheEntry.lastSuccessAt) < fullRefreshMs()) {
           progress[idx].status = 'done';
           progress[idx].rowCount = cacheEntry?.rowCount ?? 0;
           notify();
           return;
         }
 
-        const selectStr = COLUMN_SELECTS[table] || '*';
+        const selectStr = (syncV2Habilitado() ? COLUMN_SELECTS_V2[table] : undefined)
+          || COLUMN_SELECTS[table]
+          || '*';
+
 
         const parentIds = await getScopedParentIds(table, empresaId);
         const parentChunks = parentIds ? chunk(parentIds, CHILD_IN_CHUNK_SIZE) : [null];
@@ -545,21 +608,40 @@ async function downloadAllDataInternal(
             if (childScope && parentChunk && parentChunk.length > 0) {
               q = q.in(childScope.foreignKey, parentChunk);
             }
-            // Ventana de 30 días por created_at para tablas transaccionales
-            // hijas/append (acota cuánta historia se cachea).
-            if (RECENT_TABLES.has(table)) {
-              const thirtyDaysAgo = new Date();
-              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-              q = q.gte('created_at', thirtyDaysAgo.toISOString());
+            // FILTRADO POR VENDEDOR (`ruta_sync_v2`): el dispositivo baja solo
+            // lo del vendedor activo. Los clientes sin vendedor asignado también
+            // bajan, para no quitarle acceso a nadie.
+            const vendorScope = VENDOR_SCOPED_TABLES[table];
+            if (vendorScope && vendedorScopeActivo()) {
+              const scope = getSyncScope();
+              const value = vendorScope.source === 'user' ? scope.userId : scope.vendedorId;
+              if (value) {
+                q = vendorScope.nullable
+                  ? q.or(`${vendorScope.column}.eq.${value},${vendorScope.column}.is.null`)
+                  : q.eq(vendorScope.column, value);
+              }
             }
-            // Ventana por updated_at (ventas/cobros): cachea la actividad de los
-            // últimos 30 días; una venta vieja pagada hoy tiene updated_at de hoy
-            // y entra. Baja las ACTUALIZACIONES, no solo filas nuevas.
+            // Ventana por created_at para tablas transaccionales hijas/append
+            // (acota cuánta historia se cachea).
+            if (RECENT_TABLES.has(table)) {
+              const desde = new Date();
+              desde.setDate(desde.getDate() - windowDays());
+              q = q.gte('created_at', desde.toISOString());
+            }
+            // Ventana por updated_at (ventas/cobros): cachea la actividad
+            // reciente; una venta vieja pagada hoy tiene updated_at de hoy y
+            // entra. Baja las ACTUALIZACIONES, no solo filas nuevas.
             if (isUpdatedAtWindow) {
               const windowStart = new Date();
-              windowStart.setDate(windowStart.getDate() - WINDOW_DAYS);
-              q = q.gte('updated_at', windowStart.toISOString());
+              windowStart.setDate(windowStart.getDate() - windowDays());
+              const desdeIso = windowStart.toISOString();
+              // Excepción irrenunciable: una venta CON SALDO PENDIENTE siempre
+              // baja, por antigua que sea (si no, el vendedor no podría cobrarla).
+              q = table === 'ventas'
+                ? q.or(`updated_at.gte.${desdeIso},saldo_pendiente.gt.0`)
+                : q.gte('updated_at', desdeIso);
             }
+
             if (mode === 'delta') {
               if (lastTableSync) q = q.gte('created_at', new Date(lastTableSync - 5000).toISOString());
               // cursor gana sobre la ventana (es más reciente) → solo lo cambiado.
@@ -627,10 +709,24 @@ async function downloadAllDataInternal(
         if (isUpdatedAtDelta && isDeltaPull && localTable) {
           let mismatch = false;
           try {
-            const { count } = await withTimeout<any>(
-              (supabase.from as any)(table).select('id', { count: 'exact', head: true }).eq('empresa_id', empresaId),
-              `${table} conteo`,
-            );
+            let countQuery = (supabase.from as any)(table)
+              .select('id', { count: 'exact', head: true })
+              .eq('empresa_id', empresaId);
+            // El conteo debe usar EL MISMO filtro por vendedor que la descarga;
+            // si no, siempre saldría "distinto" y forzaría una descarga completa
+            // en cada sync (justo lo contrario del ahorro).
+            const vendorScopeCount = VENDOR_SCOPED_TABLES[table];
+            if (vendorScopeCount && vendedorScopeActivo()) {
+              const scope = getSyncScope();
+              const value = vendorScopeCount.source === 'user' ? scope.userId : scope.vendedorId;
+              if (value) {
+                countQuery = vendorScopeCount.nullable
+                  ? countQuery.or(`${vendorScopeCount.column}.eq.${value},${vendorScopeCount.column}.is.null`)
+                  : countQuery.eq(vendorScopeCount.column, value);
+              }
+            }
+            const { count } = await withTimeout<any>(countQuery, `${table} conteo`);
+
             const localCount = await localTable.where('empresa_id').equals(empresaId).count();
             mismatch = typeof count === 'number' && count !== localCount;
           } catch { /* si el conteo falla, la reconciliación periódica cubre */ }
