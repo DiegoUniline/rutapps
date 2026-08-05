@@ -8,6 +8,7 @@ import { useMermas, useMermaMotivos, useRegistrarMerma, useCancelarMerma, useMer
 import { useLotesPorReferencia } from '@/hooks/useLotesPorReferencia';
 import { LoteCell } from '@/components/lotes/LoteCell';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
+import { MermaLineaLotesDialog, type MermaLoteAsignacion } from '@/components/lotes/MermaLineaLotesDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +19,7 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Plus, Trash2, X, Settings, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, X, Settings, AlertTriangle, Boxes } from 'lucide-react';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { fmtMoney } from '@/lib/currency';
 import { toast } from 'sonner';
@@ -33,6 +34,8 @@ interface LineaForm {
   cantidad: number;
   costo_unitario: number;
   precio_venta_unitario: number;
+  maneja_lote?: boolean;
+  lotes?: MermaLoteAsignacion[];
 }
 
 export default function MermasPage() {
@@ -53,6 +56,7 @@ export default function MermasPage() {
   const [observaciones, setObservaciones] = useState('');
   const [lineas, setLineas] = useState<LineaForm[]>([]);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [loteLineaIdx, setLoteLineaIdx] = useState<number | null>(null);
 
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const { data: detalle } = useMerma(detalleId ?? undefined);
@@ -82,6 +86,8 @@ export default function MermasPage() {
       cantidad: 1,
       costo_unitario: Number(p.costo) || 0,
       precio_venta_unitario: Number(p.precio_principal) || 0,
+      maneja_lote: !!p.maneja_lote,
+      lotes: [],
     }]);
     setProductPickerOpen(false);
   };
@@ -91,6 +97,11 @@ export default function MermasPage() {
     if (!motivoId) return toast.error('Selecciona un motivo');
     if (lineas.length === 0) return toast.error('Agrega al menos un producto');
     if (lineas.some(l => l.cantidad <= 0)) return toast.error('Cantidades deben ser mayores a 0');
+    if (manejaLotes) {
+      const sinAsignar = lineas.find(l => l.maneja_lote
+        && Math.abs((l.lotes ?? []).reduce((s, x) => s + Number(x.cantidad || 0), 0) - l.cantidad) > 0.0001);
+      if (sinAsignar) return toast.error(`Asigna los lotes de ${sinAsignar.nombre}`);
+    }
 
     try {
       await registrar.mutateAsync({
@@ -102,6 +113,7 @@ export default function MermasPage() {
           cantidad: l.cantidad,
           costo_unitario: l.costo_unitario,
           precio_venta_unitario: l.precio_venta_unitario,
+          lotes: (l.lotes ?? []).map(x => ({ lote_id: x.lote_id, cantidad: x.cantidad })),
         })),
       });
       resetForm();
@@ -243,7 +255,7 @@ export default function MermasPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label>Almacén origen *</Label>
-              <Select value={almacenId} onValueChange={setAlmacenId}>
+              <Select value={almacenId} onValueChange={(v) => { setAlmacenId(v); setLineas(prev => prev.map(l => ({ ...l, lotes: [] }))); }}>
                 <SelectTrigger><SelectValue placeholder="Selecciona almacén" /></SelectTrigger>
                 <SelectContent>
                   {(almacenes ?? []).map((a: any) => (
@@ -308,6 +320,7 @@ export default function MermasPage() {
                       <TableHead className="w-32">Cantidad</TableHead>
                       <TableHead className="w-32">Costo unit.</TableHead>
                       <TableHead className="w-32">Precio venta</TableHead>
+                      {manejaLotes && <TableHead className="w-40">Lotes</TableHead>}
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -342,6 +355,28 @@ export default function MermasPage() {
                             }}
                             className="text-right" />
                         </TableCell>
+                        {manejaLotes && (
+                          <TableCell>
+                            {l.maneja_lote ? (() => {
+                              const asignado = (l.lotes ?? []).reduce((s, x) => s + Number(x.cantidad || 0), 0);
+                              const completo = Math.abs(asignado - l.cantidad) < 0.0001;
+                              return (
+                                <Button
+                                  size="sm"
+                                  variant={completo ? 'outline' : 'secondary'}
+                                  disabled={!almacenId}
+                                  onClick={() => setLoteLineaIdx(idx)}
+                                  title={almacenId ? 'Asignar lotes' : 'Selecciona primero el almacén origen'}
+                                >
+                                  <Boxes className="h-4 w-4 mr-1" />
+                                  {(l.lotes ?? []).length === 0
+                                    ? 'Asignar'
+                                    : `${(l.lotes ?? []).map(x => x.codigo).join(', ')}`}
+                                </Button>
+                              );
+                            })() : <span className="text-xs text-muted-foreground">—</span>}
+                          </TableCell>
+                        )}
                         <TableCell>
                           <Button variant="ghost" size="icon" onClick={() => setLineas(lineas.filter((_, i) => i !== idx))}>
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -370,6 +405,19 @@ export default function MermasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {manejaLotes && loteLineaIdx !== null && lineas[loteLineaIdx] && empresa?.id && almacenId && (
+        <MermaLineaLotesDialog
+          open
+          empresaId={empresa.id}
+          almacenOrigenId={almacenId}
+          producto={{ id: lineas[loteLineaIdx].producto_id, nombre: lineas[loteLineaIdx].nombre }}
+          cantidadTotal={lineas[loteLineaIdx].cantidad}
+          asignaciones={lineas[loteLineaIdx].lotes ?? []}
+          onChange={(next) => setLineas(prev => prev.map((x, i) => i === loteLineaIdx ? { ...x, lotes: next } : x))}
+          onClose={() => setLoteLineaIdx(null)}
+        />
+      )}
 
       {/* Detalle */}
       <Dialog open={!!detalleId} onOpenChange={(v) => !v && setDetalleId(null)}>

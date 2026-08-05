@@ -10,7 +10,10 @@ export interface MermaLinea {
   cantidad: number;
   costo_unitario: number;
   precio_venta_unitario: number;
+  /** Reparto por lote (empresas con manejo de lotes) */
+  lotes?: { lote_id: string; cantidad: number }[];
 }
+
 
 export function useMermaMotivos() {
   const { empresa } = useAuth();
@@ -160,6 +163,8 @@ export function useRegistrarMerma() {
       qc.invalidateQueries({ queryKey: ['mermas'] });
       qc.invalidateQueries({ queryKey: ['stock_almacen'] });
       qc.invalidateQueries({ queryKey: ['inventario'] });
+      qc.invalidateQueries({ queryKey: ['stock-lotes'] });
+      qc.invalidateQueries({ queryKey: ['lotes'] });
     },
   });
 }
@@ -176,6 +181,8 @@ export function useCancelarMerma() {
       qc.invalidateQueries({ queryKey: ['mermas'] });
       qc.invalidateQueries({ queryKey: ['stock_almacen'] });
       qc.invalidateQueries({ queryKey: ['inventario'] });
+      qc.invalidateQueries({ queryKey: ['stock-lotes'] });
+      qc.invalidateQueries({ queryKey: ['lotes'] });
     },
   });
 }

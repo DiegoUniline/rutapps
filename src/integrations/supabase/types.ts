@@ -4269,6 +4269,61 @@ export type Database = {
           },
         ]
       }
+      merma_linea_lotes: {
+        Row: {
+          cantidad: number
+          created_at: string
+          empresa_id: string
+          id: string
+          lote_id: string
+          merma_id: string
+          merma_linea_id: string
+          producto_id: string
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string
+          empresa_id: string
+          id?: string
+          lote_id: string
+          merma_id: string
+          merma_linea_id: string
+          producto_id: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          lote_id?: string
+          merma_id?: string
+          merma_linea_id?: string
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merma_linea_lotes_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merma_linea_lotes_merma_id_fkey"
+            columns: ["merma_id"]
+            isOneToOne: false
+            referencedRelation: "mermas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merma_linea_lotes_merma_linea_id_fkey"
+            columns: ["merma_linea_id"]
+            isOneToOne: false
+            referencedRelation: "merma_lineas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merma_lineas: {
         Row: {
           cantidad: number
