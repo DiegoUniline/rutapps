@@ -40,6 +40,8 @@ const TABLES_TO_CACHE = [
   'almacenes',
   'lotes',
   'stock_lotes',
+  'ruta_sesiones',
+  'vehiculos',
 ] as const;
 
 type CacheTable = typeof TABLES_TO_CACHE[number];
@@ -69,6 +71,8 @@ export const MOBILE_QUICK_SYNC_TABLES: readonly CacheTable[] = [
   'visitas',
   'lotes',
   'stock_lotes',
+  'ruta_sesiones',
+  'vehiculos',
 ];
 
 const PAGE_TIMEOUT_MS = 18000;
@@ -95,6 +99,8 @@ export const COLUMN_SELECTS: Record<string, string> = {
   almacenes: 'id,empresa_id,nombre,activo,es_merma,created_at',
   lotes: 'id,empresa_id,producto_id,codigo,fecha_caducidad,activo,updated_at',
   stock_lotes: 'id,empresa_id,almacen_id,producto_id,lote_id,cantidad,updated_at',
+  ruta_sesiones: 'id,empresa_id,vendedor_id,vehiculo_id,carga_id,fecha,inicio_at,fin_at,km_inicio,km_fin,km_recorridos,lat_inicio,lng_inicio,lat_fin,lng_fin,foto_inicio_url,foto_fin_url,notas_inicio,notas_fin,status,created_at,updated_at',
+  vehiculos: 'id,empresa_id,alias,placa,activo,created_at',
 };
 
 
@@ -133,6 +139,8 @@ export const TABLE_LABELS: Record<string, string> = {
   almacenes: 'Almacenes',
   lotes: 'Lotes',
   stock_lotes: 'Stock por lote',
+  ruta_sesiones: 'Jornadas de ruta',
+  vehiculos: 'Vehículos',
 };
 
 
@@ -151,6 +159,8 @@ export const TABLES_WITH_EMPRESA = new Set([
   'almacenes',
   'lotes',
   'stock_lotes',
+  'ruta_sesiones',
+  'vehiculos',
 ]);
 
 
@@ -196,6 +206,8 @@ const NO_DELTA_TABLES = new Set([
   'promociones',
   'lotes',
   'stock_lotes',
+  'ruta_sesiones',
+  'vehiculos',
 ]);
 
 // Tablas grandes con delta REAL por `updated_at` (mantenido por trigger en BD,

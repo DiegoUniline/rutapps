@@ -73,6 +73,8 @@ class OfflineDatabase extends Dexie {
   almacenes!: Table;
   lotes!: Table;
   stock_lotes!: Table;
+  ruta_sesiones!: Table;
+  vehiculos!: Table;
 
   // Sync infrastructure
   syncQueue!: Table<SyncQueueItem, number>;
@@ -146,6 +148,13 @@ class OfflineDatabase extends Dexie {
     // respuesta válida del servidor y, si no existe, se niega el acceso.
     this.version(13).stores({
       securitySnapshots: 'id, empresa_id, user_id',
+    });
+    // v14: jornada de ruta. Sin esto, al cerrar la app sin señal el vendedor
+    // perdía la sesión activa (vivía solo en la memoria de React Query) y no
+    // podía iniciar ni cerrar su jornada offline.
+    this.version(14).stores({
+      ruta_sesiones: 'id, empresa_id, vendedor_id, status, fecha',
+      vehiculos: 'id, empresa_id, activo',
     });
   }
 
