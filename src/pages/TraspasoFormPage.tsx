@@ -150,7 +150,10 @@ export default function TraspasoFormPage() {
 
   // Fetch ALL products with clasificacion/marca info
   const { data: allProductos } = useQuery({
-    queryKey: ['productos-select', empresa?.id],
+    // Clave propia: el prefetch global usa ['productos-select', id] con un
+    // select distinto (sin maneja_lote) y pisaba estos datos → la columna de
+    // lotes se quedaba en "—".
+    queryKey: ['productos-select-traspaso', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => fetchAllPages<any>((from, to) =>
       supabase.from('productos').select('id, codigo, nombre, cantidad, maneja_lote, clasificacion_id, marca_id, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre').range(from, to)
