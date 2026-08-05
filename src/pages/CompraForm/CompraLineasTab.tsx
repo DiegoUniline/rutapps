@@ -256,13 +256,14 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                   {line._tiene_ieps && <span className="text-[10px] text-muted-foreground">{iepsLabel}</span>}
                 </div>
               </div>
-              {manejaLotes && line.producto_id && lineaManejaLote(line) && line.id && (
+              {manejaLotes && line.producto_id && lineaManejaLote(line) && (
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border">
                   <span className="text-[10px] uppercase text-muted-foreground">Lotes</span>
                   <button
                     type="button"
+                    disabled={preparando}
                     onClick={() => abrirLoteo(line)}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border border-dashed border-primary/50 text-primary"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border border-dashed border-primary/50 text-primary disabled:opacity-50"
                   >
                     <Boxes className="h-3 w-3" /> {(Number((line as any).piezas_loteadas) || 0).toLocaleString('es-MX')} / {totalPz.toLocaleString('es-MX')}
                   </button>

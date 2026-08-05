@@ -52,7 +52,7 @@ export default function CompraFormPage() {
       </div>
 
       <OdooTabs activeTab={activeTab} tabs={[
-        { key: 'lineas', label: 'Líneas de compra', content: <CompraLineasTab compraId={h.form.id} almacenId={h.form.almacen_id} onLoteChanged={h.refetchCompra} lineas={h.lineas} productosList={h.productosList} isEditable={h.isEditable} puedeRecibir={puedeRecibir} updateLinea={h.updateLinea} addLine={h.addLine} removeLine={h.removeLine} onRecibirLinea={h.recibirLineaPendiente} /> },
+        { key: 'lineas', label: 'Líneas de compra', content: <CompraLineasTab compraId={h.form.id} needsSave={h.isNew || h.dirty} ensureSavedLinea={h.ensureSavedLinea} almacenId={h.form.almacen_id} onLoteChanged={h.refetchCompra} lineas={h.lineas} productosList={h.productosList} isEditable={h.isEditable} puedeRecibir={puedeRecibir} updateLinea={h.updateLinea} addLine={h.addLine} removeLine={h.removeLine} onRecibirLinea={h.recibirLineaPendiente} /> },
         { key: 'notas', label: 'Notas', content: (
           <div className="space-y-3">
             <div><label className="label-odoo">Notas generales</label><textarea className="input-odoo w-full h-20" value={h.form.notas ?? ''} onChange={e => h.updateField('notas', e.target.value)} disabled={!h.isEditable} /></div>
