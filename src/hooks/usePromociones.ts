@@ -54,6 +54,10 @@ export function usePromocionesActivas() {
   return useQuery({
     queryKey: ['promociones-activas', empresaId],
     enabled: !!empresaId,
+    // Si no se pudieron cargar, reintentar: NUNCA vender sin promociones por
+    // un fallo de red silencioso.
+    retry: 3,
+    refetchOnReconnect: true,
     queryFn: async () => {
       const today = todayInTimezone(empresa?.zona_horaria);
 
@@ -68,6 +72,7 @@ export function usePromocionesActivas() {
       }).sort((a: any, b: any) => (b.prioridad ?? 0) - (a.prioridad ?? 0)) as Promocion[];
 
       // Try server first
+      let serverFailed = false;
       try {
         const { data, error } = await supabase
           .from('promociones')
@@ -85,16 +90,28 @@ export function usePromocionesActivas() {
           } catch { /* ignore */ }
           return data as Promocion[];
         }
-      } catch { /* offline / network error → fall through */ }
+        serverFailed = true;
+      } catch { serverFailed = true; }
 
       // Offline fallback: read from IndexedDB
+      let cached: any[] = [];
+      let cacheFailed = false;
       try {
-        const cached = await offlineDb.promociones.where('empresa_id').equals(empresaId!).toArray();
-        return filterVigentes(cached);
-      } catch { return [] as Promocion[]; }
+        cached = await offlineDb.promociones.where('empresa_id').equals(empresaId!).toArray();
+      } catch { cacheFailed = true; }
+
+      // CRÍTICO: si el servidor falló y la caché local está vacía o rota, NO
+      // devolver [] (eso hacía que la venta se guardara SIN promociones y sin
+      // ningún aviso). Se lanza el error para que la query quede en estado
+      // "error" y la pantalla de venta pueda bloquear/avisar.
+      if (serverFailed && (cacheFailed || cached.length === 0)) {
+        throw new Error('No se pudieron cargar las promociones');
+      }
+      return filterVigentes(cached);
     },
   });
 }
+
 
 
 export function useSavePromocion() {

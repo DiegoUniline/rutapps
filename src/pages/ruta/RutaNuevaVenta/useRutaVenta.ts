@@ -283,7 +283,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return map;
   }, [apartadoActivoPedido, pedidoAlmacenId, pedidoStockAlmacenRaw, pedidoStockApartadoRaw]);
 
-  const { data: promocionesActivas } = usePromocionesActivas();
+  const { data: promocionesActivas, isError: promosError, isLoading: promosLoading, refetch: refetchPromos } = usePromocionesActivas();
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
 
   useEffect(() => {
@@ -914,8 +914,16 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       toast.error(`Saldo a favor insuficiente. Disponible: ${fmt(saldoFavorDisp)}`);
       return;
     }
+    // Nunca guardar una venta cuando las promociones no se pudieron cargar:
+    // se cobraría a precio completo sin descuento y sin ningún aviso.
+    if (promosError || promosLoading || !promocionesActivas) {
+      toast.error('No se pudieron cargar las promociones. Sincroniza antes de cobrar.');
+      try { refetchPromos(); } catch { /* ignore */ }
+      return;
+    }
     savingRef.current = true;
     setSaving(true);
+
     try {
       // Id estable de la venta: se genera una vez y se reusa en reintentos.
       if (!pendingVentaIdRef.current) pendingVentaIdRef.current = crypto.randomUUID();
