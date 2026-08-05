@@ -853,11 +853,27 @@ export function useVentaForm() {
         delete clean.lotes;
 
         lineProductoIds.push(producto_id);
+        lineIndexes.push(lineIndex);
         lineTotalByProduct.set(producto_id, (lineTotalByProduct.get(producto_id) ?? 0) + lineAmounts.total);
         linePromises.push(saveLinea.mutateAsync(clean));
       }
 
       const savedLines = await Promise.all(linePromises);
+
+      // Escribir de vuelta los ids generados en el estado local: sin esto, un
+      // segundo guardado (p. ej. "Confirmar" tras editar en borrador) volvería
+      // a INSERTAR las mismas líneas y quedarían duplicadas.
+      const nuevosIdsPorIndice = new Map<number, string>();
+      savedLines.forEach((row: any, i) => {
+        const li = lineIndexes[i];
+        if (row?.id && li !== undefined) nuevosIdsPorIndice.set(li, row.id);
+      });
+      if (nuevosIdsPorIndice.size > 0) {
+        // Mutamos también los objetos de la closure para blindar llamadas encadenadas.
+        nuevosIdsPorIndice.forEach((newId, li) => { if (lineas[li] && !lineas[li].id) (lineas[li] as any).id = newId; });
+        setLineas(prev => prev.map((l, i) => (l.id ? l : (nuevosIdsPorIndice.has(i) ? { ...l, id: nuevosIdsPorIndice.get(i) } : l))));
+      }
+
 
       // Registrar el desglose de promociones aplicadas (solo informativo para reportes).
       if (promoPersistHabilitado((empresa as any)?.licencia)) {
