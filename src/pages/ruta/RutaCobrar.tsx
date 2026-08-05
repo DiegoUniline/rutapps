@@ -1,3 +1,4 @@
+import { RutaOperacionGate } from '@/components/ruta/RutaOperacionGate';
 import { todayLocal } from '@/lib/utils';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -33,7 +34,7 @@ const METODOS_PAGO = [
   { value: 'otro', label: 'Otro', icon: Wallet },
 ] as const;
 
-export default function RutaCobrar() {
+function RutaCobrarInner() {
   const navigate = useNavigate();
   const location = useLocation();
   const preselectedClienteId = (location.state as any)?.clienteId as string | undefined;
@@ -691,5 +692,17 @@ export default function RutaCobrar() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Portero offline: sin los datos indispensables en el dispositivo, la
+ * operación no se puede iniciar (fail-closed).
+ */
+export default function RutaCobrar() {
+  return (
+    <RutaOperacionGate operacion="cobro">
+      <RutaCobrarInner />
+    </RutaOperacionGate>
   );
 }
