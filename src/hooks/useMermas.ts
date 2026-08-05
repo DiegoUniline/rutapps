@@ -10,7 +10,10 @@ export interface MermaLinea {
   cantidad: number;
   costo_unitario: number;
   precio_venta_unitario: number;
+  /** Reparto por lote (empresas con manejo de lotes) */
+  lotes?: { lote_id: string; cantidad: number }[];
 }
+
 
 export function useMermaMotivos() {
   const { empresa } = useAuth();
