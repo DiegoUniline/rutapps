@@ -9227,8 +9227,6 @@ export type Database = {
       }
     }
     Functions: {
-      __test_sync_venta_edicion: { Args: never; Returns: Json }
-      __test_sync_venta_lotes: { Args: never; Returns: Json }
       _aplica_stock_lote: {
         Args: {
           p_almacen: string
