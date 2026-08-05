@@ -123,7 +123,7 @@ export function useBootstrapPrefetch() {
             await lightCatalogsReady;
             const rows = await fetchAllPages<any>((from, to) =>
               supabase.from('productos')
-                .select('id, codigo, nombre, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos')
+                .select('id, codigo, nombre, precio_principal, costo, cantidad, clasificacion_id, marca_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, maneja_lote, es_granel, unidad_granel, vender_sin_stock, usa_listas_precio')
                 .eq('empresa_id', eid)
                 .eq('status', 'activo')
                 .order('nombre')
