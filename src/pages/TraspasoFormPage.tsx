@@ -480,7 +480,39 @@ export default function TraspasoFormPage() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Abrir lotes sin exigir guardar: si hace falta, guarda el borrador solo
+  const abrirLotes = async (productoId: string, qty: number) => {
+    if (readOnly) {
+      const linea = lineas.find(l => l.producto_id === productoId);
+      if (linea?.id) { setLoteTraspasoId(id ?? null); setLoteLinea({ ...linea, cantidad: qty }); }
+      return;
+    }
+    let tId: string | null = id ?? null;
+    const lineaExistente = lineas.find(l => l.producto_id === productoId);
+    if (isNew || dirty || !lineaExistente?.id) {
+      try {
+        setAutoSaving(true);
+        const res: any = await saveMut.mutateAsync();
+        tId = res?.id ?? id ?? null;
+      } catch {
+        setAutoSaving(false);
+        return;
+      }
+      setAutoSaving(false);
+    }
+    if (!tId) return;
+    const { data } = await (supabase.from as any)('traspaso_lineas')
+      .select('id, producto_id, cantidad')
+      .eq('traspaso_id', tId)
+      .eq('producto_id', productoId)
+      .maybeSingle();
+    if (!data?.id) { toast.error('No se pudo preparar la línea para asignar lotes'); return; }
+    setLoteTraspasoId(tId);
+    setLoteLinea({ id: data.id, producto_id: productoId, cantidad: qty });
+  };
+
   const handleDelete = async () => {
+
     if (!id || !await confirmAsync('¿Eliminar este traspaso?')) return;
     await supabase.from('traspaso_lineas').delete().eq('traspaso_id', id);
     await supabase.from('traspasos').delete().eq('id', id);
