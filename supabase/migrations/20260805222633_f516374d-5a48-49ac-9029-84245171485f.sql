@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.__test_sync_venta_edicion() TO sandbox_exec;
