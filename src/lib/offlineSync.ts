@@ -555,14 +555,17 @@ async function downloadAllDataInternal(
         // cada sync de 30s; si se refrescaron hace poco, se saltan. Un
         // "Descargar todo" (forceFullSync) siempre las baja.
         if (!forceFullSync && isNoDelta && cacheEntry?.lastSuccessAt
-            && (nowMs - cacheEntry.lastSuccessAt) < FULL_TABLE_REFRESH_MS) {
+            && (nowMs - cacheEntry.lastSuccessAt) < fullRefreshMs()) {
           progress[idx].status = 'done';
           progress[idx].rowCount = cacheEntry?.rowCount ?? 0;
           notify();
           return;
         }
 
-        const selectStr = COLUMN_SELECTS[table] || '*';
+        const selectStr = (syncV2Habilitado() ? COLUMN_SELECTS_V2[table] : undefined)
+          || COLUMN_SELECTS[table]
+          || '*';
+
 
         const parentIds = await getScopedParentIds(table, empresaId);
         const parentChunks = parentIds ? chunk(parentIds, CHILD_IN_CHUNK_SIZE) : [null];
