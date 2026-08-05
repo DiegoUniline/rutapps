@@ -277,10 +277,16 @@ export const UPDATED_AT_WINDOW_TABLES = new Set([
   'cobros',
 ]);
 export const WINDOW_DAYS = 30;
+/** Ventana de historial: 15 días con `ruta_sync_v2`, 30 sin la bandera. */
+const WINDOW_DAYS_V2 = 15;
+const windowDays = () => (syncV2Habilitado() ? WINDOW_DAYS_V2 : WINDOW_DAYS);
 
 // Las tablas "full" (NO_DELTA sin updated_at) no se re-descargan en cada sync de
 // 30s: se refrescan como mucho cada esta ventana (un "Descargar todo" las fuerza).
 const FULL_TABLE_REFRESH_MS = 5 * 60 * 1000; // 5 min
+const FULL_TABLE_REFRESH_MS_V2 = 15 * 60 * 1000; // 15 min con ruta_sync_v2
+const fullRefreshMs = () => (syncV2Habilitado() ? FULL_TABLE_REFRESH_MS_V2 : FULL_TABLE_REFRESH_MS);
+
 
 // Respaldo de reconciliación de borrados en tablas con delta por updated_at:
 // aunque el chequeo por conteo ya los detecta, cada tanto forzamos una descarga
