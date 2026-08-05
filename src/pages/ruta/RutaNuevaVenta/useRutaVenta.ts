@@ -756,6 +756,51 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId || undefined, (selectedCliente as any)?.zona_id || undefined, (empresa as any)?.zona_horaria);
   }, [promocionesActivas, cart, clienteId, selectedCliente, productos, sinImpuestos]);
 
+  // ── Promociones de PRODUCTO GRATIS pendientes ────────────────────────────
+  // El motor solo rebaja el regalo si ya está en el carrito. Aquí detectamos
+  // los que faltan para (a) agregarlos solos y (b) impedir cobrar mal.
+  const pendingGratis = useMemo(() => {
+    if (!promocionesActivas || cart.length === 0) return [] as PendingProductoGratis[];
+    const items: CartItemForPromo[] = cart.filter(c => !c.es_cambio).map(c => ({
+      producto_id: c.producto_id,
+      clasificacion_id: productos?.find((p: any) => p.id === c.producto_id)?.clasificacion_id ?? undefined,
+      precio_unitario: Number(c.precio_unitario) || 0,
+      cantidad: Number(c.cantidad) || 0,
+    }));
+    return getPendingProductoGratis(
+      promocionesActivas, items, clienteId || undefined,
+      (selectedCliente as any)?.zona_id || undefined, (empresa as any)?.zona_horaria,
+    );
+  }, [promocionesActivas, cart, clienteId, selectedCliente, productos, empresa]);
+
+  const autoPromosOn = promosAutoHabilitado((empresa as any)?.licencia);
+
+  // Agrega solo el producto de bonificación con la cantidad faltante (topada al
+  // stock disponible). El motor de promociones lo netea a $0 en el siguiente
+  // render, así que el vendedor ya no tiene que acordarse de agregarlo.
+  useEffect(() => {
+    if (!autoPromosOn || pendingGratis.length === 0) return;
+    for (const pend of pendingGratis) {
+      const prod = productos?.find((p: any) => p.id === pend.gratis_producto_id);
+      if (!prod) continue;
+      const enCarrito = cart.find(c => c.producto_id === pend.gratis_producto_id && !c.es_cambio)?.cantidad ?? 0;
+      const deseada = enCarrito + pend.cantidad_gratis_faltante;
+      const maxQty = getMaxQty(pend.gratis_producto_id);
+      const objetivo = Math.min(deseada, maxQty);
+      if (objetivo <= enCarrito) continue; // sin stock a bordo para el regalo
+      if (enCarrito > 0) {
+        setItemQty(pend.gratis_producto_id, objetivo);
+      } else {
+        addToCart(prod);
+        if (objetivo > 1) setItemQty(pend.gratis_producto_id, objetivo);
+      }
+      return; // un ajuste por render; el efecto vuelve a correr con el carrito nuevo
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPromosOn, pendingGratis, productos]);
+
+
+
 
   // Build a map of raw promo discount per product
   const promoRawByProduct = useMemo(() => {
