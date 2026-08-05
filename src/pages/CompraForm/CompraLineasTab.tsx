@@ -17,6 +17,8 @@ interface Props {
   puedeRecibir: boolean;
   compraId?: string;
   almacenId?: string | null;
+  needsSave?: boolean;
+  ensureSavedLinea?: (productoId: string) => Promise<{ compraId: string; lineaId: string } | null>;
   updateLinea: (idx: number, key: string, val: any) => void;
   addLine: () => void;
   removeLine: (idx: number) => void;
@@ -24,7 +26,8 @@ interface Props {
   onLoteChanged?: () => void;
 }
 
-export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibir, compraId, almacenId, updateLinea, addLine, removeLine, onRecibirLinea, onLoteChanged }: Props) {
+export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibir, compraId, almacenId, needsSave, ensureSavedLinea, updateLinea, addLine, removeLine, onRecibirLinea, onLoteChanged }: Props) {
+
   const { fmt } = useCurrency();
   const { empresa, user } = useAuth();
   const [quickOpen, setQuickOpen] = useState(false);
