@@ -283,7 +283,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return map;
   }, [apartadoActivoPedido, pedidoAlmacenId, pedidoStockAlmacenRaw, pedidoStockApartadoRaw]);
 
-  const { data: promocionesActivas } = usePromocionesActivas();
+  const { data: promocionesActivas, isError: promosError, isLoading: promosLoading, refetch: refetchPromos } = usePromocionesActivas();
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
 
   useEffect(() => {
