@@ -42,8 +42,10 @@ export default function SuperAdminEmpresaSelector() {
   // isSuperAdmin flag, which during initial load returns false and hid the bar.
   const isAllowed = isSuperAdminEmail(user?.email);
 
+  // AHORRO DE DATOS: la lista de empresas (cientos de KB) se pide SOLO cuando
+  // el super admin abre el selector, no en cada arranque de la app/móvil.
   useEffect(() => {
-    if (!isAllowed) return;
+    if (!isAllowed || !open || empresas.length > 0) return;
     (async () => {
       const nowIso = new Date().toISOString();
 
