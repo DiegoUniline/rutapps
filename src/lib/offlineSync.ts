@@ -480,7 +480,7 @@ async function downloadAllDataInternal(
 
 
     await Promise.all(batch.map(async (table) => {
-      const idx = tablesToCache.indexOf(table);
+      const idx = effectiveTables.indexOf(table);
       progress[idx].status = 'downloading';
       notify();
 
