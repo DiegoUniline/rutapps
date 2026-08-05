@@ -12,8 +12,10 @@ import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type 
 import { buildManualSalePricingFromGross, buildSalePricingSnapshot, getDisplayUnitPrice as getSaleDisplayUnitPrice, getTaxMultiplier } from '@/lib/salePricing';
 import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
-import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
+import { usePromocionesActivas, evaluatePromociones, getPendingProductoGratis, type CartItemForPromo, type PromoResult, type PendingProductoGratis } from '@/hooks/usePromociones';
 import { buildPromoAplicadaRows, promoPersistHabilitado } from '@/lib/promoPersist';
+import { promosAutoHabilitado } from '@/lib/promoAuto';
+
 import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 
