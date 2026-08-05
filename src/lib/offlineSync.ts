@@ -206,9 +206,12 @@ const NO_DELTA_TABLES = new Set([
   'promociones',
   'lotes',
   'stock_lotes',
-  'ruta_sesiones',
+  // vehiculos: catálogo pequeño que el vendedor NO crea offline.
   'vehiculos',
 ]);
+// NOTA: `ruta_sesiones` queda FUERA del refresco completo a propósito. El
+// vendedor puede abrir o cerrar su jornada sin señal; un clear+replace borraría
+// esa fila local antes de que la cola la suba.
 
 // Tablas grandes con delta REAL por `updated_at` (mantenido por trigger en BD,
 // ver migración 20260727000000). En vez de re-bajarlas completas en cada sync,
