@@ -70,6 +70,9 @@ export default function TraspasoFormPage() {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; title: string; description: string } | null>(null);
   const [loteLinea, setLoteLinea] = useState<LineaForm | null>(null);
+  const [loteTraspasoId, setLoteTraspasoId] = useState<string | null>(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+
   const { requestPin, PinDialog } = usePinAuth();
 
   const handleGenerarPdf = async () => {
