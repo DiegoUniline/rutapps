@@ -7420,6 +7420,78 @@ export type Database = {
           },
         ]
       }
+      traspaso_linea_lotes: {
+        Row: {
+          cantidad: number
+          created_at: string
+          empresa_id: string
+          id: string
+          lote_id: string
+          producto_id: string
+          traspaso_id: string
+          traspaso_linea_id: string
+          updated_at: string
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          empresa_id: string
+          id?: string
+          lote_id: string
+          producto_id: string
+          traspaso_id: string
+          traspaso_linea_id: string
+          updated_at?: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          lote_id?: string
+          producto_id?: string
+          traspaso_id?: string
+          traspaso_linea_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traspaso_linea_lotes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traspaso_linea_lotes_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traspaso_linea_lotes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traspaso_linea_lotes_traspaso_id_fkey"
+            columns: ["traspaso_id"]
+            isOneToOne: false
+            referencedRelation: "traspasos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traspaso_linea_lotes_traspaso_linea_id_fkey"
+            columns: ["traspaso_linea_id"]
+            isOneToOne: false
+            referencedRelation: "traspaso_lineas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       traspaso_lineas: {
         Row: {
           cantidad: number

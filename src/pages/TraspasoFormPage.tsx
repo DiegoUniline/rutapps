@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
-import { ArrowLeft, Save, Trash2, Check, FileText, Ban, Search } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Check, FileText, Ban, Search, Boxes } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -19,6 +19,9 @@ import { toast } from 'sonner';
 import { cn , todayLocal, fmtNum } from '@/lib/utils';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { confirmDialog as confirmAsync } from '@/lib/confirm';
+import { useManejaLotes } from '@/hooks/useManejaLotes';
+import { TraspasoLineaLotesDialog } from '@/components/lotes/TraspasoLineaLotesDialog';
+import { Button } from '@/components/ui/button';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -46,6 +49,7 @@ export default function TraspasoFormPage() {
   const navigate = useNavigate();
   const { empresa, user, profile } = useAuth();
   const qc = useQueryClient();
+  const manejaLotes = useManejaLotes();
   const isNew = id === 'nuevo';
 
   const [tipo, setTipo] = useState('almacen_almacen');
@@ -65,6 +69,7 @@ export default function TraspasoFormPage() {
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; title: string; description: string } | null>(null);
+  const [loteLinea, setLoteLinea] = useState<LineaForm | null>(null);
   const { requestPin, PinDialog } = usePinAuth();
 
   const handleGenerarPdf = async () => {
@@ -145,7 +150,7 @@ export default function TraspasoFormPage() {
     queryKey: ['productos-select', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => fetchAllPages<any>((from, to) =>
-      supabase.from('productos').select('id, codigo, nombre, cantidad, clasificacion_id, marca_id, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre').range(from, to)
+      supabase.from('productos').select('id, codigo, nombre, cantidad, maneja_lote, clasificacion_id, marca_id, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre').range(from, to)
     ),
   });
 
@@ -221,6 +226,28 @@ export default function TraspasoFormPage() {
     (stockAlmacenDestino ?? []).forEach((s: any) => m.set(s.producto_id, Number(s.cantidad) || 0));
     return m;
   }, [stockAlmacenDestino]);
+
+  const { data: lotesAsignados } = useQuery({
+    queryKey: ['traspaso-linea-lotes-resumen', id],
+    enabled: manejaLotes && !isNew && !!id,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from as any)('traspaso_linea_lotes')
+        .select('traspaso_linea_id, cantidad, lotes(codigo)')
+        .eq('traspaso_id', id!);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const lotesResumenMap = useMemo(() => {
+    const map = new Map<string, { cantidad: number; codigos: string[] }>();
+    (lotesAsignados ?? []).forEach((row: any) => {
+      const current = map.get(row.traspaso_linea_id) ?? { cantidad: 0, codigos: [] };
+      current.cantidad += Number(row.cantidad ?? 0);
+      if (row.lotes?.codigo) current.codigos.push(row.lotes.codigo);
+      map.set(row.traspaso_linea_id, current);
+    });
+    return map;
+  }, [lotesAsignados]);
 
   // Filtered product list: only those with stock > 0 from the selected origin
   const productosList = useMemo(() => {
@@ -421,6 +448,8 @@ export default function TraspasoFormPage() {
       qc.invalidateQueries({ queryKey: ['productos-select'] });
       qc.invalidateQueries({ queryKey: ['stock-camion'] });
       qc.invalidateQueries({ queryKey: ['stock-almacen-origen'] });
+      qc.invalidateQueries({ queryKey: ['stock-lotes'] });
+      qc.invalidateQueries({ queryKey: ['lotes'] });
       qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
     },
     onError: (err: any) => toast.error(err.message),
@@ -444,6 +473,8 @@ export default function TraspasoFormPage() {
       qc.invalidateQueries({ queryKey: ['productos-select'] });
       qc.invalidateQueries({ queryKey: ['stock-camion'] });
       qc.invalidateQueries({ queryKey: ['stock-almacen-origen'] });
+      qc.invalidateQueries({ queryKey: ['stock-lotes'] });
+      qc.invalidateQueries({ queryKey: ['lotes'] });
       qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
     },
     onError: (err: any) => toast.error(err.message),
@@ -706,6 +737,7 @@ export default function TraspasoFormPage() {
                             <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Producto</th>
                             <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{readOnly ? 'En destino' : 'Disponible'}</th>
                             <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">A traspasar</th>
+                            {manejaLotes && <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-36 text-left">Lotes</th>}
                           </tr>
                         </thead>
                         <tbody>
@@ -720,6 +752,14 @@ export default function TraspasoFormPage() {
                                   <td className="py-1.5 px-2 text-[12px]">{prod?.nombre ?? '—'}</td>
                                   <td className={cn("py-1.5 px-2 text-right tabular-nums", stockDest <= 0 ? "text-destructive" : "text-foreground")}>{fmtNum(stockDest)}</td>
                                   <td className="py-1.5 px-2 text-right tabular-nums font-medium">{l.cantidad}</td>
+                                  {manejaLotes && <td className="py-1.5 px-2">
+                                    {(prod as any)?.maneja_lote && l.id ? (() => {
+                                      const resumen = lotesResumenMap.get(l.id);
+                                      return <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setLoteLinea(l)}>
+                                        <Boxes className="mr-1 h-3.5 w-3.5" />{resumen ? `${resumen.codigos.join(', ')} · ${fmtNum(resumen.cantidad)}` : 'Ver lotes'}
+                                      </Button>;
+                                    })() : '—'}
+                                  </td>}
                                 </tr>
                               );
                             })
@@ -727,7 +767,7 @@ export default function TraspasoFormPage() {
                             // Edit mode: show all products with stock
                             filteredGridProducts.length === 0 ? (
                               <tr>
-                                <td colSpan={4} className="text-center py-6 text-muted-foreground text-[12px]">
+                                <td colSpan={manejaLotes ? 5 : 4} className="text-center py-6 text-muted-foreground text-[12px]">
                                   {gridSearch || filtroClasificacion || filtroMarca
                                     ? 'Sin resultados con los filtros actuales'
                                     : 'Sin productos con stock en el origen seleccionado'}
@@ -760,6 +800,15 @@ export default function TraspasoFormPage() {
                                         )}
                                       />
                                     </td>
+                                    {manejaLotes && <td className="py-1 px-2 text-[11px] text-muted-foreground">
+                                      {(p as any).maneja_lote ? (isNew ? 'Guarda para asignar' : (() => {
+                                        const linea = lineas.find(item => item.producto_id === p.id);
+                                        const resumen = linea?.id ? lotesResumenMap.get(linea.id) : undefined;
+                                        return linea?.id && hasQty ? <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setLoteLinea({ ...linea, cantidad: qty })}>
+                                          <Boxes className="mr-1 h-3.5 w-3.5" />{resumen ? `${fmtNum(resumen.cantidad)} / ${fmtNum(qty)}` : 'Asignar'}
+                                        </Button> : 'Guarda para asignar';
+                                      })()) : '—'}
+                                    </td>}
                                   </tr>
                                 );
                               })
@@ -794,6 +843,24 @@ export default function TraspasoFormPage() {
           ]} />
         </div>
       </div>
+
+      {loteLinea?.id && empresa?.id && (() => {
+        const producto = (allProductos ?? []).find(item => item.id === loteLinea.producto_id);
+        const origenLotesId = tipo === 'ruta_almacen' ? vendedorAlmacenId : almacenOrigenId;
+        if (!producto || !origenLotesId || !id) return null;
+        return <TraspasoLineaLotesDialog
+          open
+          empresaId={empresa.id}
+          traspasoId={id}
+          lineaId={loteLinea.id}
+          producto={{ id: producto.id, nombre: producto.nombre }}
+          almacenOrigenId={origenLotesId}
+          cantidadTotal={loteLinea.cantidad}
+          readOnly={readOnly}
+          onClose={() => setLoteLinea(null)}
+          onChanged={() => qc.invalidateQueries({ queryKey: ['traspaso-linea-lotes-resumen', id] })}
+        />;
+      })()}
 
       <DocumentPreviewModal
         open={showPdfModal}
