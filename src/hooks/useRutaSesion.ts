@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { todayLocal } from '@/lib/utils';
+import { offlineDb } from '@/lib/offlineDb';
+import { queueOperation } from '@/lib/syncQueue';
 
 export interface RutaSesion {
   id: string;
@@ -46,19 +48,44 @@ export function useRutaSesionActiva() {
     queryKey: ['ruta-sesion-activa', empresa?.id, vendedorId],
     enabled: !!empresa?.id && !!vendedorId,
     refetchInterval: 5 * 60_000,
+    // La jornada debe resolverse aunque el celular no tenga señal y aunque la
+    // app se haya cerrado por completo: la respuesta buena se guarda en
+    // IndexedDB y, sin red, se lee de ahí (no de la memoria de React Query).
+    networkMode: 'always',
     queryFn: async (): Promise<RutaSesion | null> => {
-      const { data, error } = await supabase
-        .from('ruta_sesiones')
-        .select('*, vehiculos(alias, placa)')
-        .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId!)
-        .eq('status', 'en_ruta')
-        .eq('fecha', todayLocal())
-        .order('inicio_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data as any;
+      const leerLocal = async (): Promise<RutaSesion | null> => {
+        const filas = await offlineDb.ruta_sesiones
+          .where('empresa_id').equals(empresa!.id)
+          .filter((r: any) => r.vendedor_id === vendedorId && r.status === 'en_ruta' && r.fecha === todayLocal())
+          .toArray();
+        const activa = filas.sort((a: any, b: any) => String(b.inicio_at).localeCompare(String(a.inicio_at)))[0] ?? null;
+        if (!activa) return null;
+        const veh = activa.vehiculo_id ? await offlineDb.vehiculos.get(activa.vehiculo_id) : null;
+        return { ...activa, vehiculos: veh ? { alias: veh.alias, placa: veh.placa ?? null } : null } as RutaSesion;
+      };
+
+      try {
+        const { data, error } = await supabase
+          .from('ruta_sesiones')
+          .select('*, vehiculos(alias, placa)')
+          .eq('empresa_id', empresa!.id)
+          .eq('vendedor_id', vendedorId!)
+          .eq('status', 'en_ruta')
+          .eq('fecha', todayLocal())
+          .order('inicio_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) throw error;
+        if (data) {
+          const { vehiculos: _v, ...fila } = data as any;
+          await offlineDb.ruta_sesiones.put(fila);
+        }
+        return data as any;
+      } catch (e) {
+        // Sin red: la copia local manda. Si tampoco hay copia, se informa como
+        // "sin jornada" solo cuando la tabla local ya existe.
+        return await leerLocal();
+      }
     },
   });
 }
@@ -78,19 +105,30 @@ export function useAbrirRutaSesion() {
       carga_id?: string | null;
     }) => {
       if (!empresa?.id || !profile?.id) throw new Error('Sesión no disponible');
-      const payload = {
+      const payload: any = {
+        id: crypto.randomUUID(),
         empresa_id: empresa.id,
         vendedor_id: profile.id,
         fecha: todayLocal(),
+        inicio_at: new Date().toISOString(),
+        status: 'en_ruta',
         ...input,
       };
-      const { data, error } = await supabase
-        .from('ruta_sesiones')
-        .insert(payload)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      try {
+        const { data, error } = await supabase
+          .from('ruta_sesiones')
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        await offlineDb.ruta_sesiones.put(data);
+        return data;
+      } catch {
+        // Offline: la jornada se abre localmente y se sube en cuanto vuelva la
+        // señal. El id lo genera el dispositivo, así que no se duplica.
+        await queueOperation('ruta_sesiones', 'insert', payload);
+        return payload;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ruta-sesion-activa'] });
@@ -111,14 +149,24 @@ export function useCerrarRutaSesion() {
       notas_fin?: string | null;
     }) => {
       const { id, ...rest } = input;
-      const { data, error } = await supabase
-        .from('ruta_sesiones')
-        .update({ ...rest, status: 'cerrada', fin_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      const cambios = { ...rest, status: 'cerrada' as const, fin_at: new Date().toISOString() };
+      try {
+        const { data, error } = await supabase
+          .from('ruta_sesiones')
+          .update(cambios)
+          .eq('id', id)
+          .select()
+          .single();
+        if (error) throw error;
+        await offlineDb.ruta_sesiones.put(data);
+        return data;
+      } catch {
+        await queueOperation('ruta_sesiones', 'update', { id, ...cambios });
+        const local = await offlineDb.ruta_sesiones.get(id);
+        const cerrada = { ...(local ?? { id }), ...cambios };
+        await offlineDb.ruta_sesiones.put(cerrada);
+        return cerrada;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ruta-sesion-activa'] });
