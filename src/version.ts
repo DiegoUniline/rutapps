@@ -1,3 +1,3 @@
 // App version – auto-bumped on every build by vite.config.ts
-export const APP_VERSION = '000258';
-export const APP_BUILD_DATE = '2026-08-05 15:59';
+export const APP_VERSION = '000259';
+export const APP_BUILD_DATE = '2026-08-05 16:04';

@@ -766,8 +766,9 @@ export function useVentaForm() {
       // Pre-cálculo de líneas ANTES de guardar el encabezado: si la promoción
       // ya viene descontada en la línea, el encabezado NO debe volver a restarla
       // (eso provocaba un descuento doble en el total de la venta).
-      const preparadas: { producto_id: string; pricedLine: any; lineAmounts: ReturnType<typeof calculateSaleLineAmounts>; brutoAmounts: ReturnType<typeof calculateSaleLineAmounts> }[] = [];
-      for (const l of lineas) {
+      const preparadas: { producto_id: string; lineIndex: number; pricedLine: any; lineAmounts: ReturnType<typeof calculateSaleLineAmounts>; brutoAmounts: ReturnType<typeof calculateSaleLineAmounts> }[] = [];
+      for (let li = 0; li < lineas.length; li++) {
+        const l = lineas[li];
         if (!l.producto_id) continue;
         const pricedLine = applyEffectiveLinePricing(l, sinImpuestos) as any;
         let lineAmounts = calculateSaleLineAmounts(pricedLine as any, sinImpuestos);
@@ -780,8 +781,9 @@ export function useVentaForm() {
             promoPendientePorProducto.set(l.producto_id, pend - aplicar);
           }
         }
-        preparadas.push({ producto_id: l.producto_id, pricedLine, lineAmounts, brutoAmounts });
+        preparadas.push({ producto_id: l.producto_id, lineIndex: li, pricedLine, lineAmounts, brutoAmounts });
       }
+
 
 
       const r2h = (n: number) => Math.round(n * 100) / 100;
@@ -817,9 +819,10 @@ export function useVentaForm() {
       const ventaId = saved.id || form.id;
       const linePromises: Promise<any>[] = [];
       const lineProductoIds: string[] = [];
+      const lineIndexes: number[] = [];
       const lineTotalByProduct = new Map<string, number>();
       const guardarDesglose = desgloseLineaHabilitado((empresa as any)?.licencia);
-      for (const { producto_id, pricedLine, lineAmounts, brutoAmounts } of preparadas) {
+      for (const { producto_id, lineIndex, pricedLine, lineAmounts, brutoAmounts } of preparadas) {
         const savedIvaPct = sinImpuestos ? 0 : (Number(pricedLine.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(pricedLine.ieps_pct) || 0);
         let desglose: Record<string, any> = {};
@@ -850,11 +853,27 @@ export function useVentaForm() {
         delete clean.lotes;
 
         lineProductoIds.push(producto_id);
+        lineIndexes.push(lineIndex);
         lineTotalByProduct.set(producto_id, (lineTotalByProduct.get(producto_id) ?? 0) + lineAmounts.total);
         linePromises.push(saveLinea.mutateAsync(clean));
       }
 
       const savedLines = await Promise.all(linePromises);
+
+      // Escribir de vuelta los ids generados en el estado local: sin esto, un
+      // segundo guardado (p. ej. "Confirmar" tras editar en borrador) volvería
+      // a INSERTAR las mismas líneas y quedarían duplicadas.
+      const nuevosIdsPorIndice = new Map<number, string>();
+      savedLines.forEach((row: any, i) => {
+        const li = lineIndexes[i];
+        if (row?.id && li !== undefined) nuevosIdsPorIndice.set(li, row.id);
+      });
+      if (nuevosIdsPorIndice.size > 0) {
+        // Mutamos también los objetos de la closure para blindar llamadas encadenadas.
+        nuevosIdsPorIndice.forEach((newId, li) => { if (lineas[li] && !lineas[li].id) (lineas[li] as any).id = newId; });
+        setLineas(prev => prev.map((l, i) => (l.id ? l : (nuevosIdsPorIndice.has(i) ? { ...l, id: nuevosIdsPorIndice.get(i) } : l))));
+      }
+
 
       // Registrar el desglose de promociones aplicadas (solo informativo para reportes).
       if (promoPersistHabilitado((empresa as any)?.licencia)) {
