@@ -38,14 +38,26 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
   const [loteoLinea, setLoteoLinea] = useState<{ lineaId: string; producto: { id: string; nombre: string }; piezasTotal: number } | null>(null);
   const manejaLotes = !!(empresa as any)?.maneja_lotes;
   const lineaManejaLote = (line: any) => !!(line.productos?.maneja_lote ?? productosList?.find((p: any) => p.id === line.producto_id)?.maneja_lote);
-  const abrirLoteo = (line: any) => {
+  const [preparando, setPreparando] = useState(false);
+  const abrirLoteo = async (line: any) => {
     const factor = Number(line._factor_conversion) || 1;
+    const piezasTotal = (Number(line.cantidad) || 0) * factor;
+    let lineaId: string | undefined = line.id;
+    if ((!lineaId || needsSave) && ensureSavedLinea && line.producto_id) {
+      setPreparando(true);
+      const res = await ensureSavedLinea(line.producto_id);
+      setPreparando(false);
+      if (!res) return;
+      lineaId = res.lineaId;
+    }
+    if (!lineaId) return;
     setLoteoLinea({
-      lineaId: line.id,
+      lineaId,
       producto: { id: line.producto_id, nombre: line.productos?.nombre ?? 'Producto' },
-      piezasTotal: (Number(line.cantidad) || 0) * factor,
+      piezasTotal,
     });
   };
+
   const abrirAsignarLote = (idx: number, line: any) => {
 
     const prod = productosList?.find((p: any) => p.id === line.producto_id);
