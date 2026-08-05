@@ -884,20 +884,22 @@ export default function TraspasoFormPage() {
       {loteLinea?.id && empresa?.id && (() => {
         const producto = (allProductos ?? []).find(item => item.id === loteLinea.producto_id);
         const origenLotesId = tipo === 'ruta_almacen' ? vendedorAlmacenId : almacenOrigenId;
-        if (!producto || !origenLotesId || !id) return null;
+        const tId = loteTraspasoId ?? id;
+        if (!producto || !origenLotesId || !tId) return null;
         return <TraspasoLineaLotesDialog
           open
           empresaId={empresa.id}
-          traspasoId={id}
+          traspasoId={tId}
           lineaId={loteLinea.id}
           producto={{ id: producto.id, nombre: producto.nombre }}
           almacenOrigenId={origenLotesId}
           cantidadTotal={loteLinea.cantidad}
           readOnly={readOnly}
           onClose={() => setLoteLinea(null)}
-          onChanged={() => qc.invalidateQueries({ queryKey: ['traspaso-linea-lotes-resumen', id] })}
+          onChanged={() => qc.invalidateQueries({ queryKey: ['traspaso-linea-lotes-resumen', tId] })}
         />;
       })()}
+
 
       <DocumentPreviewModal
         open={showPdfModal}
