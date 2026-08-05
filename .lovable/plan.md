@@ -2,7 +2,7 @@
 
 Objetivo doble: bajar los megas que consume el móvil (hoy ~28 MB por vendedor en Distribuidora Tampico) y eliminar los casos en que una promoción "se aplica pero no rebaja".
 
-Todo se activa detrás de bandera en `feature_flags` y se prueba primero con Licencia 12324489 antes de liberar al resto.
+**Alcance aprobado: SOLO Mi Empresa Demo (Licencia 12324489).** Todo queda detrás de dos banderas en `feature_flags` con `alcance = 'licencias'` y únicamente `12324489` en la lista. Ninguna otra empresa cambia de comportamiento hasta que tú lo autorices.
 
 ---
 
