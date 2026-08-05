@@ -105,6 +105,42 @@ export const COLUMN_SELECTS: Record<string, string> = {
   vehiculos: 'id,empresa_id,alias,placa,marca,modelo,anio,tipo,capacidad_kg,km_actual,foto_url,vendedor_default_id,status,notas,created_at,updated_at',
 };
 
+/**
+ * Columnas explícitas de las tablas PESADAS que hoy bajan con `select *`.
+ *
+ * Solo se usan cuando la licencia tiene activa la bandera `ruta_sync_v2`; sin
+ * la bandera el comportamiento es idéntico al actual (`*`). Cada lista incluye
+ * todas las columnas que la app móvil y los tickets/PDF realmente leen.
+ */
+export const COLUMN_SELECTS_V2: Record<string, string> = {
+  ventas: 'id,empresa_id,folio,tipo,status,cliente_id,vendedor_id,condicion_pago,tarifa_id,almacen_id,fecha,fecha_entrega,entrega_inmediata,notas,subtotal,descuento_total,iva_total,ieps_total,total,saldo_pendiente,pedido_origen_id,requiere_factura,descuento_extra,descuento_extra_tipo,es_saldo_inicial,concepto,fecha_vencimiento,origen,politica_cobro,cerrado_at,total_efectivo,cerrado_snapshot,creado_por,created_at,updated_at',
+  cobros: 'id,empresa_id,cliente_id,monto,fecha,metodo_pago,referencia,notas,user_id,status,created_at,updated_at',
+  visitas: 'id,empresa_id,cliente_id,user_id,tipo,motivo,notas,gps_lat,gps_lng,fecha,venta_id,created_at',
+  entregas: 'id,empresa_id,folio,pedido_id,vendedor_id,cliente_id,almacen_id,fecha,status,notas,vendedor_ruta_id,fecha_asignacion,fecha_carga,orden_entrega,fecha_entrega,motivo_no_entrega,created_at,updated_at',
+  devoluciones: 'id,empresa_id,vendedor_id,cliente_id,carga_id,tipo,fecha,notas,user_id,venta_id,almacen_destino_id,reembolso_efectivo,reembolso_metodo,created_at',
+  gastos: 'id,empresa_id,vendedor_id,user_id,fecha,concepto,monto,foto_url,notas,venta_id,devolucion_id,metodo_pago,created_at',
+  cargas: 'id,empresa_id,vendedor_id,fecha,status,notas,almacen_id,repartidor_id,almacen_destino_id,created_at',
+  descarga_ruta: 'id,empresa_id,carga_id,vendedor_id,user_id,fecha,status,efectivo_esperado,efectivo_entregado,diferencia_efectivo,notas,aprobado_por,fecha_aprobacion,notas_supervisor,fecha_inicio,fecha_fin,descargo_camion,almacen_destino_id,created_at',
+};
+
+/**
+ * Filtrado POR VENDEDOR. Solo aplica con `ruta_sync_v2` y cuando el usuario no
+ * tiene permiso de "ver todos": en ese caso la app ya le oculta los datos de
+ * los demás, así que descargarlos era puro gasto de megas.
+ *
+ * `nullable: true` = también se bajan las filas sin vendedor asignado (clientes
+ * huérfanos), para que nadie pierda acceso a un cliente que sí puede atender.
+ */
+const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' | 'user'; nullable?: boolean }> = {
+  clientes: { column: 'vendedor_id', source: 'vendedor', nullable: true },
+  ventas: { column: 'vendedor_id', source: 'vendedor' },
+  visitas: { column: 'user_id', source: 'user' },
+  gastos: { column: 'vendedor_id', source: 'vendedor' },
+  devoluciones: { column: 'vendedor_id', source: 'vendedor' },
+};
+
+
+
 
 // Friendly names for UI display
 export const TABLE_LABELS: Record<string, string> = {
