@@ -451,7 +451,7 @@ export default function TraspasoFormPage() {
       qc.invalidateQueries({ queryKey: ['traspasos'] });
       qc.invalidateQueries({ queryKey: ['traspaso', id] });
       qc.invalidateQueries({ queryKey: ['productos'] });
-      qc.invalidateQueries({ queryKey: ['productos-select'] });
+      qc.invalidateQueries({ queryKey: ['productos-select-traspaso'] });
       qc.invalidateQueries({ queryKey: ['stock-camion'] });
       qc.invalidateQueries({ queryKey: ['stock-almacen-origen'] });
       qc.invalidateQueries({ queryKey: ['stock-lotes'] });
@@ -476,7 +476,7 @@ export default function TraspasoFormPage() {
       qc.invalidateQueries({ queryKey: ['traspasos'] });
       qc.invalidateQueries({ queryKey: ['traspaso', id] });
       qc.invalidateQueries({ queryKey: ['productos'] });
-      qc.invalidateQueries({ queryKey: ['productos-select'] });
+      qc.invalidateQueries({ queryKey: ['productos-select-traspaso'] });
       qc.invalidateQueries({ queryKey: ['stock-camion'] });
       qc.invalidateQueries({ queryKey: ['stock-almacen-origen'] });
       qc.invalidateQueries({ queryKey: ['stock-lotes'] });
