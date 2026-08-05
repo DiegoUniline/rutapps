@@ -801,14 +801,16 @@ export default function TraspasoFormPage() {
                                       />
                                     </td>
                                     {manejaLotes && <td className="py-1 px-2 text-[11px] text-muted-foreground">
-                                      {(p as any).maneja_lote ? (isNew ? 'Guarda para asignar' : (() => {
+                                      {(p as any).maneja_lote ? (() => {
                                         const linea = lineas.find(item => item.producto_id === p.id);
                                         const resumen = linea?.id ? lotesResumenMap.get(linea.id) : undefined;
-                                        return linea?.id && hasQty ? <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setLoteLinea({ ...linea, cantidad: qty })}>
+                                        if (!hasQty) return 'Captura cantidad';
+                                        return <Button size="sm" variant="outline" className="h-7 text-xs" disabled={autoSaving} onClick={() => abrirLotes(p.id, qty)}>
                                           <Boxes className="mr-1 h-3.5 w-3.5" />{resumen ? `${fmtNum(resumen.cantidad)} / ${fmtNum(qty)}` : 'Asignar'}
-                                        </Button> : 'Guarda para asignar';
-                                      })()) : '—'}
+                                        </Button>;
+                                      })() : '—'}
                                     </td>}
+
                                   </tr>
                                 );
                               })
