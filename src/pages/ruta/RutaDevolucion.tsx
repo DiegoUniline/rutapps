@@ -1,3 +1,4 @@
+import { RutaOperacionGate } from '@/components/ruta/RutaOperacionGate';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Plus, Minus, Trash2, RotateCcw, ChevronRight } from 'lucide-react';
@@ -34,7 +35,7 @@ const MOTIVOS = [
 type Tipo = 'almacen' | 'tienda';
 type Step = 'tipo' | 'cliente' | 'items' | 'confirm';
 
-export default function RutaDevolucion() {
+function RutaDevolucionInner() {
   const navigate = useNavigate();
   const { user, profile, empresa } = useAuth();
   const { hasPermisoMovil } = usePermisos();
@@ -396,5 +397,17 @@ export default function RutaDevolucion() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Portero offline: sin los datos indispensables en el dispositivo, la
+ * operación no se puede iniciar (fail-closed).
+ */
+export default function RutaDevolucion() {
+  return (
+    <RutaOperacionGate operacion="devolucion">
+      <RutaDevolucionInner />
+    </RutaOperacionGate>
   );
 }

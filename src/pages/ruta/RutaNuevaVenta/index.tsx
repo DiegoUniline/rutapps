@@ -1,3 +1,4 @@
+import { RutaOperacionGate } from '@/components/ruta/RutaOperacionGate';
 import { ArrowLeft, X } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -18,7 +19,7 @@ import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
 import { usePermisos } from '@/hooks/usePermisos';
 import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 
-export default function RutaNuevaVenta() {
+function RutaNuevaVentaInner() {
   const { hasPermisoMovil } = usePermisos();
   const { checkAlmacen, AlmacenDialog } = useAlmacenGuard();
   const h = useRutaVenta({ onAlmacenMissing: () => checkAlmacen() });
@@ -142,5 +143,17 @@ export default function RutaNuevaVenta() {
       {h.step === 'resumen' && <StepResumen clienteNombre={h.clienteNombre} devoluciones={h.devoluciones} cambioItems={h.cambioItems} chargedItems={h.chargedItems} promoResults={h.promoResults} totals={h.totals} saldoPendienteTotal={h.saldoPendienteTotal} setStep={h.setStep} goToPayment={h.goToPayment} navigate={h.navigate} cart={h.cart} ticketLineas={h.ticketLineas} fmt={h.fmt} canApplyDiscount={h.canApplyDiscount} descuentoExtraTipo={h.descuentoExtraTipo} setDescuentoExtraTipo={h.setDescuentoExtraTipo} descuentoExtraValor={h.descuentoExtraValor} setDescuentoExtraValor={h.setDescuentoExtraValor} descuentoExtraMotivo={h.descuentoExtraMotivo} setDescuentoExtraMotivo={h.setDescuentoExtraMotivo} />}
       {h.step === 'pago' && <StepPago tipoVenta={h.tipoVenta} entregaInmediata={h.entregaInmediata} fechaEntrega={h.fechaEntrega} setFechaEntrega={h.setFechaEntrega} condicionPago={h.condicionPago} setCondicionPago={h.setCondicionPago} clienteCredito={h.clienteCredito} excedeCredito={h.excedeCredito} creditoDisponible={h.creditoDisponible} saldoPendienteTotal={h.saldoPendienteTotal} cuentasPendientes={h.cuentasPendientes} liquidarTodas={h.liquidarTodas} updateCuentaMonto={h.updateCuentaMonto} totalAplicarCuentas={h.totalAplicarCuentas} pagos={h.pagos} setPagos={h.setPagos} saldoFavorDisp={h.saldoFavorDisp} notas={h.notas} setNotas={h.setNotas} totals={h.totals} totalACobrar={h.totalACobrar} cambio={h.cambio} saving={h.saving} cart={h.cart} devoluciones={h.devoluciones} sinImpuestos={h.sinImpuestos} setSinImpuestos={h.setSinImpuestos} handleSave={h.handleSave} navigate={h.navigate} fmt={h.fmt} canApplyDiscount={h.canApplyDiscount} descuentoExtraTipo={h.descuentoExtraTipo} setDescuentoExtraTipo={h.setDescuentoExtraTipo} descuentoExtraValor={h.descuentoExtraValor} setDescuentoExtraValor={h.setDescuentoExtraValor} descuentoExtraMotivo={h.descuentoExtraMotivo} setDescuentoExtraMotivo={h.setDescuentoExtraMotivo} />}
     </div>
+  );
+}
+
+/**
+ * Portero offline: sin los datos indispensables en el dispositivo, la
+ * operación no se puede iniciar (fail-closed).
+ */
+export default function RutaNuevaVenta() {
+  return (
+    <RutaOperacionGate operacion="venta">
+      <RutaNuevaVentaInner />
+    </RutaOperacionGate>
   );
 }
