@@ -790,7 +790,7 @@ export default function TraspasoFormPage() {
                                   {manejaLotes && <td className="py-1.5 px-2">
                                     {(prod as any)?.maneja_lote && l.id ? (() => {
                                       const resumen = lotesResumenMap.get(l.id);
-                                      return <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setLoteLinea(l)}>
+                                      return <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setLoteTraspasoId(id ?? null); setLoteLinea(l); }}>
                                         <Boxes className="mr-1 h-3.5 w-3.5" />{resumen ? `${resumen.codigos.join(', ')} · ${fmtNum(resumen.cantidad)}` : 'Ver lotes'}
                                       </Button>;
                                     })() : '—'}
