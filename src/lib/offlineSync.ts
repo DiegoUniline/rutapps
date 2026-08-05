@@ -709,10 +709,24 @@ async function downloadAllDataInternal(
         if (isUpdatedAtDelta && isDeltaPull && localTable) {
           let mismatch = false;
           try {
-            const { count } = await withTimeout<any>(
-              (supabase.from as any)(table).select('id', { count: 'exact', head: true }).eq('empresa_id', empresaId),
-              `${table} conteo`,
-            );
+            let countQuery = (supabase.from as any)(table)
+              .select('id', { count: 'exact', head: true })
+              .eq('empresa_id', empresaId);
+            // El conteo debe usar EL MISMO filtro por vendedor que la descarga;
+            // si no, siempre saldría "distinto" y forzaría una descarga completa
+            // en cada sync (justo lo contrario del ahorro).
+            const vendorScopeCount = VENDOR_SCOPED_TABLES[table];
+            if (vendorScopeCount && vendedorScopeActivo()) {
+              const scope = getSyncScope();
+              const value = vendorScopeCount.source === 'user' ? scope.userId : scope.vendedorId;
+              if (value) {
+                countQuery = vendorScopeCount.nullable
+                  ? countQuery.or(`${vendorScopeCount.column}.eq.${value},${vendorScopeCount.column}.is.null`)
+                  : countQuery.eq(vendorScopeCount.column, value);
+              }
+            }
+            const { count } = await withTimeout<any>(countQuery, `${table} conteo`);
+
             const localCount = await localTable.where('empresa_id').equals(empresaId).count();
             mismatch = typeof count === 'number' && count !== localCount;
           } catch { /* si el conteo falla, la reconciliación periódica cubre */ }
