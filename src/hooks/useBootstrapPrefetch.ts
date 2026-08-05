@@ -12,12 +12,21 @@ import { enrichClientes, enrichProductos } from '@/lib/catalogEnrich';
  */
 export const CATALOG_STALE_TIME = 15 * 60 * 1000; // 15 min
 
+/** /ruta vive de IndexedDB (useOfflineQuery): ahí el prefetch solo gasta datos. */
+function enRuta(): boolean {
+  try { return window.location.pathname.startsWith('/ruta'); } catch { return false; }
+}
+
 export function useBootstrapPrefetch() {
   const { empresa } = useAuth();
   const qc = useQueryClient();
 
   useEffect(() => {
     if (!empresa?.id) return;
+    // AHORRO DE DATOS MÓVILES: en /ruta ninguna pantalla usa estas queryKeys
+    // (todas leen de IndexedDB), así que precargarlas era bajar el catálogo
+    // completo de productos y clientes en CADA apertura de la app.
+    if (enRuta()) return;
 
     const eid = empresa.id;
 
