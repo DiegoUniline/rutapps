@@ -819,9 +819,10 @@ export function useVentaForm() {
       const ventaId = saved.id || form.id;
       const linePromises: Promise<any>[] = [];
       const lineProductoIds: string[] = [];
+      const lineIndexes: number[] = [];
       const lineTotalByProduct = new Map<string, number>();
       const guardarDesglose = desgloseLineaHabilitado((empresa as any)?.licencia);
-      for (const { producto_id, pricedLine, lineAmounts, brutoAmounts } of preparadas) {
+      for (const { producto_id, lineIndex, pricedLine, lineAmounts, brutoAmounts } of preparadas) {
         const savedIvaPct = sinImpuestos ? 0 : (Number(pricedLine.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(pricedLine.ieps_pct) || 0);
         let desglose: Record<string, any> = {};
