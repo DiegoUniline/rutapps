@@ -81,6 +81,11 @@ export function useOfflineQuery<T = any>(
   const enabled = options?.enabled !== false;
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(enabled);
+  // Estado explícito: una lista vacía NO puede significar a la vez "no hay
+  // registros" y "no se pudo cargar". Los consumidores que toman decisiones de
+  // negocio deben poder distinguirlo (política fail-closed).
+  const [error, setError] = useState<Error | null>(null);
+  const [source, setSource] = useState<'server' | 'cache' | 'none'>('none');
 
   const loadData = useCallback(async (opts?: { localOnly?: boolean; force?: boolean }) => {
     if (!enabled) {
@@ -92,6 +97,7 @@ export function useOfflineQuery<T = any>(
     const cacheKey = table;
 
     setIsLoading(true);
+    setError(null);
 
     const localTable = getOfflineTable(table);
 
@@ -99,6 +105,14 @@ export function useOfflineQuery<T = any>(
       if (!localTable) return null;
       try {
         let localData = await localTable.toArray();
+
+        // BLINDAJE MULTI-EMPRESA EN LECTURA LOCAL: aunque la pantalla no filtre,
+        // nunca se devuelven filas de otro inquilino que hayan quedado en el
+        // dispositivo (cambio de empresa, sesión anterior, respaldo importado).
+        if (TABLES_WITH_EMPRESA.has(table) && table !== 'empresas' && !filters?.empresa_id) {
+          const emp = activeEmpresaId();
+          if (emp) localData = localData.filter((item: any) => !item?.empresa_id || item.empresa_id === emp);
+        }
 
         if (filters) {
           localData = localData.filter(item => {
@@ -123,6 +137,7 @@ export function useOfflineQuery<T = any>(
         return localData as T[];
       } catch (err) {
         console.warn('IndexedDB read failed:', err);
+        setError(err instanceof Error ? err : new Error('No se pudo leer la copia local'));
         return null;
       }
     };
@@ -133,6 +148,7 @@ export function useOfflineQuery<T = any>(
     if (local && local.length > 0) {
       setData(local);
       hasLocalData = true;
+      setSource('cache');
       setIsLoading(false);
     }
 
@@ -217,6 +233,7 @@ export function useOfflineQuery<T = any>(
         });
 
         lastServerFetchAt.set(cacheKey, Date.now());
+        setSource('server');
 
         // Guardar en caché local (merge, nunca borrar histórico)
         if (localTable && serverData.length > 0) {
@@ -256,6 +273,10 @@ export function useOfflineQuery<T = any>(
         }
       } catch (err) {
         console.warn('Server fetch failed, using cached data:', err);
+        // Si no hubo copia local que mostrar, esto es un ERROR real, no un
+        // "no hay registros": se expone para que el consumidor no confunda
+        // una lista vacía con un resultado válido.
+        if (!hasLocalData) setError(err instanceof Error ? err : new Error('No se pudieron cargar los datos'));
       }
     }
 
@@ -276,7 +297,7 @@ export function useOfflineQuery<T = any>(
 
   // refetch() explícito siempre fuerza descarga del servidor (ignora el throttle).
   const refetch = useCallback(() => loadData({ force: true }), [loadData]);
-  return { data, isLoading, refetch };
+  return { data, isLoading, refetch, error, source, isError: !!error };
 }
 
 /**

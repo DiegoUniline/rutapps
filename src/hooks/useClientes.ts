@@ -17,13 +17,15 @@ const CATALOG_STALE = CATALOG_STALE_TIME;
 export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, vendedorFilter?: string, zonaFilter?: string, fetchAll = false) {
   const { empresa } = useAuth();
   const qc = useQueryClient();
-  const { seeAll, profileId, clientesVisibilidad } = useDataVisibility('clientes');
+  const { seeAll, profileId, clientesVisibilidad, blocked } = useDataVisibility('clientes');
   const filterByVendedor = clientesVisibilidad === 'propios' && !seeAll && !!profileId;
 
   return useQuery({
     queryKey: ['clientes-page', empresa?.id, search, statusFilter, page, pageSize, filterByVendedor ? profileId : 'all', vendedorFilter, zonaFilter, fetchAll],
     staleTime: CATALOG_STALE,
-    enabled: !!empresa?.id,
+    // FAIL-CLOSED: si no se puede comprobar qué clientes tiene permitido ver el
+    // usuario, no se consulta la lista (antes se mostraba la cartera completa).
+    enabled: !!empresa?.id && !blocked,
     queryFn: async () => {
       // Se removieron los LEFT JOIN LATERAL (zonas(nombre), listas(nombre),
       // vendedores(nombre), cobradores(nombre), tarifas(nombre)) porque

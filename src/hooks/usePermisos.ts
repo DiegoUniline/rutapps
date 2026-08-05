@@ -3,6 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { saveSecuritySnapshot, readSecuritySnapshot, purgeForeignSecuritySnapshots } from '@/lib/offlineSecurity';
+import { dataOrNull } from '@/lib/offlineState';
+
 
 interface Permiso {
   modulo: string;
@@ -304,15 +307,24 @@ interface PermisosData {
   roleId: string | null;
 }
 
-async function fetchPermisos(userId: string): Promise<PermisosData> {
+/**
+ * Descarga permisos del servidor. FAIL-CLOSED:
+ *  - Si la consulta devuelve error, LANZA. Antes se ignoraba `error`, se veían
+ *    cero roles y se concluía "sin rol = acceso total": la ausencia de
+ *    información ampliaba permisos.
+ *  - El resultado válido se persiste por (empresa, usuario) para operar offline.
+ */
+async function fetchPermisosServer(userId: string, empresaId: string): Promise<PermisosData> {
   // Un usuario puede tener MÁS de un rol asignado. Debemos considerarlos todos:
   //  - solo_movil = ANY (el más restrictivo gana → si algún rol es "Solo móvil",
   //    el usuario NO debe ver escritorio, aunque también tenga Administrador).
   //  - permisos: unión OR por (modulo, accion).
-  const { data: userRoles } = await supabase
+  const { data: userRoles, error: rolesError } = await supabase
     .from('user_roles')
     .select('role_id, roles(solo_movil)')
     .eq('user_id', userId);
+
+  if (rolesError) throw rolesError;
 
   const roleIds = (userRoles ?? []).map((r: any) => r.role_id).filter(Boolean);
 
@@ -338,7 +350,52 @@ async function fetchPermisos(userId: string): Promise<PermisosData> {
     else if (!prev.permitido && p.permitido) merged.set(key, p);
   }
 
-  return { hasRole: true, permisos: Array.from(merged.values()), roleSoloMovil, roleId: roleIds[0] };
+  const result: PermisosData = {
+    hasRole: true,
+    permisos: Array.from(merged.values()),
+    roleSoloMovil,
+    roleId: roleIds[0],
+  };
+
+  await saveSecuritySnapshot(empresaId, userId, {
+    hasRole: result.hasRole,
+    permisos: result.permisos,
+    roleSoloMovil: result.roleSoloMovil,
+    roleId: result.roleId,
+  });
+  // Aislamiento estricto: fuera cualquier snapshot de otro usuario/empresa.
+  await purgeForeignSecuritySnapshots(empresaId, userId);
+
+  return result;
+}
+
+/**
+ * Servidor primero; sin conexión, snapshot local del MISMO contexto.
+ * Si no hay snapshot válido, propaga el error → `hasRole = null` → se niega.
+ */
+async function fetchPermisos(userId: string, empresaId: string): Promise<PermisosData> {
+  try {
+    const fresh = await fetchPermisosServer(userId, empresaId);
+    if (fresh.hasRole === false) {
+      // También se guarda el "sin rol" comprobado, para no re-preguntar offline.
+      await saveSecuritySnapshot(empresaId, userId, {
+        hasRole: false, permisos: [], roleSoloMovil: false, roleId: null,
+      });
+    }
+    return fresh;
+  } catch (err) {
+    const snap = await readSecuritySnapshot(empresaId, userId);
+    const cached = dataOrNull(snap);
+    if (cached) {
+      return {
+        hasRole: cached.hasRole,
+        permisos: cached.permisos,
+        roleSoloMovil: cached.roleSoloMovil,
+        roleId: cached.roleId,
+      };
+    }
+    throw err;
+  }
 }
 
 export function usePermisos(): UsePermisosReturn {
@@ -348,10 +405,13 @@ export function usePermisos(): UsePermisosReturn {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['user-permisos', empresa?.id, user?.id],
-    queryFn: () => fetchPermisos(user!.id),
+    queryFn: () => fetchPermisos(user!.id, empresa!.id),
     enabled: !!user?.id && !!empresa?.id,
     staleTime: 15_000,
     gcTime: 5 * 60_000,
+    // 'always': sin conexión igual se ejecuta la queryFn para poder resolver
+    // desde el snapshot local en lugar de quedarse en pausa (y sin permisos).
+    networkMode: 'always',
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     // El realtime de role_permisos + el refetch al enfocar cubren los cambios al
@@ -359,6 +419,7 @@ export function usePermisos(): UsePermisosReturn {
     // reasignan el ROL del usuario (otro role_id que el canal actual no escucha).
     refetchInterval: 5 * 60_000,
   });
+
 
   // Refetch when admin updates permissions (cross-tab via storage / same-tab via event)
   useEffect(() => {
