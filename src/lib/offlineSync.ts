@@ -402,11 +402,24 @@ export async function downloadAllData(
   const active = activeDownloads.get(lockKey);
   if (active) return active;
 
-  const task = downloadAllDataInternal(empresaId, forceFullSync, onProgress, tablesToCache)
-    .finally(() => activeDownloads.delete(lockKey));
+  // CANDADO GLOBAL (`ruta_sync_v2`): además de no repetir la MISMA descarga,
+  // se evita que dos sincronizaciones DISTINTAS corran a la vez (era ~1/3 del
+  // tráfico desperdiciado). La segunda espera a que termine la primera y
+  // entonces arranca, así ninguna se pierde.
+  const run = async (): Promise<DownloadResult> => {
+    if (syncV2Habilitado()) {
+      const previous = globalSyncChain;
+      try { await previous; } catch { /* un fallo previo no bloquea al siguiente */ }
+    }
+    return downloadAllDataInternal(empresaId, forceFullSync, onProgress, tablesToCache);
+  };
+
+  const task = run().finally(() => activeDownloads.delete(lockKey));
   activeDownloads.set(lockKey, task);
+  globalSyncChain = task.catch(() => undefined);
   return task;
 }
+
 
 export const LS_LAST_EMPRESA = 'offline-empresa-id';
 
