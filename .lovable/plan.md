@@ -2,7 +2,7 @@
 
 Objetivo doble: bajar los megas que consume el móvil (hoy ~28 MB por vendedor en Distribuidora Tampico) y eliminar los casos en que una promoción "se aplica pero no rebaja".
 
-Todo se activa detrás de bandera en `feature_flags` y se prueba primero con Licencia 12324489 antes de liberar al resto.
+**Alcance aprobado: SOLO Mi Empresa Demo (Licencia 12324489).** Todo queda detrás de dos banderas en `feature_flags` con `alcance = 'licencias'` y únicamente `12324489` en la lista. Ninguna otra empresa cambia de comportamiento hasta que tú lo autorices.
 
 ---
 
@@ -41,16 +41,33 @@ Refresco completo pasa de 5 a 15 minutos. Precios y promociones se quedan en su 
 
 ---
 
-## Cómo se garantiza que funciona
+## Cómo lo mides tú (con Mi Empresa Demo)
 
-No se publica nada sin estas cuatro comprobaciones, en este orden:
+Ya existe un medidor real de megas en la app (registra bytes por día, por usuario y por origen `ruta` / `escritorio`, con desglose por tabla). Ese es el instrumento de medición; no hay que inventar nada.
 
-1. **Medición antes/después** con la misma cuenta de Distribuidora Tampico: se registra MB y número de filas de una sincronización limpia, y se compara. Si no baja al menos 60 %, no se cierra el paso.
-2. **Prueba de promociones en Licencia 12324489**: venta con promoción de producto gratis, venta con descuento porcentual y venta mixta. Se verifica que la línea exista, que el inventario se descuente y que el ticket, el PDF y el reporte muestren el mismo total.
-3. **Prueba offline real**: modo avión, tres ventas, reconexión, y se confirma que las tres suben con sus promociones intactas.
-4. **Regresión de datos**: se confirma que ningún vendedor perdió acceso a clientes que sí le tocan (comparación de conteos antes/después del filtrado).
+**Medición 1 — Megas (la prueba dura)**
+1. Antes de activar las banderas: entra a /ruta con el usuario vendedor de la demo, borra datos locales y deja que sincronice completo. Anota los MB del día en el reporte de consumo (origen "ruta").
+2. Activa la bandera `ruta_sync_v2` solo para 12324489.
+3. Repite exactamente lo mismo al día siguiente (o con otro dispositivo/usuario para no mezclar el acumulado del día).
+4. Compara los dos números. **Criterio de éxito: al menos 60 % menos de MB** en la primera sincronización completa.
+5. El desglose por recurso te dice de dónde vino el ahorro (ventas, venta_lineas, visitas…). Si una tabla sigue pesando igual, esa parte no funcionó.
 
-Cada parte se activa por bandera de forma independiente, así que si algo sale mal se apaga sin tocar código ni afectar a otras licencias.
+**Medición 2 — Promociones (prueba funcional, 3 ventas)**
+En /ruta con la demo, con `ruta_promos_auto` activa:
+- Venta A: cliente con promoción de producto gratis, **sin** agregar el regalo al carrito. Debe aparecer solo la línea de bonificación a $0.
+- Venta B: promoción de descuento porcentual.
+- Venta C: mezcla de producto con promo y producto sin promo.
+
+Para cada una revisa cuatro puntos y que **den el mismo total**: la pantalla de cobro, el ticket impreso, el PDF y el reporte de ventas en escritorio. Además, en Inventario, el stock del producto regalado debe haber bajado. Si los cuatro coinciden y el stock bajó, funciona.
+
+**Medición 3 — Offline real**
+Modo avión, haces las mismas 3 ventas, vuelves a conexión y esperas la sincronización. Las 3 deben subir con su promoción ya descontada, sin quedar en "pendientes por sincronizar" ni requerir reparación manual.
+
+**Medición 4 — Nadie perdió datos**
+Con el filtrado por vendedor activo, el vendedor de la demo debe seguir viendo la misma lista de clientes que ve hoy. Se compara el conteo antes/después; si baja, se ajusta el filtro antes de continuar.
+
+**Marcha atrás**: apagar la bandera en Panel Master > Funciones en pruebas revierte todo al comportamiento actual al instante, sin publicar código.
+
 
 ---
 
