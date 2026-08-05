@@ -4,9 +4,12 @@ import { getPendingCount, getDeadLetterCount, processSyncQueue } from '@/lib/syn
 import { downloadAllData, getLastSyncTime, isCacheStale, MOBILE_QUICK_SYNC_TABLES } from '@/lib/offlineSync';
 import { verifySyncedItems } from '@/lib/syncVerify';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
+import { setSyncScope } from '@/lib/syncScope';
 import { getSyncConfig, isDataSaverEnabled, setDataSaverMode } from '@/lib/dataSaver';
 import { hasRealConnection } from '@/lib/connectivity';
 import { APP_VERSION } from '@/version';
+
 
 const SYNCED_APP_VERSION_KEY = 'uniline_synced_app_version';
 
