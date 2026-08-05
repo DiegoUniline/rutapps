@@ -17,6 +17,8 @@ interface Props {
   puedeRecibir: boolean;
   compraId?: string;
   almacenId?: string | null;
+  needsSave?: boolean;
+  ensureSavedLinea?: (productoId: string) => Promise<{ compraId: string; lineaId: string } | null>;
   updateLinea: (idx: number, key: string, val: any) => void;
   addLine: () => void;
   removeLine: (idx: number) => void;
@@ -24,7 +26,8 @@ interface Props {
   onLoteChanged?: () => void;
 }
 
-export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibir, compraId, almacenId, updateLinea, addLine, removeLine, onRecibirLinea, onLoteChanged }: Props) {
+export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibir, compraId, almacenId, needsSave, ensureSavedLinea, updateLinea, addLine, removeLine, onRecibirLinea, onLoteChanged }: Props) {
+
   const { fmt } = useCurrency();
   const { empresa, user } = useAuth();
   const [quickOpen, setQuickOpen] = useState(false);
@@ -38,14 +41,26 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
   const [loteoLinea, setLoteoLinea] = useState<{ lineaId: string; producto: { id: string; nombre: string }; piezasTotal: number } | null>(null);
   const manejaLotes = !!(empresa as any)?.maneja_lotes;
   const lineaManejaLote = (line: any) => !!(line.productos?.maneja_lote ?? productosList?.find((p: any) => p.id === line.producto_id)?.maneja_lote);
-  const abrirLoteo = (line: any) => {
+  const [preparando, setPreparando] = useState(false);
+  const abrirLoteo = async (line: any) => {
     const factor = Number(line._factor_conversion) || 1;
+    const piezasTotal = (Number(line.cantidad) || 0) * factor;
+    let lineaId: string | undefined = line.id;
+    if ((!lineaId || needsSave) && ensureSavedLinea && line.producto_id) {
+      setPreparando(true);
+      const res = await ensureSavedLinea(line.producto_id);
+      setPreparando(false);
+      if (!res) return;
+      lineaId = res.lineaId;
+    }
+    if (!lineaId) return;
     setLoteoLinea({
-      lineaId: line.id,
+      lineaId,
       producto: { id: line.producto_id, nombre: line.productos?.nombre ?? 'Producto' },
-      piezasTotal: (Number(line.cantidad) || 0) * factor,
+      piezasTotal,
     });
   };
+
   const abrirAsignarLote = (idx: number, line: any) => {
 
     const prod = productosList?.find((p: any) => p.id === line.producto_id);
@@ -136,24 +151,24 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                     <td className="py-1.5 px-2">
                       {!line.producto_id || !lineaManejaLote(line) ? (
                         <span className="text-[11px] text-muted-foreground">—</span>
-                      ) : line.id ? (
+                      ) : (
                         (() => {
                           const loteadoPz = Number((line as any).piezas_loteadas) || 0;
                           const full = totalPz > 0 && loteadoPz >= totalPz;
                           return (
                             <button
                               type="button"
+                              disabled={preparando}
                               onClick={() => abrirLoteo(line)}
-                              className={'inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold border transition-colors ' + (full ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'border-dashed border-primary/50 text-primary hover:bg-primary/5')}
+                              className={'inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold border transition-colors disabled:opacity-50 ' + (full ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'border-dashed border-primary/50 text-primary hover:bg-primary/5')}
                               title="Lotear piezas: elige uno o varios lotes y cuántas piezas de cada uno"
                             >
                               <Boxes className="h-3 w-3" /> {loteadoPz.toLocaleString('es-MX')} / {totalPz.toLocaleString('es-MX')}
                             </button>
                           );
                         })()
-                      ) : (
-                        <span className="text-[11px] text-muted-foreground" title="Guarda la compra para poder lotear esta línea">Guarda para lotear</span>
                       )}
+
 
 
                     </td>
@@ -241,13 +256,14 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                   {line._tiene_ieps && <span className="text-[10px] text-muted-foreground">{iepsLabel}</span>}
                 </div>
               </div>
-              {manejaLotes && line.producto_id && lineaManejaLote(line) && line.id && (
+              {manejaLotes && line.producto_id && lineaManejaLote(line) && (
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border">
                   <span className="text-[10px] uppercase text-muted-foreground">Lotes</span>
                   <button
                     type="button"
+                    disabled={preparando}
                     onClick={() => abrirLoteo(line)}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border border-dashed border-primary/50 text-primary"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border border-dashed border-primary/50 text-primary disabled:opacity-50"
                   >
                     <Boxes className="h-3 w-3" /> {(Number((line as any).piezas_loteadas) || 0).toLocaleString('es-MX')} / {totalPz.toLocaleString('es-MX')}
                   </button>

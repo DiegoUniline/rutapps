@@ -70,6 +70,9 @@ export default function TraspasoFormPage() {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; title: string; description: string } | null>(null);
   const [loteLinea, setLoteLinea] = useState<LineaForm | null>(null);
+  const [loteTraspasoId, setLoteTraspasoId] = useState<string | null>(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+
   const { requestPin, PinDialog } = usePinAuth();
 
   const handleGenerarPdf = async () => {
@@ -480,7 +483,39 @@ export default function TraspasoFormPage() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Abrir lotes sin exigir guardar: si hace falta, guarda el borrador solo
+  const abrirLotes = async (productoId: string, qty: number) => {
+    if (readOnly) {
+      const linea = lineas.find(l => l.producto_id === productoId);
+      if (linea?.id) { setLoteTraspasoId(id ?? null); setLoteLinea({ ...linea, cantidad: qty }); }
+      return;
+    }
+    let tId: string | null = id ?? null;
+    const lineaExistente = lineas.find(l => l.producto_id === productoId);
+    if (isNew || dirty || !lineaExistente?.id) {
+      try {
+        setAutoSaving(true);
+        const res: any = await saveMut.mutateAsync();
+        tId = res?.id ?? id ?? null;
+      } catch {
+        setAutoSaving(false);
+        return;
+      }
+      setAutoSaving(false);
+    }
+    if (!tId) return;
+    const { data } = await (supabase.from as any)('traspaso_lineas')
+      .select('id, producto_id, cantidad')
+      .eq('traspaso_id', tId)
+      .eq('producto_id', productoId)
+      .maybeSingle();
+    if (!data?.id) { toast.error('No se pudo preparar la línea para asignar lotes'); return; }
+    setLoteTraspasoId(tId);
+    setLoteLinea({ id: data.id, producto_id: productoId, cantidad: qty });
+  };
+
   const handleDelete = async () => {
+
     if (!id || !await confirmAsync('¿Eliminar este traspaso?')) return;
     await supabase.from('traspaso_lineas').delete().eq('traspaso_id', id);
     await supabase.from('traspasos').delete().eq('id', id);
@@ -755,7 +790,7 @@ export default function TraspasoFormPage() {
                                   {manejaLotes && <td className="py-1.5 px-2">
                                     {(prod as any)?.maneja_lote && l.id ? (() => {
                                       const resumen = lotesResumenMap.get(l.id);
-                                      return <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setLoteLinea(l)}>
+                                      return <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setLoteTraspasoId(id ?? null); setLoteLinea(l); }}>
                                         <Boxes className="mr-1 h-3.5 w-3.5" />{resumen ? `${resumen.codigos.join(', ')} · ${fmtNum(resumen.cantidad)}` : 'Ver lotes'}
                                       </Button>;
                                     })() : '—'}
@@ -801,14 +836,16 @@ export default function TraspasoFormPage() {
                                       />
                                     </td>
                                     {manejaLotes && <td className="py-1 px-2 text-[11px] text-muted-foreground">
-                                      {(p as any).maneja_lote ? (isNew ? 'Guarda para asignar' : (() => {
+                                      {(p as any).maneja_lote ? (() => {
                                         const linea = lineas.find(item => item.producto_id === p.id);
                                         const resumen = linea?.id ? lotesResumenMap.get(linea.id) : undefined;
-                                        return linea?.id && hasQty ? <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setLoteLinea({ ...linea, cantidad: qty })}>
+                                        if (!hasQty) return 'Captura cantidad';
+                                        return <Button size="sm" variant="outline" className="h-7 text-xs" disabled={autoSaving} onClick={() => abrirLotes(p.id, qty)}>
                                           <Boxes className="mr-1 h-3.5 w-3.5" />{resumen ? `${fmtNum(resumen.cantidad)} / ${fmtNum(qty)}` : 'Asignar'}
-                                        </Button> : 'Guarda para asignar';
-                                      })()) : '—'}
+                                        </Button>;
+                                      })() : '—'}
                                     </td>}
+
                                   </tr>
                                 );
                               })
@@ -847,20 +884,22 @@ export default function TraspasoFormPage() {
       {loteLinea?.id && empresa?.id && (() => {
         const producto = (allProductos ?? []).find(item => item.id === loteLinea.producto_id);
         const origenLotesId = tipo === 'ruta_almacen' ? vendedorAlmacenId : almacenOrigenId;
-        if (!producto || !origenLotesId || !id) return null;
+        const tId = loteTraspasoId ?? id;
+        if (!producto || !origenLotesId || !tId) return null;
         return <TraspasoLineaLotesDialog
           open
           empresaId={empresa.id}
-          traspasoId={id}
+          traspasoId={tId}
           lineaId={loteLinea.id}
           producto={{ id: producto.id, nombre: producto.nombre }}
           almacenOrigenId={origenLotesId}
           cantidadTotal={loteLinea.cantidad}
           readOnly={readOnly}
           onClose={() => setLoteLinea(null)}
-          onChanged={() => qc.invalidateQueries({ queryKey: ['traspaso-linea-lotes-resumen', id] })}
+          onChanged={() => qc.invalidateQueries({ queryKey: ['traspaso-linea-lotes-resumen', tId] })}
         />;
       })()}
+
 
       <DocumentPreviewModal
         open={showPdfModal}
