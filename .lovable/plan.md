@@ -1,43 +1,71 @@
-# Plan: bajar consumo de datos en /ruta y arreglar promociones
+# Plan: reducir consumo de datos en /ruta y garantizar promociones
 
-Dos frentes independientes que se pueden aprobar juntos: (1) reducir megas del sync móvil, (2) que las promociones nunca fallen ni queden "aplicadas pero sin rebajar".
+Objetivo doble: bajar los megas que consume el móvil (hoy ~28 MB por vendedor en Distribuidora Tampico) y eliminar los casos en que una promoción "se aplica pero no rebaja".
 
-## Parte 1 — Promociones
+Todo se activa detrás de bandera en `feature_flags` y se prueba primero con Licencia 12324489 antes de liberar al resto.
 
-Hallazgo confirmado en el diagnóstico previo: una promoción de **producto gratis solo se aplica si el vendedor ya metió ese producto al carrito** (`src/hooks/usePromociones.ts:252-289, 319-364`). Si no está, la promo se ve como "pendiente" y no rebaja nada. Además no se crea línea de bonificación: el beneficio se resta del precio de la línea existente y `cantidad` nunca cambia (`useRutaVenta.ts:1056`), por lo que el inventario (triggers de BD sobre `venta_lineas.cantidad`) sí descuenta bien.
+---
 
-Cambios:
+## Parte 1 — Promociones que sí rebajan
 
-1. **Auto-agregar el producto de regalo al carrito** cuando la promo `producto_gratis` se dispara, marcado como línea de bonificación (precio 0 o descuento total según la lógica actual de neteo), en vez de dejarlo como aviso pendiente. Con confirmación visible para el vendedor.
-2. **Aviso bloqueante claro** cuando hay una promo pendiente por falta del producto: hoy es fácil de ignorar; se muestra en el paso de cobro con un botón "Agregar regalo".
-3. **Frescura de promociones garantizada**: `promociones` ya se descarga y refresca completo (`offlineSync.ts:206`), pero se refuerza mostrando en el cobro la antigüedad del último sync de promociones y bloqueando si está vencida (ya existe un bloqueo parcial en `useRutaVenta.ts:919-923`).
-4. **Sello en la venta**: guardar en cada venta la versión/fecha de las promociones usadas, para poder auditar después sin adivinar (campo ya disponible vía `promocion_aplicada`).
+**1.1 Auto-agregar el producto de bonificación**
+Cuando una promoción de tipo "producto gratis" se dispara y el artículo regalado no está en el carrito, la app lo agrega automáticamente como línea con precio 0 y marca de promoción. Así la línea existe en `venta_lineas`, el trigger de inventario la descuenta igual que cualquier otra y el reporte cuadra.
+
+**1.2 Bloqueo al cobrar si hay promoción pendiente**
+Si por cualquier motivo queda una promoción evaluada sin aplicar, el botón Cobrar muestra un aviso claro ("Hay una promoción sin aplicar") y no deja cerrar hasta resolverlo. Nada de ventas que salen mal y luego hay que reparar a mano.
+
+**1.3 Frescura obligatoria del catálogo de promociones**
+Si la copia local de promociones tiene más de X horas o viene vacía, /ruta bloquea la venta y pide sincronizar. Este es el origen real de casi todos los casos reportados (VTA-0600, VTA-2771, Botanas Don Nacho): caché móvil vieja.
+
+**1.4 Respetar el precio manual**
+Al cambiar de cliente o de lista, el recálculo deja intactas las líneas con precio editado a mano.
+
+---
 
 ## Parte 2 — Consumo de datos
 
-Estado real verificado en `src/lib/offlineSync.ts`:
+**2.1 Filtrado por vendedor (el ahorro grande)**
+Hoy el móvil de cada vendedor descarga clientes, ventas, visitas y entregas de **toda la empresa**. Se acota a los del vendedor activo (más los clientes sin vendedor asignado, para no perder acceso). Ahorro estimado: 50–70 % en empresas con varios vendedores.
 
-- La sync rápida móvil baja 26 tablas (`MOBILE_QUICK_SYNC_TABLES`, líneas 49-76) cada vez que hay pendientes o al reconectar (`useNetworkStatus.ts:118-124, 148`).
-- Muchas tablas pesadas **no tienen lista de columnas** y bajan `select *`: `ventas`, `cobros`, `entregas`, `descarga_ruta`, `cargas`, `visitas`, `devoluciones`, `gastos`, `empresas`, `profiles` (`COLUMN_SELECTS`, líneas 83-104).
-- El filtro es **solo por empresa**: el móvil de un vendedor baja clientes, ventas y visitas de TODOS los vendedores de la empresa (`TABLES_WITH_EMPRESA`, líneas 148-164; no hay filtro por `vendedor_id` en el motor).
-- Las tablas "full" se re-bajan completas cada 5 minutos (`FULL_TABLE_REFRESH_MS`, línea 245), incluidas `tarifa_lineas` y `lista_precios`.
+**2.2 Columnas explícitas en las tablas pesadas**
+Ventas, líneas, cobros, visitas y entregas hoy bajan con todas las columnas. Se define la lista mínima que la app realmente usa. Ahorro estimado: 30–35 %.
 
-Cambios propuestos, en orden de impacto:
+**2.3 Candado global de sincronización**
+Se detectaron sincronizaciones duplicadas corriendo en paralelo (~35 % de tráfico desperdiciado). Un solo candado global evita que se lance una segunda mientras hay una en curso.
 
-1. **Filtrado por vendedor en móvil** (mayor ahorro). En /ruta, limitar `clientes`, `ventas`, `venta_lineas`, `cobros`, `visitas`, `entregas` a los del vendedor de la sesión. El super admin y el escritorio siguen bajando todo.
-2. **COLUMN_SELECTS para las tablas que hoy usan `*`**: `ventas`, `cobros`, `entregas`, `cargas`, `descarga_ruta`, `visitas`, `devoluciones`, `gastos`, `profiles`, `empresas`. Se listan solo las columnas que /ruta realmente lee.
-3. **Ventana de historial más corta en móvil**: 30 días → 15 días para `venta_lineas`, `visitas`, `entregas`, `devoluciones` y `gastos` (configurable, sin tocar escritorio).
-4. **Subir el intervalo de refresco de tablas "full"** de 5 a 15 minutos, dejando `promociones`, `tarifas`, `tarifa_lineas` y `lista_precios` en una vía rápida propia (siguen refrescándose seguido porque afectan precios y promos).
-5. **Medición**: dejar registrado en la pantalla de sincronización el consumo por tabla (ya existe `dataUsage.ts`) para comparar antes/después con una licencia de prueba.
+**2.4 Ventana de histórico de 30 a 15 días**
+Se mantiene la excepción actual: cualquier venta con saldo pendiente baja siempre, sin importar la antigüedad.
 
-## Detalles técnicos
+**2.5 Intervalos**
+Refresco completo pasa de 5 a 15 minutos. Precios y promociones se quedan en su pista rápida, sin cambio.
 
-- Archivos tocados: `src/lib/offlineSync.ts` (selects, ventanas, filtro por vendedor, intervalos), `src/hooks/useNetworkStatus.ts` (paso del vendedor activo a la sync móvil), `src/hooks/usePromociones.ts` y `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts` + `StepProductos.tsx` (regalo automático y aviso), `src/pages/ruta/RutaSincronizarPage.tsx` (reporte de consumo).
-- Sin cambios de esquema en la base de datos ni en los triggers de inventario.
-- El filtro por vendedor cambia qué se guarda en IndexedDB: se incluye una limpieza para que los dispositivos ya sincronizados borren lo ajeno en la primera sync tras el cambio.
+---
 
-## Pruebas
+## Cómo se garantiza que funciona
 
-- Licencia 12324489 primero, detrás de bandera en `feature_flags` (`ruta_sync_slim` y `promo_regalo_auto`).
-- Medir MB por sync antes/después en un dispositivo con Distribuidora Tampico (caso de 27.95 MB medido antes).
-- Caso promo: venta con promo de producto gratis sin el producto en carrito, verificar que se agrega y que el total rebaja.
+No se publica nada sin estas cuatro comprobaciones, en este orden:
+
+1. **Medición antes/después** con la misma cuenta de Distribuidora Tampico: se registra MB y número de filas de una sincronización limpia, y se compara. Si no baja al menos 60 %, no se cierra el paso.
+2. **Prueba de promociones en Licencia 12324489**: venta con promoción de producto gratis, venta con descuento porcentual y venta mixta. Se verifica que la línea exista, que el inventario se descuente y que el ticket, el PDF y el reporte muestren el mismo total.
+3. **Prueba offline real**: modo avión, tres ventas, reconexión, y se confirma que las tres suben con sus promociones intactas.
+4. **Regresión de datos**: se confirma que ningún vendedor perdió acceso a clientes que sí le tocan (comparación de conteos antes/después del filtrado).
+
+Cada parte se activa por bandera de forma independiente, así que si algo sale mal se apaga sin tocar código ni afectar a otras licencias.
+
+---
+
+## Detalle técnico
+
+- `src/hooks/usePromociones.ts`: auto-inserción de línea bonificada y validación de frescura del caché.
+- `src/hooks/useRutaVenta.ts`: gate de "promoción pendiente" antes de cobrar; excluir `precio_manual` del recálculo al cambiar cliente.
+- `src/lib/offlineSync.ts`: `COLUMN_SELECTS` para `ventas`, `venta_lineas`, `cobros`, `visitas`, `entregas`; filtro `vendedor_id` en el arranque de descarga; candado global de sync; ventana de 15 días.
+- `src/hooks/useNetworkStatus.ts`: intervalo de refresco completo a 15 min.
+- `feature_flags`: `ruta_sync_v2` y `ruta_promos_auto` como banderas por licencia.
+- Sin cambios de esquema en la base de datos. Los triggers de inventario y `fn_netear_linea_promo` se quedan como están.
+
+## Orden de entrega
+
+1. Promociones (1.1–1.4) + pruebas en 12324489
+2. Candado global + columnas explícitas + medición
+3. Filtrado por vendedor + regresión de acceso
+4. Ventana e intervalos
