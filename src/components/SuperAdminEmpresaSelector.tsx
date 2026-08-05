@@ -95,7 +95,7 @@ export default function SuperAdminEmpresaSelector() {
         .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
       setEmpresas(all);
     })();
-  }, [isAllowed, realEmpresa?.id]);
+  }, [isAllowed, open, empresas.length, realEmpresa?.id]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
