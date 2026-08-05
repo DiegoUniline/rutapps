@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -11,11 +12,6 @@ import { enrichClientes, enrichProductos } from '@/lib/catalogEnrich';
  * staleTime is 15 min so no view re-fetches them unless invalidated.
  */
 export const CATALOG_STALE_TIME = 15 * 60 * 1000; // 15 min
-
-/** /ruta vive de IndexedDB (useOfflineQuery): ahí el prefetch solo gasta datos. */
-function enRuta(): boolean {
-  try { return window.location.pathname.startsWith('/ruta'); } catch { return false; }
-}
 
 export function useBootstrapPrefetch() {
   const { empresa } = useAuth();
@@ -173,6 +169,6 @@ export function useBootstrapPrefetch() {
       if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(handle);
       else clearTimeout(handle);
     };
-  }, [empresa?.id, qc]);
+  }, [empresa?.id, qc, pathname]);
 }
 
