@@ -20,13 +20,14 @@ function enRuta(): boolean {
 export function useBootstrapPrefetch() {
   const { empresa } = useAuth();
   const qc = useQueryClient();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     if (!empresa?.id) return;
     // AHORRO DE DATOS MÓVILES: en /ruta ninguna pantalla usa estas queryKeys
     // (todas leen de IndexedDB), así que precargarlas era bajar el catálogo
     // completo de productos y clientes en CADA apertura de la app.
-    if (enRuta()) return;
+    if (pathname.startsWith('/ruta')) return;
 
     const eid = empresa.id;
 
