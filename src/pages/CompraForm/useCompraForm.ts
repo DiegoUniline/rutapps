@@ -134,8 +134,29 @@ export function useCompraForm() {
       }
       toast.success('Compra guardada'); qc.invalidateQueries({ queryKey: ['compras'] }); qc.invalidateQueries({ queryKey: ['compra', compraId] }); setDirty(false);
       if (isNew) navigate(`/almacen/compras/${compraId}`, { replace: true });
-    } catch (err: any) { toast.error(err.message || 'Error al guardar'); }
+      return compraId as string;
+    } catch (err: any) { toast.error(err.message || 'Error al guardar'); return null; }
   };
+
+  // Permite lotear sin exigir guardar antes: guarda el borrador solo si hace falta
+  const ensureSavedLinea = async (productoId: string): Promise<{ compraId: string; lineaId: string } | null> => {
+    let compraId = form.id;
+    if (isNew || dirty || !compraId) {
+      const saved = await handleSave();
+      if (!saved) return null;
+      compraId = saved;
+    }
+    const { data } = await supabase
+      .from('compra_lineas')
+      .select('id')
+      .eq('compra_id', compraId!)
+      .eq('producto_id', productoId)
+      .limit(1)
+      .maybeSingle();
+    if (!data?.id) { toast.error('No se pudo preparar la línea para lotear'); return null; }
+    return { compraId: compraId as string, lineaId: (data as any).id };
+  };
+
 
   const handleDelete = async () => {
     if (!form.id || !await confirmAsync('¿Eliminar esta compra?')) return;
