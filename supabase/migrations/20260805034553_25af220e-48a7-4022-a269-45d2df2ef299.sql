@@ -1,0 +1,4 @@
+insert into public.feature_flags (clave, nombre, descripcion, alcance, licencias) values
+('ruta_sync_v2','Ruta: sincronización optimizada v2','Descarga en /ruta filtrada por vendedor, columnas explícitas, ventana de 15 días, refresco cada 15 min y candado global anti-descargas duplicadas.','licencias', array['12324489']),
+('ruta_promos_auto','Ruta: promociones de producto gratis automáticas','Agrega solo el producto de bonificación al carrito y bloquea el cobro si una promoción quedó sin aplicar.','licencias', array['12324489'])
+on conflict (clave) do update set alcance = excluded.alcance, licencias = excluded.licencias, updated_at = now();
