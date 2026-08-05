@@ -968,6 +968,17 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       try { refetchPromos(); } catch { /* ignore */ }
       return;
     }
+    // Promoción de producto gratis que no se pudo aplicar (regalo sin stock a
+    // bordo). Guardar así cobraría de más: se bloquea con el detalle.
+    if (autoPromosOn && pendingGratis.length > 0) {
+      const nombres = pendingGratis.map(p => {
+        const prod = productos?.find((x: any) => x.id === p.gratis_producto_id);
+        return `${p.promocion_nombre}: faltan ${p.cantidad_gratis_faltante} de ${prod?.nombre ?? 'producto'}`;
+      }).join(' · ');
+      toast.error(`Promoción sin aplicar — ${nombres}. Agrega el producto de regalo o quita la promoción.`);
+      return;
+    }
+
     savingRef.current = true;
     setSaving(true);
 
