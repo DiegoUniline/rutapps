@@ -100,7 +100,7 @@ export const COLUMN_SELECTS: Record<string, string> = {
   lotes: 'id,empresa_id,producto_id,codigo,fecha_caducidad,activo,updated_at',
   stock_lotes: 'id,empresa_id,almacen_id,producto_id,lote_id,cantidad,updated_at',
   ruta_sesiones: 'id,empresa_id,vendedor_id,vehiculo_id,carga_id,fecha,inicio_at,fin_at,km_inicio,km_fin,km_recorridos,lat_inicio,lng_inicio,lat_fin,lng_fin,foto_inicio_url,foto_fin_url,notas_inicio,notas_fin,status,created_at,updated_at',
-  vehiculos: 'id,empresa_id,alias,placa,activo,created_at',
+  vehiculos: 'id,empresa_id,alias,placa,marca,modelo,anio,tipo,capacidad_kg,km_actual,foto_url,vendedor_default_id,status,notas,created_at,updated_at',
 };
 
 

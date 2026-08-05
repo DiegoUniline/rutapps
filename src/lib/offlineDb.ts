@@ -154,7 +154,7 @@ class OfflineDatabase extends Dexie {
     // podía iniciar ni cerrar su jornada offline.
     this.version(14).stores({
       ruta_sesiones: 'id, empresa_id, vendedor_id, status, fecha',
-      vehiculos: 'id, empresa_id, activo',
+      vehiculos: 'id, empresa_id, status, vendedor_default_id',
     });
   }
 

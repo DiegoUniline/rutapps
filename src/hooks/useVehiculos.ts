@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { offlineDb } from '@/lib/offlineDb';
 
 export interface Vehiculo {
   id: string;
@@ -26,12 +27,22 @@ export function useVehiculos(opts: { soloActivos?: boolean; vendedorId?: string 
   return useQuery({
     queryKey: ['vehiculos', empresa?.id, opts.soloActivos, opts.vendedorId],
     enabled: !!empresa?.id,
+    // Sin señal el vendedor debe poder elegir su vehículo para abrir jornada.
+    networkMode: 'always',
     queryFn: async (): Promise<Vehiculo[]> => {
-      let q = supabase.from('vehiculos').select('*').eq('empresa_id', empresa!.id).order('alias');
-      if (opts.soloActivos) q = q.eq('status', 'activo');
-      const { data, error } = await q;
-      if (error) throw error;
-      let list = (data || []) as Vehiculo[];
+      let list: Vehiculo[];
+      try {
+        let q = supabase.from('vehiculos').select('*').eq('empresa_id', empresa!.id).order('alias');
+        if (opts.soloActivos) q = q.eq('status', 'activo');
+        const { data, error } = await q;
+        if (error) throw error;
+        list = (data || []) as Vehiculo[];
+        if (list.length) await offlineDb.vehiculos.bulkPut(list);
+      } catch {
+        const locales = await offlineDb.vehiculos.where('empresa_id').equals(empresa!.id).toArray() as Vehiculo[];
+        list = (opts.soloActivos ? locales.filter(v => v.status === 'activo') : locales)
+          .sort((a, b) => String(a.alias).localeCompare(String(b.alias)));
+      }
       if (opts.vendedorId) {
         // Prefer assigned + unassigned
         list = list.sort((a, b) => {
