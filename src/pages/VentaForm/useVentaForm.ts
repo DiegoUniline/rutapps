@@ -817,7 +817,7 @@ export function useVentaForm() {
       };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
-      const linePromises: Promise<any>[] = [];
+      const linesToSave: Record<string, any>[] = [];
       const lineProductoIds: string[] = [];
       const lineIndexes: number[] = [];
       const lineTotalByProduct = new Map<string, number>();
@@ -855,10 +855,16 @@ export function useVentaForm() {
         lineProductoIds.push(producto_id);
         lineIndexes.push(lineIndex);
         lineTotalByProduct.set(producto_id, (lineTotalByProduct.get(producto_id) ?? 0) + lineAmounts.total);
-        linePromises.push(saveLinea.mutateAsync(clean));
+        linesToSave.push(clean);
       }
 
-      const savedLines = await Promise.all(linePromises);
+      // Guardar secuencialmente. Cada escritura recalcula y bloquea la cabecera
+      // de la venta; enviarlas en paralelo puede formar un deadlock entre las
+      // transacciones de dos líneas de la misma venta.
+      const savedLines: any[] = [];
+      for (const lineToSave of linesToSave) {
+        savedLines.push(await saveLinea.mutateAsync(lineToSave));
+      }
 
       // Escribir de vuelta los ids generados en el estado local: sin esto, un
       // segundo guardado (p. ej. "Confirmar" tras editar en borrador) volvería
