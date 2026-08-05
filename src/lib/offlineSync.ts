@@ -305,6 +305,9 @@ const CHILD_SCOPES: Partial<Record<CacheTable, { parentTable: CacheTable; foreig
 };
 
 const activeDownloads = new Map<string, Promise<DownloadResult>>();
+/** Cadena global: con `ruta_sync_v2` solo corre UNA sincronización a la vez. */
+let globalSyncChain: Promise<unknown> = Promise.resolve();
+
 
 function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
