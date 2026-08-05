@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS trg_recalc_venta_total ON public.venta_lineas;
