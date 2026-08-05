@@ -151,24 +151,24 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                     <td className="py-1.5 px-2">
                       {!line.producto_id || !lineaManejaLote(line) ? (
                         <span className="text-[11px] text-muted-foreground">—</span>
-                      ) : line.id ? (
+                      ) : (
                         (() => {
                           const loteadoPz = Number((line as any).piezas_loteadas) || 0;
                           const full = totalPz > 0 && loteadoPz >= totalPz;
                           return (
                             <button
                               type="button"
+                              disabled={preparando}
                               onClick={() => abrirLoteo(line)}
-                              className={'inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold border transition-colors ' + (full ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'border-dashed border-primary/50 text-primary hover:bg-primary/5')}
+                              className={'inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold border transition-colors disabled:opacity-50 ' + (full ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'border-dashed border-primary/50 text-primary hover:bg-primary/5')}
                               title="Lotear piezas: elige uno o varios lotes y cuántas piezas de cada uno"
                             >
                               <Boxes className="h-3 w-3" /> {loteadoPz.toLocaleString('es-MX')} / {totalPz.toLocaleString('es-MX')}
                             </button>
                           );
                         })()
-                      ) : (
-                        <span className="text-[11px] text-muted-foreground" title="Guarda la compra para poder lotear esta línea">Guarda para lotear</span>
                       )}
+
 
 
                     </td>
