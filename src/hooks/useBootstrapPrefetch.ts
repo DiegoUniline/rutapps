@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -15,9 +16,14 @@ export const CATALOG_STALE_TIME = 15 * 60 * 1000; // 15 min
 export function useBootstrapPrefetch() {
   const { empresa } = useAuth();
   const qc = useQueryClient();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     if (!empresa?.id) return;
+    // AHORRO DE DATOS MÓVILES: en /ruta ninguna pantalla usa estas queryKeys
+    // (todas leen de IndexedDB), así que precargarlas era bajar el catálogo
+    // completo de productos y clientes en CADA apertura de la app.
+    if (pathname.startsWith('/ruta')) return;
 
     const eid = empresa.id;
 
@@ -163,6 +169,6 @@ export function useBootstrapPrefetch() {
       if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(handle);
       else clearTimeout(handle);
     };
-  }, [empresa?.id, qc]);
+  }, [empresa?.id, qc, pathname]);
 }
 
