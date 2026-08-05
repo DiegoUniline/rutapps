@@ -608,21 +608,40 @@ async function downloadAllDataInternal(
             if (childScope && parentChunk && parentChunk.length > 0) {
               q = q.in(childScope.foreignKey, parentChunk);
             }
-            // Ventana de 30 días por created_at para tablas transaccionales
-            // hijas/append (acota cuánta historia se cachea).
-            if (RECENT_TABLES.has(table)) {
-              const thirtyDaysAgo = new Date();
-              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-              q = q.gte('created_at', thirtyDaysAgo.toISOString());
+            // FILTRADO POR VENDEDOR (`ruta_sync_v2`): el dispositivo baja solo
+            // lo del vendedor activo. Los clientes sin vendedor asignado también
+            // bajan, para no quitarle acceso a nadie.
+            const vendorScope = VENDOR_SCOPED_TABLES[table];
+            if (vendorScope && vendedorScopeActivo()) {
+              const scope = getSyncScope();
+              const value = vendorScope.source === 'user' ? scope.userId : scope.vendedorId;
+              if (value) {
+                q = vendorScope.nullable
+                  ? q.or(`${vendorScope.column}.eq.${value},${vendorScope.column}.is.null`)
+                  : q.eq(vendorScope.column, value);
+              }
             }
-            // Ventana por updated_at (ventas/cobros): cachea la actividad de los
-            // últimos 30 días; una venta vieja pagada hoy tiene updated_at de hoy
-            // y entra. Baja las ACTUALIZACIONES, no solo filas nuevas.
+            // Ventana por created_at para tablas transaccionales hijas/append
+            // (acota cuánta historia se cachea).
+            if (RECENT_TABLES.has(table)) {
+              const desde = new Date();
+              desde.setDate(desde.getDate() - windowDays());
+              q = q.gte('created_at', desde.toISOString());
+            }
+            // Ventana por updated_at (ventas/cobros): cachea la actividad
+            // reciente; una venta vieja pagada hoy tiene updated_at de hoy y
+            // entra. Baja las ACTUALIZACIONES, no solo filas nuevas.
             if (isUpdatedAtWindow) {
               const windowStart = new Date();
-              windowStart.setDate(windowStart.getDate() - WINDOW_DAYS);
-              q = q.gte('updated_at', windowStart.toISOString());
+              windowStart.setDate(windowStart.getDate() - windowDays());
+              const desdeIso = windowStart.toISOString();
+              // Excepción irrenunciable: una venta CON SALDO PENDIENTE siempre
+              // baja, por antigua que sea (si no, el vendedor no podría cobrarla).
+              q = table === 'ventas'
+                ? q.or(`updated_at.gte.${desdeIso},saldo_pendiente.gt.0`)
+                : q.gte('updated_at', desdeIso);
             }
+
             if (mode === 'delta') {
               if (lastTableSync) q = q.gte('created_at', new Date(lastTableSync - 5000).toISOString());
               // cursor gana sobre la ventana (es más reciente) → solo lo cambiado.
