@@ -77,6 +77,9 @@ class OfflineDatabase extends Dexie {
   // Sync infrastructure
   syncQueue!: Table<SyncQueueItem, number>;
   cacheTimestamps!: Table<CacheTimestamp, string>;
+  /** Snapshot fail-closed de roles/permisos por (empresa, usuario). */
+  securitySnapshots!: Table<any, string>;
+
 
   constructor() {
     super('UnilineOffline');
@@ -137,9 +140,17 @@ class OfflineDatabase extends Dexie {
       lotes: 'id, empresa_id, producto_id, activo, fecha_caducidad',
       stock_lotes: 'id, empresa_id, almacen_id, producto_id, lote_id',
     });
+    // v13: snapshot de SEGURIDAD por (empresa, usuario). Sin esto, al quedarse
+    // sin señal la app no podía comprobar roles/permisos y algunos módulos
+    // interpretaban la ausencia como "acceso total". Ahora se guarda la última
+    // respuesta válida del servidor y, si no existe, se niega el acceso.
+    this.version(13).stores({
+      securitySnapshots: 'id, empresa_id, user_id',
+    });
   }
 
 }
+
 
 
 export const offlineDb = new OfflineDatabase();

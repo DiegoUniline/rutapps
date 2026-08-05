@@ -253,7 +253,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setDataUsageIdentity(empresa?.id, user?.id);
   }, [empresa?.id, user?.id]);
 
-  const signOut = async () => { await supabase.auth.signOut(); };
+  const signOut = async () => {
+    // Al cerrar sesión no debe quedar en el dispositivo el snapshot de
+    // permisos del usuario anterior: otro usuario en el mismo teléfono nunca
+    // debe heredar accesos comprobados para alguien más.
+    try {
+      const { purgeForeignSecuritySnapshots } = await import('@/lib/offlineSecurity');
+      await purgeForeignSecuritySnapshots(null, null);
+    } catch { /* el cierre de sesión nunca debe fallar por la limpieza */ }
+    await supabase.auth.signOut();
+  };
 
   return (
     <AuthContext.Provider value={{ user, profile, empresa, realEmpresa, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, overrideVendedorId, setOverrideVendedorId }}>

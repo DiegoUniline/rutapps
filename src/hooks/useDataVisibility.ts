@@ -47,21 +47,35 @@ export function useDataVisibility(modulo: string) {
       } catch { /* offline / network error */ }
 
       // 3) Fallback to cached value
-      if (cached) return { clientes_visibilidad: cached.clientes_visibilidad };
+      if (cached) return { clientes_visibilidad: cached.clientes_visibilidad ?? 'todos', __known: true };
+      // 4) No hay servidor NI copia local: desconocido. NO se inventa 'todos'.
       return null;
     },
   });
 
   const seeAll = hasPermiso(modulo, 'ver_todos');
-  // Use cached/server value; only default to 'todos' when truly unknown
-  const clientesVisibilidad = ((empresaConfig as any)?.clientes_visibilidad as 'todos' | 'propios' | undefined) ?? 'todos';
+  const visibilityKnown = !!empresaConfig;
+  // FAIL-CLOSED: si no se puede comprobar la configuración de visibilidad, se
+  // asume la opción MÁS restrictiva ('propios'). Antes se asumía 'todos' y sin
+  // conexión el vendedor terminaba viendo la cartera completa de la empresa.
+  const clientesVisibilidad = ((empresaConfig as any)?.clientes_visibilidad as 'todos' | 'propios' | undefined) ?? 'propios';
 
+  // Cuando toca restringir a "propios" pero no se conoce el vendedor del
+  // usuario, no hay forma de filtrar correctamente → se bloquea la consulta en
+  // lugar de devolver todos los registros.
+  const needsOwnFilter = clientesVisibilidad === 'propios' && !seeAll;
+  const blocked = !visibilityKnown || (needsOwnFilter && !profile?.id);
 
   return {
     seeAll,
     profileId: profile?.id ?? null,
     userId: user?.id ?? null,
     clientesVisibilidad,
+    /** true cuando la configuración de visibilidad viene del servidor o de la copia local. */
+    visibilityKnown,
+    /** true cuando NO se puede garantizar el filtrado: no debe consultarse la lista. */
+    blocked,
     loading: permLoading || configLoading,
   };
 }
+

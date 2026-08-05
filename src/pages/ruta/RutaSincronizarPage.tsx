@@ -21,6 +21,8 @@ import {
 import { getSyncDiagnostics, formatBytes, requestPersistentStorage, type SyncDiagnostics } from '@/lib/syncDiagnostics';
 import { refreshAppVersion } from '@/lib/appUpdate';
 import { DataUsageCard } from '@/components/DataUsageCard';
+import { OfflineReadinessCard } from '@/components/ruta/OfflineReadinessCard';
+
 
 export default function RutaSincronizarPage() {
   const navigate = useNavigate();
@@ -210,6 +212,10 @@ export default function RutaSincronizarPage() {
             </p>
           </div>
         </div>
+
+        {/* ── PREPARACIÓN OFFLINE (manifiesto local) ── */}
+        <OfflineReadinessCard refreshKey={downloadResult?.total ?? 0} />
+
 
         {/* ── DIAGNÓSTICO DE INTEGRIDAD ── */}
         <div className="bg-card border border-border rounded-2xl p-4">
