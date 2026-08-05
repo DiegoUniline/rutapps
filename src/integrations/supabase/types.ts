@@ -9460,6 +9460,10 @@ export type Database = {
         Args: { p_linea_id: string }
         Returns: undefined
       }
+      fn_sync_venta_inventario: {
+        Args: { p_venta_id: string }
+        Returns: undefined
+      }
       generar_recibo_volumen: {
         Args: {
           p_desde: string
