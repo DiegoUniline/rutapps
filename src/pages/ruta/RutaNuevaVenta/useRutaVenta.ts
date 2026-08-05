@@ -410,9 +410,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   useEffect(() => {
     if (cart.length === 0 || !productos) return;
     setCart(prev => prev.map(item => {
+      if (item.es_cambio) return item;
       // Un precio editado a mano por el vendedor NO se pisa al cambiar de
       // cliente/tarifa: era una sobrescritura silenciosa.
       if ((item as any).precio_manual) return item;
+
 
       const prod = productos.find((p: any) => p.id === item.producto_id);
       if (!prod) return item;
