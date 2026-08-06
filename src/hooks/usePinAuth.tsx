@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import PinAuthDialog from '@/components/PinAuthDialog';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Hook to require PIN authorization before executing a sensitive action.
@@ -15,12 +16,22 @@ export function usePinAuth() {
   const [description, setDescription] = useState('');
   const actionRef = useRef<(() => void) | null>(null);
 
-  const requestPin = useCallback((t: string, desc: string, action: () => void) => {
+  const requestPin = useCallback(async (t: string, desc: string, action: () => void) => {
+    // Si el usuario no tiene PIN configurado, no bloqueamos la acción.
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase.rpc('has_admin_pin' as any, { p_user_id: user.id });
+        if (!error && data !== true) { action(); return; }
+      }
+    } catch { /* si falla la verificación, pedimos PIN */ }
     setTitle(t);
     setDescription(desc);
     actionRef.current = action;
-    setOpen(true);
+    // Esperamos un tick para que cualquier diálogo previo termine de cerrarse
+    setTimeout(() => setOpen(true), 120);
   }, []);
+
 
   const handleSuccess = useCallback(() => {
     actionRef.current?.();

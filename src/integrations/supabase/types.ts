@@ -9569,6 +9569,7 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: Json
       }
+      has_admin_pin: { Args: { p_user_id: string }; Returns: boolean }
       has_billing_access: { Args: { p_empresa_id: string }; Returns: boolean }
       is_diego_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       is_email_blacklisted: { Args: { p_email: string }; Returns: boolean }
