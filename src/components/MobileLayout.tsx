@@ -20,6 +20,7 @@ import { useRutaStore } from '@/stores/rutaStore';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useUnloadGuard } from '@/hooks/useUnloadGuard';
 import { useOnlineReconnect } from '@/hooks/useOnlineReconnect';
+import { useTraspasosRealtime } from '@/hooks/useTraspasosRealtime';
 import { usePendingQueue } from '@/hooks/usePendingQueue';
 import StockAdjustmentDialog from '@/components/StockAdjustmentDialog';
 import BroadcastAnnouncementModal from '@/components/BroadcastAnnouncementModal';
