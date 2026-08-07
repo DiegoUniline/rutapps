@@ -316,9 +316,15 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
       const promoLinea = promosConDesc.find(p => p.producto_id === l.producto_id);
       const det = `  Antes ${fmt(lineAmt)}${promoLinea?.descripcion ? ` ${clean(promoLinea.descripcion)}` : ''}`;
       ln(clean(det).slice(0, W));
+    } else {
+      // Precio unitario real de la venta (derivado del importe si el guardado
+      // no cuadra, para que Cantidad x P.U. = Importe).
+      const cant = Number(l.cantidad) || 0;
+      const pGuardado = Number(l.precio) || 0;
+      const pu = cant > 0 && Math.abs(pGuardado * cant - lineAmt) > 0.01 ? lineAmt / cant : pGuardado;
+      if (pu > 0) ln(clean(`  P.U. ${fmt(pu)}`).slice(0, W));
     }
-    // Se quitó el precio unitario/base por renglón: en el ticket cada línea
-    // muestra solo su precio final (con impuestos).
+
   }
   ln(divider(W));
 
