@@ -423,7 +423,14 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                       <div className="text-[8px] text-green-600 font-medium mt-px">🎁 {promoGratis?.descripcion || 'Promoción'}</div>
                     ) : !l.esCambio && (
                       <>
-                        {/* Se quitó el precio unitario/base: cada renglón muestra solo su precio final (con impuestos). */}
+                        {(() => {
+                          const cant = Number(l.cantidad) || 0;
+                          const lineAmt = Number(l.total) || 0;
+                          const pGuardado = Number(l.precio) || 0;
+                          const pu = cant > 0 && Math.abs(pGuardado * cant - lineAmt) > 0.01 ? lineAmt / cant : pGuardado;
+                          return pu > 0 ? <div className="text-[8px] text-muted-foreground mt-px">P.U. {fmt(pu)}</div> : null;
+                        })()}
+
                         {((l.descuento_pct ?? 0) > 0 || (taxModeEff === 'ambos' && ((l.iva_pct ?? 0) > 0 || (l.ieps_pct ?? 0) > 0)) || (l.precio_sugerido_publico ?? 0) > 0) && (
                           <div className="flex gap-2 text-[8px] text-muted-foreground mt-px flex-wrap">
                             {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}

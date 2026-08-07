@@ -304,11 +304,19 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
         : '';
       // <s> = tachado; va en linea propia (sin pad) para no romper columnas.
       add(`  <s>${antes}</s>${etiqueta}`);
-    } else if ((l.precio_sugerido_publico ?? 0) > 0) {
-      // Se quitó el precio unitario/base: en el ticket cada renglón muestra solo
-      // su precio final (con impuestos). Se conserva el precio sugerido si aplica.
-      for (const line of wrapText(`  Sug ${fmt(l.precio_sugerido_publico!)}`, COLS)) add(line);
+    } else {
+      // Precio unitario real de la venta. Si el precio guardado no cuadra con el
+      // importe bruto de la linea (impuestos incluidos), se deriva del importe
+      // para que SIEMPRE se cumpla Cantidad x P. Unitario = Importe.
+      const cant = Number(l.cantidad) || 0;
+      const pGuardado = Number(l.precio) || 0;
+      const pu = cant > 0 && Math.abs(pGuardado * cant - lineAmt) > 0.01 ? lineAmt / cant : pGuardado;
+      if (pu > 0) add(`  P.U. ${fmt(pu)}`);
+      if ((l.precio_sugerido_publico ?? 0) > 0) {
+        for (const line of wrapText(`  Sug ${fmt(l.precio_sugerido_publico!)}`, COLS)) add(line);
+      }
     }
+
   }
   add(div);
 
