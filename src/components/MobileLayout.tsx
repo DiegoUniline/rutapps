@@ -103,6 +103,10 @@ export default function MobileLayout() {
   // Auto-sync al reconectar y avisar de nuevas cargas
   useOnlineReconnect();
 
+  // Traspasos (confirmados o cancelados) se reflejan al instante en el stock
+  // de la vista móvil, sin depender del botón "Sincronizar".
+  useTraspasosRealtime();
+
   // Pedir storage persistente una sola vez al montar la app móvil
   useEffect(() => { requestPersistentStorage().catch(() => {}); }, []);
 
