@@ -742,7 +742,7 @@ export default function TarifaFormPage() {
         descuento_max: (l as any).descuento_max ?? 0,
         margen_pct: l.margen_pct,
         descuento_pct: l.descuento_pct,
-        comision_pct: (l as any).comision_pct ?? 0,
+        comision_pct: l.comision_pct ?? 0,
         base_precio: (l as any).base_precio ?? 'sin_impuestos',
         redondeo: (l as any).redondeo ?? 'ninguno',
         notas: (l as any).notas ?? '',
