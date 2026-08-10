@@ -376,7 +376,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     if (ivaMonto <= 0.005 && iepsMonto <= 0.005) add(pad('Impuestos', fmt(0)));
   } else {
     // Sin desglose: todo en bruto (impuestos incluidos), cuadra con el Total.
-    const descBruto = descuentoBrutoGuardado > 0.005 ? descuentoBrutoGuardado : r2(descTicket);
+    const descBruto = descuentoBrutoGuardado > 0.005 ? descuentoBrutoGuardado : r2(totalDescNeto);
     const subBruto = descBruto > 0.005
       ? r2((Number(total) || 0) + descBruto)
       : r2(sinImpTicket + ivaMonto + iepsMonto);
