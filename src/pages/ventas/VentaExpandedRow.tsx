@@ -522,16 +522,10 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                       <span className="text-muted-foreground">Subtotal sin impuestos</span>
                       <span className="tabular-nums">{fmt(sinImpDisp)}</span>
                     </div>
-                    {manualNeto > 0.005 && (
+                    {descuentoDisp > 0.005 && (
                       <div className="flex justify-between text-primary">
-                        <span>Descuento manual</span>
-                        <span className="tabular-nums">-{fmt(manualNeto)}</span>
-                      </div>
-                    )}
-                    {promoNeto > 0.005 && (
-                      <div className="flex justify-between text-primary">
-                        <span>Desc. promociones</span>
-                        <span className="tabular-nums">-{fmt(promoNeto)}</span>
+                        <span>Descuentos / promociones</span>
+                        <span className="tabular-nums">-{fmt(descuentoDisp)}</span>
                       </div>
                     )}
                     <div className="flex justify-between">

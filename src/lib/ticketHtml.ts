@@ -341,42 +341,37 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     const lista = Number(l.precio_lista_unitario);
     return s + (Number.isFinite(lista) ? r2(lista * (Number(l.cantidad) || 0)) : 0);
   }, 0));
-  const manualDiscBruto = Number(data.descuento) || 0;
-  const manualDiscNeto = r2(lineas.reduce((s, l) => {
-    const manualBrutoLinea = Number(l.descuento_manual_monto) || 0;
-    if (manualBrutoLinea <= 0) return s;
+  const descuentoNetoGuardado = r2(lineas.reduce((s, l) => {
+    const descuentoBruto = (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0);
+    if (descuentoBruto <= 0) return s;
     const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
-    return s + r2(divisor > 0 ? manualBrutoLinea / divisor : manualBrutoLinea);
-  }, 0)) || r2(manualDiscBruto / 1.16); // Fallback standard si no hay desglose por linea
-
-  const promoDiscNeto = r2(lineas.reduce((s, l) => {
-    const promoBrutoLinea = Number(l.descuento_promocion_monto) || 0;
-    if (promoBrutoLinea <= 0) return s;
-    const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
-    return s + r2(divisor > 0 ? promoBrutoLinea / divisor : promoBrutoLinea);
+    return s + r2(divisor > 0 ? descuentoBruto / divisor : descuentoBruto);
   }, 0));
-
-  const totalDescNeto = manualDiscNeto + promoDiscNeto;
-
+  const descTicket = subtotalNetoGuardado > 0
+    ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2(subtotalNetoGuardado - ((Number(total) || 0) - ivaMonto - iepsMonto)))
+    : Math.max(resumen.descuento, summary.descuentoTotal, 0);
   const sinImpTicket = subtotalNetoGuardado > 0
     ? subtotalNetoGuardado
-    : Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto) + totalDescNeto;
-
-  const gravableTicket = Math.max(0, sinImpTicket - totalDescNeto);
+    : Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto) + descTicket;
+  const gravableTicket = subtotalNetoGuardado > 0
+    ? Math.max(0, r2(sinImpTicket - descTicket))
+    : Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto);
+  // Descuento BRUTO (con impuestos), para el modo "sin desglose de impuestos":
+  // ahí el subtotal va en bruto, así que el descuento también debe ir en bruto
+  // para que Subtotal − Descuentos = Total.
   const descuentoBrutoGuardado = r2(lineas.reduce((s, l) =>
     s + (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0), 0));
   add('');
   if (showImpuestos) {
     add(pad('Subtotal sin impuestos', fmt(sinImpTicket)));
-    if (showDescuentos && manualDiscNeto > 0.005) add(pad('Descuento manual', `-${fmt(manualDiscNeto)}`));
-    if (showDescuentos && promoDiscNeto > 0.005) add(pad('Desc. promociones', `-${fmt(promoDiscNeto)}`));
+    if (showDescuentos && descTicket > 0.005) add(pad('Descuentos/promos', `-${fmt(descTicket)}`));
     add(pad('Subtotal gravable', fmt(gravableTicket)));
     if (iepsMonto > 0.005) add(pad('IEPS', fmt(iepsMonto)));
     if (ivaMonto > 0.005) add(pad('IVA', fmt(ivaMonto)));
     if (ivaMonto <= 0.005 && iepsMonto <= 0.005) add(pad('Impuestos', fmt(0)));
   } else {
     // Sin desglose: todo en bruto (impuestos incluidos), cuadra con el Total.
-    const descBruto = descuentoBrutoGuardado > 0.005 ? descuentoBrutoGuardado : r2(totalDescNeto);
+    const descBruto = descuentoBrutoGuardado > 0.005 ? descuentoBrutoGuardado : r2(descTicket);
     const subBruto = descBruto > 0.005
       ? r2((Number(total) || 0) + descBruto)
       : r2(sinImpTicket + ivaMonto + iepsMonto);

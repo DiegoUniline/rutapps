@@ -31,30 +31,38 @@ interface VentaTotalsProps {
 export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt, currencyCode, promoTotalGuardado, subtotalNetoGuardado, descuentoNetoGuardado }: VentaTotalsProps) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
-  const r2 = (v: number) => Math.round(v * 100) / 100;
+  const lineDescuento = descuento_total - (descuento_promo ?? 0) - (descuento_extra_amt ?? 0);
 
-  // Resumen VISUAL alineado con Ticket y VentaExpandedRow
+  // Subtotal en BRUTO (antes de descuentos/promos), reconstruido desde el Total +
+  // las rebajas que se muestran abajo. Así SIEMPRE cuadra (Subtotal − descuentos +
+  // impuestos = Total), sin importar si la venta guardó el descuento en el
+  // encabezado o solo lo tiene la promo recalculada en vivo (p. ej. líneas gratis
+  // neteadas a $0). Es solo presentación: no cambia ningún dato guardado.
   const promoLive = (promoResults ?? []).reduce((s, pr) => s + (Number(pr.descuento) || 0), 0);
-  const promoTotalBruto = (promoTotalGuardado ?? 0) > 0 ? (promoTotalGuardado as number) : promoLive;
-  const promoFactor = promoLive > 0 ? promoTotalBruto / promoLive : 1;
+  const promoTotal = (promoTotalGuardado ?? 0) > 0 ? (promoTotalGuardado as number) : promoLive;
+  // Factor para mostrar el detalle de cada promo alineado con lo guardado.
+  const promoFactor = promoLive > 0 ? promoTotal / promoLive : 1;
+  const shownLineDesc = lineDescuento > 0 ? lineDescuento : 0;
+  const shownExtra = (descuento_extra_amt ?? 0) > 0 ? (descuento_extra_amt ?? 0) : 0;
 
+  // Desglose fiscal (mismo que la fila expandible de la lista):
+  // Subtotal sin impuestos − Descuentos/promociones = Subtotal gravable;
+  // + IVA + IEPS (por separado) = Total.
   const gravable = (total || 0) - (iva_total || 0) - (ieps_total || 0);
-  const totalReal = (total || 0);
-
-  // Descuento manual (extra + line descuento manual)
-  const manualTotalBruto = (descuento_total || 0) - promoTotalBruto;
-  const manualNeto = totalReal > 0 ? r2(Math.max(0, manualTotalBruto) * (gravable / totalReal)) : r2(Math.max(0, manualTotalBruto) / 1.16);
-  const promoNeto = totalReal > 0 ? r2(promoTotalBruto * (gravable / totalReal)) : r2(promoTotalBruto / 1.16);
-
+  // El descuento de promoción se calcula sobre el precio BRUTO (con impuestos).
+  // Para el desglose sin impuestos se muestra solo su parte gravable, así el
+  // renglón "Subtotal sin impuestos" sigue cuadrando con el Total.
+  const promoNeto = (total || 0) > 0 ? promoTotal * (gravable / (total || 1)) : promoTotal;
+  const r2 = (v: number) => Math.round(v * 100) / 100;
   const useGuardado = (subtotalNetoGuardado ?? 0) > 0;
-  const grossSubtotal = useGuardado ? r2(subtotalNetoGuardado as number) : r2(gravable + manualNeto + promoNeto);
-
-  // Con subtotal guardado, el descuento se deriva para que siempre cuadre
-  const totalDescuentosNeto = useGuardado
+  const grossSubtotal = useGuardado ? r2(subtotalNetoGuardado as number) : r2(gravable + shownLineDesc + promoNeto + shownExtra);
+  // Con subtotal guardado, el descuento se deriva para que siempre cuadre:
+  // Subtotal − Descuentos = Subtotal gravable.
+  const totalDescuentos = useGuardado
     ? r2((descuentoNetoGuardado ?? 0) > 0 ? (descuentoNetoGuardado as number) : grossSubtotal - gravable)
-    : r2(manualNeto + promoNeto);
-
-  const gravableShown = useGuardado ? r2(grossSubtotal - totalDescuentosNeto) : gravable;
+    : r2(shownLineDesc + promoNeto + shownExtra);
+  // Con datos guardados, el gravable se deriva de las líneas para que la resta cuadre.
+  const gravableShown = useGuardado ? r2(grossSubtotal - totalDescuentos) : gravable;
 
   const pagadoAmt = saldoPendiente != null ? Math.max(0, (total || 0) - saldoPendiente) : null;
 
@@ -65,16 +73,10 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
           <span className="text-muted-foreground">Subtotal sin impuestos</span>
           <span>{money(grossSubtotal)}</span>
         </div>
-        {manualNeto > 0.005 && (
+        {totalDescuentos > 0 && (
           <div className="flex justify-between text-primary">
-            <span>Descuento manual</span>
-            <span>-{money(manualNeto)}</span>
-          </div>
-        )}
-        {promoNeto > 0.005 && (
-          <div className="flex justify-between text-primary">
-            <span>Desc. promociones</span>
-            <span>-{money(promoNeto)}</span>
+            <span>Descuentos / promociones</span>
+            <span>-{money(totalDescuentos)}</span>
           </div>
         )}
         <div className="flex justify-between">

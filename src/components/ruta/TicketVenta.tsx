@@ -15,7 +15,6 @@ interface DevolucionTicketItem {
 
 interface TicketVentaProps {
   empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null; moneda?: string | null; razon_social?: string | null; colonia?: string | null; ciudad?: string | null; estado?: string | null; cp?: string | null; email?: string | null; notas_ticket?: string | null; ticket_campos?: Record<string, boolean> | null };
-  descuento?: number;
   folio: string;
   fecha: string;
   clienteNombre: string;
@@ -143,29 +142,24 @@ export default function TicketVenta(props: TicketVentaProps) {
     const lista = Number(l.precio_lista_unitario);
     return s + (Number.isFinite(lista) ? r2(lista * (Number(l.cantidad) || 0)) : 0);
   }, 0));
-  const manualDiscBruto = Number(props.descuento) || 0;
-  const manualDiscNeto = r2(lineas.reduce((s, l: any) => {
-    const bruto = Number(l.descuento_manual_monto) || 0;
-    if (bruto <= 0) return s;
-    const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
-    return s + r2(divisor > 0 ? bruto / divisor : bruto);
-  }, 0)) || r2(manualDiscBruto / 1.16);
-
-  const promoDiscNeto = r2(lineas.reduce((s, l: any) => {
-    const bruto = Number(l.descuento_promocion_monto) || 0;
+  const descuentoNetoGuardado = r2(lineas.reduce((s, l: any) => {
+    const bruto = (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0);
     if (bruto <= 0) return s;
     const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
     return s + r2(divisor > 0 ? bruto / divisor : bruto);
   }, 0));
-
-  const totalDescNeto = manualDiscNeto + promoDiscNeto;
   const netoTotal = Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto);
-  const sinImpTicket = subtotalNetoGuardado > 0 ? subtotalNetoGuardado : netoTotal + totalDescNeto;
-  const gravableTicket = Math.max(0, r2(sinImpTicket - totalDescNeto));
-
+  const descTicket = subtotalNetoGuardado > 0
+    ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2(subtotalNetoGuardado - netoTotal))
+    : Math.max(resumen.descuento, 0);
+  const sinImpTicket = subtotalNetoGuardado > 0 ? subtotalNetoGuardado : netoTotal + descTicket;
+  const gravableTicket = subtotalNetoGuardado > 0
+    ? Math.max(0, r2(sinImpTicket - descTicket))
+    : netoTotal;
   // Modo sin desglose de impuestos: todo en bruto para que Subtotal − Desc = Total.
-  const descBrutoTicket = r2(lineas.reduce((s, l: any) =>
-    s + (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0), 0)) || (Number(props.descuento) || 0);
+  const descuentoBrutoGuardado = r2(lineas.reduce((s, l: any) =>
+    s + (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0), 0));
+  const descBrutoTicket = descuentoBrutoGuardado > 0.005 ? descuentoBrutoGuardado : r2(descTicket);
   const subBrutoTicket = descBrutoTicket > 0.005
     ? r2((Number(total) || 0) + descBrutoTicket)
     : r2(sinImpTicket + ivaMonto + iepsMonto);
@@ -256,8 +250,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
       ...(showImpuestos
         ? [
             `Subtotal sin impuestos: ${fmt(sinImpTicket)}`,
-            ...(showDescuentos && manualDiscNeto > 0.005 ? [`Descuento manual: -${fmt(manualDiscNeto)}`] : []),
-            ...(showDescuentos && promoDiscNeto > 0.005 ? [`Desc. promociones: -${fmt(promoDiscNeto)}`] : []),
+            ...(showDescuentos && descTicket > 0.005 ? [`Descuentos / promos: -${fmt(descTicket)}`] : []),
             `Subtotal gravable: ${fmt(gravableTicket)}`,
             ...(iepsMonto > 0.005 ? [`IEPS: ${fmt(iepsMonto)}`] : []),
             ...(ivaMonto > 0.005 ? [`IVA: ${fmt(ivaMonto)}`] : []),
@@ -494,16 +487,10 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                     <span className="lbl text-muted-foreground">Subtotal sin impuestos</span>
                     <span className="val text-foreground tabular-nums">{fmt(sinImpTicket)}</span>
                   </div>
-                  {showDescuentos && manualDiscNeto > 0.005 && (
+                  {showDescuentos && descTicket > 0.005 && (
                     <div className="tk-tot-row flex justify-between text-[10px]">
-                      <span className="lbl text-primary font-semibold">Descuento manual</span>
-                      <span className="val text-primary font-bold tabular-nums">-{fmt(manualDiscNeto)}</span>
-                    </div>
-                  )}
-                  {showDescuentos && promoDiscNeto > 0.005 && (
-                    <div className="tk-tot-row flex justify-between text-[10px]">
-                      <span className="lbl text-primary font-semibold">Desc. promociones</span>
-                      <span className="val text-primary font-bold tabular-nums">-{fmt(promoDiscNeto)}</span>
+                      <span className="lbl text-primary font-semibold">Descuentos / promos</span>
+                      <span className="val text-primary font-bold tabular-nums">-{fmt(descTicket)}</span>
                     </div>
                   )}
                   <div className="tk-tot-row flex justify-between text-[10px]">
