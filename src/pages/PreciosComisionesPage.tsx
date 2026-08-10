@@ -85,7 +85,7 @@ interface CellResult {
 
 function resolveCell(producto: ProductoPrecioRow, listaId: string | null, rules: TarifaLineaRule[]): CellResult {
   const pricing = resolveProductPricing(rules, producto, listaId);
-  const rule = pricing.appliedRule as (TarifaLineaRule & { comision_pct?: number }) | null;
+  const rule = pricing.appliedRule;
 
   if (rule && (rule.comision_pct ?? 0) > 0) {
     return {
