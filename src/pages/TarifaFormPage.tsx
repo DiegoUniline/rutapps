@@ -1248,8 +1248,8 @@ export default function TarifaFormPage() {
                                 </select>
                               </td>
                               <td className="py-2 px-3">
-                                <input type="number" className="input-odoo text-right text-xs w-full" placeholder="%"
-                                  value={newLinea.comision_pct || ''} onChange={e => setNewLinea(p => ({ ...p, comision_pct: +e.target.value }))} />
+                                <input type="number" step="0.01" className="input-odoo text-right text-xs w-full" placeholder="%"
+                                  value={newLinea.comision_pct ?? ''} onChange={e => setNewLinea(p => ({ ...p, comision_pct: e.target.value === '' ? 0 : +e.target.value }))} />
                               </td>
                               <td className="py-2 px-3">
                                 <input type="number" className="input-odoo text-right text-xs w-full" placeholder="$ 0"
