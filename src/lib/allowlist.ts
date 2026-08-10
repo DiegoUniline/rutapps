@@ -109,7 +109,7 @@ export const TARIFA_COLUMNS = [
 
 export const TARIFA_LINEA_COLUMNS = [
   'id','tarifa_id','aplica_a','producto_ids','clasificacion_ids','tipo_calculo','precio',
-  'precio_minimo','margen_pct','descuento_pct','redondeo','base_precio','lista_precio_id','created_at',
+  'precio_minimo','margen_pct','descuento_pct','comision_pct','redondeo','base_precio','lista_precio_id','created_at',
 ] as const;
 
 export const LISTA_PRECIO_COLUMNS = [
