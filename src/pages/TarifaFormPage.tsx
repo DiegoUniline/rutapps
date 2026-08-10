@@ -1171,7 +1171,7 @@ export default function TarifaFormPage() {
                             <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('comision')}>
                               {ec('comision') ? (
                                 <input autoFocus type="number" step="0.01" className="input-odoo text-right text-xs w-20 ml-auto" value={editLinea.comision_pct ?? ''} onBlur={handleSaveEditLinea} onChange={e => setEditLinea(p => ({ ...p, comision_pct: e.target.value === '' ? 0 : +e.target.value }))} />
-                              ) : <span className="font-mono text-xs">{(l as any).comision_pct ? `${(l as any).comision_pct}%` : '—'}</span>}
+                              ) : <span className="font-mono text-xs">{l.comision_pct ? `${l.comision_pct}%` : '—'}</span>}
                             </td>
                             {/* Precio mín */}
                             <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('precio_min')}>
