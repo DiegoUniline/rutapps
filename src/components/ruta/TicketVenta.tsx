@@ -15,6 +15,7 @@ interface DevolucionTicketItem {
 
 interface TicketVentaProps {
   empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null; moneda?: string | null; razon_social?: string | null; colonia?: string | null; ciudad?: string | null; estado?: string | null; cp?: string | null; email?: string | null; notas_ticket?: string | null; ticket_campos?: Record<string, boolean> | null };
+  descuento?: number;
   folio: string;
   fecha: string;
   clienteNombre: string;
@@ -493,10 +494,16 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                     <span className="lbl text-muted-foreground">Subtotal sin impuestos</span>
                     <span className="val text-foreground tabular-nums">{fmt(sinImpTicket)}</span>
                   </div>
-                  {showDescuentos && descTicket > 0.005 && (
+                  {showDescuentos && manualDiscNeto > 0.005 && (
                     <div className="tk-tot-row flex justify-between text-[10px]">
-                      <span className="lbl text-primary font-semibold">Descuentos / promos</span>
-                      <span className="val text-primary font-bold tabular-nums">-{fmt(descTicket)}</span>
+                      <span className="lbl text-primary font-semibold">Descuento manual</span>
+                      <span className="val text-primary font-bold tabular-nums">-{fmt(manualDiscNeto)}</span>
+                    </div>
+                  )}
+                  {showDescuentos && promoDiscNeto > 0.005 && (
+                    <div className="tk-tot-row flex justify-between text-[10px]">
+                      <span className="lbl text-primary font-semibold">Desc. promociones</span>
+                      <span className="val text-primary font-bold tabular-nums">-{fmt(promoDiscNeto)}</span>
                     </div>
                   )}
                   <div className="tk-tot-row flex justify-between text-[10px]">
