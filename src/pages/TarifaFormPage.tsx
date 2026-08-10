@@ -742,7 +742,7 @@ export default function TarifaFormPage() {
         descuento_max: (l as any).descuento_max ?? 0,
         margen_pct: l.margen_pct,
         descuento_pct: l.descuento_pct,
-        comision_pct: (l as any).comision_pct ?? 0,
+        comision_pct: l.comision_pct ?? 0,
         base_precio: (l as any).base_precio ?? 'sin_impuestos',
         redondeo: (l as any).redondeo ?? 'ninguno',
         notas: (l as any).notas ?? '',
@@ -1170,8 +1170,8 @@ export default function TarifaFormPage() {
                             {/* Comisión */}
                             <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('comision')}>
                               {ec('comision') ? (
-                                <input autoFocus type="number" className="input-odoo text-right text-xs w-20 ml-auto" value={editLinea.comision_pct || ''} onBlur={blurSave} onChange={e => setEditLinea(p => ({ ...p, comision_pct: +e.target.value }))} />
-                              ) : <span className="font-mono text-xs">{(l as any).comision_pct ? `${(l as any).comision_pct}%` : '—'}</span>}
+                                <input autoFocus type="number" step="0.01" className="input-odoo text-right text-xs w-20 ml-auto" value={editLinea.comision_pct ?? ''} onBlur={handleSaveEditLinea} onChange={e => setEditLinea(p => ({ ...p, comision_pct: e.target.value === '' ? 0 : +e.target.value }))} />
+                              ) : <span className="font-mono text-xs">{l.comision_pct ? `${l.comision_pct}%` : '—'}</span>}
                             </td>
                             {/* Precio mín */}
                             <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('precio_min')}>
@@ -1248,8 +1248,8 @@ export default function TarifaFormPage() {
                                 </select>
                               </td>
                               <td className="py-2 px-3">
-                                <input type="number" className="input-odoo text-right text-xs w-full" placeholder="%"
-                                  value={newLinea.comision_pct || ''} onChange={e => setNewLinea(p => ({ ...p, comision_pct: +e.target.value }))} />
+                                <input type="number" step="0.01" className="input-odoo text-right text-xs w-full" placeholder="%"
+                                  value={newLinea.comision_pct ?? ''} onChange={e => setNewLinea(p => ({ ...p, comision_pct: e.target.value === '' ? 0 : +e.target.value }))} />
                               </td>
                               <td className="py-2 px-3">
                                 <input type="number" className="input-odoo text-right text-xs w-full" placeholder="$ 0"
