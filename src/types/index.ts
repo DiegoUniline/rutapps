@@ -97,6 +97,7 @@ export interface TarifaLinea {
   descuento_max: number;
   margen_pct: number;
   descuento_pct: number;
+  comision_pct: number;
   redondeo: RedondeoTarifa;
   notas?: string;
   created_at: string;
