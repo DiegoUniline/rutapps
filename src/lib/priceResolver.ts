@@ -15,6 +15,7 @@ export interface TarifaLineaRule {
   margen_pct: number | null;
   descuento_pct: number | null;
   redondeo: string;
+  comision_pct?: number;
   base_precio: string;
   lista_precio_id: string | null;
 }
