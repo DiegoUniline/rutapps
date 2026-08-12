@@ -38,6 +38,14 @@ export interface CartItem {
   lote_id?: string | null;
   /** Código del lote apartado (solo para mostrar) */
   lote_codigo?: string | null;
+  /** Reparto de la cantidad entre varios lotes (empresas con manejo de lotes) */
+  lotes?: LoteAsignacionCart[];
+}
+
+export interface LoteAsignacionCart {
+  lote_id: string;
+  codigo: string;
+  cantidad: number;
 }
 
 export type AccionDevolucion = 'reposicion' | 'nota_credito' | 'devolucion_dinero' | 'descuento_venta';
