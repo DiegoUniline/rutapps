@@ -38,6 +38,9 @@ function RutaCobrarInner() {
   const navigate = useNavigate();
   const location = useLocation();
   const preselectedClienteId = (location.state as any)?.clienteId as string | undefined;
+  // Notas preseleccionadas desde Cuentas por cobrar (cobro masivo o por cuenta).
+  const preselectedVentaIds = (location.state as any)?.ventaIds as string[] | undefined;
+
   const { empresa, user, profile } = useAuth();
   const { symbol: s, fmt: fmtC } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
@@ -125,6 +128,32 @@ function RutaCobrarInner() {
     const c = lista.find((x: any) => x.id === preselectedClienteId);
     if (c) selectCliente(c);
   }, [preselectedClienteId, clienteId, clientesFiltrados]);
+
+  // Notas preseleccionadas desde CxC: arma la distribución (más antigua primero)
+  // con el saldo completo de cada nota y salta al paso de cuentas.
+  const preaplicadoRef = useRef(false);
+  useEffect(() => {
+    if (preaplicadoRef.current) return;
+    if (!preselectedVentaIds || preselectedVentaIds.length === 0) return;
+    if (!clienteId || (ventasPendientes ?? []).length === 0) return;
+    const sel = (ventasPendientes ?? []).filter(v => preselectedVentaIds.includes(v.id));
+    if (sel.length === 0) return;
+    preaplicadoRef.current = true;
+    const distribucion = sel.map(v => ({
+      id: v.id,
+      folio: v.folio,
+      fecha: v.fecha,
+      total: v.total ?? 0,
+      saldo_pendiente: v.saldo_pendiente ?? 0,
+      montoAplicar: Math.round((v.saldo_pendiente ?? 0) * 100) / 100,
+    }));
+    const suma = distribucion.reduce((s, d) => s + d.montoAplicar, 0);
+    setCuentas(distribucion);
+    setMontoRecibido(String(Math.round(suma * 100) / 100));
+    setStep('cuentas');
+  }, [preselectedVentaIds, clienteId, ventasPendientes]);
+
+
 
   const totalPendienteCliente = useMemo(() =>
     (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0),
