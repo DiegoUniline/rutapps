@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
-import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch, Boxes } from 'lucide-react';
 import { toast } from 'sonner';
 import BarcodeScanner from '@/components/ruta/BarcodeScanner';
 import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
@@ -12,6 +12,7 @@ import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelecto
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import type { CartItem, DevolucionItem } from './types';
 import { useApartadoAlmacenes } from '@/hooks/useApartadoStock';
+import { LotesLineaMovilModal } from '@/components/lotes/LotesLineaMovilModal';
 
 interface Props {
   clienteNombre: string;
@@ -62,6 +63,12 @@ interface Props {
   apartadoActivoPedido: boolean;
   pedidoAlmacenId: string | null;
   setPedidoAlmacenId: (id: string | null) => void;
+  // Lotes
+  manejaLotesEmpresa?: boolean;
+  productoManejaLote?: (pid: string) => boolean;
+  setLineaLotes?: (pid: string, lotes: { lote_id: string; codigo: string; cantidad: number }[]) => void;
+  lotePendienteDe?: (item: CartItem) => number;
+  almacenLotesBase?: string | null;
 }
 
 export function StepProductos(props: Props) {
@@ -74,6 +81,7 @@ export function StepProductos(props: Props) {
     getSuggestedPrice, getSuggestedDisplayPrice, getLineDisplayPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
     canChangePrice, canChangeLista,
     apartadoActivoPedido, pedidoAlmacenId, setPedidoAlmacenId,
+    productoManejaLote, setLineaLotes, lotePendienteDe, almacenLotesBase,
   } = props;
   const { symbol: s } = useCurrency();
   const { data: allPresentaciones } = useAllPresentaciones();
@@ -81,6 +89,7 @@ export function StepProductos(props: Props) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
   const [granelFor, setGranelFor] = useState<any | null>(null);
+  const [lotesFor, setLotesFor] = useState<{ id: string; nombre: string } | null>(null);
   const { empresa } = useAuth();
   const soloConStockDefault = !!(empresa as any)?.apartado_solo_con_stock;
   const [stockFilter, setStockFilter] = useState<'con' | 'sin' | 'todos'>(soloConStockDefault ? 'con' : 'todos');
@@ -334,11 +343,25 @@ export function StepProductos(props: Props) {
                         {inCart.paquetes?.toLocaleString('es-MX')}× {inCart.presentacion_nombre} = {inCart.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })} {p.unidad_granel || 'kg'}
                       </span>
                     )}
-                    {inCart?.lote_codigo && (
-                      <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary font-medium max-w-[110px]">
-                        <span className="truncate">Lote {inCart.lote_codigo}</span>
-                      </span>
-                    )}
+                    {inCart && productoManejaLote?.(p.id) && (() => {
+                      const asignados = inCart.lotes ?? [];
+                      const falta = lotePendienteDe ? lotePendienteDe(inCart) : 0;
+                      const label = falta !== 0
+                        ? 'Asignar lotes'
+                        : asignados.length > 1
+                          ? `${asignados.length} lotes`
+                          : `Lote ${asignados[0]?.codigo ?? inCart.lote_codigo ?? '—'}`;
+                      return (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setLotesFor({ id: p.id, nombre: p.nombre }); }}
+                          className={`inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded font-medium max-w-[130px] active:scale-95 transition-transform ${falta !== 0 ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-primary/10 text-primary'}`}
+                        >
+                          <Boxes className="h-2.5 w-2.5 shrink-0" /><span className="truncate">{label}</span>
+                        </button>
+                      );
+                    })()}
+
 
                   </div>
                 </div>
@@ -428,6 +451,21 @@ export function StepProductos(props: Props) {
           });
         }}
       />
+      {lotesFor && (() => {
+        const item = getItemInCart(lotesFor.id);
+        if (!item) return null;
+        return (
+          <LotesLineaMovilModal
+            empresaId={empresa?.id ?? ''}
+            almacenId={item.almacen_id ?? (apartadoActivoPedido && tipoVenta === 'pedido' ? pedidoAlmacenId : null) ?? almacenLotesBase ?? null}
+            producto={lotesFor}
+            cantidad={item.cantidad}
+            asignadas={item.lotes ?? []}
+            onClose={() => setLotesFor(null)}
+            onConfirm={(lotes) => { setLineaLotes?.(lotesFor.id, lotes); setLotesFor(null); }}
+          />
+        );
+      })()}
     </div>
   );
 }

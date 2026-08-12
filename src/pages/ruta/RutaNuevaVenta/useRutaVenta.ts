@@ -144,35 +144,73 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const canApplyDiscount = isOwner || hasPermisoMovil('ruta.aplicar_descuento');
   const canDoDevoluciones = isOwner || hasPermisoMovil('ruta.devoluciones');
 
-  // ── Lotes: apartar el lote desde que se captura la línea (FEFO) ──────────
+  // ── Lotes: apartar lote(s) desde que se captura la línea (FEFO) ──────────
   // Se resuelve para cualquier producto con `maneja_lote`, online (RPC) u
-  // offline (IndexedDB). El vendedor puede cambiarlo después en la línea.
+  // offline (IndexedDB). Soporta REPARTO EN VARIOS LOTES: si el primer lote no
+  // alcanza para la cantidad, se completa con los siguientes en orden FEFO.
+  // El vendedor puede ajustarlo manualmente en la línea.
+  const manejaLotesEmpresa = !!(empresa as any)?.maneja_lotes;
+  const almacenLotesBase = pedidoAlmacenId || profile?.almacen_id || null;
+  const productoManejaLote = (productoId: string) =>
+    manejaLotesEmpresa && !!productos?.find((p: any) => p.id === productoId)?.maneja_lote;
+
+  /** Asigna manualmente el reparto de lotes de una línea. */
+  const setLineaLotes = (productoId: string, lotes: { lote_id: string; codigo: string; cantidad: number }[]) => {
+    setCart(prev => prev.map(c => (c.producto_id === productoId && !c.es_cambio)
+      ? { ...c, lotes, lote_id: lotes[0]?.lote_id ?? null, lote_codigo: lotes[0]?.codigo ?? null }
+      : c));
+  };
+
+  /** Cantidad de la línea que aún no tiene lote asignado (0 = completa). */
+  const lotePendienteDe = (item: CartItem) => {
+    if (!productoManejaLote(item.producto_id) || item.es_cambio) return 0;
+    const asignado = (item.lotes ?? []).reduce((s, l) => s + (Number(l.cantidad) || 0), 0);
+    return Math.round((item.cantidad - asignado) * 1000) / 1000;
+  };
+
   useEffect(() => {
-    if (!empresa?.id || !(empresa as any)?.maneja_lotes) return;
-    const almacenBase = pedidoAlmacenId || profile?.almacen_id || null;
+    if (!empresa?.id || !manejaLotesEmpresa) return;
+    const almacenBase = almacenLotesBase;
     if (!almacenBase) return;
     const pendientes = cart
       .map((c, i) => ({ c, i }))
-      .filter(({ c }) => !c.es_cambio && !c.lote_id && !!productos?.find((p: any) => p.id === c.producto_id)?.maneja_lote);
+      .filter(({ c }) => !c.es_cambio && lotePendienteDe(c) > 0);
     if (pendientes.length === 0) return;
     let cancelado = false;
     (async () => {
       for (const { c, i } of pendientes) {
         const almacenId = c.almacen_id || almacenBase;
-        const lotes = await getLotesDisponibles({ empresaId: empresa.id, almacenId, productoId: c.producto_id });
-        const fefo = pickFefo(lotes, c.cantidad);
-        if (!fefo || cancelado) continue;
+        const disponibles = await getLotesDisponibles({ empresaId: empresa.id, almacenId, productoId: c.producto_id });
+        if (cancelado || disponibles.length === 0) continue;
+        // Reparto FEFO desde cero para la cantidad completa de la línea.
+        const reparto: { lote_id: string; codigo: string; cantidad: number }[] = [];
+        let resta = c.cantidad;
+        for (const l of disponibles) {
+          if (resta <= 0) break;
+          const usar = Math.min(l.disponible, resta);
+          if (usar > 0) {
+            reparto.push({ lote_id: l.lote_id, codigo: l.codigo, cantidad: Math.round(usar * 1000) / 1000 });
+            resta = Math.round((resta - usar) * 1000) / 1000;
+          }
+        }
+        // Si ningún lote tiene disponible, se apoya en el FEFO simple para no dejar la línea sin lote.
+        if (reparto.length === 0) {
+          const fefo = pickFefo(disponibles, c.cantidad);
+          if (fefo) reparto.push({ lote_id: fefo.lote_id, codigo: fefo.codigo, cantidad: c.cantidad });
+        }
+        if (reparto.length === 0) continue;
         setCart(prev => {
           const arr = [...prev];
-          if (!arr[i] || arr[i].producto_id !== c.producto_id || arr[i].lote_id) return prev;
-          arr[i] = { ...arr[i], lote_id: fefo.lote_id, lote_codigo: fefo.codigo };
+          if (!arr[i] || arr[i].producto_id !== c.producto_id) return prev;
+          arr[i] = { ...arr[i], lotes: reparto, lote_id: reparto[0].lote_id, lote_codigo: reparto[0].codigo };
           return arr;
         });
       }
     })();
     return () => { cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart.map(c => `${c.producto_id}:${c.lote_id ?? ''}`).join('|'), empresa?.id, pedidoAlmacenId, profile?.almacen_id]);
+  }, [cart.map(c => `${c.producto_id}:${c.cantidad}:${(c.lotes ?? []).length}`).join('|'), empresa?.id, manejaLotesEmpresa, almacenLotesBase]);
+
 
   useEffect(() => {
     if (!canDoDevoluciones && devoluciones.length > 0) {
@@ -984,6 +1022,16 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       return;
     }
 
+    // Lotes: lo loteado debe ser EXACTAMENTE igual a lo pedido en cada línea.
+    if (manejaLotesEmpresa) {
+      const sinLotear = cart.filter(c => lotePendienteDe(c) !== 0);
+      if (sinLotear.length > 0) {
+        toast.error(`Falta asignar lotes en: ${sinLotear.map(c => c.nombre).join(', ')}`);
+        return;
+      }
+    }
+
+
     savingRef.current = true;
     setSaving(true);
 
@@ -1082,6 +1130,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       // una venta de 50 productos = 1 subida al servidor, no 50 → aparece completa
       // casi al instante en admin, sin la ventana en que faltaban líneas.
       const lineasBatch: any[] = [];
+      const lineaLotesBatch: any[] = [];
       // Desglose informativo por línea (bandera por licencia). NO altera montos.
       const guardarDesglose = desgloseLineaHabilitado((empresa as any)?.licencia);
       for (let idx = 0; idx < cart.length; idx++) {
@@ -1117,6 +1166,26 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           });
         }
         lineasBatch.push({ id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, precio_unitario_sin_redondeo: Number((item as any).precio_unitario_sin_redondeo) > 0 ? Number((item as any).precio_unitario_sin_redondeo) : (item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0), unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, lote_id: item.lote_id ?? null, ...desglose, created_at: new Date().toISOString() });
+        // Reparto por lotes de la línea (empresas con manejo de lotes).
+        if (!item.es_cambio && (item.lotes?.length ?? 0) > 0) {
+          for (let li = 0; li < item.lotes!.length; li++) {
+            const l = item.lotes![li];
+            if (!(Number(l.cantidad) > 0)) continue;
+            lineaLotesBatch.push({
+              id: await deterministicUuid('vlinlote', ventaLineaId, l.lote_id),
+              empresa_id: empresa.id,
+              venta_id: ventaId,
+              venta_linea_id: ventaLineaId,
+              producto_id: item.producto_id,
+              lote_id: l.lote_id,
+              almacen_id: lineaAlmacenId ?? almacenLotesBase,
+              cantidad: Number(l.cantidad),
+              user_id: profile?.id ?? null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+          }
+        }
         if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) {
           try {
             const apartTable = getOfflineTable('stock_apartado');
@@ -1125,6 +1194,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         }
       }
       await queueInsertMany('venta_lineas', lineasBatch, 'venta_id');
+      // Los lotes van DESPUÉS de las líneas (FK venta_linea_id).
+      if (lineaLotesBatch.length > 0) await queueInsertMany('venta_linea_lotes', lineaLotesBatch, 'venta_id');
+
 
       // Desglose informativo de promociones (para reportes). No altera totales.
       if (promoPersistHabilitado((empresa as any)?.licencia)) {
@@ -1560,5 +1632,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     descuentoExtraMotivo, setDescuentoExtraMotivo,
     // Apartado de stock en pedidos
     apartadoActivoPedido, pedidoAlmacenId, setPedidoAlmacenId,
+    // Lotes
+    manejaLotesEmpresa, productoManejaLote, setLineaLotes, lotePendienteDe, almacenLotesBase,
   };
 }

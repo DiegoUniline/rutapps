@@ -26,7 +26,7 @@ export function useVentaDetalle() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { user, empresa } = useAuth();
+  const { user, empresa, profile } = useAuth();
   const queryClient = useQueryClient();
   const { data: venta, isLoading } = useVenta(id);
 
@@ -80,7 +80,7 @@ export function useVentaDetalle() {
     queryKey: ['ruta-productos-edit', empresa?.id], enabled: !!empresa?.id && view === 'editar', networkMode: 'always',
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, iva_pct, unidades:unidad_venta_id(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre');
+        const { data, error } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, iva_pct, maneja_lote, unidades:unidad_venta_id(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre');
         if (error) throw error; return data ?? [];
       } catch {
         const t = getOfflineTable('productos');
@@ -174,10 +174,38 @@ export function useVentaDetalle() {
 
   const filteredProductos = productos?.filter(p => !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchProducto.toLowerCase()));
 
-  const initEditar = () => {
+  // ── Lotes en edición móvil ───────────────────────────────────────────────
+  const manejaLotesEmpresa = !!(empresa as any)?.maneja_lotes;
+  const almacenLotesBase = (venta as any)?.almacen_id ?? ((profile as any)?.almacen_id ?? null);
+  const productoManejaLote = (productoId: string) =>
+    manejaLotesEmpresa && !!productos?.find((p: any) => p.id === productoId)?.maneja_lote;
+  const lotePendienteEdit = (l: EditLinea) => {
+    if (!productoManejaLote(l.producto_id)) return 0;
+    const asignado = (l.lotes ?? []).reduce((s, x) => s + (Number(x.cantidad) || 0), 0);
+    return Math.round((l.cantidad - asignado) * 1000) / 1000;
+  };
+  const setEditLineaLotes = (idx: number, lotes: { lote_id: string; codigo: string; cantidad: number }[]) => {
+    setEditLineas(prev => prev.map((l, i) => i === idx ? { ...l, lotes } : l));
+  };
+
+  const initEditar = async () => {
     if (!venta) return;
     const lineas = (venta as any).venta_lineas ?? [];
-    setEditLineas(lineas.map((l: any) => ({ id: l.id, producto_id: l.producto_id, nombre: l.productos?.nombre ?? l.descripcion ?? '', codigo: l.productos?.codigo ?? '', cantidad: l.cantidad, precio_unitario: l.precio_unitario, unidad: l.unidades?.abreviatura ?? 'pz', tiene_iva: (l.iva_pct ?? 0) > 0, iva_pct: l.iva_pct ?? 0 })));
+    let lotesPorLinea: Record<string, { lote_id: string; codigo: string; cantidad: number }[]> = {};
+    if (manejaLotesEmpresa && navigator.onLine) {
+      try {
+        const { data } = await supabase
+          .from('venta_linea_lotes')
+          .select('venta_linea_id, lote_id, cantidad, lotes(codigo)')
+          .eq('venta_id', venta.id);
+        for (const r of (data ?? []) as any[]) {
+          (lotesPorLinea[r.venta_linea_id] ??= []).push({
+            lote_id: r.lote_id, codigo: r.lotes?.codigo ?? '—', cantidad: Number(r.cantidad) || 0,
+          });
+        }
+      } catch { /* offline o sin permisos: se re-asigna FEFO al guardar */ }
+    }
+    setEditLineas(lineas.map((l: any) => ({ id: l.id, producto_id: l.producto_id, nombre: l.productos?.nombre ?? l.descripcion ?? '', codigo: l.productos?.codigo ?? '', cantidad: l.cantidad, precio_unitario: l.precio_unitario, unidad: l.unidades?.abreviatura ?? 'pz', tiene_iva: (l.iva_pct ?? 0) > 0, iva_pct: l.iva_pct ?? 0, lotes: lotesPorLinea[l.id] ?? [] })));
     setEditCondicion(venta.condicion_pago as any);
     setEditNotas(venta.notas ?? '');
     setView('editar');
@@ -194,18 +222,48 @@ export function useVentaDetalle() {
 
   const handleSaveEdits = async () => {
     if (editLineas.length === 0) { toast.error('Agrega al menos un producto'); return; }
+    // Lotes: lo loteado debe cuadrar EXACTO con la cantidad de cada línea.
+    if (manejaLotesEmpresa) {
+      const sinLotear = editLineas.filter(l => lotePendienteEdit(l) !== 0);
+      if (sinLotear.length > 0) {
+        toast.error(`Falta asignar lotes en: ${sinLotear.map(l => l.nombre).join(', ')}`);
+        return;
+      }
+    }
     setSaving(true);
     try {
-      const newLineas = editLineas.map(item => ({ venta_id: id!, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, subtotal: item.precio_unitario * item.cantidad, iva_pct: item.iva_pct, iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0, ieps_pct: 0, ieps_monto: 0, descuento_pct: 0, total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)) }));
+      // Ids determinísticos por (venta, posición): permiten colgar los lotes de
+      // cada línea y que un reintento no duplique nada.
+      const newIds = await Promise.all(editLineas.map((_, idx) => deterministicUuid('vlinea-edit', id!, idx)));
+      const newLineas = editLineas.map((item, idx) => ({ id: newIds[idx], venta_id: id!, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, subtotal: item.precio_unitario * item.cantidad, iva_pct: item.iva_pct, iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0, ieps_pct: 0, ieps_monto: 0, descuento_pct: 0, total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)), lote_id: item.lotes?.[0]?.lote_id ?? null }));
+
+      const loteRows: any[] = [];
+      for (let idx = 0; idx < editLineas.length; idx++) {
+        for (const l of editLineas[idx].lotes ?? []) {
+          if (!(Number(l.cantidad) > 0)) continue;
+          loteRows.push({
+            id: await deterministicUuid('vlinlote-edit', newIds[idx], l.lote_id),
+            empresa_id: empresa!.id, venta_id: id!, venta_linea_id: newIds[idx],
+            producto_id: editLineas[idx].producto_id, lote_id: l.lote_id,
+            almacen_id: almacenLotesBase, cantidad: Number(l.cantidad), user_id: profile?.id ?? null,
+          });
+        }
+      }
 
       const ventaUpdate = { condicion_pago: editCondicion as any, notas: editNotas || null, subtotal: editTotals.subtotal, iva_total: editTotals.iva, total: editTotals.total, saldo_pendiente: editTotals.total };
 
       if (navigator.onLine) {
-        // Insert first, then delete old — if insert fails, old lines remain intact
-        const { error: linErr } = await supabase.from('venta_lineas').insert(newLineas as any);
+        // Los lotes previos se borran primero (FK a venta_linea_id) y se
+        // reconstruyen con el reparto vigente.
+        await supabase.from('venta_linea_lotes').delete().eq('venta_id', id!);
+        const { error: linErr } = await supabase.from('venta_lineas').upsert(newLineas as any).select('id');
         if (linErr) throw linErr;
-        // Delete old lines (those not just inserted)
-        await supabase.from('venta_lineas').delete().eq('venta_id', id!).not('id', 'in', `(${(await supabase.from('venta_lineas').select('id').eq('venta_id', id!).order('created_at', { ascending: false }).limit(newLineas.length)).data?.map(r => r.id).join(',') ?? ''})`);
+        // Se eliminan las líneas que ya no forman parte de la venta.
+        await supabase.from('venta_lineas').delete().eq('venta_id', id!).not('id', 'in', `(${newIds.join(',')})`);
+        if (loteRows.length > 0) {
+          const { error: llErr } = await supabase.from('venta_linea_lotes').insert(loteRows as any);
+          if (llErr) throw llErr;
+        }
         const { error: ventaErr } = await supabase.from('ventas').update(ventaUpdate).eq('id', id!);
         if (ventaErr) throw ventaErr;
       } else {
@@ -214,16 +272,17 @@ export function useVentaDetalle() {
         const oldLineas = ((venta as any)?.venta_lineas ?? []) as any[];
         // Ids determinísticos por (venta, posición): reintentar/reenviar la misma
         // edición reusa los mismos ids → el upsert no duplica líneas.
-        const nuevasOps = await Promise.all(newLineas.map(async (nl, idx) => ({
+        const nuevasOps = newLineas.map(nl => ({
           table: 'venta_lineas' as const,
           operation: 'insert' as const,
-          data: { id: await deterministicUuid('vlinea-edit', id!, idx), ...nl },
-        })));
+          data: nl,
+        }));
         await queueOperations([
           ...oldLineas
             .filter(l => l?.id)
             .map(l => ({ table: 'venta_lineas', operation: 'delete' as const, data: { id: l.id } })),
           ...nuevasOps,
+          ...loteRows.map(r => ({ table: 'venta_linea_lotes' as const, operation: 'insert' as const, data: r })),
           { table: 'ventas', operation: 'update' as const, data: { id: id!, ...ventaUpdate } },
         ]);
       }
@@ -766,6 +825,8 @@ export function useVentaDetalle() {
     saldoFavorDisp,
     montoAplicarActual, updateMontoAplicarActual,
     filteredProductos, initEditar, addProductToEdit, updateEditQty, removeEditLine,
+    // Lotes en edición
+    manejaLotesEmpresa, productoManejaLote, lotePendienteEdit, setEditLineaLotes, almacenLotesBase,
     handleSaveEdits, initCobrar, updateCuentaMonto, liquidarTodas, handleCobrar,
     handleCancelar, handleVolverBorrador, handleWhatsAppSend, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta,
   };

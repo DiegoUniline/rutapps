@@ -142,6 +142,8 @@ const TABLE_PRIORITY: Record<string, number> = {
   traspaso_lineas: 20, conteo_lineas: 20, auditoria_lineas: 20, merma_lineas: 20,
   descarga_ruta_lineas: 20, cfdi_lineas: 20, entrega_lineas: 20,
   devolucion_lineas: 25, cobro_aplicaciones: 25, promocion_aplicada: 25,
+  // Lotes de línea: después de venta_lineas (FK a venta_linea_id)
+  venta_linea_lotes: 25, merma_linea_lotes: 25,
   // Inventory side-effects last
   stock_almacen: 30, movimientos_inventario: 30,
 };
