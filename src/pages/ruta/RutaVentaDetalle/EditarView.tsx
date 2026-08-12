@@ -1,4 +1,6 @@
-import { ArrowLeft, Save, Plus, Minus, Trash2, Search, Package } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Save, Plus, Minus, Trash2, Search, Package, Boxes } from 'lucide-react';
+import { LotesLineaMovilModal } from '@/components/lotes/LotesLineaMovilModal';
 import { useCurrency } from '@/hooks/useCurrency';
 import type { EditLinea } from './types';
 
@@ -26,6 +28,13 @@ interface Props {
   handleSaveEdits: () => void;
   onBack: () => void;
   fmt: (n: number) => string;
+  // Lotes
+  empresaId?: string;
+  manejaLotesEmpresa?: boolean;
+  productoManejaLote?: (pid: string) => boolean;
+  lotePendienteEdit?: (l: EditLinea) => number;
+  setEditLineaLotes?: (idx: number, lotes: { lote_id: string; codigo: string; cantidad: number }[]) => void;
+  almacenLotesBase?: string | null;
 }
 
 export function EditarView(p: Props) {
@@ -78,7 +87,9 @@ function CondicionSection({ editCondicion, setEditCondicion, clienteData, saldoP
   );
 }
 
-function ProductosSection({ editLineas, updateEditQty, removeEditLine, setShowProductSearch, fmt, s }: Props & { s: string }) {
+function ProductosSection({ editLineas, updateEditQty, removeEditLine, setShowProductSearch, fmt, s,
+  empresaId, productoManejaLote, lotePendienteEdit, setEditLineaLotes, almacenLotesBase, venta }: Props & { s: string }) {
+  const [lotesFor, setLotesFor] = useState<number | null>(null);
   return (
     <section className="bg-card rounded-xl border border-border p-3.5">
       <div className="flex items-center justify-between mb-2">
@@ -103,10 +114,38 @@ function ProductosSection({ editLineas, updateEditQty, removeEditLine, setShowPr
                 </div>
                 <span className="text-[14px] font-bold text-foreground">{fmt(lineTotal)}</span>
               </div>
+              {productoManejaLote?.(item.producto_id) && (() => {
+                const falta = lotePendienteEdit ? lotePendienteEdit(item) : 0;
+                const asignados = item.lotes ?? [];
+                return (
+                  <button
+                    type="button"
+                    onClick={() => setLotesFor(idx)}
+                    className={`mt-1.5 w-full inline-flex items-center gap-1 justify-center text-[11px] px-2 py-1.5 rounded-lg font-semibold active:scale-95 transition-transform ${falta !== 0 ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-primary/10 text-primary'}`}
+                  >
+                    <Boxes className="h-3 w-3" />
+                    {falta !== 0
+                      ? `Asignar lotes (falta ${Math.abs(falta).toLocaleString('es-MX', { maximumFractionDigits: 3 })})`
+                      : asignados.map(l => `${l.codigo} (${l.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })})`).join(' · ')}
+                  </button>
+                );
+              })()}
             </div>
           );
         })}
       </div>
+      {lotesFor !== null && editLineas[lotesFor] && (
+        <LotesLineaMovilModal
+          empresaId={empresaId ?? ''}
+          almacenId={almacenLotesBase ?? null}
+          producto={{ id: editLineas[lotesFor].producto_id, nombre: editLineas[lotesFor].nombre }}
+          cantidad={editLineas[lotesFor].cantidad}
+          asignadas={editLineas[lotesFor].lotes ?? []}
+          excluirVentaId={venta?.id ?? null}
+          onClose={() => setLotesFor(null)}
+          onConfirm={(lotes) => { setEditLineaLotes?.(lotesFor, lotes); setLotesFor(null); }}
+        />
+      )}
     </section>
   );
 }

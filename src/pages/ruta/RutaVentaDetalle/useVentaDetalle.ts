@@ -825,6 +825,8 @@ export function useVentaDetalle() {
     saldoFavorDisp,
     montoAplicarActual, updateMontoAplicarActual,
     filteredProductos, initEditar, addProductToEdit, updateEditQty, removeEditLine,
+    // Lotes en edición
+    manejaLotesEmpresa, productoManejaLote, lotePendienteEdit, setEditLineaLotes, almacenLotesBase,
     handleSaveEdits, initCobrar, updateCuentaMonto, liquidarTodas, handleCobrar,
     handleCancelar, handleVolverBorrador, handleWhatsAppSend, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta,
   };
