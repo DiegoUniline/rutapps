@@ -5,7 +5,7 @@
  */
 import { offlineDb, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
-import { getSyncScope, syncV2Habilitado, vendedorScopeActivo, vendedorScopeTransaccional } from './syncScope';
+import { getSyncScope, syncV2Habilitado, vendedorScopeActivo, vendedorScopeTransaccional, syncHijosScopedHabilitado } from './syncScope';
 
 
 const TABLES_TO_CACHE = [
