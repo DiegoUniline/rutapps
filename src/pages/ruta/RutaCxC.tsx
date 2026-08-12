@@ -13,6 +13,9 @@ export default function RutaCxC() {
   const { empresa, profile } = useAuth();
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
+  const [expandido, setExpandido] = useState<string | null>(null);
+  const [seleccion, setSeleccion] = useState<Record<string, string[]>>({});
+
 
   const { clientesVisibilidad } = useDataVisibility('cobros');
   const vendedorId = profile?.id;
