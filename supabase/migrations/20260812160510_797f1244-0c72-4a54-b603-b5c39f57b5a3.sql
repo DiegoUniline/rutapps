@@ -1,0 +1,1 @@
+UPDATE public.feature_flags SET alcance = 'todos', updated_at = now() WHERE clave IN ('ruta_sync_v2','ruta_sync_hijos');
