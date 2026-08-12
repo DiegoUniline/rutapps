@@ -40,8 +40,10 @@ export default function RutaCxC() {
     return map;
   }, [vendedores]);
 
+  interface DocCxC { id: string; folio: string | null; fecha: string; saldo: number }
+
   const clientesConSaldo = useMemo(() => {
-    const map = new Map<string, { id: string; nombre: string; saldo: number; numCuentas: number; oldest?: string; vendedorId?: string; vendedorNombre?: string }>();
+    const map = new Map<string, { id: string; nombre: string; saldo: number; numCuentas: number; oldest?: string; vendedorId?: string; vendedorNombre?: string; docs: DocCxC[] }>();
     (ventas ?? []).forEach((v: any) => {
       const saldo = Number(v.saldo_pendiente ?? 0);
       if (!v.cliente_id || saldo <= 0 || v.status === 'cancelado') return;
@@ -49,18 +51,22 @@ export default function RutaCxC() {
       const c = (clientes ?? []).find((x: any) => x.id === v.cliente_id);
       const nombre = c?.nombre ?? 'Cliente';
       const vendedorId = c?.vendedor_id ?? v.vendedor_id;
-      const prev = map.get(v.cliente_id) ?? { id: v.cliente_id, nombre, saldo: 0, numCuentas: 0, oldest: v.fecha, vendedorId };
+      const prev = map.get(v.cliente_id) ?? { id: v.cliente_id, nombre, saldo: 0, numCuentas: 0, oldest: v.fecha, vendedorId, docs: [] as DocCxC[] };
       prev.saldo += saldo;
       prev.numCuentas += 1;
+      prev.docs.push({ id: v.id, folio: v.folio ?? null, fecha: v.fecha, saldo });
       if (v.fecha && (!prev.oldest || v.fecha < prev.oldest)) prev.oldest = v.fecha;
       if (!prev.vendedorId && vendedorId) prev.vendedorId = vendedorId;
       map.set(v.cliente_id, prev);
     });
     return Array.from(map.values()).map(c => ({
       ...c,
+      // Documentos ordenados de la nota más vieja a la más nueva.
+      docs: c.docs.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')),
       vendedorNombre: c.vendedorId ? vendedorMap.get(c.vendedorId) ?? undefined : undefined,
     })).sort((a, b) => b.saldo - a.saldo);
   }, [ventas, clientes, clientesPermitidos, vendedorMap]);
+
 
 
   const filtered = useMemo(() => {
