@@ -104,6 +104,8 @@ export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> = {
 
   dImpuestosPct: true,
   dPromoNombre: true,
+  dComisionPct: true,
+  dComisionMonto: true,
 
   dBaseDescMan: false,
   dBaseIeps: false,
@@ -125,7 +127,7 @@ export const VENTA_LINEAS_DESGLOSE_OFF: Record<string, boolean> =
 export const VENTA_LINEAS_FINAL_KEYS = [
   'cantidad', 'producto', 'unidad',
   'dCosto', 'dPrecioLista', 'dImpuestosMonto', 'dImporteBruto', 'dSubtotalNeto', 'dImpuestosTotal', 'dSubtotalBruto',
-  'dDescTotal', 'dTotal', 'dImpuestosPct', 'dPromoNombre',
+  'dDescTotal', 'dTotal', 'dImpuestosPct', 'dPromoNombre', 'dComisionPct', 'dComisionMonto',
 ];
 
 /** Fuerza en `false` toda columna que no esté en el set final. */
