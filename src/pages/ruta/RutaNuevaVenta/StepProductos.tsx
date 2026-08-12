@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
-import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch, Boxes } from 'lucide-react';
 import { toast } from 'sonner';
 import BarcodeScanner from '@/components/ruta/BarcodeScanner';
 import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
@@ -12,6 +12,7 @@ import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelecto
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import type { CartItem, DevolucionItem } from './types';
 import { useApartadoAlmacenes } from '@/hooks/useApartadoStock';
+import { LotesLineaMovilModal } from '@/components/lotes/LotesLineaMovilModal';
 
 interface Props {
   clienteNombre: string;
@@ -62,6 +63,12 @@ interface Props {
   apartadoActivoPedido: boolean;
   pedidoAlmacenId: string | null;
   setPedidoAlmacenId: (id: string | null) => void;
+  // Lotes
+  manejaLotesEmpresa?: boolean;
+  productoManejaLote?: (pid: string) => boolean;
+  setLineaLotes?: (pid: string, lotes: { lote_id: string; codigo: string; cantidad: number }[]) => void;
+  lotePendienteDe?: (item: CartItem) => number;
+  almacenLotesBase?: string | null;
 }
 
 export function StepProductos(props: Props) {
@@ -74,6 +81,7 @@ export function StepProductos(props: Props) {
     getSuggestedPrice, getSuggestedDisplayPrice, getLineDisplayPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
     canChangePrice, canChangeLista,
     apartadoActivoPedido, pedidoAlmacenId, setPedidoAlmacenId,
+    productoManejaLote, setLineaLotes, lotePendienteDe, almacenLotesBase,
   } = props;
   const { symbol: s } = useCurrency();
   const { data: allPresentaciones } = useAllPresentaciones();
@@ -81,6 +89,7 @@ export function StepProductos(props: Props) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
   const [granelFor, setGranelFor] = useState<any | null>(null);
+  const [lotesFor, setLotesFor] = useState<{ id: string; nombre: string } | null>(null);
   const { empresa } = useAuth();
   const soloConStockDefault = !!(empresa as any)?.apartado_solo_con_stock;
   const [stockFilter, setStockFilter] = useState<'con' | 'sin' | 'todos'>(soloConStockDefault ? 'con' : 'todos');
