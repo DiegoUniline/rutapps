@@ -8,12 +8,12 @@ import { Plus, Trash2, Pencil, X } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { confirmDialog } from '@/lib/confirm';
 
-type Tipo = 'volumen_pct' | 'volumen_tiers' | 'bono_meta';
+type Tipo = 'volumen_pct' | 'volumen_tiers' | 'bono_meta' | 'lista_precios';
 type Periodo = 'semanal' | 'quincenal' | 'mensual';
 type Base = 'cobradas' | 'todas';
 
 interface Tier { desde: number; hasta?: number | null; pct: number }
-interface EsquemaConfig { pct?: number; tiers?: Tier[]; meta?: number; bono?: number; bono_pct?: number }
+interface EsquemaConfig { pct?: number; tiers?: Tier[]; meta?: number; bono?: number; bono_pct?: number; ajuste_pct?: number }
 interface Esquema {
   id: string;
   nombre: string;
@@ -28,6 +28,7 @@ const TIPO_LABEL: Record<Tipo, string> = {
   volumen_pct: '% fijo sobre total',
   volumen_tiers: 'Escalones por volumen',
   bono_meta: 'Bono al alcanzar meta',
+  lista_precios: 'Por lista de precios',
 };
 const PERIODO_LABEL: Record<Periodo, string> = { semanal: 'Semanal', quincenal: 'Quincenal', mensual: 'Mensual' };
 const BASE_LABEL: Record<Base, string> = { cobradas: 'Solo cobradas', todas: 'Todas las ventas' };
@@ -235,6 +236,10 @@ function describeConfig(e: Esquema, fmt: (n: number) => string): string {
     const tiers = e.config?.tiers ?? [];
     return tiers.map(t => `${fmt(t.desde)}${t.hasta ? '-' + fmt(t.hasta) : '+'} → ${t.pct}%`).join(' · ') || 'Sin escalones';
   }
+  if (e.tipo === 'lista_precios') {
+    const aj = e.config?.ajuste_pct ?? 0;
+    return aj ? `% de las reglas de listas de precios (ajuste ${aj > 0 ? '+' : ''}${aj}%)` : '% de las reglas de listas de precios';
+  }
   if (e.tipo === 'bono_meta') {
     const parts: string[] = [`Meta ${fmt(e.config?.meta ?? 0)}`];
     if (e.config?.bono) parts.push(`Bono ${fmt(e.config.bono)}`);
@@ -278,6 +283,7 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
               <option value="volumen_pct">% fijo</option>
               <option value="volumen_tiers">Escalones</option>
               <option value="bono_meta">Bono por meta</option>
+              <option value="lista_precios">Por lista de precios</option>
             </select>
           </div>
           <div>
@@ -322,6 +328,21 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
                 <button type="button" onClick={() => setTiers(tiers.filter((_, j) => j !== i))} className="p-1 hover:bg-red-50 hover:text-red-600 rounded"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             ))}
+          </div>
+        )}
+
+        {tipo === 'lista_precios' && (
+          <div className="space-y-2">
+            <div className="text-[11px] text-muted-foreground bg-accent/30 border border-accent/50 rounded px-3 py-2">
+              La comisión se toma del % configurado en las reglas de las listas de precios de cada producto vendido en el periodo.
+              Puedes verlas en la pestaña <span className="font-medium">Reglas</span>.
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Ajuste opcional sobre la comisión (%)</label>
+              <input type="number" step="0.01" className="input-odoo w-32" placeholder="0"
+                value={cfg.ajuste_pct ?? ''} onChange={e => setCfg({ ajuste_pct: parseFloat(e.target.value) || 0 })} />
+              <div className="text-[11px] text-muted-foreground mt-1">Ej: 10 = paga 10% más de lo que dictan las reglas. Deja 0 para pagar exactamente la regla.</div>
+            </div>
           </div>
         )}
 
