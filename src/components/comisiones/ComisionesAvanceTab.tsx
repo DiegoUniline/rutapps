@@ -173,7 +173,7 @@ export default function ComisionesAvanceTab() {
               </thead>
               <tbody>
                 {ranking.map(({ v, c }, idx) => (
-                  <VendedorRowComp key={v.id} vendedor={v} calc={c} rank={idx + 1} fmt={fmt} />
+                  <VendedorRowComp key={v.id} vendedor={v} calc={c} rank={idx + 1} fmt={fmt} desde={desde} />
                 ))}
               </tbody>
             </table>
@@ -194,7 +194,7 @@ function ResumenCell({ label, value, sub, highlight }: { label: string; value: s
   );
 }
 
-function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow; calc: any; rank: number; fmt: (n: number) => string }) {
+function VendedorRowComp({ vendedor, calc, rank, fmt, desde }: { vendedor: VendedorRow; calc: any; rank: number; fmt: (n: number) => string; desde: string }) {
   const esquema = vendedor.esquema;
   const total = calc?.total_ventas ?? 0;
   const numV = calc?.num_ventas ?? 0;
@@ -232,6 +232,10 @@ function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow;
       metaLabel = `Escalón máximo ${current.pct ?? 0}%`;
     }
     pctGanado = current ? `Ganando ${current.pct ?? 0}%` : null;
+  } else if (esquema?.tipo === 'lista_precios') {
+    metaLabel = '% de las reglas de listas de precios';
+    metaPct = 100;
+    pctGanado = total > 0 ? `${((comision / total) * 100).toFixed(2)}% efectivo` : null;
   } else if (esquema?.tipo === 'volumen_pct') {
     const pct = Number(esquema.config?.pct ?? 0);
     metaLabel = `${pct}% sobre ${esquema.base === 'cobradas' ? 'cobradas' : 'todas'}`;
@@ -242,6 +246,7 @@ function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow;
   const tipoLabel = esquema?.tipo === 'bono_meta' ? 'Bono por meta'
     : esquema?.tipo === 'volumen_tiers' ? 'Volumen por escalones'
     : esquema?.tipo === 'volumen_pct' ? '% sobre volumen'
+    : esquema?.tipo === 'lista_precios' ? 'Por lista de precios'
     : porReglas ? 'Comisión por reglas de lista'
     : 'Sin esquema';
 
@@ -268,6 +273,9 @@ function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow;
       <td className="td-odoo">
         <div className="text-xs">{tipoLabel}</div>
         {esquema && <div className="text-[11px] text-muted-foreground truncate">{esquema.nombre}</div>}
+        {calc?.desde_efectivo && calc.desde_efectivo > desde && (
+          <div className="text-[11px] text-amber-600">Aplica desde {fmtDate(calc.desde_efectivo)}</div>
+        )}
       </td>
       <td className="td-odoo text-right font-mono text-sm font-semibold">{fmt(total)}</td>
       <td className="td-odoo text-right font-mono text-sm">{numV}</td>

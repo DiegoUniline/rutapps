@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Pencil, X } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { confirmDialog } from '@/lib/confirm';
+import EsquemaVigenciaDialog, { type ModoGuardado } from './EsquemaVigenciaDialog';
+import { fmtDate, todayLocal } from '@/lib/utils';
 
 type Tipo = 'volumen_pct' | 'volumen_tiers' | 'bono_meta' | 'lista_precios';
 type Periodo = 'semanal' | 'quincenal' | 'mensual';
@@ -22,6 +24,7 @@ interface Esquema {
   base: Base;
   config: EsquemaConfig;
   activo: boolean;
+  vigente_desde?: string | null;
 }
 
 const TIPO_LABEL: Record<Tipo, string> = {
@@ -38,6 +41,7 @@ export default function ComisionesEsquemasTab() {
   const { fmt } = useCurrency();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Partial<Esquema> | null>(null);
+  const [askVigencia, setAskVigencia] = useState(false);
 
   const { data: esquemas, isLoading } = useQuery({
     queryKey: ['comision-esquemas', empresa?.id],
@@ -62,7 +66,7 @@ export default function ComisionesEsquemasTab() {
   });
 
   const saveMut = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (modo: ModoGuardado = 'historico') => {
       if (!editing || !empresa?.id) throw new Error('Datos incompletos');
       if (!editing.nombre?.trim()) throw new Error('Nombre requerido');
       const payload: any = {
@@ -73,8 +77,23 @@ export default function ComisionesEsquemasTab() {
         base: editing.base,
         config: editing.config ?? {},
         activo: editing.activo ?? true,
+        vigente_desde: editing.vigente_desde || null,
       };
-      if (editing.id) {
+      if (editing.id && modo === 'adelante') {
+        // Nueva versión vigente desde hoy; el esquema anterior se desactiva
+        const hoy = todayLocal();
+        const { data: nuevo, error: insErr } = await supabase.from('comision_esquemas' as any)
+          .insert({ ...payload, vigente_desde: hoy, activo: true }).select('id').single();
+        if (insErr) throw insErr;
+        const nuevoId = (nuevo as any).id as string;
+        const { error: reasErr } = await supabase.from('profiles')
+          .update({ comision_esquema_id: nuevoId } as any)
+          .eq('empresa_id', empresa.id).eq('comision_esquema_id', editing.id);
+        if (reasErr) throw reasErr;
+        const { error: offErr } = await supabase.from('comision_esquemas' as any)
+          .update({ activo: false }).eq('id', editing.id);
+        if (offErr) throw offErr;
+      } else if (editing.id) {
         const { error } = await supabase.from('comision_esquemas' as any).update(payload).eq('id', editing.id);
         if (error) throw error;
       } else {
@@ -85,7 +104,10 @@ export default function ComisionesEsquemasTab() {
     onSuccess: () => {
       toast.success('Esquema guardado');
       setEditing(null);
+      setAskVigencia(false);
       qc.invalidateQueries({ queryKey: ['comision-esquemas'] });
+      qc.invalidateQueries({ queryKey: ['esquemas-vendedores'] });
+      qc.invalidateQueries({ queryKey: ['comisiones-avance-calc'] });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -119,6 +141,7 @@ export default function ComisionesEsquemasTab() {
 
   const openNuevo = () => setEditing({
     nombre: '', tipo: 'volumen_pct', periodo: 'mensual', base: 'cobradas', config: { pct: 5 }, activo: true,
+    vigente_desde: todayLocal(),
   });
 
   return (
@@ -144,6 +167,7 @@ export default function ComisionesEsquemasTab() {
                   <th className="th-odoo text-left">Tipo</th>
                   <th className="th-odoo text-left">Base</th>
                   <th className="th-odoo text-left">Configuración</th>
+                  <th className="th-odoo text-left">Vigente desde</th>
                   <th className="th-odoo text-center">Activo</th>
                   <th className="th-odoo text-right">Acciones</th>
                 </tr>
@@ -155,6 +179,7 @@ export default function ComisionesEsquemasTab() {
                     <td className="py-1.5 px-3 text-xs">{TIPO_LABEL[e.tipo]}</td>
                     <td className="py-1.5 px-3 text-xs">{BASE_LABEL[e.base]}</td>
                     <td className="py-1.5 px-3 text-xs text-muted-foreground">{describeConfig(e, fmt)}</td>
+                    <td className="py-1.5 px-3 text-xs">{e.vigente_desde ? fmtDate(e.vigente_desde) : <span className="text-muted-foreground">Sin límite</span>}</td>
                     <td className="py-1.5 px-3 text-center">
                       {e.activo
                         ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Sí</span>
@@ -217,12 +242,21 @@ export default function ComisionesEsquemasTab() {
         </div>
       </div>
 
+      {editing && askVigencia && (
+        <EsquemaVigenciaDialog
+          nombre={editing.nombre ?? ''}
+          saving={saveMut.isPending}
+          onCancel={() => setAskVigencia(false)}
+          onConfirm={(modo) => saveMut.mutate(modo)}
+        />
+      )}
+
       {editing && (
         <EsquemaModal
           esquema={editing}
           onChange={setEditing}
           onClose={() => setEditing(null)}
-          onSave={() => saveMut.mutate()}
+          onSave={() => { if (editing.id) setAskVigencia(true); else saveMut.mutate('historico'); }}
           saving={saveMut.isPending}
         />
       )}
@@ -363,6 +397,13 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
             <div className="col-span-3 text-[11px] text-muted-foreground">Si el vendedor alcanza la meta, recibe el bono fijo + el % opcional sobre el total.</div>
           </div>
         )}
+
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Vigente desde</label>
+          <input type="date" className="input-odoo w-44 text-xs" value={esquema.vigente_desde ?? ''}
+            onChange={e => onChange({ ...esquema, vigente_desde: e.target.value || null })} />
+          <div className="text-[11px] text-muted-foreground mt-1">Las ventas anteriores a esta fecha no se consideran en el cálculo.</div>
+        </div>
 
         <label className="flex items-center gap-2 text-xs">
           <input type="checkbox" checked={esquema.activo ?? true} onChange={e => onChange({ ...esquema, activo: e.target.checked })} />

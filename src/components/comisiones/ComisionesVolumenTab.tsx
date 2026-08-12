@@ -167,6 +167,11 @@ export default function ComisionesVolumenTab({ onAfterGenerar }: { onAfterGenera
                           ? <span className="text-green-600">Meta alcanzada</span>
                           : <span className="text-amber-600">Meta no alcanzada ({fmt(v.esquema.config?.meta ?? 0)})</span>
                       )}
+                      {c?.desde_efectivo && c.desde_efectivo > desde && (
+                        <div className="text-[11px] text-amber-600 mt-0.5">
+                          El esquema aplica desde {fmtDate(c.desde_efectivo)}; las ventas previas no se consideran.
+                        </div>
+                      )}
                     </td>
                     <td className="py-1.5 px-3 text-right font-mono font-bold text-odoo-teal">{fmt(comision)}</td>
                     <td className="py-1.5 px-3 text-right">
