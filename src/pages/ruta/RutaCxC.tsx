@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronRight, AlertCircle } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, AlertCircle, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
+import { formatDate } from '@/lib/utils';
+
 
 export default function RutaCxC() {
   const navigate = useNavigate();
