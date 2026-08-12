@@ -514,6 +514,12 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             return <span className="text-[11px] whitespace-nowrap">{partes.join(' — ')}</span>;
           })() },
 
+          // Comisión (según regla de lista de precios)
+          { key: 'dComisionPct', content: (d as any).comision_pct != null
+            ? <span className="text-[11px]">{Number((d as any).comision_pct)}%</span> : null },
+          { key: 'dComisionMonto', content: (d as any).comision_monto != null
+            ? money(Number((d as any).comision_monto)) : null },
+
           // PASO 5: Bases e importes de impuestos
           { key: 'dBaseDescMan', content: u(d.base_descuento_manual) },
           { key: 'dBaseIeps', content: u(d.base_ieps) },

@@ -65,6 +65,10 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
   { key: 'dImpuestosPct',   label: 'Impuestos',       sub: '% aplicado',         group: 'Desglose' },
   { key: 'dPromoNombre',    label: 'Promo aplicada',  sub: 'nombre',             group: 'Desglose' },
 
+  // COMISIÓN (según regla de la lista de precios)
+  { key: 'dComisionPct',    label: 'Comisión %',      sub: 'regla de lista',     group: 'Desglose' },
+  { key: 'dComisionMonto',  label: 'Comisión $',      sub: 'sobre subtotal',     group: 'Desglose' },
+
   // PASO 5: BASES E IMPORTES DE IMPUESTOS
   { key: 'dBaseDescMan',    label: 'Base neta',       sub: 'dBaseDescMan',       group: 'Desglose' },
   { key: 'dBaseIeps',       label: 'Base IEPS',       sub: 'dBaseIeps',          group: 'Desglose' },
