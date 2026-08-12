@@ -343,7 +343,7 @@ export default function VentaFormPage() {
     // cliente con crédito → 'credito' (usa sus dias_credito/limite_credito/forma_pago),
     // cliente sin crédito o público general → 'contado'.
     if (!canEditCondicion) {
-      set('condicion_pago', c?.credito ? 'credito' : 'contado');
+      set('condicion_pago', condicionPagoDesdeCliente(c));
     }
   };
 
