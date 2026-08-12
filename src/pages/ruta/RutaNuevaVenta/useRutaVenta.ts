@@ -1632,5 +1632,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     descuentoExtraMotivo, setDescuentoExtraMotivo,
     // Apartado de stock en pedidos
     apartadoActivoPedido, pedidoAlmacenId, setPedidoAlmacenId,
+    // Lotes
+    manejaLotesEmpresa, productoManejaLote, setLineaLotes, lotePendienteDe, almacenLotesBase,
   };
 }
