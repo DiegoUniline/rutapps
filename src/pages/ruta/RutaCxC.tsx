@@ -76,6 +76,20 @@ export default function RutaCxC() {
   }, [clientesConSaldo, search]);
 
   const totalCxC = filtered.reduce((s, c) => s + c.saldo, 0);
+
+  const toggleDoc = (clienteId: string, docId: string) => {
+    setSeleccion(prev => {
+      const actual = prev[clienteId] ?? [];
+      return { ...prev, [clienteId]: actual.includes(docId) ? actual.filter(id => id !== docId) : [...actual, docId] };
+    });
+  };
+  const toggleTodos = (clienteId: string, docIds: string[]) => {
+    setSeleccion(prev => {
+      const actual = prev[clienteId] ?? [];
+      return { ...prev, [clienteId]: actual.length === docIds.length ? [] : docIds };
+    });
+  };
+
   const today = new Date();
   const daysOld = (d?: string) => {
     if (!d) return 0;
