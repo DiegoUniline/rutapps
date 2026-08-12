@@ -5,7 +5,7 @@
  */
 import { offlineDb, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
-import { getSyncScope, syncV2Habilitado, vendedorScopeActivo } from './syncScope';
+import { getSyncScope, syncV2Habilitado, vendedorScopeActivo, vendedorScopeTransaccional } from './syncScope';
 
 
 const TABLES_TO_CACHE = [
@@ -131,13 +131,21 @@ export const COLUMN_SELECTS_V2: Record<string, string> = {
  * `nullable: true` = también se bajan las filas sin vendedor asignado (clientes
  * huérfanos), para que nadie pierda acceso a un cliente que sí puede atender.
  */
-const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' | 'user'; nullable?: boolean }> = {
+const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' | 'user'; nullable?: boolean; transaccional?: boolean }> = {
+  // Catálogo: respeta el permiso "ver todos".
   clientes: { column: 'vendedor_id', source: 'vendedor', nullable: true },
-  ventas: { column: 'vendedor_id', source: 'vendedor' },
-  visitas: { column: 'user_id', source: 'user' },
-  gastos: { column: 'vendedor_id', source: 'vendedor' },
-  devoluciones: { column: 'vendedor_id', source: 'vendedor' },
+  // Transaccionales: en /Ruta siempre se baja SOLO lo del vendedor activo,
+  // aunque el usuario tenga permiso de "ver todos" (eso es para escritorio).
+  ventas: { column: 'vendedor_id', source: 'vendedor', transaccional: true },
+  visitas: { column: 'user_id', source: 'user', transaccional: true },
+  gastos: { column: 'vendedor_id', source: 'vendedor', transaccional: true },
+  devoluciones: { column: 'vendedor_id', source: 'vendedor', transaccional: true },
 };
+
+/** ¿Aplica el filtro por vendedor a esta tabla? */
+const scopeAplica = (scope?: { transaccional?: boolean }): boolean =>
+  scope ? (scope.transaccional ? vendedorScopeTransaccional() : vendedorScopeActivo()) : false;
+
 
 
 
@@ -615,7 +623,7 @@ async function downloadAllDataInternal(
             // lo del vendedor activo. Los clientes sin vendedor asignado también
             // bajan, para no quitarle acceso a nadie.
             const vendorScope = VENDOR_SCOPED_TABLES[table];
-            if (vendorScope && vendedorScopeActivo()) {
+            if (vendorScope && scopeAplica(vendorScope)) {
               const scope = getSyncScope();
               const value = vendorScope.source === 'user' ? scope.userId : scope.vendedorId;
               if (value) {
@@ -719,7 +727,7 @@ async function downloadAllDataInternal(
             // si no, siempre saldría "distinto" y forzaría una descarga completa
             // en cada sync (justo lo contrario del ahorro).
             const vendorScopeCount = VENDOR_SCOPED_TABLES[table];
-            if (vendorScopeCount && vendedorScopeActivo()) {
+            if (vendorScopeCount && scopeAplica(vendorScopeCount)) {
               const scope = getSyncScope();
               const value = vendorScopeCount.source === 'user' ? scope.userId : scope.vendedorId;
               if (value) {

@@ -44,7 +44,7 @@ export function RutaOperacionGate({ operacion, children }: { operacion: RutaOper
       try { await processSyncQueue(); } catch { /* se reintenta después */ }
       setPaso('Descargando información…');
       const result = await downloadAllData(empresa.id, true, (progress) => {
-        const actual = progress.find(p => p.status === 'syncing');
+        const actual = progress.find(p => p.status === 'downloading');
         if (actual) setPaso(`Descargando ${actual.label}…`);
       });
       setPaso('Verificando…');
