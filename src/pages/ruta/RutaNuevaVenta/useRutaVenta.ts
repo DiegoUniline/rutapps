@@ -151,8 +151,29 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   // El vendedor puede ajustarlo manualmente en la línea.
   const manejaLotesEmpresa = !!(empresa as any)?.maneja_lotes;
   const almacenLotesBase = pedidoAlmacenId || profile?.almacen_id || null;
+  const { data: productosLoteFresh } = useQuery({
+    queryKey: ['ruta-productos-maneja-lote', empresa?.id],
+    enabled: !!empresa?.id && manejaLotesEmpresa && (typeof navigator === 'undefined' || navigator.onLine),
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('productos')
+        .select('id, maneja_lote')
+        .eq('empresa_id', empresa!.id)
+        .eq('maneja_lote', true);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const productosLoteFreshIds = useMemo(
+    () => new Set((productosLoteFresh ?? []).map(p => p.id)),
+    [productosLoteFresh],
+  );
   const productoManejaLote = (productoId: string) =>
-    manejaLotesEmpresa && !!productos?.find((p: any) => p.id === productoId)?.maneja_lote;
+    manejaLotesEmpresa && (
+      productosLoteFreshIds.has(productoId)
+      || !!productos?.find((p: any) => p.id === productoId)?.maneja_lote
+    );
 
   /** Asigna manualmente el reparto de lotes de una línea. */
   const setLineaLotes = (productoId: string, lotes: { lote_id: string; codigo: string; cantidad: number }[]) => {
@@ -209,7 +230,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     })();
     return () => { cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart.map(c => `${c.producto_id}:${c.cantidad}:${(c.lotes ?? []).length}`).join('|'), empresa?.id, manejaLotesEmpresa, almacenLotesBase]);
+  }, [cart.map(c => `${c.producto_id}:${c.cantidad}:${(c.lotes ?? []).length}`).join('|'), empresa?.id, manejaLotesEmpresa, almacenLotesBase, productosLoteFreshIds]);
 
 
   useEffect(() => {
