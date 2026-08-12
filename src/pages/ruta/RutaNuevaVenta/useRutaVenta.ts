@@ -1165,6 +1165,26 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           });
         }
         lineasBatch.push({ id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, precio_unitario_sin_redondeo: Number((item as any).precio_unitario_sin_redondeo) > 0 ? Number((item as any).precio_unitario_sin_redondeo) : (item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0), unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, lote_id: item.lote_id ?? null, ...desglose, created_at: new Date().toISOString() });
+        // Reparto por lotes de la línea (empresas con manejo de lotes).
+        if (!item.es_cambio && (item.lotes?.length ?? 0) > 0) {
+          for (let li = 0; li < item.lotes!.length; li++) {
+            const l = item.lotes![li];
+            if (!(Number(l.cantidad) > 0)) continue;
+            lineaLotesBatch.push({
+              id: await deterministicUuid('vlinlote', ventaLineaId, l.lote_id),
+              empresa_id: empresa.id,
+              venta_id: ventaId,
+              venta_linea_id: ventaLineaId,
+              producto_id: item.producto_id,
+              lote_id: l.lote_id,
+              almacen_id: lineaAlmacenId ?? almacenLotesBase,
+              cantidad: Number(l.cantidad),
+              user_id: profile?.id ?? null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+          }
+        }
         if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) {
           try {
             const apartTable = getOfflineTable('stock_apartado');
@@ -1173,6 +1193,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         }
       }
       await queueInsertMany('venta_lineas', lineasBatch, 'venta_id');
+      // Los lotes van DESPUÉS de las líneas (FK venta_linea_id).
+      if (lineaLotesBatch.length > 0) await queueInsertMany('venta_linea_lotes', lineaLotesBatch, 'venta_id');
+
 
       // Desglose informativo de promociones (para reportes). No altera totales.
       if (promoPersistHabilitado((empresa as any)?.licencia)) {
