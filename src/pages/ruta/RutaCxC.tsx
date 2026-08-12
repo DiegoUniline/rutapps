@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
-import { formatDate } from '@/lib/utils';
+import { fmtDate } from '@/lib/utils';
 
 
 export default function RutaCxC() {
