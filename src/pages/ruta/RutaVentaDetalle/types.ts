@@ -17,6 +17,8 @@ export interface EditLinea {
   unidad: string;
   tiene_iva: boolean;
   iva_pct: number;
+  /** Reparto por lotes (empresas con manejo de lotes) */
+  lotes?: { lote_id: string; codigo: string; cantidad: number }[];
 }
 
 export type View = 'detalle' | 'editar' | 'cobrar' | 'ticket';

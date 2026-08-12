@@ -174,10 +174,38 @@ export function useVentaDetalle() {
 
   const filteredProductos = productos?.filter(p => !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchProducto.toLowerCase()));
 
-  const initEditar = () => {
+  // ── Lotes en edición móvil ───────────────────────────────────────────────
+  const manejaLotesEmpresa = !!(empresa as any)?.maneja_lotes;
+  const almacenLotesBase = (venta as any)?.almacen_id ?? (profileAlmacenId ?? null);
+  const productoManejaLote = (productoId: string) =>
+    manejaLotesEmpresa && !!productos?.find((p: any) => p.id === productoId)?.maneja_lote;
+  const lotePendienteEdit = (l: EditLinea) => {
+    if (!productoManejaLote(l.producto_id)) return 0;
+    const asignado = (l.lotes ?? []).reduce((s, x) => s + (Number(x.cantidad) || 0), 0);
+    return Math.round((l.cantidad - asignado) * 1000) / 1000;
+  };
+  const setEditLineaLotes = (idx: number, lotes: { lote_id: string; codigo: string; cantidad: number }[]) => {
+    setEditLineas(prev => prev.map((l, i) => i === idx ? { ...l, lotes } : l));
+  };
+
+  const initEditar = async () => {
     if (!venta) return;
     const lineas = (venta as any).venta_lineas ?? [];
-    setEditLineas(lineas.map((l: any) => ({ id: l.id, producto_id: l.producto_id, nombre: l.productos?.nombre ?? l.descripcion ?? '', codigo: l.productos?.codigo ?? '', cantidad: l.cantidad, precio_unitario: l.precio_unitario, unidad: l.unidades?.abreviatura ?? 'pz', tiene_iva: (l.iva_pct ?? 0) > 0, iva_pct: l.iva_pct ?? 0 })));
+    let lotesPorLinea: Record<string, { lote_id: string; codigo: string; cantidad: number }[]> = {};
+    if (manejaLotesEmpresa && navigator.onLine) {
+      try {
+        const { data } = await supabase
+          .from('venta_linea_lotes')
+          .select('venta_linea_id, lote_id, cantidad, lotes(codigo)')
+          .eq('venta_id', venta.id);
+        for (const r of (data ?? []) as any[]) {
+          (lotesPorLinea[r.venta_linea_id] ??= []).push({
+            lote_id: r.lote_id, codigo: r.lotes?.codigo ?? '—', cantidad: Number(r.cantidad) || 0,
+          });
+        }
+      } catch { /* offline o sin permisos: se re-asigna FEFO al guardar */ }
+    }
+    setEditLineas(lineas.map((l: any) => ({ id: l.id, producto_id: l.producto_id, nombre: l.productos?.nombre ?? l.descripcion ?? '', codigo: l.productos?.codigo ?? '', cantidad: l.cantidad, precio_unitario: l.precio_unitario, unidad: l.unidades?.abreviatura ?? 'pz', tiene_iva: (l.iva_pct ?? 0) > 0, iva_pct: l.iva_pct ?? 0, lotes: lotesPorLinea[l.id] ?? [] })));
     setEditCondicion(venta.condicion_pago as any);
     setEditNotas(venta.notas ?? '');
     setView('editar');
