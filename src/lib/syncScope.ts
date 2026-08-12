@@ -63,9 +63,28 @@ export function syncV2Habilitado(): boolean {
   return isFeatureEnabled('ruta_sync_v2', lic);
 }
 
-/** ¿Se debe acotar la descarga a los datos del vendedor activo? */
+/**
+ * ¿Se debe acotar la descarga a los datos del vendedor activo?
+ *
+ * Aplica al CATÁLOGO (clientes): si el usuario tiene permiso de "ver todos",
+ * necesita el catálogo completo, así que no se recorta.
+ */
 export function vendedorScopeActivo(): boolean {
   if (!syncV2Habilitado()) return false;
   if (memo.seeAll) return false;
   return !!memo.vendedorId;
 }
+
+/**
+ * ¿Se acotan las tablas TRANSACCIONALES (ventas, visitas, gastos,
+ * devoluciones) al vendedor activo?
+ *
+ * A diferencia del catálogo, aquí el permiso "ver todos" NO amplía la descarga
+ * móvil: en `/Ruta` cada quien opera lo suyo, y bajar las ventas de todos es
+ * puro gasto de megas. La consulta online del escritorio no se ve afectada.
+ */
+export function vendedorScopeTransaccional(): boolean {
+  if (!syncV2Habilitado()) return false;
+  return !!memo.vendedorId;
+}
+
