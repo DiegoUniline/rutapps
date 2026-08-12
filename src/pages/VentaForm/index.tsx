@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermisos } from '@/hooks/usePermisos';
+import { condicionPagoDesdeCliente } from '@/lib/condicionPago';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -342,7 +343,7 @@ export default function VentaFormPage() {
     // cliente con crédito → 'credito' (usa sus dias_credito/limite_credito/forma_pago),
     // cliente sin crédito o público general → 'contado'.
     if (!canEditCondicion) {
-      set('condicion_pago', c?.credito ? 'credito' : 'contado');
+      set('condicion_pago', condicionPagoDesdeCliente(c));
     }
   };
 
