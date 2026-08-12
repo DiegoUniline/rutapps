@@ -623,7 +623,7 @@ async function downloadAllDataInternal(
             // lo del vendedor activo. Los clientes sin vendedor asignado también
             // bajan, para no quitarle acceso a nadie.
             const vendorScope = VENDOR_SCOPED_TABLES[table];
-            if (vendorScope && vendedorScopeActivo()) {
+            if (vendorScope && scopeAplica(vendorScope)) {
               const scope = getSyncScope();
               const value = vendorScope.source === 'user' ? scope.userId : scope.vendedorId;
               if (value) {
@@ -727,7 +727,7 @@ async function downloadAllDataInternal(
             // si no, siempre saldría "distinto" y forzaría una descarga completa
             // en cada sync (justo lo contrario del ahorro).
             const vendorScopeCount = VENDOR_SCOPED_TABLES[table];
-            if (vendorScopeCount && vendedorScopeActivo()) {
+            if (vendorScopeCount && scopeAplica(vendorScopeCount)) {
               const scope = getSyncScope();
               const value = vendorScopeCount.source === 'user' ? scope.userId : scope.vendedorId;
               if (value) {
