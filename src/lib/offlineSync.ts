@@ -84,7 +84,7 @@ const CHILD_IN_CHUNK_SIZE = 80;
 // Minimal column selects per table to reduce payload size
 export const COLUMN_SELECTS: Record<string, string> = {
   clientes: 'id,empresa_id,vendedor_id,cobrador_id,nombre,codigo,telefono,email,direccion,colonia,cp,gps_lat,gps_lng,status,credito,limite_credito,dias_credito,dia_visita,frecuencia,tarifa_id,lista_id,lista_precio_id,zona_id,orden,rfc,regimen_fiscal,uso_cfdi,contacto,notas,notas_fiscales,requiere_factura,foto_url,foto_fachada_url,created_at,updated_at,fecha_alta,facturama_id,facturama_rfc,facturama_razon_social,facturama_regimen_fiscal,facturama_uso_cfdi,facturama_cp,facturama_correo_facturacion',
-  productos: 'id,empresa_id,codigo,clave_alterna,nombre,formula,nombre_compra,nombre_venta,nombre_ticket,precio_principal,costo,cantidad,min,max,status,unidad_venta_id,unidad_compra_id,marca_id,clasificacion_id,lista_id,codigo_sat,udem_sat_id,imagen_url,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,se_puede_vender,se_puede_comprar,se_puede_inventariar,vender_sin_stock,permitir_descuento,tiene_comision,tipo_comision,pct_comision,monto_maximo,es_combo,factor_conversion,costo_incluye_impuestos,usa_listas_precio,es_granel,unidad_granel,almacenes,proveedor_preferido_id,created_at,updated_at',
+  productos: 'id,empresa_id,codigo,clave_alterna,nombre,formula,nombre_compra,nombre_venta,nombre_ticket,precio_principal,costo,cantidad,min,max,status,unidad_venta_id,unidad_compra_id,marca_id,clasificacion_id,lista_id,codigo_sat,udem_sat_id,imagen_url,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,se_puede_vender,se_puede_comprar,se_puede_inventariar,vender_sin_stock,permitir_descuento,tiene_comision,tipo_comision,pct_comision,monto_maximo,es_combo,factor_conversion,costo_incluye_impuestos,usa_listas_precio,maneja_lote,es_granel,unidad_granel,almacenes,proveedor_preferido_id,created_at,updated_at',
   venta_lineas: 'id,venta_id,producto_id,descripcion,cantidad,unidad_id,precio_unitario,descuento_pct,subtotal,iva_pct,ieps_pct,iva_monto,ieps_monto,total,notas,facturado,almacen_id,presentacion_id,presentacion_nombre,presentacion_factor,paquetes,lista_precio_id,precio_manual,created_at',
   carga_lineas: 'id,carga_id,producto_id,cantidad_cargada,cantidad_vendida,cantidad_devuelta,created_at',
   cobro_aplicaciones: 'id,cobro_id,venta_id,monto_aplicado,created_at',
@@ -510,14 +510,17 @@ async function downloadAllDataInternal(
   // demás serían megas tirados a la basura.
   let manejaLotes = false;
   try {
-    const empLocal: any = await getOfflineTable('empresas')?.get(empresaId);
-    if (empLocal && 'maneja_lotes' in empLocal) {
-      manejaLotes = !!empLocal.maneja_lotes;
-    } else {
+    if (navigator.onLine) {
       const { data } = await (supabase.from as any)('empresas').select('maneja_lotes').eq('id', empresaId).maybeSingle();
       manejaLotes = !!data?.maneja_lotes;
+    } else {
+      const empLocal: any = await getOfflineTable('empresas')?.get(empresaId);
+      manejaLotes = !!empLocal?.maneja_lotes;
     }
-  } catch { /* sin señal: se omiten los lotes en esta pasada */ }
+  } catch {
+    const empLocal: any = await getOfflineTable('empresas')?.get(empresaId);
+    manejaLotes = !!empLocal?.maneja_lotes;
+  }
   const effectiveTables = (manejaLotes
     ? tablesToCache
     : tablesToCache.filter(t => t !== 'lotes' && t !== 'stock_lotes')) as readonly CacheTable[];
