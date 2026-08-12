@@ -1,5 +1,7 @@
 import { Search, Check, ChevronRight } from 'lucide-react';
 import type { Step } from './types';
+import { usePermisos } from '@/hooks/usePermisos';
+import { condicionPagoDesdeCliente } from '@/lib/condicionPago';
 
 interface Props {
   searchCliente: string;
