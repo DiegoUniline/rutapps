@@ -6,6 +6,7 @@
 import { offlineDb, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
 import { getSyncScope, syncV2Habilitado, vendedorScopeActivo, vendedorScopeTransaccional, syncHijosScopedHabilitado } from './syncScope';
+import { getFeatureFlagsCache, setFeatureFlagsCache, type FeatureFlag } from './featureFlags';
 
 
 const TABLES_TO_CACHE = [
@@ -436,6 +437,19 @@ interface DownloadOptions {
   tables?: readonly CacheTable[];
 }
 
+async function ensureSyncFeatureFlags(): Promise<void> {
+  const cached = getFeatureFlagsCache();
+  if (cached.some(flag => flag.clave === 'ruta_sync_v2')
+      && cached.some(flag => flag.clave === 'ruta_sync_hijos')) return;
+
+  const { data, error } = await supabase
+    .from('feature_flags')
+    .select('id,clave,nombre,descripcion,notas_prueba,alcance,licencias,created_at,updated_at')
+    .in('clave', ['ruta_sync_v2', 'ruta_sync_hijos']);
+  if (error) throw new Error(`No se pudo validar el alcance de sincronización: ${error.message}`);
+  setFeatureFlagsCache((data ?? []) as unknown as FeatureFlag[]);
+}
+
 /**
  * Download all data with progress reporting.
  * forceFullSync = true ignores delta timestamps and re-downloads everything.
@@ -446,6 +460,7 @@ export async function downloadAllData(
   onProgress?: (progress: SyncProgress[]) => void,
   options?: DownloadOptions,
 ): Promise<DownloadResult> {
+  await ensureSyncFeatureFlags();
   const tablesToCache = (options?.tables?.length ? options.tables : TABLES_TO_CACHE) as readonly CacheTable[];
   const lockKey = `${empresaId}:${forceFullSync ? 'full' : 'delta'}:${tablesToCache.join(',')}`;
   const active = activeDownloads.get(lockKey);
