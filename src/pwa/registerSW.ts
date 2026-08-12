@@ -130,6 +130,11 @@ export async function registerAppSW() {
         (window as any).__checkSWUpdate = check;
       },
     });
+
+    // Camino RÁPIDO de actualización: activa el worker nuevo (skipWaiting) y
+    // recarga. Solo baja los chunks con hash nuevo (unos KB), sin borrar el
+    // precache ni forzar re-descarga del bundle completo.
+    (window as any).__applySWUpdate = () => updateSWFn?.(true);
   } catch (err) {
     console.warn("[pwa] SW registration skipped:", err);
   }

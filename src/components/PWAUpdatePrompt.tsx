@@ -25,6 +25,23 @@ export default function PWAUpdatePrompt() {
 
   const apply = async () => {
     setApplying(true);
+    // Camino RÁPIDO: activar el worker nuevo y recargar. Solo descarga los
+    // archivos que cambiaron (unos KB). El camino pesado (borrar precache y
+    // re-descargar todo el bundle) queda solo como respaldo si esto falla.
+    try {
+      const fast = (window as unknown as { __applySWUpdate?: () => Promise<void> | undefined })
+        .__applySWUpdate;
+      if (fast) {
+        await fast();
+        // Si en 6s no recargó (worker sin waiting), usar el respaldo pesado.
+        setTimeout(() => {
+          void refreshAppVersion().catch(() => window.location.reload());
+        }, 6000);
+        return;
+      }
+    } catch {
+      // cae al respaldo
+    }
     try {
       await refreshAppVersion();
     } catch {
