@@ -131,7 +131,7 @@ export const COLUMN_SELECTS_V2: Record<string, string> = {
  * `nullable: true` = también se bajan las filas sin vendedor asignado (clientes
  * huérfanos), para que nadie pierda acceso a un cliente que sí puede atender.
  */
-const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' | 'user'; nullable?: boolean; transaccional?: boolean }> = {
+const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' | 'user'; nullable?: boolean; transaccional?: boolean; soloFlagHijos?: boolean }> = {
   // Catálogo: respeta el permiso "ver todos".
   clientes: { column: 'vendedor_id', source: 'vendedor', nullable: true },
   // Transaccionales: en /Ruta siempre se baja SOLO lo del vendedor activo,
@@ -140,11 +140,19 @@ const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' 
   visitas: { column: 'user_id', source: 'user', transaccional: true },
   gastos: { column: 'vendedor_id', source: 'vendedor', transaccional: true },
   devoluciones: { column: 'vendedor_id', source: 'vendedor', transaccional: true },
+  // Cobranza: cada quien baja los cobros que ÉL registró. Los saldos por cobrar
+  // no dependen de esta tabla (viven en `ventas.saldo_pendiente`), así que no se
+  // pierde información de cobranza. Solo con la bandera `ruta_sync_hijos`.
+  cobros: { column: 'user_id', source: 'user', transaccional: true, soloFlagHijos: true },
 };
 
 /** ¿Aplica el filtro por vendedor a esta tabla? */
-const scopeAplica = (scope?: { transaccional?: boolean }): boolean =>
-  scope ? (scope.transaccional ? vendedorScopeTransaccional() : vendedorScopeActivo()) : false;
+const scopeAplica = (scope?: { transaccional?: boolean; soloFlagHijos?: boolean }): boolean => {
+  if (!scope) return false;
+  if (scope.soloFlagHijos && !syncHijosScopedHabilitado()) return false;
+  return scope.transaccional ? vendedorScopeTransaccional() : vendedorScopeActivo();
+};
+
 
 
 
