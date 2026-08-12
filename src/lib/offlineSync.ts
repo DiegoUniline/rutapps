@@ -576,8 +576,20 @@ async function downloadAllDataInternal(
 
   // Process tables sequentially for progress visibility (parallel within batches)
   const BATCH_SIZE = 4;
-  for (let i = 0; i < effectiveTables.length; i += BATCH_SIZE) {
-    const batch = effectiveTables.slice(i, i + BATCH_SIZE);
+  // Con `ruta_sync_hijos`: una tabla hija nunca se descarga en paralelo con su
+  // padre (si no, lee IDs de padre a medio actualizar → condición de carrera).
+  const evitarCarreraHijos = syncHijosScopedHabilitado();
+  for (let i = 0; i < effectiveTables.length; ) {
+    let batch = effectiveTables.slice(i, i + BATCH_SIZE);
+    if (evitarCarreraHijos) {
+      const cut = batch.findIndex((t, pos) => {
+        const child = CHILD_SCOPES[t];
+        return !!child && batch.slice(0, pos).includes(child.parentTable);
+      });
+      if (cut > 0) batch = batch.slice(0, cut);
+    }
+    i += batch.length;
+
 
 
     await Promise.all(batch.map(async (table) => {
