@@ -451,6 +451,21 @@ export function StepProductos(props: Props) {
           });
         }}
       />
+      {lotesFor && (() => {
+        const item = getItemInCart(lotesFor.id);
+        if (!item) return null;
+        return (
+          <LotesLineaMovilModal
+            empresaId={empresa?.id ?? ''}
+            almacenId={item.almacen_id ?? (apartadoActivoPedido && tipoVenta === 'pedido' ? pedidoAlmacenId : null) ?? almacenLotesBase ?? null}
+            producto={lotesFor}
+            cantidad={item.cantidad}
+            asignadas={item.lotes ?? []}
+            onClose={() => setLotesFor(null)}
+            onConfirm={(lotes) => { setLineaLotes?.(lotesFor.id, lotes); setLotesFor(null); }}
+          />
+        );
+      })()}
     </div>
   );
 }
