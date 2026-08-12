@@ -5,7 +5,7 @@
  */
 import { offlineDb, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
-import { getSyncScope, syncV2Habilitado, vendedorScopeActivo, vendedorScopeTransaccional } from './syncScope';
+import { getSyncScope, syncV2Habilitado, vendedorScopeActivo, vendedorScopeTransaccional, syncHijosScopedHabilitado } from './syncScope';
 
 
 const TABLES_TO_CACHE = [
@@ -356,14 +356,42 @@ async function withTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T
   }
 }
 
+/** Aplica el filtro por vendedor de una tabla a un query de Supabase. */
+function applyVendorScope(table: CacheTable | string, q: any): any {
+  const vendorScope = VENDOR_SCOPED_TABLES[table];
+  if (!vendorScope || !scopeAplica(vendorScope)) return q;
+  const scope = getSyncScope();
+  const value = vendorScope.source === 'user' ? scope.userId : scope.vendedorId;
+  if (!value) return q;
+  return vendorScope.nullable
+    ? q.or(`${vendorScope.column}.eq.${value},${vendorScope.column}.is.null`)
+    : q.eq(vendorScope.column, value);
+}
+
+/** ¿Esta fila local del padre entra en el alcance del vendedor activo? */
+function localRowInVendorScope(table: CacheTable | string, row: any): boolean {
+  const vendorScope = VENDOR_SCOPED_TABLES[table];
+  if (!vendorScope || !scopeAplica(vendorScope)) return true;
+  const scope = getSyncScope();
+  const value = vendorScope.source === 'user' ? scope.userId : scope.vendedorId;
+  if (!value) return true;
+  const rowValue = row?.[vendorScope.column] ?? null;
+  if (rowValue === value) return true;
+  return vendorScope.nullable ? rowValue === null : false;
+}
+
 async function getScopedParentIds(table: CacheTable, empresaId: string): Promise<string[] | null> {
   const scope = CHILD_SCOPES[table];
   if (!scope) return null;
+  // Con `ruta_sync_hijos` los IDs del padre respetan el filtro por vendedor;
+  // sin la bandera se conserva el comportamiento anterior (toda la empresa).
+  const hijosScoped = syncHijosScopedHabilitado();
 
   const localParentTable = getOfflineTable(scope.parentTable);
   const localRowsRaw = localParentTable ? await localParentTable.toArray().catch(() => []) : [];
   const localRows = localRowsRaw.filter((row: any) => {
     if (scope.parentTable === 'empresas') return row?.id === empresaId;
+    if (hijosScoped && !localRowInVendorScope(scope.parentTable, row)) return false;
     if (TABLES_WITH_EMPRESA.has(scope.parentTable)) return row?.empresa_id === empresaId;
     return true;
   });
@@ -376,10 +404,12 @@ async function getScopedParentIds(table: CacheTable, empresaId: string): Promise
       ? query.eq('id', empresaId)
       : query.eq('empresa_id', empresaId);
   }
+  if (hijosScoped) query = applyVendorScope(scope.parentTable, query);
   const { data, error } = await withTimeout<any>(query.range(0, 4999), `${scope.parentTable} ids`);
   if (error) throw error;
   return Array.from(new Set(((data || []) as any[]).map(row => row?.id).filter(Boolean)));
 }
+
 
 export interface SyncProgress {
   table: string;
@@ -546,8 +576,20 @@ async function downloadAllDataInternal(
 
   // Process tables sequentially for progress visibility (parallel within batches)
   const BATCH_SIZE = 4;
-  for (let i = 0; i < effectiveTables.length; i += BATCH_SIZE) {
-    const batch = effectiveTables.slice(i, i + BATCH_SIZE);
+  // Con `ruta_sync_hijos`: una tabla hija nunca se descarga en paralelo con su
+  // padre (si no, lee IDs de padre a medio actualizar → condición de carrera).
+  const evitarCarreraHijos = syncHijosScopedHabilitado();
+  for (let i = 0; i < effectiveTables.length; ) {
+    let batch = effectiveTables.slice(i, i + BATCH_SIZE);
+    if (evitarCarreraHijos) {
+      const cut = batch.findIndex((t, pos) => {
+        const child = CHILD_SCOPES[t];
+        return !!child && batch.slice(0, pos).includes(child.parentTable);
+      });
+      if (cut > 0) batch = batch.slice(0, cut);
+    }
+    i += batch.length;
+
 
 
     await Promise.all(batch.map(async (table) => {

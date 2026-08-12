@@ -88,3 +88,17 @@ export function vendedorScopeTransaccional(): boolean {
   return !!memo.vendedorId;
 }
 
+
+/**
+ * ¿Las tablas HIJAS (venta_lineas, cobro_aplicaciones…) se acotan a los padres
+ * del vendedor activo, y se descargan siempre después de su padre?
+ *
+ * Bandera `ruta_sync_hijos`: se prueba por licencia antes de generalizarla.
+ * Fail-safe: sin bandera cargada, comportamiento anterior.
+ */
+export function syncHijosScopedHabilitado(): boolean {
+  if (!vendedorScopeTransaccional()) return false;
+  const lic = String(memo.licencia ?? '').trim();
+  if (!lic) return false;
+  return isFeatureEnabled('ruta_sync_hijos', lic);
+}
