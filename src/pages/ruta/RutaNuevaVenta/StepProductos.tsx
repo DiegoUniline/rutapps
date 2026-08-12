@@ -334,11 +334,25 @@ export function StepProductos(props: Props) {
                         {inCart.paquetes?.toLocaleString('es-MX')}× {inCart.presentacion_nombre} = {inCart.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })} {p.unidad_granel || 'kg'}
                       </span>
                     )}
-                    {inCart?.lote_codigo && (
-                      <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary font-medium max-w-[110px]">
-                        <span className="truncate">Lote {inCart.lote_codigo}</span>
-                      </span>
-                    )}
+                    {inCart && productoManejaLote?.(p.id) && (() => {
+                      const asignados = inCart.lotes ?? [];
+                      const falta = lotePendienteDe ? lotePendienteDe(inCart) : 0;
+                      const label = falta !== 0
+                        ? 'Asignar lotes'
+                        : asignados.length > 1
+                          ? `${asignados.length} lotes`
+                          : `Lote ${asignados[0]?.codigo ?? inCart.lote_codigo ?? '—'}`;
+                      return (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setLotesFor({ id: p.id, nombre: p.nombre }); }}
+                          className={`inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded font-medium max-w-[130px] active:scale-95 transition-transform ${falta !== 0 ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-primary/10 text-primary'}`}
+                        >
+                          <Boxes className="h-2.5 w-2.5 shrink-0" /><span className="truncate">{label}</span>
+                        </button>
+                      );
+                    })()}
+
 
                   </div>
                 </div>
