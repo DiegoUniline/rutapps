@@ -1933,6 +1933,7 @@ export type Database = {
           periodo: string
           tipo: string
           updated_at: string
+          vigente_desde: string | null
         }
         Insert: {
           activo?: boolean
@@ -1945,6 +1946,7 @@ export type Database = {
           periodo: string
           tipo: string
           updated_at?: string
+          vigente_desde?: string | null
         }
         Update: {
           activo?: boolean
@@ -1957,6 +1959,7 @@ export type Database = {
           periodo?: string
           tipo?: string
           updated_at?: string
+          vigente_desde?: string | null
         }
         Relationships: [
           {
