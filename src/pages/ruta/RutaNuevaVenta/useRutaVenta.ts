@@ -149,7 +149,21 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   // offline (IndexedDB). Soporta REPARTO EN VARIOS LOTES: si el primer lote no
   // alcanza para la cantidad, se completa con los siguientes en orden FEFO.
   // El vendedor puede ajustarlo manualmente en la línea.
-  const manejaLotesEmpresa = !!(empresa as any)?.maneja_lotes;
+  const { data: empresaLotesFresh } = useQuery({
+    queryKey: ['ruta-empresa-maneja-lotes', empresa?.id],
+    enabled: !!empresa?.id && (typeof navigator === 'undefined' || navigator.onLine),
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('maneja_lotes')
+        .eq('id', empresa!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const manejaLotesEmpresa = !!((empresa as any)?.maneja_lotes || empresaLotesFresh?.maneja_lotes);
   const almacenLotesBase = pedidoAlmacenId || profile?.almacen_id || null;
   const { data: productosLoteFresh } = useQuery({
     queryKey: ['ruta-productos-maneja-lote', empresa?.id],

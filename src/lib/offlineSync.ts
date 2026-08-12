@@ -510,14 +510,17 @@ async function downloadAllDataInternal(
   // demás serían megas tirados a la basura.
   let manejaLotes = false;
   try {
-    const empLocal: any = await getOfflineTable('empresas')?.get(empresaId);
-    if (empLocal && 'maneja_lotes' in empLocal) {
-      manejaLotes = !!empLocal.maneja_lotes;
-    } else {
+    if (navigator.onLine) {
       const { data } = await (supabase.from as any)('empresas').select('maneja_lotes').eq('id', empresaId).maybeSingle();
       manejaLotes = !!data?.maneja_lotes;
+    } else {
+      const empLocal: any = await getOfflineTable('empresas')?.get(empresaId);
+      manejaLotes = !!empLocal?.maneja_lotes;
     }
-  } catch { /* sin señal: se omiten los lotes en esta pasada */ }
+  } catch {
+    const empLocal: any = await getOfflineTable('empresas')?.get(empresaId);
+    manejaLotes = !!empLocal?.maneja_lotes;
+  }
   const effectiveTables = (manejaLotes
     ? tablesToCache
     : tablesToCache.filter(t => t !== 'lotes' && t !== 'stock_lotes')) as readonly CacheTable[];
