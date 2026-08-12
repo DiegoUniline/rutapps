@@ -26,7 +26,7 @@ export function useVentaDetalle() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { user, empresa } = useAuth();
+  const { user, empresa, profile } = useAuth();
   const queryClient = useQueryClient();
   const { data: venta, isLoading } = useVenta(id);
 
@@ -80,7 +80,7 @@ export function useVentaDetalle() {
     queryKey: ['ruta-productos-edit', empresa?.id], enabled: !!empresa?.id && view === 'editar', networkMode: 'always',
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, iva_pct, unidades:unidad_venta_id(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre');
+        const { data, error } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, iva_pct, maneja_lote, unidades:unidad_venta_id(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre');
         if (error) throw error; return data ?? [];
       } catch {
         const t = getOfflineTable('productos');
@@ -176,7 +176,7 @@ export function useVentaDetalle() {
 
   // ── Lotes en edición móvil ───────────────────────────────────────────────
   const manejaLotesEmpresa = !!(empresa as any)?.maneja_lotes;
-  const almacenLotesBase = (venta as any)?.almacen_id ?? (profileAlmacenId ?? null);
+  const almacenLotesBase = (venta as any)?.almacen_id ?? ((profile as any)?.almacen_id ?? null);
   const productoManejaLote = (productoId: string) =>
     manejaLotesEmpresa && !!productos?.find((p: any) => p.id === productoId)?.maneja_lote;
   const lotePendienteEdit = (l: EditLinea) => {
