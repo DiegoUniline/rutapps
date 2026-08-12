@@ -1022,6 +1022,16 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       return;
     }
 
+    // Lotes: lo loteado debe ser EXACTAMENTE igual a lo pedido en cada línea.
+    if (manejaLotesEmpresa) {
+      const sinLotear = cart.filter(c => lotePendienteDe(c) !== 0);
+      if (sinLotear.length > 0) {
+        toast.error(`Falta asignar lotes en: ${sinLotear.map(c => c.nombre).join(', ')}`);
+        return;
+      }
+    }
+
+
     savingRef.current = true;
     setSaving(true);
 
