@@ -65,6 +65,10 @@ export const VENTA_LINEAS_DESGLOSE_COLUMNS: ColumnDef[] = [
   { key: 'dImpuestosPct',   label: 'Impuestos',       sub: '% aplicado',         group: 'Desglose' },
   { key: 'dPromoNombre',    label: 'Promo aplicada',  sub: 'nombre',             group: 'Desglose' },
 
+  // COMISIÓN (según regla de la lista de precios)
+  { key: 'dComisionPct',    label: 'Comisión %',      sub: 'regla de lista',     group: 'Desglose' },
+  { key: 'dComisionMonto',  label: 'Comisión $',      sub: 'sobre subtotal',     group: 'Desglose' },
+
   // PASO 5: BASES E IMPORTES DE IMPUESTOS
   { key: 'dBaseDescMan',    label: 'Base neta',       sub: 'dBaseDescMan',       group: 'Desglose' },
   { key: 'dBaseIeps',       label: 'Base IEPS',       sub: 'dBaseIeps',          group: 'Desglose' },
@@ -100,6 +104,8 @@ export const VENTA_LINEAS_DESGLOSE_DEFAULTS: Record<string, boolean> = {
 
   dImpuestosPct: true,
   dPromoNombre: true,
+  dComisionPct: true,
+  dComisionMonto: true,
 
   dBaseDescMan: false,
   dBaseIeps: false,
@@ -121,7 +127,7 @@ export const VENTA_LINEAS_DESGLOSE_OFF: Record<string, boolean> =
 export const VENTA_LINEAS_FINAL_KEYS = [
   'cantidad', 'producto', 'unidad',
   'dCosto', 'dPrecioLista', 'dImpuestosMonto', 'dImporteBruto', 'dSubtotalNeto', 'dImpuestosTotal', 'dSubtotalBruto',
-  'dDescTotal', 'dTotal', 'dImpuestosPct', 'dPromoNombre',
+  'dDescTotal', 'dTotal', 'dImpuestosPct', 'dPromoNombre', 'dComisionPct', 'dComisionMonto',
 ];
 
 /** Fuerza en `false` toda columna que no esté en el set final. */

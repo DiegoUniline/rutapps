@@ -8272,6 +8272,8 @@ export type Database = {
           base_iva: number | null
           cantidad: number
           cantidad_bonificada: number | null
+          comision_monto: number | null
+          comision_pct: number | null
           created_at: string
           descripcion: string | null
           descuento_manual: boolean | null
@@ -8321,6 +8323,8 @@ export type Database = {
           base_iva?: number | null
           cantidad?: number
           cantidad_bonificada?: number | null
+          comision_monto?: number | null
+          comision_pct?: number | null
           created_at?: string
           descripcion?: string | null
           descuento_manual?: boolean | null
@@ -8370,6 +8374,8 @@ export type Database = {
           base_iva?: number | null
           cantidad?: number
           cantidad_bonificada?: number | null
+          comision_monto?: number | null
+          comision_pct?: number | null
           created_at?: string
           descripcion?: string | null
           descuento_manual?: boolean | null
@@ -9733,6 +9739,15 @@ export type Database = {
       reserve_timbre: {
         Args: { p_empresa_id: string; p_user_id: string }
         Returns: string
+      }
+      resolver_comision_pct_linea: {
+        Args: {
+          p_cliente_id: string
+          p_empresa_id: string
+          p_producto_id: string
+          p_tarifa_id: string
+        }
+        Returns: number
       }
       revertir_surtido_linea: {
         Args: { p_empresa_id: string; p_entrega_id: string; p_linea_id: string }
