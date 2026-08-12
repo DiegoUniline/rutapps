@@ -38,6 +38,9 @@ function RutaCobrarInner() {
   const navigate = useNavigate();
   const location = useLocation();
   const preselectedClienteId = (location.state as any)?.clienteId as string | undefined;
+  // Notas preseleccionadas desde Cuentas por cobrar (cobro masivo o por cuenta).
+  const preselectedVentaIds = (location.state as any)?.ventaIds as string[] | undefined;
+
   const { empresa, user, profile } = useAuth();
   const { symbol: s, fmt: fmtC } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
