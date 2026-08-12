@@ -1130,6 +1130,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       // una venta de 50 productos = 1 subida al servidor, no 50 → aparece completa
       // casi al instante en admin, sin la ventana en que faltaban líneas.
       const lineasBatch: any[] = [];
+      const lineaLotesBatch: any[] = [];
       // Desglose informativo por línea (bandera por licencia). NO altera montos.
       const guardarDesglose = desgloseLineaHabilitado((empresa as any)?.licencia);
       for (let idx = 0; idx < cart.length; idx++) {
