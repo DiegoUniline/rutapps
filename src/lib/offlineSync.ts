@@ -635,7 +635,17 @@ async function downloadAllDataInternal(
         //  - cursor (updated_at): solo filas cambiadas desde el último cursor.
         //  - lastTableSync (created_at): delta clásico para tablas transaccionales.
         //  - null en ambos: descarga COMPLETA (primer sync o forzado).
-        const cursor = (!forceFullSync && (isUpdatedAtDelta || isUpdatedAtWindow)) ? (cacheEntry?.cursor ?? null) : null;
+        // Al activar el alcance transaccional por vendedor, `ventas` y `cobros`
+        // pueden contener todavía filas de toda la empresa de sincronizaciones
+        // anteriores. Un delta solo mezcla cambios y jamás elimina esas filas.
+        // Bajo la bandera de prueba hacemos un reemplazo scoped de estas tablas:
+        // son pequeñas por vendedor y garantiza que la caché refleje su alcance.
+        const scopedWindowRefresh = isUpdatedAtWindow
+          && syncHijosScopedHabilitado()
+          && scopeAplica(VENDOR_SCOPED_TABLES[table]);
+        const cursor = (!forceFullSync && !scopedWindowRefresh && (isUpdatedAtDelta || isUpdatedAtWindow))
+          ? (cacheEntry?.cursor ?? null)
+          : null;
         const lastTableSync = (!forceFullSync && !isNoDelta && !isUpdatedAtDelta && !isUpdatedAtWindow && cacheEntry?.lastSync)
           ? cacheEntry.lastSync : null;
         const isDeltaPull = !!cursor || !!lastTableSync;
