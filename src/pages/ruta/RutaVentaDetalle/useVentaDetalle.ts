@@ -222,18 +222,48 @@ export function useVentaDetalle() {
 
   const handleSaveEdits = async () => {
     if (editLineas.length === 0) { toast.error('Agrega al menos un producto'); return; }
+    // Lotes: lo loteado debe cuadrar EXACTO con la cantidad de cada línea.
+    if (manejaLotesEmpresa) {
+      const sinLotear = editLineas.filter(l => lotePendienteEdit(l) !== 0);
+      if (sinLotear.length > 0) {
+        toast.error(`Falta asignar lotes en: ${sinLotear.map(l => l.nombre).join(', ')}`);
+        return;
+      }
+    }
     setSaving(true);
     try {
-      const newLineas = editLineas.map(item => ({ venta_id: id!, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, subtotal: item.precio_unitario * item.cantidad, iva_pct: item.iva_pct, iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0, ieps_pct: 0, ieps_monto: 0, descuento_pct: 0, total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)) }));
+      // Ids determinísticos por (venta, posición): permiten colgar los lotes de
+      // cada línea y que un reintento no duplique nada.
+      const newIds = await Promise.all(editLineas.map((_, idx) => deterministicUuid('vlinea-edit', id!, idx)));
+      const newLineas = editLineas.map((item, idx) => ({ id: newIds[idx], venta_id: id!, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, subtotal: item.precio_unitario * item.cantidad, iva_pct: item.iva_pct, iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0, ieps_pct: 0, ieps_monto: 0, descuento_pct: 0, total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)), lote_id: item.lotes?.[0]?.lote_id ?? null }));
+
+      const loteRows: any[] = [];
+      for (let idx = 0; idx < editLineas.length; idx++) {
+        for (const l of editLineas[idx].lotes ?? []) {
+          if (!(Number(l.cantidad) > 0)) continue;
+          loteRows.push({
+            id: await deterministicUuid('vlinlote-edit', newIds[idx], l.lote_id),
+            empresa_id: empresa!.id, venta_id: id!, venta_linea_id: newIds[idx],
+            producto_id: editLineas[idx].producto_id, lote_id: l.lote_id,
+            almacen_id: almacenLotesBase, cantidad: Number(l.cantidad), user_id: profile?.id ?? null,
+          });
+        }
+      }
 
       const ventaUpdate = { condicion_pago: editCondicion as any, notas: editNotas || null, subtotal: editTotals.subtotal, iva_total: editTotals.iva, total: editTotals.total, saldo_pendiente: editTotals.total };
 
       if (navigator.onLine) {
-        // Insert first, then delete old — if insert fails, old lines remain intact
-        const { error: linErr } = await supabase.from('venta_lineas').insert(newLineas as any);
+        // Los lotes previos se borran primero (FK a venta_linea_id) y se
+        // reconstruyen con el reparto vigente.
+        await supabase.from('venta_linea_lotes').delete().eq('venta_id', id!);
+        const { error: linErr } = await supabase.from('venta_lineas').upsert(newLineas as any).select('id');
         if (linErr) throw linErr;
-        // Delete old lines (those not just inserted)
-        await supabase.from('venta_lineas').delete().eq('venta_id', id!).not('id', 'in', `(${(await supabase.from('venta_lineas').select('id').eq('venta_id', id!).order('created_at', { ascending: false }).limit(newLineas.length)).data?.map(r => r.id).join(',') ?? ''})`);
+        // Se eliminan las líneas que ya no forman parte de la venta.
+        await supabase.from('venta_lineas').delete().eq('venta_id', id!).not('id', 'in', `(${newIds.join(',')})`);
+        if (loteRows.length > 0) {
+          const { error: llErr } = await supabase.from('venta_linea_lotes').insert(loteRows as any);
+          if (llErr) throw llErr;
+        }
         const { error: ventaErr } = await supabase.from('ventas').update(ventaUpdate).eq('id', id!);
         if (ventaErr) throw ventaErr;
       } else {
@@ -242,16 +272,17 @@ export function useVentaDetalle() {
         const oldLineas = ((venta as any)?.venta_lineas ?? []) as any[];
         // Ids determinísticos por (venta, posición): reintentar/reenviar la misma
         // edición reusa los mismos ids → el upsert no duplica líneas.
-        const nuevasOps = await Promise.all(newLineas.map(async (nl, idx) => ({
+        const nuevasOps = newLineas.map(nl => ({
           table: 'venta_lineas' as const,
           operation: 'insert' as const,
-          data: { id: await deterministicUuid('vlinea-edit', id!, idx), ...nl },
-        })));
+          data: nl,
+        }));
         await queueOperations([
           ...oldLineas
             .filter(l => l?.id)
             .map(l => ({ table: 'venta_lineas', operation: 'delete' as const, data: { id: l.id } })),
           ...nuevasOps,
+          ...loteRows.map(r => ({ table: 'venta_linea_lotes' as const, operation: 'insert' as const, data: r })),
           { table: 'ventas', operation: 'update' as const, data: { id: id!, ...ventaUpdate } },
         ]);
       }
