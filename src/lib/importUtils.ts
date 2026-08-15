@@ -30,8 +30,16 @@ export interface ImportColumn {
 export const PRODUCT_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'codigo', header: 'Código', required: true, example: 'PROD-0001' },
   { key: 'nombre', header: 'Nombre', required: true, example: 'Refresco Cola 600ml' },
-  { key: 'precio_principal', header: 'Precio', example: '18.50' },
+  { key: 'nombre_venta', header: 'Nombre Venta', example: 'Cola 600ml' },
+  { key: 'nombre_compra', header: 'Nombre Compra', example: 'Cola 600 ml caja' },
+  { key: 'nombre_ticket', header: 'Nombre Ticket', example: 'COLA 600' },
+  { key: 'clave_alterna', header: 'Clave Alterna', example: 'RC600' },
+  { key: 'formula', header: 'Fórmula / Descripción', example: 'Bebida carbonatada' },
   { key: 'costo', header: 'Costo', example: '12.00' },
+  { key: 'precio_principal', header: 'Precio', example: '18.50' },
+  { key: 'precio_sugerido_publico', header: 'Precio Público', example: '22.00' },
+  { key: 'min', header: 'Mínimo', example: '10' },
+  { key: 'max', header: 'Máximo', example: '100' },
   // Stock inicial removido: debe cargarse desde Inventario → Ajustes eligiendo almacén.
   { key: 'marca', header: 'Marca', example: 'Coca-Cola' },
   { key: 'clasificacion', header: 'Clasificación', example: 'Bebidas' },
@@ -39,10 +47,27 @@ export const PRODUCT_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'lista', header: 'Lista', example: 'Lista General' },
   { key: 'unidad_venta', header: 'Unidad Venta', example: 'Pieza' },
   { key: 'unidad_compra', header: 'Unidad Compra', example: 'Caja' },
-  { key: 'clave_alterna', header: 'Clave Alterna', example: 'RC600' },
+  { key: 'factor_conversion', header: 'Factor Conversión', example: '1' },
   { key: 'tiene_iva', header: 'Tiene IVA (Sí/No)', example: 'Sí' },
+  { key: 'iva_pct', header: 'IVA %', example: '16' },
+  { key: 'tiene_ieps', header: 'Tiene IEPS (Sí/No)', example: 'No' },
+  { key: 'ieps_pct', header: 'IEPS %', example: '0' },
+  { key: 'costo_incluye_impuestos', header: 'Costo incluye impuestos (Sí/No)', example: 'No' },
+  { key: 'codigo_sat', header: 'Código SAT', example: '50202306' },
+  { key: 'se_puede_vender', header: 'Se puede vender (Sí/No)', example: 'Sí' },
+  { key: 'se_puede_comprar', header: 'Se puede comprar (Sí/No)', example: 'Sí' },
+  { key: 'se_puede_inventariar', header: 'Se puede inventariar (Sí/No)', example: 'Sí' },
+  { key: 'vender_sin_stock', header: 'Vender sin stock (Sí/No)', example: 'No' },
+  { key: 'maneja_lote', header: 'Maneja lote (Sí/No)', example: 'No' },
+  { key: 'es_granel', header: 'Es granel (Sí/No)', example: 'No' },
+  { key: 'permitir_descuento', header: 'Permitir descuento (Sí/No)', example: 'Sí' },
+  { key: 'monto_maximo', header: 'Descuento máx. (%)', example: '0' },
+  { key: 'tiene_comision', header: 'Tiene comisión (Sí/No)', example: 'No' },
+  { key: 'pct_comision', header: 'Comisión %', example: '0' },
+  { key: 'imagen_url', header: 'Imagen (URL)', example: 'https://...' },
   { key: 'status', header: 'Estado', example: 'activo' },
 ];
+
 
 // ─── Client template columns ───────────────────────────────────
 export const CLIENT_IMPORT_COLUMNS: ImportColumn[] = [
