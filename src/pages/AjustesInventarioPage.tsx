@@ -517,7 +517,39 @@ export default function AjustesInventarioPage() {
         }
       }
 
+      // Lotes venidos de la plantilla: se agrupan por (código+caducidad+
+      // fabricación+costo) y se crean/reutilizan con asignar_lote_masivo.
+      if (lotesImport.length > 0) {
+        const grupos = new Map<string, LoteImportItem[]>();
+        for (const l of lotesImport) {
+          const k = `${l.codigo}|${l.caducidad ?? ''}|${l.fabricacion ?? ''}|${l.costo ?? ''}`;
+          if (!grupos.has(k)) grupos.set(k, []);
+          grupos.get(k)!.push(l);
+        }
+        let nLotes = 0;
+        for (const items of grupos.values()) {
+          const head = items[0];
+          const { error: loteErr } = await supabase.rpc('asignar_lote_masivo' as any, {
+            p_empresa_id: empresa!.id,
+            p_almacen_id: almacenId,
+            p_codigo: head.codigo,
+            p_caducidad: head.caducidad,
+            p_fabricacion: head.fabricacion,
+            p_costo: head.costo,
+            p_items: items.map(i => ({ producto_id: i.producto_id, cantidad: i.cantidad })),
+            p_user_id: user?.id,
+          });
+          if (loteErr) throw loteErr;
+          nLotes++;
+        }
+        loteMsg += ` · ${nLotes} lote(s) creados/actualizados desde la plantilla`;
+        setLotesImport([]);
+        qc.invalidateQueries({ queryKey: ['lotes'] });
+        qc.invalidateQueries({ queryKey: ['stock-lotes'] });
+      }
+
       toast.success((changedRows.length > 0 ? `${changedRows.length} producto(s) ajustados` : 'Aplicado') + loteMsg);
+
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['productos-ajuste'] });
       qc.invalidateQueries({ queryKey: ['ajustes-historial'] });
