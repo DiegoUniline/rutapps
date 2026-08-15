@@ -244,6 +244,11 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
       const unidad_venta_id = await resolveOrCreate('unidades', raw.unidad_venta, empresaId, cache);
       const unidad_compra_id = await resolveOrCreate('unidades', raw.unidad_compra, empresaId, cache);
 
+      const num = (v: any) => (v === undefined || v === null || v === '' || isNaN(Number(v)) ? undefined : Number(v));
+      const str = (v: any) => (v === undefined || v === null || String(v).trim() === '' ? undefined : String(v).trim());
+      const bool = (v: any) => (v === undefined || v === null || v === '' ? undefined : toBool(v));
+      const put = (obj: any, key: string, val: any) => { if (val !== undefined) obj[key] = val; };
+
       const productData: any = {
         empresa_id: empresaId,
         codigo: raw.codigo?.toString().trim() || '',
@@ -260,6 +265,32 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
         ...(unidad_venta_id && { unidad_venta_id }),
         ...(unidad_compra_id && { unidad_compra_id }),
       };
+
+      put(productData, 'nombre_venta', str(raw.nombre_venta));
+      put(productData, 'nombre_compra', str(raw.nombre_compra));
+      put(productData, 'nombre_ticket', str(raw.nombre_ticket));
+      put(productData, 'formula', str(raw.formula));
+      put(productData, 'precio_sugerido_publico', num(raw.precio_sugerido_publico));
+      put(productData, 'min', num(raw.min));
+      put(productData, 'max', num(raw.max));
+      put(productData, 'factor_conversion', num(raw.factor_conversion));
+      put(productData, 'iva_pct', num(raw.iva_pct));
+      put(productData, 'ieps_pct', num(raw.ieps_pct));
+      put(productData, 'tiene_ieps', bool(raw.tiene_ieps));
+      put(productData, 'costo_incluye_impuestos', bool(raw.costo_incluye_impuestos));
+      put(productData, 'codigo_sat', str(raw.codigo_sat));
+      put(productData, 'se_puede_vender', bool(raw.se_puede_vender));
+      put(productData, 'se_puede_comprar', bool(raw.se_puede_comprar));
+      put(productData, 'se_puede_inventariar', bool(raw.se_puede_inventariar));
+      put(productData, 'vender_sin_stock', bool(raw.vender_sin_stock));
+      put(productData, 'maneja_lote', bool(raw.maneja_lote));
+      put(productData, 'es_granel', bool(raw.es_granel));
+      put(productData, 'permitir_descuento', bool(raw.permitir_descuento));
+      put(productData, 'monto_maximo', num(raw.monto_maximo));
+      put(productData, 'tiene_comision', bool(raw.tiene_comision));
+      put(productData, 'pct_comision', num(raw.pct_comision));
+      put(productData, 'imagen_url', str(raw.imagen_url));
+
 
       let productId: string | null = null;
 
