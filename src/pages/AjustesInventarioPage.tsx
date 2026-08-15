@@ -323,6 +323,22 @@ export default function AjustesInventarioPage() {
     return undefined;
   };
 
+  const toISODate = (v: any): string | null => {
+    if (v === undefined || v === null || String(v).trim() === '') return null;
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    if (typeof v === 'number') {
+      // Serial de Excel
+      const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+      return d.toISOString().slice(0, 10);
+    }
+    const s = String(v).trim();
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    const dmy = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+    return null;
+  };
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -344,7 +360,11 @@ export default function AjustesInventarioPage() {
 
       let matched = 0;
       let skippedEmpty = 0;
+      const sinLote: string[] = [];
       const newRows = [...rows];
+      const lotes: LoteImportItem[] = [];
+      const acumPorProducto = new Map<string, number>();
+
       for (const row of data) {
         const codigo = String(findKey(row, ['Código', 'codigo', 'code', 'clave', 'sku']) ?? '').trim();
         const cantidadNueva = findKey(row, ['Cantidad nueva', 'cantidad_nueva', 'cantidad', 'qty', 'stock nuevo', 'nuevo']);
@@ -356,27 +376,54 @@ export default function AjustesInventarioPage() {
         }
 
         const idx = newRows.findIndex(r => r.codigo.toLowerCase() === codigo.toLowerCase());
-        if (idx !== -1) {
-          const numVal = Number(cantidadNueva);
-          const differs = numVal !== newRows[idx].cantidadSistema;
-          newRows[idx] = { ...newRows[idx], cantidadReal: numVal, touched: differs };
-          matched++;
+        if (idx === -1) continue;
+
+        const numVal = Number(cantidadNueva);
+        if (isNaN(numVal)) { skippedEmpty++; continue; }
+
+        const prod = newRows[idx];
+
+        if (manejaLotes && prod.manejaLote) {
+          const loteCodigo = String(findKey(row, ['Lote', 'lote', 'batch']) ?? '').trim();
+          if (!loteCodigo) {
+            sinLote.push(prod.codigo);
+            continue;
+          }
+          lotes.push({
+            producto_id: prod.id,
+            codigo: loteCodigo,
+            caducidad: toISODate(findKey(row, ['Caducidad (AAAA-MM-DD)', 'caducidad', 'fecha caducidad', 'vencimiento'])),
+            fabricacion: toISODate(findKey(row, ['Fabricación (AAAA-MM-DD)', 'fabricacion', 'fecha fabricacion'])),
+            costo: (() => { const c = findKey(row, ['Costo lote', 'costo lote', 'costo']); return c === undefined || c === '' || isNaN(Number(c)) ? null : Number(c); })(),
+            cantidad: numVal,
+          });
         }
+
+        // Un producto puede venir en varias filas (un lote por fila): sumamos.
+        const acum = (acumPorProducto.get(prod.id) ?? 0) + numVal;
+        acumPorProducto.set(prod.id, acum);
+        newRows[idx] = { ...prod, cantidadReal: acum, touched: acum !== prod.cantidadSistema };
+        matched++;
       }
 
       setRows(newRows);
+      setLotesImport(lotes);
       if (matched > 0) {
-        toast.success(`${matched} producto(s) actualizados desde el archivo`);
+        toast.success(`${matched} fila(s) aplicadas desde el archivo${lotes.length > 0 ? ` · ${lotes.length} lote(s) detectados` : ''}`);
       } else if (skippedEmpty === data.length || skippedEmpty > 0) {
         toast.info('La columna "Cantidad nueva" está vacía. Llénala en el archivo antes de subirlo.');
       } else {
         toast.error('No se encontraron coincidencias por código. Verifica que los códigos coincidan.');
+      }
+      if (sinLote.length > 0) {
+        toast.warning(`Estos productos manejan lote y su fila no trae "Lote", se omitieron: ${[...new Set(sinLote)].slice(0, 8).join(', ')}${sinLote.length > 8 ? '…' : ''}`);
       }
     } catch (err: any) {
       toast.error('Error al leer el archivo: ' + (err.message || ''));
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
 
   // Apply all changes
   const applyAdjustments = async () => {
