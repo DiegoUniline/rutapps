@@ -34,7 +34,17 @@ import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import * as XLSX from 'xlsx';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
+interface LoteImportItem {
+  producto_id: string;
+  codigo: string;
+  caducidad: string | null;
+  fabricacion: string | null;
+  costo: number | null;
+  cantidad: number;
+}
+
 interface ProductRow {
+
   id: string;
   codigo: string;
   nombre: string;
@@ -67,6 +77,8 @@ export default function AjustesInventarioPage() {
   const [applying, setApplying] = useState(false);
   const manejaLotes = !!(empresa as any)?.maneja_lotes;
   const [loteSel, setLoteSel] = useState<LoteDef | null>(null);
+  const [lotesImport, setLotesImport] = useState<LoteImportItem[]>([]);
+
   const [showLoteModal, setShowLoteModal] = useState(false);
   const [showLoteConfirm, setShowLoteConfirm] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
@@ -243,8 +255,12 @@ export default function AjustesInventarioPage() {
   // lote a uno que no lo maneja.
   const modeRows = useMemo(() => {
     if (!manejaLotes) return rows;
+    // Importación con lotes en la plantilla: se muestran todos (cada producto
+    // con lote ya trae su(s) lote(s) definidos en el archivo).
+    if (lotesImport.length > 0) return rows;
     return rows.filter(r => (loteSel ? r.manejaLote : !r.manejaLote));
-  }, [rows, manejaLotes, loteSel]);
+  }, [rows, manejaLotes, loteSel, lotesImport]);
+
 
   const filteredRows = useMemo(() => {
     let result = modeRows;
@@ -277,20 +293,34 @@ export default function AjustesInventarioPage() {
       return;
     }
     const almacenNombre = (almacenes ?? []).find((a: any) => a.id === almacenId)?.nombre ?? 'General';
-    const wsData = productos.map((p: any) => ({
-      'Código': p.codigo,
-      'Producto': p.nombre,
-      'Unidad': (p.unidades as any)?.abreviatura ?? 'PZA',
-      'Stock actual': p.cantidad ?? 0,
-      'Cantidad nueva': '',
-    }));
+    const wsData = productos.map((p: any) => {
+      const base: Record<string, any> = {
+        'Código': p.codigo,
+        'Producto': p.nombre,
+        'Unidad': (p.unidades as any)?.abreviatura ?? 'PZA',
+        'Stock actual': p.cantidad ?? 0,
+        'Cantidad nueva': '',
+      };
+      if (manejaLotes) {
+        base['Maneja lote'] = p.maneja_lote ? 'Sí' : 'No';
+        base['Lote'] = '';
+        base['Caducidad (AAAA-MM-DD)'] = '';
+        base['Fabricación (AAAA-MM-DD)'] = '';
+        base['Costo lote'] = '';
+      }
+      return base;
+    });
     const ws = XLSX.utils.json_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 14 }, { wch: 35 }, { wch: 8 }, { wch: 14 }, { wch: 14 }];
+    ws['!cols'] = [{ wch: 14 }, { wch: 35 }, { wch: 8 }, { wch: 14 }, { wch: 14 },
+      ...(manejaLotes ? [{ wch: 12 }, { wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 12 }] : [])];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Ajuste');
     XLSX.writeFile(wb, `plantilla-ajuste-${almacenNombre}-${todayLocal()}.xlsx`);
-    toast.success('Plantilla descargada');
+    toast.success(manejaLotes
+      ? 'Plantilla descargada. Para productos con lote, repite el código en varias filas si tienes más de un lote.'
+      : 'Plantilla descargada');
   };
+
 
   // ─── Import from file ────────────────────────────────────────
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_\s]+/g, ' ').trim();
@@ -307,6 +337,22 @@ export default function AjustesInventarioPage() {
       if (found !== undefined) return obj[found];
     }
     return undefined;
+  };
+
+  const toISODate = (v: any): string | null => {
+    if (v === undefined || v === null || String(v).trim() === '') return null;
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    if (typeof v === 'number') {
+      // Serial de Excel
+      const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+      return d.toISOString().slice(0, 10);
+    }
+    const s = String(v).trim();
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    const dmy = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+    return null;
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -330,7 +376,11 @@ export default function AjustesInventarioPage() {
 
       let matched = 0;
       let skippedEmpty = 0;
+      const sinLote: string[] = [];
       const newRows = [...rows];
+      const lotes: LoteImportItem[] = [];
+      const acumPorProducto = new Map<string, number>();
+
       for (const row of data) {
         const codigo = String(findKey(row, ['Código', 'codigo', 'code', 'clave', 'sku']) ?? '').trim();
         const cantidadNueva = findKey(row, ['Cantidad nueva', 'cantidad_nueva', 'cantidad', 'qty', 'stock nuevo', 'nuevo']);
@@ -342,21 +392,47 @@ export default function AjustesInventarioPage() {
         }
 
         const idx = newRows.findIndex(r => r.codigo.toLowerCase() === codigo.toLowerCase());
-        if (idx !== -1) {
-          const numVal = Number(cantidadNueva);
-          const differs = numVal !== newRows[idx].cantidadSistema;
-          newRows[idx] = { ...newRows[idx], cantidadReal: numVal, touched: differs };
-          matched++;
+        if (idx === -1) continue;
+
+        const numVal = Number(cantidadNueva);
+        if (isNaN(numVal)) { skippedEmpty++; continue; }
+
+        const prod = newRows[idx];
+
+        if (manejaLotes && prod.manejaLote) {
+          const loteCodigo = String(findKey(row, ['Lote', 'lote', 'batch']) ?? '').trim();
+          if (!loteCodigo) {
+            sinLote.push(prod.codigo);
+            continue;
+          }
+          lotes.push({
+            producto_id: prod.id,
+            codigo: loteCodigo,
+            caducidad: toISODate(findKey(row, ['Caducidad (AAAA-MM-DD)', 'caducidad', 'fecha caducidad', 'vencimiento'])),
+            fabricacion: toISODate(findKey(row, ['Fabricación (AAAA-MM-DD)', 'fabricacion', 'fecha fabricacion'])),
+            costo: (() => { const c = findKey(row, ['Costo lote', 'costo lote', 'costo']); return c === undefined || c === '' || isNaN(Number(c)) ? null : Number(c); })(),
+            cantidad: numVal,
+          });
         }
+
+        // Un producto puede venir en varias filas (un lote por fila): sumamos.
+        const acum = (acumPorProducto.get(prod.id) ?? 0) + numVal;
+        acumPorProducto.set(prod.id, acum);
+        newRows[idx] = { ...prod, cantidadReal: acum, touched: acum !== prod.cantidadSistema };
+        matched++;
       }
 
       setRows(newRows);
+      setLotesImport(lotes);
       if (matched > 0) {
-        toast.success(`${matched} producto(s) actualizados desde el archivo`);
+        toast.success(`${matched} fila(s) aplicadas desde el archivo${lotes.length > 0 ? ` · ${lotes.length} lote(s) detectados` : ''}`);
       } else if (skippedEmpty === data.length || skippedEmpty > 0) {
         toast.info('La columna "Cantidad nueva" está vacía. Llénala en el archivo antes de subirlo.');
       } else {
         toast.error('No se encontraron coincidencias por código. Verifica que los códigos coincidan.');
+      }
+      if (sinLote.length > 0) {
+        toast.warning(`Estos productos manejan lote y su fila no trae "Lote", se omitieron: ${[...new Set(sinLote)].slice(0, 8).join(', ')}${sinLote.length > 8 ? '…' : ''}`);
       }
     } catch (err: any) {
       toast.error('Error al leer el archivo: ' + (err.message || ''));
@@ -364,10 +440,11 @@ export default function AjustesInventarioPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+
   // Apply all changes
   const applyAdjustments = async () => {
     if (!almacenId) { toast.error('Selecciona un almacén primero'); return; }
-    if (changedRows.length === 0 && !loteSel) { toast.info('No hay cambios'); return; }
+    if (changedRows.length === 0 && !loteSel && lotesImport.length === 0) { toast.info('No hay cambios'); return; }
     if (changedRows.length > 0 && !motivo.trim()) { toast.error('Indica un motivo para el ajuste'); return; }
     setApplying(true);
     try {
@@ -440,7 +517,39 @@ export default function AjustesInventarioPage() {
         }
       }
 
+      // Lotes venidos de la plantilla: se agrupan por (código+caducidad+
+      // fabricación+costo) y se crean/reutilizan con asignar_lote_masivo.
+      if (lotesImport.length > 0) {
+        const grupos = new Map<string, LoteImportItem[]>();
+        for (const l of lotesImport) {
+          const k = `${l.codigo}|${l.caducidad ?? ''}|${l.fabricacion ?? ''}|${l.costo ?? ''}`;
+          if (!grupos.has(k)) grupos.set(k, []);
+          grupos.get(k)!.push(l);
+        }
+        let nLotes = 0;
+        for (const items of grupos.values()) {
+          const head = items[0];
+          const { error: loteErr } = await supabase.rpc('asignar_lote_masivo' as any, {
+            p_empresa_id: empresa!.id,
+            p_almacen_id: almacenId,
+            p_codigo: head.codigo,
+            p_caducidad: head.caducidad,
+            p_fabricacion: head.fabricacion,
+            p_costo: head.costo,
+            p_items: items.map(i => ({ producto_id: i.producto_id, cantidad: i.cantidad })),
+            p_user_id: user?.id,
+          });
+          if (loteErr) throw loteErr;
+          nLotes++;
+        }
+        loteMsg += ` · ${nLotes} lote(s) creados/actualizados desde la plantilla`;
+        setLotesImport([]);
+        qc.invalidateQueries({ queryKey: ['lotes'] });
+        qc.invalidateQueries({ queryKey: ['stock-lotes'] });
+      }
+
       toast.success((changedRows.length > 0 ? `${changedRows.length} producto(s) ajustados` : 'Aplicado') + loteMsg);
+
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['productos-ajuste'] });
       qc.invalidateQueries({ queryKey: ['ajustes-historial'] });
@@ -682,7 +791,7 @@ export default function AjustesInventarioPage() {
                   <Button
                     size="sm"
                     onClick={() => (loteSel ? setShowLoteConfirm(true) : applyAdjustments())}
-                    disabled={applying || (changedRows.length === 0 && !loteSel) || !almacenId}
+                    disabled={applying || (changedRows.length === 0 && !loteSel && lotesImport.length === 0) || !almacenId}
                     className="gap-1.5"
                   >
                     <Save className="h-4 w-4" />
