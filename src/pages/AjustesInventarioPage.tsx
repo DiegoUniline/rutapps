@@ -791,7 +791,7 @@ export default function AjustesInventarioPage() {
                   <Button
                     size="sm"
                     onClick={() => (loteSel ? setShowLoteConfirm(true) : applyAdjustments())}
-                    disabled={applying || (changedRows.length === 0 && !loteSel) || !almacenId}
+                    disabled={applying || (changedRows.length === 0 && !loteSel && lotesImport.length === 0) || !almacenId}
                     className="gap-1.5"
                   >
                     <Save className="h-4 w-4" />
