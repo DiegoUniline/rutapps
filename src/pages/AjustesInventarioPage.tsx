@@ -34,7 +34,17 @@ import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import * as XLSX from 'xlsx';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
+interface LoteImportItem {
+  producto_id: string;
+  codigo: string;
+  caducidad: string | null;
+  fabricacion: string | null;
+  costo: number | null;
+  cantidad: number;
+}
+
 interface ProductRow {
+
   id: string;
   codigo: string;
   nombre: string;
