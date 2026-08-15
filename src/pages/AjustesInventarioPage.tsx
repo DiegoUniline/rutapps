@@ -277,20 +277,34 @@ export default function AjustesInventarioPage() {
       return;
     }
     const almacenNombre = (almacenes ?? []).find((a: any) => a.id === almacenId)?.nombre ?? 'General';
-    const wsData = productos.map((p: any) => ({
-      'Código': p.codigo,
-      'Producto': p.nombre,
-      'Unidad': (p.unidades as any)?.abreviatura ?? 'PZA',
-      'Stock actual': p.cantidad ?? 0,
-      'Cantidad nueva': '',
-    }));
+    const wsData = productos.map((p: any) => {
+      const base: Record<string, any> = {
+        'Código': p.codigo,
+        'Producto': p.nombre,
+        'Unidad': (p.unidades as any)?.abreviatura ?? 'PZA',
+        'Stock actual': p.cantidad ?? 0,
+        'Cantidad nueva': '',
+      };
+      if (manejaLotes) {
+        base['Maneja lote'] = p.maneja_lote ? 'Sí' : 'No';
+        base['Lote'] = '';
+        base['Caducidad (AAAA-MM-DD)'] = '';
+        base['Fabricación (AAAA-MM-DD)'] = '';
+        base['Costo lote'] = '';
+      }
+      return base;
+    });
     const ws = XLSX.utils.json_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 14 }, { wch: 35 }, { wch: 8 }, { wch: 14 }, { wch: 14 }];
+    ws['!cols'] = [{ wch: 14 }, { wch: 35 }, { wch: 8 }, { wch: 14 }, { wch: 14 },
+      ...(manejaLotes ? [{ wch: 12 }, { wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 12 }] : [])];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Ajuste');
     XLSX.writeFile(wb, `plantilla-ajuste-${almacenNombre}-${todayLocal()}.xlsx`);
-    toast.success('Plantilla descargada');
+    toast.success(manejaLotes
+      ? 'Plantilla descargada. Para productos con lote, repite el código en varias filas si tienes más de un lote.'
+      : 'Plantilla descargada');
   };
+
 
   // ─── Import from file ────────────────────────────────────────
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_\s]+/g, ' ').trim();
