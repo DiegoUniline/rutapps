@@ -67,6 +67,8 @@ export default function AjustesInventarioPage() {
   const [applying, setApplying] = useState(false);
   const manejaLotes = !!(empresa as any)?.maneja_lotes;
   const [loteSel, setLoteSel] = useState<LoteDef | null>(null);
+  const [lotesImport, setLotesImport] = useState<LoteImportItem[]>([]);
+
   const [showLoteModal, setShowLoteModal] = useState(false);
   const [showLoteConfirm, setShowLoteConfirm] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
