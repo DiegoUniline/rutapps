@@ -255,8 +255,12 @@ export default function AjustesInventarioPage() {
   // lote a uno que no lo maneja.
   const modeRows = useMemo(() => {
     if (!manejaLotes) return rows;
+    // Importación con lotes en la plantilla: se muestran todos (cada producto
+    // con lote ya trae su(s) lote(s) definidos en el archivo).
+    if (lotesImport.length > 0) return rows;
     return rows.filter(r => (loteSel ? r.manejaLote : !r.manejaLote));
-  }, [rows, manejaLotes, loteSel]);
+  }, [rows, manejaLotes, loteSel, lotesImport]);
+
 
   const filteredRows = useMemo(() => {
     let result = modeRows;
