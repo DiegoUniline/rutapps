@@ -7478,27 +7478,6 @@ export type Database = {
           },
         ]
       }
-      tmp_difasur_lotes: {
-        Row: {
-          cad: string | null
-          cant: number | null
-          lote: string | null
-          val: string | null
-        }
-        Insert: {
-          cad?: string | null
-          cant?: number | null
-          lote?: string | null
-          val?: string | null
-        }
-        Update: {
-          cad?: string | null
-          cant?: number | null
-          lote?: string | null
-          val?: string | null
-        }
-        Relationships: []
-      }
       traspaso_linea_lotes: {
         Row: {
           cantidad: number
