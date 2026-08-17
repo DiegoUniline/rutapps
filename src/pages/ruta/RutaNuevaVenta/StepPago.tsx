@@ -96,10 +96,15 @@ export function StepPago(props: Props) {
   const totalPagos = pagos.reduce((sum, p) => sum + p.monto, 0);
   const restante = Math.max(0, totalACobrar - totalPagos);
 
+  // En pedidos el cobro es opcional: se cobra al entregar, así que NO se
+  // precarga una línea de efectivo. El vendedor la agrega solo si ya le pagaron.
+  const pagoOpcional = tipoVenta === 'pedido';
+
   // Auto-inicializar con Efectivo cuando hay total y no hay pagos.
   // Además, si solo hay un pago de Efectivo, mantenerlo sincronizado con el total a cobrar
   // (para que cambios en descuento/cuentas pendientes se reflejen automáticamente).
   React.useEffect(() => {
+    if (pagoOpcional) return;
     if (totalACobrar > 0 && pagos.length === 0) {
       setPagos([{ id: crypto.randomUUID(), metodo_pago: 'efectivo', monto: totalACobrar, referencia: '' }]);
       return;
@@ -108,7 +113,8 @@ export function StepPago(props: Props) {
       setPagos([{ ...pagos[0], monto: totalACobrar }]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalACobrar]);
+  }, [totalACobrar, pagoOpcional]);
+
 
   // Saldo a favor ya reservado en las líneas de pago actuales.
   const saldoFavorEnUso = pagos.filter(p => p.metodo_pago === 'saldo_favor').reduce((s, p) => s + p.monto, 0);
@@ -307,9 +313,19 @@ export function StepPago(props: Props) {
 
         {/* Payment lines section */}
         <section className="bg-card rounded-lg p-3">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pagos recibidos</p>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Pagos recibidos {pagoOpcional && <span className="normal-case font-medium text-muted-foreground/80">(opcional)</span>}
+          </p>
 
-          {/* Existing payment lines */}
+          {pagoOpcional && pagos.length === 0 && (
+            <div className="rounded-md bg-accent/40 border border-dashed border-border px-2.5 py-2 mb-2.5">
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Es un pedido: normalmente se cobra al entregar. Si ya te pagaron, agrega el pago abajo.
+              </p>
+            </div>
+          )}
+
+
           <div className="space-y-2 mb-2.5">
             {pagos.map((pago) => {
               const meta = METODO_META[pago.metodo_pago] ?? METODO_META.efectivo;
@@ -324,7 +340,7 @@ export function StepPago(props: Props) {
                       </div>
                       <span className="text-[12.5px] font-semibold text-foreground">{meta.label}</span>
                     </div>
-                    {pagos.length > 1 && (
+                    {(pagos.length > 1 || pagoOpcional) && (
                       <button onClick={() => removePago(pago.id)} className="text-destructive hover:text-destructive/80 active:scale-95">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
