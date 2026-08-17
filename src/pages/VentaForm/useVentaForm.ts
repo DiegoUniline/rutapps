@@ -14,7 +14,7 @@ import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
-import { buildManualSalePricingFromGross, buildSalePricingSnapshot, calculateSaleLineAmounts, calculateSaleLineEffectivePrices } from '@/lib/salePricing';
+import { buildSalePricingSnapshot, calculateSaleLineAmounts, calculateSaleLineEffectivePrices, getTaxMultiplier } from '@/lib/salePricing';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
