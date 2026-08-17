@@ -238,12 +238,11 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
               }}
             />
             {(() => {
-              const basePrecio = ((l as any).base_precio ?? 'sin_impuestos');
-              const showGross = basePrecio === 'con_impuestos';
-              const shownValue = showGross
-                ? ((l as any).display_unit_price ?? l.precio_unitario ?? '')
-                : (l.precio_unitario ?? '');
+              // La columna "Precio s/imp" SIEMPRE muestra y edita el precio neto,
+              // sin importar si la lista de precios es base "con_impuestos".
+              const shownValue = (l.precio_unitario ?? '');
               return (
+
                 <input
                   ref={el => setCellRef(idx, 2, el)}
                   type="number" inputMode="decimal"
