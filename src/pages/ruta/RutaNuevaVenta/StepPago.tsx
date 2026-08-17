@@ -340,7 +340,7 @@ export function StepPago(props: Props) {
                       </div>
                       <span className="text-[12.5px] font-semibold text-foreground">{meta.label}</span>
                     </div>
-                    {pagos.length > 1 && (
+                    {(pagos.length > 1 || pagoOpcional) && (
                       <button onClick={() => removePago(pago.id)} className="text-destructive hover:text-destructive/80 active:scale-95">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
