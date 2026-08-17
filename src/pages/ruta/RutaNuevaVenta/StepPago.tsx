@@ -313,9 +313,19 @@ export function StepPago(props: Props) {
 
         {/* Payment lines section */}
         <section className="bg-card rounded-lg p-3">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pagos recibidos</p>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Pagos recibidos {pagoOpcional && <span className="normal-case font-medium text-muted-foreground/80">(opcional)</span>}
+          </p>
 
-          {/* Existing payment lines */}
+          {pagoOpcional && pagos.length === 0 && (
+            <div className="rounded-md bg-accent/40 border border-dashed border-border px-2.5 py-2 mb-2.5">
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Es un pedido: normalmente se cobra al entregar. Si ya te pagaron, agrega el pago abajo.
+              </p>
+            </div>
+          )}
+
+
           <div className="space-y-2 mb-2.5">
             {pagos.map((pago) => {
               const meta = METODO_META[pago.metodo_pago] ?? METODO_META.efectivo;
