@@ -14,7 +14,7 @@ import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
-import { buildManualSalePricingFromGross, buildSalePricingSnapshot, calculateSaleLineAmounts, calculateSaleLineEffectivePrices } from '@/lib/salePricing';
+import { buildSalePricingSnapshot, calculateSaleLineAmounts, calculateSaleLineEffectivePrices, getTaxMultiplier } from '@/lib/salePricing';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
@@ -661,34 +661,28 @@ export function useVentaForm() {
       setDirty(true);
       return;
     }
-    // Manual price edit: if the line is priced "con impuestos" (Base chip),
-    // the value in the input is a GROSS price that includes IVA/IEPS. Decompose
-    // it into net so the totals honor the taxes the user configured.
+    // Manual price edit: el valor tecleado en la columna "Precio s/imp" SIEMPRE
+    // es un precio NETO (sin impuestos). El precio con impuestos se recalcula a
+    // partir de él, sin importar el `base_precio` de la lista de precios.
     if (field === 'precio_unitario') {
       setLineas(prev => {
         const next = [...prev];
         const line = next[idx] as any;
-        const gross = Number(val) || 0;
-        const basePrecio = (line.base_precio ?? 'sin_impuestos');
-        if (basePrecio === 'con_impuestos') {
-          const snap = buildManualSalePricingFromGross(
-            { tiene_iva: Number(line.iva_pct) > 0, iva_pct: Number(line.iva_pct) || 0, tiene_ieps: Number(line.ieps_pct) > 0, ieps_pct: Number(line.ieps_pct) || 0 },
-            gross,
-          );
-          next[idx] = { ...line, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice, precio_unitario_sin_redondeo: snap.rawUnitPrice, precio_display_sin_redondeo: snap.rawDisplayPrice, redondeo: 'ninguno', precio_manual: true };
-        } else {
-          // El precio manual es la nueva fuente de verdad: hay que re-anclar el
-          // neto crudo, si no `calculateSaleLineEffectivePrices` seguiría usando
-          // el `precio_unitario_sin_redondeo` de la lista de precios y el precio
-          // escrito por el usuario se perdería al recalcular la línea.
-          next[idx] = { ...line, precio_unitario: gross, display_unit_price: gross, precio_unitario_sin_redondeo: gross, precio_display_sin_redondeo: gross, redondeo: 'ninguno', precio_manual: true };
-        }
-
+        const net = Number(val) || 0;
+        const mult = getTaxMultiplier({
+          tiene_iva: Number(line.iva_pct) > 0,
+          iva_pct: Number(line.iva_pct) || 0,
+          tiene_ieps: Number(line.ieps_pct) > 0,
+          ieps_pct: Number(line.ieps_pct) || 0,
+        });
+        const gross = Math.round(net * mult * 100) / 100;
+        next[idx] = { ...line, precio_unitario: net, display_unit_price: gross, precio_unitario_sin_redondeo: net, precio_display_sin_redondeo: gross, base_precio: 'sin_impuestos', redondeo: 'ninguno', precio_manual: true };
         return next;
       });
       setDirty(true);
       return;
     }
+
     setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], [field]: val }; return next; });
     setDirty(true);
   };
