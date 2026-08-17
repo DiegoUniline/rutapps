@@ -96,10 +96,15 @@ export function StepPago(props: Props) {
   const totalPagos = pagos.reduce((sum, p) => sum + p.monto, 0);
   const restante = Math.max(0, totalACobrar - totalPagos);
 
+  // En pedidos el cobro es opcional: se cobra al entregar, así que NO se
+  // precarga una línea de efectivo. El vendedor la agrega solo si ya le pagaron.
+  const pagoOpcional = tipoVenta === 'pedido';
+
   // Auto-inicializar con Efectivo cuando hay total y no hay pagos.
   // Además, si solo hay un pago de Efectivo, mantenerlo sincronizado con el total a cobrar
   // (para que cambios en descuento/cuentas pendientes se reflejen automáticamente).
   React.useEffect(() => {
+    if (pagoOpcional) return;
     if (totalACobrar > 0 && pagos.length === 0) {
       setPagos([{ id: crypto.randomUUID(), metodo_pago: 'efectivo', monto: totalACobrar, referencia: '' }]);
       return;
@@ -108,7 +113,8 @@ export function StepPago(props: Props) {
       setPagos([{ ...pagos[0], monto: totalACobrar }]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalACobrar]);
+  }, [totalACobrar, pagoOpcional]);
+
 
   // Saldo a favor ya reservado en las líneas de pago actuales.
   const saldoFavorEnUso = pagos.filter(p => p.metodo_pago === 'saldo_favor').reduce((s, p) => s + p.monto, 0);
