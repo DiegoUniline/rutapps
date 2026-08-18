@@ -137,6 +137,35 @@ export default function LotesPage() {
   const stockPorLote = stock?.total;
   const stockDetalle = stock?.detalle;
 
+  // Apartado (reservado por pedidos) por lote y almacén.
+  const { data: apartado } = useQuery({
+    queryKey: ['stock-apartado-lotes', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const data = await fetchAllPages<{ lote_id: string | null; almacen_id: string | null; cantidad: number }>((from, to) =>
+        (supabase.from as any)('stock_apartado')
+          .select('lote_id, almacen_id, cantidad')
+          .eq('empresa_id', empresa!.id)
+          .not('lote_id', 'is', null)
+          .range(from, to),
+      );
+      const porLote = new Map<string, number>();
+      const porCelda = new Map<string, number>();
+      data.forEach(r => {
+        if (!r.lote_id) return;
+        const q = Number(r.cantidad ?? 0);
+        porLote.set(r.lote_id, (porLote.get(r.lote_id) ?? 0) + q);
+        if (r.almacen_id) {
+          const k = `${r.lote_id}|${r.almacen_id}`;
+          porCelda.set(k, (porCelda.get(k) ?? 0) + q);
+        }
+      });
+      return { porLote, porCelda };
+    },
+  });
+  const apartadoEn = (loteId: string, almacenId: string) => apartado?.porCelda.get(`${loteId}|${almacenId}`) ?? 0;
+
+
   // Agrupación POR ALMACÉN/RUTA: almacen_id -> lotes que tiene dentro.
   const porAlmacen = (() => {
     const lotesById = new Map((lotes ?? []).map(l => [l.id, l]));
