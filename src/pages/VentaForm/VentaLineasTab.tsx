@@ -20,6 +20,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
+import { useVentaLineaLotes } from '@/hooks/useVentaLineaLotes';
+
 
 interface Props {
   lineas: Partial<VentaLinea>[];
@@ -62,6 +64,9 @@ export function VentaLineasTab(props: Props) {
   // La columna Lote se muestra si algún producto maneja lote o si la línea ya
   // trae lote guardado (evita depender del catálogo en caché tras activar lotes).
   const manejaLotes = useManejaLotes();
+  const ventaIdActual = (props.lineas ?? []).map(l => (l as any).venta_id).find(Boolean) as string | undefined;
+  const lotesPorLinea = useVentaLineaLotes(ventaIdActual, manejaLotes);
+
   const hayLotes = manejaLotes && ((props.lineas ?? []).some(l =>
     !!(props.productosList ?? []).find((p: any) => p.id === l.producto_id)?.maneja_lote
     || !!(l as any).lote_id || !!(l as any).lote_codigo,
@@ -158,8 +163,9 @@ export function VentaLineasTab(props: Props) {
                   </thead>
                   <tbody>
                     {lineas.map((l, idx) => (
-                      <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} cols={effectiveCols} />
+                      <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} cols={effectiveCols} lotesAsignados={lotesPorLinea[(l as any).id] ?? undefined} />
                     ))}
+
                   </tbody>
                   <VentaLineasFooter lineas={lineas} cols={effectiveCols} currencyCode={currencyCode} />
                 </table>

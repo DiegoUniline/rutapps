@@ -460,7 +460,9 @@ export default function VentaFormPage() {
               if (next[idx]) next[idx] = { ...next[idx], lote_id: loteId, lote_codigo: label };
               return next;
             });
+            queryClient.invalidateQueries({ queryKey: ['venta_linea_lotes'] });
           }}
+
         />
       )}
 
