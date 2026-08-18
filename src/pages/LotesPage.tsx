@@ -482,12 +482,17 @@ export default function LotesPage() {
                     </th>
                   ))}
                   <th className="th-odoo text-right w-24 bg-muted/40">Total</th>
+                  <th className="th-odoo text-right w-24">Apartado</th>
+                  <th className="th-odoo text-right w-24 bg-muted/40">Disponible</th>
                   <th className="th-odoo w-12 text-right">·</th>
                 </tr>
               </thead>
               <tbody>
                 {lotesVisibles.map(l => {
                   const est = estadoVencimiento(l.fecha_caducidad);
+                  const fisico = stockDe(l.id);
+                  const ap = apartadoDe(l.id);
+                  const disp = fisico - ap;
                   return (
                     <tr key={l.id} className="border-b border-table-border hover:bg-table-hover transition-colors group">
                       <td className="py-1.5 px-3 sticky left-0 z-10 bg-card group-hover:bg-table-hover">
@@ -498,13 +503,23 @@ export default function LotesPage() {
                       <td className={cn("py-1.5 px-3 text-[12px]", est.clase)}>{est.texto}</td>
                       {matrizCols.map(c => {
                         const q = cantidadEn(l.id, c.id);
+                        const apc = apartadoEn(l.id, c.id);
                         return (
                           <td key={c.id} className={cn("py-1.5 px-3 text-right tabular-nums", q === 0 ? 'text-muted-foreground/40' : q < 0 ? 'text-destructive font-medium' : 'text-foreground')}>
                             {q === 0 ? '—' : nQty(q)}
+                            {apc > 0 && (
+                              <div className="text-[10px] text-amber-600 dark:text-amber-400">Ap. {nQty(apc)} · Disp. {nQty(q - apc)}</div>
+                            )}
                           </td>
                         );
                       })}
-                      <td className="py-1.5 px-3 text-right tabular-nums font-semibold bg-muted/30">{nQty(stockDe(l.id))}</td>
+                      <td className="py-1.5 px-3 text-right tabular-nums font-semibold bg-muted/30">{nQty(fisico)}</td>
+                      <td className={cn("py-1.5 px-3 text-right tabular-nums", ap > 0 ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-muted-foreground/40')}>
+                        {ap > 0 ? nQty(ap) : '—'}
+                      </td>
+                      <td className={cn("py-1.5 px-3 text-right tabular-nums font-semibold bg-muted/30", disp < 0 ? 'text-destructive' : disp === 0 ? 'text-muted-foreground' : 'text-emerald-600 dark:text-emerald-400')}>
+                        {nQty(disp)}
+                      </td>
                       <td className="py-1.5 px-3 text-right">
                         <button className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(l)} title="Editar">
                           <Pencil className="h-3.5 w-3.5" />
@@ -522,10 +537,13 @@ export default function LotesPage() {
                     <td key={c.id} className="py-2 px-3 text-right tabular-nums text-foreground">{nQty(totalesCol.get(c.id) ?? 0)}</td>
                   ))}
                   <td className="py-2 px-3 text-right tabular-nums text-foreground">{nQty(totalGeneral)}</td>
+                  <td className="py-2 px-3 text-right tabular-nums text-amber-600 dark:text-amber-400">{nQty(totalApartado)}</td>
+                  <td className="py-2 px-3 text-right tabular-nums text-foreground">{nQty(totalDisponible)}</td>
                   <td />
                 </tr>
               </tfoot>
             </table>
+
           )}
         </div>
       )}
