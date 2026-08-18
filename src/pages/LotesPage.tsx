@@ -257,9 +257,17 @@ export default function LotesPage() {
   const cantidadEn = (loteId: string, almacenId: string) =>
     (stockDetalle?.get(loteId) ?? []).find(d => d.almacen_id === almacenId)?.cantidad ?? 0;
   const nQty = (n: number) => n.toLocaleString('es-MX', { maximumFractionDigits: 3 });
+  // Apartado relevante de un lote: total o el de los almacenes filtrados.
+  const apartadoDe = (loteId: string): number => {
+    if (almacenFilters.size === 0) return apartado?.porLote.get(loteId) ?? 0;
+    return Array.from(almacenFilters).reduce((s, a) => s + apartadoEn(loteId, a), 0);
+  };
   const totalesCol = new Map<string, number>();
   matrizCols.forEach(c => totalesCol.set(c.id, lotesVisibles.reduce((s, l) => s + cantidadEn(l.id, c.id), 0)));
   const totalGeneral = lotesVisibles.reduce((s, l) => s + stockDe(l.id), 0);
+  const totalApartado = lotesVisibles.reduce((s, l) => s + apartadoDe(l.id), 0);
+  const totalDisponible = totalGeneral - totalApartado;
+
 
   const openNew = () => setEdit({ ...emptyEdit });
   const openEdit = (l: LoteRow) => setEdit({
