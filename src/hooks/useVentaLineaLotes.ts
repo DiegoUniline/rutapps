@@ -14,7 +14,9 @@ export interface LineaLoteAsignado {
  * Devuelve un mapa venta_linea_id → lotes con su cantidad.
  */
 export function useVentaLineaLotes(ventaId?: string | null, enabled = true) {
-  const { empresaId } = useAuth();
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
+
 
   const { data } = useQuery({
     queryKey: ['venta_linea_lotes', empresaId, ventaId],
