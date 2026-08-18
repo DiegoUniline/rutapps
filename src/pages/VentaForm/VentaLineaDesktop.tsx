@@ -355,23 +355,48 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       <td className="py-1 px-2">
         {isEmpty ? '' : (() => {
           const manejaLote = manejaLotesEmpresa && !!(prod as any)?.maneja_lote;
+          const asignados = (lotesAsignados ?? []).filter(x => x.cantidad > 0);
           const codigo = (l as any).lote_codigo;
-          if (!manejaLote && !codigo) return <span className="text-muted-foreground text-[11px]">—</span>;
+          if (!manejaLote && !codigo && !asignados.length) return <span className="text-muted-foreground text-[11px]">—</span>;
+
+          // Multi-lote: una fila por lote con su cantidad.
+          if (asignados.length > 1) {
+            const contenido = (
+              <div className="flex flex-col gap-0.5 text-[11px] leading-tight">
+                {asignados.map(a => (
+                  <span key={a.lote_id} className="whitespace-nowrap">
+                    <span className="font-medium">{a.codigo}</span>
+                    <span className="text-muted-foreground"> · {a.cantidad}</span>
+                  </span>
+                ))}
+              </div>
+            );
+            if (!onPickLote) return contenido;
+            return (
+              <button type="button" onClick={() => onPickLote(idx)} className="text-left text-primary hover:underline"
+                title="Ver, editar o corregir los lotes de esta línea">
+                {contenido}
+              </button>
+            );
+          }
+
+          const unico = asignados[0]?.codigo ?? codigo;
           if (!onPickLote) {
-            return codigo
-              ? <span className="text-[11px] font-medium">{codigo}</span>
+            return unico
+              ? <span className="text-[11px] font-medium">{unico}</span>
               : <span className="text-muted-foreground text-[11px]">—</span>;
           }
           // El lote se puede asignar/ver siempre (incluso en pedidos cerrados o
           // no editables): se guarda al instante y la entrega lo hereda.
           return (
             <button type="button" onClick={() => onPickLote(idx)}
-              className={cn('text-[11px] font-medium hover:underline', codigo ? 'text-primary' : 'text-amber-600')}
-              title={codigo ? 'Ver o cambiar el lote de esta línea' : 'Asignar lote a esta línea'}>
-              {codigo || 'Lotear'}
+              className={cn('text-[11px] font-medium hover:underline', unico ? 'text-primary' : 'text-amber-600')}
+              title={unico ? 'Ver o cambiar el lote de esta línea' : 'Asignar lote a esta línea'}>
+              {unico || 'Lotear'}
             </button>
           );
         })()}
+
       </td>
       )}
       {/* ── Desglose por línea (columnas informativas, valores GUARDADOS) ── */}
