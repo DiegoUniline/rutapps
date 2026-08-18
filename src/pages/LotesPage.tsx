@@ -137,6 +137,35 @@ export default function LotesPage() {
   const stockPorLote = stock?.total;
   const stockDetalle = stock?.detalle;
 
+  // Apartado (reservado por pedidos) por lote y almacén.
+  const { data: apartado } = useQuery({
+    queryKey: ['stock-apartado-lotes', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const data = await fetchAllPages<{ lote_id: string | null; almacen_id: string | null; cantidad: number }>((from, to) =>
+        (supabase.from as any)('stock_apartado')
+          .select('lote_id, almacen_id, cantidad')
+          .eq('empresa_id', empresa!.id)
+          .not('lote_id', 'is', null)
+          .range(from, to),
+      );
+      const porLote = new Map<string, number>();
+      const porCelda = new Map<string, number>();
+      data.forEach(r => {
+        if (!r.lote_id) return;
+        const q = Number(r.cantidad ?? 0);
+        porLote.set(r.lote_id, (porLote.get(r.lote_id) ?? 0) + q);
+        if (r.almacen_id) {
+          const k = `${r.lote_id}|${r.almacen_id}`;
+          porCelda.set(k, (porCelda.get(k) ?? 0) + q);
+        }
+      });
+      return { porLote, porCelda };
+    },
+  });
+  const apartadoEn = (loteId: string, almacenId: string) => apartado?.porCelda.get(`${loteId}|${almacenId}`) ?? 0;
+
+
   // Agrupación POR ALMACÉN/RUTA: almacen_id -> lotes que tiene dentro.
   const porAlmacen = (() => {
     const lotesById = new Map((lotes ?? []).map(l => [l.id, l]));
@@ -228,9 +257,17 @@ export default function LotesPage() {
   const cantidadEn = (loteId: string, almacenId: string) =>
     (stockDetalle?.get(loteId) ?? []).find(d => d.almacen_id === almacenId)?.cantidad ?? 0;
   const nQty = (n: number) => n.toLocaleString('es-MX', { maximumFractionDigits: 3 });
+  // Apartado relevante de un lote: total o el de los almacenes filtrados.
+  const apartadoDe = (loteId: string): number => {
+    if (almacenFilters.size === 0) return apartado?.porLote.get(loteId) ?? 0;
+    return Array.from(almacenFilters).reduce((s, a) => s + apartadoEn(loteId, a), 0);
+  };
   const totalesCol = new Map<string, number>();
   matrizCols.forEach(c => totalesCol.set(c.id, lotesVisibles.reduce((s, l) => s + cantidadEn(l.id, c.id), 0)));
   const totalGeneral = lotesVisibles.reduce((s, l) => s + stockDe(l.id), 0);
+  const totalApartado = lotesVisibles.reduce((s, l) => s + apartadoDe(l.id), 0);
+  const totalDisponible = totalGeneral - totalApartado;
+
 
   const openNew = () => setEdit({ ...emptyEdit });
   const openEdit = (l: LoteRow) => setEdit({
@@ -445,12 +482,17 @@ export default function LotesPage() {
                     </th>
                   ))}
                   <th className="th-odoo text-right w-24 bg-muted/40">Total</th>
+                  <th className="th-odoo text-right w-24">Apartado</th>
+                  <th className="th-odoo text-right w-24 bg-muted/40">Disponible</th>
                   <th className="th-odoo w-12 text-right">·</th>
                 </tr>
               </thead>
               <tbody>
                 {lotesVisibles.map(l => {
                   const est = estadoVencimiento(l.fecha_caducidad);
+                  const fisico = stockDe(l.id);
+                  const ap = apartadoDe(l.id);
+                  const disp = fisico - ap;
                   return (
                     <tr key={l.id} className="border-b border-table-border hover:bg-table-hover transition-colors group">
                       <td className="py-1.5 px-3 sticky left-0 z-10 bg-card group-hover:bg-table-hover">
@@ -461,13 +503,23 @@ export default function LotesPage() {
                       <td className={cn("py-1.5 px-3 text-[12px]", est.clase)}>{est.texto}</td>
                       {matrizCols.map(c => {
                         const q = cantidadEn(l.id, c.id);
+                        const apc = apartadoEn(l.id, c.id);
                         return (
                           <td key={c.id} className={cn("py-1.5 px-3 text-right tabular-nums", q === 0 ? 'text-muted-foreground/40' : q < 0 ? 'text-destructive font-medium' : 'text-foreground')}>
                             {q === 0 ? '—' : nQty(q)}
+                            {apc > 0 && (
+                              <div className="text-[10px] text-amber-600 dark:text-amber-400">Ap. {nQty(apc)} · Disp. {nQty(q - apc)}</div>
+                            )}
                           </td>
                         );
                       })}
-                      <td className="py-1.5 px-3 text-right tabular-nums font-semibold bg-muted/30">{nQty(stockDe(l.id))}</td>
+                      <td className="py-1.5 px-3 text-right tabular-nums font-semibold bg-muted/30">{nQty(fisico)}</td>
+                      <td className={cn("py-1.5 px-3 text-right tabular-nums", ap > 0 ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-muted-foreground/40')}>
+                        {ap > 0 ? nQty(ap) : '—'}
+                      </td>
+                      <td className={cn("py-1.5 px-3 text-right tabular-nums font-semibold bg-muted/30", disp < 0 ? 'text-destructive' : disp === 0 ? 'text-muted-foreground' : 'text-emerald-600 dark:text-emerald-400')}>
+                        {nQty(disp)}
+                      </td>
                       <td className="py-1.5 px-3 text-right">
                         <button className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(l)} title="Editar">
                           <Pencil className="h-3.5 w-3.5" />
@@ -485,10 +537,13 @@ export default function LotesPage() {
                     <td key={c.id} className="py-2 px-3 text-right tabular-nums text-foreground">{nQty(totalesCol.get(c.id) ?? 0)}</td>
                   ))}
                   <td className="py-2 px-3 text-right tabular-nums text-foreground">{nQty(totalGeneral)}</td>
+                  <td className="py-2 px-3 text-right tabular-nums text-amber-600 dark:text-amber-400">{nQty(totalApartado)}</td>
+                  <td className="py-2 px-3 text-right tabular-nums text-foreground">{nQty(totalDisponible)}</td>
                   <td />
                 </tr>
               </tfoot>
             </table>
+
           )}
         </div>
       )}
