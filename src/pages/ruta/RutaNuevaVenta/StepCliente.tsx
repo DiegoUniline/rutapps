@@ -1,6 +1,5 @@
 import { Search, Check, ChevronRight } from 'lucide-react';
 import type { Step } from './types';
-import { usePermisos } from '@/hooks/usePermisos';
 import { condicionPagoDesdeCliente } from '@/lib/condicionPago';
 
 interface Props {
@@ -20,16 +19,15 @@ interface Props {
 
 export function StepCliente(props: Props) {
   const { searchCliente, setSearchCliente, filteredClientes, clienteId, setClienteId, setClienteNombre, setClienteCredito, setCondicionPago, setStep, sinCompra, canDoDevoluciones, soloDevolucion } = props;
-  const { hasPermisoMovil } = usePermisos();
-  const canEditCondicion = hasPermisoMovil('ventas.editar_condicion_pago');
 
   const selectCliente = (id: string | null, nombre: string, credito: { credito: boolean; limite: number; dias: number } | null) => {
     setClienteId(id);
     setClienteNombre(nombre);
     setClienteCredito(credito);
-    // Sin permiso para cambiar la condición: se toma tal cual del cliente
-    // (crédito → crédito con su límite/días; sin crédito → contado; público general → por definir)
-    setCondicionPago(canEditCondicion ? 'contado' : condicionPagoDesdeCliente(id ? credito : null));
+    // La condición se toma siempre del cliente (crédito → crédito con su límite/días;
+    // sin crédito → contado; público general → por definir). Si tiene permiso, puede cambiarla después.
+    setCondicionPago(condicionPagoDesdeCliente(id ? credito : null));
+
     if (soloDevolucion) { setStep('devoluciones'); return; }
     setStep(sinCompra ? 'tipo' : (canDoDevoluciones ? 'devoluciones' : 'productos'));
   };

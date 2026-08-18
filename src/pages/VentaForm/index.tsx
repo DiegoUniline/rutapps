@@ -339,12 +339,11 @@ export default function VentaFormPage() {
       const dias = (c as any)?.dia_visita as string[] | null | undefined;
       set('fecha_entrega', nextVisitDate(dias));
     }
-    // Si el usuario NO puede editar la condición de pago, la fijamos según el cliente:
-    // cliente con crédito → 'credito' (usa sus dias_credito/limite_credito/forma_pago),
-    // cliente sin crédito o público general → 'contado'.
-    if (!canEditCondicion) {
-      set('condicion_pago', condicionPagoDesdeCliente(c));
-    }
+    // La condición de pago se toma siempre del cliente al seleccionarlo:
+    // cliente con crédito → 'credito', sin crédito → 'contado', público general → 'por definir'.
+    // Si el usuario tiene permiso, puede cambiarla después manualmente.
+    set('condicion_pago', condicionPagoDesdeCliente(c));
+
   };
 
   const billingEnabled = isSuperAdminEmail(user?.email);

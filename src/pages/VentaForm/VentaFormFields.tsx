@@ -63,9 +63,8 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
         {['pedido', 'venta_directa'].map(t => (
           <button key={t} onClick={() => {
             set('tipo', t);
-            // Solo autopisamos condicion_pago si el usuario puede editarla;
-            // en caso contrario, la maneja el auto-fill por cliente.
-            if (canEditCondicion) set('condicion_pago', t === 'pedido' ? 'por_definir' : 'contado');
+            // La condición de pago la manda el cliente; solo autopisamos si aún no hay cliente.
+            if (canEditCondicion && !form.cliente_id) set('condicion_pago', t === 'pedido' ? 'por_definir' : 'contado');
             set('entrega_inmediata', t === 'venta_directa');
           }}
             className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors", form.tipo === t ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary")}>
