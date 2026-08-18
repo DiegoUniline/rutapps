@@ -53,7 +53,7 @@ export default function ProductoDropdown({
     // El dropdown necesita más ancho que la columna "Producto" (angosta) para
     // que el nombre completo se lea sin truncarse. Lo ampliamos a un mínimo y lo
     // recorremos a la izquierda si se saldría del borde derecho de la pantalla.
-    const MIN_WIDTH = 380;
+    const MIN_WIDTH = 640;
     const MARGIN = 8;
     const width = Math.min(
       Math.max(rect.width, MIN_WIDTH),
@@ -99,7 +99,7 @@ export default function ProductoDropdown({
         width: position.width,
         zIndex: 99999,
       }}
-      className="bg-popover border border-border rounded-md shadow-xl max-h-60 overflow-y-auto"
+      className="bg-popover border border-border rounded-md shadow-xl max-h-80 overflow-y-auto"
     >
       {resultados.length === 0 ? (
         <div className="px-3 py-2.5 text-[12px] text-muted-foreground">Sin resultados</div>
@@ -113,11 +113,11 @@ export default function ProductoDropdown({
             }}
             onMouseEnter={() => onHover(i)}
             className={cn(
-              'px-3 py-2 text-[12px] cursor-pointer flex items-center justify-between gap-2 transition-colors',
+              'px-3 py-2 text-[12px] cursor-pointer flex items-start justify-between gap-2 transition-colors',
               i === highlightIdx ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-accent'
             )}
           >
-            <span className="min-w-0 truncate">
+            <span className="min-w-0 flex-1 break-words leading-snug">
               <span className="text-muted-foreground font-mono mr-1.5">{highlightMatch(p.codigo, search)}</span>
               {highlightMatch(p.nombre, search)}
             </span>
