@@ -35,9 +35,11 @@ interface Props {
   cols?: Record<string, boolean>;
   /** Abre el selector de lote de la línea (productos que manejan lote). */
   onPickLote?: (idx: number) => void;
+  /** Lotes asignados a esta línea (multi-lote) con su cantidad. */
+  lotesAsignados?: { lote_id: string; codigo: string; caducidad: string | null; cantidad: number }[];
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols, onPickLote }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols, onPickLote, lotesAsignados }: Props) {
   const { fmt } = useCurrency();
   const manejaLotesEmpresa = useManejaLotes();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
