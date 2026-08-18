@@ -82,9 +82,23 @@ export function LotesLineaMovilModal({
     setSel(prev => {
       const next = { ...prev };
       if (v <= 0) delete next[loteId]; else next[loteId] = v;
+      // Nunca dejar que la suma pase de lo pedido: recorta los OTROS lotes
+      // (del último al primero) para que se pueda repartir sin borrar antes.
+      let exceso = r3(Object.values(next).reduce((s, n) => s + (Number(n) || 0), 0) - cantidad);
+      if (exceso > 0) {
+        for (const k of Object.keys(next).reverse()) {
+          if (exceso <= 0) break;
+          if (k === loteId) continue;
+          const quitar = Math.min(next[k], exceso);
+          const restante = r3(next[k] - quitar);
+          if (restante <= 0) delete next[k]; else next[k] = restante;
+          exceso = r3(exceso - quitar);
+        }
+      }
       return next;
     });
   };
+
 
   const autoFefo = () => {
     const next: Record<string, number> = {};
