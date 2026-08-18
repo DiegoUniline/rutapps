@@ -354,6 +354,20 @@ export async function generateDifasurVentaPdf(
 
   const { data: empresa } = await supabase.from('empresas').select('*').eq('id', empresaId).single();
 
+  // Lotes asignados por línea de venta (multi-lote)
+  const { data: lineaLotes } = await supabase
+    .from('venta_linea_lotes')
+    .select('venta_linea_id, cantidad, lotes:lotes!lote_id(codigo, fecha_caducidad)')
+    .eq('venta_id', ventaId);
+  const lotesPorLinea: Record<string, { codigo: string; caducidad?: string | null; cantidad: number }[]> = {};
+  for (const ll of (lineaLotes ?? []) as any[]) {
+    if (!ll.venta_linea_id || !ll.lotes) continue;
+    const arr = lotesPorLinea[ll.venta_linea_id] ?? (lotesPorLinea[ll.venta_linea_id] = []);
+    const ex = arr.find((x) => x.codigo === ll.lotes.codigo);
+    if (ex) ex.cantidad += Number(ll.cantidad) || 0;
+    else arr.push({ codigo: ll.lotes.codigo, caducidad: ll.lotes.fecha_caducidad, cantidad: Number(ll.cantidad) || 0 });
+  }
+
   // Fetch delivered lot info per producto (union across all entregas of this pedido)
   const { data: entregas } = await supabase
     .from('entregas')
@@ -361,20 +375,19 @@ export async function generateDifasurVentaPdf(
     .eq('pedido_id', ventaId);
   const entregaIds = (entregas ?? []).map((e: any) => e.id);
 
-  let lotesPorProducto: Record<string, { codigo: string; caducidad?: string | null }[]> = {};
+  let lotesPorProducto: Record<string, { codigo: string; caducidad?: string | null; cantidad: number }[]> = {};
   if (entregaIds.length) {
     const { data: entLineas } = await supabase
       .from('entrega_lineas')
-      .select('producto_id, lote_id, lotes:lotes!lote_id(codigo, fecha_caducidad)')
+      .select('producto_id, lote_id, cantidad_entregada, lotes:lotes!lote_id(codigo, fecha_caducidad)')
       .in('entrega_id', entregaIds)
       .not('lote_id', 'is', null);
     for (const el of (entLineas ?? []) as any[]) {
       if (!el.producto_id || !el.lotes) continue;
       const arr = lotesPorProducto[el.producto_id] ?? (lotesPorProducto[el.producto_id] = []);
-      // dedupe by lote codigo
-      if (!arr.find((x) => x.codigo === el.lotes.codigo)) {
-        arr.push({ codigo: el.lotes.codigo, caducidad: el.lotes.fecha_caducidad });
-      }
+      const ex = arr.find((x) => x.codigo === el.lotes.codigo);
+      if (ex) ex.cantidad += Number(el.cantidad_entregada) || 0;
+      else arr.push({ codigo: el.lotes.codigo, caducidad: el.lotes.fecha_caducidad, cantidad: Number(el.cantidad_entregada) || 0 });
     }
   }
 
@@ -386,34 +399,58 @@ export async function generateDifasurVentaPdf(
 
   const lineas: DifasurLine[] = ((venta as any).venta_lineas ?? [])
     .filter((l: any) => l.producto_id)
-    .map((l: any) => {
+    .flatMap((l: any): DifasurLine[] => {
       const prod = l.productos ?? {};
       const cantidad = Number(l.cantidad) || 0;
       const precioUnit = Number(l.precio_unitario) || 0;
       const importe = Number(l.total) || cantidad * precioUnit;
       const ivaMonto = Number(l.iva_monto) || 0;
-      const lotesInfo = [...(lotesPorProducto[l.producto_id] ?? [])];
-      // Lote asignado directamente en la línea del pedido
-      if (l.lotes?.codigo && !lotesInfo.find((x) => x.codigo === l.lotes.codigo)) {
-        lotesInfo.push({ codigo: l.lotes.codigo, caducidad: l.lotes.fecha_caducidad });
-      }
-      const loteStr = lotesInfo.map((x) => x.codigo).join(', ');
-      const cadStr = lotesInfo
-        .map((x) => (x.caducidad ? fmtDate(x.caducidad) : ''))
-        .filter(Boolean)
-        .join(', ');
-      return {
-        cantidad,
+      const base = {
         codigo: prod.codigo ?? '',
         descripcion: prod.nombre_ticket || prod.nombre_venta || prod.nombre || l.descripcion || '',
-        lote: loteStr,
-        caducidad: cadStr,
         precio_publico: Number(prod.precio_sugerido_publico) || 0,
         precio_unitario: precioUnit,
-        iva_monto: ivaMonto,
-        importe,
       };
+
+      // Lotes con cantidad: prioridad venta_linea_lotes → entrega_lineas → lote directo
+      let lotesInfo = (lotesPorLinea[l.id] ?? []).filter((x) => x.cantidad > 0);
+      if (!lotesInfo.length) lotesInfo = (lotesPorProducto[l.producto_id] ?? []).filter((x) => x.cantidad > 0);
+      if (!lotesInfo.length && l.lotes?.codigo) {
+        lotesInfo = [{ codigo: l.lotes.codigo, caducidad: l.lotes.fecha_caducidad, cantidad }];
+      }
+
+      if (lotesInfo.length <= 1) {
+        const u = lotesInfo[0];
+        return [{
+          ...base,
+          cantidad,
+          lote: u?.codigo ?? '',
+          caducidad: u?.caducidad ? fmtDate(u.caducidad) : '',
+          iva_monto: ivaMonto,
+          importe,
+        }];
+      }
+
+      // Una línea por lote, prorrateando importe e IVA por cantidad loteada
+      const totalLoteado = lotesInfo.reduce((s, x) => s + x.cantidad, 0) || 1;
+      let accImporte = 0;
+      let accIva = 0;
+      return lotesInfo.map((x, i): DifasurLine => {
+        const last = i === lotesInfo.length - 1;
+        const imp = last ? importe - accImporte : Math.round((importe * x.cantidad / totalLoteado) * 100) / 100;
+        const iva = last ? ivaMonto - accIva : Math.round((ivaMonto * x.cantidad / totalLoteado) * 100) / 100;
+        accImporte += imp; accIva += iva;
+        return {
+          ...base,
+          cantidad: x.cantidad,
+          lote: x.codigo,
+          caducidad: x.caducidad ? fmtDate(x.caducidad) : '',
+          iva_monto: iva,
+          importe: imp,
+        };
+      });
     });
+
 
   const blob = await generarDifasurNotaVentaPdf({
     empresa: {
