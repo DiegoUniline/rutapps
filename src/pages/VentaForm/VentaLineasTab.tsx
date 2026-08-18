@@ -62,6 +62,9 @@ export function VentaLineasTab(props: Props) {
   // La columna Lote se muestra si algún producto maneja lote o si la línea ya
   // trae lote guardado (evita depender del catálogo en caché tras activar lotes).
   const manejaLotes = useManejaLotes();
+  const ventaIdActual = (props.lineas ?? []).map(l => (l as any).venta_id).find(Boolean) as string | undefined;
+  const lotesPorLinea = useVentaLineaLotes(ventaIdActual, manejaLotes);
+
   const hayLotes = manejaLotes && ((props.lineas ?? []).some(l =>
     !!(props.productosList ?? []).find((p: any) => p.id === l.producto_id)?.maneja_lote
     || !!(l as any).lote_id || !!(l as any).lote_codigo,
