@@ -20,6 +20,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
+import { useVentaLineaLotes } from '@/hooks/useVentaLineaLotes';
+
 
 interface Props {
   lineas: Partial<VentaLinea>[];
