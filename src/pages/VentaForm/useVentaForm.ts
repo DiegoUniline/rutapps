@@ -836,7 +836,10 @@ export function useVentaForm() {
             objetoImpuesto: (pricedLine as any).objeto_impuesto ?? null,
           });
         }
-        const linePayload = { ...pricedLine, venta_id: ventaId, subtotal: lineAmounts.subtotal, iva_pct: savedIvaPct, iva_monto: lineAmounts.iva, ieps_pct: savedIepsPct, ieps_monto: lineAmounts.ieps, total: lineAmounts.total, ...desglose };
+        // El almacén del encabezado debe bajar a cada línea: sin `almacen_id`
+        // en la línea, el apartado de stock de pedidos nunca se registra.
+        const lineaAlmacenId = (pricedLine as any).almacen_id ?? form.almacen_id ?? null;
+        const linePayload = { ...pricedLine, almacen_id: lineaAlmacenId, venta_id: ventaId, subtotal: lineAmounts.subtotal, iva_pct: savedIvaPct, iva_monto: lineAmounts.iva, ieps_pct: savedIepsPct, ieps_monto: lineAmounts.ieps, total: lineAmounts.total, ...desglose };
         const clean = { ...linePayload } as any;
         delete clean.unidad_label;
         delete clean.impuestos_label;
