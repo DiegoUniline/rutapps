@@ -158,8 +158,9 @@ export function VentaLineasTab(props: Props) {
                   </thead>
                   <tbody>
                     {lineas.map((l, idx) => (
-                      <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} cols={effectiveCols} />
+                      <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} cols={effectiveCols} lotesAsignados={lotesPorLinea[(l as any).id] ?? undefined} />
                     ))}
+
                   </tbody>
                   <VentaLineasFooter lineas={lineas} cols={effectiveCols} currencyCode={currencyCode} />
                 </table>
