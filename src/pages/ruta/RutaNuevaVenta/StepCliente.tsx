@@ -27,9 +27,10 @@ export function StepCliente(props: Props) {
     setClienteId(id);
     setClienteNombre(nombre);
     setClienteCredito(credito);
-    // Sin permiso para cambiar la condición: se toma tal cual del cliente
-    // (crédito → crédito con su límite/días; sin crédito → contado; público general → por definir)
-    setCondicionPago(canEditCondicion ? 'contado' : condicionPagoDesdeCliente(id ? credito : null));
+    // La condición se toma siempre del cliente (crédito → crédito con su límite/días;
+    // sin crédito → contado; público general → por definir). Si tiene permiso, puede cambiarla después.
+    setCondicionPago(condicionPagoDesdeCliente(id ? credito : null));
+
     if (soloDevolucion) { setStep('devoluciones'); return; }
     setStep(sinCompra ? 'tipo' : (canDoDevoluciones ? 'devoluciones' : 'productos'));
   };
