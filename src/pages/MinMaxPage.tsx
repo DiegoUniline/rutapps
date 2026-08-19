@@ -227,36 +227,30 @@ export default function MinMaxPage() {
         </div>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input className="input-odoo pl-7 w-64" placeholder="Buscar producto, código o código de barras..." value={buscar} onChange={e => { setBuscar(e.target.value); setPage(1); }} />
-          </div>
-          <select className="input-odoo" value={estado} onChange={e => { setEstado(e.target.value as EstadoFiltro); setPage(1); }}>
-            <option value="todos">Todos los estados</option>
-            <option value="sin_config">Sin configuración</option>
-            <option value="bajo_min">Debajo del mínimo</option>
-            <option value="sobre_max">Encima del máximo</option>
-          </select>
-          {seleccion.size > 0 && (
-            <span className="text-[12px] text-muted-foreground">{seleccion.size} seleccionados · <button className="underline" onClick={() => setSeleccion(new Set())}>limpiar</button></span>
-          )}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input className="input-odoo pl-7 w-64" placeholder="Buscar producto, código o código de barras..." value={buscar} onChange={e => { setBuscar(e.target.value); setPage(1); }} />
         </div>
-
-        <div className="flex flex-wrap gap-x-6 gap-y-3">
-          <ChipGroup label="Categorías" options={opciones.cats} selected={categoriasSel} onChange={v => { setCategoriasSel(v); setPage(1); }} allLabel="Todas" />
-          <ChipGroup label="Marcas" options={opciones.marcas} selected={marcasSel} onChange={v => { setMarcasSel(v); setPage(1); }} allLabel="Todas" />
-          <ChipGroup label="Proveedores" options={opciones.provs} selected={proveedoresSel} onChange={v => { setProveedoresSel(v); setPage(1); }} allLabel="Todos" />
-        </div>
-
+        <select className="input-odoo" value={estado} onChange={e => { setEstado(e.target.value as EstadoFiltro); setPage(1); }}>
+          <option value="todos">Todos los estados</option>
+          <option value="sin_config">Sin configuración</option>
+          <option value="bajo_min">Debajo del mínimo</option>
+          <option value="sobre_max">Encima del máximo</option>
+        </select>
+        <FilterDropdown label="Categorías" options={opciones.cats} selected={categoriasSel} onChange={v => { setCategoriasSel(v); setPage(1); }} />
+        <FilterDropdown label="Marcas" options={opciones.marcas} selected={marcasSel} onChange={v => { setMarcasSel(v); setPage(1); }} />
+        <FilterDropdown label="Proveedores" options={opciones.provs} selected={proveedoresSel} onChange={v => { setProveedoresSel(v); setPage(1); }} />
         {filtrosActivos > 0 && (
           <button
             className="text-[11px] text-muted-foreground underline hover:text-foreground"
             onClick={() => { setMarcasSel(new Set()); setCategoriasSel(new Set()); setProveedoresSel(new Set()); setPage(1); }}
           >
-            Limpiar filtros de chips ({filtrosActivos})
+            Limpiar filtros ({filtrosActivos})
           </button>
+        )}
+        {seleccion.size > 0 && (
+          <span className="text-[12px] text-muted-foreground">{seleccion.size} seleccionados · <button className="underline" onClick={() => setSeleccion(new Set())}>limpiar</button></span>
         )}
       </div>
 
