@@ -132,6 +132,7 @@ const TABLE_PRIORITY: Record<string, number> = {
   // Top-level transactions (parents)
   cargas: 10, ventas: 10, compras: 10, traspasos: 10, cotizaciones: 10,
   conteos_fisicos: 10, auditorias: 10, mermas: 10, descarga_ruta: 10, cfdis: 10,
+  solicitudes_traspaso: 10,
   // Devoluciones depends on ventas → must come after
   devoluciones: 15,
   // Cobros depends on ventas (via aplicaciones)
@@ -141,6 +142,7 @@ const TABLE_PRIORITY: Record<string, number> = {
   venta_lineas: 20, carga_lineas: 20, compra_lineas: 20, cotizacion_lineas: 20,
   traspaso_lineas: 20, conteo_lineas: 20, auditoria_lineas: 20, merma_lineas: 20,
   descarga_ruta_lineas: 20, cfdi_lineas: 20, entrega_lineas: 20,
+  solicitud_traspaso_lineas: 20,
   devolucion_lineas: 25, cobro_aplicaciones: 25, promocion_aplicada: 25,
   // Lotes de línea: después de venta_lineas (FK a venta_linea_id)
   venta_linea_lotes: 25, merma_linea_lotes: 25,
