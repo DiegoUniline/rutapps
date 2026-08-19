@@ -50,6 +50,7 @@ export default function SolicitudTraspasoFormPage() {
   const aprobando = status === 'solicitada';
 
   const guardar = useGuardarSolicitud();
+  const guardarAprobacionPendiente = useGuardarAprobacionPendiente();
   const enviar = useEnviarSolicitud();
   const aprobar = useAprobarSolicitud();
   const rechazar = useRechazarSolicitud();
