@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PirateBlockPage from '@/pages/PirateBlockPage';
 import { Link, useSearchParams } from 'react-router-dom';
 import rutappLogo from '@/assets/rutapp-logo.jpeg.asset.json';
 import {
