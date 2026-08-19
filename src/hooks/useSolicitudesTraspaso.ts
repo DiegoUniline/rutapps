@@ -147,6 +147,7 @@ export function useInvalidarSolicitudes() {
     qc.invalidateQueries({ queryKey: ['solicitud_traspaso'] });
     qc.invalidateQueries({ queryKey: ['solicitud_traspaso_lineas'] });
     qc.invalidateQueries({ queryKey: ['solicitud_traspaso_historial'] });
+    qc.invalidateQueries({ queryKey: ['solicitud_traspaso_surtidos'] });
     qc.invalidateQueries({ queryKey: ['stock_almacen'] });
     qc.invalidateQueries({ queryKey: ['traspasos'] });
   };
