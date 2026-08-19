@@ -24,6 +24,8 @@ export interface Producto {
   
   costo: number;
   clasificacion_id?: string;
+  /** Grupo de precio del producto (A, B, C, D…). Opcional. */
+  grupo_precio?: string | null;
   lista_id?: string;
   tarifa_id?: string;
   imagen_url?: string;

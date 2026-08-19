@@ -5724,6 +5724,7 @@ export type Database = {
           es_granel: boolean
           factor_conversion: number | null
           formula: string | null
+          grupo_precio: string | null
           id: string
           ieps_pct: number
           ieps_tipo: string
@@ -5783,6 +5784,7 @@ export type Database = {
           es_granel?: boolean
           factor_conversion?: number | null
           formula?: string | null
+          grupo_precio?: string | null
           id?: string
           ieps_pct?: number
           ieps_tipo?: string
@@ -5842,6 +5844,7 @@ export type Database = {
           es_granel?: boolean
           factor_conversion?: number | null
           formula?: string | null
+          grupo_precio?: string | null
           id?: string
           ieps_pct?: number
           ieps_tipo?: string
@@ -7348,6 +7351,7 @@ export type Database = {
           created_at: string
           descuento_max: number | null
           descuento_pct: number | null
+          grupos: string[]
           id: string
           lista_precio_id: string | null
           margen_pct: number | null
@@ -7367,6 +7371,7 @@ export type Database = {
           created_at?: string
           descuento_max?: number | null
           descuento_pct?: number | null
+          grupos?: string[]
           id?: string
           lista_precio_id?: string | null
           margen_pct?: number | null
@@ -7386,6 +7391,7 @@ export type Database = {
           created_at?: string
           descuento_max?: number | null
           descuento_pct?: number | null
+          grupos?: string[]
           id?: string
           lista_precio_id?: string | null
           margen_pct?: number | null
@@ -10276,7 +10282,7 @@ export type Database = {
         | "nota_credito"
         | "devolucion_dinero"
         | "descuento_venta"
-      aplica_a_tarifa: "todos" | "categoria" | "producto"
+      aplica_a_tarifa: "todos" | "categoria" | "producto" | "grupo"
       aplica_promocion:
         | "todos"
         | "producto"
@@ -10492,7 +10498,7 @@ export const Constants = {
         "devolucion_dinero",
         "descuento_venta",
       ],
-      aplica_a_tarifa: ["todos", "categoria", "producto"],
+      aplica_a_tarifa: ["todos", "categoria", "producto", "grupo"],
       aplica_promocion: [
         "todos",
         "producto",

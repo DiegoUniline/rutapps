@@ -1,5 +1,5 @@
 import { useState, Fragment } from 'react';
-import { Boxes, Plus, Pencil, AlertTriangle, ChevronRight, ChevronDown, Warehouse, Truck, Search, Check } from 'lucide-react';
+import { Boxes, Plus, Pencil, AlertTriangle, ChevronRight, ChevronDown, Warehouse, Truck, Search, Check, Download, ArrowUpDown, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -25,7 +25,7 @@ interface LoteRow {
   costo: number | null;
   notas: string | null;
   activo: boolean;
-  productos?: { nombre: string; codigo: string | null } | null;
+  productos?: { nombre: string; codigo: string | null; marca_id?: string | null } | null;
 }
 
 interface EditState {
@@ -55,6 +55,16 @@ export default function LotesPage() {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
   const [stockFilter, setStockFilter] = useState<'todos' | 'con' | 'sin'>('todos');
+  const [marcaFilters, setMarcaFilters] = useState<Set<string>>(new Set()); // vacío = todas
+  const toggleMarca = (id: string) => setMarcaFilters(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+  const [sortBy, setSortBy] = useState<'producto' | 'marca' | 'lote' | 'vence'>('producto');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const toggleSort = (k: 'producto' | 'marca' | 'lote' | 'vence') => {
+    if (sortBy === k) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortBy(k); setSortDir('asc'); }
+  };
   const [vencMode, setVencMode] = useState<'todos' | 'porvencer' | 'vencido'>('todos');
   const [vencDias, setVencDias] = useState('30'); // umbral editable de "por vencer"
   const toggleExpand = (id: string) => setExpanded(prev => {
@@ -77,13 +87,26 @@ export default function LotesPage() {
     },
   });
 
+  // Marcas (para mostrar/ordenar/exportar por marca).
+  const { data: marcasMap } = useQuery({
+    queryKey: ['lotes-marcas', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from as any)('marcas')
+        .select('id, nombre').eq('empresa_id', empresa!.id);
+      if (error) throw error;
+      return new Map<string, string>((data ?? []).map((m: any) => [m.id, m.nombre]));
+    },
+  });
+  const marcaDe = (l: LoteRow) => (l.productos?.marca_id ? (marcasMap?.get(l.productos.marca_id) ?? '—') : '—');
+
   // Lotes existentes.
   const { data: lotes, isLoading } = useQuery({
     queryKey: ['lotes', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
       return fetchAllPages<LoteRow>((from, to) => (supabase.from as any)('lotes')
-        .select('id, producto_id, codigo, fecha_caducidad, fecha_fabricacion, costo, notas, activo, productos(nombre, codigo)')
+        .select('id, producto_id, codigo, fecha_caducidad, fecha_fabricacion, costo, notas, activo, productos(nombre, codigo, marca_id)')
         .eq('empresa_id', empresa!.id)
         .eq('activo', true)
         .order('fecha_caducidad', { ascending: true, nullsFirst: false })
@@ -235,12 +258,19 @@ export default function LotesPage() {
       const detalle = stockDetalle?.get(l.id) ?? [];
       if (!detalle.some(d => almacenFilters.has(d.almacen_id))) return false;
     }
+    if (marcaFilters.size > 0 && !marcaFilters.has(l.productos?.marca_id ?? '')) return false;
     if (stockFilter !== 'todos') {
       const q = stockDe(l.id);
       if (stockFilter === 'con' && q <= 0) return false;
       if (stockFilter === 'sin' && q > 0) return false;
     }
     return true;
+  }).sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortBy === 'marca') return dir * (marcaDe(a).localeCompare(marcaDe(b)) || (a.productos?.nombre ?? '').localeCompare(b.productos?.nombre ?? ''));
+    if (sortBy === 'lote') return dir * a.codigo.localeCompare(b.codigo);
+    if (sortBy === 'vence') return dir * ((a.fecha_caducidad ?? '9999-12-31').localeCompare(b.fecha_caducidad ?? '9999-12-31'));
+    return dir * ((a.productos?.nombre ?? '').localeCompare(b.productos?.nombre ?? ''));
   });
 
   const porAlmacenVisible = porAlmacen
@@ -317,6 +347,47 @@ export default function LotesPage() {
     }
   };
 
+  // Exporta a Excel lo que está en pantalla (con los filtros y el orden actual).
+  const exportar = async () => {
+    const { exportToExcel } = await import('@/lib/exportUtils');
+    const data = lotesVisibles.map(l => {
+      const fisico = stockDe(l.id);
+      const ap = apartadoDe(l.id);
+      const row: Record<string, any> = {
+        producto: l.productos?.nombre ?? '—',
+        codigo_producto: l.productos?.codigo ?? '',
+        marca: marcaDe(l),
+        lote: l.codigo,
+        caducidad: l.fecha_caducidad ?? '',
+        costo: l.costo ?? 0,
+        total: fisico,
+        apartado: ap,
+        disponible: fisico - ap,
+      };
+      matrizCols.forEach(c => { row[`al_${c.id}`] = cantidadEn(l.id, c.id); });
+      return row;
+    });
+    await exportToExcel({
+      fileName: `lotes-${new Date().toISOString().slice(0, 10)}`,
+      title: 'Lotes y existencias',
+      empresa: empresa?.nombre ?? undefined,
+      columns: [
+        { key: 'producto', header: 'Producto', width: 40 },
+        { key: 'codigo_producto', header: 'Código', width: 14 },
+        { key: 'marca', header: 'Marca', width: 20 },
+        { key: 'lote', header: 'Lote', width: 16 },
+        { key: 'caducidad', header: 'Caducidad', width: 14, format: 'date' },
+        { key: 'costo', header: 'Costo', width: 12, format: 'currency', align: 'right' },
+        ...matrizCols.map(c => ({ key: `al_${c.id}`, header: c.nombre, width: 14, format: 'number' as const, align: 'right' as const })),
+        { key: 'total', header: 'Total', width: 12, format: 'number', align: 'right' },
+        { key: 'apartado', header: 'Apartado', width: 12, format: 'number', align: 'right' },
+        { key: 'disponible', header: 'Disponible', width: 12, format: 'number', align: 'right' },
+      ],
+      data,
+    });
+  };
+
+
   const noHayProductos = (productos?.length ?? 0) === 0;
   const resumen = (lotes ?? []).reduce((a, l) => {
     const dias = diasParaVencer(l.fecha_caducidad);
@@ -335,10 +406,16 @@ export default function LotesPage() {
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Boxes className="h-5 w-5" /> Lotes
         </h1>
-        <button className="btn-odoo-primary text-sm flex items-center gap-1" onClick={openNew} disabled={noHayProductos}>
-          <Plus className="h-4 w-4" /> Nuevo lote
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="btn-odoo text-sm flex items-center gap-1" onClick={exportar} disabled={lotesVisibles.length === 0}>
+            <Download className="h-4 w-4" /> Exportar
+          </button>
+          <button className="btn-odoo-primary text-sm flex items-center gap-1" onClick={openNew} disabled={noHayProductos}>
+            <Plus className="h-4 w-4" /> Nuevo lote
+          </button>
+        </div>
       </div>
+
 
       {noHayProductos && (
         <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-[13px] text-foreground flex items-start gap-2">
@@ -412,6 +489,33 @@ export default function LotesPage() {
           </PopoverContent>
         </Popover>
 
+        {/* Marcas: dropdown multi-selección (vacío = todas) */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] border transition-colors",
+              marcaFilters.size > 0 ? "bg-primary/10 border-primary text-foreground" : "border-border text-muted-foreground hover:border-primary/40"
+            )}>
+              <Tag className="h-3.5 w-3.5" />
+              {marcaFilters.size === 0 ? 'Todas las marcas' : `${marcaFilters.size} marca${marcaFilters.size !== 1 ? 's' : ''}`}
+              <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 p-1 max-h-80 overflow-y-auto">
+            <label className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] hover:bg-accent cursor-pointer">
+              <Checkbox checked={marcaFilters.size === 0} onCheckedChange={() => setMarcaFilters(new Set())} />
+              <span className="font-medium">Todas</span>
+            </label>
+            <div className="my-1 border-t border-border" />
+            {Array.from(marcasMap ?? new Map()).sort((a, b) => String(a[1]).localeCompare(String(b[1]))).map(([id, nombre]) => (
+              <label key={id} className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] hover:bg-accent cursor-pointer">
+                <Checkbox checked={marcaFilters.has(id)} onCheckedChange={() => toggleMarca(id)} />
+                <span className="truncate">{nombre}</span>
+              </label>
+            ))}
+          </PopoverContent>
+        </Popover>
+
 
         {/* Stock: segmentado */}
         <div className="inline-flex rounded-md border border-border overflow-hidden text-[12px]">
@@ -470,9 +574,26 @@ export default function LotesPage() {
             <table className="text-sm min-w-full">
               <thead>
                 <tr className="border-b border-table-border">
-                  <th className="th-odoo text-left sticky left-0 z-20 bg-card min-w-[220px]">Producto</th>
-                  <th className="th-odoo text-left w-32">Lote</th>
-                  <th className="th-odoo text-left w-36">Vence</th>
+                  <th className="th-odoo text-left sticky left-0 z-20 bg-card min-w-[220px]">
+                    <button onClick={() => toggleSort('producto')} className="inline-flex items-center gap-1 hover:text-primary">
+                      Producto <ArrowUpDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </th>
+                  <th className="th-odoo text-left w-40">
+                    <button onClick={() => toggleSort('marca')} className="inline-flex items-center gap-1 hover:text-primary">
+                      Marca <ArrowUpDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </th>
+                  <th className="th-odoo text-left w-32">
+                    <button onClick={() => toggleSort('lote')} className="inline-flex items-center gap-1 hover:text-primary">
+                      Lote <ArrowUpDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </th>
+                  <th className="th-odoo text-left w-36">
+                    <button onClick={() => toggleSort('vence')} className="inline-flex items-center gap-1 hover:text-primary">
+                      Vence <ArrowUpDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </th>
                   {matrizCols.map(c => (
                     <th key={c.id} className="th-odoo text-right whitespace-nowrap min-w-[110px]">
                       <span className="inline-flex items-center gap-1 justify-end">
@@ -499,6 +620,7 @@ export default function LotesPage() {
                         <div className="text-foreground">{l.productos?.nombre ?? '—'}</div>
                         {l.productos?.codigo && <div className="text-[11px] text-muted-foreground">{l.productos.codigo}</div>}
                       </td>
+                      <td className="py-1.5 px-3 text-muted-foreground">{marcaDe(l)}</td>
                       <td className={cn("py-1.5 px-3 font-medium", estaVencido(l.fecha_caducidad) ? 'text-destructive' : 'text-foreground')}>{l.codigo}</td>
                       <td className={cn("py-1.5 px-3 text-[12px]", est.clase)}>{est.texto}</td>
                       {matrizCols.map(c => {
@@ -532,7 +654,7 @@ export default function LotesPage() {
               <tfoot>
                 <tr className="border-t-2 border-border bg-muted/40 font-semibold">
                   <td className="py-2 px-3 sticky left-0 z-10 bg-muted/40 text-foreground">Total ({lotesVisibles.length} lotes)</td>
-                  <td /><td />
+                  <td /><td /><td />
                   {matrizCols.map(c => (
                     <td key={c.id} className="py-2 px-3 text-right tabular-nums text-foreground">{nQty(totalesCol.get(c.id) ?? 0)}</td>
                   ))}

@@ -6,9 +6,11 @@
  */
 
 export interface TarifaLineaRule {
-  aplica_a: string; // 'todos' | 'producto' | 'categoria'
+  aplica_a: string; // 'todos' | 'producto' | 'categoria' | 'grupo'
   producto_ids: string[];
   clasificacion_ids: string[];
+  /** Grupos de precio (A, B, C, D…) a los que aplica la regla. */
+  grupos?: string[];
   tipo_calculo: string; // 'precio_fijo' | 'margen_costo' | 'descuento_precio'
   precio: number;
   precio_minimo: number | null;
@@ -25,6 +27,7 @@ export interface ProductForPricing {
   precio_principal: number;
   costo?: number;
   clasificacion_id?: string | null;
+  grupo_precio?: string | null;
   tiene_iva?: boolean;
   iva_pct?: number;
   tiene_ieps?: boolean;
@@ -83,6 +86,14 @@ function findMatchingRule(
       r => r.aplica_a === 'categoria' && (r.clasificacion_ids ?? []).includes(producto.clasificacion_id!)
     );
     if (catRule) return catRule;
+  }
+
+  // Grupo de precio del producto (A, B, C, D…): más específico que la regla global.
+  if (producto.grupo_precio) {
+    const grupoRule = filtered.find(
+      r => r.aplica_a === 'grupo' && (r.grupos ?? []).includes(producto.grupo_precio!)
+    );
+    if (grupoRule) return grupoRule;
   }
 
   const globalRule = filtered.find(r => r.aplica_a === 'todos');

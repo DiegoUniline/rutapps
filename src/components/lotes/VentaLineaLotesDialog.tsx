@@ -78,6 +78,62 @@ export function VentaLineaLotesDialog({
   useEffect(() => { if (open) { load(); setLoteId(''); } }, [open, load]);
   useEffect(() => { setCantidad(pendiente); }, [pendiente]);
 
+  /**
+   * Reparte lo pendiente entre TODOS los lotes disponibles en orden FEFO.
+   * Un producto puede necesitar 2 o más lotes cuando el primero no alcanza.
+   */
+  const asignarFefo = async () => {
+    if (pendiente <= 0) return;
+    const yaAsignado = new Map(asignaciones.map(a => [a.lote_id, Number(a.cantidad) || 0]));
+    let resta = pendiente;
+    const nuevos: { lote_id: string; cantidad: number }[] = [];
+    for (const l of disponibles) {
+      if (resta <= 0.0001) break;
+      const libre = Math.max(0, Number(l.disponible) || 0);
+      if (libre <= 0) continue;
+      const toma = Math.min(libre, resta);
+      nuevos.push({ lote_id: l.lote_id, cantidad: toma });
+      resta -= toma;
+    }
+    if (nuevos.length === 0) { toast.error('No hay lotes con existencia para surtir esta línea'); return; }
+    setSaving(true);
+    try {
+      const aInsertar = nuevos.filter(n => !yaAsignado.has(n.lote_id));
+      const aActualizar = nuevos.filter(n => yaAsignado.has(n.lote_id));
+      if (aInsertar.length > 0) {
+        const { error } = await (supabase.from as any)('venta_linea_lotes').insert(
+          aInsertar.map(n => ({
+            empresa_id: empresaId, venta_id: ventaId, venta_linea_id: lineaId,
+            producto_id: producto.id, lote_id: n.lote_id, almacen_id: almacenId,
+            cantidad: n.cantidad, user_id: userId ?? null,
+          })),
+        );
+        if (error) throw error;
+      }
+      for (const n of aActualizar) {
+        const ex = asignaciones.find(a => a.lote_id === n.lote_id)!;
+        const { error } = await (supabase.from as any)('venta_linea_lotes')
+          .update({ cantidad: Number(ex.cantidad) + n.cantidad, updated_at: new Date().toISOString() })
+          .eq('id', ex.id);
+        if (error) throw error;
+      }
+      const { data: asg } = await (supabase.from as any)('venta_linea_lotes')
+        .select('id, cantidad, created_at, lote_id, lotes(codigo, fecha_caducidad)')
+        .eq('venta_linea_id', lineaId)
+        .order('created_at', { ascending: true });
+      const rows = (asg ?? []) as Asignacion[];
+      setAsignaciones(rows);
+      onChanged(resumen(rows));
+      await load();
+      toast.success(resta > 0.0001
+        ? `Se asignaron ${nuevos.length} lote(s); faltan ${resta.toLocaleString('es-MX')} por existencia`
+        : `Línea surtida con ${nuevos.length} lote(s)`);
+    } catch (err: any) {
+      toast.error(err.message || 'No se pudieron asignar los lotes');
+    } finally { setSaving(false); }
+  };
+
+
   const asignar = async () => {
     const qty = Number(cantidad) || 0;
     if (!loteId) { toast.error('Elige un lote'); return; }
@@ -193,8 +249,13 @@ export function VentaLineaLotesDialog({
                     <Input type="number" min={0} step="0.001" value={cantidad} onChange={e => setCantidad(Number(e.target.value))} />
                   </div>
                   <Button onClick={asignar} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}Asignar lote</Button>
+                  <Button type="button" variant="outline" onClick={asignarFefo} disabled={saving || disponibles.length === 0}
+                    title="Reparte lo pendiente entre los lotes que caducan primero (puede usar 2 o más lotes)">
+                    Repartir automático (FEFO)
+                  </Button>
                 </div>
               </div>
+
             ) : (
               <p className="text-sm text-emerald-600 font-medium border-t border-border pt-3">Línea asignada al 100%.</p>
             )}

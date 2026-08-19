@@ -561,7 +561,10 @@ export function useVentaForm() {
         const ventaId = (form as any).id ?? null;
         (async () => {
           const lotes = await getLotesDisponibles({ empresaId, almacenId, productoId, excluirVentaId: ventaId });
-          const fefo = pickFefo(lotes, 1);
+          // Toma como referencia la cantidad de la línea: así elige un lote que
+          // alcance; si ninguno alcanza se completa con varios desde el modal.
+          const cantLinea = Number((lineas[idx] as any)?.cantidad) || 1;
+          const fefo = pickFefo(lotes, cantLinea);
           if (!fefo) return;
           setLineas(prev => {
             const arr = [...prev];
