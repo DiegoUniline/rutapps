@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Send, Check, X, Wand2, Truck } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { ListPage } from '@/components/layout/ListPage';
 import { StatusChip } from '@/components/StatusChip';
 import ProductSearchInput from '@/components/ProductSearchInput';
@@ -162,6 +163,14 @@ export default function SolicitudTraspasoFormPage() {
   const lineasPayload = () => lineas.map(l => ({ id: l.id, cantidad: l.cantidad_aprobada }));
 
   const onAprobar = async () => {
+    if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return; }
+    if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return; }
+    if (origenId !== (solicitud?.almacen_origen_id ?? '')) {
+      const { error } = await (supabase.from as any)('solicitudes_traspaso')
+        .update({ almacen_origen_id: origenId })
+        .eq('id', solicitudId);
+      if (error) { toast.error(error.message); return; }
+    }
     await aprobar.mutateAsync({ p_solicitud_id: solicitudId, p_lineas: lineasPayload() });
     toast.success('Solicitud aprobada');
   };
@@ -245,7 +254,7 @@ export default function SolicitudTraspasoFormPage() {
         <div className="bg-card border border-border rounded p-3 grid grid-cols-1 md:grid-cols-4 gap-3 text-[12px]">
           <label className="flex flex-col gap-1">
             <span className="text-muted-foreground">Almacén origen (surte)</span>
-            <select className="input-odoo" value={origenId} disabled={!editable} onChange={e => setOrigenId(e.target.value)}>
+            <select className="input-odoo" value={origenId} disabled={!editable && !aprobando} onChange={e => setOrigenId(e.target.value)}>
               <option value="">Selecciona...</option>
               {almacenes.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
             </select>
