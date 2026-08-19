@@ -41,9 +41,8 @@ interface InventarioTabProps {
   isNew?: boolean;
 }
 
-export function InventarioTabContent({ form, set, productoId, isNew }: InventarioTabProps) {
+export function InventarioTabContent({ form, set }: InventarioTabProps) {
   return (
-    <div className="space-y-6">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
       <div>
         <OdooField label="Min stock" value={form.min} type="number" teal onChange={v => set('min', +v)} format={v => (v ?? 0).toString()} />
@@ -53,11 +52,17 @@ export function InventarioTabContent({ form, set, productoId, isNew }: Inventari
         <div className="odoo-field-row"><span className="odoo-field-label">Vender sin stock</span><label className="flex items-center gap-2 cursor-pointer pt-[2px]"><input type="checkbox" checked={!!form.vender_sin_stock} onChange={e => set('vender_sin_stock', e.target.checked)} className="rounded border-input h-3.5 w-3.5" /></label></div>
       </div>
     </div>
-    <div>
-      <h3 className="text-[13px] font-medium mb-2">Mínimos y máximos por almacén</h3>
-      <MinMaxAlmacenTab productoId={productoId} isNew={!!isNew} />
-    </div>
-    </div>
+  );
+}
+
+export function MinMaxAlmacenTabContent({ form, productoId, isNew }: InventarioTabProps) {
+  return (
+    <MinMaxAlmacenTab
+      productoId={productoId}
+      isNew={!!isNew}
+      minGeneral={Number(form.min) || 0}
+      maxGeneral={Number(form.max) || 0}
+    />
   );
 }
 

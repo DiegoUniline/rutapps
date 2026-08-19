@@ -5,7 +5,7 @@ import { useAlmacenes } from '@/hooks/useData';
 import { useProductoAlmacenConfig, useGuardarProductoAlmacenConfig } from '@/hooks/useProductoAlmacenConfig';
 
 /** Mínimos y máximos por almacén de un producto (base del resurtido sugerido). */
-export function MinMaxAlmacenTab({ productoId, isNew }: { productoId?: string; isNew: boolean }) {
+export function MinMaxAlmacenTab({ productoId, isNew, minGeneral = 0, maxGeneral = 0 }: { productoId?: string; isNew: boolean; minGeneral?: number; maxGeneral?: number }) {
   const { data: almacenes = [] } = useAlmacenes();
   const { data: config = [] } = useProductoAlmacenConfig(undefined, productoId);
   const guardar = useGuardarProductoAlmacenConfig();
@@ -13,10 +13,10 @@ export function MinMaxAlmacenTab({ productoId, isNew }: { productoId?: string; i
 
   const inicial = useMemo(() => {
     const map: Record<string, { min: number; max: number }> = {};
-    for (const a of almacenes) map[a.id] = { min: 0, max: 0 };
+    for (const a of almacenes) map[a.id] = { min: Number(minGeneral) || 0, max: Number(maxGeneral) || 0 };
     for (const c of config) map[c.almacen_id] = { min: Number(c.stock_minimo) || 0, max: Number(c.stock_maximo) || 0 };
     return map;
-  }, [almacenes, config]);
+  }, [almacenes, config, minGeneral, maxGeneral]);
 
   useEffect(() => { setValores(inicial); }, [inicial]);
 
