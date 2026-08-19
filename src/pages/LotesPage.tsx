@@ -547,9 +547,26 @@ export default function LotesPage() {
             <table className="text-sm min-w-full">
               <thead>
                 <tr className="border-b border-table-border">
-                  <th className="th-odoo text-left sticky left-0 z-20 bg-card min-w-[220px]">Producto</th>
-                  <th className="th-odoo text-left w-32">Lote</th>
-                  <th className="th-odoo text-left w-36">Vence</th>
+                  <th className="th-odoo text-left sticky left-0 z-20 bg-card min-w-[220px]">
+                    <button onClick={() => toggleSort('producto')} className="inline-flex items-center gap-1 hover:text-primary">
+                      Producto <ArrowUpDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </th>
+                  <th className="th-odoo text-left w-40">
+                    <button onClick={() => toggleSort('marca')} className="inline-flex items-center gap-1 hover:text-primary">
+                      Marca <ArrowUpDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </th>
+                  <th className="th-odoo text-left w-32">
+                    <button onClick={() => toggleSort('lote')} className="inline-flex items-center gap-1 hover:text-primary">
+                      Lote <ArrowUpDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </th>
+                  <th className="th-odoo text-left w-36">
+                    <button onClick={() => toggleSort('vence')} className="inline-flex items-center gap-1 hover:text-primary">
+                      Vence <ArrowUpDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </th>
                   {matrizCols.map(c => (
                     <th key={c.id} className="th-odoo text-right whitespace-nowrap min-w-[110px]">
                       <span className="inline-flex items-center gap-1 justify-end">
