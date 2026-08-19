@@ -176,6 +176,18 @@ export default function SolicitudTraspasoFormPage() {
 
   const lineasPayload = () => lineas.map(l => ({ id: l.id, cantidad: l.cantidad_aprobada }));
 
+  const onGuardarAprobacionPendiente = async () => {
+    if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return; }
+    if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return; }
+    await guardarAprobacionPendiente.mutateAsync({
+      id: solicitudId,
+      almacen_origen_id: origenId,
+      observaciones,
+      lineas: lineas.map(l => ({ id: l.id, cantidad_aprobada: l.cantidad_aprobada })),
+    });
+    toast.success('Cambios guardados');
+  };
+
   const onAprobar = async () => {
     if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return; }
     if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return; }
