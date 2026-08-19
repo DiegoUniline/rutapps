@@ -328,7 +328,9 @@ export default function SolicitudTraspasoFormPage() {
               </span>
             )}
             {puedeCancelar && !editable && (
-              <button onClick={onCancelar} className="btn-odoo">Cancelar solicitud</button>
+              <button onClick={onCancelar} className="btn-odoo-secondary p-2" title="Cancelar solicitud">
+                <X className="h-4 w-4" />
+              </button>
             )}
           </div>
         }
