@@ -288,6 +288,18 @@ html, body, #root {
            bg-card text-foreground border border-border hover:bg-accent transition-all
            disabled:opacity-50 disabled:pointer-events-none;
   }
+  .btn-odoo-danger {
+    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
+           bg-destructive text-destructive-foreground hover:opacity-90 transition-all
+           disabled:opacity-50 disabled:pointer-events-none;
+    box-shadow: var(--shadow-xs);
+  }
+  .btn-odoo-success {
+    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
+           bg-success text-success-foreground hover:opacity-90 transition-all
+           disabled:opacity-50 disabled:pointer-events-none;
+    box-shadow: var(--shadow-xs);
+  }
 
   /* Segmented control (corporate style — matches shadcn Tabs) */
   .seg-group {
