@@ -77,13 +77,26 @@ export default function LotesPage() {
     },
   });
 
+  // Marcas (para mostrar/ordenar/exportar por marca).
+  const { data: marcasMap } = useQuery({
+    queryKey: ['lotes-marcas', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from as any)('marcas')
+        .select('id, nombre').eq('empresa_id', empresa!.id);
+      if (error) throw error;
+      return new Map<string, string>((data ?? []).map((m: any) => [m.id, m.nombre]));
+    },
+  });
+  const marcaDe = (l: LoteRow) => (l.productos?.marca_id ? (marcasMap?.get(l.productos.marca_id) ?? '—') : '—');
+
   // Lotes existentes.
   const { data: lotes, isLoading } = useQuery({
     queryKey: ['lotes', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
       return fetchAllPages<LoteRow>((from, to) => (supabase.from as any)('lotes')
-        .select('id, producto_id, codigo, fecha_caducidad, fecha_fabricacion, costo, notas, activo, productos(nombre, codigo)')
+        .select('id, producto_id, codigo, fecha_caducidad, fecha_fabricacion, costo, notas, activo, productos(nombre, codigo, marca_id)')
         .eq('empresa_id', empresa!.id)
         .eq('activo', true)
         .order('fecha_caducidad', { ascending: true, nullsFirst: false })
