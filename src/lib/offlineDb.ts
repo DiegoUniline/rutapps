@@ -75,6 +75,9 @@ class OfflineDatabase extends Dexie {
   stock_lotes!: Table;
   ruta_sesiones!: Table;
   vehiculos!: Table;
+  producto_almacen_config!: Table;
+  solicitudes_traspaso!: Table;
+  solicitud_traspaso_lineas!: Table;
 
   // Sync infrastructure
   syncQueue!: Table<SyncQueueItem, number>;
@@ -155,6 +158,13 @@ class OfflineDatabase extends Dexie {
     this.version(14).stores({
       ruta_sesiones: 'id, empresa_id, vendedor_id, status, fecha',
       vehiculos: 'id, empresa_id, status, vendedor_default_id',
+    });
+    // v15: mínimos/máximos por almacén y solicitudes de traspaso (resurtido).
+    // Permite crear borradores desde la ruta sin señal y sugerir por mínimos.
+    this.version(15).stores({
+      producto_almacen_config: 'id, empresa_id, almacen_id, producto_id',
+      solicitudes_traspaso: 'id, empresa_id, almacen_destino_id, almacen_origen_id, status, fecha',
+      solicitud_traspaso_lineas: 'id, solicitud_id, producto_id',
     });
   }
 

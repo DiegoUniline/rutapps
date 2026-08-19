@@ -5502,6 +5502,64 @@ export type Database = {
         }
         Relationships: []
       }
+      producto_almacen_config: {
+        Row: {
+          activo: boolean
+          almacen_id: string
+          created_at: string
+          empresa_id: string
+          id: string
+          producto_id: string
+          stock_maximo: number
+          stock_minimo: number
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          almacen_id: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          producto_id: string
+          stock_maximo?: number
+          stock_minimo?: number
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          almacen_id?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          producto_id?: string
+          stock_maximo?: number
+          stock_minimo?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producto_almacen_config_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "producto_almacen_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "producto_almacen_config_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       producto_equivalencias: {
         Row: {
           codigo_externo: string
@@ -6535,6 +6593,176 @@ export type Database = {
           },
         ]
       }
+      solicitud_traspaso_historial: {
+        Row: {
+          accion: string
+          created_at: string
+          detalle: Json | null
+          empresa_id: string
+          id: string
+          solicitud_id: string
+          user_id: string | null
+          user_nombre: string | null
+        }
+        Insert: {
+          accion: string
+          created_at?: string
+          detalle?: Json | null
+          empresa_id: string
+          id?: string
+          solicitud_id: string
+          user_id?: string | null
+          user_nombre?: string | null
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          detalle?: Json | null
+          empresa_id?: string
+          id?: string
+          solicitud_id?: string
+          user_id?: string | null
+          user_nombre?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitud_traspaso_historial_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitud_traspaso_historial_solicitud_id_fkey"
+            columns: ["solicitud_id"]
+            isOneToOne: false
+            referencedRelation: "solicitudes_traspaso"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitud_traspaso_lineas: {
+        Row: {
+          cantidad_aprobada: number
+          cantidad_solicitada: number
+          cantidad_sugerida: number
+          cantidad_surtida: number
+          created_at: string
+          id: string
+          notas: string | null
+          presentacion_id: string | null
+          producto_id: string
+          solicitud_id: string
+          stock_actual_snapshot: number
+          stock_maximo_snapshot: number
+          stock_minimo_snapshot: number
+          updated_at: string
+        }
+        Insert: {
+          cantidad_aprobada?: number
+          cantidad_solicitada?: number
+          cantidad_sugerida?: number
+          cantidad_surtida?: number
+          created_at?: string
+          id?: string
+          notas?: string | null
+          presentacion_id?: string | null
+          producto_id: string
+          solicitud_id: string
+          stock_actual_snapshot?: number
+          stock_maximo_snapshot?: number
+          stock_minimo_snapshot?: number
+          updated_at?: string
+        }
+        Update: {
+          cantidad_aprobada?: number
+          cantidad_solicitada?: number
+          cantidad_sugerida?: number
+          cantidad_surtida?: number
+          created_at?: string
+          id?: string
+          notas?: string | null
+          presentacion_id?: string | null
+          producto_id?: string
+          solicitud_id?: string
+          stock_actual_snapshot?: number
+          stock_maximo_snapshot?: number
+          stock_minimo_snapshot?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitud_traspaso_lineas_presentacion_id_fkey"
+            columns: ["presentacion_id"]
+            isOneToOne: false
+            referencedRelation: "producto_presentaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitud_traspaso_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitud_traspaso_lineas_solicitud_id_fkey"
+            columns: ["solicitud_id"]
+            isOneToOne: false
+            referencedRelation: "solicitudes_traspaso"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitud_traspaso_surtidos: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          solicitud_id: string
+          surtido_por: string | null
+          traspaso_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          solicitud_id: string
+          surtido_por?: string | null
+          traspaso_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          solicitud_id?: string
+          surtido_por?: string | null
+          traspaso_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitud_traspaso_surtidos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitud_traspaso_surtidos_solicitud_id_fkey"
+            columns: ["solicitud_id"]
+            isOneToOne: false
+            referencedRelation: "solicitudes_traspaso"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitud_traspaso_surtidos_traspaso_id_fkey"
+            columns: ["traspaso_id"]
+            isOneToOne: false
+            referencedRelation: "traspasos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       solicitudes_pago: {
         Row: {
           aprobado_por: string | null
@@ -6599,6 +6827,98 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitudes_traspaso: {
+        Row: {
+          almacen_destino_id: string | null
+          almacen_origen_id: string | null
+          aprobado_at: string | null
+          aprobado_por: string | null
+          created_at: string
+          empresa_id: string
+          enviado_at: string | null
+          fecha: string
+          folio: string | null
+          id: string
+          motivo_rechazo: string | null
+          observaciones: string | null
+          rechazado_at: string | null
+          rechazado_por: string | null
+          solicitante_profile_id: string | null
+          solicitante_user_id: string | null
+          status: Database["public"]["Enums"]["status_solicitud_traspaso"]
+          updated_at: string
+        }
+        Insert: {
+          almacen_destino_id?: string | null
+          almacen_origen_id?: string | null
+          aprobado_at?: string | null
+          aprobado_por?: string | null
+          created_at?: string
+          empresa_id: string
+          enviado_at?: string | null
+          fecha?: string
+          folio?: string | null
+          id?: string
+          motivo_rechazo?: string | null
+          observaciones?: string | null
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          solicitante_profile_id?: string | null
+          solicitante_user_id?: string | null
+          status?: Database["public"]["Enums"]["status_solicitud_traspaso"]
+          updated_at?: string
+        }
+        Update: {
+          almacen_destino_id?: string | null
+          almacen_origen_id?: string | null
+          aprobado_at?: string | null
+          aprobado_por?: string | null
+          created_at?: string
+          empresa_id?: string
+          enviado_at?: string | null
+          fecha?: string
+          folio?: string | null
+          id?: string
+          motivo_rechazo?: string | null
+          observaciones?: string | null
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          solicitante_profile_id?: string | null
+          solicitante_user_id?: string | null
+          status?: Database["public"]["Enums"]["status_solicitud_traspaso"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitudes_traspaso_almacen_destino_id_fkey"
+            columns: ["almacen_destino_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_traspaso_almacen_origen_id_fkey"
+            columns: ["almacen_origen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_traspaso_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_traspaso_solicitante_profile_id_fkey"
+            columns: ["solicitante_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -9339,6 +9659,10 @@ export type Database = {
         Args: { _comision_pct?: number; _slug: string; _solicitud_id: string }
         Returns: string
       }
+      aprobar_solicitud_traspaso: {
+        Args: { p_lineas?: Json; p_solicitud_id: string }
+        Returns: undefined
+      }
       archivar_usuario: {
         Args: { p_force?: boolean; p_motivo?: string; p_profile_id: string }
         Returns: Json
@@ -9369,6 +9693,10 @@ export type Database = {
         Returns: Json
       }
       cancelar_merma: { Args: { _merma_id: string }; Returns: undefined }
+      cancelar_solicitud_traspaso: {
+        Args: { p_motivo?: string; p_solicitud_id: string }
+        Returns: undefined
+      }
       cancelar_traspaso: {
         Args: { p_traspaso_id: string; p_user_id: string }
         Returns: undefined
@@ -9433,6 +9761,10 @@ export type Database = {
         Returns: number
       }
       ensure_almacen_mermas: { Args: { _empresa_id: string }; Returns: string }
+      enviar_solicitud_traspaso: {
+        Args: { p_solicitud_id: string }
+        Returns: undefined
+      }
       fn_disponible_almacen: {
         Args: { p_almacen_id: string; p_producto_id: string }
         Returns: number
@@ -9452,6 +9784,15 @@ export type Database = {
           lote_id: string
         }[]
       }
+      fn_log_solicitud_traspaso: {
+        Args: {
+          p_accion: string
+          p_detalle?: Json
+          p_empresa_id: string
+          p_solicitud_id: string
+        }
+        Returns: undefined
+      }
       fn_netear_linea_promo: { Args: { _linea_id: string }; Returns: undefined }
       fn_recalc_venta_header: {
         Args: { p_venta_id: string }
@@ -9464,6 +9805,18 @@ export type Database = {
       fn_reevaluar_promos_venta: {
         Args: { _venta_id: string }
         Returns: number
+      }
+      fn_sugerencias_resurtido: {
+        Args: { p_almacen_id: string }
+        Returns: {
+          cantidad_sugerida: number
+          codigo: string
+          nombre: string
+          producto_id: string
+          stock_actual: number
+          stock_maximo: number
+          stock_minimo: number
+        }[]
       }
       fn_sync_apartado_linea: {
         Args: { p_linea_id: string }
@@ -9658,6 +10011,10 @@ export type Database = {
         Args: { _motivo?: string; _solicitud_id: string }
         Returns: undefined
       }
+      rechazar_solicitud_traspaso: {
+        Args: { p_motivo?: string; p_solicitud_id: string }
+        Returns: undefined
+      }
       recibir_compra_linea_parcial: {
         Args: {
           p_almacen_id: string
@@ -9838,6 +10195,10 @@ export type Database = {
         }
         Returns: number
       }
+      surtir_solicitud_traspaso: {
+        Args: { p_lineas: Json; p_solicitud_id: string }
+        Returns: string
+      }
       tiene_cobertura_vigente: {
         Args: { p_empresa_id: string }
         Returns: boolean
@@ -9938,6 +10299,14 @@ export type Database = {
         | "cancelado"
         | "no_entregado"
       status_producto: "activo" | "inactivo" | "borrador"
+      status_solicitud_traspaso:
+        | "borrador"
+        | "solicitada"
+        | "aprobada"
+        | "parcialmente_surtida"
+        | "surtida"
+        | "rechazada"
+        | "cancelada"
       status_traspaso: "borrador" | "confirmado" | "cancelado"
       status_venta:
         | "borrador"
@@ -10151,6 +10520,15 @@ export const Constants = {
         "no_entregado",
       ],
       status_producto: ["activo", "inactivo", "borrador"],
+      status_solicitud_traspaso: [
+        "borrador",
+        "solicitada",
+        "aprobada",
+        "parcialmente_surtida",
+        "surtida",
+        "rechazada",
+        "cancelada",
+      ],
       status_traspaso: ["borrador", "confirmado", "cancelado"],
       status_venta: [
         "borrador",

@@ -45,6 +45,9 @@ const TABLES_TO_CACHE = [
   'stock_lotes',
   'ruta_sesiones',
   'vehiculos',
+  'producto_almacen_config',
+  'solicitudes_traspaso',
+  'solicitud_traspaso_lineas',
 ] as const;
 
 type CacheTable = typeof TABLES_TO_CACHE[number];
@@ -76,6 +79,9 @@ export const MOBILE_QUICK_SYNC_TABLES: readonly CacheTable[] = [
   'stock_lotes',
   'ruta_sesiones',
   'vehiculos',
+  'producto_almacen_config',
+  'solicitudes_traspaso',
+  'solicitud_traspaso_lineas',
 ];
 
 const PAGE_TIMEOUT_MS = 18000;
@@ -104,6 +110,9 @@ export const COLUMN_SELECTS: Record<string, string> = {
   stock_lotes: 'id,empresa_id,almacen_id,producto_id,lote_id,cantidad,updated_at',
   ruta_sesiones: 'id,empresa_id,vendedor_id,vehiculo_id,carga_id,fecha,inicio_at,fin_at,km_inicio,km_fin,km_recorridos,lat_inicio,lng_inicio,lat_fin,lng_fin,foto_inicio_url,foto_fin_url,notas_inicio,notas_fin,status,created_at,updated_at',
   vehiculos: 'id,empresa_id,alias,placa,marca,modelo,anio,tipo,capacidad_kg,km_actual,foto_url,vendedor_default_id,status,notas,created_at,updated_at',
+  producto_almacen_config: 'id,empresa_id,producto_id,almacen_id,stock_minimo,stock_maximo,activo,updated_at',
+  solicitudes_traspaso: 'id,empresa_id,folio,fecha,status,almacen_origen_id,almacen_destino_id,solicitante_user_id,solicitante_profile_id,observaciones,enviado_at,aprobado_at,rechazado_at,motivo_rechazo,created_at,updated_at',
+  solicitud_traspaso_lineas: 'id,solicitud_id,producto_id,presentacion_id,stock_actual_snapshot,stock_minimo_snapshot,stock_maximo_snapshot,cantidad_sugerida,cantidad_solicitada,cantidad_aprobada,cantidad_surtida,notas,created_at,updated_at',
 };
 
 /**
@@ -145,6 +154,8 @@ const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' 
   // no dependen de esta tabla (viven en `ventas.saldo_pendiente`), así que no se
   // pierde información de cobranza. Solo con la bandera `ruta_sync_hijos`.
   cobros: { column: 'user_id', source: 'user', transaccional: true, soloFlagHijos: true },
+  // Solicitudes de resurtido: en /Ruta cada quien baja únicamente las suyas.
+  solicitudes_traspaso: { column: 'solicitante_user_id', source: 'user', transaccional: true },
 };
 
 /** ¿Aplica el filtro por vendedor a esta tabla? */
@@ -196,6 +207,9 @@ export const TABLE_LABELS: Record<string, string> = {
   stock_lotes: 'Stock por lote',
   ruta_sesiones: 'Jornadas de ruta',
   vehiculos: 'Vehículos',
+  producto_almacen_config: 'Mínimos y máximos',
+  solicitudes_traspaso: 'Solicitudes de traspaso',
+  solicitud_traspaso_lineas: 'Líneas de solicitud',
 };
 
 
@@ -216,6 +230,8 @@ export const TABLES_WITH_EMPRESA = new Set([
   'stock_lotes',
   'ruta_sesiones',
   'vehiculos',
+  'producto_almacen_config',
+  'solicitudes_traspaso',
 ]);
 
 
@@ -263,7 +279,13 @@ const NO_DELTA_TABLES = new Set([
   'stock_lotes',
   // vehiculos: catálogo pequeño que el vendedor NO crea offline.
   'vehiculos',
+  // Config de mínimos/máximos: catálogo chico que el admin edita y el vendedor
+  // NO crea offline, así que el clear+replace es seguro.
+  'producto_almacen_config',
 ]);
+// NOTA: `solicitudes_traspaso` y sus líneas quedan FUERA del refresco completo:
+// el vendedor crea borradores sin señal y un clear+replace los borraría antes
+// de que la cola los suba.
 // NOTA: `ruta_sesiones` queda FUERA del refresco completo a propósito. El
 // vendedor puede abrir o cerrar su jornada sin señal; un clear+replace borraría
 // esa fila local antes de que la cola la suba.
@@ -319,6 +341,7 @@ const CHILD_SCOPES: Partial<Record<CacheTable, { parentTable: CacheTable; foreig
   entrega_lineas: { parentTable: 'entregas', foreignKey: 'entrega_id' },
   tarifa_lineas: { parentTable: 'tarifas', foreignKey: 'tarifa_id' },
   cliente_pedido_sugerido: { parentTable: 'clientes', foreignKey: 'cliente_id' },
+  solicitud_traspaso_lineas: { parentTable: 'solicitudes_traspaso', foreignKey: 'solicitud_id' },
 };
 
 const activeDownloads = new Map<string, Promise<DownloadResult>>();
