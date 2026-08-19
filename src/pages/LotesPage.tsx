@@ -248,12 +248,19 @@ export default function LotesPage() {
       const detalle = stockDetalle?.get(l.id) ?? [];
       if (!detalle.some(d => almacenFilters.has(d.almacen_id))) return false;
     }
+    if (marcaFilters.size > 0 && !marcaFilters.has(l.productos?.marca_id ?? '')) return false;
     if (stockFilter !== 'todos') {
       const q = stockDe(l.id);
       if (stockFilter === 'con' && q <= 0) return false;
       if (stockFilter === 'sin' && q > 0) return false;
     }
     return true;
+  }).sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortBy === 'marca') return dir * (marcaDe(a).localeCompare(marcaDe(b)) || (a.productos?.nombre ?? '').localeCompare(b.productos?.nombre ?? ''));
+    if (sortBy === 'lote') return dir * a.codigo.localeCompare(b.codigo);
+    if (sortBy === 'vence') return dir * ((a.fecha_caducidad ?? '9999-12-31').localeCompare(b.fecha_caducidad ?? '9999-12-31'));
+    return dir * ((a.productos?.nombre ?? '').localeCompare(b.productos?.nombre ?? ''));
   });
 
   const porAlmacenVisible = porAlmacen
