@@ -22,6 +22,8 @@ import { confirmDialog as confirmAsync } from '@/lib/confirm';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { TraspasoLineaLotesDialog } from '@/components/lotes/TraspasoLineaLotesDialog';
 import { Button } from '@/components/ui/button';
+import { Wand2 } from 'lucide-react';
+import { useSugerenciasResurtido } from '@/hooks/useProductoAlmacenConfig';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -333,6 +335,28 @@ export default function TraspasoFormPage() {
     });
     setDirty(true);
   }, [readOnly, maxStockMap]);
+
+  const { refetch: recargarSugerencias } = useSugerenciasResurtido(almacenDestinoId || undefined, false);
+
+  const sugerirPorMinimos = useCallback(async () => {
+    if (!almacenDestinoId) { toast.error('Elige primero el almacén destino'); return; }
+    const { data } = await recargarSugerencias();
+    const filas = data ?? [];
+    if (!filas.length) { toast.info('No hay productos por debajo del mínimo en el destino'); return; }
+    let aplicados = 0;
+    setCantidades(prev => {
+      const next = { ...prev };
+      for (const s of filas) {
+        const disp = maxStockMap.get(s.producto_id) ?? 0;
+        const cant = Math.min(Number(s.cantidad_sugerida) || 0, disp);
+        if (cant > 0) { next[s.producto_id] = cant; aplicados++; }
+      }
+      return next;
+    });
+    setDirty(true);
+    if (aplicados === 0) toast.warning('Los productos sugeridos no tienen stock disponible en el origen');
+    else toast.success(`${aplicados} productos sugeridos para resurtir hasta el máximo`);
+  }, [almacenDestinoId, recargarSugerencias, maxStockMap]);
 
   // Derive lineas from cantidades for save
   const lineasFromCantidades = useMemo(() => {
@@ -749,6 +773,11 @@ export default function TraspasoFormPage() {
                             <option key={m.id} value={m.id}>{m.nombre}</option>
                           ))}
                         </select>
+                      )}
+                      {!!almacenDestinoId && (
+                        <button type="button" onClick={sugerirPorMinimos} className="btn-odoo-secondary flex items-center gap-1.5 whitespace-nowrap">
+                          <Wand2 className="h-3.5 w-3.5" /> Sugerir por mínimos/máximos
+                        </button>
                       )}
                       {totalProductosSeleccionados > 0 && (
                         <span className="text-[11px] text-muted-foreground bg-primary/10 px-2 py-1 rounded">
