@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
-import { ListPage, TABLE_CARD } from '@/components/layout/ListPage';
+import { ListPage } from '@/components/layout/ListPage';
 import { StatusChip } from '@/components/StatusChip';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { fmtDate } from '@/lib/utils';
@@ -85,7 +85,6 @@ export default function SolicitudTraspasoListPage() {
       </ListPage.Toolbar>
 
       <ListPage.Body>
-        <div className={TABLE_CARD}>
           {isLoading ? (
             <TableSkeleton rows={8} cols={7} />
           ) : filtradas.length === 0 ? (
@@ -128,7 +127,6 @@ export default function SolicitudTraspasoListPage() {
               </tbody>
             </table>
           )}
-        </div>
       </ListPage.Body>
     </ListPage>
   );
