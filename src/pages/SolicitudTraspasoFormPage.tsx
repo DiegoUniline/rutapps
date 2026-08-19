@@ -304,6 +304,9 @@ export default function SolicitudTraspasoFormPage() {
                 <button onClick={onRechazar} className="btn-odoo flex items-center gap-1.5">
                   <X className="h-3.5 w-3.5" /> Rechazar
                 </button>
+                <button onClick={onGuardarAprobacionPendiente} disabled={guardarAprobacionPendiente.isPending} className="btn-odoo flex items-center gap-1.5">
+                  <Save className="h-3.5 w-3.5" /> Guardar cambios
+                </button>
                 <button onClick={onAprobar} className="btn-odoo-primary flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5" /> Aprobar
                 </button>
