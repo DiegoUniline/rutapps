@@ -568,6 +568,7 @@ export default function EntregaListPage() {
               <TableHead className="text-[11px]">Fecha pedido</TableHead>
               <TableHead className="text-[11px]">Fecha programada</TableHead>
               <TableHead className="text-[11px]">Fecha real</TableHead>
+              <TableHead className="text-[11px]">Creado</TableHead>
               <TableHead className="text-[11px] text-center">Status</TableHead>
               <TableHead className="w-8" />
             </TableRow>
