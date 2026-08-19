@@ -489,6 +489,33 @@ export default function LotesPage() {
           </PopoverContent>
         </Popover>
 
+        {/* Marcas: dropdown multi-selección (vacío = todas) */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] border transition-colors",
+              marcaFilters.size > 0 ? "bg-primary/10 border-primary text-foreground" : "border-border text-muted-foreground hover:border-primary/40"
+            )}>
+              <Tag className="h-3.5 w-3.5" />
+              {marcaFilters.size === 0 ? 'Todas las marcas' : `${marcaFilters.size} marca${marcaFilters.size !== 1 ? 's' : ''}`}
+              <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 p-1 max-h-80 overflow-y-auto">
+            <label className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] hover:bg-accent cursor-pointer">
+              <Checkbox checked={marcaFilters.size === 0} onCheckedChange={() => setMarcaFilters(new Set())} />
+              <span className="font-medium">Todas</span>
+            </label>
+            <div className="my-1 border-t border-border" />
+            {Array.from(marcasMap ?? new Map()).sort((a, b) => String(a[1]).localeCompare(String(b[1]))).map(([id, nombre]) => (
+              <label key={id} className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] hover:bg-accent cursor-pointer">
+                <Checkbox checked={marcaFilters.has(id)} onCheckedChange={() => toggleMarca(id)} />
+                <span className="truncate">{nombre}</span>
+              </label>
+            ))}
+          </PopoverContent>
+        </Popover>
+
 
         {/* Stock: segmentado */}
         <div className="inline-flex rounded-md border border-border overflow-hidden text-[12px]">
