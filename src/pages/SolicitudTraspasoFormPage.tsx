@@ -301,13 +301,13 @@ export default function SolicitudTraspasoFormPage() {
             )}
             {aprobando && (
               <>
-                <button onClick={onRechazar} className="btn-odoo flex items-center gap-1.5">
+                <button onClick={onRechazar} className="btn-odoo-danger flex items-center gap-1.5">
                   <X className="h-3.5 w-3.5" /> Rechazar
                 </button>
-                <button onClick={onGuardarAprobacionPendiente} disabled={guardarAprobacionPendiente.isPending} className="btn-odoo flex items-center gap-1.5">
-                  <Save className="h-3.5 w-3.5" /> Guardar cambios
+                <button onClick={onGuardarAprobacionPendiente} disabled={guardarAprobacionPendiente.isPending} className="btn-odoo-secondary">
+                  Guardar
                 </button>
-                <button onClick={onAprobar} className="btn-odoo-primary flex items-center gap-1.5">
+                <button onClick={onAprobar} className="btn-odoo-success flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5" /> Aprobar
                 </button>
               </>
@@ -328,7 +328,9 @@ export default function SolicitudTraspasoFormPage() {
               </span>
             )}
             {puedeCancelar && !editable && (
-              <button onClick={onCancelar} className="btn-odoo">Cancelar solicitud</button>
+              <button onClick={onCancelar} className="btn-odoo-secondary p-2" title="Cancelar solicitud">
+                <X className="h-4 w-4" />
+              </button>
             )}
           </div>
         }
