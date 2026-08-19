@@ -62,6 +62,7 @@ const ALL_SECTIONS: Section[] = [
     items: [
       { label: 'Stock', sub: 'Inventario móvil', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock', tone: 'orange' },
       { label: 'Mi carga', sub: 'Producto a bordo', icon: Truck, path: '/ruta/carga', permiso: 'ruta.carga', tone: 'orange' },
+      { label: 'Solicitar mercancía', sub: 'Resurtido a ruta', icon: PackagePlus, path: '/ruta/solicitud-traspaso', permiso: null, tone: 'orange' },
       { label: 'Liquidar', sub: 'Cierre de ruta', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga', tone: 'orange' },
     ],
   },
