@@ -30,7 +30,7 @@ import BroadcastListener from "@/components/BroadcastListener";
 import GlobalColumnResizer from "@/components/global/GlobalColumnResizer";
 import GlobalColumnHider from "@/components/global/GlobalColumnHider";
 import { TableAutoHeight } from "@/components/global/TableAutoHeight";
-
+import PirateBlockPage from '@/pages/PirateBlockPage';
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
