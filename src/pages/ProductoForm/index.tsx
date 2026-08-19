@@ -6,7 +6,7 @@ import { ProductoHeader } from './ProductoHeader';
 import { ProductoGeneralFields } from './ProductoGeneralFields';
 import { ProductoFiscalTab } from './ProductoFiscalTab';
 import { ProductoComisionesTab } from './ProductoComisionesTab';
-import { InventarioTabContent, ProveedoresTabWrapper, KardexTabWrapper } from './ProductoExtraTabs';
+import { InventarioTabContent, MinMaxAlmacenTabContent, ProveedoresTabWrapper, KardexTabWrapper } from './ProductoExtraTabs';
 import { ProductoPresentacionesTab } from './ProductoPresentacionesTab';
 import { ProductoUnidadesStockTab } from './ProductoUnidadesStockTab';
 import { ProductoConfigCompraTab } from './ProductoConfigCompraTab';
@@ -50,6 +50,7 @@ export default function ProductoFormPage() {
           { key: 'fiscal', label: 'Fiscal', content: <ProductoFiscalTab form={h.form} set={h.set} unidadesSat={h.unidadesSat} /> },
           { key: 'comisiones', label: 'Comisiones', content: <ProductoComisionesTab form={h.form} set={h.set} tarifaLineas={h.tarifaLineas} /> },
           { key: 'inventario', label: 'Inventario', content: <InventarioTabContent form={h.form} set={h.set} productoId={h.form?.id} isNew={h.isNew} /> },
+          { key: 'minmax_almacen', label: 'Mín/Máx por almacén', content: <MinMaxAlmacenTabContent form={h.form} set={h.set} productoId={h.form?.id} isNew={h.isNew} /> },
           { key: 'proveedores', label: 'Proveedores', content: <ProveedoresTabWrapper productoId={h.id} isNew={h.isNew} proveedores={h.proveedores ?? []} prodProveedores={h.prodProveedores ?? []} saveProvMut={h.saveProvMut} deleteProvMut={h.deleteProvMut} createProveedor={h.createProveedor} /> },
           { key: 'config_compra', label: 'Config. compra', content: <ProductoConfigCompraTab form={h.form} set={h.set} proveedores={h.proveedores} createProveedor={h.createProveedor} /> },
           { key: 'kardex', label: 'Kardex', content: <KardexTabWrapper productoId={h.id} isNew={h.isNew} /> },
