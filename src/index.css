@@ -300,6 +300,12 @@ html, body, #root {
            disabled:opacity-50 disabled:pointer-events-none;
     box-shadow: var(--shadow-xs);
   }
+  .btn-odoo-info {
+    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
+           bg-info text-info-foreground hover:opacity-90 transition-all
+           disabled:opacity-50 disabled:pointer-events-none;
+    box-shadow: var(--shadow-xs);
+  }
 
   /* Segmented control (corporate style — matches shadcn Tabs) */
   .seg-group {

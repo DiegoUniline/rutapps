@@ -300,17 +300,24 @@ export default function SolicitudTraspasoFormPage() {
               </>
             )}
             {aprobando && (
-              <>
-                <button onClick={onRechazar} className="btn-odoo-danger flex items-center gap-1.5">
-                  <X className="h-3.5 w-3.5" /> Rechazar
-                </button>
-                <button onClick={onGuardarAprobacionPendiente} disabled={guardarAprobacionPendiente.isPending} className="btn-odoo-secondary">
-                  Guardar
-                </button>
-                <button onClick={onAprobar} className="btn-odoo-success flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5" /> Aprobar
-                </button>
-              </>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <button onClick={onGuardarAprobacionPendiente} disabled={guardarAprobacionPendiente.isPending} className="btn-odoo-info">
+                    Guardar
+                  </button>
+                  <button onClick={onCancelar} className="btn-odoo-secondary p-2" title="Cancelar solicitud">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex items-center">
+                  <button onClick={onRechazar} className="btn-odoo-danger flex items-center gap-1.5 rounded-r-none border-r border-destructive-foreground/20">
+                    <X className="h-3.5 w-3.5" /> Rechazar
+                  </button>
+                  <button onClick={onAprobar} className="btn-odoo-success flex items-center gap-1.5 rounded-l-none">
+                    <Check className="h-3.5 w-3.5" /> Aprobar
+                  </button>
+                </div>
+              </div>
             )}
             {puedeSurtir && (
               <>
@@ -326,11 +333,6 @@ export default function SolicitudTraspasoFormPage() {
               <span className="text-[12px] text-muted-foreground flex items-center gap-1.5">
                 <History className="h-3.5 w-3.5" /> Solo consulta e historial
               </span>
-            )}
-            {puedeCancelar && !editable && (
-              <button onClick={onCancelar} className="btn-odoo-secondary p-2" title="Cancelar solicitud">
-                <X className="h-4 w-4" />
-              </button>
             )}
           </div>
         }
