@@ -11,7 +11,7 @@ import { useDisponiblePorAlmacen } from '@/hooks/useApartadoStock';
 import { fmtDate } from '@/lib/utils';
 import {
   useSolicitudTraspaso, useSolicitudTraspasoLineas, useSolicitudTraspasoHistorial,
-  useGuardarSolicitud, useEnviarSolicitud, useAprobarSolicitud, useRechazarSolicitud,
+  useGuardarSolicitud, useGuardarAprobacionPendiente, useEnviarSolicitud, useAprobarSolicitud, useRechazarSolicitud,
   useCancelarSolicitud, useSurtirSolicitud, usePublicarSolicitud, useCerrarSolicitud,
   useSolicitudSurtidos, previewSurtido, SOLICITUD_STATUS_LABELS,
   type StatusSolicitudTraspaso, type PreviewSurtidoLinea,
