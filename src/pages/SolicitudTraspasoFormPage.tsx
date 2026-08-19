@@ -362,7 +362,7 @@ export default function SolicitudTraspasoFormPage() {
           </label>
           <label className="flex flex-col gap-1 md:col-span-2">
             <span className="text-muted-foreground">Observaciones</span>
-            <input className="input-odoo" value={observaciones} disabled={!editable}
+            <input className="input-odoo" value={observaciones} disabled={!editable && !aprobando}
               onChange={e => setObservaciones(e.target.value)} placeholder="Motivo del resurtido..." />
           </label>
         </div>
