@@ -158,7 +158,7 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
           unidad_compra_id: unidadCompraId,
           factor_conversion: factorConversion || 1,
           es_granel: esGranel,
-          unidad_granel: esGranel ? unidadGranel : null,
+          unidad_granel: esGranel ? unidadGranel : 'kg',
           clasificacion_id: categoriaId || null,
           costo,
           precio_principal: precio,
