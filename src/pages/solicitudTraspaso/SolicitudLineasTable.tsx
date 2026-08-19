@@ -23,7 +23,7 @@ interface Props {
   editable: boolean;
   /** El usuario puede ajustar cantidades a aprobar/surtir. */
   aprobando: boolean;
-  disponiblePorProducto?: Record<string, number>;
+  disponiblePorProducto?: Map<string, number>;
   onChange: (id: string, campo: 'cantidad_solicitada' | 'cantidad_aprobada', valor: number) => void;
   onRemove: (id: string) => void;
 }
@@ -56,7 +56,7 @@ export function SolicitudLineasTable({
       </thead>
       <tbody>
         {lineas.map(l => {
-          const disponible = disponiblePorProducto?.[l.producto_id];
+          const disponible = disponiblePorProducto?.get(l.producto_id);
           const insuficiente = aprobando && disponible != null && l.cantidad_aprobada > disponible;
           return (
             <tr key={l.id} className="border-b border-border">

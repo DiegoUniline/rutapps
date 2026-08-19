@@ -284,7 +284,7 @@ export default function SolicitudTraspasoFormPage() {
           status={status}
           editable={editable}
           aprobando={aprobando}
-          disponiblePorProducto={disponibles as Record<string, number> | undefined}
+          disponiblePorProducto={disponibles}
           onChange={cambiarCantidad}
           onRemove={quitarLinea}
         />
