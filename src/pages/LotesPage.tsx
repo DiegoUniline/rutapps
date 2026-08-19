@@ -593,6 +593,7 @@ export default function LotesPage() {
                         <div className="text-foreground">{l.productos?.nombre ?? '—'}</div>
                         {l.productos?.codigo && <div className="text-[11px] text-muted-foreground">{l.productos.codigo}</div>}
                       </td>
+                      <td className="py-1.5 px-3 text-muted-foreground">{marcaDe(l)}</td>
                       <td className={cn("py-1.5 px-3 font-medium", estaVencido(l.fecha_caducidad) ? 'text-destructive' : 'text-foreground')}>{l.codigo}</td>
                       <td className={cn("py-1.5 px-3 text-[12px]", est.clase)}>{est.texto}</td>
                       {matrizCols.map(c => {
