@@ -142,6 +142,7 @@ const navItems: NavItem[] = [
       { label: 'Kardex', path: '/almacen/kardex' },
       { label: 'Inteligencia', path: '/almacen/inteligencia' },
       { label: 'Traspasos', path: '/almacen/traspasos' },
+      { label: 'Solicitudes de traspaso', path: '/almacen/solicitudes-traspaso' },
       { label: 'Ajustes y Mermas', path: '/almacen/ajustes-mermas' },
       { label: 'Lotes', path: '/almacen/lotes' },
       { label: 'Almacenes', path: '/almacen/almacenes' },

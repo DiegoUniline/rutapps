@@ -110,6 +110,8 @@ const AguaPage = lazy(() => import("@/pages/landing/giros/AguaPage"));
 const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
 const TraspasosListPage = lazy(() => import("@/pages/TraspasosListPage"));
 const TraspasoFormPage = lazy(() => import("@/pages/TraspasoFormPage"));
+const SolicitudTraspasoListPage = lazy(() => import("@/pages/SolicitudTraspasoListPage"));
+const SolicitudTraspasoFormPage = lazy(() => import("@/pages/SolicitudTraspasoFormPage"));
 const AjustesInventarioPage = lazy(() => import("@/pages/AjustesInventarioPage"));
 const AjustesMermasPage = lazy(() => import("@/pages/AjustesMermasPage"));
 const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
@@ -821,6 +823,8 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
       <Route path="/almacen/descargas" element={<DescargasPage />} />
       <Route path="/almacen/traspasos" element={<TraspasosListPage />} />
       <Route path="/almacen/traspasos/:id" element={<TraspasoFormPage />} />
+      <Route path="/almacen/solicitudes-traspaso" element={<SolicitudTraspasoListPage />} />
+      <Route path="/almacen/solicitudes-traspaso/:id" element={<SolicitudTraspasoFormPage />} />
       <Route path="/almacen/ajustes" element={<AjustesInventarioPage />} />
       <Route path="/almacen/ajustes-mermas" element={<AjustesMermasPage />} />
       <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
