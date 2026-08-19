@@ -6,7 +6,7 @@ import { ListPage } from '@/components/layout/ListPage';
 import { StatusChip } from '@/components/StatusChip';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { useAlmacenes, useProductos } from '@/hooks/useData';
-import { useApartadoStock } from '@/hooks/useApartadoStock';
+import { useDisponiblePorAlmacen } from '@/hooks/useApartadoStock';
 import { fmtDate } from '@/lib/utils';
 import {
   useSolicitudTraspaso, useSolicitudTraspasoLineas, useSolicitudTraspasoHistorial,
@@ -50,7 +50,7 @@ export default function SolicitudTraspasoFormPage() {
   const cancelar = useCancelarSolicitud();
   const surtir = useSurtirSolicitud();
 
-  const { data: disponibles } = useApartadoStock(origenId || undefined);
+  const { data: disponibles } = useDisponiblePorAlmacen(origenId || undefined);
   const { data: sugerencias = [], refetch: recargarSugerencias } = useSugerenciasResurtido(destinoId || undefined, false);
 
   useEffect(() => {
