@@ -627,7 +627,7 @@ export default function LotesPage() {
               <tfoot>
                 <tr className="border-t-2 border-border bg-muted/40 font-semibold">
                   <td className="py-2 px-3 sticky left-0 z-10 bg-muted/40 text-foreground">Total ({lotesVisibles.length} lotes)</td>
-                  <td /><td />
+                  <td /><td /><td />
                   {matrizCols.map(c => (
                     <td key={c.id} className="py-2 px-3 text-right tabular-nums text-foreground">{nQty(totalesCol.get(c.id) ?? 0)}</td>
                   ))}
