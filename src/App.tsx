@@ -198,6 +198,7 @@ import RutaDevolucion from "@/pages/ruta/RutaDevolucion";
 import RutaEntregas from "@/pages/ruta/RutaEntregas";
 import RutaEntregaDetalle from "@/pages/ruta/RutaEntregaDetalle";
 import RutaDescarga from "@/pages/ruta/RutaDescarga";
+import RutaSolicitudTraspaso from "@/pages/ruta/RutaSolicitudTraspaso";
 import RutaMapaPage from "@/pages/ruta/RutaMapaPage";
 import RutaNavegacionPage from "@/pages/ruta/RutaNavegacionPage";
 import RutaPerfil from "@/pages/ruta/RutaPerfil";
@@ -639,6 +640,7 @@ function AuthenticatedAppRoutes() {
         <Route path="/ruta/clientes/:id" element={<RutaClienteDetalle />} />
         <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
         <Route path="/ruta/descarga" element={<RutaDescarga />} />
+      <Route path="/ruta/solicitud-traspaso" element={<RutaSolicitudTraspaso />} />
         <Route path="/ruta/mapa" element={<RutaMapaPage />} />
         <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
         <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
@@ -707,6 +709,7 @@ function renderAuthenticatedRoutes() {
       <Route path="/ruta/clientes/:id" element={<RutaClienteDetalle />} />
       <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
       <Route path="/ruta/descarga" element={<RutaDescarga />} />
+      <Route path="/ruta/solicitud-traspaso" element={<RutaSolicitudTraspaso />} />
       <Route path="/ruta/mapa" element={<RutaMapaPage />} />
       <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
       <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
