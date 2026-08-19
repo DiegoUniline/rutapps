@@ -25,7 +25,7 @@ interface LoteRow {
   costo: number | null;
   notas: string | null;
   activo: boolean;
-  productos?: { nombre: string; codigo: string | null } | null;
+  productos?: { nombre: string; codigo: string | null; marca_id?: string | null } | null;
 }
 
 interface EditState {
