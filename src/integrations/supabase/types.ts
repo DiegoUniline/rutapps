@@ -5510,8 +5510,8 @@ export type Database = {
           empresa_id: string
           id: string
           producto_id: string
-          stock_maximo: number
-          stock_minimo: number
+          stock_maximo: number | null
+          stock_minimo: number | null
           updated_at: string
         }
         Insert: {
@@ -5521,8 +5521,8 @@ export type Database = {
           empresa_id: string
           id?: string
           producto_id: string
-          stock_maximo?: number
-          stock_minimo?: number
+          stock_maximo?: number | null
+          stock_minimo?: number | null
           updated_at?: string
         }
         Update: {
@@ -5532,8 +5532,8 @@ export type Database = {
           empresa_id?: string
           id?: string
           producto_id?: string
-          stock_maximo?: number
-          stock_minimo?: number
+          stock_maximo?: number | null
+          stock_minimo?: number | null
           updated_at?: string
         }
         Relationships: [
