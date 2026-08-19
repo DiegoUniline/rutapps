@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Save, Copy, ListChecks, Search } from 'lucide-react';
+import { Save, Copy, ListChecks, Search, X } from 'lucide-react';
 import { useAlmacenes, useProductos } from '@/hooks/useData';
 import { useMinMaxConfigMap, useStockMatriz, useGuardarMinMaxBulk, cellKey, type MinMaxRow } from '@/hooks/useMinMaxMatriz';
 import MinMaxMatrixTable, { type CeldaValor } from '@/components/minmax/MinMaxMatrixTable';
@@ -9,6 +9,58 @@ import AsignarValoresDialog from '@/components/minmax/AsignarValoresDialog';
 
 const PAGE_SIZE = 50;
 type EstadoFiltro = 'todos' | 'sin_config' | 'bajo_min' | 'sobre_max';
+
+type ChipGroupProps = {
+  label: string;
+  options: [string, string][];
+  selected: Set<string>;
+  onChange: (selected: Set<string>) => void;
+  allLabel?: string;
+};
+
+function ChipGroup({ label, options, selected, onChange, allLabel = 'Todos' }: ChipGroupProps) {
+  const todosSeleccionados = selected.size === 0;
+  const toggle = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange(next);
+  };
+  return (
+    <div className="flex flex-col gap-1.5 min-w-0">
+      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">{label}</span>
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          onClick={() => onChange(new Set())}
+          className={`px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
+            todosSeleccionados
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-background text-foreground border-border hover:border-primary/50'
+          }`}
+        >
+          {allLabel}
+        </button>
+        {options.map(([id, nombre]) => {
+          const active = selected.has(id);
+          return (
+            <button
+              key={id}
+              onClick={() => toggle(id)}
+              className={`px-2.5 py-1 rounded-full text-[11px] border transition-colors flex items-center gap-1 ${
+                active
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-foreground border-border hover:border-primary/50'
+              }`}
+            >
+              {nombre}
+              {active && <X className="h-3 w-3" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function MinMaxPage() {
   const { data: almacenes = [] } = useAlmacenes();
@@ -20,9 +72,9 @@ export default function MinMaxPage() {
   const [pending, setPending] = useState<Record<string, CeldaValor>>({});
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [buscar, setBuscar] = useState('');
-  const [marca, setMarca] = useState('todas');
-  const [categoria, setCategoria] = useState('todas');
-  const [proveedor, setProveedor] = useState('todos');
+  const [marcasSel, setMarcasSel] = useState<Set<string>>(new Set());
+  const [categoriasSel, setCategoriasSel] = useState<Set<string>>(new Set());
+  const [proveedoresSel, setProveedoresSel] = useState<Set<string>>(new Set());
   const [estado, setEstado] = useState<EstadoFiltro>('todos');
   const [page, setPage] = useState(1);
   const [copiarOpen, setCopiarOpen] = useState(false);
@@ -51,15 +103,15 @@ export default function MinMaxPage() {
     const q = buscar.trim().toLowerCase();
     return (productos as any[]).filter(p => {
       if (q && !(`${p.codigo ?? ''} ${p.nombre ?? ''} ${p.formula ?? ''}`.toLowerCase().includes(q))) return false;
-      if (marca !== 'todas' && p.marca_id !== marca) return false;
-      if (categoria !== 'todas' && p.clasificacion_id !== categoria) return false;
-      if (proveedor !== 'todos' && p.proveedor_preferido_id !== proveedor) return false;
+      if (marcasSel.size > 0 && !marcasSel.has(p.marca_id)) return false;
+      if (categoriasSel.size > 0 && !categoriasSel.has(p.clasificacion_id)) return false;
+      if (proveedoresSel.size > 0 && !proveedoresSel.has(p.proveedor_preferido_id)) return false;
       if (estado === 'sin_config') return almacenes.every(a => { const v = valor(p.id, a.id); return v.min == null && v.max == null; });
       if (estado === 'bajo_min') return almacenes.some(a => { const v = valor(p.id, a.id); const s = stock[cellKey(p.id, a.id)]; return v.min != null && s != null && s < v.min; });
       if (estado === 'sobre_max') return almacenes.some(a => { const v = valor(p.id, a.id); const s = stock[cellKey(p.id, a.id)]; return v.max != null && v.max > 0 && s != null && s > v.max; });
       return true;
     });
-  }, [productos, buscar, marca, categoria, proveedor, estado, almacenes, config, pending, stock]);
+  }, [productos, buscar, marcasSel, categoriasSel, proveedoresSel, estado, almacenes, config, pending, stock]);
 
   const totalPages = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
   const pageSafe = Math.min(page, totalPages);
@@ -137,6 +189,8 @@ export default function MinMaxPage() {
 
   const cambios = Object.keys(pending).length;
 
+  const filtrosActivos = marcasSel.size + categoriasSel.size + proveedoresSel.size;
+
   return (
     <div className="p-4 lg:p-6 bg-background min-h-[100dvh] space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -157,31 +211,36 @@ export default function MinMaxPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative">
-          <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input className="input-odoo pl-7 w-64" placeholder="Buscar producto, código o código de barras..." value={buscar} onChange={e => { setBuscar(e.target.value); setPage(1); }} />
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input className="input-odoo pl-7 w-64" placeholder="Buscar producto, código o código de barras..." value={buscar} onChange={e => { setBuscar(e.target.value); setPage(1); }} />
+          </div>
+          <select className="input-odoo" value={estado} onChange={e => { setEstado(e.target.value as EstadoFiltro); setPage(1); }}>
+            <option value="todos">Todos los estados</option>
+            <option value="sin_config">Sin configuración</option>
+            <option value="bajo_min">Debajo del mínimo</option>
+            <option value="sobre_max">Encima del máximo</option>
+          </select>
+          {seleccion.size > 0 && (
+            <span className="text-[12px] text-muted-foreground">{seleccion.size} seleccionados · <button className="underline" onClick={() => setSeleccion(new Set())}>limpiar</button></span>
+          )}
         </div>
-        <select className="input-odoo" value={categoria} onChange={e => { setCategoria(e.target.value); setPage(1); }}>
-          <option value="todas">Todas las categorías</option>
-          {opciones.cats.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
-        </select>
-        <select className="input-odoo" value={marca} onChange={e => { setMarca(e.target.value); setPage(1); }}>
-          <option value="todas">Todas las marcas</option>
-          {opciones.marcas.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
-        </select>
-        <select className="input-odoo" value={proveedor} onChange={e => { setProveedor(e.target.value); setPage(1); }}>
-          <option value="todos">Todos los proveedores</option>
-          {opciones.provs.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
-        </select>
-        <select className="input-odoo" value={estado} onChange={e => { setEstado(e.target.value as EstadoFiltro); setPage(1); }}>
-          <option value="todos">Todos</option>
-          <option value="sin_config">Sin configuración</option>
-          <option value="bajo_min">Debajo del mínimo</option>
-          <option value="sobre_max">Encima del máximo</option>
-        </select>
-        {seleccion.size > 0 && (
-          <span className="text-[12px] text-muted-foreground">{seleccion.size} seleccionados · <button className="underline" onClick={() => setSeleccion(new Set())}>limpiar</button></span>
+
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          <ChipGroup label="Categorías" options={opciones.cats} selected={categoriasSel} onChange={v => { setCategoriasSel(v); setPage(1); }} allLabel="Todas" />
+          <ChipGroup label="Marcas" options={opciones.marcas} selected={marcasSel} onChange={v => { setMarcasSel(v); setPage(1); }} allLabel="Todas" />
+          <ChipGroup label="Proveedores" options={opciones.provs} selected={proveedoresSel} onChange={v => { setProveedoresSel(v); setPage(1); }} allLabel="Todos" />
+        </div>
+
+        {filtrosActivos > 0 && (
+          <button
+            className="text-[11px] text-muted-foreground underline hover:text-foreground"
+            onClick={() => { setMarcasSel(new Set()); setCategoriasSel(new Set()); setProveedoresSel(new Set()); setPage(1); }}
+          >
+            Limpiar filtros de chips ({filtrosActivos})
+          </button>
         )}
       </div>
 
