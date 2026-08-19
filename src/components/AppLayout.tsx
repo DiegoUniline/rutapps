@@ -144,6 +144,7 @@ const navItems: NavItem[] = [
       { label: 'Traspasos', path: '/almacen/traspasos' },
       { label: 'Solicitudes de traspaso', path: '/almacen/solicitudes-traspaso' },
       { label: 'Ajustes y Mermas', path: '/almacen/ajustes-mermas' },
+      { label: 'Máximos y mínimos', path: '/almacen/min-max' },
       { label: 'Lotes', path: '/almacen/lotes' },
       { label: 'Almacenes', path: '/almacen/almacenes' },
     ],
