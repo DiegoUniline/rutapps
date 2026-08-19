@@ -35,7 +35,7 @@ export const defaultProduct: Partial<Producto & { usa_listas_precio?: boolean }>
   pct_comision: 0, status: 'activo', almacenes: [], tiene_iva: false,
   tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '',
   iva_pct: 16, ieps_pct: 0, ieps_tipo: 'porcentaje',
-  costo_incluye_impuestos: false, usa_listas_precio: false,
+  costo_incluye_impuestos: false, usa_listas_precio: false, grupo_precio: null,
 };
 
 export function useProductoForm() {
