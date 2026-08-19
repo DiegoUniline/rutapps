@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Save, Copy, ListChecks, Search, X, ChevronDown, Check } from 'lucide-react';
+import { Save, Copy, ListChecks, Search, X, ChevronDown } from 'lucide-react';
 import { useAlmacenes, useProductos } from '@/hooks/useData';
 import { useMinMaxConfigMap, useStockMatriz, useGuardarMinMaxBulk, cellKey, type MinMaxRow } from '@/hooks/useMinMaxMatriz';
 import MinMaxMatrixTable, { type CeldaValor } from '@/components/minmax/MinMaxMatrixTable';
