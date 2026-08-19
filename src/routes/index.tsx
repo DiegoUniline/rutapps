@@ -1,5 +1,5 @@
-import PirateBlockPage from '@/pages/PirateBlockPage';
+import { Navigate } from 'react-router-dom';
 
-const Index = () => <PirateBlockPage />;
+const Index = () => <Navigate to="/" replace />;
 
 export default Index;
