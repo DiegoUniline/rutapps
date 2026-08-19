@@ -85,6 +85,14 @@ function findMatchingRule(
     if (catRule) return catRule;
   }
 
+  // Grupo de precio del producto (A, B, C, D…): más específico que la regla global.
+  if (producto.grupo_precio) {
+    const grupoRule = filtered.find(
+      r => r.aplica_a === 'grupo' && (r.grupos ?? []).includes(producto.grupo_precio!)
+    );
+    if (grupoRule) return grupoRule;
+  }
+
   const globalRule = filtered.find(r => r.aplica_a === 'todos');
   return globalRule ?? null;
 }
