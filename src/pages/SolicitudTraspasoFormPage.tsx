@@ -11,7 +11,7 @@ import { useDisponiblePorAlmacen } from '@/hooks/useApartadoStock';
 import { fmtDate } from '@/lib/utils';
 import {
   useSolicitudTraspaso, useSolicitudTraspasoLineas, useSolicitudTraspasoHistorial,
-  useGuardarSolicitud, useEnviarSolicitud, useAprobarSolicitud, useRechazarSolicitud,
+  useGuardarSolicitud, useGuardarAprobacionPendiente, useEnviarSolicitud, useAprobarSolicitud, useRechazarSolicitud,
   useCancelarSolicitud, useSurtirSolicitud, usePublicarSolicitud, useCerrarSolicitud,
   useSolicitudSurtidos, previewSurtido, SOLICITUD_STATUS_LABELS,
   type StatusSolicitudTraspaso, type PreviewSurtidoLinea,
@@ -50,6 +50,7 @@ export default function SolicitudTraspasoFormPage() {
   const aprobando = status === 'solicitada';
 
   const guardar = useGuardarSolicitud();
+  const guardarAprobacionPendiente = useGuardarAprobacionPendiente();
   const enviar = useEnviarSolicitud();
   const aprobar = useAprobarSolicitud();
   const rechazar = useRechazarSolicitud();
@@ -175,6 +176,18 @@ export default function SolicitudTraspasoFormPage() {
 
   const lineasPayload = () => lineas.map(l => ({ id: l.id, cantidad: l.cantidad_aprobada }));
 
+  const onGuardarAprobacionPendiente = async () => {
+    if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return; }
+    if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return; }
+    await guardarAprobacionPendiente.mutateAsync({
+      id: solicitudId,
+      almacen_origen_id: origenId,
+      observaciones,
+      lineas: lineas.map(l => ({ id: l.id, cantidad_aprobada: l.cantidad_aprobada })),
+    });
+    toast.success('Cambios guardados');
+  };
+
   const onAprobar = async () => {
     if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return; }
     if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return; }
@@ -291,6 +304,9 @@ export default function SolicitudTraspasoFormPage() {
                 <button onClick={onRechazar} className="btn-odoo flex items-center gap-1.5">
                   <X className="h-3.5 w-3.5" /> Rechazar
                 </button>
+                <button onClick={onGuardarAprobacionPendiente} disabled={guardarAprobacionPendiente.isPending} className="btn-odoo flex items-center gap-1.5">
+                  <Save className="h-3.5 w-3.5" /> Guardar cambios
+                </button>
                 <button onClick={onAprobar} className="btn-odoo-primary flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5" /> Aprobar
                 </button>
@@ -346,7 +362,7 @@ export default function SolicitudTraspasoFormPage() {
           </label>
           <label className="flex flex-col gap-1 md:col-span-2">
             <span className="text-muted-foreground">Observaciones</span>
-            <input className="input-odoo" value={observaciones} disabled={!editable}
+            <input className="input-odoo" value={observaciones} disabled={!editable && !aprobando}
               onChange={e => setObservaciones(e.target.value)} placeholder="Motivo del resurtido..." />
           </label>
         </div>
