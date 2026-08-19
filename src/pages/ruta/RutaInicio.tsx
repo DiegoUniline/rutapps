@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ReceiptCent,
   Gift,
+  PackagePlus,
 } from 'lucide-react';
 import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
