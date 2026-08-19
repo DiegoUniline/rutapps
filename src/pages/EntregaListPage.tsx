@@ -659,7 +659,7 @@ export default function EntregaListPage() {
                 </TableRow>
                 {isExpanded && (
                   <TableRow key={`exp-${e.id}`} className="bg-muted/30 hover:bg-muted/30">
-                    <TableCell colSpan={13} className="p-0">
+                    <TableCell colSpan={14} className="p-0">
                       <div className="px-6 py-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <h3 className="text-[12px] font-semibold text-foreground flex items-center gap-1.5">
