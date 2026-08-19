@@ -649,6 +649,7 @@ export default function EntregaListPage() {
                   <TableCell className="text-[12px] text-muted-foreground py-2">{e.ventas?.fecha ? fmtDate(e.ventas.fecha) : '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(e.fecha)}</TableCell>
                   <TableCell className="text-[12px] py-2">{e.fecha_entrega ? <span className="text-success font-medium">{fmtDate(e.fecha_entrega)}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2 tabular-nums">{e.created_at ? fmtDateTime(e.created_at) : '—'}</TableCell>
                   <TableCell className="text-center py-2">
                     <Badge variant={badge.variant} className={`text-[10px] ${badge.className ?? ''}`}>{badge.label}</Badge>
                   </TableCell>
