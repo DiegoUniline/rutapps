@@ -55,6 +55,16 @@ export default function LotesPage() {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
   const [stockFilter, setStockFilter] = useState<'todos' | 'con' | 'sin'>('todos');
+  const [marcaFilters, setMarcaFilters] = useState<Set<string>>(new Set()); // vacío = todas
+  const toggleMarca = (id: string) => setMarcaFilters(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+  const [sortBy, setSortBy] = useState<'producto' | 'marca' | 'lote' | 'vence'>('producto');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const toggleSort = (k: 'producto' | 'marca' | 'lote' | 'vence') => {
+    if (sortBy === k) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortBy(k); setSortDir('asc'); }
+  };
   const [vencMode, setVencMode] = useState<'todos' | 'porvencer' | 'vencido'>('todos');
   const [vencDias, setVencDias] = useState('30'); // umbral editable de "por vencer"
   const toggleExpand = (id: string) => setExpanded(prev => {
