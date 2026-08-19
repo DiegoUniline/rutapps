@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Send, Check, X, Wand2, Truck } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { ListPage } from '@/components/layout/ListPage';
 import { StatusChip } from '@/components/StatusChip';
 import ProductSearchInput from '@/components/ProductSearchInput';
