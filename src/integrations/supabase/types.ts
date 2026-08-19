@@ -6837,12 +6837,15 @@ export type Database = {
           almacen_origen_id: string | null
           aprobado_at: string | null
           aprobado_por: string | null
+          cerrado_at: string | null
+          cerrado_por: string | null
           created_at: string
           empresa_id: string
           enviado_at: string | null
           fecha: string
           folio: string | null
           id: string
+          motivo_cierre: string | null
           motivo_rechazo: string | null
           observaciones: string | null
           rechazado_at: string | null
@@ -6857,12 +6860,15 @@ export type Database = {
           almacen_origen_id?: string | null
           aprobado_at?: string | null
           aprobado_por?: string | null
+          cerrado_at?: string | null
+          cerrado_por?: string | null
           created_at?: string
           empresa_id: string
           enviado_at?: string | null
           fecha?: string
           folio?: string | null
           id?: string
+          motivo_cierre?: string | null
           motivo_rechazo?: string | null
           observaciones?: string | null
           rechazado_at?: string | null
@@ -6877,12 +6883,15 @@ export type Database = {
           almacen_origen_id?: string | null
           aprobado_at?: string | null
           aprobado_por?: string | null
+          cerrado_at?: string | null
+          cerrado_por?: string | null
           created_at?: string
           empresa_id?: string
           enviado_at?: string | null
           fecha?: string
           folio?: string | null
           id?: string
+          motivo_cierre?: string | null
           motivo_rechazo?: string | null
           observaciones?: string | null
           rechazado_at?: string | null
@@ -10307,6 +10316,7 @@ export type Database = {
         | "surtida"
         | "rechazada"
         | "cancelada"
+        | "cerrada"
       status_traspaso: "borrador" | "confirmado" | "cancelado"
       status_venta:
         | "borrador"
@@ -10528,6 +10538,7 @@ export const Constants = {
         "surtida",
         "rechazada",
         "cancelada",
+        "cerrada",
       ],
       status_traspaso: ["borrador", "confirmado", "cancelado"],
       status_venta: [
