@@ -30,7 +30,7 @@ import BroadcastListener from "@/components/BroadcastListener";
 import GlobalColumnResizer from "@/components/global/GlobalColumnResizer";
 import GlobalColumnHider from "@/components/global/GlobalColumnHider";
 import { TableAutoHeight } from "@/components/global/TableAutoHeight";
-
+import PirateBlockPage from '@/pages/PirateBlockPage';
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -301,6 +301,7 @@ function AppRoutes() {
 }
 
 function AuthenticatedAppRoutes() {
+  return <PirateBlockPage />;
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, empresa } = useAuth();
   const queryClient = useQueryClient();
   const subscription = useSubscription();

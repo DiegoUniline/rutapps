@@ -5,8 +5,10 @@ import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
 import { translateError } from '@/lib/errorTranslator';
 import { Seo } from '@/components/seo/Seo';
+import PirateBlockPage from '@/pages/PirateBlockPage';
 
 export default function LoginPage() {
+  return <PirateBlockPage />;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isForgot, setIsForgot] = useState(false);

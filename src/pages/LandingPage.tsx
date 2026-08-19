@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PirateBlockPage from '@/pages/PirateBlockPage';
 import { Link, useSearchParams } from 'react-router-dom';
 import rutappLogo from '@/assets/rutapp-logo.jpeg.asset.json';
 import {
@@ -252,6 +253,7 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  return <PirateBlockPage />;
   return (
     <div className="min-h-[100dvh] bg-white overflow-x-hidden antialiased"
       style={{ color: BRAND.ink, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>

@@ -65,8 +65,10 @@ const COUNTRY_CODES = [
 type VerificationMethod = 'whatsapp' | 'email' | null;
 
 const REF_KEY = 'rutapp_partner_ref';
+import PirateBlockPage from '@/pages/PirateBlockPage';
 
 export default function SignupPage() {
+  return <PirateBlockPage />;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
