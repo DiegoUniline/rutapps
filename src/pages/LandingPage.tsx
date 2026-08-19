@@ -252,6 +252,7 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  return <PirateBlockPage />;
   return (
     <div className="min-h-[100dvh] bg-white overflow-x-hidden antialiased"
       style={{ color: BRAND.ink, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
