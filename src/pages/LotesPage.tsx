@@ -365,10 +365,16 @@ export default function LotesPage() {
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Boxes className="h-5 w-5" /> Lotes
         </h1>
-        <button className="btn-odoo-primary text-sm flex items-center gap-1" onClick={openNew} disabled={noHayProductos}>
-          <Plus className="h-4 w-4" /> Nuevo lote
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="btn-odoo text-sm flex items-center gap-1" onClick={exportar} disabled={lotesVisibles.length === 0}>
+            <Download className="h-4 w-4" /> Exportar
+          </button>
+          <button className="btn-odoo-primary text-sm flex items-center gap-1" onClick={openNew} disabled={noHayProductos}>
+            <Plus className="h-4 w-4" /> Nuevo lote
+          </button>
+        </div>
       </div>
+
 
       {noHayProductos && (
         <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-[13px] text-foreground flex items-start gap-2">
