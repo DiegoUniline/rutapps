@@ -27,6 +27,7 @@ export interface ProductForPricing {
   precio_principal: number;
   costo?: number;
   clasificacion_id?: string | null;
+  grupo_precio?: string | null;
   tiene_iva?: boolean;
   iva_pct?: number;
   tiene_ieps?: boolean;
