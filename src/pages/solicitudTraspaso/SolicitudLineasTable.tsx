@@ -50,14 +50,17 @@ export function SolicitudLineasTable({
           <th className="px-3 py-2 text-right">Solicitado</th>
           <th className="px-3 py-2 text-right">Aprobado</th>
           {mostrarSurtido && <th className="px-3 py-2 text-right">Surtido</th>}
-          {aprobando && <th className="px-3 py-2 text-right">Disp. origen</th>}
+          {mostrarSurtido && <th className="px-3 py-2 text-right">Pendiente</th>}
+          <th className="px-3 py-2 text-right">Stock origen</th>
           {editable && <th className="px-3 py-2" />}
         </tr>
       </thead>
       <tbody>
         {lineas.map(l => {
           const disponible = disponiblePorProducto?.get(l.producto_id);
-          const insuficiente = aprobando && disponible != null && l.cantidad_aprobada > disponible;
+          const base = l.cantidad_aprobada || l.cantidad_solicitada;
+          const pendiente = Math.max(0, base - l.cantidad_surtida);
+          const insuficiente = disponible != null && pendiente > 0 && pendiente > disponible;
           return (
             <tr key={l.id} className="border-b border-border">
               <td className="px-3 py-1.5">{l.codigo}</td>
@@ -87,11 +90,14 @@ export function SolicitudLineasTable({
                 ) : fmtNum(l.cantidad_aprobada)}
               </td>
               {mostrarSurtido && <td className="px-3 py-1.5 text-right">{fmtNum(l.cantidad_surtida)}</td>}
-              {aprobando && (
-                <td className={`px-3 py-1.5 text-right ${insuficiente ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                  {disponible != null ? fmtNum(disponible) : '—'}
+              {mostrarSurtido && (
+                <td className={`px-3 py-1.5 text-right ${pendiente > 0 ? 'text-destructive font-medium' : ''}`}>
+                  {fmtNum(pendiente)}
                 </td>
               )}
+              <td className={`px-3 py-1.5 text-right ${insuficiente ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                {disponible != null ? fmtNum(disponible) : '—'}
+              </td>
               {editable && (
                 <td className="px-3 py-1.5 text-right">
                   <button onClick={() => onRemove(l.id)} className="text-muted-foreground hover:text-destructive">
