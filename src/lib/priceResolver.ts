@@ -6,9 +6,11 @@
  */
 
 export interface TarifaLineaRule {
-  aplica_a: string; // 'todos' | 'producto' | 'categoria'
+  aplica_a: string; // 'todos' | 'producto' | 'categoria' | 'grupo'
   producto_ids: string[];
   clasificacion_ids: string[];
+  /** Grupos de precio (A, B, C, D…) a los que aplica la regla. */
+  grupos?: string[];
   tipo_calculo: string; // 'precio_fijo' | 'margen_costo' | 'descuento_precio'
   precio: number;
   precio_minimo: number | null;
