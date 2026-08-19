@@ -1,0 +1,2 @@
+ALTER TABLE public.producto_almacen_config ALTER COLUMN stock_minimo DROP NOT NULL, ALTER COLUMN stock_maximo DROP NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_pac_empresa_almacen ON public.producto_almacen_config(empresa_id, almacen_id);
