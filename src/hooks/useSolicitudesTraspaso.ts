@@ -6,7 +6,7 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 
 export type StatusSolicitudTraspaso =
   | 'borrador' | 'solicitada' | 'aprobada' | 'parcialmente_surtida'
-  | 'surtida' | 'rechazada' | 'cancelada';
+  | 'surtida' | 'rechazada' | 'cancelada' | 'cerrada';
 
 export const SOLICITUD_STATUS_LABELS: Record<StatusSolicitudTraspaso, string> = {
   borrador: 'Borrador',
@@ -16,6 +16,7 @@ export const SOLICITUD_STATUS_LABELS: Record<StatusSolicitudTraspaso, string> = 
   surtida: 'Surtida',
   rechazada: 'Rechazada',
   cancelada: 'Cancelada',
+  cerrada: 'Cerrada',
 };
 
 export interface SolicitudTraspaso {
@@ -33,6 +34,9 @@ export interface SolicitudTraspaso {
   aprobado_at: string | null;
   rechazado_at: string | null;
   motivo_rechazo: string | null;
+  cerrado_at: string | null;
+  cerrado_por: string | null;
+  motivo_cierre: string | null;
   created_at: string;
   updated_at: string;
   almacen_origen?: { nombre: string } | null;
@@ -59,7 +63,7 @@ export interface SolicitudTraspasoLinea {
 const from = (t: string) => (supabase.from as any)(t);
 
 const HEADER_SELECT =
-  'id, empresa_id, folio, fecha, status, almacen_origen_id, almacen_destino_id, solicitante_user_id, solicitante_profile_id, observaciones, enviado_at, aprobado_at, rechazado_at, motivo_rechazo, created_at, updated_at,' +
+  'id, empresa_id, folio, fecha, status, almacen_origen_id, almacen_destino_id, solicitante_user_id, solicitante_profile_id, observaciones, enviado_at, aprobado_at, rechazado_at, motivo_rechazo, cerrado_at, cerrado_por, motivo_cierre, created_at, updated_at,' +
   ' almacen_origen:almacenes!solicitudes_traspaso_almacen_origen_id_fkey(nombre),' +
   ' almacen_destino:almacenes!solicitudes_traspaso_almacen_destino_id_fkey(nombre),' +
   ' solicitante:profiles!solicitudes_traspaso_solicitante_profile_id_fkey(nombre)';
@@ -143,6 +147,7 @@ export function useInvalidarSolicitudes() {
     qc.invalidateQueries({ queryKey: ['solicitud_traspaso'] });
     qc.invalidateQueries({ queryKey: ['solicitud_traspaso_lineas'] });
     qc.invalidateQueries({ queryKey: ['solicitud_traspaso_historial'] });
+    qc.invalidateQueries({ queryKey: ['solicitud_traspaso_surtidos'] });
     qc.invalidateQueries({ queryKey: ['stock_almacen'] });
     qc.invalidateQueries({ queryKey: ['traspasos'] });
   };
@@ -229,4 +234,59 @@ export const useEnviarSolicitud = () => useRpc<{ p_solicitud_id: string }>('envi
 export const useAprobarSolicitud = () => useRpc<{ p_solicitud_id: string; p_lineas: any }>('aprobar_solicitud_traspaso');
 export const useRechazarSolicitud = () => useRpc<{ p_solicitud_id: string; p_motivo: string | null }>('rechazar_solicitud_traspaso');
 export const useCancelarSolicitud = () => useRpc<{ p_solicitud_id: string; p_motivo: string | null }>('cancelar_solicitud_traspaso');
+export const usePublicarSolicitud = () => useRpc<{ p_solicitud_id: string; p_lineas?: any }>('publicar_solicitud_traspaso');
+export const useCerrarSolicitud = () => useRpc<{ p_solicitud_id: string; p_motivo: string | null }>('cerrar_solicitud_traspaso');
 export const useSurtirSolicitud = () => useRpc<{ p_solicitud_id: string; p_lineas: any }>('surtir_solicitud_traspaso');
+
+export interface PreviewSurtidoLinea {
+  linea_id: string;
+  producto_id: string;
+  codigo: string | null;
+  nombre: string;
+  cantidad_solicitada: number;
+  cantidad_surtida: number;
+  cantidad_pendiente: number;
+  disponible_origen: number;
+  cantidad_surtible: number;
+}
+
+/** Consulta el stock real del origen justo antes de publicar o surtir. */
+export async function previewSurtido(solicitudId: string): Promise<PreviewSurtidoLinea[]> {
+  const { data, error } = await (supabase.rpc as any)('preview_surtido_solicitud', { p_solicitud_id: solicitudId });
+  if (error) throw error;
+  return ((data ?? []) as any[]).map(r => ({
+    linea_id: r.linea_id,
+    producto_id: r.producto_id,
+    codigo: r.codigo,
+    nombre: r.nombre,
+    cantidad_solicitada: Number(r.cantidad_solicitada) || 0,
+    cantidad_surtida: Number(r.cantidad_surtida) || 0,
+    cantidad_pendiente: Number(r.cantidad_pendiente) || 0,
+    disponible_origen: Number(r.disponible_origen) || 0,
+    cantidad_surtible: Number(r.cantidad_surtible) || 0,
+  }));
+}
+
+export interface SurtidoHistorial {
+  id: string;
+  created_at: string;
+  traspaso_id: string;
+  traspasos?: { folio: string | null; fecha: string; traspaso_lineas?: Array<{ cantidad: number }> } | null;
+  surtido_profile?: { nombre: string | null } | null;
+}
+
+/** Historial de surtidos (cada uno es un traspaso real) de la solicitud. */
+export function useSolicitudSurtidos(solicitudId?: string) {
+  return useQuery({
+    queryKey: ['solicitud_traspaso_surtidos', solicitudId],
+    enabled: !!solicitudId && solicitudId !== 'nueva',
+    queryFn: async (): Promise<SurtidoHistorial[]> => {
+      const { data, error } = await from('solicitud_traspaso_surtidos')
+        .select('id, created_at, traspaso_id, traspasos(folio, fecha, traspaso_lineas(cantidad))')
+        .eq('solicitud_id', solicitudId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as SurtidoHistorial[];
+    },
+  });
+}

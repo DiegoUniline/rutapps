@@ -16,6 +16,9 @@ const config: Record<string, { label: string; className: string }> = {
   pagada: { label: 'Pagada', className: 'status-pill status-activo' },
   cancelado: { label: 'Cancelado', className: 'status-pill status-inactivo' },
   cancelada: { label: 'Cancelada', className: 'status-pill status-inactivo' },
+  cerrada: { label: 'Cerrada', className: 'status-pill status-inactivo' },
+  surtida: { label: 'Surtida', className: 'status-pill status-activo' },
+  parcialmente_surtida: { label: 'Parcialmente surtida', className: 'status-pill bg-amber-100 text-amber-700 border border-amber-300' },
 };
 
 export function StatusChip({ status, label }: { status: StatusType; label?: string }) {
