@@ -9714,6 +9714,10 @@ export type Database = {
         Args: { p_user_id?: string; p_venta_id: string }
         Returns: undefined
       }
+      cerrar_solicitud_traspaso: {
+        Args: { p_motivo?: string; p_solicitud_id: string }
+        Returns: undefined
+      }
       check_stock_lote_paridad: {
         Args: { p_empresa_id?: string }
         Returns: {
@@ -9983,6 +9987,24 @@ export type Database = {
           p_referencia?: string
         }
         Returns: string
+      }
+      preview_surtido_solicitud: {
+        Args: { p_solicitud_id: string }
+        Returns: {
+          cantidad_pendiente: number
+          cantidad_solicitada: number
+          cantidad_surtible: number
+          cantidad_surtida: number
+          codigo: string
+          disponible_origen: number
+          linea_id: string
+          nombre: string
+          producto_id: string
+        }[]
+      }
+      publicar_solicitud_traspaso: {
+        Args: { p_lineas?: Json; p_solicitud_id: string }
+        Returns: undefined
       }
       purge_internal_notifications: { Args: never; Returns: undefined }
       purge_old_gps_history: { Args: never; Returns: undefined }
