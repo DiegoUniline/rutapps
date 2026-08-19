@@ -249,8 +249,13 @@ export function VentaLineaLotesDialog({
                     <Input type="number" min={0} step="0.001" value={cantidad} onChange={e => setCantidad(Number(e.target.value))} />
                   </div>
                   <Button onClick={asignar} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}Asignar lote</Button>
+                  <Button type="button" variant="outline" onClick={asignarFefo} disabled={saving || disponibles.length === 0}
+                    title="Reparte lo pendiente entre los lotes que caducan primero (puede usar 2 o más lotes)">
+                    Repartir automático (FEFO)
+                  </Button>
                 </div>
               </div>
+
             ) : (
               <p className="text-sm text-emerald-600 font-medium border-t border-border pt-3">Línea asignada al 100%.</p>
             )}
