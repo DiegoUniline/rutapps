@@ -18,6 +18,7 @@ const STATUS_TABS: Array<{ value: 'todas' | StatusSolicitudTraspaso; label: stri
   { value: 'aprobada', label: 'Aprobadas' },
   { value: 'parcialmente_surtida', label: 'Parciales' },
   { value: 'surtida', label: 'Surtidas' },
+  { value: 'cerrada', label: 'Cerradas' },
   { value: 'rechazada', label: 'Rechazadas' },
   { value: 'cancelada', label: 'Canceladas' },
 ];
