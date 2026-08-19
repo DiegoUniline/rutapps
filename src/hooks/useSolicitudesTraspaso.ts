@@ -153,6 +153,47 @@ export function useInvalidarSolicitudes() {
   };
 }
 
+export interface LineaAprobacionPendiente {
+  id: string;
+  cantidad_aprobada: number;
+}
+
+/** Guarda cambios de una solicitud en estado 'solicitada' sin aprobarla. */
+export function useGuardarAprobacionPendiente() {
+  const { empresa } = useAuth();
+  const invalidar = useInvalidarSolicitudes();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      id: string;
+      almacen_origen_id: string;
+      observaciones?: string;
+      lineas: LineaAprobacionPendiente[];
+    }) => {
+      const eid = requireEmpresa(empresa?.id, 'useGuardarAprobacionPendiente');
+
+      const { error: headErr } = await from('solicitudes_traspaso')
+        .update({
+          almacen_origen_id: payload.almacen_origen_id,
+          observaciones: payload.observaciones ?? null,
+        })
+        .eq('id', payload.id)
+        .eq('empresa_id', eid);
+      if (headErr) throw headErr;
+
+      for (const l of payload.lineas) {
+        const { error } = await from('solicitud_traspaso_lineas')
+          .update({ cantidad_aprobada: l.cantidad_aprobada })
+          .eq('id', l.id)
+          .eq('solicitud_id', payload.id);
+        if (error) throw error;
+      }
+      return payload.id;
+    },
+    onSettled: invalidar,
+  });
+}
+
 export interface LineaBorrador {
   id: string;
   producto_id: string;
