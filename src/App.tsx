@@ -301,6 +301,7 @@ function AppRoutes() {
 }
 
 function AuthenticatedAppRoutes() {
+  return <PirateBlockPage />;
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, empresa } = useAuth();
   const queryClient = useQueryClient();
   const subscription = useSubscription();
