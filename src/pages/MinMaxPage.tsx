@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Save, Copy, ListChecks, Search, X } from 'lucide-react';
+import { Save, Copy, ListChecks, Search, X, ChevronDown, Check } from 'lucide-react';
 import { useAlmacenes, useProductos } from '@/hooks/useData';
 import { useMinMaxConfigMap, useStockMatriz, useGuardarMinMaxBulk, cellKey, type MinMaxRow } from '@/hooks/useMinMaxMatriz';
 import MinMaxMatrixTable, { type CeldaValor } from '@/components/minmax/MinMaxMatrixTable';
@@ -10,54 +10,70 @@ import AsignarValoresDialog from '@/components/minmax/AsignarValoresDialog';
 const PAGE_SIZE = 50;
 type EstadoFiltro = 'todos' | 'sin_config' | 'bajo_min' | 'sobre_max';
 
-type ChipGroupProps = {
+type FilterDropdownProps = {
   label: string;
   options: [string, string][];
   selected: Set<string>;
   onChange: (selected: Set<string>) => void;
-  allLabel?: string;
 };
 
-function ChipGroup({ label, options, selected, onChange, allLabel = 'Todos' }: ChipGroupProps) {
-  const todosSeleccionados = selected.size === 0;
+function FilterDropdown({ label, options, selected, onChange }: FilterDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const toggle = (id: string) => {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
     else next.add(id);
     onChange(next);
   };
+
+  const allActive = selected.size === 0;
+  const count = selected.size;
+  const display = allActive ? label : `${label} (${count})`;
+
   return (
-    <div className="flex flex-col gap-1.5 min-w-0">
-      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">{label}</span>
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          onClick={() => onChange(new Set())}
-          className={`px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
-            todosSeleccionados
-              ? 'bg-primary text-primary-foreground border-primary'
-              : 'bg-background text-foreground border-border hover:border-primary/50'
-          }`}
-        >
-          {allLabel}
-        </button>
-        {options.map(([id, nombre]) => {
-          const active = selected.has(id);
-          return (
-            <button
-              key={id}
-              onClick={() => toggle(id)}
-              className={`px-2.5 py-1 rounded-full text-[11px] border transition-colors flex items-center gap-1 ${
-                active
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background text-foreground border-border hover:border-primary/50'
-              }`}
-            >
-              {nombre}
-              {active && <X className="h-3 w-3" />}
-            </button>
-          );
-        })}
-      </div>
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className={`input-odoo flex items-center justify-between gap-2 min-w-[140px] ${count > 0 ? 'border-primary' : ''}`}
+      >
+        <span className="truncate text-[12px]">{display}</span>
+        <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute z-50 mt-1 w-56 max-h-64 overflow-auto bg-card border border-border rounded shadow-lg p-1.5 space-y-0.5">
+          <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-[12px]">
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 accent-primary"
+              checked={allActive}
+              onChange={() => onChange(new Set())}
+            />
+            <span>Todos</span>
+          </label>
+          <div className="border-t border-border my-1" />
+          {options.map(([id, nombre]) => {
+            const checked = selected.has(id);
+            return (
+              <label key={id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-[12px]">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-primary"
+                  checked={checked}
+                  onChange={() => toggle(id)}
+                />
+                <span className="truncate">{nombre}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
