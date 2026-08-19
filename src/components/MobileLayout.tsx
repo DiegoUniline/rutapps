@@ -53,6 +53,7 @@ const ALL_MORE_ITEMS = [
   { label: 'Navegación', icon: Navigation, path: '/ruta/navegacion', permiso: 'ruta.mapa' },
   { label: 'Promociones', icon: Gift, path: '/ruta/promociones', permiso: null as string | null },
   { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga' },
+  { label: 'Solicitar mercancía', icon: PackagePlus, path: '/ruta/solicitud-traspaso', permiso: null as string | null },
   { label: 'Pendientes', icon: Inbox, path: '/ruta/pendientes', permiso: null as string | null },
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null as string | null },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil', permiso: null as string | null },
