@@ -254,7 +254,7 @@ export default function SolicitudTraspasoFormPage() {
         <div className="bg-card border border-border rounded p-3 grid grid-cols-1 md:grid-cols-4 gap-3 text-[12px]">
           <label className="flex flex-col gap-1">
             <span className="text-muted-foreground">Almacén origen (surte)</span>
-            <select className="input-odoo" value={origenId} disabled={!editable} onChange={e => setOrigenId(e.target.value)}>
+            <select className="input-odoo" value={origenId} disabled={!editable && !aprobando} onChange={e => setOrigenId(e.target.value)}>
               <option value="">Selecciona...</option>
               {almacenes.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
             </select>
