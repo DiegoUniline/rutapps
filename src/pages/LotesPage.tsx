@@ -347,6 +347,47 @@ export default function LotesPage() {
     }
   };
 
+  // Exporta a Excel lo que está en pantalla (con los filtros y el orden actual).
+  const exportar = async () => {
+    const { exportToExcel } = await import('@/lib/exportUtils');
+    const data = lotesVisibles.map(l => {
+      const fisico = stockDe(l.id);
+      const ap = apartadoDe(l.id);
+      const row: Record<string, any> = {
+        producto: l.productos?.nombre ?? '—',
+        codigo_producto: l.productos?.codigo ?? '',
+        marca: marcaDe(l),
+        lote: l.codigo,
+        caducidad: l.fecha_caducidad ?? '',
+        costo: l.costo ?? 0,
+        total: fisico,
+        apartado: ap,
+        disponible: fisico - ap,
+      };
+      matrizCols.forEach(c => { row[`al_${c.id}`] = cantidadEn(l.id, c.id); });
+      return row;
+    });
+    await exportToExcel({
+      fileName: `lotes-${new Date().toISOString().slice(0, 10)}`,
+      title: 'Lotes y existencias',
+      empresa: empresa?.nombre ?? undefined,
+      columns: [
+        { key: 'producto', header: 'Producto', width: 40 },
+        { key: 'codigo_producto', header: 'Código', width: 14 },
+        { key: 'marca', header: 'Marca', width: 20 },
+        { key: 'lote', header: 'Lote', width: 16 },
+        { key: 'caducidad', header: 'Caducidad', width: 14, format: 'date' },
+        { key: 'costo', header: 'Costo', width: 12, format: 'currency', align: 'right' },
+        ...matrizCols.map(c => ({ key: `al_${c.id}`, header: c.nombre, width: 14, format: 'number' as const, align: 'right' as const })),
+        { key: 'total', header: 'Total', width: 12, format: 'number', align: 'right' },
+        { key: 'apartado', header: 'Apartado', width: 12, format: 'number', align: 'right' },
+        { key: 'disponible', header: 'Disponible', width: 12, format: 'number', align: 'right' },
+      ],
+      data,
+    });
+  };
+
+
   const noHayProductos = (productos?.length ?? 0) === 0;
   const resumen = (lotes ?? []).reduce((a, l) => {
     const dias = diasParaVencer(l.fecha_caducidad);
