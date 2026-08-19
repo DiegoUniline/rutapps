@@ -162,6 +162,14 @@ export default function SolicitudTraspasoFormPage() {
   const lineasPayload = () => lineas.map(l => ({ id: l.id, cantidad: l.cantidad_aprobada }));
 
   const onAprobar = async () => {
+    if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return; }
+    if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return; }
+    if (origenId !== (solicitud?.almacen_origen_id ?? '')) {
+      const { error } = await (supabase.from as any)('solicitudes_traspaso')
+        .update({ almacen_origen_id: origenId })
+        .eq('id', solicitudId);
+      if (error) { toast.error(error.message); return; }
+    }
     await aprobar.mutateAsync({ p_solicitud_id: solicitudId, p_lineas: lineasPayload() });
     toast.success('Solicitud aprobada');
   };
