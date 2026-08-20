@@ -179,13 +179,17 @@ export default function SolicitudTraspasoFormPage() {
   const onGuardarAprobacionPendiente = async () => {
     if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return; }
     if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return; }
-    await guardarAprobacionPendiente.mutateAsync({
-      id: solicitudId,
-      almacen_origen_id: origenId,
-      observaciones,
-      lineas: lineas.map(l => ({ id: l.id, cantidad_aprobada: l.cantidad_aprobada })),
-    });
-    toast.success('Cambios guardados');
+    try {
+      await guardarAprobacionPendiente.mutateAsync({
+        id: solicitudId,
+        almacen_origen_id: origenId,
+        observaciones,
+        lineas: lineas.map(l => ({ id: l.id, cantidad_aprobada: Math.max(0, Number(l.cantidad_aprobada) || 0) })),
+      });
+      toast.success('Cambios guardados');
+    } catch (e: any) {
+      toast.error(e?.message ?? 'No se pudieron guardar los cambios');
+    }
   };
 
   const onAprobar = async () => {
