@@ -184,7 +184,7 @@ export function useProducto(id?: string) {
     queryKey: ['producto', id],
     staleTime: CATALOG_STALE,
     queryFn: async () => {
-      const { data, error } = await supabase.from('productos').select('*, marcas(nombre)').eq('id', id!).single();
+      const { data, error } = await supabase.from('productos').select('*, marcas(nombre), clasificaciones(nombre), listas(nombre), unidades_venta:unidad_venta_id(nombre, abreviatura), unidades_compra:unidad_compra_id(nombre, abreviatura)').eq('id', id!).single();
       if (error) throw error;
       return data as Producto;
     },
