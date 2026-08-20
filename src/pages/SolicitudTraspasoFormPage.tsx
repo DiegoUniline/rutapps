@@ -87,7 +87,7 @@ export default function SolicitudTraspasoFormPage() {
       stock_maximo_snapshot: Number(l.stock_maximo_snapshot) || 0,
       cantidad_sugerida: Number(l.cantidad_sugerida) || 0,
       cantidad_solicitada: Number(l.cantidad_solicitada) || 0,
-      cantidad_aprobada: Number(l.cantidad_aprobada) || Number(l.cantidad_solicitada) || 0,
+      cantidad_aprobada: l.cantidad_aprobada != null ? Number(l.cantidad_aprobada) : (Number(l.cantidad_solicitada) || 0),
       cantidad_surtida: Number(l.cantidad_surtida) || 0,
     })));
   }, [lineasServidor, esNueva]);
@@ -179,13 +179,17 @@ export default function SolicitudTraspasoFormPage() {
   const onGuardarAprobacionPendiente = async () => {
     if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return; }
     if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return; }
-    await guardarAprobacionPendiente.mutateAsync({
-      id: solicitudId,
-      almacen_origen_id: origenId,
-      observaciones,
-      lineas: lineas.map(l => ({ id: l.id, cantidad_aprobada: l.cantidad_aprobada })),
-    });
-    toast.success('Cambios guardados');
+    try {
+      await guardarAprobacionPendiente.mutateAsync({
+        id: solicitudId,
+        almacen_origen_id: origenId,
+        observaciones,
+        lineas: lineas.map(l => ({ id: l.id, cantidad_aprobada: Math.max(0, Number(l.cantidad_aprobada) || 0) })),
+      });
+      toast.success('Cambios guardados');
+    } catch (e: any) {
+      toast.error(e?.message ?? 'No se pudieron guardar los cambios');
+    }
   };
 
   const onAprobar = async () => {
