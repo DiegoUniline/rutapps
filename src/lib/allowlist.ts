@@ -22,7 +22,7 @@ export const PRODUCTO_COLUMNS = [
   'calculo_costo','codigo_sat','iva_pct','ieps_pct','ieps_tipo',
   'costo_incluye_impuestos','usa_listas_precio','usa_presentaciones','marca_id','clasificacion_id','lista_id','tarifa_id',
   'unidad_venta_id','unidad_compra_id','udem_sat_id','created_at',
-  'modo_compra_sugerida','dias_cobertura','lead_time_dias','proveedor_preferido_id','grupo_precio',
+  'modo_compra_sugerida','dias_cobertura','lead_time_dias','proveedor_preferido_id',
 ] as const;
 
 export const VENTA_COLUMNS = [

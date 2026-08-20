@@ -54,7 +54,8 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
         )}
         <OdooField label="Marca" value={form.marca_id} type="select" options={marcas?.map(m => ({ value: m.id, label: m.nombre })) ?? []} onChange={v => set('marca_id', v || null)} format={() => findName(marcas, form.marca_id ?? undefined)} onCreateNew={createMarca} />
         <OdooField label="Categoría" value={form.clasificacion_id} type="select" options={clasificaciones?.map(c => ({ value: c.id, label: c.nombre })) ?? []} onChange={v => set('clasificacion_id', v || null)} format={() => findName(clasificaciones, form.clasificacion_id ?? undefined)} onCreateNew={createClasificacion} />
-        <OdooField label="Lista de Precio" value={form.grupo_precio ?? ''} type="select"
+        <OdooField label="Lista" value={form.lista_id} type="select" options={listas?.map(l => ({ value: l.id, label: l.nombre })) ?? []} onChange={v => set('lista_id', v || null)} format={() => findName(listas, form.lista_id ?? undefined)} onCreateNew={createLista} />
+        <OdooField label="Grupo" value={form.grupo_precio ?? ''} type="select"
           options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'C', label: 'C' }, { value: 'D', label: 'D' }]}
           onChange={v => set('grupo_precio', v || null)}
           format={() => form.grupo_precio || '—'} />
