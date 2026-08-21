@@ -141,12 +141,14 @@ export const COLUMN_SELECTS_V2: Record<string, string> = {
  * `nullable: true` = también se bajan las filas sin vendedor asignado (clientes
  * huérfanos), para que nadie pierda acceso a un cliente que sí puede atender.
  */
-const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' | 'user'; nullable?: boolean; transaccional?: boolean; soloFlagHijos?: boolean }> = {
+const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' | 'user'; nullable?: boolean; transaccional?: boolean; soloFlagHijos?: boolean; incluirSaldosIniciales?: boolean }> = {
   // Catálogo: respeta el permiso "ver todos".
   clientes: { column: 'vendedor_id', source: 'vendedor', nullable: true },
   // Transaccionales: en /Ruta siempre se baja SOLO lo del vendedor activo,
   // aunque el usuario tenga permiso de "ver todos" (eso es para escritorio).
-  ventas: { column: 'vendedor_id', source: 'vendedor', transaccional: true },
+  // Los saldos iniciales (SAL-xxxx) se cargan sin vendedor asignado; si no se
+  // incluyen aquí, el cobrador nunca los ve en las cuentas por cobrar de /Ruta.
+  ventas: { column: 'vendedor_id', source: 'vendedor', transaccional: true, incluirSaldosIniciales: true },
   visitas: { column: 'user_id', source: 'user', transaccional: true },
   gastos: { column: 'vendedor_id', source: 'vendedor', transaccional: true },
   devoluciones: { column: 'vendedor_id', source: 'vendedor', transaccional: true },
@@ -388,6 +390,14 @@ async function withTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T
   }
 }
 
+/** Expresión OR (PostgREST) del alcance por vendedor, o null si es un `eq` simple. */
+function vendorScopeOr(vendorScope: { column: string; nullable?: boolean; incluirSaldosIniciales?: boolean }, value: string): string | null {
+  const parts: string[] = [`${vendorScope.column}.eq.${value}`];
+  if (vendorScope.nullable) parts.push(`${vendorScope.column}.is.null`);
+  if (vendorScope.incluirSaldosIniciales) parts.push('and(es_saldo_inicial.is.true,saldo_pendiente.gt.0)');
+  return parts.length > 1 ? parts.join(',') : null;
+}
+
 /** Aplica el filtro por vendedor de una tabla a un query de Supabase. */
 function applyVendorScope(table: CacheTable | string, q: any): any {
   const vendorScope = VENDOR_SCOPED_TABLES[table];
@@ -395,9 +405,8 @@ function applyVendorScope(table: CacheTable | string, q: any): any {
   const scope = getSyncScope();
   const value = vendorScope.source === 'user' ? scope.userId : scope.vendedorId;
   if (!value) return q;
-  return vendorScope.nullable
-    ? q.or(`${vendorScope.column}.eq.${value},${vendorScope.column}.is.null`)
-    : q.eq(vendorScope.column, value);
+  const orExpr = vendorScopeOr(vendorScope, value);
+  return orExpr ? q.or(orExpr) : q.eq(vendorScope.column, value);
 }
 
 /** ¿Esta fila local del padre entra en el alcance del vendedor activo? */
@@ -409,6 +418,7 @@ function localRowInVendorScope(table: CacheTable | string, row: any): boolean {
   if (!value) return true;
   const rowValue = row?.[vendorScope.column] ?? null;
   if (rowValue === value) return true;
+  if (vendorScope.incluirSaldosIniciales && row?.es_saldo_inicial === true && Number(row?.saldo_pendiente ?? 0) > 0) return true;
   return vendorScope.nullable ? rowValue === null : false;
 }
 
@@ -725,9 +735,8 @@ async function downloadAllDataInternal(
               const scope = getSyncScope();
               const value = vendorScope.source === 'user' ? scope.userId : scope.vendedorId;
               if (value) {
-                q = vendorScope.nullable
-                  ? q.or(`${vendorScope.column}.eq.${value},${vendorScope.column}.is.null`)
-                  : q.eq(vendorScope.column, value);
+                const orExpr = vendorScopeOr(vendorScope, value);
+                q = orExpr ? q.or(orExpr) : q.eq(vendorScope.column, value);
               }
             }
             // Ventana por created_at para tablas transaccionales hijas/append
@@ -829,9 +838,8 @@ async function downloadAllDataInternal(
               const scope = getSyncScope();
               const value = vendorScopeCount.source === 'user' ? scope.userId : scope.vendedorId;
               if (value) {
-                countQuery = vendorScopeCount.nullable
-                  ? countQuery.or(`${vendorScopeCount.column}.eq.${value},${vendorScopeCount.column}.is.null`)
-                  : countQuery.eq(vendorScopeCount.column, value);
+                const orExprCount = vendorScopeOr(vendorScopeCount, value);
+                countQuery = orExprCount ? countQuery.or(orExprCount) : countQuery.eq(vendorScopeCount.column, value);
               }
             }
             const { count } = await withTimeout<any>(countQuery, `${table} conteo`);
