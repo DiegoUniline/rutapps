@@ -44,7 +44,13 @@ function RutaNuevaVentaInner() {
       vendedorTelefono: (h.profile as any)?.telefono ?? null,
       lineas: h.ticketLineas,
       subtotal: h.totals.subtotal,
-      descuento: h.totals.descuentoDevolucion ?? 0,
+      // Descuentos totales del ticket: devolución aplicada como descuento +
+      // descuento manual (extra) + promociones. Si sólo se manda la devolución,
+      // el "Subtotal sin impuestos" del ticket queda ya neteado del descuento
+      // manual (se deriva de Total − impuestos + descuentos).
+      descuento: (h.totals.descuentoDevolucion ?? 0)
+        + (h.totals.descuentoExtra ?? 0)
+        + h.promoResults.reduce((s, r) => s + (Number(r.descuento) || 0), 0),
       iva: h.totals.iva,
       ieps: h.totals.ieps,
       total: h.totals.total,
