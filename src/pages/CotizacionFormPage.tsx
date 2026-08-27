@@ -187,7 +187,7 @@ export default function CotizacionFormPage() {
       id: producto.id, precio_principal: Number(producto.precio_principal) || 0, costo: Number(producto.costo) || 0,
       clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: ivaPct,
       tiene_ieps: producto.tiene_ieps, ieps_pct: iepsPct, ieps_tipo: producto.ieps_tipo,
-      usa_listas_precio: (producto as any).usa_listas_precio,
+      usa_listas_precio: (producto as any).usa_listas_precio, lista_id: (producto as any).lista_id ?? null,
     };
     const listaPrecioId = (form as any).lista_precio_id || null;
     const pricing = resolveProductPricing(tarifaRules ?? [], prodForPricing, listaPrecioId);

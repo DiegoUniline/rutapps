@@ -263,7 +263,7 @@ export function useVentaForm() {
       if (!l.producto_id || m.has(l.producto_id)) return;
       const prod = productosList.find((p: any) => p.id === l.producto_id);
       if (!prod) return;
-      const pf: ProductForPricing = { id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0, clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16), tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo, usa_listas_precio: prod.usa_listas_precio };
+      const pf: ProductForPricing = { id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0, clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16), tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo, usa_listas_precio: prod.usa_listas_precio, lista_id: (prod as any).lista_id ?? null };
       const r = resolveProductPricing(tarifaRules ?? [], pf, listaPrecioId);
       m.set(l.producto_id, { rawUnitPrice: r.rawUnitPrice, rawDisplayPrice: r.rawDisplayPrice, basePrecio: r.basePrecio, redondeo: r.appliedRule?.redondeo ?? 'ninguno' });
     });
@@ -461,7 +461,7 @@ export function useVentaForm() {
         id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0,
         clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16),
         tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo,
-        usa_listas_precio: prod.usa_listas_precio,
+        usa_listas_precio: prod.usa_listas_precio, lista_id: (prod as any).lista_id ?? null,
       };
       const pricing = resolveProductPricing(tarifaRules ?? [], prodForPricing, formListaPrecioId);
       const snap = buildSalePricingSnapshot(prodForPricing, pricing);
@@ -536,7 +536,7 @@ export function useVentaForm() {
       id: productoId, precio_principal: Number(producto.precio_principal) || 0, costo: Number(producto.costo) || 0,
       clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: Number(producto.iva_pct ?? 16),
       tiene_ieps: hasIeps, ieps_pct: iepsPct, ieps_tipo: producto.ieps_tipo,
-      usa_listas_precio: producto.usa_listas_precio,
+      usa_listas_precio: producto.usa_listas_precio, lista_id: (producto as any).lista_id ?? null,
     };
     // Siempre resolvemos con el resolver: aunque la lista NO tenga reglas,
     // `resolveProductPricing` cae en `precioPrincipalFallback`, donde
