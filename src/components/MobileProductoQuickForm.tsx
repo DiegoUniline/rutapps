@@ -93,7 +93,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
   const [savedId, setSavedId] = useState<string | undefined>(undefined);
   const isNew = !savedId;
 
-  const { data: tarifaLineas } = useTarifaLineasForProducto(savedId, undefined);
+  const { data: tarifaLineas } = useTarifaLineasForProducto(savedId, (form as any)?.clasificacion_id, (form as any)?.lista_id);
   const { data: prodProveedores } = useProductoProveedores(savedId);
   const saveProvMut = useSaveProductoProveedor();
   const deleteProvMut = useDeleteProductoProveedor();
