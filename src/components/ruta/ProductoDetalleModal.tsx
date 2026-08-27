@@ -110,6 +110,7 @@ export function ProductoDetalleModal({
       ieps_pct: Number(producto.ieps_pct ?? 0),
       ieps_tipo: producto.ieps_tipo,
       usa_listas_precio: producto.usa_listas_precio,
+      lista_id: (producto as any).lista_id ?? null,
     };
     const result: ListaOption[] = [];
     for (const lista of listas) {
