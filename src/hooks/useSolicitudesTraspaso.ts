@@ -57,6 +57,12 @@ export interface SolicitudTraspasoLinea {
   cantidad_aprobada: number;
   cantidad_surtida: number;
   notas: string | null;
+  excluida?: boolean;
+  agregada_por_admin?: boolean;
+  agregada_por?: string | null;
+  agregada_at?: string | null;
+  excluida_por?: string | null;
+  excluida_at?: string | null;
   productos?: { codigo: string; nombre: string } | null;
 }
 
@@ -119,7 +125,9 @@ export function useSolicitudTraspasoLineas(solicitudId?: string) {
         .eq('solicitud_id', solicitudId)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return (data ?? []) as SolicitudTraspasoLinea[];
+      // Mantiene compatibilidad durante el despliegue de la migración: antes de
+      // existir `excluida`, el campo llega como undefined y la línea se conserva.
+      return ((data ?? []) as SolicitudTraspasoLinea[]).filter(l => !l.excluida);
     },
   });
 }
@@ -155,7 +163,9 @@ export function useInvalidarSolicitudes() {
 
 export interface LineaAprobacionPendiente {
   id: string;
+  producto_id: string;
   cantidad_aprobada: number;
+  agregada_por_admin?: boolean;
 }
 
 /** Guarda cambios de una solicitud en estado 'solicitada' sin aprobarla. */
@@ -169,25 +179,22 @@ export function useGuardarAprobacionPendiente() {
       almacen_origen_id: string;
       observaciones?: string;
       lineas: LineaAprobacionPendiente[];
+      lineasExcluidas?: string[];
     }) => {
-      const eid = requireEmpresa(empresa?.id, 'useGuardarAprobacionPendiente');
-
-      const { error: headErr } = await from('solicitudes_traspaso')
-        .update({
-          almacen_origen_id: payload.almacen_origen_id,
-          observaciones: payload.observaciones ?? null,
-        })
-        .eq('id', payload.id)
-        .eq('empresa_id', eid);
-      if (headErr) throw headErr;
-
-      for (const l of payload.lineas) {
-        const { error } = await from('solicitud_traspaso_lineas')
-          .update({ cantidad_aprobada: l.cantidad_aprobada })
-          .eq('id', l.id)
-          .eq('solicitud_id', payload.id);
-        if (error) throw error;
-      }
+      requireEmpresa(empresa?.id, 'useGuardarAprobacionPendiente');
+      const { error } = await (supabase.rpc as any)('guardar_aprobacion_solicitud', {
+        p_solicitud_id: payload.id,
+        p_almacen_origen_id: payload.almacen_origen_id,
+        p_observaciones: payload.observaciones ?? null,
+        p_lineas: payload.lineas.map(l => ({
+          linea_id: l.id,
+          producto_id: l.producto_id,
+          cantidad_aprobada: Math.max(0, Number(l.cantidad_aprobada) || 0),
+          agregada_por_admin: !!l.agregada_por_admin,
+        })),
+        p_excluidas: payload.lineasExcluidas ?? [],
+      });
+      if (error) throw error;
       return payload.id;
     },
     onSettled: invalidar,
@@ -275,7 +282,6 @@ export const useEnviarSolicitud = () => useRpc<{ p_solicitud_id: string }>('envi
 export const useAprobarSolicitud = () => useRpc<{ p_solicitud_id: string; p_lineas: any }>('aprobar_solicitud_traspaso');
 export const useRechazarSolicitud = () => useRpc<{ p_solicitud_id: string; p_motivo: string | null }>('rechazar_solicitud_traspaso');
 export const useCancelarSolicitud = () => useRpc<{ p_solicitud_id: string; p_motivo: string | null }>('cancelar_solicitud_traspaso');
-export const usePublicarSolicitud = () => useRpc<{ p_solicitud_id: string; p_lineas?: any }>('publicar_solicitud_traspaso');
 export const useCerrarSolicitud = () => useRpc<{ p_solicitud_id: string; p_motivo: string | null }>('cerrar_solicitud_traspaso');
 export const useSurtirSolicitud = () => useRpc<{ p_solicitud_id: string; p_lineas: any }>('surtir_solicitud_traspaso');
 

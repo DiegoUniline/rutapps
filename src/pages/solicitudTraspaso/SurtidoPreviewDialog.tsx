@@ -5,15 +5,13 @@ import type { PreviewSurtidoLinea } from '@/hooks/useSolicitudesTraspaso';
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  /** 'publicar' agrega la publicación antes del surtido. */
-  modo: 'publicar' | 'surtir';
   lineas: PreviewSurtidoLinea[];
   cargando?: boolean;
   ejecutando?: boolean;
   onConfirm: () => void;
 }
 
-export function SurtidoPreviewDialog({ open, onOpenChange, modo, lineas, cargando, ejecutando, onConfirm }: Props) {
+export function SurtidoPreviewDialog({ open, onOpenChange, lineas, cargando, ejecutando, onConfirm }: Props) {
   const pendiente = lineas.reduce((s, l) => s + l.cantidad_pendiente, 0);
   const surtible = lineas.reduce((s, l) => s + l.cantidad_surtible, 0);
   const faltantes = lineas.filter(l => l.cantidad_surtible < l.cantidad_pendiente);
@@ -21,16 +19,16 @@ export function SurtidoPreviewDialog({ open, onOpenChange, modo, lineas, cargand
   const nada = surtible <= 0;
 
   const textoBoton = nada
-    ? (modo === 'publicar' ? 'Publicar sin surtir' : 'Cerrar')
+    ? 'Sin existencia'
     : completo
-      ? (modo === 'publicar' ? 'Publicar y surtir' : 'Surtir todo')
+      ? 'Surtir todo'
       : `Enviar ${fmtNum(surtible)} piezas`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl z-[60] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{modo === 'publicar' ? 'Publicar solicitud' : 'Surtir pendientes'}</DialogTitle>
+          <DialogTitle>Surtir pendientes</DialogTitle>
         </DialogHeader>
 
         {cargando ? (
@@ -41,9 +39,7 @@ export function SurtidoPreviewDialog({ open, onOpenChange, modo, lineas, cargand
               <p className="text-primary font-medium">Todo el inventario solicitado está disponible.</p>
             ) : nada ? (
               <p className="text-destructive font-medium">
-                No hay existencia disponible en el almacén origen. {modo === 'publicar'
-                  ? 'Puedes publicar la solicitud y surtirla después.'
-                  : 'Intenta más tarde o cierra el traspaso.'}
+                No hay existencia disponible en el almacén origen. Intenta más tarde o cierra el traspaso.
               </p>
             ) : (
               <p>
@@ -96,7 +92,7 @@ export function SurtidoPreviewDialog({ open, onOpenChange, modo, lineas, cargand
 
         <DialogFooter>
           <button className="btn-odoo" onClick={() => onOpenChange(false)}>Cancelar</button>
-          <button className="btn-odoo-primary" disabled={cargando || ejecutando || (nada && modo === 'surtir')} onClick={onConfirm}>
+          <button className="btn-odoo-primary" disabled={cargando || ejecutando || nada} onClick={onConfirm}>
             {ejecutando ? 'Procesando...' : textoBoton}
           </button>
         </DialogFooter>

@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import { fmtNum } from '@/lib/utils';
 import type { StatusSolicitudTraspaso } from '@/hooks/useSolicitudesTraspaso';
+import { cantidadPendienteSolicitud } from '@/lib/solicitudTraspasoCantidad';
 
 export interface LineaEditable {
   id: string;
@@ -14,6 +15,7 @@ export interface LineaEditable {
   cantidad_solicitada: number;
   cantidad_aprobada: number;
   cantidad_surtida: number;
+  agregada_por_admin?: boolean;
 }
 
 interface Props {
@@ -52,19 +54,28 @@ export function SolicitudLineasTable({
           {mostrarSurtido && <th className="px-3 py-2 text-right">Surtido</th>}
           {mostrarSurtido && <th className="px-3 py-2 text-right">Pendiente</th>}
           <th className="px-3 py-2 text-right">Stock origen</th>
-          {editable && <th className="px-3 py-2" />}
+          {(editable || aprobando) && <th className="px-3 py-2" />}
         </tr>
       </thead>
       <tbody>
         {lineas.map(l => {
           const disponible = disponiblePorProducto?.get(l.producto_id);
-          const base = l.cantidad_aprobada || l.cantidad_solicitada;
-          const pendiente = Math.max(0, base - l.cantidad_surtida);
+          const pendiente = cantidadPendienteSolicitud(
+            status,
+            l.cantidad_solicitada,
+            l.cantidad_aprobada,
+            l.cantidad_surtida,
+          );
           const insuficiente = disponible != null && pendiente > 0 && pendiente > disponible;
           return (
             <tr key={l.id} className="border-b border-border">
               <td className="px-3 py-1.5">{l.codigo}</td>
-              <td className="px-3 py-1.5">{l.nombre}</td>
+              <td className="px-3 py-1.5">
+                {l.nombre}
+                {l.agregada_por_admin && (
+                  <span className="ml-1.5 text-[10px] text-primary">Agregado por admin</span>
+                )}
+              </td>
               <td className="px-3 py-1.5 text-right">{fmtNum(l.stock_actual_snapshot)}</td>
               <td className="px-3 py-1.5 text-right">{fmtNum(l.stock_minimo_snapshot)}</td>
               <td className="px-3 py-1.5 text-right">{fmtNum(l.stock_maximo_snapshot)}</td>
@@ -98,9 +109,13 @@ export function SolicitudLineasTable({
               <td className={`px-3 py-1.5 text-right ${insuficiente ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                 {disponible != null ? fmtNum(disponible) : '—'}
               </td>
-              {editable && (
+              {(editable || aprobando) && (
                 <td className="px-3 py-1.5 text-right">
-                  <button onClick={() => onRemove(l.id)} className="text-muted-foreground hover:text-destructive">
+                  <button
+                    onClick={() => onRemove(l.id)}
+                    className="text-muted-foreground hover:text-destructive"
+                    title={aprobando ? 'Excluir de la aprobación' : 'Eliminar partida'}
+                  >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </td>

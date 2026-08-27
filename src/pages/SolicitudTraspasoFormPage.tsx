@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, Send, Check, X, Wand2, Truck, Lock, History } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { ArrowLeft, Save, Send, Check, X, Wand2, Truck, Lock, History, FileText, CircleSlash2 } from 'lucide-react';
 import { ListPage } from '@/components/layout/ListPage';
 import { StatusChip } from '@/components/StatusChip';
 import ProductSearchInput from '@/components/ProductSearchInput';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import { useAuth } from '@/contexts/AuthContext';
 import { useAlmacenes, useProductos } from '@/hooks/useData';
 import { useDisponiblePorAlmacen } from '@/hooks/useApartadoStock';
 import { fmtDate } from '@/lib/utils';
 import {
   useSolicitudTraspaso, useSolicitudTraspasoLineas, useSolicitudTraspasoHistorial,
   useGuardarSolicitud, useGuardarAprobacionPendiente, useEnviarSolicitud, useAprobarSolicitud, useRechazarSolicitud,
-  useCancelarSolicitud, useSurtirSolicitud, usePublicarSolicitud, useCerrarSolicitud,
+  useCancelarSolicitud, useSurtirSolicitud, useCerrarSolicitud,
   useSolicitudSurtidos, previewSurtido, SOLICITUD_STATUS_LABELS,
   type StatusSolicitudTraspaso, type PreviewSurtidoLinea,
 } from '@/hooks/useSolicitudesTraspaso';
@@ -21,6 +22,8 @@ import { SolicitudLineasTable, type LineaEditable } from './solicitudTraspaso/So
 import SurtidoPreviewDialog from './solicitudTraspaso/SurtidoPreviewDialog';
 import CerrarTraspasoDialog from './solicitudTraspaso/CerrarTraspasoDialog';
 import SolicitudResumen from './solicitudTraspaso/SolicitudResumen';
+import { generarSolicitudTraspasoPdf } from '@/lib/solicitudTraspasoPdf';
+import { cantidadBaseSolicitud } from '@/lib/solicitudTraspasoCantidad';
 
 const nuevoId = () => crypto.randomUUID();
 
@@ -28,6 +31,7 @@ export default function SolicitudTraspasoFormPage() {
   const { id = 'nueva' } = useParams();
   const navigate = useNavigate();
   const esNueva = id === 'nueva';
+  const { empresa, profile } = useAuth();
 
   const { data: almacenes = [] } = useAlmacenes();
   const { data: productos = [] } = useProductos();
@@ -44,6 +48,7 @@ export default function SolicitudTraspasoFormPage() {
   const [observaciones, setObservaciones] = useState('');
   const [lineas, setLineas] = useState<LineaEditable[]>([]);
   const [eliminadas, setEliminadas] = useState<string[]>([]);
+  const [excluidas, setExcluidas] = useState<string[]>([]);
 
   const status: StatusSolicitudTraspaso = solicitud?.status ?? 'borrador';
   const editable = esNueva || status === 'borrador';
@@ -56,14 +61,14 @@ export default function SolicitudTraspasoFormPage() {
   const rechazar = useRechazarSolicitud();
   const cancelar = useCancelarSolicitud();
   const surtir = useSurtirSolicitud();
-  const publicar = usePublicarSolicitud();
   const cerrar = useCerrarSolicitud();
 
   const [preview, setPreview] = useState<PreviewSurtidoLinea[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewModo, setPreviewModo] = useState<'publicar' | 'surtir'>('publicar');
   const [previewCargando, setPreviewCargando] = useState(false);
   const [cerrarOpen, setCerrarOpen] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
 
   const { data: disponibles } = useDisponiblePorAlmacen(origenId || undefined);
   const { data: sugerencias = [], refetch: recargarSugerencias } = useSugerenciasResurtido(destinoId || undefined, false);
@@ -87,8 +92,9 @@ export default function SolicitudTraspasoFormPage() {
       stock_maximo_snapshot: Number(l.stock_maximo_snapshot) || 0,
       cantidad_sugerida: Number(l.cantidad_sugerida) || 0,
       cantidad_solicitada: Number(l.cantidad_solicitada) || 0,
-      cantidad_aprobada: l.cantidad_aprobada != null ? Number(l.cantidad_aprobada) : (Number(l.cantidad_solicitada) || 0),
+      cantidad_aprobada: Number(l.cantidad_aprobada) || 0,
       cantidad_surtida: Number(l.cantidad_surtida) || 0,
+      agregada_por_admin: !!l.agregada_por_admin,
     })));
   }, [lineasServidor, esNueva]);
 
@@ -107,7 +113,11 @@ export default function SolicitudTraspasoFormPage() {
     setLineas(prev => [...prev, {
       id: nuevoId(), producto_id: p.id, codigo: p.codigo, nombre: p.nombre,
       stock_actual_snapshot: 0, stock_minimo_snapshot: 0, stock_maximo_snapshot: 0,
-      cantidad_sugerida: 0, cantidad_solicitada: 1, cantidad_aprobada: 1, cantidad_surtida: 0,
+      cantidad_sugerida: 0,
+      cantidad_solicitada: aprobando ? 0 : 1,
+      cantidad_aprobada: 1,
+      cantidad_surtida: 0,
+      agregada_por_admin: aprobando,
     }]);
   };
 
@@ -134,7 +144,14 @@ export default function SolicitudTraspasoFormPage() {
 
   const quitarLinea = (lineaId: string) => {
     setLineas(prev => prev.filter(l => l.id !== lineaId));
-    if (!esNueva) setEliminadas(prev => [...prev, lineaId]);
+    if (aprobando) {
+      // Las nuevas aún no existen en servidor; basta retirarlas del estado local.
+      if (lineasServidor.some(l => l.id === lineaId)) {
+        setExcluidas(prev => prev.includes(lineaId) ? prev : [...prev, lineaId]);
+      }
+    } else if (!esNueva) {
+      setEliminadas(prev => prev.includes(lineaId) ? prev : [...prev, lineaId]);
+    }
   };
 
   const validar = () => {
@@ -174,35 +191,44 @@ export default function SolicitudTraspasoFormPage() {
     toast.success('Solicitud enviada a aprobación');
   };
 
-  const lineasPayload = () => lineas.map(l => ({ id: l.id, cantidad: l.cantidad_aprobada }));
+  const lineasPayload = () => lineas.map(l => ({
+    linea_id: l.id,
+    cantidad_aprobada: Math.max(0, Number(l.cantidad_aprobada) || 0),
+  }));
 
-  const onGuardarAprobacionPendiente = async () => {
-    if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return; }
-    if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return; }
+  const onGuardarAprobacionPendiente = async (silencioso = false) => {
+    if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return false; }
+    if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return false; }
     try {
       await guardarAprobacionPendiente.mutateAsync({
         id: solicitudId,
         almacen_origen_id: origenId,
         observaciones,
-        lineas: lineas.map(l => ({ id: l.id, cantidad_aprobada: Math.max(0, Number(l.cantidad_aprobada) || 0) })),
+        lineas: lineas.map(l => ({
+          id: l.id,
+          producto_id: l.producto_id,
+          cantidad_aprobada: Math.max(0, Number(l.cantidad_aprobada) || 0),
+          agregada_por_admin: !!l.agregada_por_admin,
+        })),
+        lineasExcluidas: excluidas,
       });
-      toast.success('Cambios guardados');
+      setExcluidas([]);
+      if (!silencioso) toast.success('Cambios guardados');
+      return true;
     } catch (e: any) {
       toast.error(e?.message ?? 'No se pudieron guardar los cambios');
+      return false;
     }
   };
 
   const onAprobar = async () => {
-    if (!origenId) { toast.error('Elige el almacén origen que surtirá'); return; }
-    if (origenId === destinoId) { toast.error('El origen y el destino no pueden ser el mismo'); return; }
-    if (origenId !== (solicitud?.almacen_origen_id ?? '')) {
-      const { error } = await (supabase.from as any)('solicitudes_traspaso')
-        .update({ almacen_origen_id: origenId })
-        .eq('id', solicitudId);
-      if (error) { toast.error(error.message); return; }
+    if (!(await onGuardarAprobacionPendiente(true))) return;
+    try {
+      await aprobar.mutateAsync({ p_solicitud_id: solicitudId, p_lineas: lineasPayload() });
+      toast.success('Solicitud aprobada');
+    } catch (e: any) {
+      toast.error(e?.message ?? 'No se pudo aprobar la solicitud');
     }
-    await aprobar.mutateAsync({ p_solicitud_id: solicitudId, p_lineas: lineasPayload() });
-    toast.success('Solicitud aprobada');
   };
 
   const onRechazar = async () => {
@@ -218,9 +244,7 @@ export default function SolicitudTraspasoFormPage() {
     toast.success('Solicitud cancelada');
   };
 
-  const abrirPreview = async (modo: 'publicar' | 'surtir') => {
-    if (modo === 'publicar' && !(await onGuardar(true))) return;
-    setPreviewModo(modo);
+  const abrirPreview = async () => {
     setPreview([]);
     setPreviewCargando(true);
     setPreviewOpen(true);
@@ -239,14 +263,6 @@ export default function SolicitudTraspasoFormPage() {
       .filter(l => l.cantidad_surtible > 0)
       .map(l => ({ linea_id: l.linea_id, cantidad: l.cantidad_surtible }));
     try {
-      if (previewModo === 'publicar') {
-        await publicar.mutateAsync({ p_solicitud_id: solicitudId });
-        if (payload.length === 0) {
-          toast.success('Solicitud publicada. Podrás surtirla cuando haya existencia.');
-          setPreviewOpen(false);
-          return;
-        }
-      }
       if (payload.length === 0) { toast.info('No hay existencia disponible para surtir'); return; }
       const traspasoId = await surtir.mutateAsync({ p_solicitud_id: solicitudId, p_lineas: payload });
       setPreviewOpen(false);
@@ -263,10 +279,50 @@ export default function SolicitudTraspasoFormPage() {
     toast.success('Traspaso cerrado. Las cantidades pendientes ya no podrán surtirse.');
   };
 
+  const ponerTodasEnCero = () => {
+    setLineas(prev => prev.map(l => ({ ...l, cantidad_aprobada: 0 })));
+    toast.info('Todas las cantidades aprobadas se marcaron en cero');
+  };
+
+  const generarPdf = async () => {
+    if (!solicitud) return;
+    try {
+      const blob = await generarSolicitudTraspasoPdf({
+        empresa: {
+          nombre: empresa?.nombre ?? '',
+          razon_social: empresa?.razon_social,
+          rfc: empresa?.rfc,
+          direccion: empresa?.direccion,
+          telefono: empresa?.telefono,
+        },
+        solicitud: {
+          folio: solicitud.folio || 'Solicitud',
+          fecha: solicitud.fecha,
+          status,
+          observaciones: observaciones || undefined,
+        },
+        origen: solicitud.almacen_origen?.nombre || almacenes.find(a => a.id === origenId)?.nombre || '—',
+        destino: solicitud.almacen_destino?.nombre || almacenes.find(a => a.id === destinoId)?.nombre || '—',
+        solicitante: solicitud.solicitante?.nombre || undefined,
+        responsable: profile?.nombre || undefined,
+        lineas: lineas.map(l => ({
+          codigo: l.codigo,
+          nombre: l.nombre,
+          cantidad_solicitada: l.cantidad_solicitada,
+          cantidad_aprobada: l.cantidad_aprobada,
+          agregada_por_admin: !!l.agregada_por_admin,
+        })),
+      });
+      setPdfBlob(blob);
+      setPdfOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? 'No se pudo generar el PDF');
+    }
+  };
+
   const puedeSurtir = status === 'aprobada' || status === 'parcialmente_surtida';
-  const puedeCancelar = status === 'borrador' || status === 'solicitada';
   const totales = lineas.reduce((acc, l) => {
-    const base = l.cantidad_aprobada || l.cantidad_solicitada;
+    const base = cantidadBaseSolicitud(status, l.cantidad_solicitada, l.cantidad_aprobada);
     acc.solicitado += l.cantidad_solicitada;
     acc.surtido += l.cantidad_surtida;
     acc.pendiente += Math.max(0, base - l.cantidad_surtida);
@@ -298,16 +354,16 @@ export default function SolicitudTraspasoFormPage() {
                 <button onClick={onEnviar} disabled={enviar.isPending} className="btn-odoo flex items-center gap-1.5">
                   <Send className="h-3.5 w-3.5" /> Enviar a aprobación
                 </button>
-                <button onClick={() => abrirPreview('publicar')} disabled={publicar.isPending} className="btn-odoo-primary flex items-center gap-1.5">
-                  <Truck className="h-3.5 w-3.5" /> Publicar solicitud
-                </button>
               </>
             )}
             {aprobando && (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <button onClick={onGuardarAprobacionPendiente} disabled={guardarAprobacionPendiente.isPending} className="btn-odoo-info">
+                  <button onClick={() => onGuardarAprobacionPendiente()} disabled={guardarAprobacionPendiente.isPending} className="btn-odoo-info">
                     Guardar
+                  </button>
+                  <button onClick={ponerTodasEnCero} className="btn-odoo flex items-center gap-1.5" title="Marcar todas las cantidades aprobadas en cero">
+                    <CircleSlash2 className="h-3.5 w-3.5" /> Todo en cero
                   </button>
                   <button onClick={onCancelar} className="btn-odoo-secondary p-2" title="Cancelar solicitud">
                     <X className="h-4 w-4" />
@@ -328,10 +384,15 @@ export default function SolicitudTraspasoFormPage() {
                 <button onClick={() => setCerrarOpen(true)} className="btn-odoo flex items-center gap-1.5">
                   <Lock className="h-3.5 w-3.5" /> Cerrar traspaso
                 </button>
-                <button onClick={() => abrirPreview('surtir')} disabled={surtir.isPending} className="btn-odoo-primary flex items-center gap-1.5">
+                <button onClick={abrirPreview} disabled={surtir.isPending} className="btn-odoo-primary flex items-center gap-1.5">
                   <Truck className="h-3.5 w-3.5" /> {status === 'aprobada' ? 'Surtir' : 'Surtir pendientes'}
                 </button>
               </>
+            )}
+            {!esNueva && (
+              <button onClick={generarPdf} className="btn-odoo-secondary flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5" /> PDF
+              </button>
             )}
             {(status === 'surtida' || status === 'cerrada') && (
               <span className="text-[12px] text-muted-foreground flex items-center gap-1.5">
@@ -375,9 +436,11 @@ export default function SolicitudTraspasoFormPage() {
           </label>
         </div>
 
-        {editable && (
+        {(editable || aprobando) && (
           <div className="bg-card border border-border rounded p-3">
-            <span className="text-[12px] text-muted-foreground block mb-1">Agregar producto</span>
+            <span className="text-[12px] text-muted-foreground block mb-1">
+              {aprobando ? 'Agregar producto a la aprobación' : 'Agregar producto'}
+            </span>
             <ProductSearchInput products={productOptions} value="" onSelect={agregarProducto} />
           </div>
         )}
@@ -421,10 +484,9 @@ export default function SolicitudTraspasoFormPage() {
       <SurtidoPreviewDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}
-        modo={previewModo}
         lineas={preview}
         cargando={previewCargando}
-        ejecutando={surtir.isPending || publicar.isPending}
+        ejecutando={surtir.isPending}
         onConfirm={confirmarPreview}
       />
       <CerrarTraspasoDialog
@@ -433,6 +495,15 @@ export default function SolicitudTraspasoFormPage() {
         pendiente={totales.pendiente}
         ejecutando={cerrar.isPending}
         onConfirm={onCerrar}
+      />
+      <DocumentPreviewModal
+        open={pdfOpen}
+        onClose={() => { setPdfOpen(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`solicitud-traspaso-${solicitud?.folio || 'documento'}.pdf`}
+        empresaId={empresa?.id || ''}
+        tipo="solicitud_traspaso"
+        referencia_id={solicitudId}
       />
     </ListPage>
   );
