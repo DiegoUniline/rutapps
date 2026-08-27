@@ -28,6 +28,9 @@ export interface ProductForPricing {
   costo?: number;
   clasificacion_id?: string | null;
   grupo_precio?: string | null;
+  /** Lista del producto (productos.lista_id) usada por reglas `aplica_a = 'grupo'`. */
+  lista_id?: string | null;
+
   tiene_iva?: boolean;
   iva_pct?: number;
   tiene_ieps?: boolean;
@@ -88,13 +91,17 @@ function findMatchingRule(
     if (catRule) return catRule;
   }
 
-  // Grupo de precio del producto (A, B, C, D…): más específico que la regla global.
-  if (producto.grupo_precio) {
+  // Grupo/Lista del producto (A, B, C, D…): más específico que la regla global.
+  // `grupos` puede contener el UUID de la lista del producto (productos.lista_id)
+  // o una clave textual legacy (grupo_precio).
+  const grupoKeys = [producto.lista_id, producto.grupo_precio].filter(Boolean) as string[];
+  if (grupoKeys.length) {
     const grupoRule = filtered.find(
-      r => r.aplica_a === 'grupo' && (r.grupos ?? []).includes(producto.grupo_precio!)
+      r => r.aplica_a === 'grupo' && (r.grupos ?? []).some(g => grupoKeys.includes(g))
     );
     if (grupoRule) return grupoRule;
   }
+
 
   const globalRule = filtered.find(r => r.aplica_a === 'todos');
   return globalRule ?? null;
