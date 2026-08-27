@@ -63,11 +63,38 @@ export default function CompraFormPage() {
       ]} />
 
       <div className="flex items-end justify-end gap-4">
-        <div className="ml-auto bg-card border border-border rounded-lg p-4 w-full md:w-72 space-y-2">
+        <div className="ml-auto bg-card border border-border rounded-lg p-4 w-full md:w-[420px] space-y-3">
+          <div className="grid grid-cols-[1fr_90px] gap-2">
+            <div>
+              <label className="label-odoo">Descuento final de factura</label>
+              <input type="number" min={0} max={h.form.descuento_extra_tipo === 'porcentaje' ? 100 : undefined} step="0.01" className="input-odoo w-full" value={h.form.descuento_extra ?? 0} onChange={e => h.updateField('descuento_extra', Math.max(0, Number(e.target.value) || 0))} disabled={!h.isEditable} />
+            </div>
+            <div>
+              <label className="label-odoo">Tipo</label>
+              <select className="input-odoo w-full" value={h.form.descuento_extra_tipo ?? 'monto'} onChange={e => h.updateField('descuento_extra_tipo', e.target.value)} disabled={!h.isEditable}>
+                <option value="monto">Monto</option>
+                <option value="porcentaje">%</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="label-odoo">Motivo del descuento</label>
+            <input className="input-odoo w-full" value={h.form.descuento_extra_motivo ?? ''} onChange={e => h.updateField('descuento_extra_motivo', e.target.value)} placeholder="Ej. descuento comercial al final" disabled={!h.isEditable} />
+          </div>
+          <div>
+            <label className="label-odoo">Ajuste por diferencia (+ / −)</label>
+            <input type="number" step="0.01" className="input-odoo w-full" value={h.form.ajuste_total ?? 0} onChange={e => h.updateField('ajuste_total', Number(e.target.value) || 0)} disabled={!h.isEditable} />
+            <p className="mt-1 text-[11px] text-muted-foreground">Usa negativo para restar centavos o pesos; positivo para sumar.</p>
+          </div>
+          <div className="border-t border-border pt-2 space-y-2">
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">{fmt(h.totals.subtotal)}</span></div>
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Impuestos</span><span className="font-medium">{fmt(h.totals.iva_total)}</span></div>
-          <div className="border-t border-border pt-2 flex justify-between text-base"><span className="font-semibold">Total</span><span className="font-bold">{fmt(h.totals.total)}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total antes de ajustes</span><span className="font-medium">{fmt(h.totals.total_antes_ajustes)}</span></div>
+          {h.totals.descuento_total > 0 && <div className="flex justify-between text-sm text-success"><span>Descuento final</span><span className="font-medium">− {fmt(h.totals.descuento_total)}</span></div>}
+          {h.totals.ajuste_total !== 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Ajuste</span><span className="font-medium">{h.totals.ajuste_total > 0 ? '+' : '−'} {fmt(Math.abs(h.totals.ajuste_total))}</span></div>}
+          <div className="border-t border-border pt-2 flex justify-between text-base"><span className="font-semibold">Total final</span><span className="font-bold">{fmt(h.totals.total)}</span></div>
           {!h.isNew && (<><div className="border-t border-border pt-2 flex justify-between text-sm"><span className="text-success">Pagado</span><span className="font-medium text-success">{fmt(h.totalPagado)}</span></div><div className="flex justify-between text-sm"><span className="text-destructive">Saldo</span><span className="font-bold text-destructive">{fmt(h.saldoActual)}</span></div></>)}
+          </div>
         </div>
       </div>
     </div>

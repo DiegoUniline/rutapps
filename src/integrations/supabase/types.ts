@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       ajustes_inventario: {
         Row: {
+          ajuste_total: number
           almacen_id: string | null
           batch_id: string | null
           cantidad_anterior: number
@@ -1533,6 +1534,10 @@ export type Database = {
           credito: boolean | null
           dia_visita: string[] | null
           dias_credito: number | null
+          descuento_extra: number
+          descuento_extra_motivo: string | null
+          descuento_extra_tipo: string
+          descuento_total: number
           direccion: string | null
           email: string | null
           empresa_id: string
@@ -1986,6 +1991,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          ajuste_total?: number
           almacen_id?: string | null
           compra_id: string
           compra_linea_id: string
@@ -2133,6 +2139,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           dias_credito?: number | null
+          descuento_extra?: number
+          descuento_extra_motivo?: string | null
+          descuento_extra_tipo?: string
+          descuento_total?: number
           empresa_id: string
           fecha?: string
           fecha_vencimiento?: string | null
@@ -2149,11 +2159,16 @@ export type Database = {
           total?: number | null
         }
         Update: {
+          ajuste_total?: number
           almacen_id?: string | null
           condicion_pago?: string
           created_at?: string
           created_by?: string | null
           dias_credito?: number | null
+          descuento_extra?: number
+          descuento_extra_motivo?: string | null
+          descuento_extra_tipo?: string
+          descuento_total?: number
           empresa_id?: string
           fecha?: string
           fecha_vencimiento?: string | null

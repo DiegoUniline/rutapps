@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { emptyLine, calcLineTotals, type CompraLinea } from './types';
 import { confirmDialog as confirmAsync } from '@/lib/confirm';
+import { calcularTotalesCompra } from '@/lib/compraAjustes';
 
 function useCompra(id?: string) {
   return useQuery({ queryKey: ['compra', id], queryFn: async () => { const { data, error } = await supabase.from('compras').select('*, proveedores(nombre), almacenes(nombre), compra_lineas(*, productos(id, codigo, nombre, nombre_compra, costo, maneja_lote), lotes(codigo))').eq('id', id!).single(); if (error) throw error; return data; }, enabled: !!id });
@@ -30,7 +31,7 @@ export function useCompraForm() {
   const { data: productosList } = useProductosForSelect();
   const { data: almacenesList } = useAlmacenes();
 
-  const [form, setForm] = useState<Record<string, any>>({ status: 'borrador', condicion_pago: 'contado', fecha: todayLocal(), dias_credito: 0, subtotal: 0, iva_total: 0, total: 0, saldo_pendiente: 0 });
+  const [form, setForm] = useState<Record<string, any>>({ status: 'borrador', condicion_pago: 'contado', fecha: todayLocal(), dias_credito: 0, subtotal: 0, iva_total: 0, total: 0, saldo_pendiente: 0, descuento_extra: 0, descuento_extra_tipo: 'monto', descuento_total: 0, ajuste_total: 0 });
   const [lineas, setLineas] = useState<Partial<CompraLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
   const [showPago, setShowPago] = useState(false);
@@ -59,8 +60,14 @@ export function useCompraForm() {
   const totals = useMemo(() => {
     const subtotal = lineas.reduce((s, l) => s + (l.subtotal ?? 0), 0);
     const total = lineas.reduce((s, l) => s + (l.total ?? 0), 0);
-    return { subtotal, iva_total: total - subtotal, total };
-  }, [lineas]);
+    return calcularTotalesCompra({
+      subtotalLineas: subtotal,
+      totalLineas: total,
+      descuentoExtra: form.descuento_extra,
+      descuentoExtraTipo: form.descuento_extra_tipo,
+      ajusteTotal: form.ajuste_total,
+    });
+  }, [lineas, form.descuento_extra, form.descuento_extra_tipo, form.ajuste_total]);
 
   const updateField = (key: string, val: any) => {
     setForm(f => {
@@ -120,7 +127,9 @@ export function useCompraForm() {
     if (!form.almacen_id) { toast.error('Selecciona un almacén destino'); return; }
     try {
       const totalPagado = pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0;
-      const compraData = { empresa_id: empresa.id, proveedor_id: form.proveedor_id || null, almacen_id: form.almacen_id || null, fecha: form.fecha, condicion_pago: form.condicion_pago, dias_credito: form.condicion_pago === 'credito' ? (form.dias_credito ?? 0) : 0, status: form.status, subtotal: totals.subtotal, iva_total: totals.iva_total, total: totals.total, saldo_pendiente: Math.max(0, totals.total - totalPagado), notas: form.notas || null, notas_pago: form.notas_pago || null, numero_factura: form.numero_factura || null, fecha_vencimiento: form.condicion_pago === 'credito' ? (form.fecha_vencimiento || null) : null };
+      const descuentoTipo = form.descuento_extra_tipo === 'porcentaje' ? 'porcentaje' : 'monto';
+      const descuentoCapturado = Math.max(0, Number(form.descuento_extra) || 0);
+      const compraData = { empresa_id: empresa.id, proveedor_id: form.proveedor_id || null, almacen_id: form.almacen_id || null, fecha: form.fecha, condicion_pago: form.condicion_pago, dias_credito: form.condicion_pago === 'credito' ? (form.dias_credito ?? 0) : 0, status: form.status, subtotal: totals.subtotal, iva_total: totals.iva_total, total: totals.total, saldo_pendiente: Math.max(0, totals.total - totalPagado), descuento_extra: descuentoTipo === 'porcentaje' ? Math.min(100, descuentoCapturado) : descuentoCapturado, descuento_extra_tipo: descuentoTipo, descuento_extra_motivo: form.descuento_extra_motivo || null, descuento_total: totals.descuento_total, ajuste_total: totals.ajuste_total, notas: form.notas || null, notas_pago: form.notas_pago || null, numero_factura: form.numero_factura || null, fecha_vencimiento: form.condicion_pago === 'credito' ? (form.fecha_vencimiento || null) : null };
       let compraId = form.id;
       if (isNew) { const { data, error } = await supabase.from('compras').insert(compraData as any).select().single(); if (error) throw error; compraId = (data as any).id; } else { const { empresa_id, ...updateData } = compraData; const { error } = await supabase.from('compras').update(updateData as any).eq('id', compraId); if (error) throw error; await supabase.from('compra_lineas').delete().eq('compra_id', compraId); }
       const validLines = lineas.filter(l => l.producto_id);

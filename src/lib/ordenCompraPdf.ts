@@ -29,7 +29,7 @@ async function loadOrdenCompra(compraId: string, empresaId: string): Promise<Ord
   const [cRes, lRes, eRes] = await Promise.all([
     supabase
       .from('compras')
-      .select('id, folio, fecha, status, condicion_pago, dias_credito, fecha_vencimiento, numero_factura, notas, subtotal, iva_total, total, saldo_pendiente, proveedor_id, proveedores(nombre, rfc, telefono, email)')
+      .select('id, folio, fecha, status, condicion_pago, dias_credito, fecha_vencimiento, numero_factura, notas, subtotal, iva_total, descuento_extra, descuento_extra_tipo, descuento_extra_motivo, descuento_total, ajuste_total, total, saldo_pendiente, proveedor_id, proveedores(nombre, rfc, telefono, email)')
       .eq('id', compraId)
       .eq('empresa_id', empresaId)
       .maybeSingle(),
@@ -120,11 +120,18 @@ export async function downloadOrdenCompraPdf(compraId: string, empresaId: string
 
   y = (doc as any).lastAutoTable.finalY + 8;
 
-  const totales = [
+  const totales: { label: string; value: string; bold?: boolean }[] = [
     { label: 'Subtotal', value: fmtMoney(Number(d.compra.subtotal ?? 0), d.simbolo) },
     { label: 'IVA', value: fmtMoney(Number(d.compra.iva_total ?? 0), d.simbolo) },
-    { label: 'Total', value: fmtMoney(Number(d.compra.total ?? 0), d.simbolo), bold: true },
   ];
+  if (Number(d.compra.descuento_total ?? 0) > 0) {
+    totales.push({ label: 'Descuento final', value: `- ${fmtMoney(Number(d.compra.descuento_total), d.simbolo)}` });
+  }
+  if (Number(d.compra.ajuste_total ?? 0) !== 0) {
+    const ajuste = Number(d.compra.ajuste_total);
+    totales.push({ label: 'Ajuste', value: `${ajuste > 0 ? '+' : '-'} ${fmtMoney(Math.abs(ajuste), d.simbolo)}` });
+  }
+  totales.push({ label: 'Total final', value: fmtMoney(Number(d.compra.total ?? 0), d.simbolo), bold: true });
   if (Number(d.compra.saldo_pendiente ?? 0) > 0) {
     totales.push({ label: 'Saldo pendiente', value: fmtMoney(Number(d.compra.saldo_pendiente), d.simbolo) });
   }
@@ -164,6 +171,8 @@ export async function downloadOrdenCompraExcel(compraId: string, empresaId: stri
     `Fecha: ${fmtDate(d.compra.fecha)}`,
     d.compra.numero_factura ? `Factura: ${d.compra.numero_factura}` : null,
     d.compra.fecha_vencimiento ? `Vence: ${fmtDate(d.compra.fecha_vencimiento)}` : null,
+    Number(d.compra.descuento_total ?? 0) > 0 ? `Descuento: ${fmtMoney(Number(d.compra.descuento_total), d.simbolo)}` : null,
+    Number(d.compra.ajuste_total ?? 0) !== 0 ? `Ajuste: ${fmtMoney(Number(d.compra.ajuste_total), d.simbolo)}` : null,
   ].filter(Boolean) as string[];
 
   await exportToExcel({

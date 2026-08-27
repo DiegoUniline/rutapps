@@ -146,7 +146,9 @@ export function CompraExpandedRow({ compra, colSpan, fmt, onCollapse }: Props) {
                   <div className="text-[12px] space-y-0.5 min-w-[200px]">
                     <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">{fmt(compra.subtotal)}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">IVA</span><span className="tabular-nums">{fmt(compra.iva_total)}</span></div>
-                    <div className="flex justify-between font-bold border-t border-border pt-0.5"><span>Total</span><span className="tabular-nums">{fmt(compra.total)}</span></div>
+                    {(compra.descuento_total ?? 0) > 0 && <div className="flex justify-between text-success"><span>Descuento final</span><span className="tabular-nums">− {fmt(compra.descuento_total)}</span></div>}
+                    {(compra.ajuste_total ?? 0) !== 0 && <div className="flex justify-between"><span className="text-muted-foreground">Ajuste</span><span className="tabular-nums">{compra.ajuste_total > 0 ? '+' : '−'} {fmt(Math.abs(compra.ajuste_total))}</span></div>}
+                    <div className="flex justify-between font-bold border-t border-border pt-0.5"><span>Total final</span><span className="tabular-nums">{fmt(compra.total)}</span></div>
                     {(compra.saldo_pendiente ?? 0) > 0 && (
                       <div className="flex justify-between text-destructive font-medium"><span>Saldo pendiente</span><span className="tabular-nums">{fmt(compra.saldo_pendiente)}</span></div>
                     )}

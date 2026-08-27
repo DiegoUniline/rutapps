@@ -24,6 +24,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 import { getNombreCompra } from '@/lib/productoNombres';
 import { toast } from 'sonner';
+import { prorratearAjustesCompra } from '@/lib/compraAjustes';
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
@@ -35,27 +36,93 @@ const STATUS_MAP: Record<string, { label: string; variant: string }> = {
 
 const COMPRAS_COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
+  { key: 'numero_factura', header: 'Número de factura', width: 18 },
   { key: 'proveedor', header: 'Proveedor', width: 25 },
+  { key: 'proveedor_rfc', header: 'RFC proveedor', width: 16 },
+  { key: 'almacen', header: 'Almacén', width: 18 },
   { key: 'fecha', header: 'Fecha', format: 'date', width: 12 },
+  { key: 'fecha_vencimiento', header: 'Vencimiento', format: 'date', width: 12 },
   { key: 'condicion_pago', header: 'Condición', width: 12 },
+  { key: 'dias_credito', header: 'Días crédito', format: 'number', width: 12 },
   { key: 'subtotal', header: 'Subtotal', format: 'currency', width: 14 },
   { key: 'iva_total', header: 'IVA', format: 'currency', width: 12 },
-  { key: 'total', header: 'Total', format: 'currency', width: 14 },
+  { key: 'total_antes_ajustes', header: 'Total antes ajustes', format: 'currency', width: 18 },
+  { key: 'descuento_capturado', header: 'Descuento capturado', format: 'number', width: 18 },
+  { key: 'descuento_tipo', header: 'Tipo descuento', width: 14 },
+  { key: 'descuento_total', header: 'Descuento aplicado', format: 'currency', width: 18 },
+  { key: 'descuento_motivo', header: 'Motivo descuento', width: 28 },
+  { key: 'ajuste_total', header: 'Ajuste (+ / −)', format: 'currency', width: 14 },
+  { key: 'total', header: 'Total final', format: 'currency', width: 14 },
+  { key: 'total_pagado', header: 'Total pagado', format: 'currency', width: 14 },
   { key: 'saldo_pendiente', header: 'Saldo', format: 'currency', width: 14 },
   { key: 'status', header: 'Estado', width: 12 },
+  { key: 'notas', header: 'Notas', width: 30 },
+  { key: 'notas_pago', header: 'Notas de pago', width: 30 },
 ];
 
 const DETALLE_COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
+  { key: 'numero_factura', header: 'Número de factura', width: 18 },
   { key: 'proveedor', header: 'Proveedor', width: 25 },
+  { key: 'proveedor_rfc', header: 'RFC proveedor', width: 16 },
+  { key: 'almacen', header: 'Almacén', width: 18 },
   { key: 'fecha', header: 'Fecha', format: 'date', width: 12 },
   { key: 'codigo', header: 'Código', width: 14 },
   { key: 'producto', header: 'Producto', width: 25 },
   { key: 'cantidad', header: 'Cantidad', format: 'number', width: 12 },
-  { key: 'precio_unitario', header: 'P. Unit.', format: 'currency', width: 14 },
-  { key: 'subtotal', header: 'Subtotal', format: 'currency', width: 14 },
+  { key: 'factor_conversion', header: 'Factor conversión', format: 'number', width: 15 },
+  { key: 'piezas_total', header: 'Piezas totales', format: 'number', width: 14 },
+  { key: 'cantidad_recibida', header: 'Piezas recibidas', format: 'number', width: 15 },
+  { key: 'cantidad_pendiente', header: 'Piezas pendientes', format: 'number', width: 15 },
+  { key: 'precio_unitario', header: 'Costo unitario bruto', format: 'currency', width: 18 },
+  { key: 'subtotal', header: 'Subtotal línea', format: 'currency', width: 14 },
+  { key: 'total_bruto_linea', header: 'Total bruto línea', format: 'currency', width: 17 },
+  { key: 'descuento_prorrateado', header: 'Descuento prorrateado', format: 'currency', width: 20 },
+  { key: 'ajuste_prorrateado', header: 'Ajuste prorrateado', format: 'currency', width: 18 },
+  { key: 'total_neto_linea', header: 'Total neto línea', format: 'currency', width: 17 },
+  { key: 'costo_unitario_neto', header: 'Costo unitario neto', format: 'currency', width: 18 },
+  { key: 'condicion_pago', header: 'Condición', width: 12 },
+  { key: 'fecha_vencimiento', header: 'Vencimiento', format: 'date', width: 12 },
+  { key: 'total_antes_ajustes', header: 'Total compra antes ajustes', format: 'currency', width: 22 },
+  { key: 'descuento_total_compra', header: 'Descuento compra', format: 'currency', width: 18 },
+  { key: 'descuento_motivo', header: 'Motivo descuento', width: 28 },
+  { key: 'ajuste_total_compra', header: 'Ajuste compra', format: 'currency', width: 16 },
+  { key: 'total_compra', header: 'Total final compra', format: 'currency', width: 17 },
+  { key: 'saldo_pendiente', header: 'Saldo compra', format: 'currency', width: 15 },
   { key: 'status', header: 'Estado', width: 12 },
 ];
+
+const totalPagadoCompra = (compra: any) =>
+  (compra.pago_compras ?? []).reduce((sum: number, pago: any) => sum + (Number(pago.monto) || 0), 0);
+
+const compraToExport = (compra: any) => {
+  const totalAntesAjustes = Number(compra.subtotal ?? 0) + Number(compra.iva_total ?? 0);
+  return {
+    folio: compra.folio ?? '',
+    numero_factura: compra.numero_factura ?? '',
+    proveedor: compra.proveedores?.nombre ?? '',
+    proveedor_rfc: compra.proveedores?.rfc ?? '',
+    almacen: compra.almacenes?.nombre ?? '',
+    fecha: compra.fecha,
+    fecha_vencimiento: compra.fecha_vencimiento,
+    condicion_pago: compra.condicion_pago === 'credito' ? 'Crédito' : 'Contado',
+    dias_credito: compra.dias_credito ?? 0,
+    subtotal: Number(compra.subtotal) || 0,
+    iva_total: Number(compra.iva_total) || 0,
+    total_antes_ajustes: totalAntesAjustes,
+    descuento_capturado: Number(compra.descuento_extra) || 0,
+    descuento_tipo: compra.descuento_extra_tipo === 'porcentaje' ? 'Porcentaje' : 'Monto',
+    descuento_total: Number(compra.descuento_total) || 0,
+    descuento_motivo: compra.descuento_extra_motivo ?? '',
+    ajuste_total: Number(compra.ajuste_total) || 0,
+    total: Number(compra.total) || 0,
+    total_pagado: totalPagadoCompra(compra),
+    saldo_pendiente: Number(compra.saldo_pendiente) || 0,
+    status: STATUS_MAP[compra.status]?.label ?? compra.status,
+    notas: compra.notas ?? '',
+    notas_pago: compra.notas_pago ?? '',
+  };
+};
 
 const PAGE_SIZE = 80;
 
@@ -106,7 +173,7 @@ function useCompras(search: string, statusFilter: string[], empresaId?: string) 
     queryFn: async () => {
       let q = supabase
         .from('compras')
-        .select('*, proveedores(nombre), almacenes(nombre), compra_lineas(cantidad, factor_conversion, piezas_loteadas, productos(maneja_lote))')
+        .select('*, proveedores(nombre, rfc), almacenes(nombre), pago_compras(monto), compra_lineas(cantidad, factor_conversion, piezas_loteadas, productos(maneja_lote))')
         .eq('empresa_id', empresaId!)
         .order('fecha', { ascending: false });
       if (statusFilter && statusFilter.length > 0) q = q.in('status', statusFilter);
@@ -117,6 +184,7 @@ function useCompras(search: string, statusFilter: string[], empresaId?: string) 
         const s = search.toLowerCase();
         filtered = filtered.filter((c: any) =>
           (c.folio ?? '').toLowerCase().includes(s) ||
+          (c.numero_factura ?? '').toLowerCase().includes(s) ||
           ((c.proveedores as any)?.nombre ?? '').toLowerCase().includes(s)
         );
       }
@@ -188,24 +256,64 @@ export default function ComprasPage() {
       const data = await fetchAllPages<any>((from, to) =>
         supabase
           .from('compra_lineas')
-          .select('id, cantidad, precio_unitario, subtotal, total, producto_id, compra_id, productos(codigo, nombre, nombre_compra), compras!inner(folio, status, fecha, proveedor_id, proveedores(nombre))')
+          .select('id, cantidad, cantidad_recibida, factor_conversion, piezas_total, precio_unitario, subtotal, total, producto_id, compra_id, productos(codigo, nombre, nombre_compra), compras!inner(folio, numero_factura, status, fecha, fecha_vencimiento, condicion_pago, dias_credito, subtotal, iva_total, descuento_extra, descuento_extra_tipo, descuento_extra_motivo, descuento_total, ajuste_total, total, saldo_pendiente, notas, proveedor_id, almacen_id, proveedores(nombre, rfc), almacenes(nombre))')
           .eq('compras.empresa_id', empresa!.id)
           .order('created_at', { ascending: false })
           .range(from, to)
       );
-      return data.map((l: any) => ({
-        linea_id: l.id,
-        compra_id: l.compra_id,
-        cantidad: l.cantidad,
-        precio_unitario: l.precio_unitario,
-        subtotal: l.subtotal ?? l.cantidad * l.precio_unitario,
-        codigo: l.productos?.codigo ?? '',
-        producto: getNombreCompra(l.productos),
-        folio: l.compras?.folio ?? l.compra_id?.slice(0, 8),
-        status: l.compras?.status ?? '',
-        fecha: l.compras?.fecha ?? '',
-        proveedor: l.compras?.proveedores?.nombre ?? '—',
-      }));
+      const porCompra = new Map<string, any[]>();
+      for (const linea of data) {
+        const grupo = porCompra.get(linea.compra_id) ?? [];
+        grupo.push(linea);
+        porCompra.set(linea.compra_id, grupo);
+      }
+
+      return Array.from(porCompra.values()).flatMap(grupo => {
+        const compra = grupo[0]?.compras ?? {};
+        return prorratearAjustesCompra(
+          grupo.map((l: any) => ({ ...l, total: Number(l.total ?? l.subtotal) || 0 })),
+          Number(compra.descuento_total) || 0,
+          Number(compra.ajuste_total) || 0,
+        ).map((l: any) => {
+          const cantidad = Number(l.cantidad) || 0;
+          const factor = Number(l.factor_conversion) || 1;
+          const piezas = Number(l.piezas_total) || cantidad * factor;
+          const recibido = Number(l.cantidad_recibida) || 0;
+          return {
+            linea_id: l.id,
+            compra_id: l.compra_id,
+            numero_factura: compra.numero_factura ?? '',
+            cantidad,
+            factor_conversion: factor,
+            piezas_total: piezas,
+            cantidad_recibida: recibido,
+            cantidad_pendiente: Math.max(0, piezas - recibido),
+            precio_unitario: Number(l.precio_unitario) || 0,
+            subtotal: Number(l.subtotal) || cantidad * (Number(l.precio_unitario) || 0),
+            total_bruto_linea: Number(l.total) || 0,
+            descuento_prorrateado: l.descuento_prorrateado,
+            ajuste_prorrateado: l.ajuste_prorrateado,
+            total_neto_linea: l.total_neto_linea,
+            costo_unitario_neto: cantidad > 0 ? l.total_neto_linea / cantidad : 0,
+            codigo: l.productos?.codigo ?? '',
+            producto: getNombreCompra(l.productos),
+            folio: compra.folio ?? l.compra_id?.slice(0, 8),
+            status: compra.status ?? '',
+            fecha: compra.fecha ?? '',
+            fecha_vencimiento: compra.fecha_vencimiento ?? '',
+            condicion_pago: compra.condicion_pago === 'credito' ? 'Crédito' : 'Contado',
+            total_antes_ajustes: Number(compra.subtotal ?? 0) + Number(compra.iva_total ?? 0),
+            descuento_total_compra: Number(compra.descuento_total) || 0,
+            descuento_motivo: compra.descuento_extra_motivo ?? '',
+            ajuste_total_compra: Number(compra.ajuste_total) || 0,
+            total_compra: Number(compra.total) || 0,
+            saldo_pendiente: Number(compra.saldo_pendiente) || 0,
+            proveedor: compra.proveedores?.nombre ?? '—',
+            proveedor_rfc: compra.proveedores?.rfc ?? '',
+            almacen: compra.almacenes?.nombre ?? '',
+          };
+        });
+      });
     },
   });
 
@@ -250,7 +358,12 @@ export default function ComprasPage() {
   const pageData = filteredCompras.slice(from - 1, to);
   const allSelected = pageData.length > 0 && pageData.every((c: any) => selected.has(c.id));
   const toggleAll = () => allSelected ? setSelected(new Set()) : setSelected(new Set(pageData.map((c: any) => c.id)));
-  const toggleOne = (id: string) => { const next = new Set(selected); next.has(id) ? next.delete(id) : next.add(id); setSelected(next); };
+  const toggleOne = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
+  };
 
   const handleBulkExportCompras = () => {
     if (selected.size === 0) return;
@@ -259,12 +372,7 @@ export default function ComprasPage() {
       fileName: `Compras-seleccion-${sel.length}`,
       title: `Compras seleccionadas (${sel.length})`,
       columns: COMPRAS_COLUMNS,
-      data: sel.map((c: any) => ({
-        folio: c.folio ?? '', proveedor: c.proveedores?.nombre ?? '', fecha: c.fecha,
-        condicion_pago: c.condicion_pago === 'credito' ? 'Crédito' : 'Contado',
-        subtotal: c.subtotal ?? 0, iva_total: c.iva_total ?? 0, total: c.total ?? 0,
-        saldo_pendiente: c.saldo_pendiente ?? 0, status: STATUS_MAP[c.status]?.label ?? c.status,
-      })),
+      data: sel.map(compraToExport),
       totals: { total: sel.reduce((s, c) => s + (c.total ?? 0), 0), saldo_pendiente: sel.reduce((s, c) => s + (c.saldo_pendiente ?? 0), 0) },
     });
     toast.success(`${sel.length} compras exportadas`);
@@ -287,17 +395,7 @@ export default function ComprasPage() {
   const totalCompras = filteredCompras.reduce((s, c) => s + ((c as any).total ?? 0), 0);
   const totalSaldo = filteredCompras.reduce((s, c) => s + ((c as any).saldo_pendiente ?? 0), 0);
 
-  const exportData = filteredCompras.map((c: any) => ({
-    folio: c.folio ?? '',
-    proveedor: c.proveedores?.nombre ?? '',
-    fecha: c.fecha,
-    condicion_pago: c.condicion_pago === 'credito' ? 'Crédito' : 'Contado',
-    subtotal: c.subtotal ?? 0,
-    iva_total: c.iva_total ?? 0,
-    total: c.total ?? 0,
-    saldo_pendiente: c.saldo_pendiente ?? 0,
-    status: STATUS_MAP[c.status]?.label ?? c.status,
-  }));
+  const exportData = filteredCompras.map(compraToExport);
 
   // ─── DETALLE filtering ───────────────────────────────────
   const filteredLineas = useMemo(() => {
@@ -308,6 +406,7 @@ export default function ComprasPage() {
       const s = searchD.toLowerCase();
       list = list.filter(l =>
         l.folio.toLowerCase().includes(s) ||
+        l.numero_factura.toLowerCase().includes(s) ||
         l.producto.toLowerCase().includes(s) ||
         l.codigo.toLowerCase().includes(s) ||
         l.proveedor.toLowerCase().includes(s)
@@ -323,7 +422,7 @@ export default function ComprasPage() {
   const toD = Math.min(pageD * PAGE_SIZE, totalD);
   const pageDataD = filteredLineas.slice(fromD - 1, toD);
   const totalCantidadD = filteredLineas.reduce((s, l) => s + (l.cantidad ?? 0), 0);
-  const totalSubtotalD = filteredLineas.reduce((s, l) => s + (l.subtotal ?? 0), 0);
+  const totalSubtotalD = filteredLineas.reduce((s, l) => s + (l.total_neto_linea ?? 0), 0);
 
   const exportLineas = filteredLineas.map(l => ({
     ...l,
@@ -450,19 +549,20 @@ export default function ComprasPage() {
         <thead>
           <tr className="border-b border-table-border text-left">
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Factura</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Proveedor</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">P. Unit.</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Subtotal</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total neto</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
-            <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">No hay líneas de detalle.</td></tr>
+            <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">No hay líneas de detalle.</td></tr>
           )}
           {items.map((l: any, i: number) => (
             <tr
@@ -471,13 +571,14 @@ export default function ComprasPage() {
               onClick={() => navigate(`/almacen/compras/${l.compra_id}`)}
             >
               <td className="py-2 px-3 font-mono text-xs font-medium">{l.folio}</td>
+              <td className="py-2 px-3 font-mono text-xs text-muted-foreground">{l.numero_factura || '—'}</td>
               <td className="py-2 px-3">{l.proveedor}</td>
               <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(l.fecha)}</td>
               <td className="py-2 px-3 font-mono text-xs text-muted-foreground">{l.codigo}</td>
               <td className="py-2 px-3 font-medium">{l.producto}</td>
               <td className="py-2 px-3 text-right font-bold">{fmtNum(l.cantidad)}</td>
               <td className="py-2 px-3 text-right hidden md:table-cell">{fmt(l.precio_unitario)}</td>
-              <td className="py-2 px-3 text-right">{fmt(l.subtotal)}</td>
+              <td className="py-2 px-3 text-right">{fmt(l.total_neto_linea)}</td>
               <td className="py-2 px-3 text-center"><StatusChip status={l.status} /></td>
             </tr>
           ))}
@@ -485,10 +586,10 @@ export default function ComprasPage() {
         {items.length > 0 && (
           <tfoot>
             <tr className="bg-card border-t border-border font-semibold text-[12px]">
-              <td colSpan={5} className="py-2 px-3 text-muted-foreground">{items.length} líneas</td>
+              <td colSpan={6} className="py-2 px-3 text-muted-foreground">{items.length} líneas</td>
               <td className="py-2 px-3 text-right font-bold">{fmtNum(items.reduce((s: number, l: any) => s + (l.cantidad ?? 0), 0))}</td>
               <td className="py-2 px-3 text-right hidden md:table-cell">—</td>
-              <td className="py-2 px-3 text-right font-bold">{fmt(items.reduce((s: number, l: any) => s + (l.subtotal ?? 0), 0))}</td>
+              <td className="py-2 px-3 text-right font-bold">{fmt(items.reduce((s: number, l: any) => s + (l.total_neto_linea ?? 0), 0))}</td>
               <td />
             </tr>
           </tfoot>
@@ -527,7 +628,7 @@ export default function ComprasPage() {
             viewMode === 'compras' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          <List className="h-3.5 w-3.5" /> Compras
+          <List className="h-3.5 w-3.5" /> Por factura
         </button>
         <button
           onClick={() => setViewMode('detalle')}
@@ -536,7 +637,7 @@ export default function ComprasPage() {
             viewMode === 'detalle' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          <Package className="h-3.5 w-3.5" /> Detalle productos
+          <Package className="h-3.5 w-3.5" /> Por producto
         </button>
       </div>
 
@@ -547,7 +648,7 @@ export default function ComprasPage() {
             <OdooFilterBar
               search={search}
               onSearchChange={val => { setSearch(val); setPage(1); }}
-              placeholder="Buscar por folio o proveedor..."
+              placeholder="Buscar por folio, factura o proveedor..."
               filterOptions={FILTER_OPTIONS}
               activeFilters={filters}
               onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
@@ -619,7 +720,7 @@ export default function ComprasPage() {
             <OdooFilterBar
               search={searchD}
               onSearchChange={val => { setSearchD(val); setPageD(1); }}
-              placeholder="Buscar por folio, producto o proveedor..."
+              placeholder="Buscar por folio, factura, producto o proveedor..."
               filterOptions={STATIC_FILTER_OPTIONS}
               activeFilters={filtersD}
               onToggleFilter={(key, val) => { toggleFilterValueD(key, val); setPageD(1); }}
@@ -638,8 +739,8 @@ export default function ComprasPage() {
             />
             <div className="flex items-center gap-2 shrink-0">
               <ExportButton
-                onExcel={() => exportToExcel({ fileName: 'Compras_Detalle', title: 'Detalle de Compras', columns: DETALLE_COLUMNS, data: exportLineas, totals: { cantidad: totalCantidadD, subtotal: totalSubtotalD } })}
-                onPDF={() => exportToPDF({ fileName: 'Compras_Detalle', title: 'Detalle de Compras', columns: DETALLE_COLUMNS, data: exportLineas, totals: { cantidad: totalCantidadD, subtotal: totalSubtotalD } })}
+                onExcel={() => exportToExcel({ fileName: 'Compras_por_producto', title: 'Compras por producto', columns: DETALLE_COLUMNS, data: exportLineas, totals: { cantidad: totalCantidadD, total_neto_linea: totalSubtotalD } })}
+                onPDF={() => exportToPDF({ fileName: 'Compras_por_producto', title: 'Compras por producto', columns: DETALLE_COLUMNS, data: exportLineas, totals: { cantidad: totalCantidadD, total_neto_linea: totalSubtotalD } })}
               />
             </div>
           </div>

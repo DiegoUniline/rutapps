@@ -6,6 +6,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import type { ExportColumn } from '@/lib/exportUtils';
+import { prorratearAjustesCompra } from '@/lib/compraAjustes';
 
 export type ReporteFuente =
   | 'ventas'
@@ -129,6 +130,7 @@ export const CAMPOS_INVENTARIO: CampoDef[] = [
 export const CAMPOS_COMPRAS: CampoDef[] = [
   { key: 'fecha',          label: 'Fecha',         format: 'date',     width: 12 },
   { key: 'folio',          label: 'Folio',         format: 'text',     width: 14 },
+  { key: 'numero_factura', label: 'Número factura',format: 'text',     width: 18 },
   { key: 'status',         label: 'Estado',        format: 'text',     width: 12 },
   { key: 'proveedor',      label: 'Proveedor',     format: 'text',     width: 28 },
   { key: 'proveedor_rfc',  label: 'RFC proveedor', format: 'text',     width: 14 },
@@ -136,12 +138,30 @@ export const CAMPOS_COMPRAS: CampoDef[] = [
   { key: 'codigo',         label: 'EAN / Código',  format: 'text',     width: 16 },
   { key: 'producto',       label: 'Producto',      format: 'text',     width: 32 },
   { key: 'cantidad',       label: 'Cantidad',      format: 'number',   width: 10 },
-  { key: 'precio_unitario',label: 'Costo unitario',format: 'currency', width: 14 },
+  { key: 'factor_conversion',label: 'Factor conversión',format: 'number',width: 14 },
+  { key: 'piezas_total',   label: 'Piezas totales',format: 'number',   width: 14 },
+  { key: 'cantidad_recibida',label: 'Piezas recibidas',format: 'number',width: 15 },
+  { key: 'cantidad_pendiente',label: 'Piezas pendientes',format: 'number',width: 15 },
+  { key: 'precio_unitario',label: 'Costo unitario bruto',format: 'currency', width: 18 },
   { key: 'subtotal_linea', label: 'Subtotal línea',format: 'currency', width: 14 },
-  { key: 'total_linea',    label: 'Total línea',   format: 'currency', width: 14 },
+  { key: 'total_linea',    label: 'Total bruto línea',format: 'currency', width: 17 },
+  { key: 'descuento_linea',label: 'Descuento prorrateado',format: 'currency',width: 20 },
+  { key: 'ajuste_linea',   label: 'Ajuste prorrateado',format: 'currency',width: 18 },
+  { key: 'total_neto_linea',label: 'Total neto línea',format: 'currency',width: 17 },
+  { key: 'costo_unitario_neto',label: 'Costo unitario neto',format: 'currency',width: 18 },
+  { key: 'subtotal_compra',label: 'Subtotal compra',format: 'currency',width: 16 },
+  { key: 'iva_compra',     label: 'IVA compra',    format: 'currency', width: 14 },
+  { key: 'descuento_capturado',label: 'Descuento capturado',format: 'number',width: 18 },
+  { key: 'descuento_tipo', label: 'Tipo descuento',format: 'text',     width: 14 },
+  { key: 'descuento_total',label: 'Descuento aplicado',format: 'currency',width: 18 },
+  { key: 'descuento_motivo',label: 'Motivo descuento',format: 'text',  width: 28 },
+  { key: 'ajuste_total',   label: 'Ajuste (+ / −)',format: 'currency', width: 14 },
   { key: 'total_compra',   label: 'Total compra',  format: 'currency', width: 14 },
   { key: 'saldo_pendiente',label: 'Saldo pendiente',format: 'currency',width: 14 },
   { key: 'condicion_pago', label: 'Condición pago',format: 'text',     width: 12 },
+  { key: 'dias_credito',   label: 'Días crédito',  format: 'number',   width: 12 },
+  { key: 'fecha_vencimiento',label: 'Vencimiento', format: 'date',     width: 12 },
+  { key: 'notas',          label: 'Notas',          format: 'text',     width: 28 },
 ];
 
 export const CAMPOS_CLIENTES: CampoDef[] = [
@@ -608,7 +628,7 @@ async function runCompras(filtros: ReporteFiltros, empresaId: string) {
   const compras = await fetchAllPages<any>((from, to) => {
     let q = supabase
       .from('compras')
-      .select('id, fecha, folio, status, proveedor_id, almacen_id, total, saldo_pendiente, condicion_pago')
+      .select('id, fecha, folio, numero_factura, status, proveedor_id, almacen_id, subtotal, iva_total, descuento_extra, descuento_extra_tipo, descuento_extra_motivo, descuento_total, ajuste_total, total, saldo_pendiente, condicion_pago, dias_credito, fecha_vencimiento, notas')
       .eq('empresa_id', empresaId)
       .order('fecha', { ascending: true })
       .range(from, to);
@@ -620,7 +640,10 @@ async function runCompras(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.condicionPago?.length) q = q.in('condicion_pago', filtros.condicionPago as any);
     if (typeof filtros.montoMin === 'number') q = q.gte('total', filtros.montoMin);
     if (typeof filtros.montoMax === 'number') q = q.lte('total', filtros.montoMax);
-    if (filtros.search?.trim()) q = q.ilike('folio', `%${filtros.search.trim()}%`);
+    if (filtros.search?.trim()) {
+      const s = filtros.search.trim();
+      q = q.or(`folio.ilike.%${s}%,numero_factura.ilike.%${s}%`);
+    }
     return q;
   });
   if (!compras.length) return [];
@@ -631,28 +654,61 @@ async function runCompras(filtros: ReporteFiltros, empresaId: string) {
     loadMap('proveedores', provIds, 'id, nombre, rfc'),
     loadMap('almacenes', almIds, 'id, nombre'),
     fetchAllPages<any>((from, to) =>
-      supabase.from('compra_lineas').select('compra_id, producto_id, cantidad, precio_unitario, subtotal, total').in('compra_id', compraIds).range(from, to)
+      supabase.from('compra_lineas').select('id, compra_id, producto_id, cantidad, cantidad_recibida, factor_conversion, piezas_total, precio_unitario, subtotal, total').in('compra_id', compraIds).range(from, to)
     ),
   ]);
   const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));
   const productosMap = await loadMap('productos', productoIds, 'id, codigo, nombre');
   const comprasMap = new Map(compras.map(c => [c.id, c]));
+  const lineasPorCompra = new Map<string, any[]>();
+  for (const linea of lineas) {
+    const grupo = lineasPorCompra.get(linea.compra_id) ?? [];
+    grupo.push(linea);
+    lineasPorCompra.set(linea.compra_id, grupo);
+  }
+  const ajustesPorLinea = new Map<string, { descuento_prorrateado: number; ajuste_prorrateado: number; total_neto_linea: number }>();
+  for (const compra of compras) {
+    const lineasCompra = lineasPorCompra.get(compra.id) ?? [];
+    for (const linea of prorratearAjustesCompra(
+      lineasCompra.map(l => ({ ...l, total: Number(l.total ?? l.subtotal) || 0 })),
+      Number(compra.descuento_total) || 0,
+      Number(compra.ajuste_total) || 0,
+    )) ajustesPorLinea.set(linea.id, linea);
+  }
   return lineas.map(l => {
     const c = comprasMap.get(l.compra_id); if (!c) return null;
     const p = productosMap.get(l.producto_id);
     const prov = provMap.get(c.proveedor_id);
     return {
-      fecha: c.fecha, folio: c.folio ?? '', status: c.status,
+      fecha: c.fecha, folio: c.folio ?? '', numero_factura: c.numero_factura ?? '', status: c.status,
       proveedor: prov?.nombre ?? '', proveedor_rfc: prov?.rfc ?? '',
       almacen: almMap.get(c.almacen_id)?.nombre ?? '',
       codigo: p?.codigo ?? '', producto: p?.nombre ?? '',
       cantidad: Number(l.cantidad || 0),
+      factor_conversion: Number(l.factor_conversion || 1),
+      piezas_total: Number(l.piezas_total || (Number(l.cantidad || 0) * Number(l.factor_conversion || 1))),
+      cantidad_recibida: Number(l.cantidad_recibida || 0),
+      cantidad_pendiente: Math.max(0, Number(l.piezas_total || (Number(l.cantidad || 0) * Number(l.factor_conversion || 1))) - Number(l.cantidad_recibida || 0)),
       precio_unitario: Number(l.precio_unitario || 0),
       subtotal_linea: Number(l.subtotal || 0),
       total_linea: Number(l.total || 0),
+      descuento_linea: ajustesPorLinea.get(l.id)?.descuento_prorrateado ?? 0,
+      ajuste_linea: ajustesPorLinea.get(l.id)?.ajuste_prorrateado ?? 0,
+      total_neto_linea: ajustesPorLinea.get(l.id)?.total_neto_linea ?? Number(l.total || 0),
+      costo_unitario_neto: Number(l.cantidad || 0) > 0 ? (ajustesPorLinea.get(l.id)?.total_neto_linea ?? Number(l.total || 0)) / Number(l.cantidad) : 0,
+      subtotal_compra: Number(c.subtotal || 0),
+      iva_compra: Number(c.iva_total || 0),
+      descuento_capturado: Number(c.descuento_extra || 0),
+      descuento_tipo: c.descuento_extra_tipo === 'porcentaje' ? 'Porcentaje' : 'Monto',
+      descuento_total: Number(c.descuento_total || 0),
+      descuento_motivo: c.descuento_extra_motivo ?? '',
+      ajuste_total: Number(c.ajuste_total || 0),
       total_compra: Number(c.total || 0),
       saldo_pendiente: Number(c.saldo_pendiente || 0),
       condicion_pago: c.condicion_pago,
+      dias_credito: Number(c.dias_credito || 0),
+      fecha_vencimiento: c.fecha_vencimiento ?? '',
+      notas: c.notas ?? '',
     };
   }).filter(Boolean) as Record<string, any>[];
 }
@@ -955,4 +1011,3 @@ export function groupRows(
   const groups = Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, 'es-MX'));
   return { groups, totals };
 }
-
