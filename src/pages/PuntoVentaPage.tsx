@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
+import { buildPosTicketPayments } from '@/lib/posTicketPayments';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
@@ -1049,7 +1050,12 @@ export default function PuntoVentaPage() {
       }
 
       // Save ticket data for display
-      const metodosUsados = (paySplitsComputed.length > 0 ? paySplitsComputed : [{ metodo: 'efectivo' }]).map(s => s.metodo).join(' + ');
+      const ticketPaymentData = buildPosTicketPayments({
+        condicion,
+        splits: paySplitsComputed,
+        total: totals.total,
+        fecha: today,
+      });
       const clienteTicket = clienteId ? clientes?.find(c => c.id === clienteId) : null;
       setLastVentaData({
         folio: ventaData?.folio ?? ventaId.slice(0, 8),
@@ -1084,18 +1090,20 @@ export default function PuntoVentaPage() {
         promoDetails: promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id, tipo: r.tipo, cantidad_gratis: r.cantidad_gratis })),
         total: totals.total,
         condicionPago: condicion,
-        metodoPago: metodosUsados || 'efectivo',
-        montoRecibido: totalPagado > 0 ? totalPagado : undefined,
-        cambio: totalAppliedToAccountsPOS > 0
-          ? Math.max(0, totalPagado - totals.total - totalAppliedToAccountsPOS)
-          : (cambio > 0 ? cambio : undefined),
+        metodoPago: ticketPaymentData.metodoPago,
+        montoRecibido: ticketPaymentData.montoRecibido,
+        cambio: condicion === 'contado'
+          ? (totalAppliedToAccountsPOS > 0
+            ? Math.max(0, totalPagado - totals.total - totalAppliedToAccountsPOS)
+            : (cambio > 0 ? cambio : undefined))
+          : undefined,
         saldoPendiente: condicion === 'credito' ? totals.total : 0,
         saldoAnterior: saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined,
         pagoAplicadoCuentas: totalAppliedToAccountsPOS > 0 ? totalAppliedToAccountsPOS : undefined,
         saldoNuevoCalc: condicion === 'credito'
           ? saldoAnteriorCliente + totals.total
           : (saldoAnteriorCliente > 0 ? Math.max(0, saldoAnteriorCliente - totalAppliedToAccountsPOS) : undefined),
-        pagos: (paySplitsComputed.length > 0 ? paySplitsComputed : [{ metodo: 'efectivo', monto: totals.total }]).map(s => ({ metodo: s.metodo, monto: (s as any).monto ?? totals.total, fecha: fmtDate(todayInTimezone()) })),
+        pagos: ticketPaymentData.pagos,
       });
 
       toast.success('¡Venta registrada!');
