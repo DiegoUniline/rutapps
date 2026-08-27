@@ -114,7 +114,7 @@ export default function CotizacionFormPage() {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.from('tarifa_lineas')
-        .select('aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
+        .select('aplica_a, producto_ids, clasificacion_ids, grupos, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
         .eq('tarifa_id', form.tarifa_id!);
       if (error) throw error;
       return (data ?? []) as TarifaLineaRule[];
