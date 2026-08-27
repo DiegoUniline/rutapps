@@ -64,13 +64,14 @@ export function useProductoForm() {
   const { data: almacenes } = useAlmacenes();
   const { data: unidadesSat } = useUnidadesSat();
   const { data: tarifasDisp } = useAllListasPrecios(empresa?.id);
-  const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, undefined);
+  const [form, setForm] = useState<Partial<Producto>>(defaultProduct);
+  const [originalForm, setOriginalForm] = useState<Partial<Producto>>(defaultProduct);
+
+  const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id, (form as any).lista_id);
   const { data: prodProveedores } = useProductoProveedores(isNew ? undefined : id);
   const saveProvMut = useSaveProductoProveedor();
   const deleteProvMut = useDeleteProductoProveedor();
 
-  const [form, setForm] = useState<Partial<Producto>>(defaultProduct);
-  const [originalForm, setOriginalForm] = useState<Partial<Producto>>(defaultProduct);
   const [starred, setStarred] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);

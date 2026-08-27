@@ -114,7 +114,7 @@ export default function CotizacionFormPage() {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.from('tarifa_lineas')
-        .select('aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
+        .select('aplica_a, producto_ids, clasificacion_ids, grupos, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
         .eq('tarifa_id', form.tarifa_id!);
       if (error) throw error;
       return (data ?? []) as TarifaLineaRule[];
@@ -187,7 +187,7 @@ export default function CotizacionFormPage() {
       id: producto.id, precio_principal: Number(producto.precio_principal) || 0, costo: Number(producto.costo) || 0,
       clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: ivaPct,
       tiene_ieps: producto.tiene_ieps, ieps_pct: iepsPct, ieps_tipo: producto.ieps_tipo,
-      usa_listas_precio: (producto as any).usa_listas_precio,
+      usa_listas_precio: (producto as any).usa_listas_precio, lista_id: (producto as any).lista_id ?? null,
     };
     const listaPrecioId = (form as any).lista_precio_id || null;
     const pricing = resolveProductPricing(tarifaRules ?? [], prodForPricing, listaPrecioId);

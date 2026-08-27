@@ -71,7 +71,7 @@ export function ListaPrecioPicker({
         supabase.from('lista_precios').select('id, nombre, tarifa_id, es_principal, activa').eq('empresa_id', empresa!.id),
         tarifaIds.length
           ? supabase.from('tarifa_lineas')
-              .select('tarifa_id, aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
+              .select('tarifa_id, aplica_a, producto_ids, clasificacion_ids, grupos, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
               .in('tarifa_id', tarifaIds)
           : Promise.resolve({ data: [] as any[] }),
       ]);
@@ -97,6 +97,7 @@ export function ListaPrecioPicker({
       ieps_pct: Number(producto.ieps_pct ?? 0),
       ieps_tipo: producto.ieps_tipo,
       usa_listas_precio: producto.usa_listas_precio,
+      lista_id: (producto as any).lista_id ?? null,
     };
 
     const result: ListaOption[] = [];

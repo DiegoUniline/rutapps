@@ -474,16 +474,18 @@ export function useTarifasForSelect() {
   });
 }
 
-export function useTarifaLineasForProducto(productoId?: string, clasificacionId?: string | null) {
+export function useTarifaLineasForProducto(productoId?: string, clasificacionId?: string | null, listaId?: string | null) {
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
   return useQuery({
-    queryKey: ['tarifa-lineas-producto', empresaId, productoId, clasificacionId],
+    queryKey: ['tarifa-lineas-producto', empresaId, productoId, clasificacionId, listaId],
     staleTime: CATALOG_STALE,
     queryFn: async () => {
       const filters: string[] = ['aplica_a.eq.todos'];
       if (productoId) filters.push(`producto_ids.cs.{${productoId}}`);
       if (clasificacionId) filters.push(`clasificacion_ids.cs.{${clasificacionId}}`);
+      if (listaId) filters.push(`grupos.cs.{${listaId}}`);
+
 
       // Restrict to current empresa's tarifas (super admin RLS bypasses tenant isolation)
       const { data: tarifasEmpresa, error: tErr } = await supabase

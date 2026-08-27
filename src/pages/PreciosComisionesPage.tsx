@@ -62,7 +62,7 @@ function usePreciosComisionesData() {
       let tarifaLineas: (TarifaLineaRule & { comision_pct?: number })[] = [];
       if (tarifaIds.length > 0) {
         const { data, error } = await supabase.from('tarifa_lineas')
-          .select('id, tarifa_id, lista_precio_id, aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, comision_pct')
+          .select('id, tarifa_id, lista_precio_id, aplica_a, producto_ids, clasificacion_ids, grupos, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, comision_pct')
           .in('tarifa_id', tarifaIds);
         if (error) throw error;
         tarifaLineas = (data ?? []) as any[];

@@ -236,7 +236,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
 
       const prods = await fetchAllPages<any>((from, to) =>
         supabase.from('productos')
-          .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos')
+          .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, lista_id')
           .eq('empresa_id', empresaId!)
           .eq('status', 'activo')
           .order('nombre')
@@ -253,6 +253,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
           aplica_a: l.aplica_a,
           producto_ids: l.producto_ids ?? [],
           clasificacion_ids: l.clasificacion_ids ?? [],
+          grupos: l.grupos ?? [],
           tipo_calculo: l.tipo_calculo,
           precio: l.precio ?? 0,
           precio_minimo: l.precio_minimo,
@@ -277,6 +278,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
           ieps_pct: p.ieps_pct,
           ieps_tipo: p.ieps_tipo,
           costo_incluye_impuestos: p.costo_incluye_impuestos,
+          lista_id: (p as any).lista_id ?? null,
         };
 
         const pricing = resolveProductPricing(rules, producto, listaSeleccionadaId);
