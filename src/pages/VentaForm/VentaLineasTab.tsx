@@ -110,14 +110,14 @@ export function VentaLineasTab(props: Props) {
 
 
   return (
-    <div className="min-w-0 max-w-full overflow-hidden p-3 sm:p-4">
+    <div className="min-w-0 max-w-full overflow-hidden p-2.5 sm:p-3">
       {!readOnly && !pricingReady && (
         <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-[12px] text-foreground">
           Selecciona un cliente para cargar su lista de precios antes de agregar productos.
         </div>
       )}
       {/* Tabla de líneas a lo ANCHO; la card de Resumen va DEBAJO de la tabla. */}
-      <div className="min-w-0 max-w-full space-y-4">
+      <div className="min-w-0 max-w-full space-y-3">
         <div className="min-w-0 max-w-full space-y-3">
           {isMobile ? (
             <div className="space-y-2">

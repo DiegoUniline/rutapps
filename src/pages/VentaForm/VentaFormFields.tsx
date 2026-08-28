@@ -236,24 +236,58 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4">
-      <div className="space-y-3">
-        <div><label className="label-odoo">Tipo</label>{renderTipo()}</div>
-        <div><label className="label-odoo label-required">Cliente</label>{renderCliente()}</div>
-        <div><label className="label-odoo">Vendedor</label>{renderVendedor()}</div>
-        <div><label className="label-odoo">Condición de pago</label>{renderCondicion()}</div>
+    <div className="grid grid-cols-12 gap-x-3 gap-y-2">
+      {/* Fila principal: lo necesario para comenzar a capturar productos. */}
+      <div className="col-span-12 md:col-span-6 lg:col-span-3">
+        <label className="label-odoo label-required">Cliente</label>
+        {renderCliente()}
       </div>
-      <div className="space-y-3">
-        <div><label className="label-odoo">Fecha</label>{readOnly ? <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha)}</div> : <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />}</div>
-        <div>{renderEntrega()}</div>
-        <div><label className="label-odoo">Registrado por</label>{renderRegistradoPor()}</div>
-        <div><label className="label-odoo">Folio</label><div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Se asigna al guardar' : '—')}</div></div>
+      <div className="col-span-12 md:col-span-6 lg:col-span-2">
+        <label className="label-odoo">Tipo</label>
+        {renderTipo()}
       </div>
-      <div className="space-y-3">
-        <div><label className="label-odoo label-required">Almacén</label>{renderAlmacen()}</div>
+      <div className="col-span-12 md:col-span-6 lg:col-span-2">
+        <label className="label-odoo label-required">Almacén</label>
+        {renderAlmacen()}
+      </div>
+      <div className="col-span-12 md:col-span-6 lg:col-span-3">
+        <label className="label-odoo">Condición de pago</label>
+        {renderCondicion()}
+      </div>
+      <div className="col-span-12 md:col-span-6 lg:col-span-2">
+        <label className="label-odoo">Fecha</label>
+        {readOnly
+          ? <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha)}</div>
+          : <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />}
+      </div>
+
+      {/* Segunda fila: todos los datos siguen visibles, sin paneles ocultables. */}
+      <div className="col-span-12 md:col-span-6 lg:col-span-3">
+        <label className="label-odoo">Vendedor</label>
+        {renderVendedor()}
+      </div>
+      <div className="col-span-12 md:col-span-6 lg:col-span-2">
+        {renderEntrega()}
+      </div>
+      <div className="col-span-12 md:col-span-6 lg:col-span-2">
         {renderDescuentoExtra()}
-        {renderSaldo()}
       </div>
+      <div className="col-span-12 md:col-span-6 lg:col-span-3">
+        <label className="label-odoo">Registrado por</label>
+        {renderRegistradoPor()}
+      </div>
+      <div className="col-span-12 md:col-span-6 lg:col-span-2">
+        <label className="label-odoo">Folio</label>
+        <div className="text-[13px] text-muted-foreground py-1.5 px-1">
+          {form.folio || (isNew ? 'Se asigna al guardar' : '—')}
+        </div>
+      </div>
+
+      {!isNew && form.status !== 'borrador' && (
+        <div className="col-span-12 lg:col-start-9 lg:col-span-4">
+          {renderSaldo()}
+        </div>
+      )}
     </div>
   );
 

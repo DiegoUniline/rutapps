@@ -384,8 +384,8 @@ export default function VentaFormPage() {
           )}
         </div>
       )}
-      <div className="p-3 sm:p-5 space-y-4 max-w-[1200px]">
-        <div className="bg-card border border-border rounded-md p-5">
+      <div className="w-full max-w-none p-2.5 sm:p-3 space-y-2.5">
+        <div className="bg-card border border-border rounded-md p-3">
           {readOnly && <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />Esta venta está {form.status} y no se puede editar.</div>}
           <VentaFormFields form={form} readOnly={readOnly} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} canApplyDiscount={canApplyDiscount} set={set} onClienteChange={onClienteChange} />
         </div>
