@@ -1865,8 +1865,10 @@ export type Database = {
           notif_email_status: string | null
           notif_error: string | null
           notif_wa_status: string | null
+          origen: string | null
           referencia: string | null
           status: string
+          turno_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -1882,8 +1884,10 @@ export type Database = {
           notif_email_status?: string | null
           notif_error?: string | null
           notif_wa_status?: string | null
+          origen?: string | null
           referencia?: string | null
           status?: string
+          turno_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -1899,8 +1903,10 @@ export type Database = {
           notif_email_status?: string | null
           notif_error?: string | null
           notif_wa_status?: string | null
+          origen?: string | null
           referencia?: string | null
           status?: string
+          turno_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -1917,6 +1923,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobros_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "caja_turnos"
             referencedColumns: ["id"]
           },
         ]
@@ -9688,7 +9701,9 @@ export type Database = {
           p_metodo: string
           p_monto: number
           p_notas?: string
+          p_origen?: string
           p_referencia: string
+          p_turno_id?: string
           p_user_id?: string
         }
         Returns: string

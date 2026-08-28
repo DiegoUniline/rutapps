@@ -45,38 +45,28 @@ export function useCajaTurno() {
   useRealtimeInvalidate({ table: 'caja_turnos', empresaId: empresa?.id, queryKeys: [['caja-turno-activo']] });
   useRealtimeInvalidate({ table: 'caja_movimientos', empresaId: empresa?.id, queryKeys: [['caja-movimientos']] });
 
-  // Fetch the empresa-level flag directly to avoid relying on the cached AuthContext object,
-  // which doesn't include `pos_turnos_habilitado` in its SELECT.
-  const flagQuery = useQuery({
-    queryKey: ['empresa-pos-turnos-flag', empresa?.id],
-    enabled: !!empresa?.id,
-    staleTime: 5 * 60_000,
-    queryFn: async (): Promise<boolean> => {
-      const { data } = await supabase
-        .from('empresas')
-        .select('pos_turnos_habilitado')
-        .eq('id', empresa!.id)
-        .maybeSingle();
-      return !!(data as any)?.pos_turnos_habilitado;
-    },
-  });
-  const enabled = !!user?.id && !!empresa?.id && !!flagQuery.data;
+  // Toda operación del POS requiere un turno real. La bandera histórica no se
+  // usa como bypass porque permitiría crear ventas/cobros POS sin trazabilidad.
+  const enabled = !!user?.id && !!empresa?.id;
+
+  const getTurnoActivo = async (): Promise<CajaTurno | null> => {
+    if (!user?.id || !empresa?.id) return null;
+    const { data, error } = await supabase
+      .from('caja_turnos')
+      .select('*')
+      .eq('empresa_id', empresa.id)
+      .eq('cajero_id', user.id)
+      .eq('status', 'abierto')
+      .order('abierto_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return (data as CajaTurno) ?? null;
+  };
 
   const turnoQuery = useQuery({
     queryKey: ['caja-turno-activo', user?.id, empresa?.id],
-    queryFn: async (): Promise<CajaTurno | null> => {
-      const { data, error } = await supabase
-        .from('caja_turnos')
-        .select('*')
-        .eq('empresa_id', empresa!.id)
-        .eq('cajero_id', user!.id)
-        .eq('status', 'abierto')
-        .order('abierto_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return (data as CajaTurno) ?? null;
-    },
+    queryFn: getTurnoActivo,
     enabled,
     staleTime: 30_000,
   });
@@ -148,14 +138,15 @@ export function useCajaTurno() {
     const t = turnoQuery.data;
     if (!t) return { efectivo_esperado: 0, tarjeta_esperado: 0, transferencia_esperado: 0, otros_esperado: 0 };
 
-    // Cobros del turno (ventas POS pagadas durante el turno por este cajero)
-    const { data: cobros } = await supabase
+    // Sólo cobros POS vinculados directamente al turno. No se infiere por
+    // fecha, horario ni cajero.
+    const { data: cobros, error: cobrosError } = await supabase
       .from('cobros')
       .select('monto, metodo_pago')
-      .eq('empresa_id', empresa!.id)
-      .eq('user_id', user!.id)
-      .neq('status', 'cancelado')
-      .gte('created_at', t.abierto_at);
+      .eq('turno_id', t.id)
+      .eq('origen', 'pos')
+      .neq('status', 'cancelado');
+    if (cobrosError) throw cobrosError;
 
     let efectivo = Number(t.fondo_inicial) || 0;
     let tarjeta = 0;
@@ -241,6 +232,7 @@ export function useCajaTurno() {
     cerrarTurno,
     registrarMovimiento,
     computeArqueo,
+    getTurnoActivo,
     reload: () => qc.invalidateQueries({ queryKey: ['caja-turno-activo'] }),
   };
 }

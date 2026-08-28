@@ -371,12 +371,18 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
         .select('*')
         .eq('turno_id', turnoId)
         .order('created_at', { ascending: false });
+      const { data: cobros } = await supabase
+        .from('cobros')
+        .select('id, created_at, monto, metodo_pago, referencia, status, cliente:clientes(nombre)')
+        .eq('turno_id', turnoId)
+        .eq('origen', 'pos')
+        .order('created_at', { ascending: false });
       const { data: ventas } = await supabase
         .from('ventas')
         .select('id, folio, fecha, total, condicion_pago, status, cliente:clientes(nombre)')
         .eq('turno_id', turnoId)
         .order('fecha', { ascending: false });
-      return { turno, movs: movs ?? [], ventas: ventas ?? [] };
+      return { turno, movs: movs ?? [], cobros: cobros ?? [], ventas: ventas ?? [] };
     },
     enabled: !!turnoId,
   });
@@ -419,6 +425,39 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
               <div><b>Cierre:</b> {t.cerrado_at ? fmtDate(t.cerrado_at) : '—'}</div>
               {t.notas_apertura && <div className="col-span-2"><b>Notas apertura:</b> {t.notas_apertura}</div>}
               {t.notas_cierre && <div className="col-span-2"><b>Notas cierre:</b> {t.notas_cierre}</div>}
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Receipt className="h-4 w-4" /> Cobros POS ({q.data?.cobros.length ?? 0})</h4>
+              <Card className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left px-2 py-1.5">Fecha</th>
+                      <th className="text-left px-2 py-1.5">Cliente</th>
+                      <th className="text-left px-2 py-1.5">Método</th>
+                      <th className="text-left px-2 py-1.5">Referencia</th>
+                      <th className="text-left px-2 py-1.5">Estado</th>
+                      <th className="text-right px-2 py-1.5">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(q.data?.cobros ?? []).map((c: any) => (
+                      <tr key={c.id} className="border-t border-border/50">
+                        <td className="px-2 py-1.5 tabular-nums">{fmtDate(c.created_at)}</td>
+                        <td className="px-2 py-1.5">{c.cliente?.nombre ?? '—'}</td>
+                        <td className="px-2 py-1.5 capitalize">{c.metodo_pago}</td>
+                        <td className="px-2 py-1.5 text-muted-foreground">{c.referencia || '—'}</td>
+                        <td className="px-2 py-1.5 capitalize">{c.status}</td>
+                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{fmtMoney(c.monto)}</td>
+                      </tr>
+                    ))}
+                    {!q.data?.cobros.length && (
+                      <tr><td colSpan={6} className="px-2 py-3 text-center text-muted-foreground">Sin cobros POS vinculados.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </Card>
             </div>
 
             <div>

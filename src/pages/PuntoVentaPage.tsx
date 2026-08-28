@@ -107,7 +107,12 @@ export default function PuntoVentaPage() {
   const { symbol: s, fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
   const scanRef = useRef<HTMLInputElement>(null);
-  const { enabled: turnosEnabled, turno: turnoActivo } = useCajaTurno();
+  const {
+    enabled: turnosEnabled,
+    turno: turnoActivo,
+    loading: turnoLoading,
+    getTurnoActivo,
+  } = useCajaTurno();
   const [showAbrirTurnoPrompt, setShowAbrirTurnoPrompt] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -825,8 +830,12 @@ export default function PuntoVentaPage() {
   // Save sale
   const handleCobrar = async () => {
     if (!empresa || !user || cart.length === 0) return;
+    if (turnoLoading) {
+      toast.error('Espera mientras se verifica el turno activo');
+      return;
+    }
     if (turnosEnabled && !turnoActivo) {
-      toast.error('Debes abrir un turno antes de cobrar');
+      toast.error('Debes abrir una caja y turno antes de cobrar en el POS');
       setShowAbrirTurnoPrompt(true);
       return;
     }
@@ -839,6 +848,15 @@ export default function PuntoVentaPage() {
     savingRef.current = true;
     setSaving(true);
     try {
+      // Revalidación contra la base antes de crear cualquier registro. No se
+      // confía únicamente en la caché del turno mostrada en pantalla.
+      const turnoOperacion = await getTurnoActivo();
+      if (!turnoOperacion) {
+        toast.error('No hay una caja y turno activos. Abre un turno antes de cobrar.');
+        setShowAbrirTurnoPrompt(true);
+        return;
+      }
+
       const ventaId = crypto.randomUUID();
       const almacenId = profile?.almacen_id || null;
       if (!almacenId) {
@@ -918,7 +936,7 @@ export default function PuntoVentaPage() {
         entrega_inmediata: true,
         status: 'confirmado',
         origen: 'pos',
-        turno_id: turnoActivo?.id ?? null,
+        turno_id: turnoOperacion.id,
         almacen_id: almacenId,
         subtotal: totals.subtotal,
         iva_total: totals.iva,
@@ -1041,9 +1059,11 @@ export default function PuntoVentaPage() {
             p_referencia: split.referencia || null,
             p_fecha: today,
             p_aplicaciones: splitApplications,
+            p_turno_id: turnoOperacion.id,
+            p_origen: 'pos',
             p_user_id: user.id,
           });
-          if (cobErr) continue;
+          if (cobErr) throw cobErr;
 
           // Recibo automático
           import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(newCobroId, empresa.id));

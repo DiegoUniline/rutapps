@@ -659,6 +659,12 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
       if (!turnoId) return null;
       const { data: turno } = await supabase.from('caja_turnos').select('*').eq('id', turnoId).maybeSingle();
       const { data: movs } = await supabase.from('caja_movimientos').select('*').eq('turno_id', turnoId).order('created_at', { ascending: false });
+      const { data: cobros } = await supabase
+        .from('cobros')
+        .select('id, created_at, monto, metodo_pago, referencia, status, cliente:clientes(nombre)')
+        .eq('turno_id', turnoId)
+        .eq('origen', 'pos')
+        .order('created_at', { ascending: false });
       const { data: ventas } = await supabase
         .from('ventas')
         .select('id, folio, fecha, created_at, total, condicion_pago, status, vendedor_id, cliente:clientes(nombre)')
@@ -676,8 +682,10 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
       if (ventaIds.length) {
         const { data: apps } = await supabase
           .from('cobro_aplicaciones')
-          .select('venta_id, cobros!inner(metodo_pago, status)')
+          .select('venta_id, cobros!inner(metodo_pago, status, turno_id, origen)')
           .in('venta_id', ventaIds)
+          .eq('cobros.turno_id', turnoId)
+          .eq('cobros.origen', 'pos')
           .neq('cobros.status', 'cancelado');
         for (const a of (apps ?? []) as any[]) {
           const m = a.cobros?.metodo_pago;
@@ -693,7 +701,7 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
         vendedor_nombre: nameMap.get(v.vendedor_id) ?? '—',
         metodos_pago: metodosMap.get(v.id) ?? [],
       }));
-      return { turno, movs: movs ?? [], ventas: ventasEnriched };
+      return { turno, movs: movs ?? [], cobros: cobros ?? [], ventas: ventasEnriched };
     },
     enabled: !!turnoId,
   });
@@ -727,6 +735,29 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
               <div><b>Cierre:</b> {t.cerrado_at ? fmtDate(t.cerrado_at) : '—'}</div>
               {t.notas_apertura && <div className="col-span-2"><b>Notas apertura:</b> {t.notas_apertura}</div>}
               {t.notas_cierre && <div className="col-span-2"><b>Notas cierre:</b> {t.notas_cierre}</div>}
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Receipt className="h-4 w-4" /> Cobros POS ({q.data?.cobros.length ?? 0})</h4>
+              <Card className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50">
+                    <tr><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Cliente</th><th className="text-left px-2 py-1.5">Método</th><th className="text-left px-2 py-1.5">Referencia</th><th className="text-left px-2 py-1.5">Estado</th><th className="text-right px-2 py-1.5">Monto</th></tr>
+                  </thead>
+                  <tbody>
+                    {(q.data?.cobros ?? []).map((c: any) => (
+                      <tr key={c.id} className="border-t border-border/50">
+                        <td className="px-2 py-1.5 tabular-nums whitespace-nowrap">{fmtDate(c.created_at)}</td>
+                        <td className="px-2 py-1.5">{c.cliente?.nombre ?? '—'}</td>
+                        <td className="px-2 py-1.5 capitalize">{c.metodo_pago}</td>
+                        <td className="px-2 py-1.5 text-muted-foreground">{c.referencia || '—'}</td>
+                        <td className="px-2 py-1.5 capitalize">{c.status}</td>
+                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{_fmt(c.monto)}</td>
+                      </tr>
+                    ))}
+                    {!q.data?.cobros.length && <tr><td colSpan={6} className="px-2 py-3 text-center text-muted-foreground">Sin cobros POS vinculados.</td></tr>}
+                  </tbody>
+                </table>
+              </Card>
             </div>
             <div>
               <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Banknote className="h-4 w-4" /> Movimientos ({q.data?.movs.length ?? 0})</h4>

@@ -66,10 +66,9 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
       const { data } = await supabase
         .from('cobros')
         .select('id, monto, metodo_pago, created_at, status, cliente:clientes(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .eq('user_id', user!.id)
+        .eq('turno_id', turno!.id)
+        .eq('origen', 'pos')
         .neq('status', 'cancelado')
-        .gte('created_at', turno!.abierto_at)
         .order('created_at', { ascending: false });
       return (data ?? []) as any;
     },
@@ -134,8 +133,11 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
     queryFn: async (): Promise<Record<string, string[]>> => {
       const { data } = await supabase
         .from('cobro_aplicaciones')
-        .select('venta_id, cobros(metodo_pago)')
-        .in('venta_id', ventaIds);
+        .select('venta_id, cobros!inner(metodo_pago, turno_id, origen, status)')
+        .in('venta_id', ventaIds)
+        .eq('cobros.turno_id', turno!.id)
+        .eq('cobros.origen', 'pos')
+        .neq('cobros.status', 'cancelado');
       const map: Record<string, string[]> = {};
       for (const a of (data ?? []) as any[]) {
         const m = a.cobros?.metodo_pago;
