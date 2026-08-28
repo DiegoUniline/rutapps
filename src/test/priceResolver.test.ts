@@ -39,6 +39,37 @@ describe('resolveProductPrice', () => {
   });
 });
 
+describe('reglas por grupo/lista de producto', () => {
+  it('aplica la regla del UUID de lista antes que la regla general', () => {
+    const listaA = '021330b8-0000-4000-8000-000000000000';
+    const global: TarifaLineaRule = {
+      ...reglaDescuento,
+      aplica_a: 'todos',
+      clasificacion_ids: [],
+      descuento_pct: 0,
+    };
+    const grupoA: TarifaLineaRule = {
+      ...reglaDescuento,
+      aplica_a: 'grupo',
+      clasificacion_ids: [],
+      grupos: [listaA],
+      descuento_pct: 20,
+      base_precio: 'con_impuestos',
+    };
+    const producto = {
+      ...productoBasico,
+      precio_principal: 112.65,
+      lista_id: listaA,
+      usa_listas_precio: true,
+    };
+
+    const pricing = resolveProductPricing([global, grupoA], producto);
+
+    expect(pricing.appliedRule).toBe(grupoA);
+    expect(pricing.rawDisplayPrice).toBeCloseTo(90.12, 2);
+  });
+});
+
 describe('calculatePrice – base_precio con_impuestos', () => {
   it('extracts pre-tax price when base includes taxes', () => {
     const rule = { ...reglaPrecioFijo, precio: 11.6, base_precio: 'con_impuestos' };

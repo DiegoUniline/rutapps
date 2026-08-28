@@ -207,7 +207,7 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, precio_sugerido_publico, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id, marca_id, vender_sin_stock, es_granel, unidad_granel, usa_listas_precio, usa_presentaciones')
+        .select('id, codigo, nombre, precio_principal, precio_sugerido_publico, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, costo_incluye_impuestos, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id, lista_id, marca_id, vender_sin_stock, es_granel, unidad_granel, usa_listas_precio, usa_presentaciones')
         .eq('empresa_id', empresa!.id)
         .eq('se_puede_vender', true)
         .eq('status', 'activo')
@@ -348,7 +348,9 @@ export default function PuntoVentaPage() {
               tiene_ieps: p.tiene_ieps,
               ieps_pct: p.ieps_pct ?? 0,
               ieps_tipo: p.ieps_tipo,
+              costo_incluye_impuestos: p.costo_incluye_impuestos,
               usa_listas_precio: p.usa_listas_precio,
+              lista_id: p.lista_id ?? null,
             },
             clienteListaPrecioId,
           )
