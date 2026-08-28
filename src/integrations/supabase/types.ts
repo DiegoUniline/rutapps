@@ -16,7 +16,6 @@ export type Database = {
     Tables: {
       ajustes_inventario: {
         Row: {
-          ajuste_total: number
           almacen_id: string | null
           batch_id: string | null
           cantidad_anterior: number
@@ -1534,10 +1533,6 @@ export type Database = {
           credito: boolean | null
           dia_visita: string[] | null
           dias_credito: number | null
-          descuento_extra: number
-          descuento_extra_motivo: string | null
-          descuento_extra_tipo: string
-          descuento_total: number
           direccion: string | null
           email: string | null
           empresa_id: string
@@ -1991,7 +1986,6 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          ajuste_total?: number
           almacen_id?: string | null
           compra_id: string
           compra_linea_id: string
@@ -2113,10 +2107,15 @@ export type Database = {
       }
       compras: {
         Row: {
+          ajuste_total: number
           almacen_id: string | null
           condicion_pago: string
           created_at: string
           created_by: string | null
+          descuento_extra: number
+          descuento_extra_motivo: string | null
+          descuento_extra_tipo: string
+          descuento_total: number
           dias_credito: number | null
           empresa_id: string
           fecha: string
@@ -2134,15 +2133,16 @@ export type Database = {
           total: number | null
         }
         Insert: {
+          ajuste_total?: number
           almacen_id?: string | null
           condicion_pago?: string
           created_at?: string
           created_by?: string | null
-          dias_credito?: number | null
           descuento_extra?: number
           descuento_extra_motivo?: string | null
           descuento_extra_tipo?: string
           descuento_total?: number
+          dias_credito?: number | null
           empresa_id: string
           fecha?: string
           fecha_vencimiento?: string | null
@@ -2164,11 +2164,11 @@ export type Database = {
           condicion_pago?: string
           created_at?: string
           created_by?: string | null
-          dias_credito?: number | null
           descuento_extra?: number
           descuento_extra_motivo?: string | null
           descuento_extra_tipo?: string
           descuento_total?: number
+          dias_credito?: number | null
           empresa_id?: string
           fecha?: string
           fecha_vencimiento?: string | null
@@ -6661,11 +6661,17 @@ export type Database = {
       }
       solicitud_traspaso_lineas: {
         Row: {
+          agregada_at: string | null
+          agregada_por: string | null
+          agregada_por_admin: boolean
           cantidad_aprobada: number
           cantidad_solicitada: number
           cantidad_sugerida: number
           cantidad_surtida: number
           created_at: string
+          excluida: boolean
+          excluida_at: string | null
+          excluida_por: string | null
           id: string
           notas: string | null
           presentacion_id: string | null
@@ -6677,11 +6683,17 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agregada_at?: string | null
+          agregada_por?: string | null
+          agregada_por_admin?: boolean
           cantidad_aprobada?: number
           cantidad_solicitada?: number
           cantidad_sugerida?: number
           cantidad_surtida?: number
           created_at?: string
+          excluida?: boolean
+          excluida_at?: string | null
+          excluida_por?: string | null
           id?: string
           notas?: string | null
           presentacion_id?: string | null
@@ -6693,11 +6705,17 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agregada_at?: string | null
+          agregada_por?: string | null
+          agregada_por_admin?: boolean
           cantidad_aprobada?: number
           cantidad_solicitada?: number
           cantidad_sugerida?: number
           cantidad_surtida?: number
           created_at?: string
+          excluida?: boolean
+          excluida_at?: string | null
+          excluida_por?: string | null
           id?: string
           notas?: string | null
           presentacion_id?: string | null
@@ -9818,6 +9836,7 @@ export type Database = {
           lote_id: string
         }[]
       }
+      fn_factor_neto_compra: { Args: { p_compra_id: string }; Returns: number }
       fn_log_solicitud_traspaso: {
         Args: {
           p_accion: string
@@ -9964,6 +9983,16 @@ export type Database = {
       get_user_archive_summary: {
         Args: { p_profile_id: string }
         Returns: Json
+      }
+      guardar_aprobacion_solicitud: {
+        Args: {
+          p_almacen_origen_id: string
+          p_excluidas?: Json
+          p_lineas?: Json
+          p_observaciones?: string
+          p_solicitud_id: string
+        }
+        Returns: undefined
       }
       has_admin_pin: { Args: { p_user_id: string }; Returns: boolean }
       has_billing_access: { Args: { p_empresa_id: string }; Returns: boolean }
