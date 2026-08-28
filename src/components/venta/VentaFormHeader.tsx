@@ -1,4 +1,4 @@
-import { ArrowLeft, Save, Trash2, Check, Truck, FileText, Receipt, Printer, RotateCcw, User, Undo2 } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Check, Truck, FileText, Receipt, Printer, RotateCcw, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StatusVenta } from '@/types';
 
@@ -12,7 +12,7 @@ interface VentaFormHeaderProps {
   isNew: boolean;
   folio?: string;
   clienteNombre?: string;
-  vendedorNombre?: string;
+  registradoPorNombre?: string;
   status?: string;
   entregaInmediata?: boolean;
   tipo?: string;
@@ -38,7 +38,7 @@ interface VentaFormHeaderProps {
 }
 
 export function VentaFormHeader({
-  isNew, folio, clienteNombre, vendedorNombre, status, entregaInmediata, tipo,
+  isNew, folio, clienteNombre, registradoPorNombre, status, entregaInmediata, tipo,
   requiereFactura, readOnly, canCreateEntrega, canDeleteCancelada, hayEntregas,
   entregasExistentes, lineasPendientesFactura, isSaving, isCreatingEntrega,
   onBack, onSave, onDelete, onStatusChange, onCreateEntrega,
@@ -58,9 +58,9 @@ export function VentaFormHeader({
             {clienteNombre && (
               <p className="text-xs text-muted-foreground truncate">{clienteNombre}</p>
             )}
-            {vendedorNombre && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 sm:p-0 rounded sm:rounded-none text-[11px] font-medium bg-primary/10 sm:bg-transparent text-primary border border-primary/20 sm:border-0">
-                <User className="h-3 w-3" /> {vendedorNombre}
+            {registradoPorNombre && (
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                Registrado por {registradoPorNombre}
               </span>
             )}
           </div>

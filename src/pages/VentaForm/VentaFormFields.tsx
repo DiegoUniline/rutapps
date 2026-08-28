@@ -3,7 +3,7 @@ import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCurrency } from '@/hooks/useCurrency';
 import SearchableSelect from '@/components/SearchableSelect';
 import { cn, fmtDate } from '@/lib/utils';
-import { Percent, DollarSign, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { useAllListasPrecios } from '@/hooks/useData';
 import { useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,15 +20,14 @@ interface Props {
   totalPagado: number;
   saldoPendiente: number;
   canEditCondicion?: boolean;
-  canApplyDiscount?: boolean;
   set: (field: string, val: any) => void;
   onClienteChange: (cId: string) => void;
 }
 
-export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, canApplyDiscount = true, set, onClienteChange }: Props) {
+export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
-  const { empresa, profile } = useAuth();
+  const { empresa } = useAuth();
   const { data: listasPrecios } = useAllListasPrecios(empresa?.id);
   const { data: vendedoresList } = useVendedores();
 
@@ -36,19 +35,10 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
   const vendedorNombre = (form as any).vendedores?.nombre
     ?? vendedorOptions.find(v => v.value === form.vendedor_id)?.label
     ?? '—';
-  const registradoPorId = (form as any).creado_por ?? (isNew ? profile?.id : null);
-  const registradoPor = vendedorOptions.find(v => v.value === registradoPorId)?.label
-    ?? (registradoPorId === profile?.id ? profile?.nombre : null)
-    ?? '—';
 
   const renderVendedor = () => readOnly
     ? <div className="text-[13px] py-1.5 px-1 text-foreground">{vendedorNombre}</div>
     : <SearchableSelect options={vendedorOptions} value={form.vendedor_id ?? ''} onChange={val => set('vendedor_id', val || null)} placeholder="Buscar vendedor..." />;
-
-  const renderRegistradoPor = () => (
-    <div className="text-[13px] py-1.5 px-1 text-muted-foreground">{registradoPor}</div>
-  );
-
 
   const condicionBtns = [
     { value: 'contado', label: 'Contado' },
@@ -171,65 +161,18 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
   );
 
 
-  const extraTipo = form.descuento_extra_tipo || 'porcentaje';
-  const impliedDiscount = Math.max(0, Number(form.subtotal ?? 0) + Number(form.iva_total ?? 0) + Number(form.ieps_total ?? 0) - Number(form.total ?? 0));
-  const discountDisplay = (form.descuento_extra ?? 0) > 0
-    ? `${form.descuento_extra} ${extraTipo === 'porcentaje' ? '%' : '$'}`
-    : impliedDiscount > 0
-      ? fmt(impliedDiscount)
-      : '—';
-  const renderDescuentoExtra = () => {
-    if (!canApplyDiscount && !readOnly) return null;
-    return (
-      <div>
-        <label className="label-odoo">Descuento extra</label>
-        {readOnly || !canApplyDiscount ? (
-          <div className="text-[13px] py-1.5 px-1 text-foreground">
-            {discountDisplay}
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.descuento_extra ?? 0}
-              onChange={e => set('descuento_extra', Number(e.target.value) || 0)}
-              className="flex-1 input-odoo text-[13px] py-1.5 w-20"
-              placeholder="0"
-            />
-            <button
-              type="button"
-              onClick={() => set('descuento_extra_tipo', extraTipo === 'porcentaje' ? 'monto' : 'porcentaje')}
-              className={cn(
-                "shrink-0 flex items-center justify-center w-8 h-8 rounded border transition-colors",
-                "bg-card text-foreground border-input hover:bg-secondary"
-              )}
-              title={extraTipo === 'porcentaje' ? 'Cambiar a monto fijo' : 'Cambiar a porcentaje'}
-            >
-              {extraTipo === 'porcentaje' ? <Percent className="h-3.5 w-3.5" /> : <DollarSign className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   if (isMobile) {
     return (
       <div className="space-y-3">
         <div><label className="label-odoo">Tipo</label>{renderTipo()}</div>
         <div><label className="label-odoo label-required">Cliente</label>{renderCliente()}</div>
         <div><label className="label-odoo">Vendedor</label>{renderVendedor()}</div>
-        <div><label className="label-odoo">Registrado por</label>{renderRegistradoPor()}</div>
         <div><label className="label-odoo">Condición de pago</label>{renderCondicion()}</div>
         <div className="grid grid-cols-2 gap-3">
           <div><label className="label-odoo">Fecha</label>{readOnly ? <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha)}</div> : <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />}</div>
           <div>{renderEntrega()}</div>
         </div>
-        <div><label className="label-odoo">Folio</label><div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Al guardar' : '—')}</div></div>
         <div><label className="label-odoo label-required">Almacén</label>{renderAlmacen()}</div>
-        {renderDescuentoExtra()}
         {renderSaldo()}
       </div>
     );
@@ -261,26 +204,13 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
           : <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />}
       </div>
 
-      {/* Segunda fila: todos los datos siguen visibles, sin paneles ocultables. */}
-      <div className="col-span-12 md:col-span-6 lg:col-span-3">
+      {/* Segunda fila: únicamente los datos operativos restantes. */}
+      <div className="col-span-12 md:col-span-6 lg:col-span-6">
         <label className="label-odoo">Vendedor</label>
         {renderVendedor()}
       </div>
-      <div className="col-span-12 md:col-span-6 lg:col-span-2">
+      <div className="col-span-12 md:col-span-6 lg:col-span-6">
         {renderEntrega()}
-      </div>
-      <div className="col-span-12 md:col-span-6 lg:col-span-2">
-        {renderDescuentoExtra()}
-      </div>
-      <div className="col-span-12 md:col-span-6 lg:col-span-3">
-        <label className="label-odoo">Registrado por</label>
-        {renderRegistradoPor()}
-      </div>
-      <div className="col-span-12 md:col-span-6 lg:col-span-2">
-        <label className="label-odoo">Folio</label>
-        <div className="text-[13px] text-muted-foreground py-1.5 px-1">
-          {form.folio || (isNew ? 'Se asigna al guardar' : '—')}
-        </div>
       </div>
 
       {!isNew && form.status !== 'borrador' && (

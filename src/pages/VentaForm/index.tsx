@@ -37,6 +37,7 @@ import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { nextVisitDate } from '@/lib/nextVisitDate';
 import { RepriceListaDialog } from '@/components/venta/RepriceListaDialog';
 import { AdminEditVentaDialog } from '@/components/venta/AdminEditVentaDialog';
+import { useVendedores } from '@/hooks/useClientes';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -51,6 +52,7 @@ export default function VentaFormPage() {
   const [checkoutSaving, setCheckoutSaving] = useState(false);
   const [showDevolucion, setShowDevolucion] = useState(false);
   const h = useVentaForm();
+  const { data: vendedoresList } = useVendedores();
   const manejaLotesEmpresa = useManejaLotes();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading,
@@ -238,6 +240,9 @@ export default function VentaFormPage() {
   const clienteSel = clientesList?.find(c => c.id === form.cliente_id);
   const clienteNombre = clienteSel?.nombre;
   const clienteNotasFiscales = (clienteSel as any)?.notas_fiscales as string | undefined;
+  const registradoPorId = (form as any).creado_por ?? (isNew ? profile?.id : null);
+  const registradoPorNombre = (vendedoresList ?? []).find((v: any) => v.id === registradoPorId)?.nombre
+    ?? (registradoPorId === profile?.id ? profile?.nombre : undefined);
   const steps = form.entrega_inmediata ? VENTA_STEPS_INMEDIATA : VENTA_STEPS_FULL;
 
   const handleGenerarPdf = async () => {
@@ -351,7 +356,7 @@ export default function VentaFormPage() {
     <div className="min-h-full">
       <RepriceListaDialog pending={pendingReprice} onConfirm={confirmReprice} onDismiss={dismissReprice} />
       <VentaFormHeader
-        isNew={isNew} folio={form.folio} clienteNombre={clienteNombre} vendedorNombre={(form as any).vendedores?.nombre ?? profile?.nombre} status={form.status}
+        isNew={isNew} folio={form.folio} clienteNombre={clienteNombre} registradoPorNombre={registradoPorNombre} status={form.status}
         entregaInmediata={form.entrega_inmediata} tipo={form.tipo}
         requiereFactura={billingEnabled && (form as any).requiere_factura} readOnly={readOnly}
         canCreateEntrega={canCreateEntrega} canDeleteCancelada={canDeleteCancelada} hayEntregas={hayEntregas}
@@ -387,11 +392,11 @@ export default function VentaFormPage() {
       <div className="w-full max-w-none p-2.5 sm:p-3 space-y-2.5">
         <div className="bg-card border border-border rounded-md p-3">
           {readOnly && <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />Esta venta está {form.status} y no se puede editar.</div>}
-          <VentaFormFields form={form} readOnly={readOnly} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} canApplyDiscount={canApplyDiscount} set={set} onClienteChange={onClienteChange} />
+          <VentaFormFields form={form} readOnly={readOnly} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
         </div>
         <div className="bg-card border border-border rounded-md">
           <OdooTabs tabs={[
-            { key: 'lineas', label: 'Líneas de venta', content: <VentaLineasTab lineas={lineas} pricingReady={pricingReady} productosList={productosList ?? []} readOnly={readOnly} totals={totals} cerradoSnapshot={(form as any).cerrado_at ? ((form as any).cerrado_snapshot ?? null) : null} promoResults={promoResults} onProductSelect={handleProductSelect} onUpdateLine={updateLine} onRemoveLine={removeLine} onAddLine={addLine} setCellRef={setCellRef} onCellKeyDown={handleCellKeyDown} navigateCell={navigateCell} setLineas={setLineas} sinImpuestos={sinImpuestos} setSinImpuestos={setSinImpuestos} readOnlyForm={readOnly} saldoPendiente={saldoPendiente} canChangePrice={canChangePrice} canApplyDiscount={canApplyDiscount} onChangeLineListaPrecio={changeLineListaPrecio} onPickLote={(idx) => { const l: any = lineas[idx]; if (!l?.producto_id) return; const prod: any = (productosList ?? []).find((p: any) => p.id === l.producto_id); h.setLoteParaLinea({ idx, producto: { id: l.producto_id, nombre: prod?.nombre ?? l.descripcion ?? 'Producto' } }); }} /> },
+            { key: 'lineas', label: 'Líneas de venta', content: <VentaLineasTab lineas={lineas} pricingReady={pricingReady} productosList={productosList ?? []} readOnly={readOnly} totals={totals} cerradoSnapshot={(form as any).cerrado_at ? ((form as any).cerrado_snapshot ?? null) : null} promoResults={promoResults} onProductSelect={handleProductSelect} onUpdateLine={updateLine} onRemoveLine={removeLine} onAddLine={addLine} setCellRef={setCellRef} onCellKeyDown={handleCellKeyDown} navigateCell={navigateCell} setLineas={setLineas} sinImpuestos={sinImpuestos} setSinImpuestos={setSinImpuestos} readOnlyForm={readOnly} saldoPendiente={saldoPendiente} canChangePrice={canChangePrice} canApplyDiscount={canApplyDiscount} descuentoExtraValor={Number((form as any).descuento_extra) || 0} descuentoExtraTipo={(form as any).descuento_extra_tipo || 'porcentaje'} onDescuentoExtraChange={(value) => set('descuento_extra', value)} onToggleDescuentoExtraTipo={() => set('descuento_extra_tipo', (form as any).descuento_extra_tipo === 'monto' ? 'porcentaje' : 'monto')} onChangeLineListaPrecio={changeLineListaPrecio} onPickLote={(idx) => { const l: any = lineas[idx]; if (!l?.producto_id) return; const prod: any = (productosList ?? []).find((p: any) => p.id === l.producto_id); h.setLoteParaLinea({ idx, producto: { id: l.producto_id, nombre: prod?.nombre ?? l.descripcion ?? 'Producto' } }); }} /> },
             ...(!isNew ? [{ key: 'pagos', label: `Pagos (${(pagosData ?? []).length})`, content: <VentaPagosTab pagos={(pagosData ?? []) as any} totalPagado={totalPagado} saldoPendiente={saldoPendiente} isMobile={isMobile} onAddPago={handleAddPago} onCancelPago={handleCancelPago} onReactivarPago={handleReactivarPago} onDeletePago={handleDeletePago} onUpdatePago={handleUpdatePago} onRealizarPago={() => setShowPago(true)} /> }] : []),
             ...(!isNew ? [{ key: 'entregas', label: `Entregas (${entregasActivas.length})`, content: <VentaEntregasTab tipo={form.tipo} lineas={lineas} productosList={(productosList ?? []).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre }))} entregasExistentes={(entregasExistentes ?? []) as any} entregasActivas={entregasActivas as any} lineDeliverySummary={lineDeliverySummary} canCreateEntrega={canCreateEntrega} fullyDelivered={fullyDelivered} remaining={remaining} isCreatingEntrega={crearEntrega.isPending} isMobile={isMobile} onCreateEntrega={async (items) => { try { const entrega = await crearEntrega.mutateAsync({ pedidoId: form.id, vendedorId: form.vendedor_id ?? undefined, clienteId: form.cliente_id ?? undefined, almacenId: form.almacen_id ?? undefined, lineas: items }); toast.success(`Entrega ${entrega.folio} creada`); } catch (e: any) { toast.error(e.message); } }} /> }] : []),
             ...(billingEnabled && !isNew ? [{ key: 'facturacion', label: `Facturas (${cfdisCount ?? 0})`, content: <div className="p-4"><CfdiHistory ventaId={form.id!} lineas={lineas} productosList={productosList ?? []} />{lineas.every(l => !l.producto_id || l.facturado) && lineas.some(l => l.facturado) && <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground mt-4"><span className="inline-block w-2 h-2 rounded-full bg-primary" />Todas las líneas facturadas</div>}</div> }] : []),

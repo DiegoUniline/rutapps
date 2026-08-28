@@ -485,11 +485,18 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   'conteo-fisico': 'Conteo físico',
 };
 
+function isVentaFormPath(pathname: string) {
+  const segments = pathname.split('/').filter(Boolean);
+  return segments.length === 2
+    && segments[0] === 'ventas'
+    && (segments[1] === 'nuevo' || UUID_RE.test(segments[1]));
+}
+
 function Breadcrumb() {
   const location = useLocation();
   const segments = location.pathname.split('/').filter(Boolean);
 
-  if (segments.length === 0) return null;
+  if (segments.length === 0 || isVentaFormPath(location.pathname)) return null;
 
   return (
     <div className="h-9 flex items-center px-5 bg-card border-b border-border text-xs text-muted-foreground overflow-x-auto">
@@ -647,6 +654,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { hasModulo, loading: permisosLoading } = usePermisos();
   const isMobile = useIsMobile();
   const location = useLocation();
+  const isVentaForm = isVentaFormPath(location.pathname);
   useProductosRealtime();
   useFeatureFlags();
 
@@ -958,7 +966,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 min-h-0 overflow-y-auto">
           {children}
         </main>
-        <div className="shrink-0"><UnilineFooter /></div>
+        {!isVentaForm && <div className="shrink-0"><UnilineFooter /></div>}
       </div>
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />

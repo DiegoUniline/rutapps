@@ -59,6 +59,7 @@ export default function FloatingSoporteChat() {
   // Visible en TODA la app administrativa (escritorio y móvil del admin).
   // Solo se oculta en la app móvil de ruta (/ruta) o si el usuario lo cierra.
   const isRutaApp = pathname.startsWith("/ruta");
+  const compactOnSale = /^\/ventas\/(?:nuevo|[0-9a-f-]{36})$/i.test(pathname);
   void count;
   void isMobile;
 
@@ -73,17 +74,20 @@ export default function FloatingSoporteChat() {
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full",
+          "fixed z-[60] flex items-center gap-2 rounded-full",
           "bg-primary text-primary-foreground shadow-xl hover:shadow-2xl",
-          "pl-3 pr-4 py-2.5 transition-all hover:scale-[1.03]",
+          "transition-all hover:scale-[1.03]",
+          compactOnSale
+            ? "bottom-4 right-4 h-11 w-11 justify-center p-0"
+            : "bottom-5 right-5 py-2.5 pl-3 pr-4",
         )}
         aria-label="Abrir Asesor IA de Soporte"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-foreground/15">
           <Bot className="h-4 w-4" />
         </span>
-        <span className="text-sm font-semibold whitespace-nowrap">Asesor IA</span>
-        {count > 0 && (
+        {!compactOnSale && <span className="whitespace-nowrap text-sm font-semibold">Asesor IA</span>}
+        {!compactOnSale && count > 0 && (
           <span className="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[10px] font-bold">
             {count}
           </span>

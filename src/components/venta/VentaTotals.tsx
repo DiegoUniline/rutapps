@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { formatCurrency } from '@/lib/currency';
-import { Tag, Gift } from 'lucide-react';
+import { Tag, Gift, Percent, DollarSign, ReceiptText } from 'lucide-react';
 import type { PromoResult } from '@/hooks/usePromociones';
 
 interface VentaTotalsProps {
@@ -15,6 +15,14 @@ interface VentaTotalsProps {
   promoResults?: PromoResult[];
   descuento_promo?: number;
   descuento_extra_amt?: number;
+  descuentoExtraValor?: number;
+  descuentoExtraTipo?: string;
+  canEditDescuentoExtra?: boolean;
+  onDescuentoExtraChange?: (value: number) => void;
+  onToggleDescuentoExtraTipo?: () => void;
+  sinImpuestos?: boolean;
+  canToggleSinImpuestos?: boolean;
+  onSinImpuestosChange?: (value: boolean) => void;
   currencyCode?: string | null;
   /** Suma de los descuentos de promoción GUARDADOS en las líneas (con impuestos).
    *  Cuando viene, manda sobre el cálculo en vivo para que el resumen cuadre
@@ -28,7 +36,14 @@ interface VentaTotalsProps {
   descuentoNetoGuardado?: number | null;
 }
 
-export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt, currencyCode, promoTotalGuardado, subtotalNetoGuardado, descuentoNetoGuardado }: VentaTotalsProps) {
+export function VentaTotals({
+  subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente,
+  promoResults, descuento_promo, descuento_extra_amt, descuentoExtraValor = 0,
+  descuentoExtraTipo = 'porcentaje', canEditDescuentoExtra = false,
+  onDescuentoExtraChange, onToggleDescuentoExtraTipo, sinImpuestos = false,
+  canToggleSinImpuestos = false, onSinImpuestosChange, currencyCode,
+  promoTotalGuardado, subtotalNetoGuardado, descuentoNetoGuardado,
+}: VentaTotalsProps) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const lineDescuento = descuento_total - (descuento_promo ?? 0) - (descuento_extra_amt ?? 0);
@@ -69,6 +84,67 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
   return (
     <div className="flex justify-end pt-2 max-lg:sticky max-lg:bottom-0 lg:sticky lg:top-4 bg-card pb-2">
       <div className={cn("bg-accent rounded-md p-3 space-y-1.5 text-[13px]", isMobile ? "w-full" : "w-80")}>
+        {(canEditDescuentoExtra || descuentoExtraValor > 0 || canToggleSinImpuestos || sinImpuestos) && (
+          <div className="mb-2 space-y-2 border-b border-border pb-2">
+            {(canEditDescuentoExtra || descuentoExtraValor > 0) && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[12px] font-medium text-muted-foreground">Descuento extra</span>
+                {canEditDescuentoExtra && onDescuentoExtraChange ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="0"
+                      max={descuentoExtraTipo === 'porcentaje' ? 100 : undefined}
+                      step="0.01"
+                      value={descuentoExtraValor}
+                      onChange={(event) => {
+                        const next = Math.max(0, Number(event.target.value) || 0);
+                        onDescuentoExtraChange(descuentoExtraTipo === 'porcentaje' ? Math.min(100, next) : next);
+                      }}
+                      className="input-odoo h-7 w-24 px-2 py-1 text-right text-[12px] tabular-nums"
+                      aria-label="Descuento extra"
+                    />
+                    <button
+                      type="button"
+                      onClick={onToggleDescuentoExtraTipo}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-input bg-card text-foreground transition-colors hover:bg-secondary"
+                      title={descuentoExtraTipo === 'porcentaje' ? 'Cambiar a monto fijo' : 'Cambiar a porcentaje'}
+                    >
+                      {descuentoExtraTipo === 'porcentaje'
+                        ? <Percent className="h-3.5 w-3.5" />
+                        : <DollarSign className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                ) : (
+                  <span className="font-medium tabular-nums">
+                    {descuentoExtraValor} {descuentoExtraTipo === 'porcentaje' ? '%' : '$'}
+                  </span>
+                )}
+              </div>
+            )}
+            {(canToggleSinImpuestos || sinImpuestos) && (
+              <button
+                type="button"
+                disabled={!canToggleSinImpuestos}
+                onClick={() => onSinImpuestosChange?.(!sinImpuestos)}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-md border px-2 py-1.5 text-[12px] font-medium transition-colors disabled:cursor-default",
+                  sinImpuestos
+                    ? "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                    : "border-border/50 bg-card/70 text-muted-foreground",
+                )}
+              >
+                <span className="flex items-center gap-1.5">
+                  <ReceiptText className="h-3.5 w-3.5" />
+                  Sin impuestos
+                </span>
+                <span className={cn("relative h-4 w-8 rounded-full transition-colors", sinImpuestos ? "bg-amber-500" : "bg-border")}>
+                  <span className={cn("absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform", sinImpuestos ? "translate-x-4" : "translate-x-0.5")} />
+                </span>
+              </button>
+            )}
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal sin impuestos</span>
           <span>{money(grossSubtotal)}</span>

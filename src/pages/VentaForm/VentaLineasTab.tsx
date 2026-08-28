@@ -1,9 +1,8 @@
-import { Plus, Trash2, ReceiptText } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import type { PromoResult } from '@/hooks/usePromociones';
 import { VentaTotals } from '@/components/venta/VentaTotals';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
 import type { VentaLinea } from '@/types';
 import { VentaLineaMobile } from './VentaLineaMobile';
 import { VentaLineaDesktop } from './VentaLineaDesktop';
@@ -46,6 +45,10 @@ interface Props {
   cerradoSnapshot?: { lineas?: Array<{ producto_id: string; pedido: number; entregado: number }> } | null;
   canChangePrice?: boolean;
   canApplyDiscount?: boolean;
+  descuentoExtraValor?: number;
+  descuentoExtraTipo?: string;
+  onDescuentoExtraChange?: (value: number) => void;
+  onToggleDescuentoExtraTipo?: () => void;
   onChangeLineListaPrecio?: (idx: number, selection: import('@/components/venta/ListaPrecioPicker').ListaPrecioSelection) => void;
   onPickLote?: (idx: number) => void;
 }
@@ -53,7 +56,12 @@ interface Props {
 export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
   const { symbol } = useCurrency();
-  const { readOnly, totals, onAddLine, pricingReady = true, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults, currencyCode, cerradoSnapshot } = props;
+  const {
+    readOnly, totals, onAddLine, pricingReady = true, sinImpuestos, setSinImpuestos,
+    readOnlyForm, saldoPendiente, promoResults, currencyCode, cerradoSnapshot,
+    canApplyDiscount, descuentoExtraValor, descuentoExtraTipo,
+    onDescuentoExtraChange, onToggleDescuentoExtraTipo,
+  } = props;
   const { empresa } = useAuth();
   const showDesglose = desgloseLineaHabilitado(empresa?.licencia);
   const defaults = { ...VENTA_LINEAS_DEFAULT_VISIBILITY, ...VENTA_LINEAS_DESGLOSE_DEFAULTS };
@@ -112,7 +120,7 @@ export function VentaLineasTab(props: Props) {
   return (
     <div className="min-w-0 max-w-full overflow-hidden p-2.5 sm:p-3">
       {!readOnly && !pricingReady && (
-        <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-[12px] text-foreground">
+        <div className="mb-2 rounded-md border border-primary/30 bg-primary/5 px-2.5 py-1.5 text-[11px] text-foreground">
           Selecciona un cliente para cargar su lista de precios antes de agregar productos.
         </div>
       )}
@@ -174,26 +182,17 @@ export function VentaLineasTab(props: Props) {
           )}
 
           {!readOnly && (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center">
               <button onClick={onAddLine} disabled={!pricingReady} className="btn-odoo-secondary text-xs disabled:opacity-50 disabled:cursor-not-allowed">
                 <Plus className="h-3 w-3" /> Agregar producto
               </button>
-              {setSinImpuestos && !readOnlyForm && (
-                <button onClick={() => setSinImpuestos(!sinImpuestos)} className={cn("flex items-center gap-2 rounded-md px-3 py-1.5 text-[12px] font-medium transition-all border", sinImpuestos ? "bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300" : "bg-accent/50 border-border/40 text-muted-foreground")}>
-                  <ReceiptText className="h-3.5 w-3.5" />
-                  Sin impuestos
-                  <div className={cn("w-8 h-4 rounded-full relative transition-colors", sinImpuestos ? "bg-amber-500" : "bg-border")}>
-                    <div className={cn("absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform", sinImpuestos ? "translate-x-4" : "translate-x-0.5")} />
-                  </div>
-                </button>
-              )}
             </div>
           )}
         </div>
 
         <div className="flex w-full justify-end">
-          <div className="w-full lg:w-80">
-            <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} currencyCode={currencyCode} promoTotalGuardado={readOnly ? lineas.reduce((s, l) => s + (Number((l as any).descuento_promocion_monto) || 0), 0) : null} subtotalNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const lista = Number((l as any).precio_lista_unitario); const qty = Number((l as any).cantidad) || 0; return s + (Number.isFinite(lista) ? Math.round(lista * qty * 100) / 100 : 0); }, 0) * 100) / 100 : null} descuentoNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const a = l as any; const desc = (Number(a.descuento_promocion_monto) || 0) + (Number(a.descuento_manual_monto) || 0); if (desc <= 0) return s; const divisor = (1 + (Number(a.ieps_pct) || 0) / 100) * (1 + (Number(a.iva_pct) || 0) / 100); return s + Math.round((divisor > 0 ? desc / divisor : desc) * 100) / 100; }, 0) * 100) / 100 : null} />
+          <div className="w-full lg:w-96">
+            <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} descuentoExtraValor={descuentoExtraValor} descuentoExtraTipo={descuentoExtraTipo} canEditDescuentoExtra={!readOnly && !!canApplyDiscount} onDescuentoExtraChange={onDescuentoExtraChange} onToggleDescuentoExtraTipo={onToggleDescuentoExtraTipo} sinImpuestos={sinImpuestos} canToggleSinImpuestos={!readOnlyForm && !!setSinImpuestos} onSinImpuestosChange={setSinImpuestos} currencyCode={currencyCode} promoTotalGuardado={readOnly ? lineas.reduce((s, l) => s + (Number((l as any).descuento_promocion_monto) || 0), 0) : null} subtotalNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const lista = Number((l as any).precio_lista_unitario); const qty = Number((l as any).cantidad) || 0; return s + (Number.isFinite(lista) ? Math.round(lista * qty * 100) / 100 : 0); }, 0) * 100) / 100 : null} descuentoNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const a = l as any; const desc = (Number(a.descuento_promocion_monto) || 0) + (Number(a.descuento_manual_monto) || 0); if (desc <= 0) return s; const divisor = (1 + (Number(a.ieps_pct) || 0) / 100) * (1 + (Number(a.iva_pct) || 0) / 100); return s + Math.round((divisor > 0 ? desc / divisor : desc) * 100) / 100; }, 0) * 100) / 100 : null} />
           </div>
         </div>
       </div>
