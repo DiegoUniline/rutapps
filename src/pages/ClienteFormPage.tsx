@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { usePermisos } from '@/hooks/usePermisos';
-import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { compressPhoto } from '@/lib/imageCompressor';
 import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2, Upload, FileText } from 'lucide-react';
 import { GoogleMap, Marker } from '@react-google-maps/api';
@@ -211,8 +210,7 @@ export default function ClienteFormPage() {
   const vendedorIdParam = searchParams.get('vendedorId');
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
-  const { empresa, user } = useAuth();
-  const billingEnabled = isSuperAdminEmail(user?.email);
+  const { empresa } = useAuth();
   const { fmt: currFmt } = useCurrency();
   const qc = useQueryClient();
   const isNew = id === 'nuevo';
@@ -668,7 +666,7 @@ export default function ClienteFormPage() {
             </div>
           ),
         },
-        ...(billingEnabled ? [{
+        {
           key: 'fiscal', label: 'Datos Fiscales',
           content: (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
@@ -723,7 +721,7 @@ export default function ClienteFormPage() {
               </div>
             </div>
           ),
-        }] : []),
+        },
         {
           key: 'comercial', label: 'Comercial',
           content: (
