@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { PlayCircle, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useQuery } from '@tanstack/react-query';
@@ -25,9 +27,11 @@ interface VideoRow { id: string; url: string; title: string; module: string | nu
 
 interface VideoHelpButtonProps {
   module: string;
+  compact?: boolean;
 }
 
-export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
+export default function VideoHelpButton({ module, compact }: VideoHelpButtonProps) {
+
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<VideoRow | null>(null);
 
@@ -56,11 +60,14 @@ export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
     <>
       {videos.length === 1 ? (
         <Button
-          size="sm"
-          className="gap-1.5 text-xs font-semibold bg-[#FF0000] hover:bg-[#CC0000] text-white border-0 shadow-sm"
+          size={compact ? "sm" : "sm"}
+          className={cn(
+            "gap-1.5 font-semibold bg-[#FF0000] hover:bg-[#CC0000] text-white border-0 shadow-sm",
+            compact ? "h-7 text-[11px] px-2" : "text-xs"
+          )}
           onClick={() => handleOpen(videos[0])}
         >
-          <PlayCircle className="h-4 w-4" />
+          <PlayCircle className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
           Ver tutorial
         </Button>
       ) : (
@@ -68,16 +75,20 @@ export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
           {videos.map((v) => (
             <Button
               key={v.id}
-              size="sm"
-              className="gap-1.5 text-xs font-semibold bg-[#FF0000] hover:bg-[#CC0000] text-white border-0 shadow-sm"
+              size={compact ? "sm" : "sm"}
+              className={cn(
+                "gap-1.5 font-semibold bg-[#FF0000] hover:bg-[#CC0000] text-white border-0 shadow-sm",
+                compact ? "h-7 text-[11px] px-2" : "text-xs"
+              )}
               onClick={() => handleOpen(v)}
             >
-              <PlayCircle className="h-4 w-4" />
+              <PlayCircle className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
               {v.title}
             </Button>
           ))}
         </div>
       )}
+
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl p-0 overflow-hidden">

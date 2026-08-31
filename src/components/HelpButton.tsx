@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { HelpCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export interface HelpSection {
@@ -11,9 +13,11 @@ export interface HelpSection {
 interface HelpButtonProps {
   title: string;
   sections: HelpSection[];
+  compact?: boolean;
 }
 
-export default function HelpButton({ title, sections }: HelpButtonProps) {
+export default function HelpButton({ title, sections, compact }: HelpButtonProps) {
+
   const [open, setOpen] = useState(false);
 
   return (
@@ -21,12 +25,16 @@ export default function HelpButton({ title, sections }: HelpButtonProps) {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-muted-foreground hover:text-primary"
+        className={cn(
+          "text-muted-foreground hover:text-primary",
+          compact ? "h-7 w-7" : "h-8 w-8"
+        )}
         onClick={() => setOpen(true)}
         title="Ayuda"
       >
-        <HelpCircle className="h-5 w-5" />
+        <HelpCircle className={cn("shrink-0", compact ? "h-4 w-4" : "h-5 w-5")} />
       </Button>
+
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[80dvh] overflow-y-auto">
