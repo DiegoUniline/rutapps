@@ -458,10 +458,11 @@ export default function VentasListPage() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
         <OdooFilterBar
+          compact
           search={search} onSearchChange={val => { setSearch(val); setPage(1); }}
-          placeholder={isProductView ? "Buscar por producto, código o folio..." : "Buscar por folio o cliente..."}
+          placeholder={isProductView ? "Buscar producto, código o folio..." : "Buscar folio o cliente..."}
           filterOptions={FILTER_OPTIONS} activeFilters={filters}
           onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
           onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
@@ -473,7 +474,7 @@ export default function VentasListPage() {
           onDateFromChange={v => { setDateFrom(v); setPage(1); }}
           onDateToChange={v => { setDateTo(v); setPage(1); }}
         />
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
 
           {!isMobile && (
             <ColumnVisibilityMenu
@@ -491,12 +492,12 @@ export default function VentasListPage() {
             />
           )}
           <RepararPromocionesButton />
-          <button onClick={() => navigate('/finanzas/aplicar-pagos')} className="btn-odoo-secondary shrink-0">
+          <button onClick={() => navigate('/finanzas/aplicar-pagos')} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border bg-card text-foreground hover:bg-accent text-[12px] font-medium shrink-0">
             <Banknote className="h-3.5 w-3.5" /> Aplicar pagos
           </button>
 
           {canCreate && (
-            <button onClick={() => navigate('/ventas/nuevo')} className="btn-odoo-primary shrink-0">
+            <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[12px] font-medium shrink-0">
               <Plus className="h-3.5 w-3.5" /> Nueva venta
             </button>
           )}
