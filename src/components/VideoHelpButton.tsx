@@ -25,9 +25,11 @@ interface VideoRow { id: string; url: string; title: string; module: string | nu
 
 interface VideoHelpButtonProps {
   module: string;
+  compact?: boolean;
 }
 
-export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
+export default function VideoHelpButton({ module, compact }: VideoHelpButtonProps) {
+
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<VideoRow | null>(null);
 
