@@ -942,25 +942,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        <div className="shrink-0"><SuperAdminEmpresaSelector /></div>
-        <div className="h-10 flex items-center justify-end px-4 border-b border-border bg-card shrink-0 gap-2">
-          <button
-            onClick={applySwUpdate}
-            className={cn(
-              "hidden md:flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-medium transition-colors shadow-sm",
-              "bg-primary text-primary-foreground hover:bg-primary/90",
-              swUpdateAvailable && "animate-pulse shadow-primary/30 shadow-md"
-            )}
-            title="Sincronizar y limpiar caché"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Sincronizar
-          </button>
-          <TiendaOrdersBell />
-          <InternalNotificationBell />
-          <BroadcastBell />
-          <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
-
+        <div className="shrink-0 flex items-center justify-between gap-2 px-4 border-b border-border bg-card min-h-10">
+          <div className="flex-1 min-w-0"><SuperAdminEmpresaSelector /></div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={applySwUpdate}
+              className={cn(
+                "hidden md:flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-medium transition-colors shadow-sm",
+                "bg-primary text-primary-foreground hover:bg-primary/90",
+                swUpdateAvailable && "animate-pulse shadow-primary/30 shadow-md"
+              )}
+              title="Sincronizar y limpiar caché"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Sincronizar
+            </button>
+            <TiendaOrdersBell />
+            <InternalNotificationBell />
+            <BroadcastBell />
+            <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
+          </div>
         </div>
         <div className="shrink-0"><Breadcrumb /></div>
         <main className="flex-1 min-h-0 overflow-y-auto">
