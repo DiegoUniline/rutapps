@@ -425,6 +425,7 @@ export default function VentasListPage() {
           <nav className="flex gap-6" role="tablist" aria-label="Vista de ventas">
             <button
               role="tab"
+              aria-label="Ventas"
               aria-selected={viewMode === 'ventas'}
               onClick={() => { setViewMode('ventas'); setPage(1); }}
               className={cn(
@@ -434,7 +435,7 @@ export default function VentasListPage() {
                   : "text-muted-foreground border-transparent hover:text-foreground"
               )}
             >
-              <List className="h-4 w-4" /> Ventas
+              <List className="h-4 w-4" />
             </button>
             <button
               role="tab"
