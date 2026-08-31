@@ -458,51 +458,50 @@ export default function VentasListPage() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-        <OdooFilterBar
-          compact
-          search={search} onSearchChange={val => { setSearch(val); setPage(1); }}
-          placeholder={isProductView ? "Buscar producto, código o folio..." : "Buscar folio o cliente..."}
-          filterOptions={FILTER_OPTIONS} activeFilters={filters}
-          onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
-          onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
-          onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); setPage(1); }}
-          groupByOptions={GROUP_BY_OPTIONS} activeGroupBy={groupBy} onGroupByChange={setGroupBy}
-          activeGroupByLevels={groupByLevels} onGroupByLevelChange={setGroupByLevel}
-          dateFrom={dateFrom} dateTo={dateTo}
-          onDateRangeChange={(f, t) => { setDates(f, t); setPage(1); }}
-          onDateFromChange={v => { setDateFrom(v); setPage(1); }}
-          onDateToChange={v => { setDateTo(v); setPage(1); }}
-        />
-        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+      <OdooFilterBar
+        compact
+        search={search} onSearchChange={val => { setSearch(val); setPage(1); }}
+        placeholder={isProductView ? "Buscar producto, código o folio..." : "Buscar folio o cliente..."}
+        filterOptions={FILTER_OPTIONS} activeFilters={filters}
+        onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
+        onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
+        onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); setPage(1); }}
+        groupByOptions={GROUP_BY_OPTIONS} activeGroupBy={groupBy} onGroupByChange={setGroupBy}
+        activeGroupByLevels={groupByLevels} onGroupByLevelChange={setGroupByLevel}
+        dateFrom={dateFrom} dateTo={dateTo}
+        onDateRangeChange={(f, t) => { setDates(f, t); setPage(1); }}
+        onDateFromChange={v => { setDateFrom(v); setPage(1); }}
+        onDateToChange={v => { setDateTo(v); setPage(1); }}
+      >
+        {!isMobile && (
+          <ColumnVisibilityMenu
+            compact
+            columns={VENTAS_TABLE_COLUMNS}
+            visible={columnVisibility}
+            onToggle={toggleColumn}
+            onShowAll={() => setAll(true)}
+            onReset={reset}
+          />
+        )}
+        {!isMobile && (
+          <ExportButton
+            compact
+            onExcel={() => exportToExcel({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0), saldo_pendiente: ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0) } })}
+            onPDF={() => exportToPDF({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0), saldo_pendiente: ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0) } })}
+          />
+        )}
+        <RepararPromocionesButton compact />
+        <button onClick={() => navigate('/finanzas/aplicar-pagos')} className="inline-flex items-center gap-1.5 h-7 px-2 rounded-lg border bg-card text-foreground hover:bg-accent text-[11px] font-medium shrink-0">
+          <Banknote className="h-3 w-3" /> Aplicar pagos
+        </button>
 
-          {!isMobile && (
-            <ColumnVisibilityMenu
-              columns={VENTAS_TABLE_COLUMNS}
-              visible={columnVisibility}
-              onToggle={toggleColumn}
-              onShowAll={() => setAll(true)}
-              onReset={reset}
-            />
-          )}
-          {!isMobile && (
-            <ExportButton
-              onExcel={() => exportToExcel({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0), saldo_pendiente: ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0) } })}
-              onPDF={() => exportToPDF({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0), saldo_pendiente: ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0) } })}
-            />
-          )}
-          <RepararPromocionesButton />
-          <button onClick={() => navigate('/finanzas/aplicar-pagos')} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border bg-card text-foreground hover:bg-accent text-[12px] font-medium shrink-0">
-            <Banknote className="h-3.5 w-3.5" /> Aplicar pagos
+        {canCreate && (
+          <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-7 px-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[11px] font-medium shrink-0">
+            <Plus className="h-3 w-3" /> Nueva venta
           </button>
+        )}
+      </OdooFilterBar>
 
-          {canCreate && (
-            <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[12px] font-medium shrink-0">
-              <Plus className="h-3.5 w-3.5" /> Nueva venta
-            </button>
-          )}
-        </div>
-      </div>
 
       {!activeLoading && total > 0 && (
         // Barra fija (sticky) y responsive: SIEMPRE visible al hacer scroll y

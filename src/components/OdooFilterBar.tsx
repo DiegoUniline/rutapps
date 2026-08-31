@@ -80,7 +80,7 @@ function IndependentFilterDropdown({
         onClick={() => setOpen(!open)}
         className={cn(
           "flex items-center gap-1 shrink-0 rounded-lg border bg-card text-foreground hover:bg-accent transition-all",
-          compact ? "h-8 px-2.5 py-1 text-[12px] font-medium" : "btn-odoo-secondary",
+          compact ? "h-7 px-2 text-[11px] font-medium" : "btn-odoo-secondary",
           count > 0 && "border-primary text-primary"
         )}
       >
@@ -223,160 +223,160 @@ export function OdooFilterBar({
     return chips;
   }, [activeFilters, filterOptions]);
 
-  return (
-    <div className={cn(compact ? "flex flex-wrap items-center gap-2" : "space-y-2")}>
-      {/* Search bar */}
-      <div className={cn(compact ? "relative w-56 shrink-0" : "flex justify-center w-full")}>
-        <div className={cn("relative", compact ? "w-full" : "w-full max-w-xl")}>
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-            placeholder={placeholder}
-            className={cn("input-odoo pl-8 w-full", compact && "h-8 py-1.5 text-[12px]")}
+  const renderControls = (isMobile: boolean) => (
+    <>
+      {/* Dates first */}
+      <ResponsiveFilterCard label="Fecha" isMobile={isMobile}>
+        {(onDateRangeChange || (onDateFromChange && onDateToChange)) && (
+          <DateRangePicker
+            compact={compact}
+            placeholder={compact ? "Rango" : "Seleccionar rango"}
+            from={dateFrom ?? ''}
+            to={dateTo ?? ''}
+            onChange={(f, t) => {
+              if (onDateRangeChange) onDateRangeChange(f, t);
+              else { onDateFromChange?.(f); onDateToChange?.(t); }
+            }}
+            className={compact ? "shrink-0" : undefined}
           />
+        )}
+      </ResponsiveFilterCard>
+
+      {/* Filter dropdowns */}
+      {filterOptions && filterOptions.length > 0 && onToggleFilter && filterOptions.map(fo => (
+        <ResponsiveFilterCard key={fo.key} label={fo.label} isMobile={isMobile}>
+          <IndependentFilterDropdown
+            filter={fo}
+            selected={activeFilters?.[fo.key] ?? []}
+            onToggle={(val) => onToggleFilter(fo.key, val)}
+            onSetAll={(vals) => onSetFilter?.(fo.key, vals)}
+            compact={compact}
+          />
+        </ResponsiveFilterCard>
+      ))}
+
+      {/* Group by — multi-level */}
+      <ResponsiveFilterCard label="Agrupar" isMobile={isMobile}>
+        {groupByOptions && groupByOptions.length > 0 && (onGroupByChange || onGroupByLevelChange) && (
+          <div ref={(el) => { groupRefs.current[isMobile ? 1 : 0] = el; }} className="relative">
+            <button
+              onClick={() => setGroupOpen(!groupOpen)}
+              className={cn(
+                "flex items-center gap-1 shrink-0 rounded-lg border bg-card text-foreground hover:bg-accent transition-all",
+                compact ? "h-7 px-2 text-[11px] font-medium" : "btn-odoo-secondary",
+                hasGroupBy && "border-primary text-primary"
+              )}
+            >
+              <Layers className={cn("shrink-0", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
+              {levels.length > 0
+                ? `Agrupado (${levels.length})`
+                : 'Agrupar por'}
+              <ChevronDown className="h-3 w-3" />
+            </button>
+            {groupOpen && (
+              <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg min-w-[220px] py-2 animate-in fade-in-0 zoom-in-95 duration-150">
+                {[0, 1, 2].map(level => {
+                  const currentVal = levels[level] ?? '';
+                  const prevLevel = level > 0 ? levels[level - 1] : 'always';
+                  if (level > 0 && !prevLevel) return null;
+                  const usedInOtherLevels = levels.filter((_, i) => i !== level);
+                  const availableOptions = groupByOptions.filter(g => !usedInOtherLevels.includes(g.value));
+                  return (
+                    <div key={level} className={cn(level > 0 && "border-t border-border mt-1 pt-1")}>
+                      <div className="px-3 py-1 text-[10px] text-muted-foreground uppercase font-semibold">
+                        {level === 0 ? 'Agrupación 1' : level === 1 ? 'Agrupación 2' : 'Agrupación 3'}
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (onGroupByLevelChange) onGroupByLevelChange(level, '');
+                          else if (level === 0 && onGroupByChange) onGroupByChange('');
+                          if (level === 0) setGroupOpen(false);
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-1.5 text-[12px] hover:bg-accent transition-colors",
+                          !currentVal && "font-semibold text-primary"
+                        )}
+                      >
+                        {level === 0 ? 'Sin agrupación' : 'Ninguna'}
+                      </button>
+                      {availableOptions.map(g => (
+                        <button
+                          key={g.value}
+                          onClick={() => {
+                            if (onGroupByLevelChange) onGroupByLevelChange(level, g.value);
+                            else if (level === 0 && onGroupByChange) onGroupByChange(g.value);
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-[12px] hover:bg-accent transition-colors",
+                            currentVal === g.value && "font-semibold text-primary"
+                          )}
+                        >
+                          {currentVal === g.value && <Check className="h-3 w-3 inline mr-1" />}
+                          {g.label}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+                <div className="border-t border-border mt-1 pt-1 px-3">
+                  <button
+                    onClick={() => setGroupOpen(false)}
+                    className="w-full text-center py-1.5 text-[11px] text-primary font-semibold hover:bg-accent rounded transition-colors"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </ResponsiveFilterCard>
+
+      {/* Clear all */}
+      <ResponsiveFilterCard label="Acción" isMobile={isMobile}>
+        {activeCount > 0 && onClearFilters && (
+          <button onClick={() => { onClearFilters(); if (onDateRangeChange) onDateRangeChange('', ''); else { onDateFromChange?.(''); onDateToChange?.(''); } }} className={cn("text-destructive hover:underline flex items-center gap-1 shrink-0", compact ? "text-[10px]" : "text-[11px]")}>
+            <X className="h-3 w-3" /> Limpiar
+          </button>
+        )}
+      </ResponsiveFilterCard>
+
+      <ResponsiveFilterCard label="Más" isMobile={isMobile}>
+        {children}
+      </ResponsiveFilterCard>
+    </>
+  );
+
+  return (
+    <div className={cn("space-y-2", compact && "space-y-1")}>
+      <div className={cn("flex items-start gap-2", compact ? "flex-nowrap" : "flex-wrap")}>
+        {/* Search bar */}
+        <div className={cn(compact ? "relative w-44 shrink-0" : "flex justify-center w-full")}>
+          <div className={cn("relative", compact ? "w-full" : "w-full max-w-xl")}>
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => onSearchChange(e.target.value)}
+              placeholder={placeholder}
+              className={cn("input-odoo pl-8 w-full", compact && "h-7 py-1 text-[11px]")}
+            />
+          </div>
+        </div>
+
+        {/* Desktop controls: extended horizontally in compact mode */}
+        <div className={cn(
+          "hidden sm:flex items-center",
+          compact ? "flex-1 min-w-0 gap-1.5 overflow-x-auto no-scrollbar" : "flex-wrap gap-2"
+        )}>
+          {renderControls(false)}
         </div>
       </div>
 
-      {/* Dates → Filters → Group by → Clear (desktop) / collapsed button (mobile) */}
-      {(() => {
-        const controls = (isMobile: boolean) => (
-          <>
-            {/* Dates first */}
-            <ResponsiveFilterCard label="Fecha" isMobile={isMobile}>
-              {(onDateRangeChange || (onDateFromChange && onDateToChange)) && (
-                <DateRangePicker
-                  from={dateFrom ?? ''}
-                  to={dateTo ?? ''}
-                  onChange={(f, t) => {
-                    if (onDateRangeChange) onDateRangeChange(f, t);
-                    else { onDateFromChange?.(f); onDateToChange?.(t); }
-                  }}
-                  className={compact ? "shrink-0" : undefined}
-                />
-              )}
-            </ResponsiveFilterCard>
-
-            {/* Filter dropdowns */}
-            {filterOptions && filterOptions.length > 0 && onToggleFilter && filterOptions.map(fo => (
-              <ResponsiveFilterCard key={fo.key} label={fo.label} isMobile={isMobile}>
-                <IndependentFilterDropdown
-                  filter={fo}
-                  selected={activeFilters?.[fo.key] ?? []}
-                  onToggle={(val) => onToggleFilter(fo.key, val)}
-                  onSetAll={(vals) => onSetFilter?.(fo.key, vals)}
-                  compact={compact}
-                />
-              </ResponsiveFilterCard>
-            ))}
-
-            {/* Group by — multi-level */}
-            <ResponsiveFilterCard label="Agrupar" isMobile={isMobile}>
-              {groupByOptions && groupByOptions.length > 0 && (onGroupByChange || onGroupByLevelChange) && (
-                <div ref={(el) => { groupRefs.current[isMobile ? 1 : 0] = el; }} className="relative">
-                  <button
-                    onClick={() => setGroupOpen(!groupOpen)}
-                    className={cn(
-                      "flex items-center gap-1 shrink-0 rounded-lg border bg-card text-foreground hover:bg-accent transition-all",
-                      compact ? "h-8 px-2.5 py-1 text-[12px] font-medium" : "btn-odoo-secondary",
-                      hasGroupBy && "border-primary text-primary"
-                    )}
-                  >
-                    <Layers className="h-3.5 w-3.5" />
-                    {levels.length > 0
-                      ? `Agrupado (${levels.length})`
-                      : 'Agrupar por'}
-                    <ChevronDown className="h-3 w-3" />
-                  </button>
-                  {groupOpen && (
-                    <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg min-w-[220px] py-2 animate-in fade-in-0 zoom-in-95 duration-150">
-                      {[0, 1, 2].map(level => {
-                        const currentVal = levels[level] ?? '';
-                        const prevLevel = level > 0 ? levels[level - 1] : 'always';
-                        if (level > 0 && !prevLevel) return null;
-                        const usedInOtherLevels = levels.filter((_, i) => i !== level);
-                        const availableOptions = groupByOptions.filter(g => !usedInOtherLevels.includes(g.value));
-                        return (
-                          <div key={level} className={cn(level > 0 && "border-t border-border mt-1 pt-1")}>
-                            <div className="px-3 py-1 text-[10px] text-muted-foreground uppercase font-semibold">
-                              {level === 0 ? 'Agrupación 1' : level === 1 ? 'Agrupación 2' : 'Agrupación 3'}
-                            </div>
-                            <button
-                              onClick={() => {
-                                if (onGroupByLevelChange) onGroupByLevelChange(level, '');
-                                else if (level === 0 && onGroupByChange) onGroupByChange('');
-                                if (level === 0) setGroupOpen(false);
-                              }}
-                              className={cn(
-                                "w-full text-left px-3 py-1.5 text-[12px] hover:bg-accent transition-colors",
-                                !currentVal && "font-semibold text-primary"
-                              )}
-                            >
-                              {level === 0 ? 'Sin agrupación' : 'Ninguna'}
-                            </button>
-                            {availableOptions.map(g => (
-                              <button
-                                key={g.value}
-                                onClick={() => {
-                                  if (onGroupByLevelChange) onGroupByLevelChange(level, g.value);
-                                  else if (level === 0 && onGroupByChange) onGroupByChange(g.value);
-                                }}
-                                className={cn(
-                                  "w-full text-left px-3 py-1.5 text-[12px] hover:bg-accent transition-colors",
-                                  currentVal === g.value && "font-semibold text-primary"
-                                )}
-                              >
-                                {currentVal === g.value && <Check className="h-3 w-3 inline mr-1" />}
-                                {g.label}
-                              </button>
-                            ))}
-                          </div>
-                        );
-                      })}
-                      <div className="border-t border-border mt-1 pt-1 px-3">
-                        <button
-                          onClick={() => setGroupOpen(false)}
-                          className="w-full text-center py-1.5 text-[11px] text-primary font-semibold hover:bg-accent rounded transition-colors"
-                        >
-                          Cerrar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </ResponsiveFilterCard>
-
-            {/* Clear all */}
-            <ResponsiveFilterCard label="Acción" isMobile={isMobile}>
-              {activeCount > 0 && onClearFilters && (
-                <button onClick={() => { onClearFilters(); if (onDateRangeChange) onDateRangeChange('', ''); else { onDateFromChange?.(''); onDateToChange?.(''); } }} className="text-[11px] text-destructive hover:underline flex items-center gap-1 shrink-0">
-                  <X className="h-3 w-3" /> Limpiar
-                </button>
-              )}
-            </ResponsiveFilterCard>
-
-            <ResponsiveFilterCard label="Más" isMobile={isMobile}>
-              {children}
-            </ResponsiveFilterCard>
-          </>
-        );
-
-        return (
-          <>
-            {/* Desktop / tablet: inline row */}
-            <div className={cn("hidden sm:flex items-center flex-wrap", compact ? "gap-1.5" : "gap-2")}>
-              {controls(false)}
-            </div>
-
-            {/* Mobile: horizontal scrollable filter cards */}
-            <div className="flex sm:hidden items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              {controls(true)}
-            </div>
-          </>
-        );
-      })()}
+      {/* Mobile controls */}
+      <div className="flex sm:hidden items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+        {renderControls(true)}
+      </div>
 
       {/* Active filter chips */}
       {filterChips.length > 0 && (
