@@ -37,6 +37,8 @@ interface OdooFilterBarProps {
   onDateToChange?: (val: string) => void;
   /** Preferred: sets both dates atomically (avoids stale-state races) */
   onDateRangeChange?: (from: string, to: string) => void;
+  /** Compact horizontal layout: search + filters share one row. */
+  compact?: boolean;
 }
 
 function IndependentFilterDropdown({
