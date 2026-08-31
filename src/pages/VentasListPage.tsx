@@ -498,10 +498,11 @@ export default function VentasListPage() {
           </button>
         )}
         <div className="flex items-center gap-1 shrink-0">
-          <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} />
-          <VideoHelpButton module="ventas" />
+          <HelpButton compact title={HELP.ventas.title} sections={HELP.ventas.sections} />
+          <VideoHelpButton compact module="ventas" />
         </div>
       </OdooFilterBar>
+
 
 
 
