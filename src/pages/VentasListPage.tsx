@@ -470,6 +470,10 @@ export default function VentasListPage() {
         onDateFromChange={v => { setDateFrom(v); setPage(1); }}
         onDateToChange={v => { setDateTo(v); setPage(1); }}
       >
+        <div className="flex items-center gap-1 shrink-0">
+          <HelpButton compact title={HELP.ventas.title} sections={HELP.ventas.sections} />
+          <VideoHelpButton compact module="ventas" />
+        </div>
         {!isMobile && (
           <ColumnVisibilityMenu
             compact
@@ -497,11 +501,8 @@ export default function VentasListPage() {
             <Plus className="h-3 w-3" /> Nueva venta
           </button>
         )}
-        <div className="flex items-center gap-1 shrink-0">
-          <HelpButton compact title={HELP.ventas.title} sections={HELP.ventas.sections} />
-          <VideoHelpButton compact module="ventas" />
-        </div>
       </OdooFilterBar>
+
 
 
 
