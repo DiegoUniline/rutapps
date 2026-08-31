@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { PlayCircle, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useQuery } from '@tanstack/react-query';
