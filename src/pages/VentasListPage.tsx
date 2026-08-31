@@ -568,8 +568,9 @@ export default function VentasListPage() {
 
       {/* Fila de totales FIJA al fondo de la pantalla: siempre visible al hacer
           scroll (muestra los totales de la PÁGINA visible). Sin agrupar y en
-          escritorio. */}
-      {!activeLoading && !isMobile && !groupBy && total > 0 && (
+          escritorio. Se omite si todo cabe en una sola página: sería idéntica
+          a la barra de totales de arriba y solo resta espacio a la tabla. */}
+      {!activeLoading && !isMobile && !groupBy && total > 0 && totalPages > 1 && (
         <ListPage.Footer className="-mx-4 px-4 pt-2 pb-1 bg-background/95 backdrop-blur-sm border-t border-border">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:gap-x-6 text-xs text-muted-foreground bg-card border border-border rounded px-3 py-2">
             <span className="font-semibold text-foreground">Página</span>

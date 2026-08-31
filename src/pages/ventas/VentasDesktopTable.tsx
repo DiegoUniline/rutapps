@@ -93,16 +93,16 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           {v('folio') && <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>}
           {v('tipo') && <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</SortableTh>}
           {v('cliente') && <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>}
-          {v('vendedor') && <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</SortableTh>}
-          {v('almacen') && <SortableTh sortKey="almacen" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Almacén</SortableTh>}
-          {v('condicion') && <SortableTh sortKey="condicion" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</SortableTh>}
-          {v('fecha') && <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha / Hora</SortableTh>}
-          {v('subtotal') && <SortableTh sortKey="subtotal" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal s/imp</SortableTh>}
-          {v('descuento') && <SortableTh sortKey="descuento" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Desc. / promo</SortableTh>}
-          {v('iva') && <SortableTh sortKey="iva" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Impuestos</SortableTh>}
+          {v('vendedor') && <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Vendedor</SortableTh>}
+          {v('almacen') && <SortableTh sortKey="almacen" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Almacén</SortableTh>}
+          {v('condicion') && <SortableTh sortKey="condicion" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden 2xl:table-cell">Condición</SortableTh>}
+          {v('fecha') && <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden 2xl:table-cell">Fecha / Hora</SortableTh>}
+          {v('subtotal') && <SortableTh sortKey="subtotal" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Subtotal s/imp</SortableTh>}
+          {v('descuento') && <SortableTh sortKey="descuento" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Desc. / promo</SortableTh>}
+          {v('iva') && <SortableTh sortKey="iva" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Impuestos</SortableTh>}
           {v('total') && <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</SortableTh>}
-          {v('pagado') && <SortableTh sortKey="pagado" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Pagado</SortableTh>}
-          {v('saldo') && <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</SortableTh>}
+          {v('pagado') && <SortableTh sortKey="pagado" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Pagado</SortableTh>}
+          {v('saldo') && <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Saldo</SortableTh>}
           {v('status') && <SortableTh sortKey="status" sort={sort} onToggle={toggle} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</SortableTh>}
           <th className="py-2 px-2 w-8" />
         </tr>
@@ -149,15 +149,15 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   </td>
                 )}
                 {v('cliente') && <td className="py-2 px-3 max-w-[180px] truncate">{row.cliente_id ? <ClienteLink id={row.cliente_id}>{row.clientes?.nombre || '—'}</ClienteLink> : 'Público en general'}</td>}
-                {v('vendedor') && <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.vendedores?.nombre ?? '—'}</td>}
-                {v('almacen') && <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.almacenes?.nombre ?? <span className="text-destructive">Sin almacén</span>}</td>}
-                {v('condicion') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[row.condicion_pago] || row.condicion_pago}</td>}
-                {v('fecha') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDateTime(row.created_at)}</td>}
-                {v('subtotal') && <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(resById[row.id]?.sinImpuestos ?? row.subtotal)}</td>}
+                {v('vendedor') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{row.vendedores?.nombre ?? '—'}</td>}
+                {v('almacen') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{row.almacenes?.nombre ?? <span className="text-destructive">Sin almacén</span>}</td>}
+                {v('condicion') && <td className="py-2 px-3 hidden 2xl:table-cell text-muted-foreground">{CONDICION_LABELS[row.condicion_pago] || row.condicion_pago}</td>}
+                {v('fecha') && <td className="py-2 px-3 hidden 2xl:table-cell text-muted-foreground">{fmtDateTime(row.created_at)}</td>}
+                {v('subtotal') && <td className="py-2 px-3 text-right hidden lg:table-cell text-muted-foreground tabular-nums">{fmt(resById[row.id]?.sinImpuestos ?? row.subtotal)}</td>}
                 {v('descuento') && (() => {
                   const desc = resById[row.id]?.descuento ?? 0;
                   return (
-                    <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+                    <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums">
                       {desc > 0.005 ? (
                         <span className="flex items-center justify-end gap-1">
                           <Gift className="h-3 w-3 text-primary shrink-0" />
@@ -169,7 +169,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                     </td>
                   );
                 })()}
-                {v('iva') && <td className="py-2 px-3 text-right hidden lg:table-cell text-muted-foreground tabular-nums">{fmt(resById[row.id]?.impuestos ?? row.iva_total)}</td>}
+                {v('iva') && <td className="py-2 px-3 text-right hidden 2xl:table-cell text-muted-foreground tabular-nums">{fmt(resById[row.id]?.impuestos ?? row.iva_total)}</td>}
                 {v('total') && (
                   <td className="py-2 px-3 text-right font-medium tabular-nums">
                     {isCerradaParcial(row) ? (
@@ -184,7 +184,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 {v('pagado') && (() => {
                   const pagado = Math.max(0, totalEfectivoVenta(row) - saldoRealVenta(row));
                   return (
-                    <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+                    <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums">
                       {pagado > 0 ? (
                         <span className="text-success font-medium">{fmt(pagado)}</span>
                       ) : (
@@ -196,7 +196,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 {v('saldo') && (() => {
                   const saldo = saldoRealVenta(row);
                   return (
-                    <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+                    <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums">
                       {saldo > 0 ? (
                         <span className="text-warning font-medium">{fmt(saldo)}</span>
                       ) : (
@@ -259,16 +259,16 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
               {v('folio') && <td className="py-2 px-3 text-muted-foreground">{items.length} ventas</td>}
               {v('tipo') && <td />}
               {v('cliente') && <td />}
-              {v('vendedor') && <td className="hidden md:table-cell" />}
-              {v('almacen') && <td className="hidden md:table-cell" />}
-              {v('condicion') && <td className="hidden lg:table-cell" />}
-              {v('fecha') && <td className="hidden lg:table-cell" />}
-              {v('subtotal') && <td className="py-2 px-3 text-right hidden md:table-cell tabular-nums font-bold">{fmt(totSubtotal)}</td>}
-              {v('descuento') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums font-bold text-destructive">{totDescuento > 0 ? `-${fmt(totDescuento)}` : '—'}</td>}
-              {v('iva') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums font-bold">{fmt(totIva)}</td>}
+              {v('vendedor') && <td className="hidden lg:table-cell" />}
+              {v('almacen') && <td className="hidden lg:table-cell" />}
+              {v('condicion') && <td className="hidden 2xl:table-cell" />}
+              {v('fecha') && <td className="hidden 2xl:table-cell" />}
+              {v('subtotal') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums font-bold">{fmt(totSubtotal)}</td>}
+              {v('descuento') && <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums font-bold text-destructive">{totDescuento > 0 ? `-${fmt(totDescuento)}` : '—'}</td>}
+              {v('iva') && <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums font-bold">{fmt(totIva)}</td>}
               {v('total') && <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(totTotal)}</td>}
-              {v('pagado') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-success font-bold">{fmt(totPagado)}</td>}
-              {v('saldo') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-warning font-bold">{fmt(totSaldo)}</td>}
+              {v('pagado') && <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums text-success font-bold">{fmt(totPagado)}</td>}
+              {v('saldo') && <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums text-warning font-bold">{fmt(totSaldo)}</td>}
               {v('status') && <td />}
               <td />
             </tr>
