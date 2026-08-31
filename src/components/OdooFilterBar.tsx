@@ -79,7 +79,8 @@ function IndependentFilterDropdown({
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "btn-odoo-secondary flex items-center gap-1 shrink-0",
+          "flex items-center gap-1 shrink-0 rounded-lg border bg-card text-foreground hover:bg-accent transition-all",
+          compact ? "h-8 px-2.5 py-1 text-[12px] font-medium" : "btn-odoo-secondary",
           count > 0 && "border-primary text-primary"
         )}
       >
