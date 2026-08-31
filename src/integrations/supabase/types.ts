@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -9692,22 +9692,37 @@ export type Database = {
           monto: number
         }[]
       }
-      aplicar_cobro: {
-        Args: {
-          p_aplicaciones: Json
-          p_cliente_id: string
-          p_empresa_id: string
-          p_fecha: string
-          p_metodo: string
-          p_monto: number
-          p_notas?: string
-          p_origen?: string
-          p_referencia: string
-          p_turno_id?: string
-          p_user_id?: string
-        }
-        Returns: string
-      }
+      aplicar_cobro:
+        | {
+            Args: {
+              p_aplicaciones: Json
+              p_cliente_id: string
+              p_empresa_id: string
+              p_fecha: string
+              p_metodo: string
+              p_monto: number
+              p_notas?: string
+              p_referencia: string
+              p_user_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_aplicaciones: Json
+              p_cliente_id: string
+              p_empresa_id: string
+              p_fecha: string
+              p_metodo: string
+              p_monto: number
+              p_notas?: string
+              p_origen: string
+              p_referencia: string
+              p_turno_id: string
+              p_user_id?: string
+            }
+            Returns: string
+          }
       aplicar_partner_referido: {
         Args: {
           p_cupon_codigo?: string
