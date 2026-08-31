@@ -179,6 +179,7 @@ export function OdooFilterBar({
   activeGroupByLevels, onGroupByLevelChange,
   onClearFilters,
   dateFrom, dateTo, onDateFromChange, onDateToChange, onDateRangeChange,
+  compact,
 }: OdooFilterBarProps) {
   const [groupOpen, setGroupOpen] = useState(false);
   const groupRefs = useRef<(HTMLDivElement | null)[]>([]);
