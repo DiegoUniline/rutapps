@@ -23,12 +23,16 @@ export default function HelpButton({ title, sections, compact }: HelpButtonProps
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-muted-foreground hover:text-primary"
+        className={cn(
+          "text-muted-foreground hover:text-primary",
+          compact ? "h-7 w-7" : "h-8 w-8"
+        )}
         onClick={() => setOpen(true)}
         title="Ayuda"
       >
-        <HelpCircle className="h-5 w-5" />
+        <HelpCircle className={cn("shrink-0", compact ? "h-4 w-4" : "h-5 w-5")} />
       </Button>
+
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[80dvh] overflow-y-auto">
