@@ -37,6 +37,8 @@ interface OdooFilterBarProps {
   onDateToChange?: (val: string) => void;
   /** Preferred: sets both dates atomically (avoids stale-state races) */
   onDateRangeChange?: (from: string, to: string) => void;
+  /** Compact horizontal layout: search + filters share one row. */
+  compact?: boolean;
 }
 
 function IndependentFilterDropdown({
@@ -44,11 +46,13 @@ function IndependentFilterDropdown({
   selected,
   onToggle,
   onSetAll,
+  compact,
 }: {
   filter: FilterOption;
   selected: string[];
   onToggle: (value: string) => void;
   onSetAll: (values: string[]) => void;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -75,7 +79,8 @@ function IndependentFilterDropdown({
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "btn-odoo-secondary flex items-center gap-1 shrink-0",
+          "flex items-center gap-1 shrink-0 rounded-lg border bg-card text-foreground hover:bg-accent transition-all",
+          compact ? "h-8 px-2.5 py-1 text-[12px] font-medium" : "btn-odoo-secondary",
           count > 0 && "border-primary text-primary"
         )}
       >
@@ -174,6 +179,7 @@ export function OdooFilterBar({
   activeGroupByLevels, onGroupByLevelChange,
   onClearFilters,
   dateFrom, dateTo, onDateFromChange, onDateToChange, onDateRangeChange,
+  compact,
 }: OdooFilterBarProps) {
   const [groupOpen, setGroupOpen] = useState(false);
   const groupRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -218,22 +224,22 @@ export function OdooFilterBar({
   }, [activeFilters, filterOptions]);
 
   return (
-    <div className="space-y-2">
-      {/* Row 1: Search bar – centered, full width */}
-      <div className="flex justify-center">
-        <div className="relative w-full max-w-xl">
+    <div className={cn(compact ? "flex flex-wrap items-center gap-2" : "space-y-2")}>
+      {/* Search bar */}
+      <div className={cn(compact ? "relative w-56 shrink-0" : "flex justify-center w-full")}>
+        <div className={cn("relative", compact ? "w-full" : "w-full max-w-xl")}>
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={e => onSearchChange(e.target.value)}
             placeholder={placeholder}
-            className="input-odoo pl-8 w-full"
+            className={cn("input-odoo pl-8 w-full", compact && "h-8 py-1.5 text-[12px]")}
           />
         </div>
       </div>
 
-      {/* Row 2: Dates → Filters → Group by → Clear (desktop) / collapsed button (mobile) */}
+      {/* Dates → Filters → Group by → Clear (desktop) / collapsed button (mobile) */}
       {(() => {
         const controls = (isMobile: boolean) => (
           <>
@@ -247,6 +253,7 @@ export function OdooFilterBar({
                     if (onDateRangeChange) onDateRangeChange(f, t);
                     else { onDateFromChange?.(f); onDateToChange?.(t); }
                   }}
+                  className={compact ? "shrink-0" : undefined}
                 />
               )}
             </ResponsiveFilterCard>
@@ -259,6 +266,7 @@ export function OdooFilterBar({
                   selected={activeFilters?.[fo.key] ?? []}
                   onToggle={(val) => onToggleFilter(fo.key, val)}
                   onSetAll={(vals) => onSetFilter?.(fo.key, vals)}
+                  compact={compact}
                 />
               </ResponsiveFilterCard>
             ))}
@@ -270,7 +278,8 @@ export function OdooFilterBar({
                   <button
                     onClick={() => setGroupOpen(!groupOpen)}
                     className={cn(
-                      "btn-odoo-secondary flex items-center gap-1 shrink-0",
+                      "flex items-center gap-1 shrink-0 rounded-lg border bg-card text-foreground hover:bg-accent transition-all",
+                      compact ? "h-8 px-2.5 py-1 text-[12px] font-medium" : "btn-odoo-secondary",
                       hasGroupBy && "border-primary text-primary"
                     )}
                   >
@@ -357,7 +366,7 @@ export function OdooFilterBar({
         return (
           <>
             {/* Desktop / tablet: inline row */}
-            <div className="hidden sm:flex items-center gap-2 flex-wrap">
+            <div className={cn("hidden sm:flex items-center flex-wrap", compact ? "gap-1.5" : "gap-2")}>
               {controls(false)}
             </div>
 
@@ -371,12 +380,15 @@ export function OdooFilterBar({
 
       {/* Active filter chips */}
       {filterChips.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className={cn("flex items-center flex-wrap", compact ? "gap-1" : "gap-1.5")}>
           {filterChips.map(chip => (
             chip.values.map(v => (
               <span
                 key={`${chip.filterKey}-${v.value}`}
-                className="inline-flex items-center gap-1 bg-primary/10 text-primary text-[10px] font-medium rounded-full px-2 py-0.5"
+                className={cn(
+                  "inline-flex items-center gap-1 bg-primary/10 text-primary font-medium rounded-full",
+                  compact ? "text-[9px] px-1.5 py-0.5" : "text-[10px] px-2 py-0.5"
+                )}
               >
                 {chip.filterLabel}: {v.label}
                 <button
