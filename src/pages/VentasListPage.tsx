@@ -417,40 +417,44 @@ export default function VentasListPage() {
 
   return (
     <ListPage>
-      <ListPage.Header title={<><HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} /> <VideoHelpButton module="ventas" /></>} />
-
       <ListPage.Toolbar>
       {!isMobile && (
         <div className="border-b border-border -mx-4 px-4 sm:mx-0 sm:px-0">
-          <nav className="flex gap-6" role="tablist" aria-label="Vista de ventas">
-            <button
-              role="tab"
-              aria-label="Ventas"
-              aria-selected={viewMode === 'ventas'}
-              onClick={() => { setViewMode('ventas'); setPage(1); }}
-              className={cn(
-                "relative inline-flex items-center gap-2 px-1 pb-2.5 pt-1 text-sm font-semibold transition-colors border-b-2 -mb-px",
-                viewMode === 'ventas'
-                  ? "text-primary border-primary"
-                  : "text-muted-foreground border-transparent hover:text-foreground"
-              )}
-            >
-              <List className="h-4 w-4" />
-            </button>
-            <button
-              role="tab"
-              aria-selected={viewMode === 'productos'}
-              onClick={() => { setViewMode('productos'); setPage(1); }}
-              className={cn(
-                "relative inline-flex items-center gap-2 px-1 pb-2.5 pt-1 text-sm font-semibold transition-colors border-b-2 -mb-px",
-                viewMode === 'productos'
-                  ? "text-primary border-primary"
-                  : "text-muted-foreground border-transparent hover:text-foreground"
-              )}
-            >
-              <Package className="h-4 w-4" /> Productos
-            </button>
-          </nav>
+          <div className="flex items-center justify-between">
+            <nav className="flex gap-6" role="tablist" aria-label="Vista de ventas">
+              <button
+                role="tab"
+                aria-label="Ventas"
+                aria-selected={viewMode === 'ventas'}
+                onClick={() => { setViewMode('ventas'); setPage(1); }}
+                className={cn(
+                  "relative inline-flex items-center gap-2 px-1 pb-2.5 pt-1 text-sm font-semibold transition-colors border-b-2 -mb-px",
+                  viewMode === 'ventas'
+                    ? "text-primary border-primary"
+                    : "text-muted-foreground border-transparent hover:text-foreground"
+                )}
+              >
+                <List className="h-4 w-4" /> Ventas
+              </button>
+              <button
+                role="tab"
+                aria-selected={viewMode === 'productos'}
+                onClick={() => { setViewMode('productos'); setPage(1); }}
+                className={cn(
+                  "relative inline-flex items-center gap-2 px-1 pb-2.5 pt-1 text-sm font-semibold transition-colors border-b-2 -mb-px",
+                  viewMode === 'productos'
+                    ? "text-primary border-primary"
+                    : "text-muted-foreground border-transparent hover:text-foreground"
+                )}
+              >
+                <Package className="h-4 w-4" /> Productos
+              </button>
+            </nav>
+            <div className="flex items-center gap-2 pb-1">
+              <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} />
+              <VideoHelpButton module="ventas" />
+            </div>
+          </div>
         </div>
       )}
 
