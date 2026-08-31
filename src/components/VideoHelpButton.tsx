@@ -58,11 +58,14 @@ export default function VideoHelpButton({ module, compact }: VideoHelpButtonProp
     <>
       {videos.length === 1 ? (
         <Button
-          size="sm"
-          className="gap-1.5 text-xs font-semibold bg-[#FF0000] hover:bg-[#CC0000] text-white border-0 shadow-sm"
+          size={compact ? "sm" : "sm"}
+          className={cn(
+            "gap-1.5 font-semibold bg-[#FF0000] hover:bg-[#CC0000] text-white border-0 shadow-sm",
+            compact ? "h-7 text-[11px] px-2" : "text-xs"
+          )}
           onClick={() => handleOpen(videos[0])}
         >
-          <PlayCircle className="h-4 w-4" />
+          <PlayCircle className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
           Ver tutorial
         </Button>
       ) : (
@@ -70,16 +73,20 @@ export default function VideoHelpButton({ module, compact }: VideoHelpButtonProp
           {videos.map((v) => (
             <Button
               key={v.id}
-              size="sm"
-              className="gap-1.5 text-xs font-semibold bg-[#FF0000] hover:bg-[#CC0000] text-white border-0 shadow-sm"
+              size={compact ? "sm" : "sm"}
+              className={cn(
+                "gap-1.5 font-semibold bg-[#FF0000] hover:bg-[#CC0000] text-white border-0 shadow-sm",
+                compact ? "h-7 text-[11px] px-2" : "text-xs"
+              )}
               onClick={() => handleOpen(v)}
             >
-              <PlayCircle className="h-4 w-4" />
+              <PlayCircle className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
               {v.title}
             </Button>
           ))}
         </div>
       )}
+
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl p-0 overflow-hidden">
