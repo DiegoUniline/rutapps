@@ -417,7 +417,7 @@ export default function VentasListPage() {
 
   return (
     <ListPage>
-      <ListPage.Header title={<>Ventas <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} /> <VideoHelpButton module="ventas" /></>} />
+      <ListPage.Header title={<><HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} /> <VideoHelpButton module="ventas" /></>} />
 
       <ListPage.Toolbar>
       {!isMobile && (
