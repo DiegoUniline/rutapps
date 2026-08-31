@@ -496,7 +496,7 @@ function Breadcrumb() {
   const location = useLocation();
   const segments = location.pathname.split('/').filter(Boolean);
 
-  if (segments.length === 0 || isVentaFormPath(location.pathname)) return null;
+  if (segments.length === 0 || isVentaFormPath(location.pathname) || location.pathname === '/ventas') return null;
 
   return (
     <div className="h-9 flex items-center px-5 bg-card border-b border-border text-xs text-muted-foreground overflow-x-auto">
