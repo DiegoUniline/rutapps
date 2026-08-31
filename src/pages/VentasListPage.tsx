@@ -447,18 +447,15 @@ export default function VentasListPage() {
                     : "text-muted-foreground border-transparent hover:text-foreground"
                 )}
               >
-                <Package className="h-4 w-4" /> Productos
+              <Package className="h-4 w-4" /> Productos
               </button>
             </nav>
-            <div className="flex items-center gap-2 pb-1">
-              <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} />
-              <VideoHelpButton module="ventas" />
-            </div>
           </div>
         </div>
       )}
 
       <OdooFilterBar
+
         compact
         search={search} onSearchChange={val => { setSearch(val); setPage(1); }}
         placeholder={isProductView ? "Buscar producto, código o folio..." : "Buscar folio o cliente..."}
