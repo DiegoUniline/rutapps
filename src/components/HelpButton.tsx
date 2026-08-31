@@ -11,9 +11,11 @@ export interface HelpSection {
 interface HelpButtonProps {
   title: string;
   sections: HelpSection[];
+  compact?: boolean;
 }
 
-export default function HelpButton({ title, sections }: HelpButtonProps) {
+export default function HelpButton({ title, sections, compact }: HelpButtonProps) {
+
   const [open, setOpen] = useState(false);
 
   return (
