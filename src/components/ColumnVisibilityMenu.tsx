@@ -37,11 +37,15 @@ interface Props {
   onApplyPreset?: (columns: string[]) => void;
   /** When provided, columns are rendered grouped by `col.group` in this order. */
   groupOrder?: string[];
+  /** Compact trigger for dense toolbars. */
+  compact?: boolean;
 }
 
+
 export function ColumnVisibilityMenu({
-  columns, visible, onToggle, onShowAll, onReset, presets, onApplyPreset, groupOrder,
+  columns, visible, onToggle, onShowAll, onReset, presets, onApplyPreset, groupOrder, compact,
 }: Props) {
+
   const visibleCount = columns.filter(c => c.required || visible[c.key]).length;
 
   // ¿Qué preset coincide con la selección actual? (para resaltar el chip activo)
@@ -85,14 +89,18 @@ export function ColumnVisibilityMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="btn-odoo-secondary"
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg border bg-card text-foreground hover:bg-accent transition-colors shrink-0",
+            compact ? "h-7 px-2 text-[11px] font-medium" : "btn-odoo-secondary"
+          )}
           title="Mostrar / ocultar columnas"
         >
-          <Columns3 className="h-3.5 w-3.5" />
+          <Columns3 className={cn("shrink-0", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
           <span className="hidden sm:inline">Columnas</span>
           <span className="text-[10px] text-muted-foreground">({visibleCount}/{columns.length})</span>
         </button>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent align="end" className="w-64 max-h-[70dvh] overflow-y-auto">
         {presets && presets.length > 0 && onApplyPreset && (
           <>

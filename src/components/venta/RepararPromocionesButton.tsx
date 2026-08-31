@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Wand2, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -28,7 +30,7 @@ interface Fila {
  * líneas. Los totales y el saldo del cliente se recalculan con los triggers
  * existentes. Es idempotente: una venta con promociones ya registradas se omite.
  */
-export function RepararPromocionesButton() {
+export function RepararPromocionesButton({ compact }: { compact?: boolean }) {
   const isSuper = useIsSuperAdmin();
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
@@ -68,11 +70,15 @@ export function RepararPromocionesButton() {
       <button
         type="button"
         onClick={() => { setResult(null); setOpen(true); }}
-        className="btn-odoo-secondary shrink-0 whitespace-nowrap"
+        className={cn(
+          "flex items-center gap-1.5 rounded-lg border bg-card text-foreground hover:bg-accent transition-colors shrink-0 whitespace-nowrap",
+          compact ? "h-7 px-2 text-[11px] font-medium" : "btn-odoo-secondary"
+        )}
         title="Reparar promociones (solo super admin)"
       >
-        <Wand2 className="h-3.5 w-3.5" /> Actualizar promos
+        <Wand2 className={cn("shrink-0", compact ? "h-3 w-3" : "h-3.5 w-3.5")} /> Actualizar promos
       </button>
+
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[60]">

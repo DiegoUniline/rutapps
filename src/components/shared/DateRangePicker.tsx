@@ -24,7 +24,10 @@ export interface DateRangePickerProps {
   onChange: (from: string, to: string) => void;
   className?: string;
   placeholder?: string;
+  /** Compact trigger button for dense toolbars. */
+  compact?: boolean;
 }
+
 
 type Preset = { label: string; getRange: () => { from: Date; to: Date } };
 
@@ -54,7 +57,9 @@ export function DateRangePicker({
   onChange,
   className,
   placeholder = 'Seleccionar rango',
+  compact,
 }: DateRangePickerProps) {
+
   const [open, setOpen] = React.useState(false);
   const initialRange: DateRange | undefined = React.useMemo(() => {
     const f = isoToDate(from);
@@ -130,11 +135,19 @@ export function DateRangePicker({
     <div className={cn('inline-flex items-center gap-1', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="default" size="sm" className="h-9 gap-2 font-normal bg-primary text-primary-foreground hover:bg-primary/90">
-            <CalendarIcon className="h-4 w-4" />
-            <span>{buttonLabel}</span>
+          <Button
+            variant="default"
+            size="sm"
+            className={cn(
+              "gap-2 font-normal bg-primary text-primary-foreground hover:bg-primary/90",
+              compact ? "h-7 px-2 text-[11px] gap-1" : "h-9"
+            )}
+          >
+            <CalendarIcon className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
+            <span className="truncate max-w-[120px] sm:max-w-[160px]">{buttonLabel}</span>
           </Button>
         </PopoverTrigger>
+
         <PopoverContent className="w-[calc(100vw-1rem)] sm:w-auto max-w-[560px] p-0 pointer-events-auto max-h-[85vh] overflow-hidden" align="start" collisionPadding={8}>
           <div className="flex flex-col sm:flex-row max-h-[85vh]">
             {/* Presets */}
