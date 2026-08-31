@@ -497,7 +497,12 @@ export default function VentasListPage() {
             <Plus className="h-3 w-3" /> Nueva venta
           </button>
         )}
+        <div className="flex items-center gap-1 shrink-0">
+          <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} />
+          <VideoHelpButton module="ventas" />
+        </div>
       </OdooFilterBar>
+
 
 
       {!activeLoading && total > 0 && (
