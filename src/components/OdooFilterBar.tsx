@@ -46,11 +46,13 @@ function IndependentFilterDropdown({
   selected,
   onToggle,
   onSetAll,
+  compact,
 }: {
   filter: FilterOption;
   selected: string[];
   onToggle: (value: string) => void;
   onSetAll: (values: string[]) => void;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
