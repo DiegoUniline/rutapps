@@ -10,6 +10,7 @@ import { usePinAuth } from '@/hooks/usePinAuth';
 import { emptyLine, calcLineTotals, type CompraLinea } from './types';
 import { confirmDialog as confirmAsync } from '@/lib/confirm';
 import { calcularTotalesCompra } from '@/lib/compraAjustes';
+import { calcularImpactoEdicionCompra } from '@/lib/compraInventoryReconciliation';
 
 function useCompra(id?: string) {
   return useQuery({ queryKey: ['compra', id], queryFn: async () => { const { data, error } = await supabase.from('compras').select('*, proveedores(nombre), almacenes(nombre), compra_lineas(*, productos(id, codigo, nombre, nombre_compra, costo, maneja_lote), lotes(codigo))').eq('id', id!).single(); if (error) throw error; return data; }, enabled: !!id });
@@ -33,7 +34,11 @@ export function useCompraForm() {
 
   const [form, setForm] = useState<Record<string, any>>({ status: 'borrador', condicion_pago: 'contado', fecha: todayLocal(), dias_credito: 0, subtotal: 0, iva_total: 0, total: 0, saldo_pendiente: 0, descuento_extra: 0, descuento_extra_tipo: 'monto', descuento_total: 0, ajuste_total: 0 });
   const [lineas, setLineas] = useState<Partial<CompraLinea>[]>([emptyLine()]);
+  const [lineasGuardadas, setLineasGuardadas] = useState<Partial<CompraLinea>[]>([]);
+  const [formGuardado, setFormGuardado] = useState<Record<string, any> | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [editingExisting, setEditingExisting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [showPago, setShowPago] = useState(false);
   const [addingPago, setAddingPago] = useState(false);
   const [newPago, setNewPago] = useState({ fecha: todayLocal(), metodo_pago: 'transferencia', referencia: '', notas: '', monto: 0 });
@@ -41,6 +46,7 @@ export function useCompraForm() {
   const { requestPin, PinDialog } = usePinAuth();
 
   useEffect(() => {
+    if (dirty) return;
     if (existingCompra && productosList) {
       const { compra_lineas, ...rest } = existingCompra as any;
       setForm(rest);
@@ -53,9 +59,15 @@ export function useCompraForm() {
           return { ...cl, _tiene_iva: prod?.tiene_iva ?? false, _iva_pct: prod?.iva_pct ?? 16, _tiene_ieps: prod?.tiene_ieps ?? false, _ieps_pct: prod?.ieps_pct ?? 0, _ieps_tipo: prod?.ieps_tipo ?? 'porcentaje', _unidad_compra: prod?.unidades_compra?.abreviatura ?? prod?.unidades_venta?.abreviatura ?? 'pz', _factor_conversion: factor, _piezas_total: (cl.cantidad ?? 1) * factor, _lote_codigo: cl.lotes?.codigo ?? null };
         });
         setLineas(enrichedLines);
+        setLineasGuardadas(enrichedLines.map((linea: Partial<CompraLinea>) => ({ ...linea })));
+      } else {
+        setLineas([]);
+        setLineasGuardadas([]);
       }
+      setFormGuardado({ ...rest });
+      setDirty(false);
     }
-  }, [existingCompra, productosList]);
+  }, [dirty, existingCompra, productosList]);
 
   const totals = useMemo(() => {
     const subtotal = lineas.reduce((s, l) => s + (l.subtotal ?? 0), 0);
@@ -120,31 +132,104 @@ export function useCompraForm() {
   };
 
   const addLine = () => { setLineas(prev => [...prev, emptyLine()]); setDirty(true); };
-  const removeLine = (idx: number) => { setLineas(prev => prev.filter((_, i) => i !== idx)); setDirty(true); };
+  const removeLine = async (idx: number) => {
+    const linea = lineas[idx];
+    const recibidas = Number(linea?.cantidad_recibida) || 0;
+    if (recibidas > 0 && !await confirmAsync(
+      `Este renglón aportó ${recibidas.toLocaleString('es-MX')} pieza(s) al inventario. Al guardar se revertirán. ¿Quitar el renglón?`,
+    )) return;
+    setLineas(prev => prev.filter((_, i) => i !== idx));
+    setDirty(true);
+  };
+
+  const inventoryImpact = useMemo(() => {
+    const manejaLotesEmpresa = !!(empresa as any)?.maneja_lotes;
+    const toInventoryLine = (linea: Partial<CompraLinea>) => {
+      const producto = productosList?.find((item: any) => item.id === linea.producto_id) as any;
+      const factor = Number(linea._factor_conversion) > 0 ? Number(linea._factor_conversion) : 1;
+      return {
+        id: linea.id ?? null,
+        productoId: linea.producto_id ?? '',
+        piezasTotales: (Number(linea.cantidad) || 0) * factor,
+        piezasRecibidas: Number(linea.cantidad_recibida) || 0,
+        requiereLote: manejaLotesEmpresa && !!(linea.productos?.maneja_lote ?? producto?.maneja_lote),
+      };
+    };
+    return calcularImpactoEdicionCompra(
+      lineasGuardadas.map(toInventoryLine),
+      lineas.filter(linea => linea.producto_id).map(toInventoryLine),
+      form.status,
+    );
+  }, [empresa, form.status, lineas, lineasGuardadas, productosList]);
+
+  const beginEditing = () => {
+    requestPin(
+      'Editar factura de compra',
+      'Los cambios de cantidades ajustarán automáticamente el inventario. Ingresa tu PIN para continuar.',
+      () => setEditingExisting(true),
+    );
+  };
+
+  const cancelEditing = async () => {
+    if (dirty && !await confirmAsync('¿Descartar los cambios de esta factura?')) return;
+    if (formGuardado) setForm({ ...formGuardado });
+    setLineas(lineasGuardadas.map(linea => ({ ...linea })));
+    setDirty(false);
+    setEditingExisting(false);
+  };
 
   const handleSave = async () => {
     if (!empresa?.id) return;
     if (!form.almacen_id) { toast.error('Selecciona un almacén destino'); return; }
+    const validLines = lineas.filter(l => l.producto_id);
+    if (!validLines.length) { toast.error('Agrega al menos un producto a la compra'); return; }
+    if (validLines.some(linea => (Number(linea.cantidad) || 0) <= 0)) {
+      toast.error('Todas las cantidades deben ser mayores que cero');
+      return;
+    }
+    if (inventoryImpact.bloqueos.length) {
+      toast.error(inventoryImpact.bloqueos[0]);
+      return;
+    }
+    setSaving(true);
     try {
       const totalPagado = pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0;
       const descuentoTipo = form.descuento_extra_tipo === 'porcentaje' ? 'porcentaje' : 'monto';
       const descuentoCapturado = Math.max(0, Number(form.descuento_extra) || 0);
       const compraData = { empresa_id: empresa.id, proveedor_id: form.proveedor_id || null, almacen_id: form.almacen_id || null, fecha: form.fecha, condicion_pago: form.condicion_pago, dias_credito: form.condicion_pago === 'credito' ? (form.dias_credito ?? 0) : 0, status: form.status, subtotal: totals.subtotal, iva_total: totals.iva_total, total: totals.total, saldo_pendiente: Math.max(0, totals.total - totalPagado), descuento_extra: descuentoTipo === 'porcentaje' ? Math.min(100, descuentoCapturado) : descuentoCapturado, descuento_extra_tipo: descuentoTipo, descuento_extra_motivo: form.descuento_extra_motivo || null, descuento_total: totals.descuento_total, ajuste_total: totals.ajuste_total, notas: form.notas || null, notas_pago: form.notas_pago || null, numero_factura: form.numero_factura || null, fecha_vencimiento: form.condicion_pago === 'credito' ? (form.fecha_vencimiento || null) : null };
-      let compraId = form.id;
-      if (isNew) { const { data, error } = await supabase.from('compras').insert(compraData as any).select().single(); if (error) throw error; compraId = (data as any).id; } else { const { empresa_id, ...updateData } = compraData; const { error } = await supabase.from('compras').update(updateData as any).eq('id', compraId); if (error) throw error; await supabase.from('compra_lineas').delete().eq('compra_id', compraId); }
-      const validLines = lineas.filter(l => l.producto_id);
-      if (validLines.length) {
-        const rows = validLines.map(l => {
-          const factor = Number(l._factor_conversion) > 0 ? Number(l._factor_conversion) : 1;
-          const cantidad = l.cantidad ?? 1;
-          return { compra_id: compraId, producto_id: l.producto_id!, cantidad, precio_unitario: l.precio_unitario ?? 0, subtotal: l.subtotal ?? 0, total: l.total ?? 0, factor_conversion: factor, piezas_total: cantidad * factor, lote_id: l.lote_id ?? null };
-        });
-        const { error } = await supabase.from('compra_lineas').insert(rows as any); if (error) throw error;
-      }
-      toast.success('Compra guardada'); qc.invalidateQueries({ queryKey: ['compras'] }); qc.invalidateQueries({ queryKey: ['compra', compraId] }); setDirty(false);
+      const rows = validLines.map(l => {
+        const factor = Number(l._factor_conversion) > 0 ? Number(l._factor_conversion) : 1;
+        const cantidad = Number(l.cantidad) || 0;
+        return { id: l.id ?? null, producto_id: l.producto_id!, cantidad, precio_unitario: Number(l.precio_unitario) || 0, subtotal: Number(l.subtotal) || 0, total: Number(l.total) || 0, factor_conversion: factor, piezas_total: cantidad * factor, lote_id: l.lote_id ?? null };
+      });
+      const { data, error } = await supabase.rpc('guardar_compra_segura' as any, {
+        p_compra_id: isNew ? null : form.id,
+        p_compra: compraData,
+        p_lineas: rows,
+      } as any);
+      if (error) throw error;
+      const result = data as { compra_id?: string; piezas_entrada?: number; piezas_salida?: number } | null;
+      const compraId = result?.compra_id ?? form.id;
+      const entrada = Number(result?.piezas_entrada) || 0;
+      const salida = Number(result?.piezas_salida) || 0;
+      toast.success(entrada || salida
+        ? `Compra guardada · inventario ajustado${entrada ? ` +${entrada}` : ''}${salida ? ` −${salida}` : ''} pieza(s)`
+        : 'Compra guardada');
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['compras'] }),
+        qc.invalidateQueries({ queryKey: ['compra', compraId] }),
+        qc.invalidateQueries({ queryKey: ['inventario'] }),
+        qc.invalidateQueries({ queryKey: ['productos'] }),
+        qc.invalidateQueries({ queryKey: ['stock-almacen'] }),
+        qc.invalidateQueries({ queryKey: ['stock-lotes'] }),
+      ]);
+      if (!isNew) await refetchCompraQuery();
+      setDirty(false);
+      setEditingExisting(false);
       if (isNew) navigate(`/almacen/compras/${compraId}`, { replace: true });
       return compraId as string;
     } catch (err: any) { toast.error(err.message || 'Error al guardar'); return null; }
+    finally { setSaving(false); }
   };
 
   // Permite lotear sin exigir guardar antes: guarda el borrador solo si hace falta
@@ -316,7 +401,7 @@ export function useCompraForm() {
 
   const totalPagado = pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0;
   const saldoActual = Math.max(0, totals.total - totalPagado);
-  const isEditable = form.status === 'borrador';
+  const isEditable = form.status === 'borrador' || editingExisting;
 
   const handleSavePago = async () => {
     if (newPago.monto <= 0) return toast.error('Ingresa un monto válido');
@@ -334,6 +419,7 @@ export function useCompraForm() {
 
   return {
     id, navigate, isNew, empresa, form, setForm, lineas, setLineas, dirty, isEditable,
+    editingExisting, saving, inventoryImpact, beginEditing, cancelEditing,
     totals, totalPagado, saldoActual, pagos, proveedoresList, productosList, almacenesList,
     isLoading, addingPago, setAddingPago, newPago, setNewPago, confirmDialog, setConfirmDialog,
     requestPin, PinDialog, updateField, updateLinea, addLine, removeLine,

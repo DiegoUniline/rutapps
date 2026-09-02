@@ -32,13 +32,27 @@ export default function CompraFormPage() {
 
   return (
     <><div className="p-3 sm:p-4 space-y-4 min-h-full max-w-full overflow-x-hidden">
-      <CompraHeader form={h.form} isNew={h.isNew} isEditable={h.isEditable} dirty={h.dirty} totalPagado={h.totalPagado} totals={h.totals} saldoActual={h.saldoActual} hayPendienteRecibir={hayPendienteRecibir} confirmDialog={h.confirmDialog} setConfirmDialog={h.setConfirmDialog} handleSave={h.handleSave} handleDelete={h.handleDelete} handleStatusChange={h.handleStatusChange} handleCancel={h.handleCancel} recibirTodoPendiente={h.recibirTodoPendiente} requestPin={h.requestPin} onBack={() => h.navigate('/almacen/compras')} onRegistrarPago={() => { h.setNewPago(() => ({ fecha: todayInTimezone(empresa?.zona_horaria), metodo_pago: 'transferencia', referencia: '', notas: '', monto: h.saldoActual })); h.setAddingPago(true); setActiveTab('pagos'); }} />
+      <CompraHeader form={h.form} isNew={h.isNew} isEditable={h.isEditable} editingExisting={h.editingExisting} saving={h.saving} dirty={h.dirty} totalPagado={h.totalPagado} totals={h.totals} saldoActual={h.saldoActual} hayPendienteRecibir={hayPendienteRecibir} confirmDialog={h.confirmDialog} setConfirmDialog={h.setConfirmDialog} handleSave={h.handleSave} beginEditing={h.beginEditing} cancelEditing={h.cancelEditing} handleDelete={h.handleDelete} handleStatusChange={h.handleStatusChange} handleCancel={h.handleCancel} recibirTodoPendiente={h.recibirTodoPendiente} requestPin={h.requestPin} onBack={() => h.navigate('/almacen/compras')} onRegistrarPago={() => { h.setNewPago(() => ({ fecha: todayInTimezone(empresa?.zona_horaria), metodo_pago: 'transferencia', referencia: '', notas: '', monto: h.saldoActual })); h.setAddingPago(true); setActiveTab('pagos'); }} />
+
+      {h.editingExisting && (
+        <div className="rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm">
+          <p className="font-semibold text-foreground">Editando factura con conciliación de inventario</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Puedes corregir costos, cantidades o eliminar renglones. Al guardar se aplicará únicamente la diferencia contra lo recibido originalmente.</p>
+          {h.dirty && (h.inventoryImpact.entradas > 0 || h.inventoryImpact.salidas > 0 || h.inventoryImpact.pendientes > 0) && (
+            <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium tabular-nums">
+              {h.inventoryImpact.entradas > 0 && <span className="rounded bg-success/10 px-2 py-1 text-success">Entrada +{h.inventoryImpact.entradas.toLocaleString('es-MX')} pzas.</span>}
+              {h.inventoryImpact.salidas > 0 && <span className="rounded bg-destructive/10 px-2 py-1 text-destructive">Reversa −{h.inventoryImpact.salidas.toLocaleString('es-MX')} pzas.</span>}
+              {h.inventoryImpact.pendientes > 0 && <span className="rounded bg-amber-500/10 px-2 py-1 text-amber-700 dark:text-amber-400">Pendiente {h.inventoryImpact.pendientes.toLocaleString('es-MX')} pzas.</span>}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-lg p-4 space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div><label className="label-odoo label-required">Proveedor</label>{h.isEditable ? <SearchableSelect options={(h.proveedoresList ?? []).map(p => ({ value: p.id, label: p.nombre }))} value={h.form.proveedor_id ?? ''} onChange={val => h.updateField('proveedor_id', val || null)} placeholder="Buscar proveedor..." onCreateNew={async (name) => { setProvName(name); setProvOpen(true); return undefined; }} /> : <div className="text-[13px] py-1.5 px-1 text-foreground">{h.form.proveedores?.nombre || h.proveedoresList?.find(p => p.id === h.form.proveedor_id)?.nombre || '—'}</div>}</div>
           <div><label className="label-odoo label-required">Almacén destino</label>{h.isEditable ? <SearchableSelect options={(h.almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }))} value={h.form.almacen_id ?? ''} onChange={val => h.updateField('almacen_id', val || null)} placeholder="Buscar almacén..." /> : <div className="text-[13px] py-1.5 px-1 text-foreground">{h.form.almacenes?.nombre || h.almacenesList?.find(a => a.id === h.form.almacen_id)?.nombre || '—'}</div>}</div>
-          <div><label className="label-odoo">Fecha</label><OdooDatePicker value={h.form.fecha ?? ''} onChange={val => h.updateField('fecha', val)} /></div>
+          <div><label className="label-odoo">Fecha</label><OdooDatePicker value={h.form.fecha ?? ''} onChange={val => h.updateField('fecha', val)} disabled={!h.isEditable} /></div>
           <div><label className="label-odoo">Condición de pago</label>{h.isEditable ? <SearchableSelect options={[{ value: 'contado', label: 'Contado' }, { value: 'credito', label: 'Crédito' }]} value={h.form.condicion_pago ?? 'contado'} onChange={val => h.updateField('condicion_pago', val)} placeholder="Seleccionar..." /> : <div className="text-[13px] py-1.5 px-1 text-foreground capitalize">{h.form.condicion_pago}</div>}</div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
