@@ -12,9 +12,10 @@ interface OdooDatePickerProps {
   onChange: (val: string) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
-export function OdooDatePicker({ value, onChange, placeholder = 'Seleccionar fecha', className }: OdooDatePickerProps) {
+export function OdooDatePicker({ value, onChange, placeholder = 'Seleccionar fecha', className, disabled = false }: OdooDatePickerProps) {
   const [open, setOpen] = useState(false);
   const date = value ? new Date(value + 'T12:00:00') : undefined;
 
@@ -26,10 +27,11 @@ export function OdooDatePicker({ value, onChange, placeholder = 'Seleccionar fec
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={nextOpen => { if (!disabled) setOpen(nextOpen); }}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          disabled={disabled}
           className={cn(
             "w-full justify-start text-left font-normal h-8 px-2.5 text-[13px] border-input bg-card",
             !date && "text-muted-foreground",

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Save, Trash2, Ban, CheckCircle2, PackageCheck, AlertTriangle, DollarSign, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Ban, CheckCircle2, PackageCheck, AlertTriangle, DollarSign, FileText, FileSpreadsheet, Loader2, Pencil, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -12,6 +12,8 @@ interface Props {
   form: Record<string, any>;
   isNew: boolean;
   isEditable: boolean;
+  editingExisting: boolean;
+  saving: boolean;
   dirty: boolean;
   totalPagado: number;
   totals: { total: number };
@@ -20,6 +22,8 @@ interface Props {
   confirmDialog: { open: boolean; action: string; title: string; description: string } | null;
   setConfirmDialog: (v: any) => void;
   handleSave: () => void;
+  beginEditing: () => void;
+  cancelEditing: () => void;
   handleDelete: () => void;
   handleStatusChange: (s: string) => void;
   handleCancel: () => void;
@@ -33,7 +37,7 @@ export function CompraHeader(p: Props) {
   const { fmt } = useCurrency();
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <button onClick={p.onBack} className="btn-odoo-icon"><ArrowLeft className="h-4 w-4" /></button>
           <div>
@@ -41,10 +45,22 @@ export function CompraHeader(p: Props) {
             {!p.isNew && <p className="text-xs text-muted-foreground">Pagado: {fmt(p.totalPagado)} / Saldo: {fmt(Math.max(0, p.totals.total - p.totalPagado))}</p>}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {!p.isNew && p.form.id && <ExportarOrdenCompra compraId={p.form.id} />}
           {p.form.status === 'borrador' && !p.isNew && <button onClick={p.handleDelete} className="btn-odoo-icon text-destructive"><Trash2 className="h-4 w-4" /></button>}
-          {p.isEditable && <button onClick={p.handleSave} disabled={!p.dirty && !p.isNew} className="btn-odoo-primary gap-1"><Save className="h-3.5 w-3.5" /> Guardar</button>}
+          {!p.isNew && !p.isEditable && p.form.status !== 'cancelada' && (
+            <button onClick={p.beginEditing} className="btn-odoo-primary gap-1">
+              <Pencil className="h-3.5 w-3.5" /> Editar factura
+            </button>
+          )}
+          {p.editingExisting && (
+            <button onClick={p.cancelEditing} disabled={p.saving} className="btn-odoo-secondary gap-1">
+              <X className="h-3.5 w-3.5" /> Descartar
+            </button>
+          )}
+          {p.isEditable && <button onClick={p.handleSave} disabled={p.saving || (!p.dirty && !p.isNew)} className="btn-odoo-primary gap-1">
+            {p.saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} {p.saving ? 'Guardando…' : 'Guardar'}
+          </button>}
         </div>
 
       </div>
@@ -99,12 +115,13 @@ function StatusBar(p: Props) {
         form.status === 'cancelada' && "bg-destructive/10 text-destructive")}>
         {form.status === 'cancelada' && <Ban className="h-3 w-3" />}{form.status === 'pagada' && <CheckCircle2 className="h-3 w-3" />}{form.status === 'recibida' && <PackageCheck className="h-3 w-3" />}{form.status}
       </span>
-      {form.status === 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'confirmada', title: 'Confirmar compra', description: '¿Confirmar esta compra?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-95"><CheckCircle2 className="h-4 w-4" />Confirmar</button>}
-      {puedeRecibir && <button onClick={() => setConfirmDialog({ open: true, action: 'recibir_todo', title: 'Recibir mercancía pendiente', description: 'Se sumará al almacén todo lo que aún no se ha recibido de esta compra. ¿Continuar?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95"><PackageCheck className="h-4 w-4" />Recibir todo lo pendiente</button>}
-      {form.status === 'recibida' && saldoActual === 0 && totals.total > 0 && <button onClick={() => setConfirmDialog({ open: true, action: 'pagada', title: 'Marcar como pagada', description: '¿Marcar esta compra como pagada?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"><CheckCircle2 className="h-4 w-4" />Marcar pagada</button>}
-      {form.status !== 'cancelada' && form.status !== 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'cancelar', title: 'Cancelar compra', description: '¿Cancelar? Se revertirá la mercancía recibida y se borrarán los pagos.' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 active:scale-95"><Ban className="h-4 w-4" />Cancelar compra</button>}
-      {saldoActual > 0 && !['borrador', 'pagada', 'cancelada'].includes(form.status) && p.onRegistrarPago && <button onClick={p.onRegistrarPago} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-bold bg-success text-white hover:bg-success/90 active:scale-95 shadow-md"><DollarSign className="h-4 w-4" />Registrar pago · {fmt(saldoActual)}</button>}
-      {hayPendienteRecibir && form.status !== 'borrador' && form.status !== 'cancelada' && <span className="text-xs text-amber-600 dark:text-amber-400 italic flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Hay mercancía pendiente por recibir</span>}
+      {!p.editingExisting && form.status === 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'confirmada', title: 'Confirmar compra', description: '¿Confirmar esta compra?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-95"><CheckCircle2 className="h-4 w-4" />Confirmar</button>}
+      {!p.editingExisting && puedeRecibir && <button onClick={() => setConfirmDialog({ open: true, action: 'recibir_todo', title: 'Recibir mercancía pendiente', description: 'Se sumará al almacén todo lo que aún no se ha recibido de esta compra. ¿Continuar?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95"><PackageCheck className="h-4 w-4" />Recibir todo lo pendiente</button>}
+      {!p.editingExisting && form.status === 'recibida' && saldoActual === 0 && totals.total > 0 && <button onClick={() => setConfirmDialog({ open: true, action: 'pagada', title: 'Marcar como pagada', description: '¿Marcar esta compra como pagada?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"><CheckCircle2 className="h-4 w-4" />Marcar pagada</button>}
+      {!p.editingExisting && form.status !== 'cancelada' && form.status !== 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'cancelar', title: 'Cancelar compra', description: '¿Cancelar? Se revertirá la mercancía recibida y se borrarán los pagos.' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 active:scale-95"><Ban className="h-4 w-4" />Cancelar compra</button>}
+      {!p.editingExisting && saldoActual > 0 && !['borrador', 'pagada', 'cancelada'].includes(form.status) && p.onRegistrarPago && <button onClick={p.onRegistrarPago} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-bold bg-success text-white hover:bg-success/90 active:scale-95 shadow-md"><DollarSign className="h-4 w-4" />Registrar pago · {fmt(saldoActual)}</button>}
+      {!p.editingExisting && hayPendienteRecibir && form.status !== 'borrador' && form.status !== 'cancelada' && <span className="text-xs text-amber-600 dark:text-amber-400 italic flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Hay mercancía pendiente por recibir</span>}
+      {p.editingExisting && <span className="text-xs text-muted-foreground">Guarda o descarta la edición para continuar con recepción, pago o cancelación.</span>}
     </div>
   );
 }
