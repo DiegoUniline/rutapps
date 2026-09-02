@@ -33,7 +33,7 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
       // el cliente con `enrichClientes` a partir de los catálogos pequeños
       // ya cacheados por useBootstrapPrefetch. La forma de la fila se
       // preserva: consumidores siguen leyendo cliente.zonas?.nombre, etc.
-      const SELECT = 'id, codigo, nombre, telefono, lada, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url';
+      const SELECT = 'id, codigo, nombre, telefono, lada, contacto, email, rfc, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, requiere_factura, facturama_rfc, facturama_razon_social, notas_fiscales';
       const applyFilters = (q: any) => {
         q = q.eq('empresa_id', empresa!.id).order('nombre', { ascending: true });
         if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
@@ -91,7 +91,7 @@ export function useClientes(search?: string, statusFilter?: string) {
       // Mismo motivo que useClientesPaginated: joins fuera, enriquecer en cliente.
       const rows = await fetchAllPages<any>((from, to) => {
         let q = supabase.from('clientes')
-          .select('id, codigo, nombre, telefono, lada, contacto, email, rfc, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url')
+          .select('id, codigo, nombre, telefono, lada, contacto, email, rfc, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, requiere_factura, facturama_rfc, facturama_razon_social, notas_fiscales')
           .eq('empresa_id', empresa!.id)
           .order('nombre', { ascending: true })
           .range(from, to);

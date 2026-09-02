@@ -69,6 +69,7 @@ export const VENTAS_TABLE_COLUMNS: { key: string; label: string; required?: bool
   { key: 'folio', label: 'Folio', required: true, defaultVisible: true },
   { key: 'tipo', label: 'Tipo', defaultVisible: true },
   { key: 'cliente', label: 'Cliente', required: true, defaultVisible: true },
+  { key: 'facturacion', label: 'Facturación', defaultVisible: true },
   { key: 'vendedor', label: 'Vendedor', defaultVisible: true },
   { key: 'almacen', label: 'Almacén', defaultVisible: true },
   { key: 'condicion', label: 'Condición', defaultVisible: true },

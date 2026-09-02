@@ -3,7 +3,7 @@ import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCurrency } from '@/hooks/useCurrency';
 import SearchableSelect from '@/components/SearchableSelect';
 import { cn, fmtDate } from '@/lib/utils';
-import { FileText } from 'lucide-react';
+import { AlertTriangle, FileText } from 'lucide-react';
 import { useAllListasPrecios } from '@/hooks/useData';
 import { useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +17,8 @@ interface Props {
   almacenOptions: { value: string; label: string }[];
   clienteNombre?: string;
   clienteNotasFiscales?: string;
+  clienteRequiereFactura?: boolean;
+  clienteRfc?: string;
   totalPagado: number;
   saldoPendiente: number;
   canEditCondicion?: boolean;
@@ -24,7 +26,7 @@ interface Props {
   onClienteChange: (cId: string) => void;
 }
 
-export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, set, onClienteChange }: Props) {
+export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, clienteRequiereFactura = false, clienteRfc, totalPagado, saldoPendiente, canEditCondicion = true, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
@@ -97,11 +99,27 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
           Lista: <span className="font-medium text-foreground">{listaNombre}</span>
         </div>
       )}
+      {form.cliente_id && clienteRequiereFactura && (
+        <div className={cn(
+          'flex items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-[11.5px]',
+          clienteRfc
+            ? 'border-sky-300 bg-sky-50 text-sky-900'
+            : 'border-destructive/40 bg-destructive/10 text-destructive',
+        )}>
+          <span className="inline-flex items-center gap-1.5 font-semibold">
+            {clienteRfc ? <FileText className="h-3.5 w-3.5 shrink-0" /> : <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
+            Requiere factura
+          </span>
+          <span className="font-mono font-semibold whitespace-nowrap">
+            {clienteRfc ? `RFC: ${clienteRfc.toUpperCase()}` : 'RFC pendiente'}
+          </span>
+        </div>
+      )}
       {form.cliente_id && clienteNotasFiscales && (
-        <div className="flex items-start gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11.5px] text-amber-900">
-          <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-950">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
           <div className="whitespace-pre-wrap leading-snug">
-            <span className="font-semibold">Notas fiscales:</span> {clienteNotasFiscales}
+            <span className="font-semibold">Observación del cliente:</span> {clienteNotasFiscales}
           </div>
         </div>
       )}

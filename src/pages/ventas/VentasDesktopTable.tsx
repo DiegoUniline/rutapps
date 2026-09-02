@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Trash2, Gift, ChevronDown, Lock } from 'lucide-react';
+import { Trash2, Gift, ChevronDown, Lock, ReceiptText, AlertTriangle } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { cn, fmtDateTime } from '@/lib/utils';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
@@ -9,6 +9,7 @@ import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel, saldoRealVenta } from '@/lib/ventaCerrada';
 import { isVentaEntregadaParcial } from '@/lib/ventaEntregaParcial';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
+import { getVentaFacturacion } from '@/lib/ventaFacturacion';
 
 /**
  * Resumen fiscal por venta, reconstruido VISUALMENTE desde sus líneas (misma
@@ -65,6 +66,10 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
 
   const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
     if (k === 'cliente') return r.clientes?.nombre ?? '';
+    if (k === 'facturacion') {
+      const facturacion = getVentaFacturacion(r);
+      return `${facturacion.requiereFactura ? 1 : 0}-${facturacion.rfc ?? ''}`;
+    }
     if (k === 'vendedor') return r.vendedores?.nombre ?? '';
     if (k === 'almacen') return r.almacenes?.nombre ?? '';
     if (k === 'condicion') return CONDICION_LABELS[r.condicion_pago] || r.condicion_pago;
@@ -79,7 +84,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
   });
 
   // Count visible data columns for the empty/footer colSpan
-  const dataCols = ['folio','tipo','cliente','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','pagado','saldo','status']
+  const dataCols = ['folio','tipo','cliente','facturacion','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','pagado','saldo','status']
     .filter(k => v(k)).length;
   const totalCols = 1 /* checkbox */ + dataCols + 1 /* chevron */;
 
@@ -93,6 +98,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           {v('folio') && <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>}
           {v('tipo') && <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</SortableTh>}
           {v('cliente') && <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>}
+          {v('facturacion') && <SortableTh sortKey="facturacion" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Facturación</SortableTh>}
           {v('vendedor') && <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Vendedor</SortableTh>}
           {v('almacen') && <SortableTh sortKey="almacen" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Almacén</SortableTh>}
           {v('condicion') && <SortableTh sortKey="condicion" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden 2xl:table-cell">Condición</SortableTh>}
@@ -115,6 +121,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
         )}
         {sorted.map((row: any) => {
           const isExpanded = expandedId === row.id;
+          const facturacion = getVentaFacturacion(row);
           return (
             <React.Fragment key={row.id}>
               <tr
@@ -149,6 +156,26 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   </td>
                 )}
                 {v('cliente') && <td className="py-2 px-3 max-w-[180px] truncate">{row.cliente_id ? <ClienteLink id={row.cliente_id}>{row.clientes?.nombre || '—'}</ClienteLink> : 'Público en general'}</td>}
+                {v('facturacion') && (
+                  <td className="py-2 px-3 min-w-[150px]">
+                    {facturacion.requiereFactura ? (
+                      <div className="space-y-1">
+                        <span className="inline-flex items-center gap-1 rounded border border-sky-300 bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-sky-900">
+                          <ReceiptText className="h-3 w-3" /> REQUIERE FACTURA
+                        </span>
+                        {facturacion.rfc ? (
+                          <div className="font-mono text-[11px] font-semibold text-foreground">{facturacion.rfc}</div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-destructive">
+                            <AlertTriangle className="h-3 w-3" /> RFC pendiente
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">No requiere</span>
+                    )}
+                  </td>
+                )}
                 {v('vendedor') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{row.vendedores?.nombre ?? '—'}</td>}
                 {v('almacen') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{row.almacenes?.nombre ?? <span className="text-destructive">Sin almacén</span>}</td>}
                 {v('condicion') && <td className="py-2 px-3 hidden 2xl:table-cell text-muted-foreground">{CONDICION_LABELS[row.condicion_pago] || row.condicion_pago}</td>}
@@ -259,6 +286,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
               {v('folio') && <td className="py-2 px-3 text-muted-foreground">{items.length} ventas</td>}
               {v('tipo') && <td />}
               {v('cliente') && <td />}
+              {v('facturacion') && <td />}
               {v('vendedor') && <td className="hidden lg:table-cell" />}
               {v('almacen') && <td className="hidden lg:table-cell" />}
               {v('condicion') && <td className="hidden 2xl:table-cell" />}

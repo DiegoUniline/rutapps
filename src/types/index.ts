@@ -228,9 +228,16 @@ export interface Venta {
   ieps_total: number;
   total: number;
   saldo_pendiente?: number;
+  requiere_factura?: boolean;
   created_at: string;
   // joined
-  clientes?: { nombre: string };
+  clientes?: {
+    nombre: string;
+    rfc?: string;
+    facturama_rfc?: string;
+    requiere_factura?: boolean;
+    notas_fiscales?: string;
+  };
   vendedores?: { nombre: string };
   tarifas?: { nombre: string };
   almacenes?: { nombre: string };
