@@ -239,7 +239,9 @@ export default function VentaFormPage() {
   })();
   const clienteSel = clientesList?.find(c => c.id === form.cliente_id);
   const clienteNombre = clienteSel?.nombre;
-  const clienteNotasFiscales = (clienteSel as any)?.notas_fiscales as string | undefined;
+  const clienteNotasFiscales = clienteSel?.notas_fiscales;
+  const clienteRequiereFactura = clienteSel?.requiere_factura === true;
+  const clienteRfc = clienteSel?.facturama_rfc?.trim() || clienteSel?.rfc?.trim();
   const registradoPorId = (form as any).creado_por ?? (isNew ? profile?.id : null);
   const registradoPorNombre = (vendedoresList ?? []).find((v: any) => v.id === registradoPorId)?.nombre
     ?? (registradoPorId === profile?.id ? profile?.nombre : undefined);
@@ -338,7 +340,9 @@ export default function VentaFormPage() {
     if (clienteTarifa) set('tarifa_id', clienteTarifa);
     if (c && (c as any).lista_precio_id) set('lista_precio_id', (c as any).lista_precio_id);
     else set('lista_precio_id', null);
-    if (c?.requiere_factura) set('requiere_factura', true);
+    // Copiar siempre la preferencia del cliente. Así, al cambiar de un cliente
+    // que factura a uno que no, la venta no conserva una bandera incorrecta.
+    set('requiere_factura', c?.requiere_factura === true);
     // Auto-fill fecha de entrega según los días de visita del cliente
     if (form.tipo === 'pedido' && !form.entrega_inmediata && !form.fecha_entrega) {
       const dias = (c as any)?.dia_visita as string[] | null | undefined;
@@ -392,7 +396,7 @@ export default function VentaFormPage() {
       <div className="w-full max-w-none p-2.5 sm:p-3 space-y-2.5">
         <div className="bg-card border border-border rounded-md p-3">
           {readOnly && <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />Esta venta está {form.status} y no se puede editar.</div>}
-          <VentaFormFields form={form} readOnly={readOnly} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
+          <VentaFormFields form={form} readOnly={readOnly} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} clienteRequiereFactura={clienteRequiereFactura} clienteRfc={clienteRfc} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
         </div>
         <div className="bg-card border border-border rounded-md">
           <OdooTabs tabs={[
