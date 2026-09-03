@@ -95,9 +95,11 @@ export default function VentasListPage() {
   // 'si' | 'no' — solo filtra si hay una única opción seleccionada (ambas = todas).
   const promocionFilter = (filters.promocion?.length === 1 ? filters.promocion[0] : undefined) as 'si' | 'no' | undefined;
 
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter, clienteFilter);
+  // Solo consulta el conjunto de la pestaña visible. Los resúmenes de abajo
+  // permanecen separados y siguen calculando TODO el filtro, no solo la página.
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter, clienteFilter, viewMode === 'ventas');
 
-  const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, clienteFilter, promocionFilter);
+  const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, clienteFilter, promocionFilter, viewMode === 'productos');
   // Totales sobre TODO el filtro (no solo la página). Al agrupar, la lista ya
   // trae todas las filas (fetchAll), así que evitamos la doble consulta.
   const { data: ventasResumenRows } = useVentasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, promocionFilter, viewMode === 'ventas' && !groupBy, clienteFilter);

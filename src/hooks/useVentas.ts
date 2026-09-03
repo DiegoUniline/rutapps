@@ -26,7 +26,7 @@ async function fetchVentaIdsConPromo(empresaId: string): Promise<string[]> {
 }
 
 /** Paginated ventas for list views. When fetchAll=true, returns all matching rows (used for grouping). */
-export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, fetchAll = false, promoFilter?: 'si' | 'no', clienteFilter?: string) {
+export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, fetchAll = false, promoFilter?: 'si' | 'no', clienteFilter?: string, enabled = true) {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
@@ -37,7 +37,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
 
   return useQuery({
     queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas'],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && enabled,
     queryFn: async () => {
       const SELECT = 'id, folio, fecha, created_at, total, subtotal, iva_total, ieps_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, politica_cobro, cerrado_at, cerrado_por, total_efectivo, cerrado_snapshot, vendedor_id, cliente_id, almacen_id, es_saldo_inicial, origen, clientes(nombre, rfc, telefono, direccion, colonia, requiere_factura), vendedores:profiles!vendedor_id(nombre, telefono), almacenes(nombre), entregas(status, entrega_lineas(cantidad_pedida, cantidad_entregada)), cobro_aplicaciones(monto_aplicado, cobros!inner(status)), venta_lineas(subtotal, descuento_pct, precio_unitario, cantidad, iva_monto, ieps_monto, total), promocion_aplicada(descuento_aplicado)';
 
@@ -287,6 +287,7 @@ export function useVentaLineasPaginated(
   page = 1, pageSize = 80, condicionFilter?: string,
   vendedorFilter?: string, dateFrom?: string, dateTo?: string,
   fetchAll = false, clienteFilter?: string, promoFilter?: 'si' | 'no',
+  enabled = true,
 ) {
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
@@ -294,7 +295,7 @@ export function useVentaLineasPaginated(
 
   return useQuery({
     queryKey: ['venta-lineas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas'],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && enabled,
     queryFn: async () => {
       const SELECT = 'id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, tarifa_id, clientes(id, nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre))';
 
