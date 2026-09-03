@@ -90,6 +90,20 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
 
   const productoOptions = (idx: number) => (productosList as any[])?.filter(p => { const usedIds = lineas.filter((_, j) => j !== idx).map(l => l.producto_id).filter(Boolean); return !usedIds.includes(p.id); }).map(p => ({ value: p.id, label: `[${p.codigo}] ${getNombreCompra(p)}`, searchText: [p.codigo, p.nombre_compra, p.nombre].filter(Boolean).join(' ') })) ?? [];
 
+  const focusCantidad = (idx: number) => {
+    window.setTimeout(() => {
+      const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(`[data-compra-cantidad="${idx}"]`));
+      const inputVisible = inputs.find(input => input.offsetParent !== null && !input.disabled);
+      inputVisible?.focus();
+      inputVisible?.select();
+    }, 0);
+  };
+
+  const seleccionarProducto = (idx: number, productoId: string) => {
+    updateLinea(idx, 'producto_id', productoId);
+    if (productoId) focusCantidad(idx);
+  };
+
   return (
     <div className="space-y-3">
       {/* Desktop / tablet table */}
@@ -121,14 +135,14 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                       <SearchableSelect
                         options={productoOptions(idx)}
                         value={line.producto_id ?? ''}
-                        onChange={val => updateLinea(idx, 'producto_id', val)}
+                        onChange={val => seleccionarProducto(idx, val)}
                         placeholder="Buscar producto..."
                         onCreateNew={async (name) => { triggerQuickCreate(idx, name); return undefined; }}
                       />
                     ) : <span className="text-xs truncate block">{line.productos ? `[${line.productos.codigo}] ${getNombreCompra(line.productos)}` : '—'}</span>}
                   </td>
                   <td className="py-1.5 px-2 text-center text-xs text-muted-foreground uppercase">{line._unidad_compra || 'pz'}</td>
-                  <td className="py-1.5 px-2">{isEditable ? <input type="number" className="input-odoo w-24 text-right text-sm" value={line.cantidad ?? 1} onChange={e => updateLinea(idx, 'cantidad', Number(e.target.value))} min={0} /> : <span className="text-sm text-right block tabular-nums">{(line.cantidad ?? 1).toLocaleString('es-MX')}</span>}</td>
+                  <td className="py-1.5 px-2">{isEditable ? <input type="number" data-compra-cantidad={idx} className="input-odoo w-24 text-right text-sm" value={line.cantidad ?? 1} onChange={e => updateLinea(idx, 'cantidad', Number(e.target.value))} min={0} /> : <span className="text-sm text-right block tabular-nums">{(line.cantidad ?? 1).toLocaleString('es-MX')}</span>}</td>
                   <td className="py-1.5 px-1">{isEditable ? <input type="number" className="w-20 text-center text-sm bg-transparent border border-border rounded px-2 py-1 tabular-nums focus:outline-none focus:ring-1 focus:ring-primary" value={line._factor_conversion ?? 1} onChange={e => updateLinea(idx, '_factor_conversion', Math.max(1, Number(e.target.value) || 1))} min={1} /> : <span className="text-sm text-center block tabular-nums">{(line._factor_conversion ?? 1).toLocaleString('es-MX')}</span>}</td>
                   <td className="py-1.5 px-2 text-right text-sm font-medium text-foreground tabular-nums">{totalPz.toLocaleString('es-MX')}</td>
                   <td className="py-1.5 px-2 text-center">
@@ -214,7 +228,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                   <SearchableSelect
                     options={productoOptions(idx)}
                     value={line.producto_id ?? ''}
-                    onChange={val => updateLinea(idx, 'producto_id', val)}
+                    onChange={val => seleccionarProducto(idx, val)}
                     placeholder="Buscar producto..."
                     onCreateNew={async (name) => { triggerQuickCreate(idx, name); return undefined; }}
                   />
@@ -223,7 +237,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-[10px] uppercase text-muted-foreground block">Cant. ({line._unidad_compra || 'pz'})</label>
-                  {isEditable ? <input type="number" className="input-odoo w-full text-right text-sm" value={line.cantidad ?? 1} onChange={e => updateLinea(idx, 'cantidad', Number(e.target.value))} min={0} /> : <div className="text-sm text-right tabular-nums">{(line.cantidad ?? 1).toLocaleString('es-MX')}</div>}
+                  {isEditable ? <input type="number" data-compra-cantidad={idx} className="input-odoo w-full text-right text-sm" value={line.cantidad ?? 1} onChange={e => updateLinea(idx, 'cantidad', Number(e.target.value))} min={0} /> : <div className="text-sm text-right tabular-nums">{(line.cantidad ?? 1).toLocaleString('es-MX')}</div>}
                 </div>
                 <div>
                   <label className="text-[10px] uppercase text-muted-foreground block">Factor</label>
@@ -310,6 +324,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
           updateLinea(quickIdx, '_tiene_ieps', !!prod.tiene_ieps);
           if (prod.tiene_ieps) updateLinea(quickIdx, '_ieps_pct', prod.ieps_pct ?? 0);
           if (prod.factor_conversion) updateLinea(quickIdx, '_factor_conversion', prod.factor_conversion);
+          focusCantidad(quickIdx);
         }}
       />
       {loteAsignar && empresa?.id && (
