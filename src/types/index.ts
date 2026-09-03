@@ -221,7 +221,6 @@ export interface Venta {
   fecha: string;
   fecha_entrega?: string;
   entrega_inmediata: boolean;
-  requiere_factura?: boolean;
   notas?: string;
   subtotal: number;
   descuento_total: number;

@@ -63,17 +63,19 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     return m;
   }, [items]);
 
-  // La marca puede existir tanto en la venta (fotografía al capturarla) como
-  // en el cliente actual. La lista auxiliar cubre el modo superadministrador
-  // cuando se está visualizando otra empresa y el join todavía no se refresca.
+  // La etiqueta depende exclusivamente del check `clientes.requiere_factura`.
+  // La lista auxiliar cubre el modo superadministrador cuando se visualiza
+  // otra empresa; si aún no está disponible, usamos el mismo campo del join.
   const facturaClienteById = useMemo(
     () => new Map((clientesList ?? []).map((cliente: any) => [cliente.id, cliente.requiere_factura === true])),
     [clientesList],
   );
-  const requiereFactura = (row: any) =>
-    row.requiere_factura === true ||
-    row.clientes?.requiere_factura === true ||
-    facturaClienteById.get(row.cliente_id) === true;
+  const requiereFactura = (row: any) => {
+    if (row.cliente_id && facturaClienteById.has(row.cliente_id)) {
+      return facturaClienteById.get(row.cliente_id) === true;
+    }
+    return row.clientes?.requiere_factura === true;
+  };
 
   const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
     if (k === 'cliente') return r.clientes?.nombre ?? '';
