@@ -9,6 +9,7 @@ import { useClientes } from '@/hooks/useClientes';
 import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hooks/useData';
 import { getCurrencyConfig } from '@/lib/currency';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save, FileDown, Send, CheckCircle2, ShoppingCart, AlertTriangle } from 'lucide-react';
@@ -113,11 +114,12 @@ export default function CotizacionFormPage() {
     queryKey: ['tarifa-rules-cot', form.tarifa_id], enabled: !!form.tarifa_id,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from('tarifa_lineas')
+      return fetchAllPages<TarifaLineaRule>((from, to) => supabase.from('tarifa_lineas')
         .select('aplica_a, producto_ids, clasificacion_ids, grupos, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
-        .eq('tarifa_id', form.tarifa_id!);
-      if (error) throw error;
-      return (data ?? []) as TarifaLineaRule[];
+        .eq('tarifa_id', form.tarifa_id!)
+        .order('created_at')
+        .order('id')
+        .range(from, to));
     },
   });
 

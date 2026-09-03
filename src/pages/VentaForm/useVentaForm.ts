@@ -11,6 +11,7 @@ import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplic
 import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
@@ -160,11 +161,12 @@ export function useVentaForm() {
     queryKey: ['tarifa-rules-venta', form.tarifa_id], enabled: !!form.tarifa_id,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from('tarifa_lineas')
+      return fetchAllPages<TarifaLineaRule>((from, to) => supabase.from('tarifa_lineas')
         .select('aplica_a, producto_ids, clasificacion_ids, grupos, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
-        .eq('tarifa_id', form.tarifa_id!);
-      if (error) throw error;
-      return (data ?? []) as TarifaLineaRule[];
+        .eq('tarifa_id', form.tarifa_id!)
+        .order('created_at')
+        .order('id')
+        .range(from, to));
     },
   });
 

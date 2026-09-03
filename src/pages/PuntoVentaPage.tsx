@@ -19,6 +19,7 @@ import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePromocionesActivas, evaluatePromociones, getPendingProductoGratis, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { PromoPendingAlert } from '@/components/PromoPendingAlert';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { TurnoControls } from '@/components/pos/TurnoControls';
@@ -331,7 +332,12 @@ export default function PuntoVentaPage() {
   const effectiveTarifaId = clienteTarifaId || defaultTarifaId;
   const { data: effectiveTarifaLineas } = useQuery({
     queryKey: ['pos-tarifa-lineas', effectiveTarifaId], enabled: !!effectiveTarifaId, staleTime: CATALOG_STALE,
-    queryFn: async () => { const { data } = await supabase.from('tarifa_lineas').select('*').eq('tarifa_id', effectiveTarifaId!); return (data ?? []) as TarifaLineaRule[]; },
+    queryFn: async () => fetchAllPages<TarifaLineaRule>((from, to) => supabase.from('tarifa_lineas')
+      .select('*')
+      .eq('tarifa_id', effectiveTarifaId!)
+      .order('created_at')
+      .order('id')
+      .range(from, to)),
   });
 
   const productPricingMap = useMemo(() => {

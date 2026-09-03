@@ -275,11 +275,28 @@ export function useTarifas() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from('tarifas')
-        .select('id, nombre, tipo, activa, descripcion, vigencia_inicio, vigencia_fin, created_at, tarifa_lineas(id)')
+        .select('id, nombre, tipo, activa, descripcion, vigencia_inicio, vigencia_fin, created_at')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as (Tarifa & { tarifa_lineas: { id: string }[] })[];
+      const tarifaIds = (data ?? []).map(tarifa => tarifa.id);
+      const lineas = tarifaIds.length
+        ? await fetchAllPages<{ id: string; tarifa_id: string }>((from, to) => supabase.from('tarifa_lineas')
+            .select('id, tarifa_id')
+            .in('tarifa_id', tarifaIds)
+            .order('id')
+            .range(from, to))
+        : [];
+      const lineasPorTarifa = new Map<string, { id: string }[]>();
+      lineas.forEach(linea => {
+        const actuales = lineasPorTarifa.get(linea.tarifa_id) ?? [];
+        actuales.push({ id: linea.id });
+        lineasPorTarifa.set(linea.tarifa_id, actuales);
+      });
+      return (data ?? []).map(tarifa => ({
+        ...tarifa,
+        tarifa_lineas: lineasPorTarifa.get(tarifa.id) ?? [],
+      })) as (Tarifa & { tarifa_lineas: { id: string }[] })[];
     },
   });
 }
@@ -289,9 +306,17 @@ export function useTarifa(id?: string) {
     queryKey: ['tarifa', id],
     staleTime: CATALOG_STALE,
     queryFn: async () => {
-      const { data, error } = await supabase.from('tarifas').select('*, tarifa_lineas(*)').eq('id', id!).single();
+      const [{ data, error }, lineas] = await Promise.all([
+        supabase.from('tarifas').select('*').eq('id', id!).single(),
+        fetchAllPages<TarifaLinea>((from, to) => supabase.from('tarifa_lineas')
+          .select('*')
+          .eq('tarifa_id', id!)
+          .order('created_at')
+          .order('id')
+          .range(from, to)),
+      ]);
       if (error) throw error;
-      return data as Tarifa;
+      return { ...data, tarifa_lineas: lineas } as Tarifa;
     },
     enabled: !!id,
   });
@@ -752,12 +777,12 @@ export function useListaPrecioLineas(listaPrecioId?: string) {
     queryKey: ['lista_precios_lineas', listaPrecioId],
     staleTime: CATALOG_STALE,
     queryFn: async () => {
-      const { data, error } = await supabase.from('lista_precios_lineas')
+      return fetchAllPages<ListaPrecioLinea>((from, to) => supabase.from('lista_precios_lineas')
         .select('id, lista_precio_id, producto_id, precio, created_at, productos(codigo, nombre)')
         .eq('lista_precio_id', listaPrecioId!)
-        .order('created_at');
-      if (error) throw error;
-      return data as ListaPrecioLinea[];
+        .order('created_at')
+        .order('id')
+        .range(from, to));
     },
     enabled: !!listaPrecioId,
   });

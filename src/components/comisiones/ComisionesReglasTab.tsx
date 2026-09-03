@@ -5,6 +5,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { useNavigate } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 /**
  * Shows all tarifa_lineas that have comision_pct > 0,
@@ -17,13 +18,13 @@ export default function ComisionesReglasTab() {
   const { data: reglas, isLoading } = useQuery({
     queryKey: ['comision-reglas'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      return fetchAllPages<any>((from, to) => supabase
         .from('tarifa_lineas')
         .select('id, aplica_a, producto_ids, clasificacion_ids, comision_pct, tipo_calculo, precio, margen_pct, descuento_pct, tarifa_id, lista_precio_id, tarifas(id, nombre), lista_precios(id, nombre, es_principal)')
         .gt('comision_pct', 0)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as any[];
+        .order('created_at', { ascending: false })
+        .order('id')
+        .range(from, to));
     },
   });
 

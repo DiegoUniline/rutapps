@@ -3,9 +3,7 @@ import { useParams, useNavigate, Link, useSearchParams, useLocation } from 'reac
 import { usePermisos } from '@/hooks/usePermisos';
 import { compressPhoto } from '@/lib/imageCompressor';
 import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2, Upload, FileText } from 'lucide-react';
-import { GoogleMap, Marker } from '@react-google-maps/api';
-import GpsMapPicker from '@/components/GpsMapPicker';
-import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
+import GpsMapPicker, { GpsMapPreview } from '@/components/GpsMapPicker';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
@@ -22,6 +20,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver';
 import { todayLocal } from '@/lib/utils';
 import { confirmDialog } from '@/lib/confirm';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 const defaultCliente: Partial<Cliente> = {
   codigo: '', nombre: '', contacto: '', telefono: '', lada: '', email: '', direccion: '',
@@ -59,16 +58,20 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
     enabled: !!tarifaId,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data: lineas } = await supabase.from('tarifa_lineas')
+      const lineas = await fetchAllPages<any>((from, to) => supabase.from('tarifa_lineas')
         .select('*, tarifas(id, nombre), lista_precios(id, nombre, es_principal)')
-        .eq('tarifa_id', tarifaId!);
+        .eq('tarifa_id', tarifaId!)
+        .order('created_at')
+        .order('id')
+        .range(from, to));
 
-      const { data: prods } = await supabase.from('productos')
+      const prods = await fetchAllPages<any>((from, to) => supabase.from('productos')
         .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
         .eq('status', 'activo')
-        .order('nombre');
+        .order('nombre')
+        .range(from, to));
 
-      if (!prods || !lineas) return [];
+      if (!prods) return [];
 
       const filteredLineas = listaPrecioId
         ? lineas.filter((l: any) => l.lista_precio_id === listaPrecioId)
@@ -208,7 +211,6 @@ export default function ClienteFormPage() {
   const fromState = (location.state as { from?: string } | null)?.from;
   const backPath = fromState || (fromRuta ? '/ruta/clientes' : '/clientes');
   const vendedorIdParam = searchParams.get('vendedorId');
-  const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
   const { empresa } = useAuth();
   const { fmt: currFmt } = useCurrency();
@@ -258,8 +260,12 @@ export default function ClienteFormPage() {
     enabled: !!form.tarifa_id,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data } = await supabase.from('tarifa_lineas').select('*').eq('tarifa_id', form.tarifa_id!);
-      return (data ?? []) as TarifaLineaRule[];
+      return fetchAllPages<TarifaLineaRule>((from, to) => supabase.from('tarifa_lineas')
+        .select('*')
+        .eq('tarifa_id', form.tarifa_id!)
+        .order('created_at')
+        .order('id')
+        .range(from, to));
     },
   });
 
@@ -620,7 +626,6 @@ export default function ClienteFormPage() {
                         lat={form.gps_lat ? Number(form.gps_lat) : null}
                         lng={form.gps_lng ? Number(form.gps_lng) : null}
                         onChange={(lat, lng) => setForm(prev => ({ ...prev, gps_lat: lat, gps_lng: lng }))}
-                        isLoaded={mapsLoaded}
                       />
                       {form.gps_lat && form.gps_lng && (
                         <button
@@ -631,21 +636,9 @@ export default function ClienteFormPage() {
                         </button>
                       )}
                     </div>
-                    {form.gps_lat && form.gps_lng && mapsLoaded && (
-                      <div className="rounded-lg overflow-hidden border border-border w-[300px] h-[200px]">
-                        <GoogleMap
-                          mapContainerStyle={{ width: '100%', height: '100%' }}
-                          center={{ lat: Number(form.gps_lat), lng: Number(form.gps_lng) }}
-                          zoom={16}
-                          options={{
-                            disableDefaultUI: true,
-                            zoomControl: true,
-                            draggable: false,
-                            styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
-                          }}
-                        >
-                          <Marker position={{ lat: Number(form.gps_lat), lng: Number(form.gps_lng) }} />
-                        </GoogleMap>
+                    {form.gps_lat && form.gps_lng && (
+                      <div className="h-[240px] w-full max-w-[520px] overflow-hidden rounded-lg border border-border">
+                        <GpsMapPreview lat={Number(form.gps_lat)} lng={Number(form.gps_lng)} />
                       </div>
                     )}
                   </div>

@@ -22,6 +22,7 @@ import { useSaldoFavor } from '@/hooks/useSaldoFavor';
 import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { resolveProductPricing, type ProductForPricing, type TarifaLineaRule } from '@/lib/priceResolver';
 import { buildSalePricingSnapshot, calculateSaleLineAmounts } from '@/lib/salePricing';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { saldoVentaTrasEditar } from '@/lib/ventaEditBalance';
 
 export function useVentaDetalle() {
@@ -105,11 +106,12 @@ export function useVentaDetalle() {
     networkMode: 'always',
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from('tarifa_lineas')
+        return await fetchAllPages<TarifaLineaRule>((from, to) => supabase.from('tarifa_lineas')
           .select('aplica_a, producto_ids, clasificacion_ids, grupos, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
-          .eq('tarifa_id', tarifaIdEdicion!);
-        if (error) throw error;
-        return (data ?? []) as TarifaLineaRule[];
+          .eq('tarifa_id', tarifaIdEdicion!)
+          .order('created_at')
+          .order('id')
+          .range(from, to));
       } catch {
         const t = getOfflineTable('tarifa_lineas');
         const all = t ? ((await t.toArray().catch(() => [])) as any[]) : [];

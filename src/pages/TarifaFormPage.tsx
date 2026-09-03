@@ -230,9 +230,12 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
     enabled: !!tarifaId && !!empresaId,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data: lineas } = await supabase.from('tarifa_lineas')
+      const lineas = await fetchAllPages<any>((from, to) => supabase.from('tarifa_lineas')
         .select('*')
-        .eq('tarifa_id', tarifaId!);
+        .eq('tarifa_id', tarifaId!)
+        .order('created_at')
+        .order('id')
+        .range(from, to));
 
       const prods = await fetchAllPages<any>((from, to) =>
         supabase.from('productos')
@@ -243,7 +246,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
           .range(from, to)
       );
 
-      if (!prods || !lineas) return [];
+      if (!prods) return [];
 
 
       // Include rules matching the selected lista OR global (null lista_precio_id)
@@ -900,17 +903,21 @@ export default function TarifaFormPage() {
     if (!unusedProds || unusedProds.length === 0) return;
     setLoadingAllProds(true);
     try {
-      for (const prod of unusedProds) {
-        await saveLinea.mutateAsync({
+      const rows = unusedProds.map(prod => ({
           tarifa_id: id,
           aplica_a: 'producto',
           tipo_calculo: 'margen_costo',
           precio: 0, precio_minimo: 0, descuento_max: 0, margen_pct: 0, descuento_pct: 0,
           producto_ids: [prod.id],
           clasificacion_ids: [],
-        } as any);
-      }
-      refetch();
+      }));
+      const { error } = await supabase.from('tarifa_lineas').insert(rows as any);
+      if (error) throw error;
+      await Promise.all([
+        refetch(),
+        qc.invalidateQueries({ queryKey: ['tarifas'] }),
+        qc.invalidateQueries({ queryKey: ['tarifa-lineas-producto'] }),
+      ]);
       toast.success(`${unusedProds.length} productos agregados`);
     } catch (err: any) { toast.error(err.message); }
     setLoadingAllProds(false);

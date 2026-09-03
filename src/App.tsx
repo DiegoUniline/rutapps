@@ -5,7 +5,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { isSuperAdminEmail } from "@/lib/superAdminEmail";
-import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useNeedsCardCapture } from "@/hooks/useNeedsCardCapture";
 import { useFacturaPendiente } from "@/hooks/useFacturaPendiente";
@@ -776,7 +775,7 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
       <Route path="/proveedores" element={<ProveedoresListPage />} />
       <Route path="/proveedores/:id" element={<ProveedorFormPage />} />
       <Route path="/clientes" element={<ClientesListPage />} />
-      <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
+      <Route path="/clientes/:id" element={<ClienteFormPage />} />
       <Route path="/ventas" element={<VentasListPage />} />
       <Route path="/ventas/reporte-diario" element={<ReporteDiarioPage />} />
       <Route path="/ventas/devoluciones" element={<DevolucionesListPage />} />
@@ -902,9 +901,9 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
       <Route path="/:a/productos/:id" element={<ProductoFormPage />} />
       <Route path="/:a/:b/productos/:id" element={<ProductoFormPage />} />
       <Route path="/:a/:b/:c/productos/:id" element={<ProductoFormPage />} />
-      <Route path="/:a/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
-      <Route path="/:a/:b/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
-      <Route path="/:a/:b/:c/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
+      <Route path="/:a/clientes/:id" element={<ClienteFormPage />} />
+      <Route path="/:a/:b/clientes/:id" element={<ClienteFormPage />} />
+      <Route path="/:a/:b/:c/clientes/:id" element={<ClienteFormPage />} />
       <Route path="*" element={<NotFound />} />
     </>
   );
