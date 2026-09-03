@@ -91,16 +91,17 @@ export default function VentasListPage() {
   const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
   const condicionFilter = filters.condicion_pago?.length ? filters.condicion_pago.join(',') : 'todos';
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
+  const clienteFilter = filters.cliente?.length ? filters.cliente.join(',') : 'todos';
   // 'si' | 'no' — solo filtra si hay una única opción seleccionada (ambas = todas).
   const promocionFilter = (filters.promocion?.length === 1 ? filters.promocion[0] : undefined) as 'si' | 'no' | undefined;
 
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter);
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter, clienteFilter);
 
-  const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy);
+  const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, clienteFilter, promocionFilter);
   // Totales sobre TODO el filtro (no solo la página). Al agrupar, la lista ya
   // trae todas las filas (fetchAll), así que evitamos la doble consulta.
-  const { data: ventasResumenRows } = useVentasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, promocionFilter, viewMode === 'ventas' && !groupBy);
-  const { data: lineasResumenAll } = useVentaLineasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, viewMode === 'productos' && !groupBy);
+  const { data: ventasResumenRows } = useVentasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, promocionFilter, viewMode === 'ventas' && !groupBy, clienteFilter);
+  const { data: lineasResumenAll } = useVentaLineasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, viewMode === 'productos' && !groupBy, clienteFilter, promocionFilter);
   const { data: clientesList } = useClientes();
   const { data: vendedoresList } = useVendedoresForFilter();
 
@@ -111,21 +112,14 @@ export default function VentasListPage() {
   }, [vendedoresList, clientesList]);
 
   const ventasRaw = ventasData?.rows ?? [];
-  const clienteFilter = filters.cliente;
-
-  const ventas = useMemo(() => {
-    let rows = ventasRaw;
-    if (clienteFilter && clienteFilter.length > 0) rows = rows.filter(v => clienteFilter.includes(v.cliente_id ?? ''));
-    return rows;
-  }, [ventasRaw, clienteFilter]);
+  const ventas = ventasRaw;
 
   // Filas para los TOTALES: todo el filtro. Al agrupar, `ventasRaw` ya son todas.
   // Si no, usamos el resumen completo (fallback a la página mientras carga).
-  const resumenSource = useMemo(() => {
-    let rows: any[] = groupBy ? ventasRaw : (ventasResumenRows ?? ventasRaw);
-    if (clienteFilter && clienteFilter.length > 0) rows = rows.filter((v: any) => clienteFilter.includes(v.cliente_id ?? ''));
-    return rows;
-  }, [groupBy, ventasResumenRows, ventasRaw, clienteFilter]);
+  const resumenSource = useMemo(
+    () => groupBy ? ventasRaw : (ventasResumenRows ?? ventasRaw),
+    [groupBy, ventasResumenRows, ventasRaw],
+  );
 
   // Active dataset depending on view mode
   const isProductView = viewMode === 'productos';
@@ -133,10 +127,7 @@ export default function VentasListPage() {
 
   const total = isProductView
     ? (lineasData?.total ?? 0)
-    : (clienteFilter && clienteFilter.length > 0)
-      // Con filtro de cliente (client-side) el conteo real es el del resumen completo.
-      ? (ventasResumenRows ? resumenSource.length : ventas.length)
-      : (ventasData?.total ?? 0);
+    : (ventasData?.total ?? 0);
 
   const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
   const to = Math.min(page * numericPageSize, total);

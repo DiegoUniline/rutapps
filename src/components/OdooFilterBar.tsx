@@ -77,6 +77,7 @@ function IndependentFilterDropdown({
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         className={cn(
           "flex items-center gap-1 shrink-0 rounded-lg border bg-card text-foreground hover:bg-accent transition-all",
@@ -110,6 +111,7 @@ function IndependentFilterDropdown({
           )}
           <div className="px-1 py-1 max-h-[240px] overflow-y-auto">
             <button
+              type="button"
               onClick={() => onSetAll([])}
               className={cn(
                 "w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-[11px] transition-colors",
@@ -128,6 +130,7 @@ function IndependentFilterDropdown({
               const isSelected = selected.includes(opt.value);
               return (
                 <button
+                  type="button"
                   key={opt.value}
                   onClick={() => onToggle(opt.value)}
                   className={cn(
@@ -260,6 +263,7 @@ export function OdooFilterBar({
         {groupByOptions && groupByOptions.length > 0 && (onGroupByChange || onGroupByLevelChange) && (
           <div ref={(el) => { groupRefs.current[isMobile ? 1 : 0] = el; }} className="relative">
             <button
+              type="button"
               onClick={() => setGroupOpen(!groupOpen)}
               className={cn(
                 "flex items-center gap-1 shrink-0 rounded-lg border bg-card text-foreground hover:bg-accent transition-all",
@@ -287,6 +291,7 @@ export function OdooFilterBar({
                         {level === 0 ? 'Agrupación 1' : level === 1 ? 'Agrupación 2' : 'Agrupación 3'}
                       </div>
                       <button
+                        type="button"
                         onClick={() => {
                           if (onGroupByLevelChange) onGroupByLevelChange(level, '');
                           else if (level === 0 && onGroupByChange) onGroupByChange('');
@@ -301,6 +306,7 @@ export function OdooFilterBar({
                       </button>
                       {availableOptions.map(g => (
                         <button
+                          type="button"
                           key={g.value}
                           onClick={() => {
                             if (onGroupByLevelChange) onGroupByLevelChange(level, g.value);
@@ -320,6 +326,7 @@ export function OdooFilterBar({
                 })}
                 <div className="border-t border-border mt-1 pt-1 px-3">
                   <button
+                    type="button"
                     onClick={() => setGroupOpen(false)}
                     className="w-full text-center py-1.5 text-[11px] text-primary font-semibold hover:bg-accent rounded transition-colors"
                   >
@@ -335,7 +342,7 @@ export function OdooFilterBar({
       {/* Clear all */}
       <ResponsiveFilterCard label="Acción" isMobile={isMobile}>
         {activeCount > 0 && onClearFilters && (
-          <button onClick={() => { onClearFilters(); if (onDateRangeChange) onDateRangeChange('', ''); else { onDateFromChange?.(''); onDateToChange?.(''); } }} className={cn("text-destructive hover:underline flex items-center gap-1 shrink-0", compact ? "text-[10px]" : "text-[11px]")}>
+          <button type="button" onClick={() => { onClearFilters(); if (onDateRangeChange) onDateRangeChange('', ''); else { onDateFromChange?.(''); onDateToChange?.(''); } }} className={cn("text-destructive hover:underline flex items-center gap-1 shrink-0", compact ? "text-[10px]" : "text-[11px]")}>
             <X className="h-3 w-3" /> Limpiar
           </button>
         )}
@@ -367,7 +374,7 @@ export function OdooFilterBar({
         {/* Desktop controls: extended horizontally in compact mode */}
         <div className={cn(
           "hidden sm:flex items-center",
-          compact ? "flex-1 min-w-0 gap-1.5 overflow-x-auto no-scrollbar" : "flex-wrap gap-2"
+          compact ? "flex-1 min-w-0 flex-wrap gap-1.5 overflow-visible" : "flex-wrap gap-2"
         )}>
           {renderControls(false)}
         </div>
@@ -392,6 +399,7 @@ export function OdooFilterBar({
               >
                 {chip.filterLabel}: {v.label}
                 <button
+                  type="button"
                   onClick={() => onToggleFilter?.(chip.filterKey, v.value)}
                   className="hover:text-destructive"
                 >

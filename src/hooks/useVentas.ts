@@ -26,7 +26,7 @@ async function fetchVentaIdsConPromo(empresaId: string): Promise<string[]> {
 }
 
 /** Paginated ventas for list views. When fetchAll=true, returns all matching rows (used for grouping). */
-export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, fetchAll = false, promoFilter?: 'si' | 'no') {
+export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, fetchAll = false, promoFilter?: 'si' | 'no', clienteFilter?: string) {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
@@ -36,7 +36,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   // Se eliminó el canal duplicado 'ventas-realtime' para reducir egress de Realtime.
 
   return useQuery({
-    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas'],
+    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas'],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const SELECT = 'id, folio, fecha, created_at, total, subtotal, iva_total, ieps_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, politica_cobro, cerrado_at, cerrado_por, total_efectivo, cerrado_snapshot, vendedor_id, cliente_id, almacen_id, es_saldo_inicial, origen, clientes(nombre, rfc, telefono, direccion, colonia, requiere_factura), vendedores:profiles!vendedor_id(nombre, telefono), almacenes(nombre), entregas(status, entrega_lineas(cantidad_pedida, cantidad_entregada)), cobro_aplicaciones(monto_aplicado, cobros!inner(status)), venta_lineas(subtotal, descuento_pct, precio_unitario, cantidad, iva_monto, ieps_monto, total), promocion_aplicada(descuento_aplicado)';
@@ -89,6 +89,11 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
           if (arr.length > 1) q = q.in('vendedor_id', arr as any);
           else q = q.eq('vendedor_id', vendedorFilter);
         }
+        if (clienteFilter && clienteFilter !== 'todos') {
+          const arr = clienteFilter.split(',');
+          if (arr.length > 1) q = q.in('cliente_id', arr as any);
+          else q = q.eq('cliente_id', clienteFilter);
+        }
         if (dateFrom) q = q.gte('fecha', dateFrom);
         if (dateTo) q = q.lte('fecha', dateTo);
         if (promoIds) {
@@ -127,13 +132,13 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
  *
  * OJO: la lógica de filtros debe mantenerse en sync con `useVentasPaginated`.
  */
-export function useVentasResumen(search?: string, statusFilter?: string, tipoFilter?: string, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, promoFilter?: 'si' | 'no', enabled = true) {
+export function useVentasResumen(search?: string, statusFilter?: string, tipoFilter?: string, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, promoFilter?: 'si' | 'no', enabled = true, clienteFilter?: string) {
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
   const filterOwn = !seeAll && !!profileId;
 
   return useQuery({
-    queryKey: ['ventas-resumen', empresa?.id, search, statusFilter, tipoFilter, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo, promoFilter ?? 'todas'],
+    queryKey: ['ventas-resumen', empresa?.id, search, statusFilter, tipoFilter, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, promoFilter ?? 'todas'],
     enabled: !!empresa?.id && enabled,
     queryFn: async () => {
       // SELECT ligero: solo lo que consumen los totales (sin joins de cliente/vendedor/almacén/entregas).
@@ -180,6 +185,10 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
           const arr = vendedorFilter.split(',');
           if (arr.length > 1) q = q.in('vendedor_id', arr as any); else q = q.eq('vendedor_id', vendedorFilter);
         }
+        if (clienteFilter && clienteFilter !== 'todos') {
+          const arr = clienteFilter.split(',');
+          if (arr.length > 1) q = q.in('cliente_id', arr as any); else q = q.eq('cliente_id', clienteFilter);
+        }
         if (dateFrom) q = q.gte('fecha', dateFrom);
         if (dateTo) q = q.lte('fecha', dateTo);
         if (promoIds) {
@@ -200,16 +209,19 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
  * Devuelve la suma de cantidad y de importe de línea del conjunto completo.
  * OJO: mantener los filtros en sync con `useVentaLineasPaginated`.
  */
-export function useVentaLineasResumen(search?: string, statusFilter?: string, tipoFilter?: string, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, enabled = true) {
+export function useVentaLineasResumen(search?: string, statusFilter?: string, tipoFilter?: string, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, enabled = true, clienteFilter?: string, promoFilter?: 'si' | 'no') {
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
   const filterOwn = !seeAll && !!profileId;
 
   return useQuery({
-    queryKey: ['venta-lineas-resumen', empresa?.id, search, statusFilter, tipoFilter, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo],
+    queryKey: ['venta-lineas-resumen', empresa?.id, search, statusFilter, tipoFilter, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, promoFilter ?? 'todas'],
     enabled: !!empresa?.id && enabled,
     queryFn: async () => {
       const SELECT = 'cantidad, total, ventas!inner(empresa_id, status, tipo, condicion_pago, vendedor_id, fecha, folio)';
+
+      let promoIds: string[] | null = null;
+      if (promoFilter) promoIds = await fetchVentaIdsConPromo(empresa!.id);
 
       let searchOr: string | null = null;
       let searchEmpty = false;
@@ -246,8 +258,16 @@ export function useVentaLineasResumen(search?: string, statusFilter?: string, ti
           const arr = vendedorFilter.split(',');
           if (arr.length > 1) q = q.in('ventas.vendedor_id', arr as any); else q = q.eq('ventas.vendedor_id', vendedorFilter);
         }
+        if (clienteFilter && clienteFilter !== 'todos') {
+          const arr = clienteFilter.split(',');
+          if (arr.length > 1) q = q.in('ventas.cliente_id', arr as any); else q = q.eq('ventas.cliente_id', clienteFilter);
+        }
         if (dateFrom) q = q.gte('ventas.fecha', dateFrom);
         if (dateTo) q = q.lte('ventas.fecha', dateTo);
+        if (promoIds) {
+          if (promoFilter === 'si') q = q.in('venta_id', promoIds.length ? promoIds : ['00000000-0000-0000-0000-000000000000']);
+          else if (promoIds.length) q = q.not('venta_id', 'in', `(${promoIds.join(',')})`);
+        }
         if (searchEmpty) q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
         else if (searchOr) q = q.or(searchOr);
         return q;
@@ -266,17 +286,20 @@ export function useVentaLineasPaginated(
   search?: string, statusFilter?: string, tipoFilter?: string,
   page = 1, pageSize = 80, condicionFilter?: string,
   vendedorFilter?: string, dateFrom?: string, dateTo?: string,
-  fetchAll = false,
+  fetchAll = false, clienteFilter?: string, promoFilter?: 'si' | 'no',
 ) {
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
   const filterOwn = !seeAll && !!profileId;
 
   return useQuery({
-    queryKey: ['venta-lineas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo, fetchAll],
+    queryKey: ['venta-lineas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas'],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const SELECT = 'id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, tarifa_id, clientes(id, nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre))';
+
+      let promoIds: string[] | null = null;
+      if (promoFilter) promoIds = await fetchVentaIdsConPromo(empresa!.id);
 
       let searchOr: string | null = null;
       let searchEmpty = false;
@@ -318,8 +341,17 @@ export function useVentaLineasPaginated(
           if (arr.length > 1) q = q.in('ventas.vendedor_id', arr as any);
           else q = q.eq('ventas.vendedor_id', vendedorFilter);
         }
+        if (clienteFilter && clienteFilter !== 'todos') {
+          const arr = clienteFilter.split(',');
+          if (arr.length > 1) q = q.in('ventas.cliente_id', arr as any);
+          else q = q.eq('ventas.cliente_id', clienteFilter);
+        }
         if (dateFrom) q = q.gte('ventas.fecha', dateFrom);
         if (dateTo) q = q.lte('ventas.fecha', dateTo);
+        if (promoIds) {
+          if (promoFilter === 'si') q = q.in('venta_id', promoIds.length ? promoIds : ['00000000-0000-0000-0000-000000000000']);
+          else if (promoIds.length) q = q.not('venta_id', 'in', `(${promoIds.join(',')})`);
+        }
         if (searchEmpty) q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
         else if (searchOr) q = q.or(searchOr);
         return q;
