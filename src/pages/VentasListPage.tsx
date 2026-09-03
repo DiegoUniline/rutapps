@@ -55,6 +55,7 @@ export default function VentasListPage() {
   useRealtimeInvalidate({ table: 'venta_lineas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas']], tenantColumn: null });
   useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['entregas']] });
   useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['cxc'], ['saldos']] });
+  useRealtimeInvalidate({ table: 'clientes', empresaId: empresa?.id, queryKeys: [['ventas'], ['clientes']] });
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { fmt: fmtCurrency } = useCurrency();

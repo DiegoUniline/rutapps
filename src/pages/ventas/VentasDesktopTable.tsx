@@ -63,13 +63,25 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     return m;
   }, [items]);
 
+  // La marca puede existir tanto en la venta (fotografía al capturarla) como
+  // en el cliente actual. La lista auxiliar cubre el modo superadministrador
+  // cuando se está visualizando otra empresa y el join todavía no se refresca.
+  const facturaClienteById = useMemo(
+    () => new Map((clientesList ?? []).map((cliente: any) => [cliente.id, cliente.requiere_factura === true])),
+    [clientesList],
+  );
+  const requiereFactura = (row: any) =>
+    row.requiere_factura === true ||
+    row.clientes?.requiere_factura === true ||
+    facturaClienteById.get(row.cliente_id) === true;
+
   const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
     if (k === 'cliente') return r.clientes?.nombre ?? '';
     if (k === 'vendedor') return r.vendedores?.nombre ?? '';
     if (k === 'almacen') return r.almacenes?.nombre ?? '';
     if (k === 'condicion') return CONDICION_LABELS[r.condicion_pago] || r.condicion_pago;
     if (k === 'tipo') return TIPO_LABELS[r.tipo] || r.tipo;
-    if (k === 'factura') return r.clientes?.requiere_factura ? 1 : 0;
+    if (k === 'factura') return requiereFactura(r) ? 1 : 0;
     if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
     if (k === 'subtotal') return resById[r.id]?.sinImpuestos ?? 0;
     if (k === 'descuento') return resById[r.id]?.descuento ?? 0;
@@ -152,7 +164,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 )}
                 {v('factura') && (
                   <td className="py-2 px-3 text-center">
-                    {row.clientes?.requiere_factura ? (
+                    {requiereFactura(row) ? (
                       <span className="inline-flex items-center rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white">
                         FACTURA
                       </span>

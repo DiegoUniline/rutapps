@@ -221,6 +221,7 @@ export interface Venta {
   fecha: string;
   fecha_entrega?: string;
   entrega_inmediata: boolean;
+  requiere_factura?: boolean;
   notas?: string;
   subtotal: number;
   descuento_total: number;
@@ -230,7 +231,7 @@ export interface Venta {
   saldo_pendiente?: number;
   created_at: string;
   // joined
-  clientes?: { nombre: string };
+  clientes?: { nombre: string; requiere_factura?: boolean };
   vendedores?: { nombre: string };
   tarifas?: { nombre: string };
   almacenes?: { nombre: string };
