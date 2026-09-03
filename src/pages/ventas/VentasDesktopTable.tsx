@@ -69,6 +69,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     if (k === 'almacen') return r.almacenes?.nombre ?? '';
     if (k === 'condicion') return CONDICION_LABELS[r.condicion_pago] || r.condicion_pago;
     if (k === 'tipo') return TIPO_LABELS[r.tipo] || r.tipo;
+    if (k === 'factura') return r.clientes?.requiere_factura ? 1 : 0;
     if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
     if (k === 'subtotal') return resById[r.id]?.sinImpuestos ?? 0;
     if (k === 'descuento') return resById[r.id]?.descuento ?? 0;
@@ -79,7 +80,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
   });
 
   // Count visible data columns for the empty/footer colSpan
-  const dataCols = ['folio','tipo','cliente','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','pagado','saldo','status']
+  const dataCols = ['folio','tipo','factura','cliente','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','pagado','saldo','status']
     .filter(k => v(k)).length;
   const totalCols = 1 /* checkbox */ + dataCols + 1 /* chevron */;
 
@@ -92,6 +93,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           </th>
           {v('folio') && <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>}
           {v('tipo') && <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</SortableTh>}
+          {v('factura') && <SortableTh sortKey="factura" sort={sort} onToggle={toggle} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Factura</SortableTh>}
           {v('cliente') && <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>}
           {v('vendedor') && <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Vendedor</SortableTh>}
           {v('almacen') && <SortableTh sortKey="almacen" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Almacén</SortableTh>}
@@ -146,6 +148,17 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                     )}>
                       {TIPO_LABELS[row.tipo] || row.tipo}
                     </span>
+                  </td>
+                )}
+                {v('factura') && (
+                  <td className="py-2 px-3 text-center">
+                    {row.clientes?.requiere_factura ? (
+                      <span className="inline-flex items-center rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white">
+                        FACTURA
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                 )}
                 {v('cliente') && <td className="py-2 px-3 max-w-[180px] truncate">{row.cliente_id ? <ClienteLink id={row.cliente_id}>{row.clientes?.nombre || '—'}</ClienteLink> : 'Público en general'}</td>}
@@ -258,6 +271,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
               <td className="py-2 px-3" />
               {v('folio') && <td className="py-2 px-3 text-muted-foreground">{items.length} ventas</td>}
               {v('tipo') && <td />}
+              {v('factura') && <td />}
               {v('cliente') && <td />}
               {v('vendedor') && <td className="hidden lg:table-cell" />}
               {v('almacen') && <td className="hidden lg:table-cell" />}
