@@ -14,9 +14,20 @@ export interface EditLinea {
   codigo: string;
   cantidad: number;
   precio_unitario: number;
+  precio_unitario_sin_redondeo?: number;
+  precio_display_sin_redondeo?: number;
+  display_unit_price?: number;
+  base_precio?: string;
+  redondeo?: string;
+  descuento_pct?: number;
+  lista_precio_id?: string | null;
+  precio_manual?: boolean;
+  unidad_id?: string | null;
   unidad: string;
   tiene_iva: boolean;
   iva_pct: number;
+  tiene_ieps?: boolean;
+  ieps_pct?: number;
   /** Reparto por lotes (empresas con manejo de lotes) */
   lotes?: { lote_id: string; codigo: string; cantidad: number }[];
 }

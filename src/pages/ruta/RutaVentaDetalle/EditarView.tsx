@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Save, Plus, Minus, Trash2, Search, Package, Boxes } from 'lucide-react';
 import { LotesLineaMovilModal } from '@/components/lotes/LotesLineaMovilModal';
 import { useCurrency } from '@/hooks/useCurrency';
+import { calculateSaleLineAmounts } from '@/lib/salePricing';
 import type { EditLinea } from './types';
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
   setEditCondicion: (v: 'contado' | 'credito' | 'por_definir') => void;
   editNotas: string;
   setEditNotas: (v: string) => void;
-  editTotals: { subtotal: number; iva: number; total: number };
+  editTotals: { subtotal: number; iva: number; ieps?: number; total: number };
   clienteData: any;
   saldoPendienteOtras: number;
   creditoDisponible: number;
@@ -99,11 +100,13 @@ function ProductosSection({ editLineas, updateEditQty, removeEditLine, setShowPr
       <div className="space-y-1.5">
         {editLineas.length === 0 && <p className="text-muted-foreground text-[12px] text-center py-4">Sin productos</p>}
         {editLineas.map((item, idx) => {
-          const lineTotal = item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0));
+          const amounts = calculateSaleLineAmounts(item);
+          const lineTotal = amounts.total;
+          const unitDisplay = item.cantidad > 0 ? lineTotal / item.cantidad : 0;
           return (
             <div key={`${item.producto_id}-${idx}`} className="rounded-lg border border-border/60 p-2.5">
               <div className="flex items-start justify-between gap-2 mb-1.5">
-                <div className="flex-1 min-w-0"><p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p><p className="text-[10px] text-muted-foreground">{item.codigo} · {fmt(item.precio_unitario)} / {item.unidad}</p></div>
+                <div className="flex-1 min-w-0"><p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p><p className="text-[10px] text-muted-foreground">{item.codigo} · {fmt(unitDisplay)} / {item.unidad}</p></div>
                 <button onClick={() => removeEditLine(idx)} className="p-1"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
               </div>
               <div className="flex items-center justify-between">
@@ -164,13 +167,17 @@ function ProductPicker({ setShowProductSearch, setSearchProducto, searchProducto
         {filteredProductos?.map(p => {
           const inEdit = editLineas.find(l => l.producto_id === p.id);
           const inEditIdx = editLineas.findIndex(l => l.producto_id === p.id);
+          const inEditAmounts = inEdit ? calculateSaleLineAmounts(inEdit) : null;
+          const shownUnitPrice = inEdit && inEdit.cantidad > 0
+            ? (inEditAmounts?.total ?? 0) / inEdit.cantidad
+            : Number(p.precio_principal ?? 0);
           return (
             <div key={p.id} className={`rounded-lg px-3 py-2 transition-all ${inEdit ? 'bg-primary/[0.04] ring-1 ring-primary/20' : 'bg-card'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="flex-1 min-w-0" onClick={() => !inEdit && addProductToEdit(p)}>
                   <p className="text-[12.5px] font-medium text-foreground truncate">{p.nombre}</p>
                   <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
-                  <p className="text-[13px] font-bold text-foreground mt-px">{fmt(p.precio_principal ?? 0)}</p>
+                  <p className="text-[13px] font-bold text-foreground mt-px">{fmt(shownUnitPrice)}</p>
                 </div>
                 {inEdit ? (
                   <div className="flex items-center gap-0.5 shrink-0">
@@ -209,10 +216,11 @@ function NotasSection({ editNotas, setEditNotas }: { editNotas: string; setEditN
   );
 }
 
-function TotalesSection({ editTotals, fmt, s }: { editTotals: { subtotal: number; iva: number; total: number }; fmt: (n: number) => string; s: string }) {
+function TotalesSection({ editTotals, fmt, s }: { editTotals: { subtotal: number; iva: number; ieps?: number; total: number }; fmt: (n: number) => string; s: string }) {
   return (
     <section className="bg-card rounded-xl border border-border p-3.5 space-y-1.5">
       <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Subtotal</span><span className="font-medium text-foreground tabular-nums">{fmt(editTotals.subtotal)}</span></div>
+      {(editTotals.ieps ?? 0) > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">IEPS</span><span className="font-medium text-foreground tabular-nums">{fmt(editTotals.ieps ?? 0)}</span></div>}
       {editTotals.iva > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">IVA</span><span className="font-medium text-foreground tabular-nums">{fmt(editTotals.iva)}</span></div>}
       <div className="flex justify-between items-baseline pt-1.5 border-t border-border/60"><span className="text-[13px] font-semibold text-foreground">Total</span><span className="text-[20px] font-bold text-primary tabular-nums">{fmt(editTotals.total)}</span></div>
     </section>

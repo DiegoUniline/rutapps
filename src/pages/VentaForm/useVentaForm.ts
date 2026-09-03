@@ -235,7 +235,15 @@ export function useVentaForm() {
     if (loadedVentaIdRef.current === ventaId) return;
     loadedVentaIdRef.current = ventaId;
 
-    setForm(existingVenta);
+    const clienteVenta = (existingVenta as any).clientes;
+    // `lista_precio_id` se fotografía por línea (ventas no tiene esa columna).
+    // Al reabrir un borrador, hidratarla desde el mismo cliente evita que los
+    // productos nuevos caigan al precio base sin su descuento correspondiente.
+    setForm({
+      ...existingVenta,
+      tarifa_id: (existingVenta as any).tarifa_id ?? clienteVenta?.tarifa_id ?? null,
+      lista_precio_id: clienteVenta?.lista_precio_id ?? null,
+    } as any);
     const existingLines = ((existingVenta as any).venta_lineas ?? []).map((l: any) => {
       const prod = (l as any).productos;
       const unidadData = (l as any).unidades;

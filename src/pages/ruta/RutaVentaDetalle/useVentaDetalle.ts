@@ -20,6 +20,9 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 import { useSaldoFavor } from '@/hooks/useSaldoFavor';
 import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
+import { resolveProductPricing, type ProductForPricing, type TarifaLineaRule } from '@/lib/priceResolver';
+import { buildSalePricingSnapshot, calculateSaleLineAmounts } from '@/lib/salePricing';
+import { saldoVentaTrasEditar } from '@/lib/ventaEditBalance';
 
 export function useVentaDetalle() {
   const { id } = useParams();
@@ -67,7 +70,7 @@ export function useVentaDetalle() {
     queryKey: ['ruta-cliente-detalle', clienteId], enabled: !!clienteId, networkMode: 'always',
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from('clientes').select('id, nombre, telefono, credito, limite_credito, dias_credito').eq('id', clienteId!).single();
+        const { data, error } = await supabase.from('clientes').select('id, nombre, telefono, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id').eq('id', clienteId!).single();
         if (error) throw error; return data;
       } catch {
         const t = getOfflineTable('clientes');
@@ -80,13 +83,37 @@ export function useVentaDetalle() {
     queryKey: ['ruta-productos-edit', empresa?.id], enabled: !!empresa?.id && view === 'editar', networkMode: 'always',
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, iva_pct, maneja_lote, unidades:unidad_venta_id(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre');
+        const { data, error } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, costo, costo_incluye_impuestos, clasificacion_id, usa_listas_precio, lista_id, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, maneja_lote, unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre');
         if (error) throw error; return data ?? [];
       } catch {
         const t = getOfflineTable('productos');
         const all = t ? ((await t.toArray().catch(() => [])) as any[]) : [];
         return all.filter(p => p.empresa_id === empresa!.id && p.se_puede_vender && p.status === 'activo')
           .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+      }
+    },
+  });
+
+  // La venta conserva la tarifa elegida al crearla. Para documentos legacy sin
+  // tarifa, se usa la configuración actual del mismo cliente. La lista vive en
+  // el cliente y queda fotografiada en cada línea, no en el encabezado de venta.
+  const tarifaIdEdicion = (venta as any)?.tarifa_id ?? (clienteData as any)?.tarifa_id ?? null;
+  const listaPrecioIdEdicion = (clienteData as any)?.lista_precio_id ?? null;
+  const { data: tarifaRules } = useQuery({
+    queryKey: ['ruta-tarifa-rules-edit', tarifaIdEdicion],
+    enabled: view === 'editar' && !!tarifaIdEdicion,
+    networkMode: 'always',
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('tarifa_lineas')
+          .select('aplica_a, producto_ids, clasificacion_ids, grupos, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
+          .eq('tarifa_id', tarifaIdEdicion!);
+        if (error) throw error;
+        return (data ?? []) as TarifaLineaRule[];
+      } catch {
+        const t = getOfflineTable('tarifa_lineas');
+        const all = t ? ((await t.toArray().catch(() => [])) as any[]) : [];
+        return all.filter(r => r.tarifa_id === tarifaIdEdicion) as TarifaLineaRule[];
       }
     },
   });
@@ -139,21 +166,48 @@ export function useVentaDetalle() {
   const { data: pagosVenta } = useQuery({
     queryKey: ['ruta-venta-pagos', id],
     enabled: !!id,
+    networkMode: 'always',
     queryFn: async () => {
-      const { data } = await supabase
-        .from('cobro_aplicaciones')
-        .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia, status)')
-        .eq('venta_id', id!)
-        .order('created_at');
-      return data ?? [];
+      try {
+        const { data, error } = await supabase
+          .from('cobro_aplicaciones')
+          .select('id, monto_aplicado, cobro_id, cobros(fecha, metodo_pago, referencia, status)')
+          .eq('venta_id', id!)
+          .order('created_at');
+        if (error) throw error;
+        return data ?? [];
+      } catch {
+        const appsTable = getOfflineTable('cobro_aplicaciones');
+        const cobrosTable = getOfflineTable('cobros');
+        const apps = appsTable ? ((await appsTable.toArray().catch(() => [])) as any[]) : [];
+        const cobros = cobrosTable ? ((await cobrosTable.toArray().catch(() => [])) as any[]) : [];
+        const cobrosById = new Map(cobros.map(c => [c.id, c]));
+        return apps
+          .filter(a => a.venta_id === id)
+          .map(a => ({ ...a, cobros: cobrosById.get(a.cobro_id) ?? null }));
+      }
     },
   });
 
   const editTotals = useMemo(() => {
-    let subtotal = 0, iva = 0;
-    editLineas.forEach(item => { const s = item.precio_unitario * item.cantidad; subtotal += s; if (item.tiene_iva) iva += s * (item.iva_pct / 100); });
-    return { subtotal, iva, total: subtotal + iva };
-  }, [editLineas]);
+    let subtotal = 0, iva = 0, ieps = 0, totalLineas = 0;
+    editLineas.forEach(item => {
+      const amounts = calculateSaleLineAmounts(item);
+      subtotal += amounts.subtotal;
+      iva += amounts.iva;
+      ieps += amounts.ieps;
+      totalLineas += amounts.total;
+    });
+    const extra = Number((venta as any)?.descuento_extra) || 0;
+    const extraTipo = (venta as any)?.descuento_extra_tipo || 'porcentaje';
+    const extraMonto = extraTipo === 'monto' ? extra : totalLineas * extra / 100;
+    return {
+      subtotal: roundMoney(subtotal),
+      iva: roundMoney(iva),
+      ieps: roundMoney(ieps),
+      total: roundMoney(Math.max(0, totalLineas - extraMonto)),
+    };
+  }, [editLineas, (venta as any)?.descuento_extra, (venta as any)?.descuento_extra_tipo]);
 
   const saldoPendienteOtras = ventasPendientesCredito ?? 0;
   const creditoDisponible = clienteData ? (clienteData.limite_credito ?? 0) - saldoPendienteOtras : 0;
@@ -205,7 +259,28 @@ export function useVentaDetalle() {
         }
       } catch { /* offline o sin permisos: se re-asigna FEFO al guardar */ }
     }
-    setEditLineas(lineas.map((l: any) => ({ id: l.id, producto_id: l.producto_id, nombre: l.productos?.nombre ?? l.descripcion ?? '', codigo: l.productos?.codigo ?? '', cantidad: l.cantidad, precio_unitario: l.precio_unitario, unidad: l.unidades?.abreviatura ?? 'pz', tiene_iva: (l.iva_pct ?? 0) > 0, iva_pct: l.iva_pct ?? 0, lotes: lotesPorLinea[l.id] ?? [] })));
+    setEditLineas(lineas.map((l: any) => ({
+      id: l.id,
+      producto_id: l.producto_id,
+      nombre: l.productos?.nombre ?? l.descripcion ?? '',
+      codigo: l.productos?.codigo ?? '',
+      cantidad: Number(l.cantidad) || 0,
+      precio_unitario: Number(l.precio_unitario) || 0,
+      precio_unitario_sin_redondeo: l.precio_unitario_sin_redondeo == null ? undefined : Number(l.precio_unitario_sin_redondeo),
+      precio_display_sin_redondeo: l.precio_display_sin_redondeo == null ? undefined : Number(l.precio_display_sin_redondeo),
+      base_precio: l.base_precio ?? undefined,
+      redondeo: l.redondeo ?? 'ninguno',
+      descuento_pct: Number(l.descuento_pct) || 0,
+      lista_precio_id: l.lista_precio_id ?? null,
+      precio_manual: !!l.precio_manual,
+      unidad_id: l.unidad_id ?? null,
+      unidad: l.unidades?.abreviatura ?? 'pz',
+      tiene_iva: Number(l.iva_pct ?? 0) > 0,
+      iva_pct: Number(l.iva_pct) || 0,
+      tiene_ieps: Number(l.ieps_pct ?? 0) > 0,
+      ieps_pct: Number(l.ieps_pct) || 0,
+      lotes: lotesPorLinea[l.id] ?? [],
+    })));
     setEditCondicion(venta.condicion_pago as any);
     setEditNotas(venta.notas ?? '');
     setView('editar');
@@ -214,7 +289,49 @@ export function useVentaDetalle() {
   const addProductToEdit = (p: any) => {
     const existing = editLineas.find(l => l.producto_id === p.id);
     if (existing) { setEditLineas(prev => prev.map(l => l.producto_id === p.id ? { ...l, cantidad: l.cantidad + 1 } : l)); }
-    else { setEditLineas(prev => [...prev, { producto_id: p.id, nombre: p.nombre, codigo: p.codigo, cantidad: 1, precio_unitario: p.precio_principal ?? 0, unidad: (p.unidades as any)?.abreviatura || 'pz', tiene_iva: p.tiene_iva ?? false, iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0 }]); }
+    else {
+      if (tarifaIdEdicion && tarifaRules === undefined) {
+        toast.error('Espera a que cargue la lista de precios del cliente');
+        return;
+      }
+      const productForPricing: ProductForPricing = {
+        id: p.id,
+        precio_principal: Number(p.precio_principal) || 0,
+        costo: Number(p.costo) || 0,
+        costo_incluye_impuestos: !!p.costo_incluye_impuestos,
+        clasificacion_id: p.clasificacion_id ?? null,
+        usa_listas_precio: p.usa_listas_precio,
+        lista_id: p.lista_id ?? null,
+        tiene_iva: !!p.tiene_iva,
+        iva_pct: Number(p.iva_pct ?? 16),
+        tiene_ieps: !!p.tiene_ieps || Number(p.ieps_pct ?? 0) > 0,
+        ieps_pct: Number(p.ieps_pct ?? 0),
+        ieps_tipo: p.ieps_tipo,
+      };
+      const pricing = resolveProductPricing(tarifaRules ?? [], productForPricing, listaPrecioIdEdicion);
+      const snapshot = buildSalePricingSnapshot(productForPricing, pricing);
+      setEditLineas(prev => [...prev, {
+        producto_id: p.id,
+        nombre: p.nombre,
+        codigo: p.codigo,
+        cantidad: 1,
+        precio_unitario: snapshot.unitPrice,
+        precio_unitario_sin_redondeo: snapshot.rawUnitPrice,
+        precio_display_sin_redondeo: snapshot.rawDisplayPrice,
+        display_unit_price: snapshot.displayPrice,
+        base_precio: snapshot.basePrecio,
+        redondeo: snapshot.redondeo,
+        descuento_pct: 0,
+        lista_precio_id: listaPrecioIdEdicion,
+        precio_manual: false,
+        unidad_id: p.unidad_venta_id ?? null,
+        unidad: (p.unidades as any)?.abreviatura || 'pz',
+        tiene_iva: !!p.tiene_iva,
+        iva_pct: p.tiene_iva ? Number(p.iva_pct ?? 16) : 0,
+        tiene_ieps: !!p.tiene_ieps || Number(p.ieps_pct ?? 0) > 0,
+        ieps_pct: Number(p.ieps_pct ?? 0),
+      }]);
+    }
   };
 
   const updateEditQty = (idx: number, delta: number) => { setEditLineas(prev => prev.map((l, i) => i !== idx ? l : l.cantidad + delta > 0 ? { ...l, cantidad: l.cantidad + delta } : l)); };
@@ -222,6 +339,7 @@ export function useVentaDetalle() {
 
   const handleSaveEdits = async () => {
     if (editLineas.length === 0) { toast.error('Agrega al menos un producto'); return; }
+    if (pagosVenta === undefined) { toast.error('Espera a que carguen los pagos del pedido'); return; }
     // Lotes: lo loteado debe cuadrar EXACTO con la cantidad de cada línea.
     if (manejaLotesEmpresa) {
       const sinLotear = editLineas.filter(l => lotePendienteEdit(l) !== 0);
@@ -232,10 +350,41 @@ export function useVentaDetalle() {
     }
     setSaving(true);
     try {
-      // Ids determinísticos por (venta, posición): permiten colgar los lotes de
-      // cada línea y que un reintento no duplique nada.
-      const newIds = await Promise.all(editLineas.map((_, idx) => deterministicUuid('vlinea-edit', id!, idx)));
-      const newLineas = editLineas.map((item, idx) => ({ id: newIds[idx], venta_id: id!, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, subtotal: item.precio_unitario * item.cantidad, iva_pct: item.iva_pct, iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0, ieps_pct: 0, ieps_monto: 0, descuento_pct: 0, total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)), lote_id: item.lotes?.[0]?.lote_id ?? null }));
+      if ((venta as any)?.cerrado_at && !navigator.onLine) {
+        throw new Error('Conéctate a internet para reabrir este pedido cerrado antes de editarlo.');
+      }
+      if ((venta as any)?.cerrado_at) {
+        const { error: reopenErr } = await supabase.rpc('reabrir_pedido_parcial', { p_venta_id: id! });
+        if (reopenErr) throw reopenErr;
+      }
+
+      // Las líneas existentes conservan su ID; las nuevas usan un ID estable por
+      // venta + producto. Reintentar el guardado no inserta duplicados.
+      const newIds = await Promise.all(editLineas.map(item =>
+        item.id ?? deterministicUuid('vlinea-edit', id!, item.producto_id)));
+      const newLineas = editLineas.map((item, idx) => {
+        const amounts = calculateSaleLineAmounts(item);
+        return {
+          id: newIds[idx],
+          venta_id: id!,
+          producto_id: item.producto_id,
+          descripcion: item.nombre,
+          cantidad: item.cantidad,
+          unidad_id: item.unidad_id ?? null,
+          precio_unitario: item.precio_unitario,
+          precio_unitario_sin_redondeo: item.precio_unitario_sin_redondeo ?? item.precio_unitario,
+          descuento_pct: item.descuento_pct ?? 0,
+          subtotal: amounts.subtotal,
+          iva_pct: item.tiene_iva ? item.iva_pct : 0,
+          iva_monto: amounts.iva,
+          ieps_pct: item.tiene_ieps ? (item.ieps_pct ?? 0) : 0,
+          ieps_monto: amounts.ieps,
+          total: amounts.total,
+          lista_precio_id: item.lista_precio_id ?? null,
+          precio_manual: item.precio_manual ?? false,
+          lote_id: item.lotes?.[0]?.lote_id ?? null,
+        };
+      });
 
       const loteRows: any[] = [];
       for (let idx = 0; idx < editLineas.length; idx++) {
@@ -250,7 +399,18 @@ export function useVentaDetalle() {
         }
       }
 
-      const ventaUpdate = { condicion_pago: editCondicion as any, notas: editNotas || null, subtotal: editTotals.subtotal, iva_total: editTotals.iva, total: editTotals.total, saldo_pendiente: editTotals.total };
+      // El saldo nuevo se calcula contra cobros REALES activos. Nunca se infiere
+      // como total anterior - saldo anterior, porque eso marcaría como pagados
+      // los productos recién agregados a un pedido ya liquidado.
+      const ventaUpdate = {
+        condicion_pago: editCondicion as any,
+        notas: editNotas || null,
+        subtotal: editTotals.subtotal,
+        iva_total: editTotals.iva,
+        ieps_total: editTotals.ieps,
+        total: editTotals.total,
+        saldo_pendiente: saldoVentaTrasEditar(editTotals.total, pagosVenta as any[]),
+      };
 
       if (navigator.onLine) {
         // Los lotes previos se borran primero (FK a venta_linea_id) y se
@@ -259,7 +419,8 @@ export function useVentaDetalle() {
         const { error: linErr } = await supabase.from('venta_lineas').upsert(newLineas as any).select('id');
         if (linErr) throw linErr;
         // Se eliminan las líneas que ya no forman parte de la venta.
-        await supabase.from('venta_lineas').delete().eq('venta_id', id!).not('id', 'in', `(${newIds.join(',')})`);
+        const { error: deleteErr } = await supabase.from('venta_lineas').delete().eq('venta_id', id!).not('id', 'in', `(${newIds.join(',')})`);
+        if (deleteErr) throw deleteErr;
         if (loteRows.length > 0) {
           const { error: llErr } = await supabase.from('venta_linea_lotes').insert(loteRows as any);
           if (llErr) throw llErr;
@@ -561,10 +722,20 @@ export function useVentaDetalle() {
     try {
       const prevStatus = venta.status;
       if (navigator.onLine) {
+        // Un cierre congela total_efectivo. Antes de permitir nuevas líneas hay
+        // que liberar formalmente ese cierre; cambiar solo el status dejaba el
+        // saldo anclado al total anterior y los productos nuevos parecían pagados.
+        if ((venta as any).cerrado_at) {
+          const { error: reopenErr } = await supabase.rpc('reabrir_pedido_parcial', { p_venta_id: venta.id });
+          if (reopenErr) throw reopenErr;
+        }
         const { error } = await supabase.from('ventas').update({ status: 'borrador' as const }).eq('id', venta.id);
         if (error) throw error;
         await logHistorial(venta.id, 'vuelta_borrador', { status: { anterior: prevStatus, nuevo: 'borrador' } });
       } else {
+        if ((venta as any).cerrado_at) {
+          throw new Error('Conéctate a internet para reabrir este pedido cerrado.');
+        }
         await queueOperation('ventas', 'update', { id: venta.id, status: 'borrador' });
       }
       toast.success('Venta regresada a borrador');
