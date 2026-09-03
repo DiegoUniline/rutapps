@@ -34,14 +34,17 @@ import { cn, todayInTimezone, zonedDayRangeISO } from '@/lib/utils';
 import { tocaVisitaPorFrecuencia } from '@/lib/frecuenciaVisita';
 
 import { useCurrency } from '@/hooks/useCurrency';
-import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
-import { GoogleMap, InfoWindow, Marker } from '@react-google-maps/api';
-import { MultiRouteOverlay, type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
-import LiveVendedoresLayer from '@/components/LiveVendedoresLayer';
-import VendedorRecorridoLayer from '@/components/VendedorRecorridoLayer';
+import { FullscreenControl, Map as MapGL, Marker, NavigationControl, Popup, type MapRef } from 'react-map-gl/maplibre';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
+import { MultiRouteOverlayML } from '@/components/maps/MultiRouteOverlayML';
+import LiveVendedoresLayerML from '@/components/LiveVendedoresLayerML';
+import VendedorRecorridoLayerML from '@/components/VendedorRecorridoLayerML';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
 
 const MAP_CENTER = { lat: 20.6597, lng: -103.3496 };
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/bright';
 
 const ROUTE_COLORS = [
   '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6',
@@ -850,17 +853,15 @@ export default function SupervisorDashboardPage() {
         {/* Top (mobile) / Left (desktop): Map */}
         <div className="lg:flex-[3] flex flex-col min-w-0 h-[50vh] lg:h-auto shrink-0 lg:shrink">
           <div className="relative flex-1 min-h-0">
-            <GoogleMapsProvider>
-              <SupervisorMap
-                markers={mapMarkers}
-                sellerLocations={sellerLocations}
-                selectedClientId={selectedClientId}
-                onSelectClient={handleSelectClient}
-                recorridoUserId={recorridoUserId}
-                recorridoFecha={recorridoFecha}
-                multiRoutes={multiRouteEntries}
-              />
-            </GoogleMapsProvider>
+            <SupervisorMap
+              markers={mapMarkers}
+              sellerLocations={sellerLocations}
+              selectedClientId={selectedClientId}
+              onSelectClient={handleSelectClient}
+              recorridoUserId={recorridoUserId}
+              recorridoFecha={recorridoFecha}
+              multiRoutes={multiRouteEntries}
+            />
             {/* Selector flotante: ver recorrido de un vendedor en una fecha */}
             <div className="absolute top-2 left-2 right-2 sm:right-auto z-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs">
               <div className="flex items-center gap-1.5">
@@ -1553,10 +1554,9 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
   recorridoFecha?: string;
   multiRoutes?: RouteResultEntry[];
 }) {
-  const { isLoaded } = useGoogleMaps();
   const [selected, setSelected] = useState<MarkerPoint | null>(null);
   const [selectedSellerLoc, setSelectedSellerLoc] = useState<SellerLocation | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapRef = useRef<MapRef | null>(null);
 
   const center = useMemo(() => {
     const allPoints = [...markers.map(m => ({ lat: m.lat, lng: m.lng })), ...sellerLocations.map(s => ({ lat: s.lat, lng: s.lng }))];
@@ -1572,17 +1572,9 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
     const icon = visitado
       ? `<polyline points="9,20 13,24 20,15" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
       : `<line x1="10" y1="15" x2="18" y2="23" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><line x1="18" y1="15" x2="10" y2="23" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>`;
-    const label = orden != null ? `<text x="14" y="14" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="9" font-weight="bold" font-family="Arial,sans-serif">${orden}</text>` : '';
-    // Warning badge overlay (top-right) when visited far away
     const warning = outOfRange
       ? `<g transform="translate(18,-2)"><circle cx="6" cy="6" r="6" fill="#f59e0b" stroke="#fff" stroke-width="1.2"/><text x="6" y="8.5" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold" font-family="Arial,sans-serif">!</text></g>`
       : '';
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-      <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
-      ${orden != null ? label : icon}
-      ${orden != null ? icon.replace(/stroke-width="2.5"/g, 'stroke-width="0"') : ''}
-    </svg>`;
-    // If we have orden, show the number on top and a small check/x at bottom
     const svgFinal = orden != null
       ? `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
           <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
@@ -1594,122 +1586,128 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
           ${icon}
           ${warning}
         </svg>`;
-    return {
-      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgFinal),
-      scaledSize: new google.maps.Size(w, h),
-      anchor: new google.maps.Point(w / 2, h),
-    };
-  }, []);
-
-  const makeSellerIcon = useCallback((nombre: string) => {
-    const size = 36;
-    const initial = (nombre || '?')[0].toUpperCase();
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="#3b82f6" stroke="#fff" stroke-width="3"/>
-      <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="16" font-weight="bold" font-family="Arial,sans-serif">${initial}</text>
-    </svg>`;
-    return {
-      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-      scaledSize: new google.maps.Size(size, size),
-      anchor: new google.maps.Point(size / 2, size / 2),
-    };
+    return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgFinal);
   }, []);
 
   const fitBounds = useCallback(() => {
-    if (mapRef.current && markers.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      markers.forEach(m => bounds.extend({ lat: m.lat, lng: m.lng }));
-      sellerLocations.forEach(s => bounds.extend({ lat: s.lat, lng: s.lng }));
-      mapRef.current.fitBounds(bounds, 60);
-    }
+    if (!mapRef.current) return;
+    const points = [...markers, ...sellerLocations];
+    if (points.length === 0) return;
+    const bounds = new maplibregl.LngLatBounds();
+    points.forEach((point) => bounds.extend([Number(point.lng), Number(point.lat)]));
+    mapRef.current.fitBounds(bounds, { padding: 60, duration: 400, maxZoom: 15 });
   }, [markers, sellerLocations]);
-
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    fitBounds();
-  }, [fitBounds]);
 
   useEffect(() => {
     if (!selectedClientId || !mapRef.current) return;
     const marker = markers.find(m => m.id === selectedClientId);
     if (marker) {
-      mapRef.current.panTo({ lat: marker.lat, lng: marker.lng });
-      mapRef.current.setZoom(16);
+      mapRef.current.flyTo({ center: [marker.lng, marker.lat], zoom: 16, duration: 500 });
       setSelected(marker);
     }
   }, [selectedClientId, markers]);
 
   useEffect(() => { fitBounds(); }, [fitBounds]);
 
-  if (!isLoaded) return <div className="flex-1 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Cargando mapa...</div>;
   if (markers.length === 0 && sellerLocations.length === 0) return <div className="flex-1 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
 
+  const clientesById = new Map(markers.map(m => [m.id, {
+    id: m.id,
+    nombre: m.nombre,
+    gps_lat: m.lat,
+    gps_lng: m.lng,
+    visitado: m.visitado,
+    outOfRange: m.outOfRange,
+    outOfRangeMeters: m.outOfRangeMeters,
+  }]));
+  const routeVisibility = Object.fromEntries(multiRoutes.map(route => [route.vendedor_id, true]));
+
   return (
-    <GoogleMap
-      mapContainerStyle={{ width: '100%', height: '100%' }}
-      center={center}
-      zoom={12}
-      onLoad={onMapLoad}
-      options={{
-        disableDefaultUI: true, zoomControl: true, streetViewControl: false, mapTypeControl: false, fullscreenControl: true,
-        styles: [
-          { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-          { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-          { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-        ],
+    <MapGL
+      ref={mapRef}
+      mapStyle={MAP_STYLE}
+      initialViewState={{
+        longitude: center.lng,
+        latitude: center.lat,
+        zoom: 12,
       }}
+      style={{ width: '100%', height: '100%' }}
+      attributionControl={{ compact: true }}
+      onLoad={fitBounds}
     >
+      <NavigationControl position="top-right" showCompass={false} />
+      <FullscreenControl position="top-right" />
+
       {/* Marcadores base: ocultos cuando hay multirruta para evitar duplicados */}
       {multiRoutes.length === 0 && markers.map((m) => (
-        <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }}
-          onClick={() => { setSelected(m); setSelectedSellerLoc(null); onSelectClient?.(m.id); }}
-          icon={makePinIcon(m.orden, m.visitado, m.outOfRange)}
-          title={m.outOfRange ? `${m.nombre} — ⚠️ Visitado a ${m.outOfRangeMeters ?? '?'} m del cliente` : m.nombre}
-        />
+        <Marker key={m.id} longitude={m.lng} latitude={m.lat} anchor="bottom"
+          onClick={(event) => {
+            event.originalEvent.stopPropagation();
+            setSelected(m);
+            setSelectedSellerLoc(null);
+            onSelectClient?.(m.id);
+          }}
+        >
+          <button type="button" className="block transition-transform hover:scale-110"
+            title={m.outOfRange ? `${m.nombre} — ⚠️ Visitado a ${m.outOfRangeMeters ?? '?'} m del cliente` : m.nombre}>
+            <img src={makePinIcon(m.orden, m.visitado, m.outOfRange)} alt="" className="h-10 w-7" />
+          </button>
+        </Marker>
       ))}
+
       {/* Multi-route overlay (polilíneas guardadas + paradas numeradas por color de vendedor, con estado de visita) */}
       {multiRoutes.length > 0 && (
-        <MultiRouteOverlay
+        <MultiRouteOverlayML
           results={multiRoutes}
-          clientesById={new Map(markers.map(m => [m.id, {
-            id: m.id, nombre: m.nombre, gps_lat: m.lat, gps_lng: m.lng,
-            visitado: m.visitado, outOfRange: m.outOfRange, outOfRangeMeters: m.outOfRangeMeters,
-          }]))}
-          visibility={Object.fromEntries(multiRoutes.map(r => [r.vendedor_id, true]))}
+          clientesById={clientesById}
+          visibility={routeVisibility}
           hidePolylines
         />
       )}
-      {/* Hit-area invisible para abrir InfoWindow con detalle del cliente sobre el overlay */}
+
+      {/* Área transparente para abrir el detalle sobre los marcadores de multirruta. */}
       {multiRoutes.length > 0 && markers.map((m) => (
-        <Marker
-          key={`hit-${m.id}`}
-          position={{ lat: m.lat, lng: m.lng }}
-          onClick={() => { setSelected(m); setSelectedSellerLoc(null); onSelectClient?.(m.id); }}
-          icon={{
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 16,
-            fillColor: '#000',
-            fillOpacity: 0.001,
-            strokeOpacity: 0,
+        <Marker key={`hit-${m.id}`} longitude={m.lng} latitude={m.lat} anchor="center"
+          onClick={(event) => {
+            event.originalEvent.stopPropagation();
+            setSelected(m);
+            setSelectedSellerLoc(null);
+            onSelectClient?.(m.id);
           }}
-          zIndex={9999}
-          title={m.outOfRange ? `${m.nombre} — ⚠️ Visitado a ${m.outOfRangeMeters ?? '?'} m del cliente` : m.nombre}
-        />
+        >
+          <button type="button" className="h-9 w-9 rounded-full bg-transparent"
+            aria-label={`Ver ${m.nombre}`}
+            title={m.outOfRange ? `${m.nombre} — ⚠️ Visitado a ${m.outOfRangeMeters ?? '?'} m del cliente` : m.nombre} />
+        </Marker>
       ))}
+
       {sellerLocations.map((s) => (
-        <Marker key={`seller-${s.id}`} position={{ lat: s.lat, lng: s.lng }}
-          onClick={() => { setSelectedSellerLoc(s); setSelected(null); }}
-          icon={makeSellerIcon(s.nombre)} zIndex={1000} />
+        <Marker key={`seller-${s.id}`} longitude={s.lng} latitude={s.lat} anchor="center"
+          onClick={(event) => {
+            event.originalEvent.stopPropagation();
+            setSelectedSellerLoc(s);
+            setSelected(null);
+          }}
+        >
+          <button type="button"
+            title={s.nombre}
+            className="flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-white bg-blue-500 text-sm font-bold text-white shadow-md transition-transform hover:scale-110">
+            {(s.nombre || '?')[0].toUpperCase()}
+          </button>
+        </Marker>
       ))}
+
       {/* Vendedores en vivo (transmiten desde la app móvil) */}
-      <LiveVendedoresLayer enabled />
+      <LiveVendedoresLayerML enabled />
       {/* Recorrido histórico del vendedor seleccionado (fecha) */}
       {recorridoUserId && recorridoFecha && (
-        <VendedorRecorridoLayer userId={recorridoUserId} fecha={recorridoFecha} />
+        <VendedorRecorridoLayerML userId={recorridoUserId} fecha={recorridoFecha} />
       )}
+
       {selected && (
-        <InfoWindow position={{ lat: selected.lat, lng: selected.lng }} onCloseClick={() => setSelected(null)}>
-          <div className="space-y-1 p-1 text-xs">
+        <Popup longitude={selected.lng} latitude={selected.lat} anchor="bottom" offset={32}
+          closeOnClick={false} onClose={() => setSelected(null)}>
+          <div className="space-y-1 p-1 text-xs text-foreground">
             {selected.orden != null && <p className="font-bold text-sm">#{selected.orden}</p>}
             <p className="font-semibold">{selected.nombre}</p>
             <p style={{ color: '#6b7280' }}>{selected.vendedorNombre}</p>
@@ -1721,16 +1719,17 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
             )}
             {selected.diasSinComprar !== null && <p>{selected.diasSinComprar} días sin comprar</p>}
           </div>
-        </InfoWindow>
+        </Popup>
       )}
       {selectedSellerLoc && (
-        <InfoWindow position={{ lat: selectedSellerLoc.lat, lng: selectedSellerLoc.lng }} onCloseClick={() => setSelectedSellerLoc(null)}>
-          <div className="space-y-1 p-1 text-xs">
+        <Popup longitude={selectedSellerLoc.lng} latitude={selectedSellerLoc.lat} anchor="bottom" offset={24}
+          closeOnClick={false} onClose={() => setSelectedSellerLoc(null)}>
+          <div className="space-y-1 p-1 text-xs text-foreground">
             <p className="font-bold text-sm" style={{ color: '#3b82f6' }}>📍 {selectedSellerLoc.nombre}</p>
             <p style={{ color: '#6b7280' }}>Última visita: {selectedSellerLoc.hora}</p>
           </div>
-        </InfoWindow>
+        </Popup>
       )}
-    </GoogleMap>
+    </MapGL>
   );
 }
