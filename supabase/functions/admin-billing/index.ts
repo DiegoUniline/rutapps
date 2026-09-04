@@ -79,6 +79,165 @@ function getCustomerId(customer: unknown): string | null {
   return null;
 }
 
+function getStripeObjectId(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "id" in value) {
+    const id = (value as { id?: unknown }).id;
+    return typeof id === "string" ? id : null;
+  }
+  return null;
+}
+
+function stripeTimestamp(value: unknown): string | null {
+  return typeof value === "number" && Number.isFinite(value)
+    ? new Date(value * 1000).toISOString()
+    : null;
+}
+
+function compactStripeInvoice(invoice: any) {
+  if (!invoice) return null;
+  const remaining = typeof invoice.amount_remaining === "number"
+    ? invoice.amount_remaining
+    : Math.max(0, Number(invoice.amount_due || 0) - Number(invoice.amount_paid || 0));
+  const trulyPaid = remaining === 0 && Number(invoice.amount_paid || 0) > 0;
+  return {
+    id: invoice.id,
+    number: invoice.number || null,
+    status: trulyPaid ? "paid" : (invoice.status || "open"),
+    amount: Number(invoice.amount_paid || invoice.amount_due || 0) / 100,
+    paid_at: trulyPaid
+      ? stripeTimestamp(invoice.status_transitions?.paid_at || invoice.created)
+      : null,
+    created_at: stripeTimestamp(invoice.created),
+    period_start: stripeTimestamp(invoice.period_start),
+    period_end: stripeTimestamp(invoice.period_end),
+    stripe_invoice_id: invoice.id,
+  };
+}
+
+function compactLocalInvoice(invoice: any) {
+  if (!invoice) return null;
+  return {
+    id: invoice.id,
+    number: invoice.numero_factura || null,
+    status: invoice.estado || "pendiente",
+    amount: Number(invoice.total || 0),
+    paid_at: invoice.fecha_pago || null,
+    created_at: invoice.fecha_emision || invoice.creado_en || null,
+    period_start: invoice.periodo_inicio || null,
+    period_end: invoice.periodo_fin || null,
+    es_prorrateo: invoice.es_prorrateo === true,
+    stripe_invoice_id: invoice.stripe_invoice_id || null,
+  };
+}
+
+function compactCard(paymentMethod: any) {
+  const card = paymentMethod?.card;
+  if (!card?.last4) return null;
+  return {
+    brand: card.brand || "card",
+    last4: card.last4,
+    exp_month: Number(card.exp_month || 0),
+    exp_year: Number(card.exp_year || 0),
+    funding: card.funding || null,
+  };
+}
+
+async function listAllStripeSubscriptions(stripe: Stripe): Promise<any[]> {
+  const rows: any[] = [];
+  let startingAfter: string | undefined;
+  for (let pageIndex = 0; pageIndex < 20; pageIndex++) {
+    const page = await stripe.subscriptions.list({
+      status: "all",
+      limit: 100,
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+      expand: ["data.items.data.price.product", "data.default_payment_method", "data.customer"],
+    });
+    rows.push(...page.data);
+    if (!page.has_more || page.data.length === 0) break;
+    startingAfter = page.data[page.data.length - 1].id;
+  }
+  return rows;
+}
+
+async function listAllStripeInvoices(stripe: Stripe): Promise<any[]> {
+  const rows: any[] = [];
+  let startingAfter: string | undefined;
+  for (let pageIndex = 0; pageIndex < 20; pageIndex++) {
+    const page = await stripe.invoices.list({
+      limit: 100,
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+    rows.push(...page.data);
+    if (!page.has_more || page.data.length === 0) break;
+    startingAfter = page.data[page.data.length - 1].id;
+  }
+  return rows;
+}
+
+async function resolveSubscriptionCard(
+  stripe: Stripe,
+  stripeSub: any,
+  dbPaymentMethodId?: string | null,
+) {
+  if (!stripeSub) return { payment_method_id: dbPaymentMethodId || null, card: null };
+
+  const customer = typeof stripeSub.customer === "object" ? stripeSub.customer : null;
+  const candidates = [
+    stripeSub.default_payment_method,
+    customer?.invoice_settings?.default_payment_method,
+    dbPaymentMethodId,
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const id = getStripeObjectId(candidate);
+    const embeddedCard = compactCard(candidate);
+    if (embeddedCard) return { payment_method_id: id, card: embeddedCard };
+    if (id?.startsWith("pm_")) {
+      try {
+        const method = await stripe.paymentMethods.retrieve(id);
+        const card = compactCard(method);
+        if (card) return { payment_method_id: id, card };
+      } catch (_) { /* continuar con el siguiente origen */ }
+    }
+  }
+
+  const customerId = getCustomerId(stripeSub.customer);
+  if (customerId) {
+    try {
+      const methods = await stripe.paymentMethods.list({ customer: customerId, type: "card", limit: 10 });
+      const method = methods.data[0];
+      if (method) return { payment_method_id: method.id, card: compactCard(method) };
+    } catch (_) { /* cliente sin PaymentMethods modernos */ }
+
+    try {
+      const stripeCustomer = await stripe.customers.retrieve(customerId);
+      if (!("deleted" in stripeCustomer && stripeCustomer.deleted)) {
+        const sourceId = getStripeObjectId((stripeCustomer as any).default_source);
+        if (sourceId) {
+          const source = await stripe.customers.retrieveSource(customerId, sourceId);
+          const sourceCard = (source as any)?.object === "card" ? source : null;
+          if (sourceCard?.last4) {
+            return {
+              payment_method_id: sourceId,
+              card: {
+                brand: sourceCard.brand || "card",
+                last4: sourceCard.last4,
+                exp_month: Number(sourceCard.exp_month || 0),
+                exp_year: Number(sourceCard.exp_year || 0),
+                funding: sourceCard.funding || null,
+              },
+            };
+          }
+        }
+      }
+    } catch (_) { /* no exponer un fallo de tarjeta como fallo del endpoint */ }
+  }
+
+  return { payment_method_id: getStripeObjectId(stripeSub.default_payment_method) || dbPaymentMethodId || null, card: null };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -392,6 +551,215 @@ Deno.serve(async (req) => {
       });
 
       return new Response(JSON.stringify({ subscriptions: mapped }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Auditoría de solo lectura: compara alta, trial, suscripción local, Stripe,
+    // tarjeta e invoices. No actualiza ninguna tabla ni objeto de Stripe.
+    if (action === "audit_subscriptions") {
+      const [empresasRes, subscriptionsRes, facturasRes, allStripeSubscriptions, allStripeInvoices] = await Promise.all([
+        supabase.from("empresas")
+          .select("id, nombre, email, created_at, is_partner_sandbox")
+          .order("created_at", { ascending: false }),
+        supabase.from("subscriptions")
+          .select("id, empresa_id, status, trial_ends_at, current_period_start, current_period_end, fecha_vencimiento, acceso_bloqueado, es_manual, cancel_at_period_end, stripe_customer_id, stripe_subscription_id, stripe_payment_method_id, stripe_sync_error, max_usuarios, updated_at, subscription_plans(nombre)"),
+        supabase.from("facturas")
+          .select("id, empresa_id, suscripcion_id, numero_factura, concepto, estado, total, fecha_pago, fecha_emision, creado_en, periodo_inicio, periodo_fin, es_prorrateo, stripe_invoice_id"),
+        listAllStripeSubscriptions(stripe),
+        listAllStripeInvoices(stripe),
+      ]);
+
+      if (empresasRes.error) throw empresasRes.error;
+      if (subscriptionsRes.error) throw subscriptionsRes.error;
+      if (facturasRes.error) throw facturasRes.error;
+
+      const empresas = empresasRes.data || [];
+      const dbSubscriptions = (subscriptionsRes.data || []) as any[];
+      const localInvoices = (facturasRes.data || []) as any[];
+      const dbStripeIds = new Set(dbSubscriptions.map(s => s.stripe_subscription_id).filter(Boolean));
+      const relevantStripeSubscriptions = allStripeSubscriptions.filter(s => dbStripeIds.has(s.id) || isRutappSubscription(s));
+
+      // Suscripciones antiguas pueden usar productos que ya no están en la lista
+      // vigente. Si la BD las referencia, se recuperan individualmente.
+      const stripeById = new Map(relevantStripeSubscriptions.map(s => [s.id, s]));
+      for (const stripeId of dbStripeIds) {
+        if (stripeById.has(stripeId)) continue;
+        try {
+          const retrieved = await stripe.subscriptions.retrieve(stripeId, {
+            expand: ["items.data.price.product", "default_payment_method", "customer"],
+          });
+          relevantStripeSubscriptions.push(retrieved);
+          stripeById.set(retrieved.id, retrieved);
+        } catch (_) { /* la vista reportará el ID local como inexistente en Stripe */ }
+      }
+
+      const dbByEmpresa = new Map<string, any[]>();
+      for (const dbSub of dbSubscriptions) {
+        const rows = dbByEmpresa.get(dbSub.empresa_id) || [];
+        rows.push(dbSub);
+        dbByEmpresa.set(dbSub.empresa_id, rows);
+      }
+      for (const rows of dbByEmpresa.values()) {
+        rows.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
+      }
+
+      const localInvoicesByEmpresa = new Map<string, any[]>();
+      for (const invoice of localInvoices) {
+        const rows = localInvoicesByEmpresa.get(invoice.empresa_id) || [];
+        rows.push(invoice);
+        localInvoicesByEmpresa.set(invoice.empresa_id, rows);
+      }
+      for (const rows of localInvoicesByEmpresa.values()) {
+        rows.sort((a, b) => new Date(b.fecha_emision || b.creado_en || 0).getTime() - new Date(a.fecha_emision || a.creado_en || 0).getTime());
+      }
+
+      const stripeInvoicesById = new Map(allStripeInvoices.map(inv => [inv.id, inv]));
+      const claimedStripeIds = new Set<string>();
+      const records: any[] = [];
+
+      // Procesamiento por lotes para no saturar Stripe al resolver tarjetas.
+      for (let offset = 0; offset < empresas.length; offset += 10) {
+        const batch = empresas.slice(offset, offset + 10);
+        const batchRecords = await Promise.all(batch.map(async empresa => {
+          const dbRows = dbByEmpresa.get(empresa.id) || [];
+          const dbSub = dbRows[0] || null;
+          const exactStripeSub = dbSub?.stripe_subscription_id
+            ? stripeById.get(dbSub.stripe_subscription_id) || null
+            : null;
+          const dbSubIdsForEmpresa = new Set(dbRows.map(row => row.stripe_subscription_id).filter(Boolean));
+          const dbCustomerIdsForEmpresa = new Set(dbRows.map(row => row.stripe_customer_id).filter(Boolean));
+
+          const stripeCandidates = relevantStripeSubscriptions.filter(stripeSub => {
+            const customerId = getCustomerId(stripeSub.customer);
+            return dbSubIdsForEmpresa.has(stripeSub.id)
+              || (customerId && dbCustomerIdsForEmpresa.has(customerId))
+              || stripeSub.metadata?.empresa_id === empresa.id;
+          });
+          const stripeSub = exactStripeSub
+            || stripeCandidates.find(s => ["active", "trialing", "past_due"].includes(s.status))
+            || stripeCandidates[0]
+            || null;
+          stripeCandidates.forEach(s => claimedStripeIds.add(s.id));
+
+          const payment = await resolveSubscriptionCard(stripe, stripeSub, dbSub?.stripe_payment_method_id);
+          const customerIds = new Set(stripeCandidates.map(s => getCustomerId(s.customer)).filter(Boolean));
+          if (dbSub?.stripe_customer_id) customerIds.add(dbSub.stripe_customer_id);
+          const candidateSubIds = new Set(stripeCandidates.map(s => s.id));
+          if (dbSub?.stripe_subscription_id) candidateSubIds.add(dbSub.stripe_subscription_id);
+
+          const stripeInvoices = allStripeInvoices
+            .filter(invoice => {
+              const subscriptionId = getStripeObjectId(invoice.subscription);
+              const customerId = getCustomerId(invoice.customer);
+              return invoice.metadata?.empresa_id === empresa.id
+                || (subscriptionId && candidateSubIds.has(subscriptionId))
+                || (customerId && customerIds.has(customerId));
+            })
+            .sort((a, b) => Number(b.created || 0) - Number(a.created || 0));
+          const paidStripeInvoices = stripeInvoices.filter(invoice => {
+            const remaining = typeof invoice.amount_remaining === "number"
+              ? invoice.amount_remaining
+              : Number(invoice.amount_due || 0) - Number(invoice.amount_paid || 0);
+            return remaining === 0 && Number(invoice.amount_paid || 0) > 0;
+          });
+
+          const companyLocalInvoices = (localInvoicesByEmpresa.get(empresa.id) || []).filter(invoice => {
+            if (invoice.suscripcion_id && dbRows.some(row => row.id === invoice.suscripcion_id)) return true;
+            return !String(invoice.concepto || "").toLowerCase().includes("timbre");
+          });
+          const paidLocalInvoices = companyLocalInvoices.filter(invoice => invoice.estado === "pagada");
+          const localByStripeId = new Map(companyLocalInvoices
+            .filter(invoice => invoice.stripe_invoice_id)
+            .map(invoice => [invoice.stripe_invoice_id, invoice]));
+
+          const stripePaidWithoutLocal = paidStripeInvoices.filter(invoice => {
+            const local = localByStripeId.get(invoice.id);
+            return !local || local.estado !== "pagada";
+          }).length;
+          const localPaidButStripeUnpaid = paidLocalInvoices.filter(invoice => {
+            if (!invoice.stripe_invoice_id) return false;
+            const stripeInvoice = stripeInvoicesById.get(invoice.stripe_invoice_id);
+            if (!stripeInvoice) return false;
+            const remaining = typeof stripeInvoice.amount_remaining === "number"
+              ? stripeInvoice.amount_remaining
+              : Number(stripeInvoice.amount_due || 0) - Number(stripeInvoice.amount_paid || 0);
+            return remaining > 0 || stripeInvoice.status !== "paid";
+          }).length;
+
+          const activeStripeCount = stripeCandidates.filter(s => ["active", "trialing", "past_due"].includes(s.status)).length;
+          const stripePeriodStart = (stripeSub as any)?.current_period_start
+            ?? (stripeSub as any)?.items?.data?.[0]?.current_period_start;
+          const stripePeriodEnd = (stripeSub as any)?.current_period_end
+            ?? (stripeSub as any)?.items?.data?.[0]?.current_period_end;
+
+          return {
+            empresa_id: empresa.id,
+            empresa_nombre: empresa.nombre,
+            empresa_email: empresa.email || null,
+            empresa_created_at: empresa.created_at,
+            is_partner_sandbox: empresa.is_partner_sandbox === true,
+            db_subscription_count: dbRows.length,
+            db_subscription: dbSub ? {
+              id: dbSub.id,
+              status: dbSub.status,
+              trial_ends_at: dbSub.trial_ends_at,
+              current_period_start: dbSub.current_period_start,
+              current_period_end: dbSub.current_period_end,
+              fecha_vencimiento: dbSub.fecha_vencimiento,
+              acceso_bloqueado: dbSub.acceso_bloqueado === true,
+              es_manual: dbSub.es_manual === true,
+              cancel_at_period_end: dbSub.cancel_at_period_end === true,
+              stripe_customer_id: dbSub.stripe_customer_id,
+              stripe_subscription_id: dbSub.stripe_subscription_id,
+              stripe_payment_method_id: dbSub.stripe_payment_method_id,
+              stripe_sync_error: dbSub.stripe_sync_error || null,
+              max_usuarios: Number(dbSub.max_usuarios || 0),
+              plan_nombre: dbSub.subscription_plans?.nombre || null,
+            } : null,
+            stripe_subscription_count: activeStripeCount,
+            stripe_subscription: stripeSub ? {
+              id: stripeSub.id,
+              customer_id: getCustomerId(stripeSub.customer),
+              status: stripeSub.status,
+              trial_end: stripeTimestamp(stripeSub.trial_end),
+              current_period_start: stripeTimestamp(stripePeriodStart),
+              current_period_end: stripeTimestamp(stripePeriodEnd),
+              cancel_at_period_end: stripeSub.cancel_at_period_end === true,
+              quantity: Number(stripeSub.items?.data?.[0]?.quantity || 0),
+              payment_method_id: payment.payment_method_id,
+              card: payment.card,
+            } : null,
+            payments: {
+              stripe_paid_count: paidStripeInvoices.length,
+              local_paid_count: paidLocalInvoices.length,
+              stripe_paid_without_local_count: stripePaidWithoutLocal,
+              local_paid_but_stripe_unpaid_count: localPaidButStripeUnpaid,
+              latest_stripe_invoice: compactStripeInvoice(stripeInvoices[0]),
+              latest_stripe_paid_invoice: compactStripeInvoice(paidStripeInvoices[0]),
+              latest_local_invoice: compactLocalInvoice(companyLocalInvoices[0]),
+              first_local_invoice: compactLocalInvoice(companyLocalInvoices[companyLocalInvoices.length - 1]),
+            },
+          };
+        }));
+        records.push(...batchRecords);
+      }
+
+      const orphanStripeSubscriptions = relevantStripeSubscriptions
+        .filter(s => !claimedStripeIds.has(s.id) && ["active", "trialing", "past_due"].includes(s.status))
+        .map(s => ({
+          id: s.id,
+          status: s.status,
+          customer_id: getCustomerId(s.customer),
+          customer_email: typeof s.customer === "object" ? s.customer?.email || null : null,
+          created_at: stripeTimestamp(s.created),
+        }));
+
+      return new Response(JSON.stringify({
+        generated_at: new Date().toISOString(),
+        records,
+        orphan_stripe_subscriptions: orphanStripeSubscriptions,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

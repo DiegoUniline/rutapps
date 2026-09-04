@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet, FlaskConical, ChevronDown } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet, FlaskConical, ChevronDown, ScanSearch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminInactivosTab from '@/components/admin/AdminInactivosTab';
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
@@ -28,11 +28,12 @@ import AdminWaBotTab from '@/components/admin/AdminWaBotTab';
 import PartnersInlineTab from '@/components/admin/PartnersInlineTab';
 import ControlPage from '@/pages/ControlPage';
 import AdminBroadcastTab from '@/components/admin/AdminBroadcastTab';
+import AdminBillingAuditTab from '@/components/admin/AdminBillingAuditTab';
 
 type TabKey =
   | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'pagos' | 'whatsapp'
   | 'notifications' | 'payment_requests' | 'anuncios' | 'publicidad' | 'cobros'
-  | 'incompletos' | 'flags' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot' | 'broadcast';
+  | 'incompletos' | 'flags' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot' | 'broadcast' | 'billing_audit';
 
 type NavItem = { key: TabKey; label: string; icon: any; danger?: boolean };
 type NavGroup = { id: string; label: string; icon: any; items: NavItem[] };
@@ -57,6 +58,7 @@ const NAV_GROUPS: NavGroup[] = [
     id: 'facturacion', label: 'Facturación y cobros', icon: CreditCard,
     items: [
       { key: 'subscriptions', label: 'Suscripciones', icon: CreditCard },
+      { key: 'billing_audit', label: 'Auditoría de cobros', icon: ScanSearch },
       { key: 'invoices', label: 'Facturas', icon: Receipt },
       { key: 'pagos', label: 'Pagos', icon: Wallet },
       { key: 'payment_requests', label: 'Pagos transferencia', icon: BanknoteIcon },
@@ -262,6 +264,7 @@ export default function SuperAdminPage() {
               {tab === 'dashboard' && <AdminStatsTab onSelectEmpresa={(id) => { setSelectedEmpresaTab('usuarios'); setSelectedEmpresaId(id); }} />}
               {tab === 'empresas' && <AdminEmpresasTab onSelectEmpresa={(id) => { setSelectedEmpresaTab('usuarios'); setSelectedEmpresaId(id); }} />}
               {tab === 'subscriptions' && <AdminSubscriptionsTab />}
+              {tab === 'billing_audit' && <AdminBillingAuditTab />}
               {tab === 'invoices' && <AdminInvoicesTab />}
               {tab === 'pagos' && <AdminPagosTab onSelectEmpresa={(id, t) => { setSelectedEmpresaTab(t || 'pagos'); setSelectedEmpresaId(id); }} />}
               {tab === 'partners' && <PartnersInlineTab />}
