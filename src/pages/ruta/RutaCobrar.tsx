@@ -15,6 +15,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import MobileNoAccess from '@/components/ruta/MobileNoAccess';
+import { getMobileReceivables, isMobileReceivable } from '@/lib/mobileReceivables';
 
 type Step = 'cliente' | 'monto' | 'cuentas' | 'pago';
 
@@ -79,7 +80,7 @@ function RutaCobrarInner() {
   const clientes = useMemo(() => {
     const saldosPorCliente: Record<string, number> = {};
     (allVentas ?? []).forEach((v: any) => {
-      if (v.cliente_id && v.condicion_pago === 'credito' && ['confirmado', 'entregado', 'facturado'].includes(v.status) && (v.saldo_pendiente ?? 0) > 0) {
+      if (isMobileReceivable(v)) {
         saldosPorCliente[v.cliente_id] = (saldosPorCliente[v.cliente_id] ?? 0) + (v.saldo_pendiente ?? 0);
       }
     });
@@ -89,14 +90,7 @@ function RutaCobrarInner() {
   // Offline-compatible: filter pending ventas for selected client
   const ventasPendientes = useMemo(() => {
     if (!allVentas || !clienteId) return [];
-    return (allVentas as any[])
-      .filter(v =>
-        v.cliente_id === clienteId &&
-        v.condicion_pago === 'credito' &&
-        (v.saldo_pendiente ?? 0) > 0 &&
-        ['confirmado', 'entregado', 'facturado'].includes(v.status)
-      )
-      .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+    return getMobileReceivables(allVentas as any[], clienteId);
   }, [allVentas, clienteId]);
   const loadingVentas = false;
 

@@ -6,6 +6,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { fmtDate } from '@/lib/utils';
+import { isMobileReceivable } from '@/lib/mobileReceivables';
 
 
 export default function RutaCxC() {
@@ -49,7 +50,7 @@ export default function RutaCxC() {
     const map = new Map<string, { id: string; nombre: string; saldo: number; numCuentas: number; oldest?: string; vendedorId?: string; vendedorNombre?: string; docs: DocCxC[] }>();
     (ventas ?? []).forEach((v: any) => {
       const saldo = Number(v.saldo_pendiente ?? 0);
-      if (!v.cliente_id || saldo <= 0 || v.status === 'cancelado') return;
+      if (!isMobileReceivable(v)) return;
       if (clientesPermitidos && !clientesPermitidos.has(v.cliente_id)) return;
       const c = (clientes ?? []).find((x: any) => x.id === v.cliente_id);
       const nombre = c?.nombre ?? 'Cliente';
