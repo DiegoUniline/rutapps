@@ -11,10 +11,16 @@ export const ADMIN_EMAIL_BCC = ["ventas@uniline.mx"];
 
 export interface BillingEventPayload {
   evento: "cobro_exitoso" | "cobro_fallido";
+  empresaId?: string;
   empresa?: string;
+  empresaEmail?: string;
+  empresaTelefono?: string;
   clienteNombre?: string;
   clienteEmail?: string;
   clienteTelefono?: string;
+  personaContacto?: string;
+  planContratado?: string;
+  usuariosCuenta?: number;
   monto?: string;
   amountCents?: number;
   numUsuarios?: number;
@@ -41,6 +47,82 @@ export interface NotifyOptions {
 }
 
 type SB = ReturnType<typeof createClient>;
+
+function getPlanModality(start?: string | null, end?: string | null, period?: string | null, months?: number | null): string {
+  if (start && end) {
+    const startDate = new Date(`${start.slice(0, 10)}T12:00:00Z`);
+    const endDate = new Date(`${end.slice(0, 10)}T12:00:00Z`);
+    if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
+      const periodMonths = (endDate.getUTCFullYear() - startDate.getUTCFullYear()) * 12
+        + endDate.getUTCMonth() - startDate.getUTCMonth();
+      if (periodMonths === 12) return "Anual";
+      if (periodMonths === 6) return "Semestral";
+      if (periodMonths === 1) return "Mensual";
+      if (periodMonths > 1) return `${periodMonths} meses`;
+    }
+  }
+
+  const normalized = String(period || "").toLowerCase();
+  if (normalized.includes("anual") || months === 12) return "Anual";
+  if (normalized.includes("semestr") || months === 6) return "Semestral";
+  if (normalized.includes("mens") || months === 1) return "Mensual";
+  return months && months > 0 ? `${months} meses` : "";
+}
+
+async function enrichAccountData(supabase: SB, payload: BillingEventPayload): Promise<BillingEventPayload> {
+  if (!payload.empresaId) return payload;
+
+  try {
+    const [empresaRes, subscriptionRes, profilesRes] = await Promise.all([
+      supabase
+        .from("empresas")
+        .select("nombre, email, telefono, owner_user_id")
+        .eq("id", payload.empresaId)
+        .maybeSingle(),
+      supabase
+        .from("subscriptions")
+        .select("max_usuarios, current_period_start, current_period_end, subscription_plans(nombre, periodo, meses)")
+        .eq("empresa_id", payload.empresaId)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("user_id, nombre, telefono")
+        .eq("empresa_id", payload.empresaId)
+        .limit(20),
+    ]);
+
+    const empresa = empresaRes.data as any;
+    const subscription = subscriptionRes.data as any;
+    const profiles = (profilesRes.data || []) as any[];
+    const ownerProfile = profiles.find((profile) => profile.user_id === empresa?.owner_user_id);
+    const contactProfile = ownerProfile || profiles.find((profile) => profile.nombre) || null;
+    const relation = subscription?.subscription_plans;
+    const plan = Array.isArray(relation) ? relation[0] : relation;
+    const modality = getPlanModality(
+      subscription?.current_period_start,
+      subscription?.current_period_end,
+      plan?.periodo,
+      plan?.meses,
+    );
+    const planName = String(plan?.nombre || "").trim();
+    const planContracted = planName && modality && planName.toLowerCase() !== modality.toLowerCase()
+      ? `${planName} · ${modality}`
+      : planName || modality;
+
+    return {
+      ...payload,
+      empresa: payload.empresa || empresa?.nombre || undefined,
+      empresaEmail: payload.empresaEmail || empresa?.email || payload.clienteEmail || undefined,
+      empresaTelefono: payload.empresaTelefono || empresa?.telefono || payload.clienteTelefono || undefined,
+      personaContacto: payload.personaContacto || contactProfile?.nombre || payload.clienteNombre || undefined,
+      planContratado: payload.planContratado || planContracted || undefined,
+      usuariosCuenta: payload.usuariosCuenta ?? subscription?.max_usuarios ?? payload.numUsuarios,
+    };
+  } catch (error) {
+    console.error("[billing-notify] Account enrichment failed:", error);
+    return payload;
+  }
+}
 
 function buildPayUrl(folio?: string | null, fallback?: string | null): string | undefined {
   if (folio) return `https://rutapp.mx/factura/${encodeURIComponent(folio)}`;
@@ -207,6 +289,8 @@ export async function notifyBillingEvent(
     }
   }
 
+  payload = await enrichAccountData(supabase, payload);
+
   const payUrl = buildPayUrl(payload.folio, payload.enlacePago || payload.invoiceUrl);
   const { evento, idempotencyKey, invoiceUrl } = payload;
 
@@ -226,6 +310,13 @@ export async function notifyBillingEvent(
         evento,
         nombre: payload.clienteNombre,
         empresa: payload.empresa,
+        empresaEmail: payload.empresaEmail,
+        empresaTelefono: payload.empresaTelefono,
+        personaContacto: payload.personaContacto,
+        planContratado: payload.planContratado,
+        usuariosCuenta: payload.usuariosCuenta,
+        clienteEmail: payload.clienteEmail,
+        clienteTelefono: payload.clienteTelefono,
         monto: payload.monto,
         numUsuarios: payload.numUsuarios,
         fechaVigencia: payload.fechaVigencia,
@@ -291,6 +382,13 @@ export async function notifyBillingEvent(
         evento,
         nombre: payload.clienteNombre,
         empresa: payload.empresa,
+        empresaEmail: payload.empresaEmail,
+        empresaTelefono: payload.empresaTelefono,
+        personaContacto: payload.personaContacto,
+        planContratado: payload.planContratado,
+        usuariosCuenta: payload.usuariosCuenta,
+        clienteEmail: payload.clienteEmail,
+        clienteTelefono: payload.clienteTelefono,
         monto: payload.monto,
         numUsuarios: payload.numUsuarios,
         fechaVigencia: payload.fechaVigencia,

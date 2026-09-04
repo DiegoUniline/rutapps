@@ -16,6 +16,13 @@ interface Props {
   evento: 'cobro_exitoso' | 'cobro_fallido' | string
   nombre?: string
   empresa?: string
+  empresaEmail?: string
+  empresaTelefono?: string
+  clienteEmail?: string
+  clienteTelefono?: string
+  personaContacto?: string
+  planContratado?: string
+  usuariosCuenta?: number
   monto?: string
   numUsuarios?: number
   fechaVigencia?: string
@@ -55,6 +62,15 @@ const isFail = (e: string) => e === 'cobro_fallido'
 
 const Email = ({
   evento,
+  nombre,
+  empresa,
+  empresaEmail,
+  empresaTelefono,
+  clienteEmail,
+  clienteTelefono,
+  personaContacto,
+  planContratado,
+  usuariosCuenta,
   monto,
   fecha,
   folio,
@@ -246,6 +262,35 @@ const Email = ({
             </table>
           </Section>
 
+          {/* Account identification */}
+          <Section>
+            <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
+              <tbody>
+                <tr>
+                  <td style={{ padding: '0 32px 24px' }}>
+                    <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={accountCard}>
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '16px 18px' }}>
+                            <Text style={accountTitle}>Datos de la cuenta</Text>
+                            <Text style={accountText}>
+                              <strong>Empresa:</strong> {empresa || 'No registrada'}<br />
+                              <strong>Correo:</strong> {empresaEmail || clienteEmail || 'No registrado'}<br />
+                              <strong>Teléfono:</strong> {empresaTelefono || clienteTelefono || 'No registrado'}<br />
+                              <strong>Persona de contacto:</strong> {personaContacto || nombre || 'No registrada'}<br />
+                              <strong>Plan contratado:</strong> {planContratado || 'No registrado'}<br />
+                              <strong>Usuarios:</strong> {usuariosCuenta ?? 'No registrado'}
+                            </Text>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Section>
+
           {/* Footer */}
           <Section>
             <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={{ ...tableReset, borderTop: `1px solid ${BORDER}` }}>
@@ -361,6 +406,11 @@ export const template = {
     evento: 'cobro_fallido',
     nombre: 'Juan',
     empresa: 'Empresa Demo',
+    empresaEmail: 'contacto@empresademo.mx',
+    empresaTelefono: '+52 317 000 0000',
+    personaContacto: 'Juan Pérez',
+    planContratado: 'Equipo · Semestral',
+    usuariosCuenta: 6,
     monto: '$2,700 MXN',
     folio: 'RUT-002',
     fecha: '15/06/2026',
@@ -431,6 +481,27 @@ const pillSub = {
   color: TEXT_MUTED,
   margin: 0,
   textAlign: 'center' as const,
+  fontFamily: 'Arial, sans-serif',
+}
+const accountCard = {
+  borderCollapse: 'separate' as const,
+  borderSpacing: 0,
+  border: `1px solid ${BORDER}`,
+  borderRadius: '12px',
+  backgroundColor: '#f8fafc',
+}
+const accountTitle = {
+  fontSize: '13px',
+  color: TEXT_DARK,
+  margin: '0 0 8px',
+  fontWeight: 700,
+  fontFamily: 'Arial, sans-serif',
+}
+const accountText = {
+  fontSize: '12px',
+  color: TEXT_MUTED,
+  margin: 0,
+  lineHeight: '1.7',
   fontFamily: 'Arial, sans-serif',
 }
 const btnPrimaryCell = {

@@ -527,6 +527,7 @@ Deno.serve(async (req) => {
           const todayMx = new Date().toLocaleDateString("es-MX", { timeZone: TZ });
           await notifyBillingEvent(supabase, waConfig?.api_token, {
             evento: "cobro_exitoso",
+            empresaId: empresa_id,
             empresa: empresaRow?.nombre || "",
             clienteNombre,
             clienteEmail,
@@ -657,6 +658,7 @@ Deno.serve(async (req) => {
 
           await notifyBillingEvent(supabase, waConfig?.api_token, {
             evento: "cobro_fallido",
+            empresaId: empresa_id,
             empresa: empresaRow?.nombre || "",
             clienteNombre,
             clienteEmail,

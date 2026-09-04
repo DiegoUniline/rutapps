@@ -468,8 +468,16 @@ Deno.serve(async (req) => {
 
         const baseSuccess = {
           evento: "cobro_exitoso" as const,
+          empresaId: undefined,
           empresa: "Tu Empresa S.A. de C.V.",
           clienteNombre: "Diego (cliente de prueba)",
+          clienteEmail: ADMIN_EMAIL_TO,
+          clienteTelefono: ADMIN_WA_PHONE,
+          empresaEmail: "contacto@tuempresa.mx",
+          empresaTelefono: "+52 317 000 0000",
+          personaContacto: "Diego (cliente de prueba)",
+          planContratado: "Equipo · Semestral",
+          usuariosCuenta: 3,
           monto: "$2,700 MXN",
           amountCents: 270000,
           numUsuarios: 3,
@@ -482,8 +490,16 @@ Deno.serve(async (req) => {
         };
         const baseFailed = {
           evento: "cobro_fallido" as const,
+          empresaId: undefined,
           empresa: "Tu Empresa S.A. de C.V.",
           clienteNombre: "Diego (cliente de prueba)",
+          clienteEmail: ADMIN_EMAIL_TO,
+          clienteTelefono: ADMIN_WA_PHONE,
+          empresaEmail: "contacto@tuempresa.mx",
+          empresaTelefono: "+52 317 000 0000",
+          personaContacto: "Diego (cliente de prueba)",
+          planContratado: "Equipo · Semestral",
+          usuariosCuenta: 3,
           monto: "$2,700 MXN",
           amountCents: 270000,
           numUsuarios: 3,
@@ -587,6 +603,7 @@ Deno.serve(async (req) => {
 
           await notifyBillingEvent(supabase, waToken, {
             evento,
+            empresaId: empresa_id,
             empresa: empresaRow?.nombre || "",
             clienteNombre: profileRow?.nombre || "",
             clienteEmail,
