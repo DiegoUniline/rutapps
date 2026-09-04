@@ -152,7 +152,7 @@ async function listAllStripeSubscriptions(stripe: Stripe): Promise<any[]> {
       status: "all",
       limit: 100,
       ...(startingAfter ? { starting_after: startingAfter } : {}),
-      expand: ["data.items.data.price.product", "data.default_payment_method", "data.customer"],
+      expand: ["data.default_payment_method", "data.customer"],
     });
     rows.push(...page.data);
     if (!page.has_more || page.data.length === 0) break;
