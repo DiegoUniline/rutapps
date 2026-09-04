@@ -481,7 +481,7 @@ export default function AdminBillingAuditTab() {
             <AuditFilterButton active={filter === 'critical'} onClick={() => setFilter('critical')}>Críticas</AuditFilterButton>
             <AuditFilterButton active={filter === 'warning'} onClick={() => setFilter('warning')}>Revisar</AuditFilterButton>
             <AuditFilterButton active={filter === 'seat_mismatch'} onClick={() => setFilter('seat_mismatch')}>
-              Desfasados ({stats.seatMismatch})
+              {`Desfasados (${stats.seatMismatch})`}
             </AuditFilterButton>
             <AuditFilterButton active={filter === 'active'} onClick={() => setFilter('active')}>Activas</AuditFilterButton>
             <AuditFilterButton active={filter === 'trial'} onClick={() => setFilter('trial')}>Prueba</AuditFilterButton>

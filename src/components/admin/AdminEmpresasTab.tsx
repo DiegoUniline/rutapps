@@ -319,7 +319,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
       .from('empresas')
       .select('id, nombre, email, telefono, created_at, timbres_saldo(saldo), subscriptions(status, max_usuarios, stripe_customer_id, stripe_subscription_id, current_period_end, trial_ends_at, plan_id)')
       .order('created_at', { ascending: false });
-    setEmpresas((data as EmpresaRow[] | null) || []);
+    setEmpresas((data as unknown as EmpresaRow[] | null) || []);
     setLoading(false);
   }
 
