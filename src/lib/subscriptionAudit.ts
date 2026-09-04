@@ -262,14 +262,22 @@ export function auditSubscription(
   if (trialAlreadyEnded && firstInvoice) {
     const actualStart = dateOnly(firstInvoice.period_start);
     const actualEnd = dateOnly(firstInvoice.period_end);
-    const wrongStart = actualStart && calendarDayDistance(actualStart, trialEnd) > 1;
-    const wrongEnd = actualEnd && calendarDayDistance(actualEnd, firstProratedPeriodEnd) > 1;
-    if (wrongStart || wrongEnd) {
-      add('first_prorated_period_mismatch', 'warning', 'Primer periodo no coincide con el prorrateo esperado',
-        `Esperado ${trialEnd} → ${firstProratedPeriodEnd}; registrado ${actualStart || 'sin inicio'} → ${actualEnd || 'sin fin'}.`);
-    } else if (actualStart && actualEnd && firstInvoice.es_prorrateo !== true) {
-      add('first_invoice_not_marked_prorated', 'warning', 'Primera factura no está marcada como prorrateo',
-        'Las fechas corresponden al primer periodo parcial, pero la factura no tiene la bandera de prorrateo.');
+    const isTrialPeriodInvoice = Boolean(
+      actualStart
+      && actualEnd
+      && compareYmd(actualStart, trialEnd) < 0
+      && calendarDayDistance(actualEnd, trialEnd) <= 1
+    );
+    if (!isTrialPeriodInvoice) {
+      const wrongStart = actualStart && calendarDayDistance(actualStart, trialEnd) > 1;
+      const wrongEnd = actualEnd && calendarDayDistance(actualEnd, firstProratedPeriodEnd) > 1;
+      if (wrongStart || wrongEnd) {
+        add('first_prorated_period_mismatch', 'warning', 'Primer periodo no coincide con el prorrateo esperado',
+          `Esperado ${trialEnd} → ${firstProratedPeriodEnd}; registrado ${actualStart || 'sin inicio'} → ${actualEnd || 'sin fin'}.`);
+      } else if (actualStart && actualEnd && firstInvoice.es_prorrateo !== true) {
+        add('first_invoice_not_marked_prorated', 'warning', 'Primera factura no está marcada como prorrateo',
+          'Las fechas corresponden al primer periodo parcial, pero la factura no tiene la bandera de prorrateo.');
+      }
     }
   }
 

@@ -29,6 +29,14 @@ function addMonthsDatePart(value: unknown, months: number): string {
   return datePart(d);
 }
 
+function addDaysDatePart(value: unknown, days: number): string {
+  const part = datePart(value);
+  const match = part.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  const d = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + days));
+  return d.toISOString().slice(0, 10);
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -685,6 +693,17 @@ Deno.serve(async (req) => {
             if (invoice.suscripcion_id && dbRows.some(row => row.id === invoice.suscripcion_id)) return true;
             return !String(invoice.concepto || "").toLowerCase().includes("timbre");
           });
+          const trialEndDate = datePart(empresa.demo_expires_at || dbSub?.trial_ends_at)
+            || addDaysDatePart(empresa.created_at, 7);
+          const firstBillableLocalInvoice = [...companyLocalInvoices].reverse().find(invoice => {
+            const status = String(invoice.estado || "").toLowerCase();
+            const periodStart = datePart(invoice.periodo_inicio);
+            const periodEnd = datePart(invoice.periodo_fin);
+            return Number(invoice.total || 0) > 0
+              && !["cancelada", "cancelado", "cancelled", "canceled"].includes(status)
+              && Boolean(periodStart && periodEnd)
+              && (!trialEndDate || periodEnd > trialEndDate);
+          });
           const paidLocalInvoices = companyLocalInvoices.filter(invoice => invoice.estado === "pagada");
           const localByStripeId = new Map(companyLocalInvoices
             .filter(invoice => invoice.stripe_invoice_id)
@@ -758,7 +777,8 @@ Deno.serve(async (req) => {
               latest_stripe_invoice: compactStripeInvoice(stripeInvoices[0]),
               latest_stripe_paid_invoice: compactStripeInvoice(paidStripeInvoices[0]),
               latest_local_invoice: compactLocalInvoice(companyLocalInvoices[0]),
-              first_local_invoice: compactLocalInvoice(companyLocalInvoices[companyLocalInvoices.length - 1]),
+              // Excluye la factura inicial del trial; aquí solo se audita el primer ciclo cobrable.
+              first_local_invoice: compactLocalInvoice(firstBillableLocalInvoice),
             },
             last_sale: latestSaleRes.data ? {
               id: latestSaleRes.data.id,

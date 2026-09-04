@@ -370,8 +370,13 @@ export default function AdminInvoicesTab() {
   const paidInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'paid');
   const failedInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'failed');
   const pendingInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'pending');
+  const totalGenerado = baseFiltered.reduce((sum, invoice) => sum + Math.max(0, invoice.amount_due || 0), 0) / 100;
   const totalCobrado = paidInvoices.reduce((sum, invoice) => sum + (invoice.amount_paid || 0), 0) / 100;
   const totalFallido = failedInvoices.reduce((sum, invoice) => sum + Math.max(0, invoice.amount_remaining ?? invoice.amount_due), 0) / 100;
+  const totalPendiente = pendingInvoices.reduce((sum, invoice) => {
+    const remaining = invoice.amount_remaining ?? invoice.amount_due - (invoice.amount_paid || 0);
+    return sum + Math.max(0, remaining);
+  }, 0) / 100;
 
   const clearFilters = () => {
     setSearch('');
@@ -415,23 +420,23 @@ export default function AdminInvoicesTab() {
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
             <button type="button" onClick={() => setStatusFilter('all')} className={`rounded-xl border p-3 text-left transition-colors ${statusFilter === 'all' ? 'border-primary bg-primary/5' : 'border-border/60 hover:bg-muted/40'}`}>
               <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Generadas</span><Receipt className="h-4 w-4" /></div>
-              <div className="mt-1 text-xl font-bold">{baseFiltered.length}</div>
-              <div className="text-[11px] text-muted-foreground">Según filtros</div>
+              <div className="mt-1 text-xl font-bold">{fmtMXN(totalGenerado)}</div>
+              <div className="text-[11px] text-muted-foreground">{baseFiltered.length} {baseFiltered.length === 1 ? 'factura' : 'facturas'}</div>
             </button>
             <button type="button" onClick={() => setStatusFilter('paid')} className={`rounded-xl border p-3 text-left transition-colors ${statusFilter === 'paid' ? 'border-emerald-400 bg-emerald-50' : 'border-border/60 hover:bg-muted/40'}`}>
               <div className="flex items-center justify-between text-xs text-emerald-700"><span>Pagadas</span><CheckCircle2 className="h-4 w-4" /></div>
-              <div className="mt-1 text-xl font-bold text-emerald-700">{paidInvoices.length}</div>
-              <div className="text-[11px] text-muted-foreground">{fmtMXN(totalCobrado)} cobrado</div>
+              <div className="mt-1 text-xl font-bold text-emerald-700">{fmtMXN(totalCobrado)}</div>
+              <div className="text-[11px] text-muted-foreground">{paidInvoices.length} {paidInvoices.length === 1 ? 'factura' : 'facturas'}</div>
             </button>
             <button type="button" onClick={() => setStatusFilter('failed')} className={`rounded-xl border p-3 text-left transition-colors ${statusFilter === 'failed' ? 'border-red-400 bg-red-50' : 'border-border/60 hover:bg-muted/40'}`}>
               <div className="flex items-center justify-between text-xs text-red-700"><span>Intentos fallidos</span><AlertTriangle className="h-4 w-4" /></div>
-              <div className="mt-1 text-xl font-bold text-red-700">{failedInvoices.length}</div>
-              <div className="text-[11px] text-muted-foreground">{fmtMXN(totalFallido)} sin cobrar</div>
+              <div className="mt-1 text-xl font-bold text-red-700">{fmtMXN(totalFallido)}</div>
+              <div className="text-[11px] text-muted-foreground">{failedInvoices.length} {failedInvoices.length === 1 ? 'factura' : 'facturas'}</div>
             </button>
             <button type="button" onClick={() => setStatusFilter('pending')} className={`rounded-xl border p-3 text-left transition-colors ${statusFilter === 'pending' ? 'border-amber-400 bg-amber-50' : 'border-border/60 hover:bg-muted/40'}`}>
               <div className="flex items-center justify-between text-xs text-amber-700"><span>Pendientes</span><Clock3 className="h-4 w-4" /></div>
-              <div className="mt-1 text-xl font-bold text-amber-700">{pendingInvoices.length}</div>
-              <div className="text-[11px] text-muted-foreground">Sin intento rechazado</div>
+              <div className="mt-1 text-xl font-bold text-amber-700">{fmtMXN(totalPendiente)}</div>
+              <div className="text-[11px] text-muted-foreground">{pendingInvoices.length} {pendingInvoices.length === 1 ? 'factura' : 'facturas'}</div>
             </button>
           </div>
 

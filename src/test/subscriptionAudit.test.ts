@@ -119,4 +119,21 @@ describe('auditSubscription', () => {
     expect(codes).toContain('expired_card');
     expect(codes).toContain('first_prorated_period_mismatch');
   });
+
+  it('no confunde la factura del periodo de prueba con el primer prorrateo', () => {
+    const result = auditSubscription({
+      ...base,
+      payments: {
+        ...base.payments,
+        first_local_invoice: {
+          id: 'invoice-trial', number: 'RUT-TRIAL', status: 'paid', amount: 0,
+          paid_at: '2026-08-17', created_at: '2026-08-10',
+          period_start: '2026-08-10', period_end: '2026-08-17', es_prorrateo: false,
+        },
+      },
+    }, new Date('2026-09-04T18:00:00Z'));
+
+    expect(result.findings.map(f => f.code)).not.toContain('first_prorated_period_mismatch');
+    expect(result.findings.map(f => f.code)).not.toContain('first_invoice_not_marked_prorated');
+  });
 });
