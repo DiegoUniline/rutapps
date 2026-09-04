@@ -309,6 +309,7 @@ Deno.serve(async (req) => {
         const empresa = empRes.data;
         const enriched = collected.map((inv: any) => ({
           ...inv,
+          paid_at: inv.status_transitions?.paid_at || null,
           empresa_id: empresaIdParam,
           empresa_nombre: empresa?.nombre || null,
           empresa_email: empresa?.email || null,
@@ -480,6 +481,12 @@ Deno.serve(async (req) => {
           customer_name: custName,
           customer_id: custId || null,
           subscription_id: typeof inv.subscription === 'string' ? inv.subscription : (inv.subscription?.id || null),
+          attempt_count: inv.attempt_count || 0,
+          attempted: !!inv.attempted,
+          next_payment_attempt: inv.next_payment_attempt || null,
+          paid_at: inv.status_transitions?.paid_at || null,
+          collection_method: inv.collection_method || null,
+          billing_reason: inv.billing_reason || null,
           empresa_id: empresa?.id || resolvedId || null,
           empresa_nombre: empresa?.nombre || inv?.metadata?.empresa_nombre || null,
           description: inv.lines?.data?.[0]?.description || "Suscripción Rutapp",

@@ -59,7 +59,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'subscriptions', label: 'Suscripciones', icon: CreditCard },
       { key: 'billing_audit', label: 'Auditoría de cobros', icon: ScanSearch },
-      { key: 'invoices', label: 'Facturas', icon: Receipt },
+      { key: 'invoices', label: 'Historial Facturas', icon: Receipt },
       { key: 'pagos', label: 'Pagos', icon: Wallet },
       { key: 'payment_requests', label: 'Pagos transferencia', icon: BanknoteIcon },
       { key: 'cobros', label: 'Cobros', icon: Store },

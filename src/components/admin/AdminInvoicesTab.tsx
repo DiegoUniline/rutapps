@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import ModalSelect from '@/components/ModalSelect';
-import { Receipt, Search, ExternalLink, Download, Plus, Send, Mail, MessageCircle, Building2, Users, Percent, FileText, Phone, Globe, Copy, Link2 } from 'lucide-react';
+import { Receipt, Search, ExternalLink, Download, Plus, Send, Mail, MessageCircle, Building2, Users, Percent, FileText, Copy, AlertTriangle, CheckCircle2, Clock3, Eye, RefreshCw, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -23,9 +22,15 @@ interface AdminInvoice {
   currency: string; created: number; due_date: number | null;
   hosted_invoice_url: string | null; invoice_pdf: string | null;
   customer_email: string | null; customer_name?: string | null;
+  customer_id?: string | null; subscription_id?: string | null;
   empresa_id?: string | null; empresa_nombre?: string | null;
   description: string;
+  attempt_count?: number; attempted?: boolean;
+  next_payment_attempt?: number | null; paid_at?: number | null;
+  collection_method?: string | null; billing_reason?: string | null;
 }
+
+type PaymentState = 'all' | 'paid' | 'failed' | 'pending' | 'draft' | 'void';
 
 interface EmpresaOption {
   id: string; nombre: string; email: string | null; telefono: string | null;
@@ -78,12 +83,41 @@ function detectCountryCode(phone: string): { lada: string; number: string } {
   return { lada: '+52', number: clean.replace(/^\+/, '') };
 }
 
+function getPaymentState(invoice: AdminInvoice): Exclude<PaymentState, 'all'> {
+  const remaining = typeof invoice.amount_remaining === 'number'
+    ? invoice.amount_remaining
+    : invoice.amount_due - (invoice.amount_paid || 0);
+  const paid = remaining === 0 && (
+    invoice.truly_paid === true ||
+    (invoice.amount_paid || 0) > 0 ||
+    invoice.status === 'paid' ||
+    invoice.stripe_status === 'paid'
+  );
+  if (paid) return 'paid';
+  if (invoice.status === 'void') return 'void';
+  if (invoice.status === 'uncollectible') return 'failed';
+  if (invoice.status === 'draft') return 'draft';
+  if ((invoice.attempted || (invoice.attempt_count || 0) > 0) && remaining > 0) return 'failed';
+  return 'pending';
+}
+
+const PAYMENT_STATE_LABELS: Record<Exclude<PaymentState, 'all'>, string> = {
+  paid: 'Pagada',
+  failed: 'Fallida',
+  pending: 'Pendiente',
+  draft: 'Borrador',
+  void: 'Anulada',
+};
+
 export default function AdminInvoicesTab() {
-  const { user } = useAuth();
   const [invoices, setInvoices] = useState<AdminInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'paid' | 'open' | 'all'>('paid');
+  const [statusFilter, setStatusFilter] = useState<PaymentState>('all');
+  const [empresaFilter, setEmpresaFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [selectedInvoice, setSelectedInvoice] = useState<AdminInvoice | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -112,7 +146,7 @@ export default function AdminInvoicesTab() {
     enviar_whatsapp: true,
   });
 
-  useEffect(() => { load(); }, [statusFilter]);
+  useEffect(() => { load(); }, []);
 
   async function load() {
     setLoading(true);
@@ -122,7 +156,7 @@ export default function AdminInvoicesTab() {
           const session = await supabase.auth.getSession();
           const token = session.data.session?.access_token;
           const res = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=list_all_invoices&status=${statusFilter}`,
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=list_all_invoices&status=all`,
             { headers: { 'Authorization': `Bearer ${token}`, 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
           );
           return await res.json();
@@ -302,29 +336,50 @@ export default function AdminInvoicesTab() {
     }
   }
 
-  const statusBadge = (s: string) => {
-    const m: Record<string, { l: string; v: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      paid: { l: 'Pagada', v: 'default' }, open: { l: 'Pendiente', v: 'destructive' },
-      draft: { l: 'Borrador', v: 'secondary' }, void: { l: 'Anulada', v: 'outline' },
+  const statusBadge = (state: Exclude<PaymentState, 'all'>) => {
+    const styles: Record<Exclude<PaymentState, 'all'>, string> = {
+      paid: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      failed: 'border-red-200 bg-red-50 text-red-700',
+      pending: 'border-amber-200 bg-amber-50 text-amber-700',
+      draft: 'border-slate-200 bg-slate-50 text-slate-600',
+      void: 'border-zinc-200 bg-zinc-50 text-zinc-600',
     };
-    const i = m[s] || { l: s, v: 'outline' as const };
-    return <Badge variant={i.v}>{i.l}</Badge>;
+    return <Badge variant="outline" className={styles[state]}>{PAYMENT_STATE_LABELS[state]}</Badge>;
   };
 
-  const filtered = invoices.filter(i => {
-    const q = search.toLowerCase();
+  const baseFiltered = invoices.filter(invoice => {
+    const q = search.trim().toLowerCase();
+    const invoiceDate = new Date(invoice.created * 1000);
+    const from = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+    const to = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
+    if (empresaFilter !== 'all' && invoice.empresa_id !== empresaFilter) return false;
+    if (from && invoiceDate < from) return false;
+    if (to && invoiceDate > to) return false;
+    if (!q) return true;
     return (
-      (i.customer_email || '').toLowerCase().includes(q) ||
-      (i.empresa_nombre || '').toLowerCase().includes(q) ||
-      (i.customer_name || '').toLowerCase().includes(q) ||
-      (i.number || '').toLowerCase().includes(q) ||
-      (i.description || '').toLowerCase().includes(q)
+      (invoice.customer_email || '').toLowerCase().includes(q) ||
+      (invoice.empresa_nombre || '').toLowerCase().includes(q) ||
+      (invoice.customer_name || '').toLowerCase().includes(q) ||
+      (invoice.number || '').toLowerCase().includes(q) ||
+      (invoice.id || '').toLowerCase().includes(q) ||
+      (invoice.description || '').toLowerCase().includes(q)
     );
   });
 
-  const totalCobrado = filtered
-    .filter(i => i.truly_paid ?? (i.status === 'paid'))
-    .reduce((sum, i) => sum + (i.amount_paid || 0), 0) / 100;
+  const filtered = baseFiltered.filter(invoice => statusFilter === 'all' || getPaymentState(invoice) === statusFilter);
+  const paidInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'paid');
+  const failedInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'failed');
+  const pendingInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'pending');
+  const totalCobrado = paidInvoices.reduce((sum, invoice) => sum + (invoice.amount_paid || 0), 0) / 100;
+  const totalFallido = failedInvoices.reduce((sum, invoice) => sum + Math.max(0, invoice.amount_remaining ?? invoice.amount_due), 0) / 100;
+
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setEmpresaFilter('all');
+    setDateFrom('');
+    setDateTo('');
+  };
 
   const empresaOptions = empresas.map(e => ({ value: e.id, label: `${e.nombre}${e.email ? ` (${e.email})` : ''}` }));
   const planOptions = plans.map(p => ({
@@ -336,44 +391,79 @@ export default function AdminInvoicesTab() {
   return (
     <>
       <Card className="border border-border/60 shadow-sm">
-        <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-3">
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between flex-wrap gap-3">
             <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-primary" /> Facturas ({filtered.length})
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-primary" /> Historial Facturas
               </CardTitle>
-              {statusFilter === 'paid' && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Total cobrado: <span className="font-semibold text-foreground">{fmtMXN(totalCobrado)}</span>
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Todas las facturas generadas en Stripe, incluidos los intentos rechazados.
+              </p>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-1 rounded-md border border-border bg-card p-0.5">
-                {(['paid', 'open', 'all'] as const).map(s => (
-                  <Button
-                    key={s}
-                    size="sm"
-                    variant={statusFilter === s ? 'default' : 'ghost'}
-                    className="h-7 px-3 text-xs"
-                    onClick={() => setStatusFilter(s)}
-                  >
-                    {s === 'paid' ? 'Pagadas' : s === 'open' ? 'Pendientes' : 'Todas'}
-                  </Button>
-                ))}
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar empresa, email, folio..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-72" />
-              </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+              </Button>
               <Button size="sm" onClick={() => setShowCreate(true)}>
                 <Plus className="h-4 w-4 mr-1.5" /> Nueva factura
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
+            <button type="button" onClick={() => setStatusFilter('all')} className={`rounded-xl border p-3 text-left transition-colors ${statusFilter === 'all' ? 'border-primary bg-primary/5' : 'border-border/60 hover:bg-muted/40'}`}>
+              <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Generadas</span><Receipt className="h-4 w-4" /></div>
+              <div className="mt-1 text-xl font-bold">{baseFiltered.length}</div>
+              <div className="text-[11px] text-muted-foreground">Según filtros</div>
+            </button>
+            <button type="button" onClick={() => setStatusFilter('paid')} className={`rounded-xl border p-3 text-left transition-colors ${statusFilter === 'paid' ? 'border-emerald-400 bg-emerald-50' : 'border-border/60 hover:bg-muted/40'}`}>
+              <div className="flex items-center justify-between text-xs text-emerald-700"><span>Pagadas</span><CheckCircle2 className="h-4 w-4" /></div>
+              <div className="mt-1 text-xl font-bold text-emerald-700">{paidInvoices.length}</div>
+              <div className="text-[11px] text-muted-foreground">{fmtMXN(totalCobrado)} cobrado</div>
+            </button>
+            <button type="button" onClick={() => setStatusFilter('failed')} className={`rounded-xl border p-3 text-left transition-colors ${statusFilter === 'failed' ? 'border-red-400 bg-red-50' : 'border-border/60 hover:bg-muted/40'}`}>
+              <div className="flex items-center justify-between text-xs text-red-700"><span>Intentos fallidos</span><AlertTriangle className="h-4 w-4" /></div>
+              <div className="mt-1 text-xl font-bold text-red-700">{failedInvoices.length}</div>
+              <div className="text-[11px] text-muted-foreground">{fmtMXN(totalFallido)} sin cobrar</div>
+            </button>
+            <button type="button" onClick={() => setStatusFilter('pending')} className={`rounded-xl border p-3 text-left transition-colors ${statusFilter === 'pending' ? 'border-amber-400 bg-amber-50' : 'border-border/60 hover:bg-muted/40'}`}>
+              <div className="flex items-center justify-between text-xs text-amber-700"><span>Pendientes</span><Clock3 className="h-4 w-4" /></div>
+              <div className="mt-1 text-xl font-bold text-amber-700">{pendingInvoices.length}</div>
+              <div className="text-[11px] text-muted-foreground">Sin intento rechazado</div>
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.5fr)_minmax(200px,1fr)_150px_150px_auto]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Empresa, cliente, correo, folio o ID Stripe..." value={search} onChange={event => setSearch(event.target.value)} className="pl-9 bg-background" />
+            </div>
+            <ModalSelect
+              options={[{ value: 'all', label: 'Todas las empresas' }, ...empresaOptions]}
+              value={empresaFilter}
+              onChange={setEmpresaFilter}
+              placeholder="Todas las empresas"
+            />
+            <Input type="date" value={dateFrom} onChange={event => setDateFrom(event.target.value)} className="bg-background" aria-label="Fecha inicial" />
+            <Input type="date" value={dateTo} onChange={event => setDateTo(event.target.value)} className="bg-background" aria-label="Fecha final" />
+            <Button type="button" variant="ghost" size="sm" onClick={clearFilters} className="h-10 px-3">
+              <XCircle className="h-4 w-4 mr-1.5" /> Limpiar
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {(['all', 'paid', 'failed', 'pending', 'draft', 'void'] as PaymentState[]).map(state => (
+              <Button key={state} size="sm" variant={statusFilter === state ? 'default' : 'outline'} className="h-8 whitespace-nowrap text-xs" onClick={() => setStatusFilter(state)}>
+                {state === 'all' ? 'Todas' : PAYMENT_STATE_LABELS[state]}
+              </Button>
+            ))}
+            <span className="ml-auto whitespace-nowrap text-xs text-muted-foreground">{filtered.length} resultado{filtered.length === 1 ? '' : 's'}</span>
+          </div>
+
           {loading ? <div className="text-center py-8 text-muted-foreground">Cargando facturas...</div> : (
+            <div className="overflow-x-auto rounded-lg border border-border/50">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -382,6 +472,7 @@ export default function AdminInvoicesTab() {
                   <TableHead>Folio</TableHead>
                   <TableHead>Descripción</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-center">Intentos</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Pagado</TableHead>
                   <TableHead className="text-right">Saldo</TableHead>
@@ -391,12 +482,13 @@ export default function AdminInvoicesTab() {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Sin facturas</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Sin facturas con estos filtros</TableCell></TableRow>
                 ) : filtered.map(inv => {
                   const remaining = typeof inv.amount_remaining === 'number' ? inv.amount_remaining : (inv.amount_due - (inv.amount_paid || 0));
-                  const isPaid = inv.truly_paid ?? (remaining === 0 && (inv.amount_paid || 0) > 0);
+                  const paymentState = getPaymentState(inv);
+                  const isPaid = paymentState === 'paid';
                   return (
-                  <TableRow key={inv.id}>
+                  <TableRow key={inv.id} className={paymentState === 'failed' ? 'bg-red-50/40' : undefined}>
                     <TableCell className="text-sm">
                       {inv.empresa_nombre ? (
                         <span className="font-medium text-foreground">{inv.empresa_nombre}</span>
@@ -407,13 +499,17 @@ export default function AdminInvoicesTab() {
                     <TableCell className="text-sm text-muted-foreground">{inv.customer_email || inv.customer_name || '—'}</TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground">{inv.number || '—'}</TableCell>
                     <TableCell className="text-sm truncate max-w-[200px] text-muted-foreground">{inv.description}</TableCell>
-                    <TableCell>{statusBadge(isPaid ? 'paid' : (inv.status || 'draft'))}</TableCell>
+                    <TableCell>{statusBadge(paymentState)}</TableCell>
+                    <TableCell className="text-center text-sm font-medium">{inv.attempt_count || 0}</TableCell>
                     <TableCell className="text-right text-muted-foreground">{fmtMXN(inv.amount_due / 100)}</TableCell>
                     <TableCell className="text-right font-medium">{fmtMXN((inv.amount_paid || 0) / 100)}</TableCell>
                     <TableCell className={`text-right font-semibold ${remaining > 0 ? 'text-destructive' : 'text-primary'}`}>{fmtMXN(remaining / 100)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{format(new Date(inv.created * 1000), 'dd MMM yy', { locale: es })}</TableCell>
                     <TableCell>
                       <div className="flex gap-1 flex-wrap">
+                        <Button size="sm" variant="ghost" onClick={() => setSelectedInvoice(inv)} title="Ver detalle completo">
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
                         {inv.hosted_invoice_url && !isPaid && (
                           <>
                             <Button
@@ -476,9 +572,87 @@ export default function AdminInvoicesTab() {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!selectedInvoice} onOpenChange={open => { if (!open) setSelectedInvoice(null); }}>
+        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
+          {selectedInvoice && (() => {
+            const state = getPaymentState(selectedInvoice);
+            const remaining = selectedInvoice.amount_remaining ?? (selectedInvoice.amount_due - (selectedInvoice.amount_paid || 0));
+            const dateTime = (seconds?: number | null) => seconds
+              ? format(new Date(seconds * 1000), "dd MMM yyyy, HH:mm", { locale: es })
+              : '—';
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Receipt className="h-5 w-5 text-primary" /> {selectedInvoice.number || 'Factura Stripe'}
+                  </DialogTitle>
+                  <DialogDescription>Información completa registrada por Stripe.</DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-lg border p-3">
+                    <div className="text-[11px] text-muted-foreground">Total</div>
+                    <div className="font-bold">{fmtMXN(selectedInvoice.amount_due / 100)}</div>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <div className="text-[11px] text-muted-foreground">Pagado</div>
+                    <div className="font-bold text-emerald-700">{fmtMXN((selectedInvoice.amount_paid || 0) / 100)}</div>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <div className="text-[11px] text-muted-foreground">Saldo</div>
+                    <div className={`font-bold ${remaining > 0 ? 'text-red-700' : ''}`}>{fmtMXN(remaining / 100)}</div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border divide-y text-sm">
+                  {[
+                    ['Estado interpretado', statusBadge(state)],
+                    ['Estado original Stripe', selectedInvoice.stripe_status || selectedInvoice.status || '—'],
+                    ['Empresa RutApp', selectedInvoice.empresa_nombre || 'Sin asociar'],
+                    ['Cliente Stripe', selectedInvoice.customer_name || '—'],
+                    ['Correo', selectedInvoice.customer_email || '—'],
+                    ['ID factura Stripe', selectedInvoice.id],
+                    ['ID cliente Stripe', selectedInvoice.customer_id || '—'],
+                    ['ID suscripción Stripe', selectedInvoice.subscription_id || '—'],
+                    ['Descripción', selectedInvoice.description || '—'],
+                    ['Generada', dateTime(selectedInvoice.created)],
+                    ['Vencimiento', dateTime(selectedInvoice.due_date)],
+                    ['Pagada', dateTime(selectedInvoice.paid_at)],
+                    ['Intentos de cobro', String(selectedInvoice.attempt_count || 0)],
+                    ['Próximo intento', dateTime(selectedInvoice.next_payment_attempt)],
+                    ['Método de cobro', selectedInvoice.collection_method === 'charge_automatically' ? 'Cargo automático' : selectedInvoice.collection_method || '—'],
+                    ['Motivo', selectedInvoice.billing_reason || '—'],
+                    ['Moneda', (selectedInvoice.currency || 'mxn').toUpperCase()],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="grid grid-cols-[155px_minmax(0,1fr)] gap-3 px-3 py-2.5">
+                      <span className="text-muted-foreground">{label}</span>
+                      <span className="font-medium break-all">{value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  {selectedInvoice.hosted_invoice_url && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={selectedInvoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4 mr-1.5" /> Abrir en Stripe</a>
+                    </Button>
+                  )}
+                  {selectedInvoice.invoice_pdf && (
+                    <Button size="sm" asChild>
+                      <a href={selectedInvoice.invoice_pdf} target="_blank" rel="noopener noreferrer"><Download className="h-4 w-4 mr-1.5" /> Descargar PDF</a>
+                    </Button>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Create invoice dialog */}
       <Dialog open={showCreate} onOpenChange={v => { if (!v) resetForm(); setShowCreate(v); }}>
