@@ -7275,6 +7275,8 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_payment_method_id: string | null
           stripe_subscription_id: string | null
+          stripe_sync_error: string | null
+          stripe_sync_error_at: string | null
           terms_accepted_at: string | null
           trial_ends_at: string | null
           ultimo_checkout_session_id: string | null
@@ -7298,6 +7300,8 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_payment_method_id?: string | null
           stripe_subscription_id?: string | null
+          stripe_sync_error?: string | null
+          stripe_sync_error_at?: string | null
           terms_accepted_at?: string | null
           trial_ends_at?: string | null
           ultimo_checkout_session_id?: string | null
@@ -7321,6 +7325,8 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_payment_method_id?: string | null
           stripe_subscription_id?: string | null
+          stripe_sync_error?: string | null
+          stripe_sync_error_at?: string | null
           terms_accepted_at?: string | null
           trial_ends_at?: string | null
           ultimo_checkout_session_id?: string | null
