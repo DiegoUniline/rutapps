@@ -9636,6 +9636,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      _aplicar_delta_compra_edicion: {
+        Args: {
+          p_almacen_id: string
+          p_compra_id: string
+          p_delta: number
+          p_empresa_id: string
+          p_folio: string
+          p_nota?: string
+          p_producto_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       _current_user_nombre: { Args: never; Returns: string }
       _inotif_cliente_nombre: { Args: { _id: string }; Returns: string }
       _map_entrega_status: { Args: { _s: string }; Returns: string }
@@ -10032,6 +10045,10 @@ export type Database = {
           p_solicitud_id: string
         }
         Returns: undefined
+      }
+      guardar_compra_segura: {
+        Args: { p_compra: Json; p_compra_id: string; p_lineas: Json }
+        Returns: Json
       }
       has_admin_pin: { Args: { p_user_id: string }; Returns: boolean }
       has_billing_access: { Args: { p_empresa_id: string }; Returns: boolean }
