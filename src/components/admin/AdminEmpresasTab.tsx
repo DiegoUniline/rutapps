@@ -71,37 +71,61 @@ interface AuditApiResponse {
 
 type EmpresaColumn =
   | 'empresa'
-  | 'contacto'
+  | 'correo'
+  | 'telefono'
   | 'alta'
   | 'estado'
   | 'plan'
+  | 'max_usuarios'
   | 'usuarios_rutapp'
+  | 'usuarios_facturables'
   | 'usuarios_stripe'
-  | 'ultimo_cobro'
-  | 'ultimo_pago'
+  | 'diferencia_usuarios'
+  | 'ultimo_cobro_monto'
+  | 'ultimo_cobro_fecha'
+  | 'ultimo_cobro_estado'
+  | 'ultimo_pago_monto'
+  | 'ultimo_pago_fecha'
   | 'saldo'
-  | 'ultima_venta'
+  | 'revision'
+  | 'ultima_venta_monto'
+  | 'ultima_venta_fecha'
+  | 'ultima_venta_folio'
   | 'dias_sin_venta'
   | 'proximo_cobro'
+  | 'proximo_cobro_estado'
   | 'timbres'
-  | 'stripe';
+  | 'stripe_estado'
+  | 'stripe_id';
 
 type ActivityFilter = 'todas' | 'hoy' | '7' | '30' | '60' | '90' | 'sin_ventas';
 
 const EMPRESA_COLUMNS: ColumnDef[] = [
   { key: 'empresa', label: 'Empresa', required: true, group: 'Empresa' },
-  { key: 'contacto', label: 'Correo y teléfono', group: 'Empresa' },
+  { key: 'correo', label: 'Correo', group: 'Empresa' },
+  { key: 'telefono', label: 'Teléfono', group: 'Empresa' },
   { key: 'alta', label: 'Fecha de alta', group: 'Empresa' },
   { key: 'estado', label: 'Estado', group: 'Suscripción' },
   { key: 'plan', label: 'Plan contratado', group: 'Suscripción' },
-  { key: 'usuarios_rutapp', label: 'Usuarios RutApp', group: 'Suscripción' },
+  { key: 'max_usuarios', label: 'Máximo de usuarios', group: 'Suscripción' },
+  { key: 'usuarios_rutapp', label: 'Usuarios activos RutApp', group: 'Suscripción' },
+  { key: 'usuarios_facturables', label: 'Usuarios facturables', group: 'Suscripción' },
   { key: 'usuarios_stripe', label: 'Usuarios Stripe', group: 'Suscripción' },
+  { key: 'diferencia_usuarios', label: 'Diferencia de usuarios', group: 'Suscripción' },
   { key: 'proximo_cobro', label: 'Próximo cobro', group: 'Suscripción' },
-  { key: 'stripe', label: 'Conexión Stripe', group: 'Suscripción' },
-  { key: 'ultimo_cobro', label: 'Último cobro generado', sub: 'Importe, fecha y estado', group: 'Cobranza' },
-  { key: 'ultimo_pago', label: 'Último pago exitoso', sub: 'Importe y fecha', group: 'Cobranza' },
-  { key: 'saldo', label: 'Saldo / revisión', group: 'Cobranza' },
-  { key: 'ultima_venta', label: 'Última venta', sub: 'Importe, fecha y folio', group: 'Actividad' },
+  { key: 'proximo_cobro_estado', label: 'Estado próximo cobro', group: 'Suscripción' },
+  { key: 'stripe_estado', label: 'Estado Stripe', group: 'Suscripción' },
+  { key: 'stripe_id', label: 'ID Stripe', group: 'Suscripción' },
+  { key: 'ultimo_cobro_monto', label: 'Último cobro — monto', group: 'Cobranza' },
+  { key: 'ultimo_cobro_fecha', label: 'Último cobro — fecha', group: 'Cobranza' },
+  { key: 'ultimo_cobro_estado', label: 'Último cobro — estado', group: 'Cobranza' },
+  { key: 'ultimo_pago_monto', label: 'Último pago — monto', group: 'Cobranza' },
+  { key: 'ultimo_pago_fecha', label: 'Último pago — fecha', group: 'Cobranza' },
+  { key: 'saldo', label: 'Saldo pendiente', group: 'Cobranza' },
+  { key: 'revision', label: 'Revisión', group: 'Cobranza' },
+  { key: 'ultima_venta_monto', label: 'Última venta — monto', group: 'Actividad' },
+  { key: 'ultima_venta_fecha', label: 'Última venta — fecha', group: 'Actividad' },
+  { key: 'ultima_venta_folio', label: 'Última venta — folio', group: 'Actividad' },
   { key: 'dias_sin_venta', label: 'Días sin vender', group: 'Actividad' },
   { key: 'timbres', label: 'Timbres', group: 'Actividad' },
 ];
@@ -114,22 +138,22 @@ const EMPRESA_PRESETS: ColumnPreset[] = [
   {
     key: 'control',
     label: 'Control rápido',
-    columns: ['empresa', 'estado', 'usuarios_rutapp', 'usuarios_stripe', 'ultimo_pago', 'saldo', 'ultima_venta', 'dias_sin_venta', 'proximo_cobro'],
+    columns: ['empresa', 'estado', 'usuarios_rutapp', 'usuarios_stripe', 'ultimo_pago_monto', 'ultimo_pago_fecha', 'saldo', 'revision', 'ultima_venta_fecha', 'dias_sin_venta', 'proximo_cobro'],
   },
   {
     key: 'cobranza',
     label: 'Cobranza',
-    columns: ['empresa', 'contacto', 'estado', 'plan', 'ultimo_cobro', 'ultimo_pago', 'saldo', 'proximo_cobro'],
+    columns: ['empresa', 'correo', 'telefono', 'estado', 'plan', 'ultimo_cobro_monto', 'ultimo_cobro_fecha', 'ultimo_cobro_estado', 'ultimo_pago_monto', 'ultimo_pago_fecha', 'saldo', 'revision', 'proximo_cobro'],
   },
   {
     key: 'actividad',
     label: 'Actividad',
-    columns: ['empresa', 'contacto', 'estado', 'ultima_venta', 'dias_sin_venta'],
+    columns: ['empresa', 'correo', 'telefono', 'estado', 'ultima_venta_monto', 'ultima_venta_fecha', 'ultima_venta_folio', 'dias_sin_venta'],
   },
   {
     key: 'suscripcion',
     label: 'Suscripción',
-    columns: ['empresa', 'estado', 'plan', 'usuarios_rutapp', 'usuarios_stripe', 'proximo_cobro', 'stripe'],
+    columns: ['empresa', 'estado', 'plan', 'max_usuarios', 'usuarios_rutapp', 'usuarios_facturables', 'usuarios_stripe', 'diferencia_usuarios', 'proximo_cobro', 'stripe_estado', 'stripe_id'],
   },
 ];
 
@@ -182,6 +206,24 @@ function latestInvoiceFor(row?: SubscriptionAuditResult): AuditInvoiceSnapshot |
 function latestPaidFor(row?: SubscriptionAuditResult): AuditInvoiceSnapshot | null {
   if (!row) return null;
   return newestInvoice(row.payments.latest_stripe_paid_invoice, row.payments.latest_local_paid_invoice);
+}
+
+function invoiceStatusLabel(status?: string | null): string {
+  const normalized = (status || '').toLowerCase();
+  if (['paid', 'pagada'].includes(normalized)) return 'Pagado';
+  if (['open', 'pending', 'pendiente', 'past_due', 'unpaid'].includes(normalized)) return 'Pendiente';
+  if (['void', 'cancelled', 'canceled', 'cancelada'].includes(normalized)) return 'Cancelado';
+  if (normalized === 'draft') return 'Borrador';
+  if (normalized === 'uncollectible') return 'Incobrable';
+  return status || 'Sin estado';
+}
+
+function reviewLabel(row?: SubscriptionAuditResult): string {
+  if (!row) return 'Consultando';
+  if (outstandingAmount(row) > 0) return 'Nos debe';
+  if (row.active_without_payment) return 'Activa sin pagos';
+  if (hasSeatMismatch(row)) return 'Revisar usuarios';
+  return 'Al corriente';
 }
 
 function lastSaleAt(row?: SubscriptionAuditResult): string | null {
@@ -409,20 +451,40 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
       const audit = auditByEmpresa.get(empresa.id);
       const sub = empresa.subscriptions?.[0];
       if (key === 'empresa') return empresa.nombre;
-      if (key === 'contacto') return empresa.email || empresa.telefono;
+      if (key === 'correo') return empresa.email;
+      if (key === 'telefono') return empresa.telefono;
       if (key === 'alta') return empresa.created_at;
-      if (key === 'status') return getEffectiveStatus(sub);
+      if (key === 'estado') return getEffectiveStatus(sub);
       if (key === 'plan') return audit?.db_subscription?.plan_nombre || sub?.plan_id;
+      if (key === 'max_usuarios') return sub?.max_usuarios;
       if (key === 'usuarios_rutapp') return audit?.active_user_count;
+      if (key === 'usuarios_facturables') return audit?.expected_billable_users;
       if (key === 'usuarios_stripe') return audit?.stripe_subscription?.quantity;
-      if (key === 'ultimo_cobro') return latestInvoiceFor(audit)?.created_at;
-      if (key === 'ultimo_pago') return latestPaidFor(audit)?.paid_at;
+      if (key === 'diferencia_usuarios') return audit?.stripe_subscription && Number.isFinite(audit.expected_billable_users)
+        ? audit.stripe_subscription.quantity - Number(audit.expected_billable_users)
+        : null;
+      if (key === 'ultimo_cobro_monto') return latestInvoiceFor(audit)?.amount;
+      if (key === 'ultimo_cobro_fecha') return latestInvoiceFor(audit)?.created_at;
+      if (key === 'ultimo_cobro_estado') {
+        const invoice = latestInvoiceFor(audit);
+        return invoice ? invoiceStatusLabel(invoice.status) : null;
+      }
+      if (key === 'ultimo_pago_monto') return latestPaidFor(audit)?.amount_paid ?? latestPaidFor(audit)?.amount;
+      if (key === 'ultimo_pago_fecha') return latestPaidFor(audit)?.paid_at;
       if (key === 'saldo') return outstandingAmount(audit);
-      if (key === 'ultima_venta') return lastSaleAt(audit);
+      if (key === 'revision') return reviewLabel(audit);
+      if (key === 'ultima_venta_monto') return audit?.last_sale?.total;
+      if (key === 'ultima_venta_fecha') return lastSaleAt(audit);
+      if (key === 'ultima_venta_folio') return audit?.last_sale?.folio;
       if (key === 'dias_sin_venta') return daysSince(lastSaleAt(audit));
       if (key === 'proximo_cobro') return sub?.status === 'trial' ? sub.trial_ends_at : sub?.current_period_end;
+      if (key === 'proximo_cobro_estado') {
+        const value = sub?.status === 'trial' ? sub.trial_ends_at : sub?.current_period_end;
+        return value && new Date(value) < new Date() ? 'Vencido' : value ? 'Programado' : null;
+      }
       if (key === 'timbres') return empresa.timbres_saldo?.[0]?.saldo ?? 0;
-      if (key === 'stripe') return sub?.stripe_customer_id || sub?.stripe_subscription_id;
+      if (key === 'stripe_estado') return audit?.stripe_subscription?.status || (sub?.stripe_customer_id ? 'Conectado' : null);
+      if (key === 'stripe_id') return sub?.stripe_subscription_id;
       return null;
     },
   );
@@ -551,20 +613,32 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                 <TableHeader>
                   <TableRow>
                     <SortableTh sortKey="empresa" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Empresa</SortableTh>
-                    {columnPreferences.isVisible('contacto') && <SortableTh sortKey="contacto" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Contacto</SortableTh>}
+                    {columnPreferences.isVisible('correo') && <SortableTh sortKey="correo" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Correo</SortableTh>}
+                    {columnPreferences.isVisible('telefono') && <SortableTh sortKey="telefono" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Teléfono</SortableTh>}
                     {columnPreferences.isVisible('alta') && <SortableTh sortKey="alta" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Fecha de alta</SortableTh>}
-                    {columnPreferences.isVisible('estado') && <SortableTh sortKey="status" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Estado</SortableTh>}
+                    {columnPreferences.isVisible('estado') && <SortableTh sortKey="estado" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Estado</SortableTh>}
                     {columnPreferences.isVisible('plan') && <SortableTh sortKey="plan" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Plan</SortableTh>}
-                    {columnPreferences.isVisible('usuarios_rutapp') && <SortableTh sortKey="usuarios_rutapp" sort={sort} onToggle={toggleSort} align="center" className="h-10 px-2 text-xs">Usuarios RutApp</SortableTh>}
+                    {columnPreferences.isVisible('max_usuarios') && <SortableTh sortKey="max_usuarios" sort={sort} onToggle={toggleSort} align="center" className="h-10 px-2 text-xs">Máx. usuarios</SortableTh>}
+                    {columnPreferences.isVisible('usuarios_rutapp') && <SortableTh sortKey="usuarios_rutapp" sort={sort} onToggle={toggleSort} align="center" className="h-10 px-2 text-xs">Usuarios activos</SortableTh>}
+                    {columnPreferences.isVisible('usuarios_facturables') && <SortableTh sortKey="usuarios_facturables" sort={sort} onToggle={toggleSort} align="center" className="h-10 px-2 text-xs">Usuarios facturables</SortableTh>}
                     {columnPreferences.isVisible('usuarios_stripe') && <SortableTh sortKey="usuarios_stripe" sort={sort} onToggle={toggleSort} align="center" className="h-10 px-2 text-xs">Usuarios Stripe</SortableTh>}
-                    {columnPreferences.isVisible('ultimo_cobro') && <SortableTh sortKey="ultimo_cobro" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Último cobro</SortableTh>}
-                    {columnPreferences.isVisible('ultimo_pago') && <SortableTh sortKey="ultimo_pago" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Último pago</SortableTh>}
-                    {columnPreferences.isVisible('saldo') && <SortableTh sortKey="saldo" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Saldo / revisión</SortableTh>}
-                    {columnPreferences.isVisible('ultima_venta') && <SortableTh sortKey="ultima_venta" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Última venta</SortableTh>}
+                    {columnPreferences.isVisible('diferencia_usuarios') && <SortableTh sortKey="diferencia_usuarios" sort={sort} onToggle={toggleSort} align="center" className="h-10 px-2 text-xs">Dif. usuarios</SortableTh>}
+                    {columnPreferences.isVisible('ultimo_cobro_monto') && <SortableTh sortKey="ultimo_cobro_monto" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Cobro monto</SortableTh>}
+                    {columnPreferences.isVisible('ultimo_cobro_fecha') && <SortableTh sortKey="ultimo_cobro_fecha" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Cobro fecha</SortableTh>}
+                    {columnPreferences.isVisible('ultimo_cobro_estado') && <SortableTh sortKey="ultimo_cobro_estado" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Cobro estado</SortableTh>}
+                    {columnPreferences.isVisible('ultimo_pago_monto') && <SortableTh sortKey="ultimo_pago_monto" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Pago monto</SortableTh>}
+                    {columnPreferences.isVisible('ultimo_pago_fecha') && <SortableTh sortKey="ultimo_pago_fecha" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Pago fecha</SortableTh>}
+                    {columnPreferences.isVisible('saldo') && <SortableTh sortKey="saldo" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Saldo pendiente</SortableTh>}
+                    {columnPreferences.isVisible('revision') && <SortableTh sortKey="revision" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Revisión</SortableTh>}
+                    {columnPreferences.isVisible('ultima_venta_monto') && <SortableTh sortKey="ultima_venta_monto" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Venta monto</SortableTh>}
+                    {columnPreferences.isVisible('ultima_venta_fecha') && <SortableTh sortKey="ultima_venta_fecha" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Venta fecha</SortableTh>}
+                    {columnPreferences.isVisible('ultima_venta_folio') && <SortableTh sortKey="ultima_venta_folio" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Venta folio</SortableTh>}
                     {columnPreferences.isVisible('dias_sin_venta') && <SortableTh sortKey="dias_sin_venta" sort={sort} onToggle={toggleSort} align="center" className="h-10 px-2 text-xs">Días sin vender</SortableTh>}
                     {columnPreferences.isVisible('proximo_cobro') && <SortableTh sortKey="proximo_cobro" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Próximo cobro</SortableTh>}
+                    {columnPreferences.isVisible('proximo_cobro_estado') && <SortableTh sortKey="proximo_cobro_estado" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Próximo estado</SortableTh>}
                     {columnPreferences.isVisible('timbres') && <SortableTh sortKey="timbres" sort={sort} onToggle={toggleSort} align="center" className="h-10 px-2 text-xs">Timbres</SortableTh>}
-                    {columnPreferences.isVisible('stripe') && <SortableTh sortKey="stripe" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Stripe</SortableTh>}
+                    {columnPreferences.isVisible('stripe_estado') && <SortableTh sortKey="stripe_estado" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Stripe estado</SortableTh>}
+                    {columnPreferences.isVisible('stripe_id') && <SortableTh sortKey="stripe_id" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Stripe ID</SortableTh>}
                     <TableHead className="w-24"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -588,12 +662,8 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                     return (
                       <TableRow key={e.id} className="cursor-pointer hover:bg-card" onClick={() => onSelectEmpresa?.(e.id)}>
                         <TableCell className="min-w-[190px] py-2"><div className="font-medium">{e.nombre}</div></TableCell>
-                        {columnPreferences.isVisible('contacto') && (
-                          <TableCell className="min-w-[210px] py-2">
-                            <div className="text-xs truncate max-w-[240px]">{e.email || 'Sin correo'}</div>
-                            <div className="text-[10px] text-muted-foreground">{e.telefono || 'Sin teléfono'}</div>
-                          </TableCell>
-                        )}
+                        {columnPreferences.isVisible('correo') && <TableCell className="min-w-[200px] py-2 text-xs">{e.email || 'Sin correo'}</TableCell>}
+                        {columnPreferences.isVisible('telefono') && <TableCell className="min-w-[120px] py-2 text-xs">{e.telefono || 'Sin teléfono'}</TableCell>}
                         {columnPreferences.isVisible('alta') && <TableCell className="py-2 text-xs">{fmtBillingDate(e.created_at)}</TableCell>}
                         {columnPreferences.isVisible('estado') && (
                           <TableCell className="py-2">
@@ -605,69 +675,61 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                           </TableCell>
                         )}
                         {columnPreferences.isVisible('plan') && (
-                          <TableCell className="py-2 min-w-[120px]">
-                            <div className="text-xs font-medium">{audit?.db_subscription?.plan_nombre || 'Sin plan'}</div>
-                            <div className="text-[10px] text-muted-foreground">Máx. {sub?.max_usuarios ?? '—'} usuarios</div>
-                          </TableCell>
+                          <TableCell className="py-2 min-w-[120px] text-xs font-medium">{audit?.db_subscription?.plan_nombre || 'Sin plan'}</TableCell>
                         )}
+                        {columnPreferences.isVisible('max_usuarios') && <TableCell className="text-center py-2 font-mono text-sm">{sub?.max_usuarios ?? '—'}</TableCell>}
                         {columnPreferences.isVisible('usuarios_rutapp') && (
-                          <TableCell className="text-center py-2">
-                            <div className="font-mono font-bold text-sm">{rutappUsers ?? (auditQuery.isLoading ? '…' : '—')}</div>
-                            <div className="text-[10px] text-muted-foreground">activos</div>
-                            {expectedUsers != null && expectedUsers !== rutappUsers && <div className="text-[10px] text-muted-foreground">facturables {expectedUsers}</div>}
-                          </TableCell>
+                          <TableCell className="text-center py-2 font-mono font-bold text-sm">{rutappUsers ?? (auditQuery.isLoading ? '…' : '—')}</TableCell>
                         )}
+                        {columnPreferences.isVisible('usuarios_facturables') && <TableCell className="text-center py-2 font-mono text-sm">{expectedUsers ?? (auditQuery.isLoading ? '…' : '—')}</TableCell>}
                         {columnPreferences.isVisible('usuarios_stripe') && (
-                          <TableCell className="text-center py-2">
-                            <span className={`font-mono font-bold text-sm ${seatMismatch ? 'text-amber-700' : stripeUsers != null ? 'text-emerald-700' : 'text-muted-foreground'}`}>
-                              {stripeUsers ?? (auditQuery.isLoading ? '…' : '—')}
-                            </span>
-                            <div className={`text-[10px] ${seatMismatch ? 'font-semibold text-amber-700' : 'text-muted-foreground'}`}>
-                              {seatMismatch ? `debe ser ${expectedUsers}` : 'configurados'}
-                            </div>
+                          <TableCell className={`text-center py-2 font-mono font-bold text-sm ${seatMismatch ? 'text-amber-700' : stripeUsers != null ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                            {stripeUsers ?? (auditQuery.isLoading ? '…' : '—')}
                           </TableCell>
                         )}
-                        {columnPreferences.isVisible('ultimo_cobro') && (
-                          <TableCell className="text-right py-2 min-w-[125px]">
-                            {latestInvoice ? <>
-                              <div className="font-mono font-semibold text-sm">{money.format(latestInvoice.amount)}</div>
-                              <div className="text-[10px] text-muted-foreground">{fmtBillingDate(latestInvoice.created_at)}</div>
-                              <div className={`text-[10px] font-medium ${['paid', 'pagada'].includes(latestInvoice.status) ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                {['paid', 'pagada'].includes(latestInvoice.status) ? 'Pagado' : 'Pendiente'}
-                              </div>
-                            </> : <span className="text-xs text-muted-foreground">Sin cobros</span>}
+                        {columnPreferences.isVisible('diferencia_usuarios') && (
+                          <TableCell className={`text-center py-2 font-mono font-bold text-sm ${seatMismatch ? 'text-amber-700' : 'text-emerald-700'}`}>
+                            {stripeUsers != null && expectedUsers != null ? stripeUsers - expectedUsers : '—'}
                           </TableCell>
                         )}
-                        {columnPreferences.isVisible('ultimo_pago') && (
-                          <TableCell className="text-right py-2 min-w-[125px]">
-                            {latestPaid ? <>
-                              <div className="font-mono font-semibold text-sm text-emerald-700">{money.format(latestPaid.amount_paid ?? latestPaid.amount)}</div>
-                              <div className="text-[10px] text-muted-foreground">{fmtBillingDate(latestPaid.paid_at)}</div>
-                            </> : <span className="text-xs font-medium text-orange-700">Sin pagos</span>}
+                        {columnPreferences.isVisible('ultimo_cobro_monto') && (
+                          <TableCell className="text-right py-2 min-w-[115px] font-mono font-semibold text-sm">
+                            {latestInvoice ? money.format(latestInvoice.amount) : '—'}
                           </TableCell>
                         )}
+                        {columnPreferences.isVisible('ultimo_cobro_fecha') && <TableCell className="py-2 min-w-[105px] text-xs">{fmtBillingDate(latestInvoice?.created_at)}</TableCell>}
+                        {columnPreferences.isVisible('ultimo_cobro_estado') && (
+                          <TableCell className={`py-2 min-w-[95px] text-xs font-medium ${latestInvoice && ['paid', 'pagada'].includes(latestInvoice.status) ? 'text-emerald-700' : 'text-amber-700'}`}>
+                            {latestInvoice ? invoiceStatusLabel(latestInvoice.status) : 'Sin cobros'}
+                          </TableCell>
+                        )}
+                        {columnPreferences.isVisible('ultimo_pago_monto') && (
+                          <TableCell className="text-right py-2 min-w-[115px] font-mono font-semibold text-sm text-emerald-700">
+                            {latestPaid ? money.format(latestPaid.amount_paid ?? latestPaid.amount) : '—'}
+                          </TableCell>
+                        )}
+                        {columnPreferences.isVisible('ultimo_pago_fecha') && <TableCell className="py-2 min-w-[105px] text-xs">{fmtBillingDate(latestPaid?.paid_at)}</TableCell>}
                         {columnPreferences.isVisible('saldo') && (
-                          <TableCell className="text-right py-2 min-w-[135px]">
-                            {pendingAmount > 0 ? <>
-                              <div className="font-mono font-bold text-sm text-red-700">{money.format(pendingAmount)}</div>
-                              <div className="text-[10px] font-semibold text-red-700">NOS DEBE</div>
-                            </> : audit?.active_without_payment ? (
-                              <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Activa sin pagos</Badge>
-                            ) : seatMismatch ? (
-                              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Revisar usuarios</Badge>
-                            ) : audit ? <span className="text-xs font-semibold text-emerald-700">Al corriente</span>
+                          <TableCell className={`text-right py-2 min-w-[115px] font-mono font-bold text-sm ${pendingAmount > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                            {money.format(pendingAmount)}
+                          </TableCell>
+                        )}
+                        {columnPreferences.isVisible('revision') && (
+                          <TableCell className="py-2 min-w-[125px]">
+                            {pendingAmount > 0 ? <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Nos debe</Badge>
+                              : audit?.active_without_payment ? <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Activa sin pagos</Badge>
+                              : seatMismatch ? <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Revisar usuarios</Badge>
+                              : audit ? <span className="text-xs font-semibold text-emerald-700">Al corriente</span>
                               : <span className="text-xs text-muted-foreground">Consultando…</span>}
                           </TableCell>
                         )}
-                        {columnPreferences.isVisible('ultima_venta') && (
-                          <TableCell className="text-right py-2 min-w-[135px]">
-                            {lastSale ? <>
-                              <div className="font-mono font-semibold text-sm">{money.format(Number(lastSale.total || 0))}</div>
-                              <div className="text-[10px] text-muted-foreground">{fmtBillingDate(lastSaleAt(audit))}</div>
-                              <div className="text-[10px] text-muted-foreground">{lastSale.folio || 'Sin folio'}</div>
-                            </> : <span className="text-xs text-muted-foreground">Sin ventas</span>}
+                        {columnPreferences.isVisible('ultima_venta_monto') && (
+                          <TableCell className="text-right py-2 min-w-[115px] font-mono font-semibold text-sm">
+                            {lastSale ? money.format(Number(lastSale.total || 0)) : '—'}
                           </TableCell>
                         )}
+                        {columnPreferences.isVisible('ultima_venta_fecha') && <TableCell className="py-2 min-w-[105px] text-xs">{fmtBillingDate(lastSaleAt(audit))}</TableCell>}
+                        {columnPreferences.isVisible('ultima_venta_folio') && <TableCell className="py-2 min-w-[100px] text-xs">{lastSale?.folio || '—'}</TableCell>}
                         {columnPreferences.isVisible('dias_sin_venta') && (
                           <TableCell className="text-center py-2">
                             {inactivityDays == null ? (
@@ -684,22 +746,28 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                               if (!endDate) return <span className="text-xs text-muted-foreground">—</span>;
                               const d = new Date(endDate);
                               const normalized = d.getDate() === 1 ? d : new Date(d.getFullYear(), d.getMonth() + 1, 1);
-                              return <div className="text-xs">
-                                <div className="font-medium">{format(normalized, 'dd MMM yyyy', { locale: es })}</div>
-                                {normalized < new Date() && <span className="text-[10px] text-destructive font-semibold">VENCIDO</span>}
-                              </div>;
+                              return <span className="text-xs font-medium">{format(normalized, 'dd MMM yyyy', { locale: es })}</span>;
+                            })()}
+                          </TableCell>
+                        )}
+                        {columnPreferences.isVisible('proximo_cobro_estado') && (
+                          <TableCell className="py-2 min-w-[105px] text-xs font-medium">
+                            {(() => {
+                              const endDate = sub?.status === 'trial' ? sub?.trial_ends_at : sub?.current_period_end;
+                              if (!endDate) return 'Sin fecha';
+                              return new Date(endDate) < new Date() ? <span className="text-destructive">Vencido</span> : <span className="text-emerald-700">Programado</span>;
                             })()}
                           </TableCell>
                         )}
                         {columnPreferences.isVisible('timbres') && <TableCell className="text-center py-2 font-mono text-sm">{saldo}</TableCell>}
-                        {columnPreferences.isVisible('stripe') && (
-                          <TableCell className="py-2 min-w-[135px]">
-                            <div className={`text-xs font-medium ${hasStripeCustomer ? 'text-emerald-700' : 'text-muted-foreground'}`}>
-                              {hasStripeCustomer ? 'Conectado' : 'Sin cliente'}
-                            </div>
-                            <div className="max-w-[145px] truncate font-mono text-[9px] text-muted-foreground" title={sub?.stripe_subscription_id || ''}>
-                              {sub?.stripe_subscription_id || '—'}
-                            </div>
+                        {columnPreferences.isVisible('stripe_estado') && (
+                          <TableCell className={`py-2 min-w-[105px] text-xs font-medium ${hasStripeCustomer ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                            {audit?.stripe_subscription?.status || (hasStripeCustomer ? 'Conectado' : 'Sin cliente')}
+                          </TableCell>
+                        )}
+                        {columnPreferences.isVisible('stripe_id') && (
+                          <TableCell className="py-2 min-w-[155px] max-w-[180px] truncate font-mono text-[10px] text-muted-foreground" title={sub?.stripe_subscription_id || ''}>
+                            {sub?.stripe_subscription_id || '—'}
                           </TableCell>
                         )}
                         <TableCell className="py-2">
