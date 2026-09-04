@@ -1143,6 +1143,189 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── One-time additional charge ───
+    // Creates and attempts to collect a standalone Stripe invoice. It is linked
+    // to the company for reporting, but NEVER changes subscription dates, plan,
+    // seats, status or access.
+    if (action === "create_additional_charge") {
+      const {
+        empresa_id,
+        cantidad = 1,
+        precio_unitario,
+        descuento_pct,
+        concepto,
+        periodo_inicio: periodoInicioInput,
+        periodo_fin: periodoFinInput,
+        days_until_due,
+        request_id,
+      } = body;
+
+      const cantidadFinal = Math.max(1, Number(cantidad) || 1);
+      const precioFinal = Number(precio_unitario);
+      const descPct = Math.min(100, Math.max(0, Number(descuento_pct) || 0));
+      if (!empresa_id) throw new Error("empresa_id requerido");
+      if (!Number.isFinite(precioFinal) || precioFinal <= 0) throw new Error("precio_unitario requerido");
+
+      const { data: empData } = await supabase
+        .from("empresas")
+        .select("id, nombre, email, telefono, rfc, owner_user_id")
+        .eq("id", empresa_id)
+        .maybeSingle();
+      if (!empData) throw new Error("Empresa no encontrada");
+
+      let clientEmail = empData.email;
+      if (!clientEmail && empData.owner_user_id) {
+        const { data: userData } = await supabase.auth.admin.getUserById(empData.owner_user_id);
+        clientEmail = userData?.user?.email || null;
+      }
+      if (!clientEmail) throw new Error("No se encontró email para esta empresa");
+
+      const { data: subRow } = await supabase
+        .from("subscriptions")
+        .select("id, stripe_customer_id, stripe_payment_method_id")
+        .eq("empresa_id", empresa_id)
+        .maybeSingle();
+
+      let customerId = subRow?.stripe_customer_id || null;
+      if (!customerId) {
+        const customers = await stripe.customers.list({ email: clientEmail, limit: 1 });
+        customerId = customers.data[0]?.id || null;
+      }
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: clientEmail,
+          name: empData.nombre,
+          phone: empData.telefono || undefined,
+          metadata: { empresa_id, rfc: empData.rfc || "" },
+        });
+        customerId = customer.id;
+      }
+
+      const subtotal = cantidadFinal * precioFinal;
+      const descMonto = subtotal * (descPct / 100);
+      const total = subtotal - descMonto;
+      if (total <= 0) throw new Error("El total del cargo debe ser mayor a cero");
+
+      const hoy = new Date();
+      const periodoInicio = periodoInicioInput ? datePart(periodoInicioInput) : datePart(hoy);
+      const periodoFin = periodoFinInput ? datePart(periodoFinInput) : periodoInicio;
+      const conceptoFinal = String(concepto || "Cargo adicional Rutapp").trim();
+      const vencimiento = new Date(hoy);
+      vencimiento.setDate(vencimiento.getDate() + (Number(days_until_due) || 7));
+      const requestId = String(request_id || crypto.randomUUID()).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+      const idempotencyBase = `rutapp-additional-${empresa_id}-${requestId}`;
+
+      const invoice = await stripe.invoices.create({
+        customer: customerId,
+        collection_method: "charge_automatically",
+        auto_advance: true,
+        description: conceptoFinal,
+        default_payment_method: subRow?.stripe_payment_method_id || undefined,
+        metadata: {
+          empresa_id,
+          tipo: "additional_charge",
+          affects_subscription: "0",
+          cantidad: String(cantidadFinal),
+          precio_unitario: String(precioFinal),
+          descuento_pct: String(descPct),
+          periodo_inicio: periodoInicio,
+          periodo_fin: periodoFin,
+          request_id: requestId,
+        },
+      }, { idempotencyKey: `${idempotencyBase}-invoice` });
+
+      await stripe.invoiceItems.create({
+        customer: customerId,
+        invoice: invoice.id,
+        amount: Math.round(subtotal * 100),
+        currency: "mxn",
+        description: `${conceptoFinal}: ${cantidadFinal} × $${precioFinal.toFixed(2)}`,
+      }, { idempotencyKey: `${idempotencyBase}-item` });
+
+      if (descMonto > 0) {
+        await stripe.invoiceItems.create({
+          customer: customerId,
+          invoice: invoice.id,
+          amount: -Math.round(descMonto * 100),
+          currency: "mxn",
+          description: `Descuento ${descPct}%`,
+        }, { idempotencyKey: `${idempotencyBase}-discount` });
+      }
+
+      // Register the draft before finalizing it. A paid webhook can therefore
+      // update this same row and cannot create a duplicate during the request.
+      const { data: existingFactura } = await supabase
+        .from("facturas")
+        .select("id")
+        .eq("stripe_invoice_id", invoice.id)
+        .maybeSingle();
+      let facturaId = existingFactura?.id || null;
+      if (!facturaId) {
+        const { data: facturaRow, error: facturaErr } = await supabase
+          .from("facturas")
+          .insert({
+            empresa_id,
+            suscripcion_id: subRow?.id || null,
+            concepto: conceptoFinal,
+            periodo_inicio: periodoInicio,
+            periodo_fin: periodoFin,
+            num_usuarios: cantidadFinal,
+            precio_unitario: precioFinal,
+            descuento_porcentaje: descPct,
+            subtotal,
+            total,
+            estado: "pendiente",
+            tipo: "additional_charge",
+            es_prorrateo: false,
+            fecha_vencimiento: vencimiento.toISOString(),
+            stripe_invoice_id: invoice.id,
+          })
+          .select("id")
+          .single();
+        if (facturaErr) throw facturaErr;
+        facturaId = facturaRow?.id || null;
+      }
+
+      let finalizedInv = await stripe.invoices.retrieve(invoice.id);
+      if (finalizedInv.status === "draft") {
+        finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
+      }
+      try {
+        if (finalizedInv.status === "open") finalizedInv = await stripe.invoices.pay(invoice.id);
+      } catch (_) {
+        finalizedInv = await stripe.invoices.retrieve(invoice.id);
+      }
+
+      if (facturaId) {
+        const { error: facturaUpdateErr } = await supabase
+          .from("facturas")
+          .update({
+            numero_factura: finalizedInv.number || undefined,
+            estado: finalizedInv.status === "paid" ? "pagada" : "pendiente",
+            fecha_pago: finalizedInv.status === "paid" ? new Date().toISOString() : null,
+            stripe_payment_intent_id: typeof (finalizedInv as any).payment_intent === "string"
+              ? (finalizedInv as any).payment_intent
+              : null,
+          })
+          .eq("id", facturaId);
+        if (facturaUpdateErr) throw facturaUpdateErr;
+      }
+
+      return new Response(JSON.stringify({
+        invoice_id: finalizedInv.id,
+        hosted_url: finalizedInv.hosted_invoice_url,
+        status: finalizedInv.status,
+        folio: finalizedInv.number || finalizedInv.id.slice(-8),
+        total,
+        factura_id: facturaId,
+        stripe: true,
+        tipo: "additional_charge",
+        subscription_unchanged: true,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ─── Create subscription invoice (N months, optional discount) ───
     // On payment, the stripe-webhook reads metadata.meses and extends current_period_end.
     if (action === "create_subscription_invoice") {
@@ -1217,6 +1400,7 @@ Deno.serve(async (req) => {
             subtotal,
             total,
             estado: "pendiente",
+            tipo: "subscription_renewal",
             es_prorrateo: false,
             fecha_vencimiento: vencimiento.toISOString(),
             stripe_invoice_id: null,
@@ -1307,6 +1491,7 @@ Deno.serve(async (req) => {
           subtotal,
           total,
           estado: finalizedInv.status === "paid" ? "pagada" : "pendiente",
+          tipo: "subscription_renewal",
           es_prorrateo: false,
           fecha_pago: finalizedInv.status === "paid" ? new Date().toISOString() : null,
           fecha_vencimiento: vencimiento.toISOString(),
@@ -1398,7 +1583,7 @@ Deno.serve(async (req) => {
 
       // Extend subscription period if requested and not a prorrateo
       let nuevoFinPeriodo: string | null = null;
-      if (extender_periodo && !fac.es_prorrateo && empresa_id) {
+      if (extender_periodo && !fac.es_prorrateo && fac.tipo !== "additional_charge" && empresa_id) {
         const { data: subRow } = await supabase
           .from("subscriptions")
           .select("id, current_period_end, current_period_start")

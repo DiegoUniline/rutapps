@@ -72,6 +72,7 @@ Deno.serve(async (req) => {
         .from("facturas")
         .select("id, fecha_emision")
         .in("estado", ["pendiente", "procesando", "past_due"])
+        .neq("tipo", "additional_charge")
         .is("fecha_vencimiento", null);
       for (const f of sinVenc || []) {
         const emi = f.fecha_emision ? new Date(f.fecha_emision) : new Date();
@@ -85,6 +86,7 @@ Deno.serve(async (req) => {
         .from("facturas")
         .select("id, empresa_id, numero_factura, fecha_vencimiento, estado, stripe_invoice_id")
         .in("estado", ["pendiente", "procesando", "past_due"])
+        .neq("tipo", "additional_charge")
         .lt("fecha_vencimiento", new Date().toISOString());
 
       // Agrupar las vencidas por empresa

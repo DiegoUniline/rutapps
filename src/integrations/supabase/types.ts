@@ -3701,6 +3701,7 @@ export type Database = {
           stripe_payment_intent_id: string | null
           subtotal: number
           suscripcion_id: string | null
+          tipo: string
           total: number
         }
         Insert: {
@@ -3725,6 +3726,7 @@ export type Database = {
           stripe_payment_intent_id?: string | null
           subtotal?: number
           suscripcion_id?: string | null
+          tipo?: string
           total?: number
         }
         Update: {
@@ -3749,6 +3751,7 @@ export type Database = {
           stripe_payment_intent_id?: string | null
           subtotal?: number
           suscripcion_id?: string | null
+          tipo?: string
           total?: number
         }
         Relationships: [

@@ -44,6 +44,18 @@ const STATUSES = ['trial', 'active', 'past_due', 'gracia', 'suspended', 'cancell
 const fmtMXN = (v: number) =>
   `$${(v || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+type InvoiceType = 'subscription_renewal' | 'additional_charge';
+
+function planModality(plan: any): string {
+  if (!plan) return '—';
+  const period = String(plan.periodo || '').trim().toLowerCase();
+  const months = Number(plan.meses || 0);
+  if (period.includes('anual') || period.includes('año') || period.includes('year') || months === 12) return 'Anual';
+  if (period.includes('semestr') || months === 6) return 'Semestral';
+  if (period.includes('mens') || period === 'mes' || months === 1) return 'Mensual';
+  return months > 0 ? `${months} meses` : (plan.periodo || '—');
+}
+
 const datePart = (value: any) => {
   if (!value) return '';
   if (typeof value === 'string') return value.split('T')[0];
@@ -68,6 +80,24 @@ const addMonthsInput = (value: string, months: number) => {
   d.setMonth(d.getMonth() + months);
   return datePart(d);
 };
+
+function subscriptionModality(subscription: any, plan: any): string {
+  const start = datePart(subscription?.current_period_start);
+  const end = datePart(subscription?.current_period_end);
+  if (start && end) {
+    const startDate = parseCalendarDate(start);
+    const endDate = parseCalendarDate(end);
+    if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
+      const months = (endDate.getFullYear() - startDate.getFullYear()) * 12
+        + endDate.getMonth() - startDate.getMonth();
+      if (months === 12) return 'Anual';
+      if (months === 6) return 'Semestral';
+      if (months === 1) return 'Mensual';
+      if (months > 1) return `${months} meses`;
+    }
+  }
+  return planModality(plan);
+}
 const fmtDate = (value: any, pattern = 'dd MMM yyyy') => value ? format(parseCalendarDate(value), pattern, { locale: es }) : '—';
 
 function getEffectiveStatus(sub: any): { l: string; v: 'default' | 'secondary' | 'destructive' | 'outline' } {
@@ -120,7 +150,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
 
   const [showSubInvoice, setShowSubInvoice] = useState(false);
   const [creatingSubInvoice, setCreatingSubInvoice] = useState(false);
+  const [subInvoiceRequestId, setSubInvoiceRequestId] = useState('');
   const [subInvoiceForm, setSubInvoiceForm] = useState({
+    tipo_factura: 'subscription_renewal' as InvoiceType,
     plan_id: '' as string,
     crear_con_stripe: true,
     meses: 1,
@@ -279,7 +311,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
     finally { setForcingAll(false); }
   }
 
-  const subInvoiceSubtotal = subInvoiceForm.num_usuarios * subInvoiceForm.meses * subInvoiceForm.precio_por_usuario_mes;
+  const invoiceMonths = subInvoiceForm.tipo_factura === 'additional_charge' ? 1 : subInvoiceForm.meses;
+  const subInvoiceSubtotal = subInvoiceForm.num_usuarios * invoiceMonths * subInvoiceForm.precio_por_usuario_mes;
   const subInvoiceDescMonto = subInvoiceSubtotal * (subInvoiceForm.descuento_pct / 100);
   const subInvoiceTotal = subInvoiceSubtotal - subInvoiceDescMonto;
 
@@ -296,13 +329,59 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
     const today = todayInput();
     const base = currentEnd && parseCalendarDate(currentEnd) > parseCalendarDate(today) ? currentEnd : today;
     setSubInvoiceForm({
-      plan_id: planId, crear_con_stripe: true, meses, num_usuarios: subscription?.max_usuarios || 1,
+      tipo_factura: 'subscription_renewal', plan_id: planId, crear_con_stripe: true, meses, num_usuarios: subscription?.max_usuarios || 1,
       precio_por_usuario_mes: precio, descuento_pct: descPlan, descuento_permanente: false,
       days_until_due: 7, concepto: `Suscripción Rutapp ${planNombre}`,
       periodo_inicio: base,
       periodo_fin: addMonthsInput(base, meses),
     });
+    setSubInvoiceRequestId(crypto.randomUUID());
     setShowSubInvoice(true);
+  }
+
+  function updateInvoiceType(type: InvoiceType) {
+    if (type === 'additional_charge') {
+      const periodStart = datePart(subscription?.current_period_start) || todayInput();
+      const periodEnd = datePart(subscription?.current_period_end) || periodStart;
+      setSubInvoiceForm(f => ({
+        ...f,
+        tipo_factura: type,
+        crear_con_stripe: true,
+        meses: 1,
+        num_usuarios: 1,
+        precio_por_usuario_mes: 300,
+        descuento_pct: 0,
+        descuento_permanente: false,
+        days_until_due: 1,
+        concepto: 'Usuario adicional no cobrado',
+        periodo_inicio: periodStart,
+        periodo_fin: periodEnd,
+      }));
+      return;
+    }
+
+    const currentPlan = subscription?.subscription_plans;
+    const planId = subscription?.plan_id || (plans[0]?.id ?? '');
+    const plan = plans.find(p => p.id === planId) || currentPlan;
+    const months = plan?.meses || 1;
+    const currentEnd = datePart(subscription?.current_period_end);
+    const today = todayInput();
+    const base = currentEnd && parseCalendarDate(currentEnd) > parseCalendarDate(today) ? currentEnd : today;
+    setSubInvoiceForm(f => ({
+      ...f,
+      tipo_factura: type,
+      crear_con_stripe: true,
+      plan_id: planId,
+      meses: months,
+      num_usuarios: subscription?.max_usuarios || 1,
+      precio_por_usuario_mes: plan?.precio_por_usuario || 300,
+      descuento_pct: currentPlan?.descuento_pct || 0,
+      descuento_permanente: false,
+      days_until_due: 7,
+      concepto: `Suscripción Rutapp ${plan?.nombre || currentPlan?.nombre || 'Mensual'}`,
+      periodo_inicio: base,
+      periodo_fin: addMonthsInput(base, months),
+    }));
   }
 
   function applyPlanToInvoice(planId: string) {
@@ -331,9 +410,13 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
 
 
   async function handleCreateSubInvoice() {
-    if (subInvoiceForm.num_usuarios < 1 || subInvoiceForm.meses < 1) {
-      toast.error('Verifica usuarios y meses'); return;
+    if (creatingSubInvoice) return;
+    const isAdditionalCharge = subInvoiceForm.tipo_factura === 'additional_charge';
+    if (subInvoiceForm.num_usuarios < 1 || (!isAdditionalCharge && subInvoiceForm.meses < 1)) {
+      toast.error(isAdditionalCharge ? 'Verifica la cantidad' : 'Verifica usuarios y meses'); return;
     }
+    if (subInvoiceForm.precio_por_usuario_mes <= 0) { toast.error('Verifica el precio'); return; }
+    if (!subInvoiceForm.concepto.trim()) { toast.error('Escribe el concepto del cobro'); return; }
     setCreatingSubInvoice(true);
     try {
       let { data: { session } } = await supabase.auth.getSession();
@@ -343,7 +426,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
       const token = session?.access_token;
       if (!token) throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
       const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=create_subscription_invoice`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=${isAdditionalCharge ? 'create_additional_charge' : 'create_subscription_invoice'}`,
         {
           method: 'POST',
           headers: {
@@ -353,6 +436,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
           },
           body: JSON.stringify({
             empresa_id: empresaId,
+            request_id: subInvoiceRequestId || crypto.randomUUID(),
+            cantidad: isAdditionalCharge ? subInvoiceForm.num_usuarios : undefined,
+            precio_unitario: isAdditionalCharge ? subInvoiceForm.precio_por_usuario_mes : undefined,
             plan_id: subInvoiceForm.plan_id || undefined,
             num_usuarios: subInvoiceForm.num_usuarios,
             meses: subInvoiceForm.meses,
@@ -369,7 +455,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
       );
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Error al crear factura');
-      toast.success(`Factura ${data.folio} creada por ${fmtMXN(data.total)}${data.stripe === false ? ' · pendiente manual' : ' · enviada por Stripe'}`);
+      toast.success(isAdditionalCharge
+        ? `Cargo ${data.folio} creado por ${fmtMXN(data.total)} · el ciclo no cambió`
+        : `Factura ${data.folio} creada por ${fmtMXN(data.total)}${data.stripe === false ? ' · pendiente manual' : ' · enviada por Stripe'}`);
       setShowSubInvoice(false);
       load();
     } catch (e: any) { toast.error(e.message); }
@@ -383,7 +471,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
       referencia_pago: '',
       fecha_pago: todayInput(),
       reflect_in_stripe: !!f.stripe_invoice_id,
-      extender_periodo: !f.es_prorrateo,
+      extender_periodo: !f.es_prorrateo && f.tipo !== 'additional_charge',
     });
   }
 
@@ -806,6 +894,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                   </div>
                 )}
                 <Row label="Plan" value={planNombre} />
+                <Row label="Modalidad" value={subscriptionModality(subscription, planActual)} />
                 <Row label="Status" value={STATUS_MAP[subscription.status]?.l || subscription.status} />
                 <Row label="Máx. usuarios" value={String(subscription.max_usuarios ?? '—')} />
                 {baseUsuarios != null && (
@@ -1006,7 +1095,12 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                         <TableRow key={f.id} className="hover:bg-muted/30">
                           <TableCell className="font-mono font-semibold text-sm">{f.numero_factura || '—'}</TableCell>
                           <TableCell className="text-sm text-muted-foreground max-w-[280px]">
-                            <div className="truncate font-medium text-foreground/80">{f.concepto || 'Suscripción Rutapp'}</div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate font-medium text-foreground/80">{f.concepto || 'Suscripción Rutapp'}</span>
+                              {f.tipo === 'additional_charge' && (
+                                <Badge variant="outline" className="shrink-0 border-blue-200 bg-blue-50 text-blue-700 text-[10px]">Cargo adicional</Badge>
+                              )}
+                            </div>
                             <div className="truncate text-xs">{periodo}</div>
                           </TableCell>
                           <TableCell className="text-sm">{f.fecha_emision ? fmtDate(f.fecha_emision) : '—'}</TableCell>
@@ -1278,10 +1372,31 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
               <Receipt className="h-5 w-5 text-primary" /> Nueva factura
             </DialogTitle>
             <DialogDescription>
-              Para <strong>{empresa?.nombre}</strong>. Al pagarse, el plan se activa/extiende automáticamente.
+              Para <strong>{empresa?.nombre}</strong>.{' '}
+              {subInvoiceForm.tipo_factura === 'additional_charge'
+                ? 'Este cargo se cobra por separado y no modifica la suscripción.'
+                : 'Al pagarse, el plan se activa/extiende automáticamente.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
+            <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-1">
+              <button
+                type="button"
+                onClick={() => updateInvoiceType('subscription_renewal')}
+                className={`rounded-md px-3 py-2 text-sm font-medium transition ${subInvoiceForm.tipo_factura === 'subscription_renewal' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Renovación
+              </button>
+              <button
+                type="button"
+                onClick={() => updateInvoiceType('additional_charge')}
+                className={`rounded-md px-3 py-2 text-sm font-medium transition ${subInvoiceForm.tipo_factura === 'additional_charge' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Cargo adicional
+              </button>
+            </div>
+
+            {subInvoiceForm.tipo_factura === 'subscription_renewal' ? (
               <div className="flex items-start gap-3 rounded-md border border-border/60 bg-muted/30 p-3">
                 <Checkbox id="crear-stripe" checked={subInvoiceForm.crear_con_stripe}
                   onCheckedChange={(v) => setSubInvoiceForm(f => ({ ...f, crear_con_stripe: !!v }))} />
@@ -1292,31 +1407,44 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                   </span>
                 </label>
               </div>
-            <div className="space-y-1.5">
-              <Label>Plan</Label>
-              <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={subInvoiceForm.plan_id} onChange={e => applyPlanToInvoice(e.target.value)}>
-                <option value="">— Personalizado —</option>
-                {plans.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre} · {p.meses} {p.meses === 1 ? 'mes' : 'meses'} · ${p.precio_por_usuario}/usuario/mes
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Meses</Label>
-                <Input type="number" min={1} value={subInvoiceForm.meses}
-                  onChange={e => updateInvoiceMeses(Math.max(1, parseInt(e.target.value) || 1))} />
+            ) : (
+              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                <p className="font-semibold">Cobro independiente con Stripe</p>
+                <p className="mt-0.5 text-xs text-blue-800">
+                  Usa la tarjeta guardada. No cambia plan, modalidad, usuarios, inicio, vencimiento ni próxima factura.
+                </p>
               </div>
+            )}
+
+            {subInvoiceForm.tipo_factura === 'subscription_renewal' && (
               <div className="space-y-1.5">
-                <Label>Usuarios</Label>
+                <Label>Plan</Label>
+                <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={subInvoiceForm.plan_id} onChange={e => applyPlanToInvoice(e.target.value)}>
+                  <option value="">— Personalizado —</option>
+                  {plans.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre} · {p.meses} {p.meses === 1 ? 'mes' : 'meses'} · ${p.precio_por_usuario}/usuario/mes
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              {subInvoiceForm.tipo_factura === 'subscription_renewal' && (
+                <div className="space-y-1.5">
+                  <Label>Meses</Label>
+                  <Input type="number" min={1} value={subInvoiceForm.meses}
+                    onChange={e => updateInvoiceMeses(Math.max(1, parseInt(e.target.value) || 1))} />
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label>{subInvoiceForm.tipo_factura === 'additional_charge' ? 'Cantidad' : 'Usuarios'}</Label>
                 <Input type="number" min={1} value={subInvoiceForm.num_usuarios}
                   onChange={e => setSubInvoiceForm(f => ({ ...f, num_usuarios: Math.max(1, parseInt(e.target.value) || 1) }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Precio / usuario / mes</Label>
+                <Label>{subInvoiceForm.tipo_factura === 'additional_charge' ? 'Precio unitario' : 'Precio / usuario / mes'}</Label>
                 <Input type="number" min={0} step="0.01" value={subInvoiceForm.precio_por_usuario_mes}
                   onChange={e => setSubInvoiceForm(f => ({ ...f, precio_por_usuario_mes: parseFloat(e.target.value) || 0 }))} />
               </div>
@@ -1325,7 +1453,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                 <Input type="number" min={0} max={100} step="0.01" value={subInvoiceForm.descuento_pct}
                   onChange={e => setSubInvoiceForm(f => ({ ...f, descuento_pct: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) }))} />
               </div>
-              <div className="col-span-2 flex items-start gap-3 rounded-md border border-border/60 bg-muted/30 p-3">
+              {subInvoiceForm.tipo_factura === 'subscription_renewal' && (
+                <div className="col-span-2 flex items-start gap-3 rounded-md border border-border/60 bg-muted/30 p-3">
                 <Checkbox id="desc-permanente" checked={subInvoiceForm.descuento_permanente}
                   onCheckedChange={(v) => setSubInvoiceForm(f => ({ ...f, descuento_permanente: !!v }))}
                   disabled={subInvoiceForm.descuento_pct <= 0} />
@@ -1337,7 +1466,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                       : 'Solo para esta factura.'}
                   </span>
                 </label>
-              </div>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Período: inicio</Label>
                 <Input type="date" value={subInvoiceForm.periodo_inicio}
@@ -1349,16 +1479,19 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                   onChange={e => setSubInvoiceForm(f => ({ ...f, periodo_fin: e.target.value }))} />
               </div>
               <div className="col-span-2 -mt-1 text-xs text-muted-foreground">
-                Al pagarse, la suscripción quedará vigente del{' '}
-                <strong>{fmtDate(subInvoiceForm.periodo_inicio)}</strong>
-                {' '}al{' '}
-                <strong>{fmtDate(subInvoiceForm.periodo_fin)}</strong>.
+                {subInvoiceForm.tipo_factura === 'additional_charge' ? (
+                  <>Periodo de referencia: <strong>{fmtDate(subInvoiceForm.periodo_inicio)}</strong> al <strong>{fmtDate(subInvoiceForm.periodo_fin)}</strong>. No modifica el ciclo.</>
+                ) : (
+                  <>Al pagarse, la suscripción quedará vigente del <strong>{fmtDate(subInvoiceForm.periodo_inicio)}</strong> al <strong>{fmtDate(subInvoiceForm.periodo_fin)}</strong>.</>
+                )}
               </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label>Días para pagar</Label>
-                <Input type="number" min={1} value={subInvoiceForm.days_until_due}
-                  onChange={e => setSubInvoiceForm(f => ({ ...f, days_until_due: Math.max(1, parseInt(e.target.value) || 1) }))} />
-              </div>
+              {subInvoiceForm.tipo_factura === 'subscription_renewal' && (
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Días para pagar</Label>
+                  <Input type="number" min={1} value={subInvoiceForm.days_until_due}
+                    onChange={e => setSubInvoiceForm(f => ({ ...f, days_until_due: Math.max(1, parseInt(e.target.value) || 1) }))} />
+                </div>
+              )}
               <div className="space-y-1.5 col-span-2">
                 <Label>Concepto</Label>
                 <Input value={subInvoiceForm.concepto}
@@ -1383,7 +1516,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
             <Button variant="outline" onClick={() => setShowSubInvoice(false)} disabled={creatingSubInvoice}>Cancelar</Button>
             <Button onClick={handleCreateSubInvoice} disabled={creatingSubInvoice}>
               {creatingSubInvoice ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Receipt className="h-4 w-4 mr-1.5" />}
-              {subInvoiceForm.crear_con_stripe ? 'Crear y cobrar con Stripe' : 'Crear pendiente manual'}
+              {subInvoiceForm.tipo_factura === 'additional_charge'
+                ? 'Crear y cobrar cargo'
+                : subInvoiceForm.crear_con_stripe ? 'Crear y cobrar con Stripe' : 'Crear pendiente manual'}
             </Button>
           </div>
         </DialogContent>
@@ -1466,7 +1601,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                 </div>
               </div>
             )}
-            {!markPaidFactura?.es_prorrateo && (
+            {!markPaidFactura?.es_prorrateo && markPaidFactura?.tipo !== 'additional_charge' && (
               <div className="flex items-start gap-2 rounded-lg border p-3 bg-emerald-50">
                 <Checkbox id="extender-periodo" checked={markPaidForm.extender_periodo}
                   onCheckedChange={(v) => setMarkPaidForm((f) => ({ ...f, extender_periodo: !!v }))} />

@@ -146,6 +146,7 @@ Deno.serve(async (req) => {
           .eq("suscripcion_id", sub.id)
           .eq("periodo_inicio", today)
           .in("estado", ["pendiente", "procesando"])
+          .neq("tipo", "additional_charge")
           .limit(1);
         if (existingInv && existingInv.length > 0) {
           log("Skipped (existing invoice)", { empresa: sub.empresa_id });
@@ -275,6 +276,7 @@ Deno.serve(async (req) => {
             subtotal,
             total,
             estado: "pendiente",
+            tipo: "subscription_renewal",
             es_prorrateo: false,
             fecha_vencimiento: new Date(now.getTime() + DIAS_GRACIA * 86400000).toISOString(),
           })

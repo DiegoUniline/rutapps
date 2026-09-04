@@ -315,6 +315,9 @@ Deno.serve(async (req) => {
 
     if (event.type === "invoice.paid" || event.type === "invoice.payment_succeeded") {
       const invoice = event.data.object as Stripe.Invoice;
+      const isAdditionalCharge = invoice.metadata?.tipo === "additional_charge" ||
+        invoice.metadata?.affects_subscription === "0";
+      const invoiceType = isAdditionalCharge ? "additional_charge" : "subscription_renewal";
       const stripeCustomerId = typeof invoice.customer === "string"
         ? invoice.customer
         : invoice.customer?.id;
@@ -352,7 +355,9 @@ Deno.serve(async (req) => {
         const planIdMeta = invoice.metadata?.plan_id || subMetadata.plan_id || null;
         const descPctMeta = invoice.metadata?.descuento_pct ? parseFloat(invoice.metadata.descuento_pct) : null;
         const descPermanente = invoice.metadata?.descuento_permanente === "1";
-        const numUsuariosMetaRaw = invoice.metadata?.num_usuarios || subMetadata.num_usuarios || null;
+        const numUsuariosMetaRaw = isAdditionalCharge
+          ? invoice.metadata?.cantidad || null
+          : invoice.metadata?.num_usuarios || subMetadata.num_usuarios || null;
         const { data: subRow } = await supabase
           .from("subscriptions")
           .select("id, current_period_end, max_usuarios, plan_id")
@@ -360,15 +365,15 @@ Deno.serve(async (req) => {
           .maybeSingle();
         const numUsuariosMeta = numUsuariosMetaRaw ? parseInt(numUsuariosMetaRaw, 10) : (subRow?.max_usuarios ?? null);
 
-        let venc: string;
-        if (meses > 0) {
+        let venc = subRow?.current_period_end?.slice(0, 10) || "";
+        if (!isAdditionalCharge && meses > 0) {
           const today = nowInMx();
           const currentEnd = subRow?.current_period_end ? new Date(subRow.current_period_end) : today;
           const base = currentEnd > today ? currentEnd : today;
           const extended = new Date(base);
           extended.setMonth(extended.getMonth() + meses);
           venc = extended.toISOString().slice(0, 10);
-        } else {
+        } else if (!isAdditionalCharge) {
           if (!stripeSubForInvoice && stripeSubId) {
             stripeSubForInvoice = await stripe.subscriptions.retrieve(stripeSubId);
           }
@@ -376,29 +381,31 @@ Deno.serve(async (req) => {
           venc = cpe ? cpe.slice(0, 10) : lastDayOfCurrentMonthMx();
         }
 
-        const periodoFromInvoice = getInvoicePeriod(invoice);
-        const updatePayload: any = {
-          status: "active",
-          fecha_vencimiento: venc,
-          acceso_bloqueado: false,
-          current_period_start: periodoFromInvoice.inicio,
-          current_period_end: stripeSubForInvoice ? getSubPeriodEnd(stripeSubForInvoice) ?? venc : venc,
-          updated_at: new Date().toISOString(),
-        };
-        if (stripeCustomerId) updatePayload.stripe_customer_id = stripeCustomerId;
-        if (stripeSubId) updatePayload.stripe_subscription_id = stripeSubId;
-        if (planIdMeta) updatePayload.plan_id = planIdMeta;
-        if (numUsuariosMeta) updatePayload.max_usuarios = numUsuariosMeta;
-        if (descPermanente && descPctMeta !== null) {
-          updatePayload.descuento_porcentaje = descPctMeta;
-        } else if (descPctMeta !== null && !descPermanente) {
-          updatePayload.descuento_porcentaje = 0;
-        }
+        if (!isAdditionalCharge) {
+          const periodoFromInvoice = getInvoicePeriod(invoice);
+          const updatePayload: any = {
+            status: "active",
+            fecha_vencimiento: venc,
+            acceso_bloqueado: false,
+            current_period_start: periodoFromInvoice.inicio,
+            current_period_end: stripeSubForInvoice ? getSubPeriodEnd(stripeSubForInvoice) ?? venc : venc,
+            updated_at: new Date().toISOString(),
+          };
+          if (stripeCustomerId) updatePayload.stripe_customer_id = stripeCustomerId;
+          if (stripeSubId) updatePayload.stripe_subscription_id = stripeSubId;
+          if (planIdMeta) updatePayload.plan_id = planIdMeta;
+          if (numUsuariosMeta) updatePayload.max_usuarios = numUsuariosMeta;
+          if (descPermanente && descPctMeta !== null) {
+            updatePayload.descuento_porcentaje = descPctMeta;
+          } else if (descPctMeta !== null && !descPermanente) {
+            updatePayload.descuento_porcentaje = 0;
+          }
 
-        await supabase
-          .from("subscriptions")
-          .update(updatePayload)
-          .eq("empresa_id", empresa_id);
+          await supabase
+            .from("subscriptions")
+            .update(updatePayload)
+            .eq("empresa_id", empresa_id);
+        }
 
         if (invoice.id) {
           const { count } = await supabase
@@ -407,18 +414,27 @@ Deno.serve(async (req) => {
             .eq("stripe_invoice_id", invoice.id);
 
           if (!count) {
-            const periodo = getInvoicePeriod(invoice);
+            const stripePeriodo = getInvoicePeriod(invoice);
+            const periodo = isAdditionalCharge ? {
+              inicio: invoice.metadata?.periodo_inicio || stripePeriodo.inicio,
+              fin: invoice.metadata?.periodo_fin || stripePeriodo.fin,
+            } : stripePeriodo;
             const total = (invoice.total ?? invoice.amount_paid ?? invoice.amount_due ?? 0) / 100;
+            const precioMeta = Number(invoice.metadata?.precio_unitario);
             await supabase.from("facturas").insert({
               empresa_id,
               suscripcion_id: subRow?.id ?? null,
+              concepto: invoice.description || (isAdditionalCharge ? "Cargo adicional Rutapp" : null),
               periodo_inicio: periodo.inicio,
               periodo_fin: periodo.fin,
               num_usuarios: numUsuariosMeta ?? 1,
-              precio_unitario: numUsuariosMeta ? total / numUsuariosMeta : total,
+              precio_unitario: Number.isFinite(precioMeta) && precioMeta > 0
+                ? precioMeta
+                : numUsuariosMeta ? total / numUsuariosMeta : total,
               subtotal: total,
               total,
               estado: "pagada",
+              tipo: invoiceType,
               fecha_emision: invoice.created ? new Date(invoice.created * 1000).toISOString() : new Date().toISOString(),
               fecha_pago: new Date().toISOString(),
               stripe_invoice_id: invoice.id,
@@ -429,6 +445,7 @@ Deno.serve(async (req) => {
           const { error: pagadaErr } = await supabase
             .from("facturas")
             .update({
+              numero_factura: (invoice as any).number || undefined,
               estado: "pagada",
               fecha_pago: new Date().toISOString(),
               stripe_payment_intent_id: typeof (invoice as any).payment_intent === "string" ? (invoice as any).payment_intent : null,
@@ -452,7 +469,7 @@ Deno.serve(async (req) => {
         //
         // Coincidencia por MONTO EXACTO (centavos) para no cerrar transferencias
         // legítimas de otro concepto. No mueve dinero: solo actualiza el estado local.
-        try {
+        if (!isAdditionalCharge) try {
           const montoPagado = invoice.amount_paid ?? invoice.total ?? 0; // centavos
           if (montoPagado > 0) {
             const folio = (invoice as any).number || invoice.id;
@@ -478,7 +495,14 @@ Deno.serve(async (req) => {
           console.error("[STRIPE-WEBHOOK] Auto-cierre de solicitudes falló:", e);
         }
 
-        log("Access renewed via invoice", { empresa_id, venc, meses, planIdMeta, descPermanente });
+        log(isAdditionalCharge ? "Additional charge paid; subscription unchanged" : "Access renewed via invoice", {
+          empresa_id,
+          invoice: invoice.id,
+          venc,
+          meses,
+          planIdMeta,
+          descPermanente,
+        });
 
         // ── Notify client + admins (real-time, per attempt) ──
         try {
@@ -513,7 +537,7 @@ Deno.serve(async (req) => {
             folio: (invoice as any).number || null,
             invoiceUrl: invoice.hosted_invoice_url || null,
             fecha: todayMx,
-            fechaVigencia: venc,
+            fechaVigencia: isAdditionalCharge ? undefined : venc,
             idempotencyKey: `inv-${invoice.id}-paid-${event.id}`,
           });
         } catch (e) {
@@ -524,6 +548,8 @@ Deno.serve(async (req) => {
 
     if (event.type === "invoice.payment_failed") {
       const invoice = event.data.object as Stripe.Invoice;
+      const isAdditionalCharge = invoice.metadata?.tipo === "additional_charge" ||
+        invoice.metadata?.affects_subscription === "0";
       const stripeCustomerId = typeof invoice.customer === "string"
         ? invoice.customer
         : invoice.customer?.id;
@@ -567,22 +593,33 @@ Deno.serve(async (req) => {
               const { data: subRow } = await supabase
                 .from("subscriptions").select("id, max_usuarios")
                 .eq("empresa_id", empresa_id).maybeSingle();
-              let nUsers = invoice.metadata?.num_usuarios ? parseInt(invoice.metadata.num_usuarios, 10) : 0;
+              let nUsers = isAdditionalCharge
+                ? parseInt(invoice.metadata?.cantidad || "0", 10)
+                : invoice.metadata?.num_usuarios ? parseInt(invoice.metadata.num_usuarios, 10) : 0;
               if (!nUsers) { for (const l of invoice.lines?.data ?? []) nUsers += (l as any).quantity ?? 0; }
               if (!nUsers) nUsers = subRow?.max_usuarios ?? 1;
-              const periodo = getInvoicePeriod(invoice);
+              const stripePeriodo = getInvoicePeriod(invoice);
+              const periodo = isAdditionalCharge ? {
+                inicio: invoice.metadata?.periodo_inicio || stripePeriodo.inicio,
+                fin: invoice.metadata?.periodo_fin || stripePeriodo.fin,
+              } : stripePeriodo;
               const created = invoice.created ? new Date(invoice.created * 1000) : new Date();
               const venc = new Date(created.getTime() + 3 * 86400000); // 3 días de gracia
+              const precioMeta = Number(invoice.metadata?.precio_unitario);
               await supabase.from("facturas").insert({
                 empresa_id,
                 suscripcion_id: subRow?.id ?? null,
+                concepto: invoice.description || (isAdditionalCharge ? "Cargo adicional Rutapp" : null),
                 periodo_inicio: periodo.inicio,
                 periodo_fin: periodo.fin,
                 num_usuarios: nUsers,
-                precio_unitario: nUsers > 0 ? Math.round((totalFac / nUsers) * 100) / 100 : totalFac,
+                precio_unitario: Number.isFinite(precioMeta) && precioMeta > 0
+                  ? precioMeta
+                  : nUsers > 0 ? Math.round((totalFac / nUsers) * 100) / 100 : totalFac,
                 subtotal: totalFac,
                 total: totalFac,
                 estado: "pendiente",
+                tipo: isAdditionalCharge ? "additional_charge" : "subscription_renewal",
                 fecha_emision: created.toISOString(),
                 fecha_vencimiento: venc.toISOString(),
                 stripe_invoice_id: invoice.id,
