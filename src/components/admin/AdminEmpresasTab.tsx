@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,11 +10,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Search, Trash2, Stamp, CreditCard, CheckCircle2, XCircle, AlertCircle, Clock, Plus, User, Mail, Phone, Lock, Loader2 } from 'lucide-react';
+import { Building2, Search, Trash2, Stamp, CheckCircle2, XCircle, AlertCircle, Clock, Plus, User, Mail, Phone, Lock, Loader2, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import { confirmDialog } from '@/lib/confirm';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
+import {
+  auditSubscription,
+  type AuditInvoiceSnapshot,
+  type BillingAuditRecord,
+  type SubscriptionAuditResult,
+} from '@/lib/subscriptionAudit';
 
 const COUNTRY_CODES = [
   { code: '+52', country: 'MX', label: '🇲🇽 México (+52)', digits: 10 },
@@ -38,11 +46,6 @@ const COUNTRY_CODES = [
   { code: '+809', country: 'DO', label: '🇩🇴 Rep. Dominicana (+809)', digits: 10 },
 ];
 
-interface ProfileRow {
-  nombre: string | null;
-  user_id: string;
-}
-
 interface SubRow {
   status: string | null;
   max_usuarios: number | null;
@@ -57,7 +60,62 @@ interface EmpresaRow {
   id: string; nombre: string; email: string | null; telefono: string | null; created_at: string;
   timbres_saldo?: { saldo: number }[];
   subscriptions?: SubRow[];
-  profiles?: ProfileRow[];
+}
+
+interface AuditApiResponse {
+  generated_at: string;
+  records: BillingAuditRecord[];
+}
+
+const money = new Intl.NumberFormat('es-MX', {
+  style: 'currency',
+  currency: 'MXN',
+  minimumFractionDigits: 2,
+});
+
+function outstandingAmount(row?: SubscriptionAuditResult): number {
+  if (!row) return 0;
+  return Number(row.payments.stripe_outstanding_amount || 0)
+    + Number(row.payments.local_manual_outstanding_amount || 0);
+}
+
+function hasSeatMismatch(row?: SubscriptionAuditResult): boolean {
+  if (!row?.stripe_subscription || !Number.isFinite(row.expected_billable_users)) return false;
+  return row.stripe_subscription.quantity !== row.expected_billable_users
+    || Boolean(row.db_subscription && row.db_subscription.max_usuarios !== row.expected_billable_users);
+}
+
+function fmtBillingDate(value?: string | null): string {
+  if (!value) return '—';
+  const parsed = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return format(parsed, 'dd MMM yyyy', { locale: es });
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error || 'Error desconocido');
+}
+
+function newestInvoice(
+  first?: AuditInvoiceSnapshot | null,
+  second?: AuditInvoiceSnapshot | null,
+): AuditInvoiceSnapshot | null {
+  if (!first) return second || null;
+  if (!second) return first;
+  if (first.stripe_invoice_id && first.stripe_invoice_id === second.stripe_invoice_id) return first;
+  const firstTime = new Date(first.created_at || first.paid_at || 0).getTime();
+  const secondTime = new Date(second.created_at || second.paid_at || 0).getTime();
+  return secondTime > firstTime ? second : first;
+}
+
+function latestInvoiceFor(row?: SubscriptionAuditResult): AuditInvoiceSnapshot | null {
+  if (!row) return null;
+  return newestInvoice(row.payments.latest_stripe_invoice, row.payments.latest_local_invoice);
+}
+
+function latestPaidFor(row?: SubscriptionAuditResult): AuditInvoiceSnapshot | null {
+  if (!row) return null;
+  return newestInvoice(row.payments.latest_stripe_paid_invoice, row.payments.latest_local_paid_invoice);
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
@@ -87,14 +145,43 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
     nombre: '', empresa: '', email: '', password: '123456', countryCode: '+52', telefono: '',
   });
 
+  const auditQuery = useQuery<AuditApiResponse>({
+    queryKey: ['admin-billing-audit'],
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Sesión no disponible');
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=audit_subscriptions`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+        },
+      );
+      const payload = await response.json();
+      if (!response.ok || payload.error) throw new Error(payload.error || 'No fue posible consultar la facturación');
+      return payload as AuditApiResponse;
+    },
+  });
+
+  const auditByEmpresa = useMemo(() => new Map(
+    (auditQuery.data?.records || [])
+      .map(record => auditSubscription(record))
+      .map(record => [record.empresa_id, record] as const),
+  ), [auditQuery.data?.records]);
+
   useEffect(() => { load(); }, []);
 
   async function load() {
     const { data } = await supabase
       .from('empresas')
-      .select('id, nombre, email, telefono, created_at, timbres_saldo(saldo), subscriptions(status, max_usuarios, stripe_customer_id, stripe_subscription_id, current_period_end, trial_ends_at, plan_id), profiles(nombre, user_id)')
+      .select('id, nombre, email, telefono, created_at, timbres_saldo(saldo), subscriptions(status, max_usuarios, stripe_customer_id, stripe_subscription_id, current_period_end, trial_ends_at, plan_id)')
       .order('created_at', { ascending: false });
-    setEmpresas((data as any) || []);
+    setEmpresas((data as EmpresaRow[] | null) || []);
     setLoading(false);
   }
 
@@ -124,8 +211,8 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
       setShowAddTimbres(false);
       setCantidadTimbres('10');
       load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (error: unknown) {
+      toast.error(errorMessage(error));
     } finally {
       setAddingTimbres(false);
     }
@@ -174,8 +261,8 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
       setShowCreateEmpresa(false);
       setNewEmpresa({ nombre: '', empresa: '', email: '', password: '123456', countryCode: '+52', telefono: '' });
       setTimeout(() => load(), 1500); // wait for triggers
-    } catch (e: any) {
-      toast.error(e.message || 'Error al crear empresa');
+    } catch (error: unknown) {
+      toast.error(errorMessage(error) || 'Error al crear empresa');
     } finally {
       setCreating(false);
     }
@@ -206,13 +293,34 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
       (e.email || '').toLowerCase().includes(search.toLowerCase()) ||
       (e.telefono || '').toLowerCase().includes(search.toLowerCase());
     if (statusFilter === 'todos') return matchSearch;
+    const audit = auditByEmpresa.get(e.id);
+    if (statusFilter === 'con_saldo') return matchSearch && outstandingAmount(audit) > 0;
+    if (statusFilter === 'usuarios_desfasados') return matchSearch && hasSeatMismatch(audit);
+    if (statusFilter === 'sin_cobros') return matchSearch && audit?.active_without_payment === true;
     const status = getEffectiveStatus(e.subscriptions?.[0]);
     return matchSearch && status === statusFilter;
   });
 
+  const { sorted: sortedFiltered, sort, toggle: toggleSort } = useSortableTable(
+    filtered,
+    (empresa, key) => {
+      const audit = auditByEmpresa.get(empresa.id);
+      const sub = empresa.subscriptions?.[0];
+      if (key === 'empresa') return empresa.nombre;
+      if (key === 'status') return getEffectiveStatus(sub);
+      if (key === 'usuarios_rutapp') return audit?.active_user_count;
+      if (key === 'usuarios_stripe') return audit?.stripe_subscription?.quantity;
+      if (key === 'factura') return latestInvoiceFor(audit)?.amount;
+      if (key === 'ultimo_cobro') return latestPaidFor(audit)?.paid_at;
+      if (key === 'saldo') return outstandingAmount(audit);
+      if (key === 'proximo_cobro') return sub?.status === 'trial' ? sub.trial_ends_at : sub?.current_period_end;
+      return null;
+    },
+  );
+
   // Group by status
   const STATUS_ORDER = ['active', 'trial', 'past_due', 'gracia', 'suspended', 'cancelada', 'sin_sub', 'pendiente_pago'];
-  const grouped = filtered.reduce<Record<string, EmpresaRow[]>>((acc, e) => {
+  const grouped = sortedFiltered.reduce<Record<string, EmpresaRow[]>>((acc, e) => {
     const status = getEffectiveStatus(e.subscriptions?.[0]);
     if (!acc[status]) acc[status] = [];
     acc[status].push(e);
@@ -229,6 +337,12 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
     return acc;
   }, {});
 
+  const quickCounts = {
+    conSaldo: empresas.filter(e => outstandingAmount(auditByEmpresa.get(e.id)) > 0).length,
+    usuariosDesfasados: empresas.filter(e => hasSeatMismatch(auditByEmpresa.get(e.id))).length,
+    sinCobros: empresas.filter(e => auditByEmpresa.get(e.id)?.active_without_payment === true).length,
+  };
+
   return (
     <>
       <Card className="border border-border/60 shadow-sm">
@@ -238,6 +352,16 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
               <Building2 className="h-5 w-5 text-primary" /> Empresas ({empresas.length})
             </CardTitle>
             <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={loading || auditQuery.isFetching}
+                onClick={() => { load(); auditQuery.refetch(); }}
+                title="Actualizar empresas y facturación"
+              >
+                <RefreshCw className={`h-4 w-4 mr-1 ${loading || auditQuery.isFetching ? 'animate-spin' : ''}`} />
+                Actualizar
+              </Button>
               <Button size="sm" onClick={() => setShowCreateEmpresa(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Crear empresa
               </Button>
@@ -269,7 +393,32 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
               </button>
             );
           })}
+          <span className="mx-1 h-6 w-px bg-border" />
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'con_saldo' ? 'todos' : 'con_saldo')}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border ${statusFilter === 'con_saldo' ? 'border-red-500 bg-red-50 text-red-700' : 'border-red-200 text-red-700 hover:bg-red-50'}`}
+          >
+            Nos deben ({auditQuery.isLoading ? '…' : quickCounts.conSaldo})
+          </button>
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'usuarios_desfasados' ? 'todos' : 'usuarios_desfasados')}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border ${statusFilter === 'usuarios_desfasados' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-amber-200 text-amber-700 hover:bg-amber-50'}`}
+          >
+            Usuarios desfasados ({auditQuery.isLoading ? '…' : quickCounts.usuariosDesfasados})
+          </button>
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'sin_cobros' ? 'todos' : 'sin_cobros')}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border ${statusFilter === 'sin_cobros' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-orange-200 text-orange-700 hover:bg-orange-50'}`}
+          >
+            Activas sin cobro ({auditQuery.isLoading ? '…' : quickCounts.sinCobros})
+          </button>
         </div>
+
+        {auditQuery.isError && (
+          <div className="mx-6 mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Las empresas están disponibles, pero Stripe no respondió. Pulsa Actualizar para consultar cobros y saldos.
+          </div>
+        )}
 
         <CardContent>
           {loading ? <div className="text-center py-8 text-muted-foreground">Cargando...</div> : (
@@ -277,14 +426,14 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Contacto</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-center">Usuarios</TableHead>
-                    <TableHead className="text-center">Timbres</TableHead>
-                    <TableHead>Stripe</TableHead>
-                    <TableHead>Próximo cobro</TableHead>
-                    <TableHead>Registro</TableHead>
+                    <SortableTh sortKey="empresa" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Empresa</SortableTh>
+                    <SortableTh sortKey="status" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Estado</SortableTh>
+                    <SortableTh sortKey="usuarios_rutapp" sort={sort} onToggle={toggleSort} align="center" className="h-10 px-2 text-xs">Usuarios RutApp</SortableTh>
+                    <SortableTh sortKey="usuarios_stripe" sort={sort} onToggle={toggleSort} align="center" className="h-10 px-2 text-xs">Usuarios Stripe</SortableTh>
+                    <SortableTh sortKey="factura" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Última factura</SortableTh>
+                    <SortableTh sortKey="ultimo_cobro" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Último cobro</SortableTh>
+                    <SortableTh sortKey="saldo" sort={sort} onToggle={toggleSort} align="right" className="h-10 px-2 text-xs">Saldo / revisión</SortableTh>
+                    <SortableTh sortKey="proximo_cobro" sort={sort} onToggle={toggleSort} className="h-10 px-2 text-xs">Próximo cobro</SortableTh>
                     <TableHead className="w-24"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -313,59 +462,87 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                           const status = getEffectiveStatus(sub);
                           const statusInfo = STATUS_MAP[status];
                           const hasStripeCustomer = !!sub?.stripe_customer_id;
-                          const hasStripeSub = !!sub?.stripe_subscription_id;
-                          const usersCount = e.profiles?.length || 0;
+                          const audit = auditByEmpresa.get(e.id);
+                          const rutappUsers = audit?.active_user_count;
+                          const stripeUsers = audit?.stripe_subscription?.quantity;
+                          const expectedUsers = audit?.expected_billable_users;
+                          const seatMismatch = hasSeatMismatch(audit);
+                          const latestInvoice = latestInvoiceFor(audit);
+                          const latestPaid = latestPaidFor(audit);
+                          const pendingAmount = outstandingAmount(audit);
                           return (
                             <TableRow key={e.id} className="cursor-pointer hover:bg-card" onClick={() => onSelectEmpresa?.(e.id)}>
-                              <TableCell>
+                              <TableCell className="min-w-[210px] py-2">
                                 <div className="font-medium">{e.nombre}</div>
-                                <div className="text-[10px] text-muted-foreground">{usersCount} usuario{usersCount !== 1 ? 's' : ''}</div>
+                                <div className="text-[10px] text-muted-foreground truncate max-w-[240px]">{e.email || 'Sin correo'} · {e.telefono || 'Sin teléfono'}</div>
+                                <div className="text-[10px] text-muted-foreground">Alta {fmtBillingDate(e.created_at)} · {saldo} timbres</div>
                               </TableCell>
-                              <TableCell>
-                                <div className="text-xs space-y-0.5">
-                                  <div className="text-muted-foreground">{e.email || '—'}</div>
-                                  <div className="text-muted-foreground">{e.telefono || '—'}</div>
+                              <TableCell className="py-2">
+                                <div className="space-y-1">
+                                  {statusInfo ? (
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${statusInfo.color}`}>
+                                      <statusInfo.icon className="h-3 w-3" />
+                                      {statusInfo.label}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[11px] text-muted-foreground">Sin suscripción</span>
+                                  )}
+                                  <div className={`text-[10px] ${hasStripeCustomer ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                                    {hasStripeCustomer ? 'Stripe conectado' : 'Sin cliente Stripe'}
+                                  </div>
                                 </div>
                               </TableCell>
-                              <TableCell>
-                                {statusInfo ? (
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${statusInfo.color}`}>
-                                    <statusInfo.icon className="h-3 w-3" />
-                                    {statusInfo.label}
-                                  </span>
-                                ) : (
-                                  <span className="text-[11px] text-muted-foreground">Sin sub</span>
+                              <TableCell className="text-center py-2">
+                                <div className="font-mono font-bold text-sm">{rutappUsers ?? (auditQuery.isLoading ? '…' : '—')}</div>
+                                <div className="text-[10px] text-muted-foreground">activos</div>
+                                {expectedUsers != null && expectedUsers !== rutappUsers && (
+                                  <div className="text-[10px] text-muted-foreground">facturables {expectedUsers}</div>
                                 )}
                               </TableCell>
-                              <TableCell className="text-center">
-                                <span className="font-mono font-semibold text-sm">{sub?.max_usuarios ?? '—'}</span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span className={`font-mono font-semibold text-sm ${saldo > 0 ? 'text-primary' : 'text-destructive'}`}>
-                                  {saldo}
+                              <TableCell className="text-center py-2">
+                                <span className={`font-mono font-bold text-sm ${seatMismatch ? 'text-amber-700' : stripeUsers != null ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                                  {stripeUsers ?? (auditQuery.isLoading ? '…' : '—')}
                                 </span>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1.5">
-                                  {hasStripeCustomer ? (
-                                    <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-green-300 text-green-700 dark:border-green-700 dark:text-green-400">
-                                      <CreditCard className="h-3 w-3" />
-                                      Cliente
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-muted text-muted-foreground">
-                                      <XCircle className="h-3 w-3" />
-                                      Sin Stripe
-                                    </Badge>
-                                  )}
-                                  {hasStripeSub && (
-                                    <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-400">
-                                      Sub
-                                    </Badge>
-                                  )}
+                                <div className={`text-[10px] ${seatMismatch ? 'font-semibold text-amber-700' : 'text-muted-foreground'}`}>
+                                  {seatMismatch ? `debe ser ${expectedUsers}` : 'en Stripe'}
                                 </div>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="text-right py-2 min-w-[125px]">
+                                {latestInvoice ? (
+                                  <>
+                                    <div className="font-mono font-semibold text-sm">{money.format(latestInvoice.amount)}</div>
+                                    <div className="text-[10px] text-muted-foreground">{fmtBillingDate(latestInvoice.created_at)}</div>
+                                    <div className={`text-[10px] font-medium ${['paid', 'pagada'].includes(latestInvoice.status) ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                      {['paid', 'pagada'].includes(latestInvoice.status) ? 'Pagada' : 'Pendiente'}
+                                    </div>
+                                  </>
+                                ) : <span className="text-xs text-muted-foreground">Sin facturas</span>}
+                              </TableCell>
+                              <TableCell className="text-right py-2 min-w-[125px]">
+                                {latestPaid ? (
+                                  <>
+                                    <div className="font-mono font-semibold text-sm text-emerald-700">{money.format(latestPaid.amount_paid ?? latestPaid.amount)}</div>
+                                    <div className="text-[10px] text-muted-foreground">{fmtBillingDate(latestPaid.paid_at)}</div>
+                                  </>
+                                ) : <span className="text-xs font-medium text-orange-700">Sin cobros</span>}
+                              </TableCell>
+                              <TableCell className="text-right py-2 min-w-[135px]">
+                                {pendingAmount > 0 ? (
+                                  <>
+                                    <div className="font-mono font-bold text-sm text-red-700">{money.format(pendingAmount)}</div>
+                                    <div className="text-[10px] font-semibold text-red-700">NOS DEBE</div>
+                                  </>
+                                ) : audit?.active_without_payment ? (
+                                  <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Activa sin cobros</Badge>
+                                ) : seatMismatch ? (
+                                  <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Revisar usuarios</Badge>
+                                ) : audit ? (
+                                  <span className="text-xs font-semibold text-emerald-700">Al corriente</span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Consultando…</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-2">
                                 {(() => {
                                   const endDate = sub?.status === 'trial' ? sub?.trial_ends_at : sub?.current_period_end;
                                   if (!endDate) return <span className="text-xs text-muted-foreground">—</span>;
@@ -374,17 +551,12 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                                   return (
                                     <div className="text-xs">
                                       <div className="font-medium">{format(normalized, 'dd MMM yyyy', { locale: es })}</div>
-                                      {normalized < new Date() && (
-                                        <span className="text-[10px] text-destructive font-semibold">VENCIDO</span>
-                                      )}
+                                      {normalized < new Date() && <span className="text-[10px] text-destructive font-semibold">VENCIDO</span>}
                                     </div>
                                   );
                                 })()}
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {format(new Date(e.created_at), 'dd MMM yyyy', { locale: es })}
-                              </TableCell>
-                              <TableCell>
+                              <TableCell className="py-2">
                                 <div className="flex gap-1" onClick={ev => ev.stopPropagation()}>
                                   <Button size="sm" variant="ghost" title="Agregar timbres" onClick={() => { setSelectedEmpresa(e); setShowAddTimbres(true); }}>
                                     <Stamp className="h-4 w-4 text-primary" />

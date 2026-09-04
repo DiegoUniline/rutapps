@@ -109,11 +109,16 @@ function compactStripeInvoice(invoice: any) {
     ? invoice.amount_remaining
     : Math.max(0, Number(invoice.amount_due || 0) - Number(invoice.amount_paid || 0));
   const trulyPaid = remaining === 0 && Number(invoice.amount_paid || 0) > 0;
+  const amountDue = Number(invoice.amount_due ?? invoice.total ?? invoice.amount_paid ?? 0);
+  const amountPaid = Number(invoice.amount_paid || 0);
   return {
     id: invoice.id,
     number: invoice.number || null,
     status: trulyPaid ? "paid" : (invoice.status || "open"),
-    amount: Number(invoice.amount_paid || invoice.amount_due || 0) / 100,
+    amount: amountDue / 100,
+    amount_due: amountDue / 100,
+    amount_paid: amountPaid / 100,
+    amount_remaining: Math.max(0, remaining) / 100,
     paid_at: trulyPaid
       ? stripeTimestamp(invoice.status_transitions?.paid_at || invoice.created)
       : null,
@@ -126,11 +131,16 @@ function compactStripeInvoice(invoice: any) {
 
 function compactLocalInvoice(invoice: any) {
   if (!invoice) return null;
+  const amount = Number(invoice.total || 0);
+  const paid = String(invoice.estado || "").toLowerCase() === "pagada";
   return {
     id: invoice.id,
     number: invoice.numero_factura || null,
     status: invoice.estado || "pendiente",
-    amount: Number(invoice.total || 0),
+    amount,
+    amount_due: amount,
+    amount_paid: paid ? amount : 0,
+    amount_remaining: paid ? 0 : amount,
     paid_at: invoice.fecha_pago || null,
     created_at: invoice.fecha_emision || invoice.creado_en || null,
     period_start: invoice.periodo_inicio || null,
@@ -840,6 +850,12 @@ Deno.serve(async (req) => {
               : Number(invoice.amount_due || 0) - Number(invoice.amount_paid || 0);
             return remaining === 0 && Number(invoice.amount_paid || 0) > 0;
           });
+          const outstandingStripeInvoices = stripeInvoices.filter(invoice => {
+            const remaining = typeof invoice.amount_remaining === "number"
+              ? invoice.amount_remaining
+              : Number(invoice.amount_due || 0) - Number(invoice.amount_paid || 0);
+            return remaining > 0 && !["draft", "void", "paid"].includes(String(invoice.status || "").toLowerCase());
+          });
 
           const companyLocalInvoices = (localInvoicesByEmpresa.get(empresa.id) || []).filter(invoice => {
             if (invoice.suscripcion_id && dbRows.some(row => row.id === invoice.suscripcion_id)) return true;
@@ -857,6 +873,12 @@ Deno.serve(async (req) => {
               && (!trialEndDate || periodEnd > trialEndDate);
           });
           const paidLocalInvoices = companyLocalInvoices.filter(invoice => invoice.estado === "pagada");
+          const localManualOutstandingInvoices = companyLocalInvoices.filter(invoice => {
+            const status = String(invoice.estado || "").toLowerCase();
+            return !invoice.stripe_invoice_id
+              && Number(invoice.total || 0) > 0
+              && !["pagada", "cancelada", "cancelado", "cancelled", "canceled"].includes(status);
+          });
           const localByStripeId = new Map(companyLocalInvoices
             .filter(invoice => invoice.stripe_invoice_id)
             .map(invoice => [invoice.stripe_invoice_id, invoice]));
@@ -929,9 +951,22 @@ Deno.serve(async (req) => {
               local_paid_count: paidLocalInvoices.length,
               stripe_paid_without_local_count: stripePaidWithoutLocal,
               local_paid_but_stripe_unpaid_count: localPaidButStripeUnpaid,
+              stripe_outstanding_count: outstandingStripeInvoices.length,
+              stripe_outstanding_amount: outstandingStripeInvoices.reduce((sum, invoice) => {
+                const remaining = typeof invoice.amount_remaining === "number"
+                  ? invoice.amount_remaining
+                  : Number(invoice.amount_due || 0) - Number(invoice.amount_paid || 0);
+                return sum + Math.max(0, remaining) / 100;
+              }, 0),
+              local_manual_outstanding_count: localManualOutstandingInvoices.length,
+              local_manual_outstanding_amount: localManualOutstandingInvoices.reduce(
+                (sum, invoice) => sum + Number(invoice.total || 0),
+                0,
+              ),
               latest_stripe_invoice: compactStripeInvoice(stripeInvoices[0]),
               latest_stripe_paid_invoice: compactStripeInvoice(paidStripeInvoices[0]),
               latest_local_invoice: compactLocalInvoice(companyLocalInvoices[0]),
+              latest_local_paid_invoice: compactLocalInvoice(paidLocalInvoices[0]),
               // Excluye la factura inicial del trial; aquí solo se audita el primer ciclo cobrable.
               first_local_invoice: compactLocalInvoice(firstBillableLocalInvoice),
             },

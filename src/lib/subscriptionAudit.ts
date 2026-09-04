@@ -61,9 +61,14 @@ export interface BillingAuditRecord {
     local_paid_count: number;
     stripe_paid_without_local_count: number;
     local_paid_but_stripe_unpaid_count: number;
+    stripe_outstanding_count?: number;
+    stripe_outstanding_amount?: number;
+    local_manual_outstanding_count?: number;
+    local_manual_outstanding_amount?: number;
     latest_stripe_invoice: AuditInvoiceSnapshot | null;
     latest_stripe_paid_invoice: AuditInvoiceSnapshot | null;
     latest_local_invoice: AuditInvoiceSnapshot | null;
+    latest_local_paid_invoice?: AuditInvoiceSnapshot | null;
     first_local_invoice: AuditInvoiceSnapshot | null;
   };
   last_sale: {
@@ -81,6 +86,9 @@ export interface AuditInvoiceSnapshot {
   number: string | null;
   status: string;
   amount: number;
+  amount_due?: number;
+  amount_paid?: number;
+  amount_remaining?: number;
   paid_at: string | null;
   created_at: string | null;
   period_start?: string | null;
