@@ -15,6 +15,7 @@ import ModalSelect from '@/components/ModalSelect';
 import { Receipt, Search, ExternalLink, Download, Plus, Send, Mail, MessageCircle, Building2, Users, Percent, FileText, Copy, AlertTriangle, CheckCircle2, Clock3, Eye, RefreshCw, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface AdminInvoice {
   id: string; number: string | null; status: string; amount_due: number; amount_paid: number;
@@ -401,6 +402,23 @@ export default function AdminInvoicesTab() {
   });
 
   const filtered = baseFiltered.filter(invoice => statusFilter === 'all' || getPaymentState(invoice) === statusFilter);
+  const {
+    sorted: sortedInvoices,
+    sort: invoiceSort,
+    toggle: toggleInvoiceSort,
+  } = useSortableTable(filtered, (invoice, key) => {
+    if (key === 'empresa') return invoice.empresa_nombre;
+    if (key === 'cliente') return invoice.customer_email || invoice.customer_name;
+    if (key === 'folio') return invoice.number;
+    if (key === 'descripcion') return invoice.description;
+    if (key === 'status') return getPaymentState(invoice);
+    if (key === 'intentos') return invoice.attempt_count || 0;
+    if (key === 'total') return invoice.amount_due || 0;
+    if (key === 'pagado') return invoice.amount_paid || 0;
+    if (key === 'saldo') return invoice.amount_remaining ?? invoice.amount_due - (invoice.amount_paid || 0);
+    if (key === 'fecha') return invoice.created;
+    return null;
+  }, { key: 'fecha', dir: 'desc' });
   const paidInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'paid');
   const failedInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'failed');
   const pendingInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'pending');
@@ -488,6 +506,22 @@ export default function AdminInvoicesTab() {
 
   const companyGroups = buildGroupedStats('company');
   const clientGroups = buildGroupedStats('client');
+  const visibleGroups = invoiceView === 'client' ? clientGroups : companyGroups;
+  const {
+    sorted: sortedGroups,
+    sort: groupSort,
+    toggle: toggleGroupSort,
+  } = useSortableTable(visibleGroups, (group, key) => {
+    if (key === 'nombre') return group.label;
+    if (key === 'facturas') return group.invoiceCount;
+    if (key === 'facturado') return group.totalDue;
+    if (key === 'pagado') return group.paid;
+    if (key === 'fallido') return group.failed;
+    if (key === 'pendiente') return group.pending;
+    if (key === 'saldo') return group.balance;
+    if (key === 'dobles') return group.duplicateCount;
+    return null;
+  }, { key: 'facturado', dir: 'desc' });
 
   const applyDatePreset = (preset: Exclude<DatePreset, 'custom'>) => {
     const now = new Date();
@@ -647,23 +681,23 @@ export default function AdminInvoicesTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Cliente (Stripe)</TableHead>
-                  <TableHead>Folio</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Intentos</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Pagado</TableHead>
-                  <TableHead className="text-right">Saldo</TableHead>
-                  <TableHead>Fecha</TableHead>
+                  <SortableTh sortKey="empresa" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Empresa</SortableTh>
+                  <SortableTh sortKey="cliente" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Cliente (Stripe)</SortableTh>
+                  <SortableTh sortKey="folio" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Folio</SortableTh>
+                  <SortableTh sortKey="descripcion" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Descripción</SortableTh>
+                  <SortableTh sortKey="status" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</SortableTh>
+                  <SortableTh sortKey="intentos" sort={invoiceSort} onToggle={toggleInvoiceSort} align="center" className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">Intentos</SortableTh>
+                  <SortableTh sortKey="total" sort={invoiceSort} onToggle={toggleInvoiceSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Total</SortableTh>
+                  <SortableTh sortKey="pagado" sort={invoiceSort} onToggle={toggleInvoiceSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Pagado</SortableTh>
+                  <SortableTh sortKey="saldo" sort={invoiceSort} onToggle={toggleInvoiceSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Saldo</SortableTh>
+                  <SortableTh sortKey="fecha" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha</SortableTh>
                   <TableHead className="w-32">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Sin facturas con estos filtros</TableCell></TableRow>
-                ) : filtered.map(inv => {
+                ) : sortedInvoices.map(inv => {
                   const remaining = typeof inv.amount_remaining === 'number' ? inv.amount_remaining : (inv.amount_due - (inv.amount_paid || 0));
                   const paymentState = getPaymentState(inv);
                   const isPaid = paymentState === 'paid';
@@ -763,19 +797,19 @@ export default function AdminInvoicesTab() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead className="text-right">Total facturado</TableHead>
-                    <TableHead className="text-right text-emerald-700">Pagadas</TableHead>
-                    <TableHead className="text-right text-red-700">Fallidas</TableHead>
-                    <TableHead className="text-right text-amber-700">Pendientes</TableHead>
-                    <TableHead className="text-right">Saldo</TableHead>
-                    <TableHead className="text-center">Revisar dobles</TableHead>
+                    <SortableTh sortKey="nombre" sort={groupSort} onToggle={toggleGroupSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Empresa</SortableTh>
+                    <SortableTh sortKey="facturado" sort={groupSort} onToggle={toggleGroupSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Total facturado</SortableTh>
+                    <SortableTh sortKey="pagado" sort={groupSort} onToggle={toggleGroupSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-emerald-700">Pagadas</SortableTh>
+                    <SortableTh sortKey="fallido" sort={groupSort} onToggle={toggleGroupSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-red-700">Fallidas</SortableTh>
+                    <SortableTh sortKey="pendiente" sort={groupSort} onToggle={toggleGroupSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-amber-700">Pendientes</SortableTh>
+                    <SortableTh sortKey="saldo" sort={groupSort} onToggle={toggleGroupSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Saldo</SortableTh>
+                    <SortableTh sortKey="dobles" sort={groupSort} onToggle={toggleGroupSort} align="center" className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">Revisar dobles</SortableTh>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {companyGroups.length === 0 ? (
                     <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Sin datos con estos filtros</TableCell></TableRow>
-                  ) : companyGroups.map(group => (
+                  ) : sortedGroups.map(group => (
                     <TableRow key={group.key} className={group.duplicateCount > 0 ? 'bg-red-50/60' : undefined}>
                       <TableCell>
                         <div className="font-medium">{group.label}</div>
@@ -810,20 +844,20 @@ export default function AdminInvoicesTab() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{invoiceView === 'company' ? 'Empresa' : 'Cliente (Stripe)'}</TableHead>
-                    <TableHead className="text-center">Facturas</TableHead>
-                    <TableHead className="text-right">Facturado</TableHead>
-                    <TableHead className="text-right text-emerald-700">Cobrado</TableHead>
-                    <TableHead className="text-right text-red-700">Fallido</TableHead>
-                    <TableHead className="text-right text-amber-700">Pendiente</TableHead>
-                    <TableHead className="text-right">Saldo</TableHead>
-                    <TableHead className="text-center">Posibles dobles</TableHead>
+                    <SortableTh sortKey="nombre" sort={groupSort} onToggle={toggleGroupSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">{invoiceView === 'company' ? 'Empresa' : 'Cliente (Stripe)'}</SortableTh>
+                    <SortableTh sortKey="facturas" sort={groupSort} onToggle={toggleGroupSort} align="center" className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">Facturas</SortableTh>
+                    <SortableTh sortKey="facturado" sort={groupSort} onToggle={toggleGroupSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Facturado</SortableTh>
+                    <SortableTh sortKey="pagado" sort={groupSort} onToggle={toggleGroupSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-emerald-700">Cobrado</SortableTh>
+                    <SortableTh sortKey="fallido" sort={groupSort} onToggle={toggleGroupSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-red-700">Fallido</SortableTh>
+                    <SortableTh sortKey="pendiente" sort={groupSort} onToggle={toggleGroupSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-amber-700">Pendiente</SortableTh>
+                    <SortableTh sortKey="saldo" sort={groupSort} onToggle={toggleGroupSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Saldo</SortableTh>
+                    <SortableTh sortKey="dobles" sort={groupSort} onToggle={toggleGroupSort} align="center" className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">Posibles dobles</SortableTh>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(invoiceView === 'company' ? companyGroups : clientGroups).length === 0 ? (
                     <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">Sin datos con estos filtros</TableCell></TableRow>
-                  ) : (invoiceView === 'company' ? companyGroups : clientGroups).map(group => (
+                  ) : sortedGroups.map(group => (
                     <TableRow key={group.key} className={group.duplicateCount > 0 ? 'bg-red-50/60' : undefined}>
                       <TableCell>
                         <div className="font-medium">{group.label}</div>

@@ -19,6 +19,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn, fmtDate } from '@/lib/utils';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 import {
   auditSubscription,
   type AuditSeverity,
@@ -250,8 +251,34 @@ export default function AdminBillingAuditTab() {
       });
   }, [audited, dateFilters, filter, search]);
 
+  const {
+    sorted: sortedAuditRows,
+    sort: auditSort,
+    toggle: toggleAuditSort,
+  } = useSortableTable(filtered, (row, key) => {
+    if (key === 'empresa') return row.empresa_nombre;
+    if (key === 'alta') return row.expected.signup_date;
+    if (key === 'fin_demo') return trialEndAt(row);
+    if (key === 'suscripcion') return subscriptionCreatedAt(row);
+    if (key === 'ultima_venta') return lastSaleAt(row);
+    if (key === 'dias_sin_venta') return daysSince(lastSaleAt(row));
+    if (key === 'usuarios') return row.active_user_count;
+    if (key === 'rutapp') return row.operational_status;
+    if (key === 'stripe') return row.stripe_subscription?.status;
+    if (key === 'periodo') return row.stripe_subscription?.current_period_end
+      ?? row.db_subscription?.current_period_end
+      ?? row.db_subscription?.fecha_vencimiento;
+    if (key === 'ultimo_cobro') return row.payments.latest_stripe_paid_invoice?.amount;
+    if (key === 'tarjeta') return row.stripe_subscription?.card
+      ? `${row.stripe_subscription.card.brand}-${row.stripe_subscription.card.last4}`
+      : null;
+    if (key === 'stripe_id') return row.stripe_subscription?.id ?? row.db_subscription?.stripe_subscription_id;
+    if (key === 'resultado') return SEVERITY_ORDER[row.severity];
+    return null;
+  });
+
   function exportAudit() {
-    const rows = filtered.map(row => ({
+    const rows = sortedAuditRows.map(row => ({
       empresa: row.empresa_nombre,
       correo: row.empresa_email ?? '',
       empresa_id: row.empresa_id,
@@ -550,25 +577,25 @@ export default function AdminBillingAuditTab() {
               <Table className="min-w-max">
                 <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow>
-                    {isColumnVisible('empresa') && <TableHead className="w-[230px]">Empresa</TableHead>}
-                    {isColumnVisible('alta') && <TableHead>Fecha de alta</TableHead>}
-                    {isColumnVisible('fin_demo') && <TableHead>Fin de demo</TableHead>}
-                    {isColumnVisible('suscripcion') && <TableHead>Suscripción</TableHead>}
-                    {isColumnVisible('ultima_venta') && <TableHead>Última venta</TableHead>}
-                    {isColumnVisible('dias_sin_venta') && <TableHead className="text-center">Días sin vender</TableHead>}
-                    {isColumnVisible('usuarios') && <TableHead className="text-center">Usuarios</TableHead>}
-                    {isColumnVisible('rutapp') && <TableHead>RutApp</TableHead>}
-                    {isColumnVisible('stripe') && <TableHead>Stripe</TableHead>}
-                    {isColumnVisible('periodo') && <TableHead>Periodo</TableHead>}
-                    {isColumnVisible('ultimo_cobro') && <TableHead>Último cobro</TableHead>}
-                    {isColumnVisible('tarjeta') && <TableHead>Tarjeta asociada</TableHead>}
-                    {isColumnVisible('stripe_id') && <TableHead className="w-[245px]">ID suscripción Stripe</TableHead>}
-                    {isColumnVisible('resultado') && <TableHead>Resultado</TableHead>}
+                    {isColumnVisible('empresa') && <SortableTh sortKey="empresa" sort={auditSort} onToggle={toggleAuditSort} className="h-12 w-[230px] px-4 text-left align-middle font-medium text-muted-foreground">Empresa</SortableTh>}
+                    {isColumnVisible('alta') && <SortableTh sortKey="alta" sort={auditSort} onToggle={toggleAuditSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha de alta</SortableTh>}
+                    {isColumnVisible('fin_demo') && <SortableTh sortKey="fin_demo" sort={auditSort} onToggle={toggleAuditSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fin de demo</SortableTh>}
+                    {isColumnVisible('suscripcion') && <SortableTh sortKey="suscripcion" sort={auditSort} onToggle={toggleAuditSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Suscripción</SortableTh>}
+                    {isColumnVisible('ultima_venta') && <SortableTh sortKey="ultima_venta" sort={auditSort} onToggle={toggleAuditSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Última venta</SortableTh>}
+                    {isColumnVisible('dias_sin_venta') && <SortableTh sortKey="dias_sin_venta" sort={auditSort} onToggle={toggleAuditSort} align="center" className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">Días sin vender</SortableTh>}
+                    {isColumnVisible('usuarios') && <SortableTh sortKey="usuarios" sort={auditSort} onToggle={toggleAuditSort} align="center" className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">Usuarios</SortableTh>}
+                    {isColumnVisible('rutapp') && <SortableTh sortKey="rutapp" sort={auditSort} onToggle={toggleAuditSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">RutApp</SortableTh>}
+                    {isColumnVisible('stripe') && <SortableTh sortKey="stripe" sort={auditSort} onToggle={toggleAuditSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Stripe</SortableTh>}
+                    {isColumnVisible('periodo') && <SortableTh sortKey="periodo" sort={auditSort} onToggle={toggleAuditSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Periodo</SortableTh>}
+                    {isColumnVisible('ultimo_cobro') && <SortableTh sortKey="ultimo_cobro" sort={auditSort} onToggle={toggleAuditSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Último cobro</SortableTh>}
+                    {isColumnVisible('tarjeta') && <SortableTh sortKey="tarjeta" sort={auditSort} onToggle={toggleAuditSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tarjeta asociada</SortableTh>}
+                    {isColumnVisible('stripe_id') && <SortableTh sortKey="stripe_id" sort={auditSort} onToggle={toggleAuditSort} className="h-12 w-[245px] px-4 text-left align-middle font-medium text-muted-foreground">ID suscripción Stripe</SortableTh>}
+                    {isColumnVisible('resultado') && <SortableTh sortKey="resultado" sort={auditSort} onToggle={toggleAuditSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Resultado</SortableTh>}
                     <TableHead className="w-12" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map(row => (
+                  {sortedAuditRows.map(row => (
                     <TableRow
                       key={row.empresa_id}
                       className={cn(
