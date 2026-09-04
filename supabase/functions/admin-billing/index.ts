@@ -296,6 +296,85 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
+    async function syncSubscriptionSeatsForEmpresa(empresaId: string) {
+      const [subscriptionRes, activeProfilesRes] = await Promise.all([
+        supabase.from("subscriptions")
+          .select("id, empresa_id, max_usuarios, stripe_subscription_id, plan_id, legacy_pricing, subscription_plans(slug, usuarios_incluidos, stripe_price_id, stripe_price_id_extra)")
+          .eq("empresa_id", empresaId)
+          .maybeSingle(),
+        supabase.from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("empresa_id", empresaId)
+          .eq("estado", "activo")
+          .is("archivado_en", null),
+      ]);
+      if (subscriptionRes.error) throw subscriptionRes.error;
+      if (activeProfilesRes.error) throw activeProfilesRes.error;
+      const localSub = subscriptionRes.data as any;
+      if (!localSub) throw new Error("La empresa no tiene suscripción");
+
+      const plan = relationOne(localSub.subscription_plans);
+      const activeUsers = Number(activeProfilesRes.count || 0);
+      const minimumUsers = plan?.usuarios_incluidos != null
+        ? Math.max(1, Number(plan.usuarios_incluidos || 0))
+        : 3;
+      const expectedUsers = Math.max(minimumUsers, activeUsers);
+      let previousStripeUsers = 0;
+
+      if (localSub.stripe_subscription_id) {
+        const stripeSub = await stripe.subscriptions.retrieve(localSub.stripe_subscription_id);
+        previousStripeUsers = stripeBillableSeats(stripeSub, plan, localSub.legacy_pricing === true);
+        const isTwoItem = Boolean(plan?.slug && plan?.stripe_price_id_extra && localSub.legacy_pricing !== true);
+        const items: any[] = [];
+
+        if (isTwoItem) {
+          const baseItem = stripeSub.items.data.find((item: any) => getStripeObjectId(item.price) === plan.stripe_price_id);
+          const extraItem = stripeSub.items.data.find((item: any) => getStripeObjectId(item.price) === plan.stripe_price_id_extra);
+          if (!baseItem) throw new Error("No se encontró el renglón base de la suscripción en Stripe");
+          items.push({ id: baseItem.id, quantity: 1 });
+          const desiredExtras = Math.max(0, expectedUsers - Number(plan.usuarios_incluidos || 0));
+          if (extraItem) {
+            items.push(desiredExtras === 0
+              ? { id: extraItem.id, deleted: true }
+              : { id: extraItem.id, quantity: desiredExtras });
+          } else if (desiredExtras > 0) {
+            items.push({ price: plan.stripe_price_id_extra, quantity: desiredExtras });
+          }
+        } else {
+          const item = stripeSub.items.data[0];
+          if (!item) throw new Error("No se encontró el renglón de la suscripción en Stripe");
+          items.push({ id: item.id, quantity: expectedUsers });
+        }
+
+        if (previousStripeUsers !== expectedUsers || stripeSub.metadata?.num_usuarios !== String(expectedUsers)) {
+          await stripe.subscriptions.update(localSub.stripe_subscription_id, {
+            items,
+            proration_behavior: "none",
+            metadata: { ...stripeSub.metadata, num_usuarios: String(expectedUsers) },
+          });
+        }
+      }
+
+      const { error: updateError } = await supabase.from("subscriptions")
+        .update({
+          max_usuarios: expectedUsers,
+          stripe_sync_error: null,
+          stripe_sync_error_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", localSub.id);
+      if (updateError) throw updateError;
+
+      return {
+        empresa_id: empresaId,
+        active_users: activeUsers,
+        minimum_users: minimumUsers,
+        previous_stripe_users: previousStripeUsers,
+        stripe_users: expectedUsers,
+        changed: previousStripeUsers !== expectedUsers || Number(localSub.max_usuarios || 0) !== expectedUsers,
+      };
+    }
+
     if (action === "list_all_invoices") {
       const statusFilter = url.searchParams.get("status") || "all"; // 'paid' | 'open' | 'all'
       const empresaIdParam = url.searchParams.get("empresa_id");
@@ -587,83 +666,46 @@ Deno.serve(async (req) => {
     if (action === "sync_subscription_seats") {
       const empresaId = String(body.empresa_id || "");
       if (!empresaId) throw new Error("empresa_id requerido");
+      const result = await syncSubscriptionSeatsForEmpresa(empresaId);
+      return new Response(JSON.stringify({ ok: true, ...result }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-      const [subscriptionRes, activeProfilesRes] = await Promise.all([
-        supabase.from("subscriptions")
-          .select("id, empresa_id, max_usuarios, stripe_subscription_id, plan_id, legacy_pricing, subscription_plans(slug, usuarios_incluidos, stripe_price_id, stripe_price_id_extra)")
-          .eq("empresa_id", empresaId)
-          .maybeSingle(),
-        supabase.from("profiles")
-          .select("id", { count: "exact", head: true })
-          .eq("empresa_id", empresaId)
-          .eq("estado", "activo")
-          .is("archivado_en", null),
-      ]);
-      if (subscriptionRes.error) throw subscriptionRes.error;
-      if (activeProfilesRes.error) throw activeProfilesRes.error;
-      const localSub = subscriptionRes.data as any;
-      if (!localSub) throw new Error("La empresa no tiene suscripción");
+    if (action === "sync_subscription_seats_bulk") {
+      const empresaIds = [...new Set(
+        (Array.isArray(body.empresa_ids) ? body.empresa_ids : [])
+          .map((value: unknown) => String(value || "").trim())
+          .filter(Boolean),
+      )].slice(0, 250);
+      if (!empresaIds.length) throw new Error("No se recibieron empresas para sincronizar");
 
-      const plan = relationOne(localSub.subscription_plans);
-      const activeUsers = Number(activeProfilesRes.count || 0);
-      const minimumUsers = plan?.usuarios_incluidos != null
-        ? Math.max(1, Number(plan.usuarios_incluidos || 0))
-        : 3;
-      const expectedUsers = Math.max(minimumUsers, activeUsers);
-      let previousStripeUsers = 0;
-
-      if (localSub.stripe_subscription_id) {
-        const stripeSub = await stripe.subscriptions.retrieve(localSub.stripe_subscription_id);
-        previousStripeUsers = stripeBillableSeats(stripeSub, plan, localSub.legacy_pricing === true);
-        const isTwoItem = Boolean(plan?.slug && plan?.stripe_price_id_extra && localSub.legacy_pricing !== true);
-        const items: any[] = [];
-
-        if (isTwoItem) {
-          const baseItem = stripeSub.items.data.find((item: any) => getStripeObjectId(item.price) === plan.stripe_price_id);
-          const extraItem = stripeSub.items.data.find((item: any) => getStripeObjectId(item.price) === plan.stripe_price_id_extra);
-          if (!baseItem) throw new Error("No se encontró el renglón base de la suscripción en Stripe");
-          items.push({ id: baseItem.id, quantity: 1 });
-          const desiredExtras = Math.max(0, expectedUsers - Number(plan.usuarios_incluidos || 0));
-          if (extraItem) {
-            items.push(desiredExtras === 0
-              ? { id: extraItem.id, deleted: true }
-              : { id: extraItem.id, quantity: desiredExtras });
-          } else if (desiredExtras > 0) {
-            items.push({ price: plan.stripe_price_id_extra, quantity: desiredExtras });
+      const results: any[] = [];
+      for (let index = 0; index < empresaIds.length; index += 5) {
+        const batch = empresaIds.slice(index, index + 5);
+        const settled = await Promise.all(batch.map(async (empresaId) => {
+          try {
+            return { ok: true, ...(await syncSubscriptionSeatsForEmpresa(empresaId)) };
+          } catch (error) {
+            return {
+              ok: false,
+              empresa_id: empresaId,
+              error: error instanceof Error ? error.message : "Error desconocido",
+            };
           }
-        } else {
-          const item = stripeSub.items.data[0];
-          if (!item) throw new Error("No se encontró el renglón de la suscripción en Stripe");
-          items.push({ id: item.id, quantity: expectedUsers });
-        }
-
-        if (previousStripeUsers !== expectedUsers || stripeSub.metadata?.num_usuarios !== String(expectedUsers)) {
-          await stripe.subscriptions.update(localSub.stripe_subscription_id, {
-            items,
-            proration_behavior: "none",
-            metadata: { ...stripeSub.metadata, num_usuarios: String(expectedUsers) },
-          });
-        }
+        }));
+        results.push(...settled);
       }
 
-      const { error: updateError } = await supabase.from("subscriptions")
-        .update({
-          max_usuarios: expectedUsers,
-          stripe_sync_error: null,
-          stripe_sync_error_at: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", localSub.id);
-      if (updateError) throw updateError;
-
+      const successful = results.filter(result => result.ok);
+      const failed = results.filter(result => !result.ok);
       return new Response(JSON.stringify({
-        ok: true,
-        empresa_id: empresaId,
-        active_users: activeUsers,
-        minimum_users: minimumUsers,
-        previous_stripe_users: previousStripeUsers,
-        stripe_users: expectedUsers,
-        changed: previousStripeUsers !== expectedUsers || Number(localSub.max_usuarios || 0) !== expectedUsers,
+        ok: failed.length === 0,
+        requested: empresaIds.length,
+        synchronized: successful.length,
+        changed: successful.filter(result => result.changed).length,
+        failed: failed.length,
+        results,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

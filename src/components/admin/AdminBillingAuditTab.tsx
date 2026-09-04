@@ -4,6 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -31,6 +41,7 @@ import {
   Search,
   ShieldCheck,
   Unplug,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -46,7 +57,7 @@ interface AuditApiResponse {
   }>;
 }
 
-type AuditFilter = 'all' | 'healthy' | 'critical' | 'warning' | 'active_without_payment' | 'active' | 'trial' | 'down';
+type AuditFilter = 'all' | 'healthy' | 'critical' | 'warning' | 'active_without_payment' | 'seat_mismatch' | 'active' | 'trial' | 'down';
 
 type AuditColumn =
   | 'empresa' | 'alta' | 'fin_demo' | 'suscripcion' | 'ultima_venta' | 'dias_sin_venta'
@@ -138,11 +149,20 @@ function lastSaleAt(row: SubscriptionAuditResult): string | null {
   return row.last_sale?.fecha || row.last_sale?.created_at || null;
 }
 
+function isSeatMismatch(row: SubscriptionAuditResult): boolean {
+  const expected = row.expected_billable_users;
+  if (!row.stripe_subscription || !Number.isFinite(expected)) return false;
+  return row.stripe_subscription.quantity !== expected
+    || Boolean(row.db_subscription && row.db_subscription.max_usuarios !== expected);
+}
+
 export default function AdminBillingAuditTab() {
   const [filter, setFilter] = useState<AuditFilter>('critical');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<SubscriptionAuditResult | null>(null);
   const [syncingEmpresaId, setSyncingEmpresaId] = useState<string | null>(null);
+  const [bulkSyncOpen, setBulkSyncOpen] = useState(false);
+  const [bulkSyncing, setBulkSyncing] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<AuditColumn[]>(DEFAULT_COLUMNS);
   const [dateFilters, setDateFilters] = useState({
     signupFrom: '', signupTo: '', trialFrom: '', trialTo: '', subscriptionFrom: '', subscriptionTo: '',
@@ -176,14 +196,20 @@ export default function AdminBillingAuditTab() {
     [query.data?.records],
   );
 
+  const seatMismatches = useMemo(
+    () => audited.filter(isSeatMismatch),
+    [audited],
+  );
+
   const stats = useMemo(() => ({
     total: audited.length,
     healthy: audited.filter(row => row.severity === 'ok').length,
     critical: audited.filter(row => row.severity === 'critical').length,
     warning: audited.filter(row => row.severity === 'warning').length,
     activeWithoutPayment: audited.filter(row => row.active_without_payment).length,
+    seatMismatch: seatMismatches.length,
     down: audited.filter(row => row.operational_status === 'down').length,
-  }), [audited]);
+  }), [audited, seatMismatches]);
 
   const filtered = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase('es-MX');
@@ -193,6 +219,7 @@ export default function AdminBillingAuditTab() {
         if (filter === 'warning') return row.severity === 'warning';
         if (filter === 'healthy') return row.severity === 'ok';
         if (filter === 'active_without_payment') return row.active_without_payment;
+        if (filter === 'seat_mismatch') return isSeatMismatch(row);
         if (filter === 'active') return row.operational_status === 'active';
         if (filter === 'trial') return row.operational_status === 'trial';
         if (filter === 'down') return row.operational_status === 'down';
@@ -297,10 +324,50 @@ export default function AdminBillingAuditTab() {
     }
   }
 
+  async function syncAllMismatchedSeats() {
+    if (!seatMismatches.length || bulkSyncing) return;
+    setBulkSyncing(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Sesión no disponible');
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=sync_subscription_seats_bulk`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ empresa_ids: seatMismatches.map(row => row.empresa_id) }),
+        },
+      );
+      const payload = await response.json();
+      if (!response.ok || payload.error) throw new Error(payload.error || 'No fue posible realizar la sincronización masiva');
+
+      if (payload.failed > 0) {
+        toast.warning(`${payload.synchronized} empresa(s) sincronizada(s); ${payload.failed} con error.`, {
+          description: 'Las empresas con error permanecen en el filtro Desfasados para revisarlas individualmente.',
+        });
+      } else {
+        toast.success(`${payload.synchronized} empresa(s) sincronizada(s) correctamente.`);
+      }
+      setBulkSyncOpen(false);
+      setFilter('seat_mismatch');
+      await query.refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No fue posible sincronizar los usuarios');
+    } finally {
+      setBulkSyncing(false);
+    }
+  }
+
   const cards: Array<{ key: AuditFilter; label: string; value: number; icon: typeof ShieldCheck; color: string }> = [
     { key: 'all', label: 'Empresas auditadas', value: stats.total, icon: ShieldCheck, color: 'bg-primary' },
     { key: 'critical', label: 'Problemas críticos', value: stats.critical, icon: AlertTriangle, color: 'bg-destructive' },
     { key: 'active_without_payment', label: 'Activas sin cobro', value: stats.activeWithoutPayment, icon: CircleDollarSign, color: 'bg-orange-500' },
+    { key: 'seat_mismatch', label: 'Usuarios desfasados', value: stats.seatMismatch, icon: Users, color: 'bg-rose-600' },
     { key: 'warning', label: 'Por revisar', value: stats.warning, icon: FileWarning, color: 'bg-amber-500' },
     { key: 'healthy', label: 'Sin problemas', value: stats.healthy, icon: CheckCircle2, color: 'bg-emerald-500' },
     { key: 'down', label: 'De baja', value: stats.down, icon: Ban, color: 'bg-slate-500' },
@@ -334,7 +401,7 @@ export default function AdminBillingAuditTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-3">
         {cards.map((card, index) => (
           <button
             key={`${card.label}-${index}`}
@@ -386,9 +453,22 @@ export default function AdminBillingAuditTab() {
             <AuditFilterButton active={filter === 'all'} onClick={() => setFilter('all')}>Todas</AuditFilterButton>
             <AuditFilterButton active={filter === 'critical'} onClick={() => setFilter('critical')}>Críticas</AuditFilterButton>
             <AuditFilterButton active={filter === 'warning'} onClick={() => setFilter('warning')}>Revisar</AuditFilterButton>
+            <AuditFilterButton active={filter === 'seat_mismatch'} onClick={() => setFilter('seat_mismatch')}>
+              Desfasados ({stats.seatMismatch})
+            </AuditFilterButton>
             <AuditFilterButton active={filter === 'active'} onClick={() => setFilter('active')}>Activas</AuditFilterButton>
             <AuditFilterButton active={filter === 'trial'} onClick={() => setFilter('trial')}>Prueba</AuditFilterButton>
             <AuditFilterButton active={filter === 'down'} onClick={() => setFilter('down')}>Baja</AuditFilterButton>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-9 gap-1.5"
+              disabled={!seatMismatches.length || bulkSyncing}
+              onClick={() => setBulkSyncOpen(true)}
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5', bulkSyncing && 'animate-spin')} />
+              Sincronizar desfasados ({seatMismatches.length})
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 gap-1.5">
@@ -603,6 +683,24 @@ export default function AdminBillingAuditTab() {
         onSync={syncSubscriptionSeats}
         syncing={!!selected && syncingEmpresaId === selected.empresa_id}
       />
+
+      <AlertDialog open={bulkSyncOpen} onOpenChange={open => !bulkSyncing && setBulkSyncOpen(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sincronizar {seatMismatches.length} empresa(s) desfasada(s)</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se volverán a contar únicamente los usuarios activos y no archivados de cada empresa y se actualizarán RutApp y Stripe. No se generarán facturas ni cargos inmediatos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkSyncing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction disabled={bulkSyncing} onClick={event => { event.preventDefault(); void syncAllMismatchedSeats(); }}>
+              <RefreshCw className={cn('mr-2 h-4 w-4', bulkSyncing && 'animate-spin')} />
+              {bulkSyncing ? 'Sincronizando…' : 'Sincronizar todas'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
