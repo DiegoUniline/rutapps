@@ -31,6 +31,24 @@ interface AdminInvoice {
 }
 
 type PaymentState = 'all' | 'paid' | 'failed' | 'pending' | 'draft' | 'void';
+type InvoiceView = 'detail' | 'company' | 'client' | 'matrix';
+type DatePreset = 'all' | 'today' | 'week' | 'month' | 'last_month' | 'custom';
+
+interface InvoiceGroupStats {
+  key: string;
+  label: string;
+  secondary: string;
+  invoiceCount: number;
+  paidCount: number;
+  failedCount: number;
+  pendingCount: number;
+  totalDue: number;
+  paid: number;
+  failed: number;
+  pending: number;
+  balance: number;
+  duplicateCount: number;
+}
 
 interface EmpresaOption {
   id: string; nombre: string; email: string | null; telefono: string | null;
@@ -109,6 +127,20 @@ const PAYMENT_STATE_LABELS: Record<Exclude<PaymentState, 'all'>, string> = {
   void: 'Anulada',
 };
 
+function localDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function invoiceCustomerKey(invoice: AdminInvoice): string {
+  return invoice.customer_id
+    || invoice.customer_email?.trim().toLowerCase()
+    || invoice.customer_name?.trim().toLowerCase()
+    || `invoice:${invoice.id}`;
+}
+
 export default function AdminInvoicesTab() {
   const [invoices, setInvoices] = useState<AdminInvoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,6 +149,8 @@ export default function AdminInvoicesTab() {
   const [empresaFilter, setEmpresaFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  const [invoiceView, setInvoiceView] = useState<InvoiceView>('detail');
   const [selectedInvoice, setSelectedInvoice] = useState<AdminInvoice | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -378,12 +412,114 @@ export default function AdminInvoicesTab() {
     return sum + Math.max(0, remaining);
   }, 0) / 100;
 
+  const paidByCustomerDateAndAmount = new Map<string, AdminInvoice[]>();
+  for (const invoice of paidInvoices) {
+    const paidAmount = invoice.amount_paid || 0;
+    if (paidAmount <= 0) continue;
+    const paidDate = new Date((invoice.paid_at || invoice.created) * 1000);
+    const key = `${invoiceCustomerKey(invoice)}|${localDateKey(paidDate)}|${paidAmount}|${invoice.currency}`;
+    const matches = paidByCustomerDateAndAmount.get(key) || [];
+    matches.push(invoice);
+    paidByCustomerDateAndAmount.set(key, matches);
+  }
+  const possibleDuplicateSets = [...paidByCustomerDateAndAmount.values()].filter(matches => matches.length > 1);
+  const possibleDuplicateIds = new Set(possibleDuplicateSets.flatMap(matches => matches.map(invoice => invoice.id)));
+  const possibleDuplicateAmount = possibleDuplicateSets.reduce((sum, matches) => {
+    const [, ...possibleExtras] = matches.sort((a, b) => (a.paid_at || a.created) - (b.paid_at || b.created));
+    return sum + possibleExtras.reduce((subtotal, invoice) => subtotal + (invoice.amount_paid || 0), 0);
+  }, 0) / 100;
+
+  const buildGroupedStats = (groupBy: 'company' | 'client'): InvoiceGroupStats[] => {
+    const groups = new Map<string, InvoiceGroupStats & { related: Set<string> }>();
+    for (const invoice of filtered) {
+      const paymentState = getPaymentState(invoice);
+      const remaining = Math.max(0, invoice.amount_remaining ?? invoice.amount_due - (invoice.amount_paid || 0));
+      const companyName = invoice.empresa_nombre || 'Empresa sin asociar';
+      const customerName = invoice.customer_name || invoice.customer_email || 'Cliente sin identificar';
+      const key = groupBy === 'company'
+        ? invoice.empresa_id || `company:${companyName}`
+        : invoiceCustomerKey(invoice);
+      const label = groupBy === 'company' ? companyName : customerName;
+      const relatedLabel = groupBy === 'company'
+        ? invoice.customer_email || invoice.customer_name || 'Sin cliente'
+        : companyName;
+      const current = groups.get(key) || {
+        key,
+        label,
+        secondary: '',
+        invoiceCount: 0,
+        paidCount: 0,
+        failedCount: 0,
+        pendingCount: 0,
+        totalDue: 0,
+        paid: 0,
+        failed: 0,
+        pending: 0,
+        balance: 0,
+        duplicateCount: 0,
+        related: new Set<string>(),
+      };
+      current.invoiceCount += 1;
+      current.totalDue += Math.max(0, invoice.amount_due || 0);
+      current.balance += remaining;
+      current.related.add(relatedLabel);
+      if (paymentState === 'paid') {
+        current.paidCount += 1;
+        current.paid += invoice.amount_paid || 0;
+      } else if (paymentState === 'failed') {
+        current.failedCount += 1;
+        current.failed += remaining;
+      } else if (paymentState === 'pending') {
+        current.pendingCount += 1;
+        current.pending += remaining;
+      }
+      if (possibleDuplicateIds.has(invoice.id)) current.duplicateCount += 1;
+      groups.set(key, current);
+    }
+    return [...groups.values()]
+      .map(group => ({
+        ...group,
+        secondary: groupBy === 'company'
+          ? `${group.related.size} ${group.related.size === 1 ? 'cliente' : 'clientes'}`
+          : [...group.related].slice(0, 2).join(', '),
+      }))
+      .sort((a, b) => b.totalDue - a.totalDue || a.label.localeCompare(b.label, 'es-MX'));
+  };
+
+  const companyGroups = buildGroupedStats('company');
+  const clientGroups = buildGroupedStats('client');
+
+  const applyDatePreset = (preset: Exclude<DatePreset, 'custom'>) => {
+    const now = new Date();
+    let from = '';
+    let to = '';
+    if (preset === 'today') {
+      from = localDateKey(now);
+      to = from;
+    } else if (preset === 'week') {
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+      from = localDateKey(monday);
+      to = localDateKey(now);
+    } else if (preset === 'month') {
+      from = localDateKey(new Date(now.getFullYear(), now.getMonth(), 1));
+      to = localDateKey(now);
+    } else if (preset === 'last_month') {
+      from = localDateKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+      to = localDateKey(new Date(now.getFullYear(), now.getMonth(), 0));
+    }
+    setDateFrom(from);
+    setDateTo(to);
+    setDatePreset(preset);
+  };
+
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('all');
     setEmpresaFilter('all');
     setDateFrom('');
     setDateTo('');
+    setDatePreset('all');
   };
 
   const empresaOptions = empresas.map(e => ({ value: e.id, label: `${e.nombre}${e.email ? ` (${e.email})` : ''}` }));
@@ -417,7 +553,7 @@ export default function AdminInvoicesTab() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 xl:grid-cols-5 gap-2.5">
             <button type="button" onClick={() => setStatusFilter('all')} className={`rounded-xl border p-3 text-left transition-colors ${statusFilter === 'all' ? 'border-primary bg-primary/5' : 'border-border/60 hover:bg-muted/40'}`}>
               <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Generadas</span><Receipt className="h-4 w-4" /></div>
               <div className="mt-1 text-xl font-bold">{fmtMXN(totalGenerado)}</div>
@@ -438,24 +574,50 @@ export default function AdminInvoicesTab() {
               <div className="mt-1 text-xl font-bold text-amber-700">{fmtMXN(totalPendiente)}</div>
               <div className="text-[11px] text-muted-foreground">{pendingInvoices.length} {pendingInvoices.length === 1 ? 'factura' : 'facturas'}</div>
             </button>
+            <button
+              type="button"
+              onClick={() => { setStatusFilter('paid'); setInvoiceView('client'); }}
+              className={`rounded-xl border p-3 text-left transition-colors ${possibleDuplicateSets.length > 0 ? 'border-red-300 bg-red-50 hover:bg-red-100/70' : 'border-border/60 hover:bg-muted/40'}`}
+            >
+              <div className="flex items-center justify-between text-xs text-red-700"><span>Posibles dobles</span><AlertTriangle className="h-4 w-4" /></div>
+              <div className="mt-1 text-xl font-bold text-red-700">{fmtMXN(possibleDuplicateAmount)}</div>
+              <div className="text-[11px] text-muted-foreground">{possibleDuplicateSets.length} {possibleDuplicateSets.length === 1 ? 'coincidencia' : 'coincidencias'} para revisar</div>
+            </button>
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-muted/20 p-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.5fr)_minmax(200px,1fr)_150px_150px_auto]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Empresa, cliente, correo, folio o ID Stripe..." value={search} onChange={event => setSearch(event.target.value)} className="pl-9 bg-background" />
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-2.5">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.5fr)_minmax(200px,1fr)_150px_150px_auto]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Empresa, cliente, correo, folio o ID Stripe..." value={search} onChange={event => setSearch(event.target.value)} className="pl-9 bg-background" />
+              </div>
+              <ModalSelect
+                options={[{ value: 'all', label: 'Todas las empresas' }, ...empresaOptions]}
+                value={empresaFilter}
+                onChange={setEmpresaFilter}
+                placeholder="Todas las empresas"
+              />
+              <Input type="date" value={dateFrom} onChange={event => { setDateFrom(event.target.value); setDatePreset('custom'); }} className="bg-background" aria-label="Fecha inicial" />
+              <Input type="date" value={dateTo} onChange={event => { setDateTo(event.target.value); setDatePreset('custom'); }} className="bg-background" aria-label="Fecha final" />
+              <Button type="button" variant="ghost" size="sm" onClick={clearFilters} className="h-10 px-3">
+                <XCircle className="h-4 w-4 mr-1.5" /> Limpiar
+              </Button>
             </div>
-            <ModalSelect
-              options={[{ value: 'all', label: 'Todas las empresas' }, ...empresaOptions]}
-              value={empresaFilter}
-              onChange={setEmpresaFilter}
-              placeholder="Todas las empresas"
-            />
-            <Input type="date" value={dateFrom} onChange={event => setDateFrom(event.target.value)} className="bg-background" aria-label="Fecha inicial" />
-            <Input type="date" value={dateTo} onChange={event => setDateTo(event.target.value)} className="bg-background" aria-label="Fecha final" />
-            <Button type="button" variant="ghost" size="sm" onClick={clearFilters} className="h-10 px-3">
-              <XCircle className="h-4 w-4 mr-1.5" /> Limpiar
-            </Button>
+            <div className="flex items-center gap-1.5 overflow-x-auto border-t border-border/50 pt-2.5">
+              <span className="mr-1 whitespace-nowrap text-xs font-medium text-muted-foreground">Periodo:</span>
+              {([
+                ['today', 'Hoy'],
+                ['week', 'Esta semana'],
+                ['month', 'Este mes'],
+                ['last_month', 'Mes pasado'],
+                ['all', 'Todo'],
+              ] as Array<[Exclude<DatePreset, 'custom'>, string]>).map(([preset, label]) => (
+                <Button key={preset} type="button" size="sm" variant={datePreset === preset ? 'default' : 'outline'} className="h-7 whitespace-nowrap px-2.5 text-xs" onClick={() => applyDatePreset(preset)}>
+                  {label}
+                </Button>
+              ))}
+              {datePreset === 'custom' && <Badge variant="outline" className="h-7 whitespace-nowrap">Personalizado</Badge>}
+            </div>
           </div>
 
           <div className="flex items-center gap-1 overflow-x-auto pb-1">
@@ -467,7 +629,20 @@ export default function AdminInvoicesTab() {
             <span className="ml-auto whitespace-nowrap text-xs text-muted-foreground">{filtered.length} resultado{filtered.length === 1 ? '' : 's'}</span>
           </div>
 
-          {loading ? <div className="text-center py-8 text-muted-foreground">Cargando facturas...</div> : (
+          <div className="flex items-center gap-1 overflow-x-auto rounded-lg border border-border/60 bg-background p-1">
+            {([
+              ['detail', 'Detalle'],
+              ['company', 'Agrupar por empresa'],
+              ['client', 'Agrupar por cliente'],
+              ['matrix', 'Matriz'],
+            ] as Array<[InvoiceView, string]>).map(([view, label]) => (
+              <Button key={view} type="button" size="sm" variant={invoiceView === view ? 'secondary' : 'ghost'} className="h-8 whitespace-nowrap text-xs" onClick={() => setInvoiceView(view)}>
+                {label}
+              </Button>
+            ))}
+          </div>
+
+          {loading ? <div className="text-center py-8 text-muted-foreground">Cargando facturas...</div> : invoiceView === 'detail' ? (
             <div className="overflow-x-auto rounded-lg border border-border/50">
             <Table>
               <TableHeader>
@@ -493,7 +668,7 @@ export default function AdminInvoicesTab() {
                   const paymentState = getPaymentState(inv);
                   const isPaid = paymentState === 'paid';
                   return (
-                  <TableRow key={inv.id} className={paymentState === 'failed' ? 'bg-red-50/40' : undefined}>
+                  <TableRow key={inv.id} className={possibleDuplicateIds.has(inv.id) ? 'bg-red-50/70' : paymentState === 'failed' ? 'bg-red-50/40' : undefined}>
                     <TableCell className="text-sm">
                       {inv.empresa_nombre ? (
                         <span className="font-medium text-foreground">{inv.empresa_nombre}</span>
@@ -504,7 +679,12 @@ export default function AdminInvoicesTab() {
                     <TableCell className="text-sm text-muted-foreground">{inv.customer_email || inv.customer_name || '—'}</TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground">{inv.number || '—'}</TableCell>
                     <TableCell className="text-sm truncate max-w-[200px] text-muted-foreground">{inv.description}</TableCell>
-                    <TableCell>{statusBadge(paymentState)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col items-start gap-1">
+                        {statusBadge(paymentState)}
+                        {possibleDuplicateIds.has(inv.id) && <Badge variant="outline" className="border-red-300 bg-red-50 text-[10px] text-red-700">Posible doble</Badge>}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-center text-sm font-medium">{inv.attempt_count || 0}</TableCell>
                     <TableCell className="text-right text-muted-foreground">{fmtMXN(inv.amount_due / 100)}</TableCell>
                     <TableCell className="text-right font-medium">{fmtMXN((inv.amount_paid || 0) / 100)}</TableCell>
@@ -577,6 +757,93 @@ export default function AdminInvoicesTab() {
                 })}
               </TableBody>
             </Table>
+            </div>
+          ) : invoiceView === 'matrix' ? (
+            <div className="overflow-x-auto rounded-lg border border-border/50">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead className="text-right">Total facturado</TableHead>
+                    <TableHead className="text-right text-emerald-700">Pagadas</TableHead>
+                    <TableHead className="text-right text-red-700">Fallidas</TableHead>
+                    <TableHead className="text-right text-amber-700">Pendientes</TableHead>
+                    <TableHead className="text-right">Saldo</TableHead>
+                    <TableHead className="text-center">Revisar dobles</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {companyGroups.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Sin datos con estos filtros</TableCell></TableRow>
+                  ) : companyGroups.map(group => (
+                    <TableRow key={group.key} className={group.duplicateCount > 0 ? 'bg-red-50/60' : undefined}>
+                      <TableCell>
+                        <div className="font-medium">{group.label}</div>
+                        <div className="text-[11px] text-muted-foreground">{group.secondary} · {group.invoiceCount} facturas</div>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{fmtMXN(group.totalDue / 100)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="font-semibold text-emerald-700">{fmtMXN(group.paid / 100)}</div>
+                        <div className="text-[10px] text-muted-foreground">{group.paidCount} facturas</div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="font-semibold text-red-700">{fmtMXN(group.failed / 100)}</div>
+                        <div className="text-[10px] text-muted-foreground">{group.failedCount} facturas</div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="font-semibold text-amber-700">{fmtMXN(group.pending / 100)}</div>
+                        <div className="text-[10px] text-muted-foreground">{group.pendingCount} facturas</div>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{fmtMXN(group.balance / 100)}</TableCell>
+                      <TableCell className="text-center">
+                        {group.duplicateCount > 0
+                          ? <Badge variant="outline" className="border-red-300 bg-red-50 text-red-700">{group.duplicateCount} facturas</Badge>
+                          : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border/50">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{invoiceView === 'company' ? 'Empresa' : 'Cliente (Stripe)'}</TableHead>
+                    <TableHead className="text-center">Facturas</TableHead>
+                    <TableHead className="text-right">Facturado</TableHead>
+                    <TableHead className="text-right text-emerald-700">Cobrado</TableHead>
+                    <TableHead className="text-right text-red-700">Fallido</TableHead>
+                    <TableHead className="text-right text-amber-700">Pendiente</TableHead>
+                    <TableHead className="text-right">Saldo</TableHead>
+                    <TableHead className="text-center">Posibles dobles</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(invoiceView === 'company' ? companyGroups : clientGroups).length === 0 ? (
+                    <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">Sin datos con estos filtros</TableCell></TableRow>
+                  ) : (invoiceView === 'company' ? companyGroups : clientGroups).map(group => (
+                    <TableRow key={group.key} className={group.duplicateCount > 0 ? 'bg-red-50/60' : undefined}>
+                      <TableCell>
+                        <div className="font-medium">{group.label}</div>
+                        <div className="max-w-[280px] truncate text-[11px] text-muted-foreground">{group.secondary || 'Sin empresa asociada'}</div>
+                      </TableCell>
+                      <TableCell className="text-center font-semibold">{group.invoiceCount}</TableCell>
+                      <TableCell className="text-right font-semibold">{fmtMXN(group.totalDue / 100)}</TableCell>
+                      <TableCell className="text-right text-emerald-700">{fmtMXN(group.paid / 100)}</TableCell>
+                      <TableCell className="text-right text-red-700">{fmtMXN(group.failed / 100)}</TableCell>
+                      <TableCell className="text-right text-amber-700">{fmtMXN(group.pending / 100)}</TableCell>
+                      <TableCell className="text-right font-semibold">{fmtMXN(group.balance / 100)}</TableCell>
+                      <TableCell className="text-center">
+                        {group.duplicateCount > 0
+                          ? <Badge variant="outline" className="border-red-300 bg-red-50 text-red-700">{group.duplicateCount} facturas</Badge>
+                          : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

@@ -664,6 +664,7 @@ Deno.serve(async (req) => {
               .eq("empresa_id", empresa.id)
               .eq("es_saldo_inicial", false)
               .in("status", ["confirmado", "entregado", "facturado"])
+              .order("fecha", { ascending: false, nullsFirst: false })
               .order("created_at", { ascending: false })
               .limit(1)
               .maybeSingle(),

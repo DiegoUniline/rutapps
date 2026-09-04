@@ -133,6 +133,10 @@ function daysSince(value?: string | null): number | null {
   return Math.max(0, Math.floor((todayUtc - saleUtc) / 86_400_000));
 }
 
+function lastSaleAt(row: SubscriptionAuditResult): string | null {
+  return row.last_sale?.fecha || row.last_sale?.created_at || null;
+}
+
 export default function AdminBillingAuditTab() {
   const [filter, setFilter] = useState<AuditFilter>('critical');
   const [search, setSearch] = useState('');
@@ -227,9 +231,9 @@ export default function AdminBillingAuditTab() {
       fin_demo_empresa: row.empresa_demo_expires_at ?? '',
       fin_prueba_rutapp: row.db_subscription?.trial_ends_at ?? '',
       fecha_hora_suscripcion: subscriptionCreatedAt(row) ?? '',
-      ultima_venta: row.last_sale?.created_at ?? '',
+      ultima_venta: lastSaleAt(row) ?? '',
       folio_ultima_venta: row.last_sale?.folio ?? '',
-      dias_desde_ultima_venta: daysSince(row.last_sale?.created_at) ?? '',
+      dias_desde_ultima_venta: daysSince(lastSaleAt(row)) ?? '',
       inicio_periodo_real: row.expected.real_period_start,
       fin_prorrateo_esperado: row.expected.first_prorated_period_end,
       primera_mensualidad_completa: row.expected.first_full_invoice_date,
@@ -477,13 +481,13 @@ export default function AdminBillingAuditTab() {
                       {isColumnVisible('ultima_venta') && <TableCell className="text-xs whitespace-nowrap">
                         {row.last_sale ? (
                           <>
-                            <div className="font-semibold">{fmtDateTime(row.last_sale.created_at)}</div>
+                            <div className="font-semibold">{fmtDateTime(lastSaleAt(row))}</div>
                             <div className="text-[10px] text-muted-foreground">{row.last_sale.folio || 'Sin folio'} · ${row.last_sale.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
                           </>
                         ) : <span className="font-semibold text-muted-foreground">Sin ventas</span>}
                       </TableCell>}
                       {isColumnVisible('dias_sin_venta') && <TableCell className="text-center">
-                        <DaysWithoutSale value={daysSince(row.last_sale?.created_at)} />
+                        <DaysWithoutSale value={daysSince(lastSaleAt(row))} />
                       </TableCell>}
                       {isColumnVisible('rutapp') && <TableCell>
                         <OperationalStatusBadge row={row} />
@@ -722,8 +726,8 @@ function AuditDetailDialog({ row, onClose }: { row: SubscriptionAuditResult | nu
               <AuditDateBox label="Fecha de alta" value={row.expected.signup_date} />
               <AuditDateBox label="Alta + 7 días" value={row.expected.trial_end} accent />
               <AuditDateBox label="Suscripción" value={fmtDateTime(subscriptionCreatedAt(row))} formatted />
-              <AuditDateBox label="Última venta" value={row.last_sale ? fmtDateTime(row.last_sale.created_at) : 'Sin ventas'} formatted />
-              <AuditDateBox label="Días sin vender" value={daysSince(row.last_sale?.created_at) === null ? 'Nunca ha vendido' : `${daysSince(row.last_sale?.created_at)} día(s)`} formatted />
+              <AuditDateBox label="Última venta" value={row.last_sale ? fmtDateTime(lastSaleAt(row)) : 'Sin ventas'} formatted />
+              <AuditDateBox label="Días sin vender" value={daysSince(lastSaleAt(row)) === null ? 'Nunca ha vendido' : `${daysSince(lastSaleAt(row))} día(s)`} formatted />
               <AuditDateBox label="Fin primer prorrateo" value={row.expected.first_prorated_period_end} />
               <AuditDateBox label="Primera mensual completa" value={row.expected.first_full_invoice_date} />
             </div>
