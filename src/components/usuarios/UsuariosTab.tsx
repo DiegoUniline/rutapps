@@ -41,7 +41,7 @@ export default function UsuariosTab({
 }: Props) {
   const [search, setSearch] = useState('');
   const visibleProfiles = useMemo(() => {
-    const base = showArchived ? profiles : profiles.filter(p => p.estado === 'activo');
+    const base = showArchived ? profiles : profiles.filter(p => p.estado === 'activo' && !p.archivado_en);
     const q = search.trim().toLowerCase();
     if (!q) return base;
     return base.filter(p => {

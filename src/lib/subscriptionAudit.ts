@@ -14,6 +14,9 @@ export interface BillingAuditRecord {
   empresa_created_at: string;
   empresa_demo_expires_at: string | null;
   is_partner_sandbox: boolean;
+  active_user_count?: number;
+  minimum_billable_users?: number;
+  expected_billable_users?: number;
   db_subscription_count: number;
   db_subscription: {
     id: string;
@@ -182,6 +185,19 @@ export function auditSubscription(
       }
 
       if (stripe) {
+        if (Number.isFinite(record.expected_billable_users) && stripe.quantity !== record.expected_billable_users) {
+          const chargingExtra = stripe.quantity > record.expected_billable_users;
+          add(
+            'stripe_seat_count_mismatch',
+            chargingExtra ? 'critical' : 'warning',
+            chargingExtra ? 'Stripe cobra usuarios de más' : 'Cantidad de usuarios desincronizada',
+            `${record.active_user_count} usuario(s) activo(s), mínimo del plan ${record.minimum_billable_users}; Stripe tiene ${stripe.quantity} usuario(s) facturable(s) y debería tener ${record.expected_billable_users}.`,
+          );
+        }
+        if (Number.isFinite(record.expected_billable_users) && db.max_usuarios !== record.expected_billable_users) {
+          add('local_seat_count_mismatch', 'warning', 'Cantidad local de usuarios desactualizada',
+            `RutApp tiene ${db.max_usuarios}; debería tener ${record.expected_billable_users} según usuarios activos y mínimo del plan.`);
+        }
         const stripeActive = ACTIVE_STRIPE_STATUSES.has(normalizeStatus(stripe.status));
         if (dbIsActive && !stripeActive) {
           add('rutapp_active_stripe_inactive', 'critical', 'RutApp activa y Stripe inactivo',

@@ -92,6 +92,16 @@ export function useUsuarios() {
     setEditForm({ nombre: p.nombre || '', telefono: p.telefono || '', estado: p.estado || 'activo', almacen_id: p.almacen_id || '', role_id: userRole?.role_id || '', pin_code: p.pin_code || '' });
   }, [userRoles]);
 
+  const syncBillingSeats = useCallback(async () => {
+    const { data, error } = await supabase.functions.invoke('manage-subscription', {
+      body: { action: 'sync_active_users' },
+    });
+    if (error || data?.error) {
+      console.error('sync_active_users error:', data?.error || error);
+      toast.warning('El usuario se guardó, pero no se pudo actualizar la cantidad en Stripe. Revisa Auditoría de cobros.');
+    }
+  }, []);
+
   const saveUser = useCallback(async () => {
     if (!editingUser) return;
     setSavingUser(true);
@@ -128,6 +138,8 @@ export function useUsuarios() {
       if (roleFnErr) throw roleFnErr;
       if (roleRes?.error) throw new Error(roleRes.error);
 
+      await syncBillingSeats();
+
       toast.success('Usuario actualizado');
       setEditingUser(null);
       loadUsuarios();
@@ -137,7 +149,7 @@ export function useUsuarios() {
     } finally {
       setSavingUser(false);
     }
-  }, [editingUser, editForm, userRoles, loadUsuarios]);
+  }, [editingUser, editForm, userRoles, loadUsuarios, syncBillingSeats]);
 
 
   const createUser = useCallback(async (availableSlots: number, maxUsuarios: number) => {
@@ -164,12 +176,13 @@ export function useUsuarios() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      await syncBillingSeats();
       toast.success('Usuario creado exitosamente');
       setShowNewUser(false);
       setNewUser({ email: '', password: '', nombre: '', role_id: '', almacen_id: '' });
       loadUsuarios();
     } catch (e: any) { toast.error(e.message || 'Error al crear usuario'); } finally { setCreatingUser(false); }
-  }, [newUser, authUsers, loadUsuarios]);
+  }, [newUser, authUsers, loadUsuarios, syncBillingSeats]);
 
   const handleSetPassword = useCallback(async () => {
     if (!passwordModal || !newPassword) return;
@@ -193,10 +206,15 @@ export function useUsuarios() {
   const toggleEstado = useCallback(async (p: ProfileUser, email?: string) => {
     const newEstado = p.estado === 'activo' ? 'baja' : 'activo';
     if (newEstado === 'baja' && !await confirmDialog(`¿Dar de baja a ${p.nombre || email}? No podrá acceder al sistema y no generará costo.`)) return;
-    await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
+    const { error } = await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await syncBillingSeats();
     toast.success(newEstado === 'baja' ? 'Usuario dado de baja' : 'Usuario reactivado');
     loadUsuarios();
-  }, [loadUsuarios]);
+  }, [loadUsuarios, syncBillingSeats]);
 
   const quickCreateRoleAction = useCallback(async () => {
     if (!quickRoleName.trim() || !empresa?.id) return;

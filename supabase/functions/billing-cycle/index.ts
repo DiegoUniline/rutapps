@@ -200,7 +200,8 @@ Deno.serve(async (req) => {
           .from("profiles")
           .select("id", { count: "exact", head: true })
           .eq("empresa_id", sub.empresa_id)
-          .eq("estado", "activo");
+          .eq("estado", "activo")
+          .is("archivado_en", null);
         const realUsers = activeProfilesCount ?? (sub.max_usuarios || 3);
         const minQty = isLegacy ? 3 : Math.max(1, planRow.usuarios_incluidos || 1);
         const qty = Math.max(minQty, realUsers);
@@ -473,12 +474,14 @@ Deno.serve(async (req) => {
             .from("profiles")
             .select("id", { count: "exact", head: true })
             .eq("empresa_id", sub.empresa_id)
-            .eq("estado", "activo");
+            .eq("estado", "activo")
+            .is("archivado_en", null);
           const realUsers = activeProfilesCount ?? (sub.max_usuarios || 3);
           const minQty = isNewPlan ? Math.max(1, planRow.usuarios_incluidos || 1) : 3;
           const qty = Math.max(minQty, realUsers);
 
           const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+          let stripeWasUpdated = false;
 
           if (isNewPlan && planRow.stripe_price_id_extra) {
             // Two-line-item model: base (qty 1) + extras (qty = qty - incluidos)
@@ -499,7 +502,9 @@ Deno.serve(async (req) => {
               await stripe.subscriptions.update(sub.stripe_subscription_id, {
                 items,
                 proration_behavior: "none",
+                metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
               });
+              stripeWasUpdated = true;
               log("Stripe extras synced", { empresa: sub.empresa_id, prev: currentExtras, new: desiredExtras });
             }
           } else {
@@ -511,9 +516,19 @@ Deno.serve(async (req) => {
               await stripe.subscriptions.update(sub.stripe_subscription_id, {
                 items: [{ id: item.id, quantity: qty }],
                 proration_behavior: "none",
+                metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
               });
+              stripeWasUpdated = true;
               log("Stripe quantity synced (legacy)", { empresa: sub.empresa_id, prev: currentStripeQty, new: qty });
             }
+          }
+
+          if (!stripeWasUpdated && stripeSub.metadata?.num_usuarios !== String(qty)) {
+            await stripe.subscriptions.update(sub.stripe_subscription_id, {
+              metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
+              proration_behavior: "none",
+            });
+            log("Stripe seat metadata synced", { empresa: sub.empresa_id, qty });
           }
 
           if (qty !== sub.max_usuarios) {

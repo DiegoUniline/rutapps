@@ -8,6 +8,9 @@ const base: BillingAuditRecord = {
   empresa_created_at: '2026-08-10T18:00:00.000Z',
   empresa_demo_expires_at: '2026-08-17T18:00:00.000Z',
   is_partner_sandbox: false,
+  active_user_count: 3,
+  minimum_billable_users: 3,
+  expected_billable_users: 3,
   db_subscription_count: 1,
   db_subscription: {
     id: 'db-sub', created_at: '2026-08-17T18:00:00.000Z', status: 'active', trial_ends_at: '2026-08-17T18:00:00.000Z',
@@ -135,5 +138,19 @@ describe('auditSubscription', () => {
 
     expect(result.findings.map(f => f.code)).not.toContain('first_prorated_period_mismatch');
     expect(result.findings.map(f => f.code)).not.toContain('first_invoice_not_marked_prorated');
+  });
+
+  it('detecta cuando Stripe cobra usuarios archivados o dados de baja', () => {
+    const result = auditSubscription({
+      ...base,
+      active_user_count: 3,
+      expected_billable_users: 3,
+      stripe_subscription: { ...base.stripe_subscription!, quantity: 4 },
+      db_subscription: { ...base.db_subscription!, max_usuarios: 4 },
+    }, new Date('2026-09-04T18:00:00Z'));
+
+    expect(result.findings.map(f => f.code)).toContain('stripe_seat_count_mismatch');
+    expect(result.findings.find(f => f.code === 'stripe_seat_count_mismatch')?.severity).toBe('critical');
+    expect(result.findings.map(f => f.code)).toContain('local_seat_count_mismatch');
   });
 });

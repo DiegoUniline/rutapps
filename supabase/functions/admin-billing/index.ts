@@ -152,6 +152,20 @@ function compactCard(paymentMethod: any) {
   };
 }
 
+function relationOne(value: any): any | null {
+  return Array.isArray(value) ? value[0] || null : value || null;
+}
+
+function stripeBillableSeats(stripeSub: any, plan: any, legacyPricing = false): number {
+  if (!stripeSub) return 0;
+  if (plan?.slug && plan?.stripe_price_id_extra && !legacyPricing) {
+    const baseItem = stripeSub.items?.data?.find((item: any) => getStripeObjectId(item.price) === plan.stripe_price_id);
+    const extraItem = stripeSub.items?.data?.find((item: any) => getStripeObjectId(item.price) === plan.stripe_price_id_extra);
+    if (baseItem) return Number(plan.usuarios_incluidos || 0) + Number(extraItem?.quantity || 0);
+  }
+  return Number(stripeSub.items?.data?.[0]?.quantity || 0);
+}
+
 async function listAllStripeSubscriptions(stripe: Stripe): Promise<any[]> {
   const rows: any[] = [];
   let startingAfter: string | undefined;
@@ -570,6 +584,89 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "sync_subscription_seats") {
+      const empresaId = String(body.empresa_id || "");
+      if (!empresaId) throw new Error("empresa_id requerido");
+
+      const [subscriptionRes, activeProfilesRes] = await Promise.all([
+        supabase.from("subscriptions")
+          .select("id, empresa_id, max_usuarios, stripe_subscription_id, plan_id, legacy_pricing, subscription_plans(slug, usuarios_incluidos, stripe_price_id, stripe_price_id_extra)")
+          .eq("empresa_id", empresaId)
+          .maybeSingle(),
+        supabase.from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("empresa_id", empresaId)
+          .eq("estado", "activo")
+          .is("archivado_en", null),
+      ]);
+      if (subscriptionRes.error) throw subscriptionRes.error;
+      if (activeProfilesRes.error) throw activeProfilesRes.error;
+      const localSub = subscriptionRes.data as any;
+      if (!localSub) throw new Error("La empresa no tiene suscripción");
+
+      const plan = relationOne(localSub.subscription_plans);
+      const activeUsers = Number(activeProfilesRes.count || 0);
+      const minimumUsers = plan?.usuarios_incluidos != null
+        ? Math.max(1, Number(plan.usuarios_incluidos || 0))
+        : 3;
+      const expectedUsers = Math.max(minimumUsers, activeUsers);
+      let previousStripeUsers = 0;
+
+      if (localSub.stripe_subscription_id) {
+        const stripeSub = await stripe.subscriptions.retrieve(localSub.stripe_subscription_id);
+        previousStripeUsers = stripeBillableSeats(stripeSub, plan, localSub.legacy_pricing === true);
+        const isTwoItem = Boolean(plan?.slug && plan?.stripe_price_id_extra && localSub.legacy_pricing !== true);
+        const items: any[] = [];
+
+        if (isTwoItem) {
+          const baseItem = stripeSub.items.data.find((item: any) => getStripeObjectId(item.price) === plan.stripe_price_id);
+          const extraItem = stripeSub.items.data.find((item: any) => getStripeObjectId(item.price) === plan.stripe_price_id_extra);
+          if (!baseItem) throw new Error("No se encontró el renglón base de la suscripción en Stripe");
+          items.push({ id: baseItem.id, quantity: 1 });
+          const desiredExtras = Math.max(0, expectedUsers - Number(plan.usuarios_incluidos || 0));
+          if (extraItem) {
+            items.push(desiredExtras === 0
+              ? { id: extraItem.id, deleted: true }
+              : { id: extraItem.id, quantity: desiredExtras });
+          } else if (desiredExtras > 0) {
+            items.push({ price: plan.stripe_price_id_extra, quantity: desiredExtras });
+          }
+        } else {
+          const item = stripeSub.items.data[0];
+          if (!item) throw new Error("No se encontró el renglón de la suscripción en Stripe");
+          items.push({ id: item.id, quantity: expectedUsers });
+        }
+
+        if (previousStripeUsers !== expectedUsers || stripeSub.metadata?.num_usuarios !== String(expectedUsers)) {
+          await stripe.subscriptions.update(localSub.stripe_subscription_id, {
+            items,
+            proration_behavior: "none",
+            metadata: { ...stripeSub.metadata, num_usuarios: String(expectedUsers) },
+          });
+        }
+      }
+
+      const { error: updateError } = await supabase.from("subscriptions")
+        .update({
+          max_usuarios: expectedUsers,
+          stripe_sync_error: null,
+          stripe_sync_error_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", localSub.id);
+      if (updateError) throw updateError;
+
+      return new Response(JSON.stringify({
+        ok: true,
+        empresa_id: empresaId,
+        active_users: activeUsers,
+        minimum_users: minimumUsers,
+        previous_stripe_users: previousStripeUsers,
+        stripe_users: expectedUsers,
+        changed: previousStripeUsers !== expectedUsers || Number(localSub.max_usuarios || 0) !== expectedUsers,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Auditoría de solo lectura: compara alta, trial, suscripción local, Stripe,
     // tarjeta e invoices. No actualiza ninguna tabla ni objeto de Stripe.
     if (action === "audit_subscriptions") {
@@ -578,7 +675,7 @@ Deno.serve(async (req) => {
           .select("id, nombre, email, created_at, demo_expires_at, is_partner_sandbox")
           .order("created_at", { ascending: false }),
         supabase.from("subscriptions")
-          .select("id, empresa_id, status, created_at, trial_ends_at, current_period_start, current_period_end, fecha_vencimiento, acceso_bloqueado, es_manual, cancel_at_period_end, stripe_customer_id, stripe_subscription_id, stripe_payment_method_id, stripe_sync_error, max_usuarios, updated_at, subscription_plans(nombre)"),
+          .select("id, empresa_id, status, created_at, trial_ends_at, current_period_start, current_period_end, fecha_vencimiento, acceso_bloqueado, es_manual, cancel_at_period_end, stripe_customer_id, stripe_subscription_id, stripe_payment_method_id, stripe_sync_error, max_usuarios, legacy_pricing, updated_at, subscription_plans(nombre, slug, usuarios_incluidos, stripe_price_id, stripe_price_id_extra)"),
         supabase.from("facturas")
           .select("id, empresa_id, suscripcion_id, numero_factura, concepto, estado, total, fecha_pago, fecha_emision, creado_en, periodo_inicio, periodo_fin, es_prorrateo, stripe_invoice_id"),
         listAllStripeSubscriptions(stripe),
@@ -657,7 +754,7 @@ Deno.serve(async (req) => {
             || null;
           stripeCandidates.forEach(s => claimedStripeIds.add(s.id));
 
-          const [payment, latestSaleRes] = await Promise.all([
+          const [payment, latestSaleRes, activeProfilesRes] = await Promise.all([
             resolveSubscriptionCard(stripe, stripeSub, dbSub?.stripe_payment_method_id),
             supabase.from("ventas")
               .select("id, folio, fecha, created_at, total, status")
@@ -668,7 +765,19 @@ Deno.serve(async (req) => {
               .order("created_at", { ascending: false })
               .limit(1)
               .maybeSingle(),
+            supabase.from("profiles")
+              .select("id", { count: "exact", head: true })
+              .eq("empresa_id", empresa.id)
+              .eq("estado", "activo")
+              .is("archivado_en", null),
           ]);
+          const planInfo = relationOne(dbSub?.subscription_plans);
+          const activeUsers = Number(activeProfilesRes.count || 0);
+          const minimumUsers = planInfo?.usuarios_incluidos != null
+            ? Math.max(1, Number(planInfo.usuarios_incluidos || 0))
+            : 3;
+          const expectedBillableUsers = Math.max(minimumUsers, activeUsers);
+          const billedUsers = stripeBillableSeats(stripeSub, planInfo, dbSub?.legacy_pricing === true);
           const customerIds = new Set(stripeCandidates.map(s => getCustomerId(s.customer)).filter(Boolean));
           if (dbSub?.stripe_customer_id) customerIds.add(dbSub.stripe_customer_id);
           const candidateSubIds = new Set(stripeCandidates.map(s => s.id));
@@ -737,6 +846,9 @@ Deno.serve(async (req) => {
             empresa_created_at: empresa.created_at,
             empresa_demo_expires_at: empresa.demo_expires_at || null,
             is_partner_sandbox: empresa.is_partner_sandbox === true,
+            active_user_count: activeUsers,
+            minimum_billable_users: minimumUsers,
+            expected_billable_users: expectedBillableUsers,
             db_subscription_count: dbRows.length,
             db_subscription: dbSub ? {
               id: dbSub.id,
@@ -754,7 +866,7 @@ Deno.serve(async (req) => {
               stripe_payment_method_id: dbSub.stripe_payment_method_id,
               stripe_sync_error: dbSub.stripe_sync_error || null,
               max_usuarios: Number(dbSub.max_usuarios || 0),
-              plan_nombre: dbSub.subscription_plans?.nombre || null,
+              plan_nombre: planInfo?.nombre || null,
             } : null,
             stripe_subscription_count: activeStripeCount,
             stripe_subscription: stripeSub ? {
@@ -766,7 +878,7 @@ Deno.serve(async (req) => {
               current_period_start: stripeTimestamp(stripePeriodStart),
               current_period_end: stripeTimestamp(stripePeriodEnd),
               cancel_at_period_end: stripeSub.cancel_at_period_end === true,
-              quantity: Number(stripeSub.items?.data?.[0]?.quantity || 0),
+              quantity: billedUsers,
               payment_method_id: payment.payment_method_id,
               card: payment.card,
             } : null,

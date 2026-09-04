@@ -38,7 +38,7 @@ export default function UsuariosPage() {
 
   useEffect(() => { reload(); }, [reload]);
 
-  const activeUsers = usuarios.profiles.filter(p => p.estado === 'activo').length;
+  const activeUsers = usuarios.profiles.filter(p => p.estado === 'activo' && !p.archivado_en).length;
   const isTrial = subscription.status === 'trial';
   // En prueba: usuarios ilimitados. En planes pagados: respeta el límite del plan.
   const effectiveMax = isTrial ? 9999 : subscription.maxUsuarios;
@@ -64,6 +64,12 @@ export default function UsuariosPage() {
     try {
       const { error } = await supabase.rpc('reactivar_usuario', { p_profile_id: p.id });
       if (error) throw error;
+      const { data: syncData, error: syncError } = await supabase.functions.invoke('manage-subscription', {
+        body: { action: 'sync_active_users' },
+      });
+      if (syncError || syncData?.error) {
+        toast.warning('El usuario se reactivó, pero la cantidad de Stripe requiere revisión en Auditoría de cobros.');
+      }
       toast.success('Usuario reactivado');
       reload();
     } catch (e: any) {

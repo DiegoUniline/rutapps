@@ -50,7 +50,7 @@ type AuditFilter = 'all' | 'healthy' | 'critical' | 'warning' | 'active_without_
 
 type AuditColumn =
   | 'empresa' | 'alta' | 'fin_demo' | 'suscripcion' | 'ultima_venta' | 'dias_sin_venta'
-  | 'rutapp' | 'stripe' | 'periodo' | 'ultimo_cobro' | 'tarjeta' | 'stripe_id' | 'resultado';
+  | 'usuarios' | 'rutapp' | 'stripe' | 'periodo' | 'ultimo_cobro' | 'tarjeta' | 'stripe_id' | 'resultado';
 
 const AUDIT_COLUMNS: Array<{ key: AuditColumn; label: string; essential?: boolean }> = [
   { key: 'empresa', label: 'Empresa', essential: true },
@@ -59,6 +59,7 @@ const AUDIT_COLUMNS: Array<{ key: AuditColumn; label: string; essential?: boolea
   { key: 'suscripcion', label: 'Día y hora de suscripción' },
   { key: 'ultima_venta', label: 'Última venta' },
   { key: 'dias_sin_venta', label: 'Días desde última venta' },
+  { key: 'usuarios', label: 'Usuarios activos / Stripe' },
   { key: 'rutapp', label: 'Estado RutApp' },
   { key: 'stripe', label: 'Estado Stripe' },
   { key: 'periodo', label: 'Periodo' },
@@ -69,7 +70,7 @@ const AUDIT_COLUMNS: Array<{ key: AuditColumn; label: string; essential?: boolea
 ];
 
 const DEFAULT_COLUMNS: AuditColumn[] = [
-  'empresa', 'alta', 'fin_demo', 'suscripcion', 'ultima_venta', 'dias_sin_venta', 'rutapp', 'ultimo_cobro', 'resultado',
+  'empresa', 'alta', 'fin_demo', 'suscripcion', 'ultima_venta', 'dias_sin_venta', 'usuarios', 'rutapp', 'ultimo_cobro', 'resultado',
 ];
 
 const STATUS_LABELS: Record<SubscriptionAuditResult['operational_status'], string> = {
@@ -141,6 +142,7 @@ export default function AdminBillingAuditTab() {
   const [filter, setFilter] = useState<AuditFilter>('critical');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<SubscriptionAuditResult | null>(null);
+  const [syncingEmpresaId, setSyncingEmpresaId] = useState<string | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<AuditColumn[]>(DEFAULT_COLUMNS);
   const [dateFilters, setDateFilters] = useState({
     signupFrom: '', signupTo: '', trialFrom: '', trialTo: '', subscriptionFrom: '', subscriptionTo: '',
@@ -234,6 +236,10 @@ export default function AdminBillingAuditTab() {
       ultima_venta: lastSaleAt(row) ?? '',
       folio_ultima_venta: row.last_sale?.folio ?? '',
       dias_desde_ultima_venta: daysSince(lastSaleAt(row)) ?? '',
+      usuarios_activos: row.active_user_count,
+      minimo_plan: row.minimum_billable_users,
+      usuarios_esperados_cobro: row.expected_billable_users,
+      usuarios_cobrados_stripe: row.stripe_subscription?.quantity ?? '',
       inicio_periodo_real: row.expected.real_period_start,
       fin_prorrateo_esperado: row.expected.first_prorated_period_end,
       primera_mensualidad_completa: row.expected.first_full_invoice_date,
@@ -259,6 +265,36 @@ export default function AdminBillingAuditTab() {
     anchor.download = `auditoria-suscripciones-${new Date().toISOString().slice(0, 10)}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function syncSubscriptionSeats(row: SubscriptionAuditResult) {
+    setSyncingEmpresaId(row.empresa_id);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Sesión no disponible');
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=sync_subscription_seats`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ empresa_id: row.empresa_id }),
+        },
+      );
+      const payload = await response.json();
+      if (!response.ok || payload.error) throw new Error(payload.error || 'No fue posible sincronizar');
+      toast.success(`Stripe quedó en ${payload.stripe_users} usuario(s) facturable(s); ${payload.active_users} activo(s).`);
+      setSelected(null);
+      await query.refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No fue posible sincronizar usuarios');
+    } finally {
+      setSyncingEmpresaId(null);
+    }
   }
 
   const cards: Array<{ key: AuditFilter; label: string; value: number; icon: typeof ShieldCheck; color: string }> = [
@@ -293,7 +329,7 @@ export default function AdminBillingAuditTab() {
         <div className="min-w-0">
           <div className="font-semibold text-sm">Auditoría segura de solo lectura</div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Compara RutApp, Stripe, facturas y tarjeta. No modifica fechas, estados, cobros ni cálculos.
+            Compara RutApp, Stripe, facturas y tarjeta. Solo modifica asientos futuros si presionas “Sincronizar con usuarios activos”.
           </p>
         </div>
       </div>
@@ -440,6 +476,7 @@ export default function AdminBillingAuditTab() {
                     {isColumnVisible('suscripcion') && <TableHead>Suscripción</TableHead>}
                     {isColumnVisible('ultima_venta') && <TableHead>Última venta</TableHead>}
                     {isColumnVisible('dias_sin_venta') && <TableHead className="text-center">Días sin vender</TableHead>}
+                    {isColumnVisible('usuarios') && <TableHead className="text-center">Usuarios</TableHead>}
                     {isColumnVisible('rutapp') && <TableHead>RutApp</TableHead>}
                     {isColumnVisible('stripe') && <TableHead>Stripe</TableHead>}
                     {isColumnVisible('periodo') && <TableHead>Periodo</TableHead>}
@@ -488,6 +525,15 @@ export default function AdminBillingAuditTab() {
                       </TableCell>}
                       {isColumnVisible('dias_sin_venta') && <TableCell className="text-center">
                         <DaysWithoutSale value={daysSince(lastSaleAt(row))} />
+                      </TableCell>}
+                      {isColumnVisible('usuarios') && <TableCell className="text-center text-xs">
+                        <div className="font-semibold tabular-nums">{row.active_user_count ?? '—'} activos</div>
+                        <div className={cn(
+                          'text-[10px] tabular-nums',
+                          row.stripe_subscription?.quantity === row.expected_billable_users ? 'text-muted-foreground' : 'font-semibold text-destructive',
+                        )}>
+                          Stripe: {row.stripe_subscription?.quantity ?? '—'} · debe: {row.expected_billable_users ?? '—'}
+                        </div>
                       </TableCell>}
                       {isColumnVisible('rutapp') && <TableCell>
                         <OperationalStatusBadge row={row} />
@@ -551,7 +597,12 @@ export default function AdminBillingAuditTab() {
         </CardContent>
       </Card>
 
-      <AuditDetailDialog row={selected} onClose={() => setSelected(null)} />
+      <AuditDetailDialog
+        row={selected}
+        onClose={() => setSelected(null)}
+        onSync={syncSubscriptionSeats}
+        syncing={!!selected && syncingEmpresaId === selected.empresa_id}
+      />
     </div>
   );
 }
@@ -709,7 +760,17 @@ function StripeIdCell({ id }: { id?: string | null }) {
   );
 }
 
-function AuditDetailDialog({ row, onClose }: { row: SubscriptionAuditResult | null; onClose: () => void }) {
+function AuditDetailDialog({
+  row,
+  onClose,
+  onSync,
+  syncing,
+}: {
+  row: SubscriptionAuditResult | null;
+  onClose: () => void;
+  onSync: (row: SubscriptionAuditResult) => void;
+  syncing: boolean;
+}) {
   return (
     <Dialog open={!!row} onOpenChange={open => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[88dvh] overflow-y-auto">
@@ -732,6 +793,42 @@ function AuditDetailDialog({ row, onClose }: { row: SubscriptionAuditResult | nu
               <AuditDateBox label="Primera mensual completa" value={row.expected.first_full_invoice_date} />
             </div>
 
+            <div className="rounded-lg border p-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="font-semibold text-sm">Usuarios que deben facturarse</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Solo perfiles activos y no archivados, respetando el mínimo incluido en el plan.</div>
+                </div>
+                {row.stripe_subscription && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={row.stripe_subscription.quantity === row.expected_billable_users ? 'outline' : 'destructive'}
+                    disabled={syncing}
+                    onClick={() => onSync(row)}
+                    className="gap-1.5"
+                  >
+                    <RefreshCw className={cn('h-3.5 w-3.5', syncing && 'animate-spin')} />
+                    {syncing ? 'Sincronizando…' : 'Sincronizar con usuarios activos'}
+                  </Button>
+                )}
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-md bg-muted/50 p-2">
+                  <div className="text-xl font-bold tabular-nums">{row.active_user_count ?? '—'}</div>
+                  <div className="text-[10px] text-muted-foreground">Activos reales</div>
+                </div>
+                <div className="rounded-md bg-muted/50 p-2">
+                  <div className="text-xl font-bold tabular-nums">{row.expected_billable_users ?? '—'}</div>
+                  <div className="text-[10px] text-muted-foreground">Deben cobrarse</div>
+                </div>
+                <div className={cn('rounded-md p-2', row.stripe_subscription?.quantity === row.expected_billable_users ? 'bg-emerald-50' : 'bg-destructive/10')}>
+                  <div className={cn('text-xl font-bold tabular-nums', row.stripe_subscription?.quantity !== row.expected_billable_users && 'text-destructive')}>{row.stripe_subscription?.quantity ?? '—'}</div>
+                  <div className="text-[10px] text-muted-foreground">Configurados en Stripe</div>
+                </div>
+              </div>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-3">
               <div className="rounded-lg border p-3 space-y-2">
                 <div className="font-semibold text-sm">RutApp</div>
@@ -740,6 +837,8 @@ function AuditDetailDialog({ row, onClose }: { row: SubscriptionAuditResult | nu
                 <DetailLine label="Estado" value={row.db_subscription?.status} />
                 <DetailLine label="Fin de prueba" value={fmtDate(row.db_subscription?.trial_ends_at)} />
                 <DetailLine label="Periodo" value={row.db_subscription ? `${fmtDate(row.db_subscription.current_period_start)} → ${fmtDate(row.db_subscription.current_period_end || row.db_subscription.fecha_vencimiento)}` : null} />
+                <DetailLine label="Usuarios activos" value={row.active_user_count == null ? '—' : String(row.active_user_count)} />
+                <DetailLine label="Usuarios para cobro" value={row.expected_billable_users == null ? '—' : String(row.expected_billable_users)} />
                 <DetailLine label="Bloqueada" value={row.db_subscription?.acceso_bloqueado ? 'Sí' : 'No'} />
                 <DetailLine label="Pagos registrados" value={String(row.payments.local_paid_count)} />
               </div>
@@ -750,6 +849,7 @@ function AuditDetailDialog({ row, onClose }: { row: SubscriptionAuditResult | nu
                 <DetailLine label="Cliente" value={row.stripe_subscription?.customer_id || row.db_subscription?.stripe_customer_id} mono />
                 <DetailLine label="Estado" value={row.stripe_subscription?.status} />
                 <DetailLine label="Periodo" value={row.stripe_subscription ? `${fmtDate(row.stripe_subscription.current_period_start)} → ${fmtDate(row.stripe_subscription.current_period_end)}` : null} />
+                <DetailLine label="Usuarios facturables" value={row.stripe_subscription ? String(row.stripe_subscription.quantity) : null} />
                 <DetailLine label="Pagos comprobados" value={String(row.payments.stripe_paid_count)} />
                 <DetailLine label="Tarjeta" value={row.stripe_subscription?.card ? `${CARD_BRANDS[row.stripe_subscription.card.brand] || row.stripe_subscription.card.brand} •••• ${row.stripe_subscription.card.last4}` : 'Sin tarjeta'} />
               </div>

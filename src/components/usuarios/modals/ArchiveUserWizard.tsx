@@ -84,6 +84,12 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
         p_force: force,
       });
       if (error) throw error;
+      const { data: syncData, error: syncError } = await supabase.functions.invoke('manage-subscription', {
+        body: { action: 'sync_active_users' },
+      });
+      if (syncError || syncData?.error) {
+        toast.warning('El usuario se archivó, pero la cantidad de Stripe requiere revisión en Auditoría de cobros.');
+      }
       toast.success(force ? 'Usuario archivado (forzado). Cupo del plan liberado.' : 'Usuario archivado. Cupo del plan liberado.');
       onArchived();
     } catch (e: any) {
@@ -94,7 +100,7 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
   };
 
   const almacenNombre = almacenes.find(a => a.id === summary?.almacen_id)?.nombre || '—';
-  const candidatos = activeUsers.filter(u => u.id !== user.id && u.estado === 'activo');
+  const candidatos = activeUsers.filter(u => u.id !== user.id && u.estado === 'activo' && !u.archivado_en);
 
   return (
     <div className="fixed inset-0 z-[60] bg-foreground/40 flex items-center justify-center p-4 overflow-y-auto">

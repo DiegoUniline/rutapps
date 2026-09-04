@@ -95,8 +95,50 @@ Deno.serve(async (req) => {
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("empresa_id", profile.empresa_id)
-        .eq("estado", "activo");
+        .eq("estado", "activo")
+        .is("archivado_en", null);
       return count || 0;
+    }
+
+    /* ─── Sync billable seats from real active profiles ─── */
+    if (action === "sync_active_users") {
+      const activeUsers = await countActiveUsers();
+      const minimumUsers = isTwoItem
+        ? Math.max(1, Number(planRow?.usuarios_incluidos || 0))
+        : 3;
+      const qty = Math.max(minimumUsers, activeUsers);
+      let previousStripeUsers = 0;
+
+      if (sub.stripe_subscription_id) {
+        const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+        if (isTwoItem) {
+          const extraItem = stripeSub.items.data.find((it: any) => it.price?.id === planRow.stripe_price_id_extra);
+          previousStripeUsers = Number(planRow.usuarios_incluidos || 0) + Number(extraItem?.quantity || 0);
+        } else {
+          previousStripeUsers = Number(stripeSub.items.data[0]?.quantity || 0);
+        }
+        const items = buildItemsForQty(stripeSub, qty);
+        if (!items.length) throw new Error("No se encontró el renglón de la suscripción");
+        if (previousStripeUsers !== qty || stripeSub.metadata?.num_usuarios !== String(qty)) {
+          await stripe.subscriptions.update(sub.stripe_subscription_id, {
+            items,
+            proration_behavior: "none",
+            metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
+          });
+        }
+      }
+
+      await supabase.from("subscriptions")
+        .update({ max_usuarios: qty, updated_at: new Date().toISOString() })
+        .eq("id", sub.id);
+
+      return new Response(JSON.stringify({
+        success: true,
+        active_users: activeUsers,
+        minimum_users: minimumUsers,
+        previous_stripe_users: previousStripeUsers,
+        stripe_users: qty,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     /* ─── Preview quantity change (no side effects) ─── */
