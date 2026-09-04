@@ -6,10 +6,11 @@ const base: BillingAuditRecord = {
   empresa_nombre: 'Empresa demo',
   empresa_email: 'demo@example.com',
   empresa_created_at: '2026-08-10T18:00:00.000Z',
+  empresa_demo_expires_at: '2026-08-17T18:00:00.000Z',
   is_partner_sandbox: false,
   db_subscription_count: 1,
   db_subscription: {
-    id: 'db-sub', status: 'active', trial_ends_at: '2026-08-17T18:00:00.000Z',
+    id: 'db-sub', created_at: '2026-08-17T18:00:00.000Z', status: 'active', trial_ends_at: '2026-08-17T18:00:00.000Z',
     current_period_start: '2026-09-01', current_period_end: '2026-10-01',
     fecha_vencimiento: null, acceso_bloqueado: false, es_manual: false,
     cancel_at_period_end: false, stripe_customer_id: 'cus_1',
@@ -18,7 +19,7 @@ const base: BillingAuditRecord = {
   },
   stripe_subscription_count: 1,
   stripe_subscription: {
-    id: 'sub_1', customer_id: 'cus_1', status: 'active', trial_end: '2026-08-17T18:00:00.000Z',
+    id: 'sub_1', created_at: '2026-08-17T18:00:00.000Z', customer_id: 'cus_1', status: 'active', trial_end: '2026-08-17T18:00:00.000Z',
     current_period_start: '2026-09-01T14:00:00.000Z', current_period_end: '2026-10-01T14:00:00.000Z',
     cancel_at_period_end: false, quantity: 3, payment_method_id: 'pm_1',
     card: { brand: 'visa', last4: '4242', exp_month: 12, exp_year: 2030, funding: 'credit' },
@@ -29,6 +30,7 @@ const base: BillingAuditRecord = {
     latest_stripe_invoice: null, latest_stripe_paid_invoice: null,
     latest_local_invoice: null, first_local_invoice: null,
   },
+  last_sale: null,
 };
 
 describe('auditSubscription', () => {

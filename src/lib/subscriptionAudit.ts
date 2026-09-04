@@ -12,10 +12,12 @@ export interface BillingAuditRecord {
   empresa_nombre: string;
   empresa_email: string | null;
   empresa_created_at: string;
+  empresa_demo_expires_at: string | null;
   is_partner_sandbox: boolean;
   db_subscription_count: number;
   db_subscription: {
     id: string;
+    created_at: string | null;
     status: string;
     trial_ends_at: string | null;
     current_period_start: string | null;
@@ -34,6 +36,7 @@ export interface BillingAuditRecord {
   stripe_subscription_count: number;
   stripe_subscription: {
     id: string;
+    created_at: string | null;
     customer_id: string | null;
     status: string;
     trial_end: string | null;
@@ -60,6 +63,14 @@ export interface BillingAuditRecord {
     latest_local_invoice: AuditInvoiceSnapshot | null;
     first_local_invoice: AuditInvoiceSnapshot | null;
   };
+  last_sale: {
+    id: string;
+    folio: string | null;
+    created_at: string;
+    fecha: string;
+    total: number;
+    status: string;
+  } | null;
 }
 
 export interface AuditInvoiceSnapshot {

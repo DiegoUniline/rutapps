@@ -567,10 +567,10 @@ Deno.serve(async (req) => {
     if (action === "audit_subscriptions") {
       const [empresasRes, subscriptionsRes, facturasRes, allStripeSubscriptions, allStripeInvoices] = await Promise.all([
         supabase.from("empresas")
-          .select("id, nombre, email, created_at, is_partner_sandbox")
+          .select("id, nombre, email, created_at, demo_expires_at, is_partner_sandbox")
           .order("created_at", { ascending: false }),
         supabase.from("subscriptions")
-          .select("id, empresa_id, status, trial_ends_at, current_period_start, current_period_end, fecha_vencimiento, acceso_bloqueado, es_manual, cancel_at_period_end, stripe_customer_id, stripe_subscription_id, stripe_payment_method_id, stripe_sync_error, max_usuarios, updated_at, subscription_plans(nombre)"),
+          .select("id, empresa_id, status, created_at, trial_ends_at, current_period_start, current_period_end, fecha_vencimiento, acceso_bloqueado, es_manual, cancel_at_period_end, stripe_customer_id, stripe_subscription_id, stripe_payment_method_id, stripe_sync_error, max_usuarios, updated_at, subscription_plans(nombre)"),
         supabase.from("facturas")
           .select("id, empresa_id, suscripcion_id, numero_factura, concepto, estado, total, fecha_pago, fecha_emision, creado_en, periodo_inicio, periodo_fin, es_prorrateo, stripe_invoice_id"),
         listAllStripeSubscriptions(stripe),
@@ -649,7 +649,17 @@ Deno.serve(async (req) => {
             || null;
           stripeCandidates.forEach(s => claimedStripeIds.add(s.id));
 
-          const payment = await resolveSubscriptionCard(stripe, stripeSub, dbSub?.stripe_payment_method_id);
+          const [payment, latestSaleRes] = await Promise.all([
+            resolveSubscriptionCard(stripe, stripeSub, dbSub?.stripe_payment_method_id),
+            supabase.from("ventas")
+              .select("id, folio, fecha, created_at, total, status")
+              .eq("empresa_id", empresa.id)
+              .eq("es_saldo_inicial", false)
+              .in("status", ["confirmado", "entregado", "facturado"])
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+          ]);
           const customerIds = new Set(stripeCandidates.map(s => getCustomerId(s.customer)).filter(Boolean));
           if (dbSub?.stripe_customer_id) customerIds.add(dbSub.stripe_customer_id);
           const candidateSubIds = new Set(stripeCandidates.map(s => s.id));
@@ -705,10 +715,12 @@ Deno.serve(async (req) => {
             empresa_nombre: empresa.nombre,
             empresa_email: empresa.email || null,
             empresa_created_at: empresa.created_at,
+            empresa_demo_expires_at: empresa.demo_expires_at || null,
             is_partner_sandbox: empresa.is_partner_sandbox === true,
             db_subscription_count: dbRows.length,
             db_subscription: dbSub ? {
               id: dbSub.id,
+              created_at: dbSub.created_at || null,
               status: dbSub.status,
               trial_ends_at: dbSub.trial_ends_at,
               current_period_start: dbSub.current_period_start,
@@ -727,6 +739,7 @@ Deno.serve(async (req) => {
             stripe_subscription_count: activeStripeCount,
             stripe_subscription: stripeSub ? {
               id: stripeSub.id,
+              created_at: stripeTimestamp(stripeSub.created),
               customer_id: getCustomerId(stripeSub.customer),
               status: stripeSub.status,
               trial_end: stripeTimestamp(stripeSub.trial_end),
@@ -747,6 +760,14 @@ Deno.serve(async (req) => {
               latest_local_invoice: compactLocalInvoice(companyLocalInvoices[0]),
               first_local_invoice: compactLocalInvoice(companyLocalInvoices[companyLocalInvoices.length - 1]),
             },
+            last_sale: latestSaleRes.data ? {
+              id: latestSaleRes.data.id,
+              folio: latestSaleRes.data.folio || null,
+              created_at: latestSaleRes.data.created_at,
+              fecha: latestSaleRes.data.fecha,
+              total: Number(latestSaleRes.data.total || 0),
+              status: latestSaleRes.data.status,
+            } : null,
           };
         }));
         records.push(...batchRecords);
