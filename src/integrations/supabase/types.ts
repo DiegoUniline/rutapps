@@ -5363,6 +5363,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "partner_comisiones_nivel_id_fkey"
+            columns: ["nivel_id"]
+            isOneToOne: false
+            referencedRelation: "partner_niveles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "partner_comisiones_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: false
@@ -5554,11 +5561,11 @@ export type Database = {
           email: string | null
           estado: string
           id: string
-          nombre: string
-          notas: string | null
           nivel_base_id_snapshot: string | null
           nivel_base_pct_snapshot: number | null
           nivel_revisado_at: string | null
+          nombre: string
+          notas: string | null
           peor_nivel_fecha: string | null
           peor_nivel_pct_60d: number | null
           razon_social: string | null
@@ -5583,11 +5590,11 @@ export type Database = {
           email?: string | null
           estado?: string
           id?: string
-          nombre: string
-          notas?: string | null
           nivel_base_id_snapshot?: string | null
           nivel_base_pct_snapshot?: number | null
           nivel_revisado_at?: string | null
+          nombre: string
+          notas?: string | null
           peor_nivel_fecha?: string | null
           peor_nivel_pct_60d?: number | null
           razon_social?: string | null
@@ -5612,11 +5619,11 @@ export type Database = {
           email?: string | null
           estado?: string
           id?: string
-          nombre?: string
-          notas?: string | null
           nivel_base_id_snapshot?: string | null
           nivel_base_pct_snapshot?: number | null
           nivel_revisado_at?: string | null
+          nombre?: string
+          notas?: string | null
           peor_nivel_fecha?: string | null
           peor_nivel_pct_60d?: number | null
           razon_social?: string | null
@@ -5632,6 +5639,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "partners_nivel_base_id_snapshot_fkey"
+            columns: ["nivel_base_id_snapshot"]
+            isOneToOne: false
+            referencedRelation: "partner_niveles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partners_sandbox_empresa_id_fkey"
             columns: ["sandbox_empresa_id"]
@@ -9831,48 +9845,6 @@ export type Database = {
           total_generado: number | null
           total_pagado: number | null
         }
-        Insert: {
-          comision_pct?: number | null
-          comision_actual_pct?: never
-          created_at?: string | null
-          cupones_activos?: never
-          email?: string | null
-          empresas_activas?: never
-          empresas_referidas?: never
-          estado?: string | null
-          nivel_emoji?: never
-          nivel_nombre?: never
-          nombre?: string | null
-          partner_id?: string | null
-          ref_slug?: string | null
-          saldo_pendiente?: never
-          telefono?: string | null
-          terms_accepted_at?: string | null
-          terms_version?: string | null
-          total_generado?: never
-          total_pagado?: never
-        }
-        Update: {
-          comision_pct?: number | null
-          comision_actual_pct?: never
-          created_at?: string | null
-          cupones_activos?: never
-          email?: string | null
-          empresas_activas?: never
-          empresas_referidas?: never
-          estado?: string | null
-          nivel_emoji?: never
-          nivel_nombre?: never
-          nombre?: string | null
-          partner_id?: string | null
-          ref_slug?: string | null
-          saldo_pendiente?: never
-          telefono?: string | null
-          terms_accepted_at?: string | null
-          terms_version?: string | null
-          total_generado?: never
-          total_pagado?: never
-        }
         Relationships: []
       }
     }
@@ -9916,6 +9888,10 @@ export type Database = {
           p_referencia_tipo: string
           p_user_id: string
         }
+        Returns: undefined
+      }
+      actualizar_mi_partner_contacto: {
+        Args: { _notas?: string; _telefono?: string }
         Returns: undefined
       }
       add_timbres: {
@@ -10171,6 +10147,10 @@ export type Database = {
         Args: { p_deleted_by: string; p_empresa_ids: string[] }
         Returns: Json
       }
+      desactivar_cupones_partner_fuera_limite: {
+        Args: { _partner_id: string }
+        Returns: number
+      }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
@@ -10243,6 +10223,7 @@ export type Database = {
         Args: { p_venta_id: string }
         Returns: undefined
       }
+      generar_bonos_partner: { Args: { _partner_id: string }; Returns: number }
       generar_recibo_volumen: {
         Args: {
           p_desde: string
@@ -10316,10 +10297,7 @@ export type Database = {
         Args: { _partner_id: string }
         Returns: number
       }
-      get_partner_coupon_cap: {
-        Args: { _partner_id: string }
-        Returns: number
-      }
+      get_partner_coupon_cap: { Args: { _partner_id: string }; Returns: number }
       get_partner_nivel: {
         Args: { _partner_id: string }
         Returns: {
@@ -10336,10 +10314,6 @@ export type Database = {
           siguiente_nombre: string
           siguiente_pct: number
         }[]
-      }
-      generar_bonos_partner: {
-        Args: { _partner_id: string }
-        Returns: number
       }
       get_sandbox_usage: {
         Args: { p_empresa_id: string }
@@ -10464,6 +10438,10 @@ export type Database = {
         Returns: undefined
       }
       recalc_venta_totales: { Args: { p_venta_id: string }; Returns: undefined }
+      recalcular_nivel_partner: {
+        Args: { _partner_id: string }
+        Returns: number
+      }
       rechazar_solicitud_partner: {
         Args: { _motivo?: string; _solicitud_id: string }
         Returns: undefined
