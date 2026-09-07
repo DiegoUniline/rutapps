@@ -186,21 +186,9 @@ async function postTransactional(
   templateData: Record<string, unknown>,
   idempotencyKey: string,
 ) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceKey) return;
-  try {
-    await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceKey}`,
-        apikey: serviceKey,
-      },
-      body: JSON.stringify({ templateName, recipientEmail: to, idempotencyKey, templateData }),
-    });
-  } catch (e) {
-    console.error(`[${templateName}] email to ${to} failed:`, e);
+  const result = await sendAppEmail(templateName, to, { templateData, idempotencyKey });
+  if (!result.sent) {
+    console.error(`[${templateName}] email not sent:`, result.reason);
   }
 }
 
