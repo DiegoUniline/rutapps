@@ -2,6 +2,7 @@
 // - Skips $0 invoices entirely.
 // - Builds rutapp.mx/factura/{folio} pay links.
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { sendAppEmail } from "./app-email.ts";
 
 const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
 
