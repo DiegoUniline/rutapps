@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { sendAppEmail } from '../_shared/app-email.ts'
 
 const PUBLIC_BASE = 'https://rutapp.mx'
 
