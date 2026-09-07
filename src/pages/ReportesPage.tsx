@@ -23,13 +23,15 @@ import { ReporteProductoCliente } from '@/components/reportes/ReporteProductoCli
 import { ReportLayout } from '@/components/reportes/ReportLayout';
 import { ResumenGeneralVentas } from '@/components/reportes/ResumenGeneralVentas';
 import { ReporteClientesNoVisitados } from '@/components/reportes/ReporteClientesNoVisitados';
+import { ReporteComisionesDifasur } from '@/components/reportes/ReporteComisionesDifasur';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
+import { DIFASUR_LICENSE } from '@/lib/reporteComisionesDifasur';
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
 
-type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'producto_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones' | 'cuentas_cobrar' | 'saldo_fecha' | 'stock_fecha' | 'no_visitados';
+type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'producto_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones' | 'cuentas_cobrar' | 'saldo_fecha' | 'stock_fecha' | 'no_visitados' | 'comisiones_difasur';
 
 function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string): ExportOptions | null {
   const dateRange = { from: desde, to: hasta };
@@ -222,6 +224,7 @@ function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string
 
 export default function ReportesPage() {
   const { empresa } = useAuth();
+  const showDifasurCommissions = String(empresa?.licencia ?? '').trim() === DIFASUR_LICENSE;
   const now = new Date();
   const mesActual = now.toISOString().slice(0, 7);
   const [desde, setDesde] = useState(mesActual + '-01');
@@ -235,7 +238,7 @@ export default function ReportesPage() {
   const [tab, setTab] = useState<ReportTab>('resumen');
   // Pestañas que NO dependen del rango de fechas ni de la consulta principal
   // (traen sus propios datos): se renderizan aunque el rango esté vacío / falle.
-  const dataIndependent = tab === 'cuentas_cobrar' || tab === 'saldo_fecha' || tab === 'stock_fecha';
+  const dataIndependent = tab === 'cuentas_cobrar' || tab === 'saldo_fecha' || tab === 'stock_fecha' || tab === 'comisiones_difasur';
 
   const statusOptions = [
     { value: 'borrador', label: 'Borrador' },
@@ -260,6 +263,7 @@ export default function ReportesPage() {
     { key: 'saldo_fecha', label: 'Saldo a la fecha', icon: DollarSign },
     { key: 'stock_fecha', label: 'Stock a la fecha', icon: BoxIcon },
     { key: 'no_visitados', label: 'No visitados', icon: UserX },
+    ...(showDifasurCommissions ? [{ key: 'comisiones_difasur' as const, label: 'Reporte de comisiones', icon: DollarSign }] : []),
   ];
 
   const toggleVendedor = (id: string) => {
@@ -365,84 +369,89 @@ export default function ReportesPage() {
         </Popover>
 
         {/* Tipo filter */}
-        <select
-          value={tipoFilter}
-          onChange={e => setTipoFilter(e.target.value as any)}
-          className={cn(
-            "input-odoo text-[12px] h-8 w-[130px] shrink-0",
-            tipoFilter && "border-primary/60 bg-primary/5"
-          )}
-
-        >
-          <option value="">Todos los tipos</option>
-          <option value="pedido">Preventa</option>
-          <option value="venta_directa">Venta directa</option>
-        </select>
+        {tab !== 'comisiones_difasur' && (
+          <select
+            value={tipoFilter}
+            onChange={e => setTipoFilter(e.target.value as '' | 'pedido' | 'venta_directa')}
+            className={cn(
+              "input-odoo text-[12px] h-8 w-[130px] shrink-0",
+              tipoFilter && "border-primary/60 bg-primary/5"
+            )}
+          >
+            <option value="">Todos los tipos</option>
+            <option value="pedido">Preventa</option>
+            <option value="venta_directa">Venta directa</option>
+          </select>
+        )}
 
         {/* Status filter */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className={cn(
-              "input-odoo text-[12px] h-8 flex items-center gap-1.5 w-[140px] shrink-0 truncate",
-              selectedStatuses.length > 0 && "border-primary/60 bg-primary/5"
-            )}>
+        {tab !== 'comisiones_difasur' && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className={cn(
+                "input-odoo text-[12px] h-8 flex items-center gap-1.5 w-[140px] shrink-0 truncate",
+                selectedStatuses.length > 0 && "border-primary/60 bg-primary/5"
+              )}>
 
-              <Filter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <span className="truncate">
-                {selectedStatuses.length === 0
-                  ? 'Todos los estados'
-                  : `${selectedStatuses.length} estado${selectedStatuses.length > 1 ? 's' : ''}`}
-              </span>
-              <ChevronDown className="h-3 w-3 shrink-0 ml-auto text-muted-foreground" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-48 p-0" align="start">
-            <div className="p-1">
-              {statusOptions.map(o => (
-                <label
-                  key={o.value}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-accent cursor-pointer text-[13px]"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedStatuses.includes(o.value)}
-                    onChange={() => toggleStatus(o.value)}
-                    className="rounded border-input"
-                  />
-                  <span>{o.label}</span>
-                </label>
-              ))}
-            </div>
-            {selectedStatuses.length > 0 && (
-              <div className="border-t border-border p-1.5">
-                <button
-                  onClick={() => setSelectedStatuses([])}
-                  className="w-full text-[12px] text-muted-foreground hover:text-foreground py-1 flex items-center justify-center gap-1"
-                >
-                  <X className="h-3 w-3" /> Limpiar
-                </button>
+                <Filter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate">
+                  {selectedStatuses.length === 0
+                    ? 'Todos los estados'
+                    : `${selectedStatuses.length} estado${selectedStatuses.length > 1 ? 's' : ''}`}
+                </span>
+                <ChevronDown className="h-3 w-3 shrink-0 ml-auto text-muted-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-0" align="start">
+              <div className="p-1">
+                {statusOptions.map(o => (
+                  <label
+                    key={o.value}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-accent cursor-pointer text-[13px]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedStatuses.includes(o.value)}
+                      onChange={() => toggleStatus(o.value)}
+                      className="rounded border-input"
+                    />
+                    <span>{o.label}</span>
+                  </label>
+                ))}
               </div>
-            )}
-          </PopoverContent>
-        </Popover>
+              {selectedStatuses.length > 0 && (
+                <div className="border-t border-border p-1.5">
+                  <button
+                    onClick={() => setSelectedStatuses([])}
+                    className="w-full text-[12px] text-muted-foreground hover:text-foreground py-1 flex items-center justify-center gap-1"
+                  >
+                    <X className="h-3 w-3" /> Limpiar
+                  </button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+        )}
 
         {/* Acciones alineadas a la derecha */}
-        <div className="flex items-center gap-2 ml-auto shrink-0">
-          <ExportButton
-            onExcel={() => handleExport('excel')}
-            onPDF={() => handleExport('pdf')}
-          />
-          <button onClick={() => window.print()} className="btn-odoo-secondary h-8 flex items-center gap-1 print:hidden">
-            <Printer className="h-3.5 w-3.5" /> Imprimir
-          </button>
-        </div>
+        {tab !== 'comisiones_difasur' && (
+          <div className="flex items-center gap-2 ml-auto shrink-0">
+            <ExportButton
+              onExcel={() => handleExport('excel')}
+              onPDF={() => handleExport('pdf')}
+            />
+            <button onClick={() => window.print()} className="btn-odoo-secondary h-8 flex items-center gap-1 print:hidden">
+              <Printer className="h-3.5 w-3.5" /> Imprimir
+            </button>
+          </div>
+        )}
 
       </div>
 
       {/* Chips de filtros activos — solo si hay alguno */}
-      {(selectedVendedores.length > 0 || selectedStatuses.length > 0 || tipoFilter) && (
+      {(selectedVendedores.length > 0 || (tab !== 'comisiones_difasur' && (selectedStatuses.length > 0 || tipoFilter))) && (
         <div className="flex items-center gap-1.5 flex-wrap print:hidden -mt-1">
-          {tipoFilter && (
+          {tab !== 'comisiones_difasur' && tipoFilter && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
               {tipoFilter === 'pedido' ? 'Preventa' : 'Venta directa'}
               <button onClick={() => setTipoFilter('')} className="hover:text-destructive">
@@ -458,7 +467,7 @@ export default function ReportesPage() {
               </button>
             </span>
           ))}
-          {selectedStatuses.map(st => (
+          {tab !== 'comisiones_difasur' && selectedStatuses.map(st => (
             <span key={st} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent text-accent-foreground text-[11px] font-medium">
               {statusOptions.find(o => o.value === st)?.label ?? st}
               <button onClick={() => toggleStatus(st)} className="hover:text-destructive">
@@ -501,6 +510,7 @@ export default function ReportesPage() {
           saldo_fecha: 'Saldo de Clientes a la Fecha',
           stock_fecha: 'Stock a la Fecha',
           no_visitados: 'Clientes No Visitados',
+          comisiones_difasur: 'Reporte de Comisiones',
         };
 
         const activeFilters: { label: string; value: string }[] = [];
@@ -543,6 +553,7 @@ export default function ReportesPage() {
             {tab === 'saldo_fecha' && <ReporteSaldoClienteFecha desde={desde} hasta={hasta} />}
             {tab === 'stock_fecha' && <ReporteStockFecha desde={desde} hasta={hasta} />}
             {tab === 'no_visitados' && <ReporteClientesNoVisitados desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} />}
+            {tab === 'comisiones_difasur' && <ReporteComisionesDifasur desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} />}
           </ReportLayout>
         );
       })()}
