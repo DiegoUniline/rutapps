@@ -1934,35 +1934,85 @@ export type Database = {
           },
         ]
       }
+      comision_esquemas: {
+        Row: {
+          activo: boolean
+          base: string
+          config: Json
+          created_at: string
+          empresa_id: string
+          id: string
+          nombre: string
+          periodo: string
+          tipo: string
+          updated_at: string
+          vigente_desde: string | null
+        }
+        Insert: {
+          activo?: boolean
+          base: string
+          config?: Json
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nombre: string
+          periodo: string
+          tipo: string
+          updated_at?: string
+          vigente_desde?: string | null
+        }
+        Update: {
+          activo?: boolean
+          base?: string
+          config?: Json
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          periodo?: string
+          tipo?: string
+          updated_at?: string
+          vigente_desde?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comision_esquemas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_audit_log: {
         Row: {
-          action: "created" | "updated" | "deleted"
+          action: string
           changed_by: string | null
           created_at: string
           entity_id: string
-          entity_type: "person" | "client_attribution"
+          entity_type: string
           id: string
           new_data: Json | null
           previous_data: Json | null
           reason: string | null
         }
         Insert: {
-          action: "created" | "updated" | "deleted"
+          action: string
           changed_by?: string | null
           created_at?: string
           entity_id: string
-          entity_type: "person" | "client_attribution"
+          entity_type: string
           id?: string
           new_data?: Json | null
           previous_data?: Json | null
           reason?: string | null
         }
         Update: {
-          action?: "created" | "updated" | "deleted"
+          action?: string
           changed_by?: string | null
           created_at?: string
           entity_id?: string
-          entity_type?: "person" | "client_attribution"
+          entity_type?: string
           id?: string
           new_data?: Json | null
           previous_data?: Json | null
@@ -2042,7 +2092,7 @@ export type Database = {
           name: string
           notes: string | null
           partner_id: string | null
-          person_type: "internal" | "partner"
+          person_type: string
           phone: string | null
           updated_at: string
         }
@@ -2056,7 +2106,7 @@ export type Database = {
           name: string
           notes?: string | null
           partner_id?: string | null
-          person_type: "internal" | "partner"
+          person_type: string
           phone?: string | null
           updated_at?: string
         }
@@ -2070,7 +2120,7 @@ export type Database = {
           name?: string
           notes?: string | null
           partner_id?: string | null
-          person_type?: "internal" | "partner"
+          person_type?: string
           phone?: string | null
           updated_at?: string
         }
@@ -2086,57 +2136,14 @@ export type Database = {
             foreignKeyName: "commission_people_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: true
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
+            referencedRelation: "partner_resumen"
+            referencedColumns: ["partner_id"]
           },
-        ]
-      }
-      comision_esquemas: {
-        Row: {
-          activo: boolean
-          base: string
-          config: Json
-          created_at: string
-          empresa_id: string
-          id: string
-          nombre: string
-          periodo: string
-          tipo: string
-          updated_at: string
-          vigente_desde: string | null
-        }
-        Insert: {
-          activo?: boolean
-          base: string
-          config?: Json
-          created_at?: string
-          empresa_id: string
-          id?: string
-          nombre: string
-          periodo: string
-          tipo: string
-          updated_at?: string
-          vigente_desde?: string | null
-        }
-        Update: {
-          activo?: boolean
-          base?: string
-          config?: Json
-          created_at?: string
-          empresa_id?: string
-          id?: string
-          nombre?: string
-          periodo?: string
-          tipo?: string
-          updated_at?: string
-          vigente_desde?: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "comision_esquemas_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "empresas"
+            foreignKeyName: "commission_people_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -9846,28 +9853,64 @@ export type Database = {
       }
       admin_save_commission_person: {
         Args: {
-          p_change_reason?: string | null
-          p_email?: string | null
+          p_change_reason?: string
+          p_email?: string
           p_is_active?: boolean
-          p_manager_id?: string | null
-          p_name?: string | null
-          p_notes?: string | null
-          p_person_id?: string | null
-          p_phone?: string | null
+          p_manager_id?: string
+          p_name?: string
+          p_notes?: string
+          p_person_id?: string
+          p_phone?: string
         }
-        Returns: Database["public"]["Tables"]["commission_people"]["Row"]
+        Returns: {
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          manager_id: string | null
+          name: string
+          notes: string | null
+          partner_id: string | null
+          person_type: string
+          phone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "commission_people"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_set_commission_client_attribution: {
         Args: {
-          p_captured_at?: string | null
-          p_captured_by_id?: string | null
-          p_change_reason?: string | null
+          p_captured_at?: string
+          p_captured_by_id?: string
+          p_change_reason?: string
           p_channel?: string
           p_empresa_id: string
-          p_managed_by_id?: string | null
-          p_notes?: string | null
+          p_managed_by_id?: string
+          p_notes?: string
         }
-        Returns: Database["public"]["Tables"]["commission_client_attributions"]["Row"]
+        Returns: {
+          captured_at: string
+          captured_by_id: string | null
+          channel: string
+          created_at: string
+          empresa_id: string
+          id: string
+          managed_by_id: string | null
+          notes: string | null
+          recorded_by: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "commission_client_attributions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_sync_duplicados: {
         Args: never
