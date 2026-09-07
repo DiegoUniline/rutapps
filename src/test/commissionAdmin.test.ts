@@ -6,6 +6,7 @@ import {
   directReportCounts,
   wouldCreateManagementCycle,
 } from '@/lib/commissionAdmin';
+import { getEffectiveCompanyStatus } from '@/lib/adminCompanyStatus';
 
 const people = [
   { id: 'director', manager_id: null, is_active: true },
@@ -44,5 +45,14 @@ describe('commissionAdmin', () => {
   it('presenta los canales con nombres entendibles', () => {
     expect(commissionChannelLabel('partner_link')).toBe('Enlace de partner');
     expect(commissionChannelLabel('whatsapp')).toBe('WhatsApp');
+  });
+
+  it('clasifica clientes con la misma vigencia efectiva que Empresas', () => {
+    const now = new Date('2026-09-07T12:00:00.000Z');
+    expect(getEffectiveCompanyStatus(undefined, now)).toBe('sin_sub');
+    expect(getEffectiveCompanyStatus({ status: 'trial', trial_ends_at: '2026-09-10T00:00:00.000Z' }, now)).toBe('trial');
+    expect(getEffectiveCompanyStatus({ status: 'suspended', current_period_end: '2026-09-30T00:00:00.000Z' }, now)).toBe('active');
+    expect(getEffectiveCompanyStatus({ status: 'suspended', current_period_end: '2026-08-31T00:00:00.000Z' }, now)).toBe('suspended');
+    expect(getEffectiveCompanyStatus({ status: 'cancelled' }, now)).toBe('cancelada');
   });
 });

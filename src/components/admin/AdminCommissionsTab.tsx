@@ -22,6 +22,18 @@ import type {
 const QUERY_KEY = ['admin-commissions'] as const;
 const EMPTY_DATA: CommissionAdminData = { people: [], companies: [], attributions: [], audit: [] };
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object') {
+    const source = error as Record<string, unknown>;
+    const details = ['message', 'details', 'hint', 'code']
+      .map(key => typeof source[key] === 'string' ? source[key] : '')
+      .filter(Boolean);
+    if (details.length) return [...new Set(details)].join(' · ');
+  }
+  return String(error || 'Error desconocido');
+}
+
 async function loadCommissionAdminData(): Promise<CommissionAdminData> {
   const [people, companies, attributions, auditResult] = await Promise.all([
     fetchAllPages<CommissionPerson>((from, to) => supabase
@@ -31,7 +43,7 @@ async function loadCommissionAdminData(): Promise<CommissionAdminData> {
       .range(from, to)),
     fetchAllPages<CommissionCompany>((from, to) => supabase
       .from('empresas')
-      .select('id, nombre, created_at')
+      .select('id, nombre, created_at, subscriptions(status, current_period_end, trial_ends_at)')
       .eq('is_partner_sandbox', false)
       .order('nombre')
       .range(from, to)),
@@ -130,7 +142,7 @@ export default function AdminCommissionsTab() {
       <Card className="border-destructive/40">
         <CardContent className="p-8 text-center space-y-3">
           <div className="font-semibold text-destructive">No se pudo cargar el módulo de Comisiones</div>
-          <div className="text-sm text-muted-foreground">{query.error instanceof Error ? query.error.message : 'Error desconocido'}</div>
+          <div className="text-sm text-muted-foreground">{errorMessage(query.error)}</div>
           <Button variant="outline" onClick={() => query.refetch()}>Reintentar</Button>
         </CardContent>
       </Card>

@@ -15,7 +15,8 @@ import {
   commissionChannelLabel,
   type CommissionChannel,
 } from '@/lib/commissionAdmin';
-import { AlertTriangle, Pencil, Search, UserRoundCheck } from 'lucide-react';
+import { getEffectiveCompanyStatus } from '@/lib/adminCompanyStatus';
+import { AlertCircle, AlertTriangle, CheckCircle2, Clock, Pencil, Search, UserRoundCheck, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CommissionAttribution, CommissionCompany, CommissionPerson } from './types';
 
@@ -29,6 +30,19 @@ interface AssignmentForm {
 }
 
 const NONE = '__none__';
+
+const STATUS_ORDER = ['active', 'trial', 'past_due', 'gracia', 'suspended', 'cancelada', 'sin_sub', 'pendiente_pago'];
+
+const STATUS_META: Record<string, { label: string; pluralLabel: string; color: string; icon: typeof CheckCircle2 }> = {
+  active: { label: 'Activa', pluralLabel: 'Activas', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle2 },
+  trial: { label: 'Trial', pluralLabel: 'Trial', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: Clock },
+  past_due: { label: 'Vencida', pluralLabel: 'Vencidas', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: AlertCircle },
+  gracia: { label: 'Gracia', pluralLabel: 'Gracia', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', icon: AlertCircle },
+  suspended: { label: 'Suspendida', pluralLabel: 'Suspendidas', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: XCircle },
+  cancelada: { label: 'Cancelada', pluralLabel: 'Canceladas', color: 'bg-muted text-muted-foreground', icon: XCircle },
+  sin_sub: { label: 'Sin suscripción', pluralLabel: 'Sin suscripción', color: 'bg-muted text-muted-foreground', icon: XCircle },
+  pendiente_pago: { label: 'Pendiente pago', pluralLabel: 'Pendiente pago', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: AlertCircle },
+};
 
 function dateInput(value: string): string {
   const date = new Date(value);
@@ -56,6 +70,7 @@ export default function CommissionClientsPanel({ companies, people, attributions
 }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'assigned' | 'unassigned'>('all');
+  const [statusFilter, setStatusFilter] = useState('todos');
   const [selectedCompany, setSelectedCompany] = useState<CommissionCompany | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<AssignmentForm>({
@@ -83,6 +98,12 @@ export default function CommissionClientsPanel({ companies, people, attributions
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
   }, [form.capturedById, people]);
 
+  const statusCounts = useMemo(() => companies.reduce<Record<string, number>>((counts, company) => {
+    const status = getEffectiveCompanyStatus(company.subscriptions?.[0]);
+    counts[status] = (counts[status] ?? 0) + 1;
+    return counts;
+  }, {}), [companies]);
+
   const rows = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('es');
     return companies.filter(company => {
@@ -90,13 +111,14 @@ export default function CommissionClientsPanel({ companies, people, attributions
       const captured = attribution?.captured_by_id ? peopleById.get(attribution.captured_by_id) : null;
       const managed = attribution?.managed_by_id ? peopleById.get(attribution.managed_by_id) : null;
       const hasActiveManager = Boolean(managed?.is_active);
+      if (statusFilter !== 'todos' && getEffectiveCompanyStatus(company.subscriptions?.[0]) !== statusFilter) return false;
       if (filter === 'assigned' && !hasActiveManager) return false;
       if (filter === 'unassigned' && hasActiveManager) return false;
       if (!term) return true;
       return [company.nombre, captured?.name, managed?.name, attribution?.channel]
         .some(value => value?.toLocaleLowerCase('es').includes(term));
     });
-  }, [attributionByCompany, companies, filter, peopleById, search]);
+  }, [attributionByCompany, companies, filter, peopleById, search, statusFilter]);
 
   const openAssignment = (company: CommissionCompany) => {
     const attribution = attributionByCompany.get(company.id);
@@ -150,20 +172,44 @@ export default function CommissionClientsPanel({ companies, people, attributions
   return (
     <div className="space-y-3">
       <Card>
-        <CardContent className="p-3 flex flex-col lg:flex-row lg:items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar cliente, captador o encargado..." className="pl-9" />
+        <CardContent className="p-3 space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar cliente, captador o encargado..." className="pl-9" />
+            </div>
+            <Select value={filter} onValueChange={value => setFilter(value as typeof filter)}>
+              <SelectTrigger className="w-full lg:w-52"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los encargados</SelectItem>
+                <SelectItem value="assigned">Con encargado</SelectItem>
+                <SelectItem value="unassigned">Sin encargado</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="text-xs text-muted-foreground whitespace-nowrap">{rows.length} de {companies.length}</div>
           </div>
-          <Select value={filter} onValueChange={value => setFilter(value as typeof filter)}>
-            <SelectTrigger className="w-full lg:w-52"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los clientes</SelectItem>
-              <SelectItem value="assigned">Con encargado</SelectItem>
-              <SelectItem value="unassigned">Sin encargado</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="text-xs text-muted-foreground whitespace-nowrap">{rows.length} de {companies.length}</div>
+          <div className="flex flex-wrap gap-1.5 border-t pt-3">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('todos')}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border ${statusFilter === 'todos' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+            >
+              Todos ({companies.length})
+            </button>
+            {STATUS_ORDER.filter(status => statusCounts[status]).map(status => {
+              const meta = STATUS_META[status];
+              return (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setStatusFilter(current => current === status ? 'todos' : status)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border ${statusFilter === status ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                >
+                  {meta?.pluralLabel ?? status} ({statusCounts[status]})
+                </button>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 
@@ -173,6 +219,7 @@ export default function CommissionClientsPanel({ companies, people, attributions
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[220px]">Cliente</TableHead>
+                <TableHead className="min-w-[125px]">Estado</TableHead>
                 <TableHead className="min-w-[170px]">Lo consiguió</TableHead>
                 <TableHead className="min-w-[170px]">Encargado actual</TableHead>
                 <TableHead className="min-w-[150px]">Canal</TableHead>
@@ -185,11 +232,22 @@ export default function CommissionClientsPanel({ companies, people, attributions
                 const attribution = attributionByCompany.get(company.id);
                 const captured = attribution?.captured_by_id ? peopleById.get(attribution.captured_by_id) : undefined;
                 const managed = attribution?.managed_by_id ? peopleById.get(attribution.managed_by_id) : undefined;
+                const status = getEffectiveCompanyStatus(company.subscriptions?.[0]);
+                const statusMeta = STATUS_META[status];
                 return (
                   <TableRow key={company.id} className={!managed?.is_active ? 'bg-amber-50/50 dark:bg-amber-950/10' : undefined}>
                     <TableCell>
                       <div className="font-semibold">{company.nombre}</div>
                       <div className="font-mono text-[10px] text-muted-foreground mt-0.5">{company.id}</div>
+                    </TableCell>
+                    <TableCell>
+                      {statusMeta ? (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusMeta.color}`}>
+                          <statusMeta.icon className="h-3 w-3" /> {statusMeta.label}
+                        </span>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px]">{status}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>{personBadge(captured)}</TableCell>
                     <TableCell>
@@ -215,7 +273,7 @@ export default function CommissionClientsPanel({ companies, people, attributions
                 );
               })}
               {rows.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">No hay clientes con ese filtro.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="h-28 text-center text-muted-foreground">No hay clientes con esos filtros.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
