@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendAppEmail } from "../_shared/app-email.ts";
 
 const SUPER_ADMIN_EMAILS = ["diego.leon@uniline.mx", "ventas@uniline.mx"];
 async function assertSuperAdmin(user: any) {
