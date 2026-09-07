@@ -15,13 +15,12 @@ import { exportToExcel, exportToPDF, type ExportOptions } from '@/lib/exportUtil
 import { cn, fmtDate } from '@/lib/utils';
 import {
   buildReporteComisionVenta,
-  DIFASUR_LICENSE,
   ESTADO_COMISION_LABEL,
   ESTADO_CUENTA_LABEL,
   type ComisionVentaSource,
   type EstadoCuentaComision,
   type EstadoPagoComision,
-} from '@/lib/reporteComisionesDifasur';
+} from '@/lib/reporteComisionesVentas';
 
 type FiscalFilter = 'todos' | 'fiscal' | 'no_fiscal' | 'rfc_pendiente';
 type AccountFilter = 'todos' | EstadoCuentaComision;
@@ -48,10 +47,10 @@ const commissionTone: Record<EstadoPagoComision, string> = {
   cancelada: 'bg-muted text-muted-foreground',
 };
 
-export function ReporteComisionesDifasur({ desde, hasta, vendedorIds }: Props) {
+export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
-  const enabled = String(empresa?.licencia ?? '').trim() === DIFASUR_LICENSE;
+  const enabled = !!empresa?.id;
   const [search, setSearch] = useState('');
   const [ruta, setRuta] = useState('todos');
   const [estadoCuenta, setEstadoCuenta] = useState<AccountFilter>('todos');
@@ -59,7 +58,7 @@ export function ReporteComisionesDifasur({ desde, hasta, vendedorIds }: Props) {
   const [fiscal, setFiscal] = useState<FiscalFilter>('todos');
 
   const query = useQuery({
-    queryKey: ['reporte-comisiones-difasur', empresa?.id, desde, hasta, vendedorIds],
+    queryKey: ['reporte-comisiones-ventas', empresa?.id, desde, hasta, vendedorIds],
     enabled: enabled && !!empresa?.id && !!desde && !!hasta,
     queryFn: async () => {
       const empresaId = empresa!.id;
@@ -121,7 +120,7 @@ export function ReporteComisionesDifasur({ desde, hasta, vendedorIds }: Props) {
     return acc;
   }, { ventas: 0, vendido: 0, comision: 0, comisionPendiente: 0, comisionPagada: 0, saldo: 0 }), [filtered]);
 
-  const pagination = useTablePagination(filtered, 'reporte-comisiones-difasur');
+  const pagination = useTablePagination(filtered, 'reporte-comisiones-ventas');
   const { resetPage } = pagination;
   useEffect(() => resetPage(), [resetPage, search, ruta, estadoCuenta, estadoComision, fiscal, desde, hasta, vendedorIds]);
 
@@ -131,7 +130,7 @@ export function ReporteComisionesDifasur({ desde, hasta, vendedorIds }: Props) {
     subtitle: 'Comisiones consolidadas por venta',
     empresa: empresa?.nombre,
     empresaInfo: {
-      nombre: empresa?.nombre ?? 'DIFASUR',
+      nombre: empresa?.nombre ?? 'Empresa',
       rfc: empresa?.rfc,
       email: empresa?.email,
       logo_url: empresa?.logo_url,
@@ -171,7 +170,7 @@ export function ReporteComisionesDifasur({ desde, hasta, vendedorIds }: Props) {
       if (format === 'excel') await exportToExcel(exportOptions());
       else await exportToPDF(exportOptions());
     } catch (error) {
-      console.error('[ReporteComisionesDifasur] export', error);
+      console.error('[ReporteComisionesVentas] export', error);
       toast.error('No se pudo generar el archivo');
     }
   };

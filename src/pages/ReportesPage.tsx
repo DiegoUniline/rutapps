@@ -23,15 +23,14 @@ import { ReporteProductoCliente } from '@/components/reportes/ReporteProductoCli
 import { ReportLayout } from '@/components/reportes/ReportLayout';
 import { ResumenGeneralVentas } from '@/components/reportes/ResumenGeneralVentas';
 import { ReporteClientesNoVisitados } from '@/components/reportes/ReporteClientesNoVisitados';
-import { ReporteComisionesDifasur } from '@/components/reportes/ReporteComisionesDifasur';
+import { ReporteComisionesVentas } from '@/components/reportes/ReporteComisionesVentas';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
-import { DIFASUR_LICENSE } from '@/lib/reporteComisionesDifasur';
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
 
-type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'producto_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones' | 'cuentas_cobrar' | 'saldo_fecha' | 'stock_fecha' | 'no_visitados' | 'comisiones_difasur';
+type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'producto_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones' | 'cuentas_cobrar' | 'saldo_fecha' | 'stock_fecha' | 'no_visitados' | 'comisiones_ventas';
 
 function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string): ExportOptions | null {
   const dateRange = { from: desde, to: hasta };
@@ -224,7 +223,6 @@ function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string
 
 export default function ReportesPage() {
   const { empresa } = useAuth();
-  const showDifasurCommissions = String(empresa?.licencia ?? '').trim() === DIFASUR_LICENSE;
   const now = new Date();
   const mesActual = now.toISOString().slice(0, 7);
   const [desde, setDesde] = useState(mesActual + '-01');
@@ -238,7 +236,7 @@ export default function ReportesPage() {
   const [tab, setTab] = useState<ReportTab>('resumen');
   // Pestañas que NO dependen del rango de fechas ni de la consulta principal
   // (traen sus propios datos): se renderizan aunque el rango esté vacío / falle.
-  const dataIndependent = tab === 'cuentas_cobrar' || tab === 'saldo_fecha' || tab === 'stock_fecha' || tab === 'comisiones_difasur';
+  const dataIndependent = tab === 'cuentas_cobrar' || tab === 'saldo_fecha' || tab === 'stock_fecha' || tab === 'comisiones_ventas';
 
   const statusOptions = [
     { value: 'borrador', label: 'Borrador' },
@@ -263,7 +261,7 @@ export default function ReportesPage() {
     { key: 'saldo_fecha', label: 'Saldo a la fecha', icon: DollarSign },
     { key: 'stock_fecha', label: 'Stock a la fecha', icon: BoxIcon },
     { key: 'no_visitados', label: 'No visitados', icon: UserX },
-    ...(showDifasurCommissions ? [{ key: 'comisiones_difasur' as const, label: 'Reporte de comisiones', icon: DollarSign }] : []),
+    { key: 'comisiones_ventas', label: 'Reporte de comisiones', icon: DollarSign },
   ];
 
   const toggleVendedor = (id: string) => {
@@ -369,7 +367,7 @@ export default function ReportesPage() {
         </Popover>
 
         {/* Tipo filter */}
-        {tab !== 'comisiones_difasur' && (
+        {tab !== 'comisiones_ventas' && (
           <select
             value={tipoFilter}
             onChange={e => setTipoFilter(e.target.value as '' | 'pedido' | 'venta_directa')}
@@ -385,7 +383,7 @@ export default function ReportesPage() {
         )}
 
         {/* Status filter */}
-        {tab !== 'comisiones_difasur' && (
+        {tab !== 'comisiones_ventas' && (
           <Popover>
             <PopoverTrigger asChild>
               <button className={cn(
@@ -434,7 +432,7 @@ export default function ReportesPage() {
         )}
 
         {/* Acciones alineadas a la derecha */}
-        {tab !== 'comisiones_difasur' && (
+        {tab !== 'comisiones_ventas' && (
           <div className="flex items-center gap-2 ml-auto shrink-0">
             <ExportButton
               onExcel={() => handleExport('excel')}
@@ -449,9 +447,9 @@ export default function ReportesPage() {
       </div>
 
       {/* Chips de filtros activos — solo si hay alguno */}
-      {(selectedVendedores.length > 0 || (tab !== 'comisiones_difasur' && (selectedStatuses.length > 0 || tipoFilter))) && (
+      {(selectedVendedores.length > 0 || (tab !== 'comisiones_ventas' && (selectedStatuses.length > 0 || tipoFilter))) && (
         <div className="flex items-center gap-1.5 flex-wrap print:hidden -mt-1">
-          {tab !== 'comisiones_difasur' && tipoFilter && (
+          {tab !== 'comisiones_ventas' && tipoFilter && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
               {tipoFilter === 'pedido' ? 'Preventa' : 'Venta directa'}
               <button onClick={() => setTipoFilter('')} className="hover:text-destructive">
@@ -467,7 +465,7 @@ export default function ReportesPage() {
               </button>
             </span>
           ))}
-          {tab !== 'comisiones_difasur' && selectedStatuses.map(st => (
+          {tab !== 'comisiones_ventas' && selectedStatuses.map(st => (
             <span key={st} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent text-accent-foreground text-[11px] font-medium">
               {statusOptions.find(o => o.value === st)?.label ?? st}
               <button onClick={() => toggleStatus(st)} className="hover:text-destructive">
@@ -510,7 +508,7 @@ export default function ReportesPage() {
           saldo_fecha: 'Saldo de Clientes a la Fecha',
           stock_fecha: 'Stock a la Fecha',
           no_visitados: 'Clientes No Visitados',
-          comisiones_difasur: 'Reporte de Comisiones',
+          comisiones_ventas: 'Reporte de Comisiones',
         };
 
         const activeFilters: { label: string; value: string }[] = [];
@@ -553,7 +551,7 @@ export default function ReportesPage() {
             {tab === 'saldo_fecha' && <ReporteSaldoClienteFecha desde={desde} hasta={hasta} />}
             {tab === 'stock_fecha' && <ReporteStockFecha desde={desde} hasta={hasta} />}
             {tab === 'no_visitados' && <ReporteClientesNoVisitados desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} />}
-            {tab === 'comisiones_difasur' && <ReporteComisionesDifasur desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} />}
+            {tab === 'comisiones_ventas' && <ReporteComisionesVentas desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} />}
           </ReportLayout>
         );
       })()}

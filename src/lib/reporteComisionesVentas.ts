@@ -1,5 +1,3 @@
-export const DIFASUR_LICENSE = '53021303';
-
 export type EstadoCuentaComision = 'adeudo' | 'liquidada' | 'cancelada';
 export type EstadoPagoComision = 'sin_comision' | 'pendiente' | 'en_recibo' | 'parcial' | 'pagada' | 'cancelada';
 

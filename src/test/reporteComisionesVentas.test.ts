@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildReporteComisionVenta, estadoCuentaVenta, type ComisionVentaSource } from '@/lib/reporteComisionesDifasur';
+import { buildReporteComisionVenta, estadoCuentaVenta, type ComisionVentaSource } from '@/lib/reporteComisionesVentas';
 
 const sale = (overrides: Partial<ComisionVentaSource> = {}): ComisionVentaSource => ({
   id: 'venta-1', folio: 'V-001', fecha: '2026-09-07', total: 1000,
@@ -9,7 +9,7 @@ const sale = (overrides: Partial<ComisionVentaSource> = {}): ComisionVentaSource
   vendedores: { nombre: 'Vendedora Uno' }, venta_comisiones: [], ...overrides,
 });
 
-describe('reporte de comisiones Difasur', () => {
+describe('reporte de comisiones por venta', () => {
   it('incluye una venta con regla de comisión en cero', () => {
     const row = buildReporteComisionVenta(sale());
     expect(row.comision).toBe(0);
