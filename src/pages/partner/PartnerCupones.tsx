@@ -20,6 +20,17 @@ export default function PartnerCupones() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ codigo: '', descuento_pct: 10, meses_duracion: '', vigencia_fin: '' });
 
+  const { data: couponCap = 0 } = useQuery({
+    queryKey: ['partner-coupon-cap', partner?.id],
+    queryFn: async () => {
+      if (!partner?.id) return 0;
+      const { data, error } = await supabase.rpc('get_partner_coupon_cap', { _partner_id: partner.id });
+      if (error) throw error;
+      return Number(data || 0);
+    },
+    enabled: !!partner?.id,
+  });
+
   const { data: cupones } = useQuery({
     queryKey: ['partner-cupones', partner?.id],
     queryFn: async () => {
@@ -32,7 +43,7 @@ export default function PartnerCupones() {
 
   const create = async () => {
     if (!form.codigo.trim() || !form.descuento_pct) { toast.error('Código y % son obligatorios'); return; }
-    const maxPct = partner?.comision_pct ?? 0;
+    const maxPct = couponCap;
     if (form.descuento_pct > maxPct) {
       toast.error(`El descuento no puede ser mayor que tu comisión (${maxPct}%)`);
       return;
@@ -48,6 +59,8 @@ export default function PartnerCupones() {
     if (error) {
       if (error.code === '23505' || /duplicate|unique/i.test(error.message)) {
         toast.error('Ese código ya está en uso por otro partner. Elige uno único (ej. tu nombre + número).');
+      } else if (error.code === '23514') {
+        toast.error(`El cupón supera tu comisión vigente de ${couponCap}%`);
       } else {
         toast.error(error.message);
       }
@@ -77,7 +90,7 @@ export default function PartnerCupones() {
         <h1 className="text-2xl font-bold">Mis Cupones</h1>
         <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nuevo</Button>
       </div>
-      <p className="text-sm text-muted-foreground">Tu comisión es <strong>{partner?.comision_pct}%</strong>. El descuento del cupón se resta de tu comisión.</p>
+      <p className="text-sm text-muted-foreground">Tu comisión vigente por nivel es <strong>{couponCap}%</strong>. El descuento del cupón se resta de tu comisión.</p>
 
       <Card>
         <Table>
@@ -93,7 +106,7 @@ export default function PartnerCupones() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(cupones || []).map((c: any) => (
+            {(cupones || []).map(c => (
               <TableRow key={c.id}>
                 <TableCell className="font-mono font-bold">{c.codigo}</TableCell>
                 <TableCell>{c.descuento_pct}%</TableCell>
@@ -114,8 +127,8 @@ export default function PartnerCupones() {
           <DialogHeader><DialogTitle>Nuevo cupón</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Código</Label><Input value={form.codigo} onChange={e => setForm({ ...form, codigo: e.target.value.toUpperCase() })} placeholder="JUAN10" className="uppercase" /></div>
-            <div><Label>Descuento % (máx {partner?.comision_pct ?? 0}%)</Label><Input type="number" min={1} max={partner?.comision_pct ?? 100} value={form.descuento_pct} onChange={e => {
-              const max = partner?.comision_pct ?? 100;
+            <div><Label>Descuento % (máx {couponCap}%)</Label><Input type="number" min={1} max={couponCap} value={form.descuento_pct} onChange={e => {
+              const max = couponCap;
               let v = Number(e.target.value);
               if (v > max) { v = max; toast.error(`Máximo permitido: ${max}%`); }
               setForm({ ...form, descuento_pct: v });

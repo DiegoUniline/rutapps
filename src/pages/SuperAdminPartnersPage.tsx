@@ -5,32 +5,36 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Wallet, Inbox, Users, Check, X } from 'lucide-react';
+import { Plus, Wallet, Inbox, Users, Check, X, Eye, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
-import { promptDialog, confirmDialog } from '@/lib/confirm';
+import { Link, useNavigate } from 'react-router-dom';
+import { promptDialog } from '@/lib/confirm';
+import type { Database } from '@/integrations/supabase/types';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+type PartnerSummary = Database['public']['Views']['partner_resumen']['Row'];
+type PartnerApplication = Database['public']['Tables']['partner_solicitudes']['Row'];
 
 export default function SuperAdminPartnersPage() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [pagoOpen, setPagoOpen] = useState<any>(null);
-  const [aprobarOpen, setAprobarOpen] = useState<any>(null);
-  const [aprobarForm, setAprobarForm] = useState({ slug: '', comision_pct: 20 });
+  const [pagoOpen, setPagoOpen] = useState<PartnerSummary | null>(null);
+  const [aprobarOpen, setAprobarOpen] = useState<PartnerApplication | null>(null);
+  const [aprobarForm, setAprobarForm] = useState({ slug: '', comision_pct: 10 });
   const [pagoForm, setPagoForm] = useState({ monto: 0, metodo: '', referencia: '', notas: '' });
-  const [form, setForm] = useState({ nombre: '', email: '', telefono: '', comision_pct: 20, ref_slug: '', user_id: '' });
+  const [form, setForm] = useState({ nombre: '', email: '', telefono: '', comision_pct: 10, ref_slug: '', user_id: '' });
 
-  const { data: partners } = useQuery({
+  const { data: partners, error: partnersError, isLoading: partnersLoading } = useQuery({
     queryKey: ['admin-partners'],
     queryFn: async () => {
-      const { data } = await supabase.from('partner_resumen').select('*').order('nombre');
+      const { data, error } = await supabase.from('partner_resumen').select('*').order('nombre');
+      if (error) throw error;
       return data || [];
     },
   });
@@ -38,12 +42,13 @@ export default function SuperAdminPartnersPage() {
   const { data: solicitudes } = useQuery({
     queryKey: ['admin-partner-solicitudes'],
     queryFn: async () => {
-      const { data } = await supabase.from('partner_solicitudes').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('partner_solicitudes').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
   });
 
-  const pendientes = (solicitudes || []).filter((s: any) => s.status === 'pending');
+  const pendientes = (solicitudes || []).filter(s => s.status === 'pending');
 
   const create = async () => {
     if (!form.nombre.trim() || !form.ref_slug.trim()) { toast.error('Nombre y slug son obligatorios'); return; }
@@ -58,7 +63,7 @@ export default function SuperAdminPartnersPage() {
     if (error) { toast.error(error.message); return; }
     toast.success('Partner creado');
     setOpen(false);
-    setForm({ nombre: '', email: '', telefono: '', comision_pct: 20, ref_slug: '', user_id: '' });
+    setForm({ nombre: '', email: '', telefono: '', comision_pct: 10, ref_slug: '', user_id: '' });
     qc.invalidateQueries({ queryKey: ['admin-partners'] });
   };
 
@@ -72,12 +77,12 @@ export default function SuperAdminPartnersPage() {
     if (error) { toast.error(error.message); return; }
     toast.success('Solicitud aprobada · partner creado');
     setAprobarOpen(null);
-    setAprobarForm({ slug: '', comision_pct: 20 });
+    setAprobarForm({ slug: '', comision_pct: 10 });
     qc.invalidateQueries({ queryKey: ['admin-partner-solicitudes'] });
     qc.invalidateQueries({ queryKey: ['admin-partners'] });
   };
 
-  const rechazar = async (s: any) => {
+  const rechazar = async (s: PartnerApplication) => {
     const motivo = await promptDialog('Motivo del rechazo (opcional):') || '';
     const { error } = await supabase.rpc('rechazar_solicitud_partner', {
       _solicitud_id: s.id,
@@ -89,7 +94,7 @@ export default function SuperAdminPartnersPage() {
   };
 
   const registrarPago = async () => {
-    if (!pagoOpen || !pagoForm.monto) { toast.error('Monto requerido'); return; }
+    if (!pagoOpen?.partner_id || !pagoForm.monto) { toast.error('Monto requerido'); return; }
     const { data: pendientesCom } = await supabase
       .from('partner_comisiones').select('id').eq('partner_id', pagoOpen.partner_id).eq('status', 'pendiente');
     const { error } = await supabase.rpc('pagar_comisiones_partner', {
@@ -119,7 +124,7 @@ export default function SuperAdminPartnersPage() {
 
       <Tabs defaultValue="partners">
         <TabsList>
-          <TabsTrigger value="partners" className="gap-1.5"><Users className="h-4 w-4" /> Partners activos</TabsTrigger>
+          <TabsTrigger value="partners" className="gap-1.5"><Users className="h-4 w-4" /> Partners</TabsTrigger>
           <TabsTrigger value="solicitudes" className="gap-1.5">
             <Inbox className="h-4 w-4" /> Solicitudes
             {pendientes.length > 0 && <Badge variant="destructive" className="ml-1">{pendientes.length}</Badge>}
@@ -133,8 +138,8 @@ export default function SuperAdminPartnersPage() {
                 <TableRow>
                   <TableHead>Partner</TableHead>
                   <TableHead>Slug</TableHead>
-                  <TableHead>%</TableHead>
-                  <TableHead>Empresas</TableHead>
+                  <TableHead>Nivel / %</TableHead>
+                  <TableHead>Empresas activas</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Pagado</TableHead>
                   <TableHead className="text-right">Pendiente</TableHead>
@@ -143,25 +148,28 @@ export default function SuperAdminPartnersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(partners || []).map((p: any) => (
-                  <TableRow key={p.partner_id}>
-                    <TableCell className="font-medium">{p.nombre}</TableCell>
+                {(partners || []).map(p => (
+                  <TableRow key={p.partner_id} className="cursor-pointer hover:bg-muted/60" onClick={() => navigate(`/super-admin/partners/${p.partner_id}`)}>
+                    <TableCell><button className="font-medium text-left hover:underline">{p.nombre}</button><div className="text-[11px] text-muted-foreground">{p.email || 'Sin correo'}</div></TableCell>
                     <TableCell><code className="text-xs bg-muted px-2 py-0.5 rounded">{p.ref_slug}</code></TableCell>
-                    <TableCell>{p.comision_pct}%</TableCell>
-                    <TableCell>{p.empresas_referidas}</TableCell>
+                    <TableCell>{p.nivel_emoji ? `${p.nivel_emoji} ${p.nivel_nombre}` : '—'}<div className="font-bold">{p.comision_actual_pct ?? p.comision_pct}%</div></TableCell>
+                    <TableCell><b>{p.empresas_activas ?? 0}</b><span className="text-xs text-muted-foreground"> / {p.empresas_referidas ?? 0} referidas</span></TableCell>
                     <TableCell className="text-right">{fmt(Number(p.total_generado))}</TableCell>
                     <TableCell className="text-right text-muted-foreground">{fmt(Number(p.total_pagado))}</TableCell>
                     <TableCell className="text-right font-bold text-primary">{fmt(Number(p.saldo_pendiente))}</TableCell>
                     <TableCell><Badge variant={p.estado === 'activo' ? 'default' : 'secondary'}>{p.estado}</Badge></TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="outline" disabled={Number(p.saldo_pendiente) <= 0}
+                    <TableCell className="flex gap-1" onClick={event => event.stopPropagation()}>
+                      <Button size="icon" variant="ghost" aria-label={`Ver expediente de ${p.nombre}`} onClick={() => navigate(`/super-admin/partners/${p.partner_id}`)}><Eye className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="outline" disabled={Number(p.saldo_pendiente) <= 0 || (p.estado === 'activo' && Number(p.saldo_pendiente) < 500)}
                         onClick={() => { setPagoOpen(p); setPagoForm({ ...pagoForm, monto: Number(p.saldo_pendiente) }); }}>
                         <Wallet className="h-3 w-3 mr-1" /> Pagar
                       </Button>
                     </TableCell>
                   </TableRow>
                 ))}
-                {!partners?.length && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sin partners</TableCell></TableRow>}
+                {partnersLoading && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Cargando partners…</TableCell></TableRow>}
+                {partnersError && <TableRow><TableCell colSpan={9} className="text-center text-destructive py-8"><AlertTriangle className="h-4 w-4 inline mr-1" /> {partnersError instanceof Error ? partnersError.message : 'No se pudo cargar el módulo'}</TableCell></TableRow>}
+                {!partnersLoading && !partnersError && !partners?.length && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sin partners</TableCell></TableRow>}
               </TableBody>
             </Table>
           </Card>
@@ -171,7 +179,7 @@ export default function SuperAdminPartnersPage() {
           {(solicitudes || []).length === 0 && (
             <Card className="p-8 text-center text-muted-foreground">Sin solicitudes</Card>
           )}
-          {(solicitudes || []).map((s: any) => (
+          {(solicitudes || []).map(s => (
             <Card key={s.id} className="p-4">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="flex-1 min-w-[260px]">
@@ -191,7 +199,7 @@ export default function SuperAdminPartnersPage() {
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => {
                       setAprobarOpen(s);
-                      setAprobarForm({ slug: s.email.split('@')[0].replace(/[^a-z0-9-]/gi, '').toLowerCase(), comision_pct: 20 });
+                      setAprobarForm({ slug: s.email.split('@')[0].replace(/[^a-z0-9-]/gi, '').toLowerCase(), comision_pct: 10 });
                     }}>
                       <Check className="h-3.5 w-3.5 mr-1" /> Aprobar
                     </Button>
@@ -219,7 +227,7 @@ export default function SuperAdminPartnersPage() {
               <Input value={aprobarForm.slug} onChange={e => setAprobarForm({ ...aprobarForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
             </div>
             <div>
-              <Label>Comisión %</Label>
+              <Label>Comisión de respaldo %</Label>
               <Input type="number" min={0} max={100} value={aprobarForm.comision_pct}
                 onChange={e => setAprobarForm({ ...aprobarForm, comision_pct: Number(e.target.value) })} />
             </div>
@@ -237,7 +245,7 @@ export default function SuperAdminPartnersPage() {
             <div><Label>Slug de referido *</Label><Input value={form.ref_slug} onChange={e => setForm({ ...form, ref_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })} /></div>
             <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
             <div><Label>Teléfono</Label><Input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} /></div>
-            <div><Label>Comisión %</Label><Input type="number" min={0} max={100} value={form.comision_pct} onChange={e => setForm({ ...form, comision_pct: Number(e.target.value) })} /></div>
+            <div><Label>Comisión de respaldo %</Label><Input type="number" min={0} max={100} value={form.comision_pct} onChange={e => setForm({ ...form, comision_pct: Number(e.target.value) })} /><p className="text-xs text-muted-foreground mt-1">La comisión real la determina automáticamente el nivel por empresas activas.</p></div>
             <Button onClick={create} className="w-full">Crear</Button>
           </div>
         </DialogContent>
@@ -248,11 +256,11 @@ export default function SuperAdminPartnersPage() {
         <DialogContent>
           <DialogHeader><DialogTitle>Pagar a {pagoOpen?.nombre}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Monto</Label><Input type="number" value={pagoForm.monto} onChange={e => setPagoForm({ ...pagoForm, monto: Number(e.target.value) })} /></div>
+            <div><Label>Monto conciliado</Label><Input type="number" value={pagoForm.monto} readOnly /></div>
             <div><Label>Método</Label><Input value={pagoForm.metodo} onChange={e => setPagoForm({ ...pagoForm, metodo: e.target.value })} placeholder="Transferencia / Efectivo" /></div>
             <div><Label>Referencia</Label><Input value={pagoForm.referencia} onChange={e => setPagoForm({ ...pagoForm, referencia: e.target.value })} placeholder="Folio de transferencia" /></div>
             <div><Label>Notas</Label><Input value={pagoForm.notas} onChange={e => setPagoForm({ ...pagoForm, notas: e.target.value })} /></div>
-            <p className="text-xs text-muted-foreground">Todas las comisiones pendientes se marcarán como pagadas.</p>
+            <p className="text-xs text-muted-foreground">El sistema verificará dentro de una transacción que este monto sea exactamente igual a todas las comisiones pendientes.</p>
             <Button onClick={registrarPago} className="w-full">Registrar pago</Button>
           </div>
         </DialogContent>

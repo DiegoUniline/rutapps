@@ -126,6 +126,7 @@ const PosAdminPage = lazy(() => import("@/pages/PosAdminPage"));
 const ReporteDiarioPage = lazy(() => import("@/pages/ReporteDiarioPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
 const SuperAdminPartnersPage = lazy(() => import("@/pages/SuperAdminPartnersPage"));
+const PartnerAdminDetailPage = lazy(() => import("@/pages/PartnerAdminDetailPage"));
 const PartnerLayout = lazy(() => import("@/pages/partner/PartnerLayout"));
 const PartnerDashboard = lazy(() => import("@/pages/partner/PartnerDashboard"));
 const PartnerEmpresas = lazy(() => import("@/pages/partner/PartnerEmpresas"));
@@ -162,6 +163,7 @@ const FacturaRedirectPage = lazy(() => import("@/pages/FacturaRedirectPage"));
 const EstadoCuentaPublicoPage = lazy(() => import("@/pages/EstadoCuentaPublicoPage"));
 const UnsubscribePage = lazy(() => import("@/pages/UnsubscribePage"));
 const PartnersLandingPage = lazy(() => import("@/pages/PartnersLandingPage"));
+const PartnerTermsPage = lazy(() => import("@/pages/PartnerTermsPage"));
 const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
 const DevolucionesListPage = lazy(() => import("@/pages/DevolucionesListPage"));
 const ControlPage = lazy(() => import("@/pages/ControlPage"));
@@ -225,8 +227,8 @@ const queryClient = new QueryClient({
       retry: 1,
     },
     mutations: {
-      onError: (error: any) => {
-        if (error?.handled) return;
+      onError: (error: unknown) => {
+        if (typeof error === 'object' && error !== null && 'handled' in error && error.handled) return;
         showAppError(error);
       },
     },
@@ -452,6 +454,7 @@ function AuthenticatedAppRoutes() {
           <Route path="/cotizacion/:token" element={<CotizacionPublicaPage />} />
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/partners" element={<PartnersLandingPage />} />
+          <Route path="/partners/terminos" element={<PartnerTermsPage />} />
           <Route path="/tutoriales" element={<TutorialesPage />} />
           <Route path="/soporte" element={<SoportePage />} />
           <Route path="/auditoria-movil/:auditoria_id" element={<AuditoriaMobilePage />} />
@@ -551,6 +554,7 @@ function AuthenticatedAppRoutes() {
           <Routes>
             <Route path="/super-admin" element={<SuperAdminPage />} />
             <Route path="/super-admin/partners" element={<SuperAdminPartnersPage />} />
+            <Route path="/super-admin/partners/:partnerId" element={<PartnerAdminDetailPage />} />
             <Route path="/super-admin/database-health" element={<DatabaseHealthPage />} />
             <Route path="/admin/database-health" element={<DatabaseHealthPage />} />
             <Route path="/super-admin/sync-health" element={<SyncHealthPage />} />

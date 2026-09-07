@@ -63,7 +63,7 @@ export default function PartnerDashboard() {
       if (!partner?.id) return null;
       const [emp, com, cup, cupRows] = await Promise.all([
         supabase.from('partner_atribuciones').select('id, created_at, empresa_id, empresas:empresa_id(nombre)').eq('partner_id', partner.id),
-        supabase.from('partner_comisiones').select('monto_comision, status, created_at, empresa_id').eq('partner_id', partner.id),
+        supabase.from('partner_comisiones').select('monto_comision, status, created_at, empresa_id, tipo').eq('partner_id', partner.id),
         supabase.from('cupones').select('id, codigo, usos_actuales').eq('partner_id', partner.id).eq('activo', true),
         supabase.from('cupones').select('id').eq('partner_id', partner.id),
       ]);
@@ -76,7 +76,7 @@ export default function PartnerDashboard() {
       if (cuponIds.length) {
         const { data: usos } = await supabase
           .from('cupon_usos')
-          .select('empresa_id, used_at')
+          .select('empresa_id, aplicado_at')
           .in('cupon_id', cuponIds);
         const known = new Set(empresas.map((e: any) => e.empresa_id));
         const extraIds = (usos || []).filter((u: any) => u.empresa_id && !known.has(u.empresa_id));
@@ -86,7 +86,7 @@ export default function PartnerDashboard() {
           extraIds.forEach((u: any) => {
             const e = (extraEmps || []).find((x: any) => x.id === u.empresa_id);
             if (e && !known.has(e.id)) {
-              empresas.push({ id: u.empresa_id, empresa_id: u.empresa_id, created_at: u.used_at, empresas: { nombre: e.nombre } });
+              empresas.push({ id: u.empresa_id, empresa_id: u.empresa_id, created_at: u.aplicado_at, empresas: { nombre: e.nombre } });
               known.add(e.id);
             }
           });
@@ -166,6 +166,7 @@ export default function PartnerDashboard() {
     // Top empresas por comisión
     const empMap: Record<string, { nombre: string; total: number; }> = {};
     (stats?.comisiones || []).forEach((c: any) => {
+      if (!c.empresa_id || c.tipo === 'bono_nivel') return;
       const id = c.empresa_id;
       if (!empMap[id]) {
         const e = (stats?.empresas || []).find((x: any) => x.empresa_id === id);

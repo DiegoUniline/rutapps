@@ -44,6 +44,7 @@ import dashboardImg from '@/assets/partners-dashboard.jpg';
 import couponImg from '@/assets/partners-coupon.jpg';
 import { Seo } from '@/components/seo/Seo';
 import { MarketingShell } from '@/components/marketing/MarketingShell';
+import { PARTNER_LEVELS_PUBLIC, PARTNER_TERMS_VERSION } from '@/lib/partnerProgram';
 
 const WHATSAPP_URL =
   'https://wa.me/5213171035768?text=' + encodeURIComponent('Hola, quiero ser partner de Rutapp');
@@ -96,13 +97,17 @@ type PartnerLevel = {
   featured?: boolean;
 };
 
-const PARTNER_LEVELS: PartnerLevel[] = [
-  { name: 'Starter', pct: 10, min: 1, max: 4, range: '1–4 empresas', bonus: null, tone: '#B87333', icon: '🥉' },
-  { name: 'Growth', pct: 15, min: 5, max: 14, range: '5–14 empresas', bonus: null, tone: '#7C8799', icon: '🥈' },
-  { name: 'Pro', pct: 20, min: 15, max: 29, range: '15–29 empresas', bonus: '+$500 bono', tone: '#E5A700', icon: '🥇' },
-  { name: 'Elite', pct: 25, min: 30, max: 59, range: '30–59 empresas', bonus: '+$1,500 bono', tone: '#06AFC9', icon: '💎', featured: true },
-  { name: 'Legend', pct: 30, min: 60, max: null, range: '60+ empresas', bonus: '+$5,000 bono', tone: '#9253E8', icon: '👑' },
-];
+const PARTNER_LEVELS: PartnerLevel[] = PARTNER_LEVELS_PUBLIC.map((level) => ({
+  name: level.nombre,
+  pct: level.pct,
+  min: level.min,
+  max: level.max,
+  range: level.max === null ? `${level.min}+ empresas` : `${level.min}–${level.max} empresas`,
+  bonus: level.bono > 0 ? `+$${level.bono.toLocaleString('es-MX')} bono único` : null,
+  tone: level.color,
+  icon: level.emoji,
+  featured: level.popular,
+}));
 
 const BENEFITS = [
   { icon: CircleDollarSign, title: 'Comisión que vuelve cada mes', text: 'Ganas un porcentaje de cada pago mensual efectivamente cobrado de tus empresas referidas.' },
@@ -128,11 +133,13 @@ const POLICIES = [
   'Las comisiones se generan únicamente sobre pagos efectivamente cobrados y elegibles.',
   'Pagos cancelados o reembolsados no generan comisión.',
   'El cupón no puede superar tu porcentaje de comisión; si lo iguala, esa comisión queda en cero.',
-  'Los pagos a Partners se realizan mensualmente por transferencia, con mínimo acumulado de $500 MXN.',
+  'Los bonos Pro, Elite y Legend se generan una sola vez al alcanzar por primera vez cada nivel.',
+  'Los pagos a Partners se realizan por transferencia, con mínimo acumulado de $500 MXN, conforme al calendario del programa.',
   'Un mismo correo no puede operar simultáneamente como cliente de Rutapp y como Partner.',
   'No se permiten autoreferidos ni cupones aplicados a empresas controladas por el mismo Partner.',
+  'La participación es comercial e independiente: sin horario, exclusividad, salario fijo ni facultad para representar a Rutapp.',
   'Rutapp puede suspender Partners por fraude, prácticas engañosas o incumplimiento de las políticas.',
-  'Los cambios de términos se comunican con 30 días de anticipación a Partners activos.',
+  'Los cambios económicos se comunican con 30 días de anticipación y se aplican hacia el futuro.',
 ] as const;
 
 const PROCESS = [
@@ -200,6 +207,7 @@ export default function PartnersLandingPage() {
   const reduceMotion = useReducedMotion();
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [lada, setLada] = useState('+52');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [calcCompanies, setCalcCompanies] = useState(15);
@@ -228,6 +236,10 @@ export default function PartnersLandingPage() {
       toast.error('Nombre y correo son obligatorios');
       return;
     }
+    if (!acceptedTerms) {
+      toast.error('Debes leer y aceptar los términos del Programa de Partners');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -240,6 +252,8 @@ export default function PartnersLandingPage() {
         motivo: form.motivo.trim() || null,
         experiencia: form.experiencia.trim() || null,
         redes: form.redes.trim() || null,
+        terms_accepted_at: new Date().toISOString(),
+        terms_version: PARTNER_TERMS_VERSION,
       });
       if (error) throw error;
 
@@ -379,7 +393,7 @@ export default function PartnersLandingPage() {
           <Reveal className="mx-auto mt-24 grid max-w-6xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 shadow-sm sm:grid-cols-4">
             {[
               { icon: TrendingUp, value: 'Hasta 30%', label: 'comisión recurrente' },
-              { icon: InfinityIcon, value: 'De por vida', label: 'mientras existan pagos elegibles' },
+              { icon: InfinityIcon, value: 'Cada mes', label: 'mientras existan pagos elegibles' },
               { icon: CircleDollarSign, value: '$0', label: 'costo de entrada' },
               { icon: Beaker, value: 'Sandbox', label: 'incluido al aprobarte' },
             ].map(({ icon: Icon, value, label }) => (
@@ -640,7 +654,7 @@ export default function PartnersLandingPage() {
 
             <div className="mt-7 grid gap-3 md:grid-cols-3">
               {[
-                { icon: TrendingUp, title: 'Sube automático', text: 'Al cierre de mes, si alcanzas el umbral, el sistema reconoce tu nuevo nivel.' },
+                { icon: TrendingUp, title: 'Sube automático', text: 'Al alcanzar el umbral, el sistema reconoce tu nuevo nivel.' },
                 { icon: ShieldCheck, title: '60 días de gracia', text: 'Si pierdes empresas, conservas temporalmente tu nivel antes de una posible baja.' },
                 { icon: Rocket, title: 'Aplica a cobros posteriores', text: 'La nueva tasa se utiliza en las facturas elegibles que ocurren después del cambio.' },
               ].map(({ icon: Icon, title, text }, index) => (
@@ -927,6 +941,13 @@ export default function PartnersLandingPage() {
                     <Label htmlFor="partner-social">Redes / sitio web</Label>
                     <Input id="partner-social" value={form.redes} onChange={(event) => setForm((current) => ({ ...current, redes: event.target.value }))} placeholder="@usuario, https://..., etc." className="mt-1.5 h-11" />
                   </div>
+
+                  <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                    <input type="checkbox" className="mt-1 h-4 w-4" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required />
+                    <span>
+                      Leí y acepto los <Link to="/partners/terminos" target="_blank" className="font-bold text-indigo-700 underline">Términos del Programa de Partners</Link> versión {PARTNER_TERMS_VERSION}. Entiendo que se trata de una colaboración comercial independiente, que las comisiones sólo nacen sobre pagos elegibles y autorizo expresamente el tratamiento de los datos fiscales y bancarios que proporcione para operar mis pagos.
+                    </span>
+                  </label>
 
                   <Button type="submit" disabled={loading} className="mt-7 h-12 w-full bg-[#0B1327] text-base font-black text-white hover:bg-[#182440]">
                     {loading ? 'Enviando solicitud...' : 'Enviar solicitud'}

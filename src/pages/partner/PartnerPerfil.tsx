@@ -15,7 +15,7 @@ export default function PartnerPerfil() {
           <div><span className="text-muted-foreground">Nombre:</span> <strong>{partner?.nombre}</strong></div>
           <div><span className="text-muted-foreground">Email:</span> {partner?.email || '—'}</div>
           <div><span className="text-muted-foreground">Teléfono:</span> {partner?.telefono || '—'}</div>
-          <div><span className="text-muted-foreground">Comisión base:</span> <strong>{partner?.comision_pct}%</strong></div>
+          <div><span className="text-muted-foreground">Comisión de respaldo:</span> <strong>{partner?.comision_pct}%</strong></div>
           <div><span className="text-muted-foreground">Slug de referido:</span> <code className="bg-muted px-2 py-0.5 rounded">{partner?.ref_slug}</code></div>
           <div><span className="text-muted-foreground">Estado:</span> {partner?.estado}</div>
         </CardContent>

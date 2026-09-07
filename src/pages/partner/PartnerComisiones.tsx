@@ -5,13 +5,16 @@ import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { Database } from '@/integrations/supabase/types';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
+type CommissionRow = Database['public']['Tables']['partner_comisiones']['Row'] & { empresas: { nombre: string } | null };
+type PaymentRow = Database['public']['Tables']['partner_pagos']['Row'];
 
 export default function PartnerComisiones() {
   const { data: partner } = usePartner();
 
-  const { data: comisiones } = useQuery({
+  const { data: comisiones } = useQuery<CommissionRow[]>({
     queryKey: ['partner-comisiones', partner?.id],
     queryFn: async () => {
       if (!partner?.id) return [];
@@ -20,12 +23,12 @@ export default function PartnerComisiones() {
         .select('*, empresas:empresa_id(nombre)')
         .eq('partner_id', partner.id)
         .order('created_at', { ascending: false });
-      return data || [];
+      return (data || []) as unknown as CommissionRow[];
     },
     enabled: !!partner?.id,
   });
 
-  const { data: pagos } = useQuery({
+  const { data: pagos } = useQuery<PaymentRow[]>({
     queryKey: ['partner-pagos', partner?.id],
     queryFn: async () => {
       if (!partner?.id) return [];
@@ -35,7 +38,7 @@ export default function PartnerComisiones() {
     enabled: !!partner?.id,
   });
 
-  const renderTable = (rows: any[]) => (
+  const renderTable = (rows: CommissionRow[]) => (
     <Card>
       <Table>
         <TableHeader>
@@ -49,12 +52,12 @@ export default function PartnerComisiones() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((c: any) => (
+          {rows.map(c => (
             <TableRow key={c.id}>
               <TableCell>{c.periodo}</TableCell>
-              <TableCell>{c.empresas?.nombre || '—'}</TableCell>
-              <TableCell>{fmt(Number(c.monto_factura))}</TableCell>
-              <TableCell>{c.partner_pct}% − {c.cupon_pct}% = <strong>{Number(c.partner_pct) - Number(c.cupon_pct)}%</strong></TableCell>
+              <TableCell>{c.tipo === 'bono_nivel' ? <Badge className="bg-amber-100 text-amber-800">Bono de nivel</Badge> : c.empresas?.nombre || '—'}</TableCell>
+              <TableCell>{c.tipo === 'bono_nivel' ? '—' : fmt(Number(c.monto_factura))}</TableCell>
+              <TableCell>{c.tipo === 'bono_nivel' ? c.notas || 'Bono único' : <>{c.partner_pct}% − {c.cupon_pct}% = <strong>{Number(c.partner_pct) - Number(c.cupon_pct)}%</strong></>}</TableCell>
               <TableCell className="text-right font-bold">{fmt(Number(c.monto_comision))}</TableCell>
               <TableCell><Badge variant={c.status === 'pagada' ? 'default' : c.status === 'pendiente' ? 'secondary' : 'outline'}>{c.status}</Badge></TableCell>
             </TableRow>
@@ -65,8 +68,8 @@ export default function PartnerComisiones() {
     </Card>
   );
 
-  const pendientes = (comisiones || []).filter((c: any) => c.status === 'pendiente');
-  const pagadas = (comisiones || []).filter((c: any) => c.status === 'pagada');
+  const pendientes = (comisiones || []).filter(c => c.status === 'pendiente');
+  const pagadas = (comisiones || []).filter(c => c.status === 'pagada');
 
   return (
     <div className="space-y-4">
@@ -86,7 +89,7 @@ export default function PartnerComisiones() {
                 <TableRow><TableHead>Fecha</TableHead><TableHead>Método</TableHead><TableHead>Referencia</TableHead><TableHead className="text-right">Monto</TableHead></TableRow>
               </TableHeader>
               <TableBody>
-                {(pagos || []).map((p: any) => (
+                {(pagos || []).map(p => (
                   <TableRow key={p.id}>
                     <TableCell>{new Date(p.pagado_en).toLocaleDateString('es-MX')}</TableCell>
                     <TableCell>{p.metodo || '—'}</TableCell>
