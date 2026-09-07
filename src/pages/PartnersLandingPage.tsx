@@ -1,15 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, useReducedMotion } from 'motion/react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
 import {
-  Handshake, DollarSign, Tag, BarChart3, ShieldCheck, CheckCircle2, ArrowRight,
-  MessageCircle, Sparkles, Users, Wallet, LineChart, Link2, Gift, Rocket, TrendingUp,
+  ArrowRight,
+  BarChart3,
+  BadgeCheck,
+  Beaker,
+  Building2,
+  Calculator,
+  CheckCircle2,
+  ChevronDown,
+  CircleDollarSign,
+  Clock3,
+  DollarSign,
+  Gift,
+  Globe2,
+  Handshake,
+  Infinity as InfinityIcon,
+  LineChart,
+  Link2,
+  MessageCircle,
+  MousePointerClick,
+  Rocket,
+  Send,
+  Share2,
+  ShieldCheck,
+  Sparkles,
+  Tag,
+  TrendingUp,
+  Trophy,
+  Users,
+  Wallet,
+  Zap,
 } from 'lucide-react';
 import heroImg from '@/assets/partners-hero.jpg';
 import dashboardImg from '@/assets/partners-dashboard.jpg';
@@ -17,7 +45,8 @@ import couponImg from '@/assets/partners-coupon.jpg';
 import { Seo } from '@/components/seo/Seo';
 import { MarketingShell } from '@/components/marketing/MarketingShell';
 
-const WHATSAPP_URL = 'https://wa.me/5213171035768?text=' + encodeURIComponent('Hola, quiero ser partner de Rutapp');
+const WHATSAPP_URL =
+  'https://wa.me/5213171035768?text=' + encodeURIComponent('Hola, quiero ser partner de Rutapp');
 
 const LADAS = [
   { code: '+52', flag: '🇲🇽', name: 'México' },
@@ -39,496 +68,890 @@ const LADAS = [
   { code: '+1', flag: '🇩🇴', name: 'Rep. Dominicana' },
   { code: '+598', flag: '🇺🇾', name: 'Uruguay' },
   { code: '+58', flag: '🇻🇪', name: 'Venezuela' },
+] as const;
+
+const BRAND = {
+  ink: '#0B1327',
+  inkSoft: '#344054',
+  primary: '#445BD8',
+  primaryDark: '#3146B8',
+  primarySoft: '#EEF1FF',
+  accent: '#FF6B1A',
+  accentSoft: '#FFF2EA',
+  green: '#0FAE78',
+  greenSoft: '#EAFBF5',
+  line: '#E7EAF0',
+  canvas: '#F7F8FC',
+} as const;
+
+type PartnerLevel = {
+  name: string;
+  pct: number;
+  min: number;
+  max: number | null;
+  range: string;
+  bonus: string | null;
+  tone: string;
+  icon: string;
+  featured?: boolean;
+};
+
+const PARTNER_LEVELS: PartnerLevel[] = [
+  { name: 'Starter', pct: 10, min: 1, max: 4, range: '1–4 empresas', bonus: null, tone: '#B87333', icon: '🥉' },
+  { name: 'Growth', pct: 15, min: 5, max: 14, range: '5–14 empresas', bonus: null, tone: '#7C8799', icon: '🥈' },
+  { name: 'Pro', pct: 20, min: 15, max: 29, range: '15–29 empresas', bonus: '+$500 bono', tone: '#E5A700', icon: '🥇' },
+  { name: 'Elite', pct: 25, min: 30, max: 59, range: '30–59 empresas', bonus: '+$1,500 bono', tone: '#06AFC9', icon: '💎', featured: true },
+  { name: 'Legend', pct: 30, min: 60, max: null, range: '60+ empresas', bonus: '+$5,000 bono', tone: '#9253E8', icon: '👑' },
 ];
 
-const PRIMARY = 'hsl(230, 55%, 52%)';
-const PRIMARY_DARK = 'hsl(230, 60%, 38%)';
-const ACCENT = 'hsl(25, 100%, 55%)';
+const BENEFITS = [
+  { icon: CircleDollarSign, title: 'Comisión que vuelve cada mes', text: 'Ganas un porcentaje de cada pago mensual efectivamente cobrado de tus empresas referidas.' },
+  { icon: Tag, title: 'Cupones con tu estrategia', text: 'Tú decides cuánto descuento ofrecer y ves con claridad cómo impacta tu comisión.' },
+  { icon: BarChart3, title: 'Panel completo', text: 'Referidos, conversiones, comisiones generadas, pendientes y pagadas en una sola vista.' },
+  { icon: Link2, title: 'Link único rastreable', text: 'Comparte por WhatsApp, redes, correo o tu sitio. La atribución se registra automáticamente.' },
+  { icon: Wallet, title: 'Pagos mensuales', text: 'Recibe tus comisiones por transferencia cuando superes el mínimo acumulado de $500 MXN.' },
+  { icon: ShieldCheck, title: 'Atribución permanente', text: 'Una empresa correctamente atribuida permanece vinculada a tu cartera mientras siga siendo elegible.' },
+] as const;
+
+const FAQS = [
+  { q: '¿Cuánto cuesta entrar al programa?', a: 'Nada. El programa de Partners tiene $0 de costo de entrada. La aprobación sí es manual para cuidar la calidad de la red.' },
+  { q: '¿Necesito contratar Rutapp para ser Partner?', a: 'No. Al ser aprobado recibes un Sandbox personal para aprender, hacer demos y resolver dudas sin usar una cuenta productiva.' },
+  { q: '¿Cómo se reconoce que una empresa es mi referida?', a: 'Por tu link único o por uno de tus cupones al momento del registro. La atribución queda registrada en el sistema.' },
+  { q: '¿Cuándo se genera mi comisión?', a: 'Sólo cuando Rutapp recibe un pago elegible de la empresa referida. Pagos cancelados o reembolsados no generan comisión.' },
+  { q: '¿Cuándo recibo mi dinero?', a: 'Los pagos a Partners se realizan una vez al mes vía transferencia, cuando el saldo acumulado supera $500 MXN.' },
+  { q: '¿Puedo regalar parte de mi comisión con un cupón?', a: 'Sí. El descuento sale de tu porcentaje de comisión. El cupón nunca puede exceder tu porcentaje vigente.' },
+  { q: '¿Qué pasa si una empresa deja de pagar?', a: 'Deja de generar comisión durante el tiempo en que no existan pagos elegibles. La atribución no se reasigna por ese motivo.' },
+] as const;
+
+const POLICIES = [
+  'La atribución se registra por link único o cupón al momento del alta y permanece vinculada al Partner.',
+  'Las comisiones se generan únicamente sobre pagos efectivamente cobrados y elegibles.',
+  'Pagos cancelados o reembolsados no generan comisión.',
+  'El cupón no puede superar tu porcentaje de comisión; si lo iguala, esa comisión queda en cero.',
+  'Los pagos a Partners se realizan mensualmente por transferencia, con mínimo acumulado de $500 MXN.',
+  'Un mismo correo no puede operar simultáneamente como cliente de Rutapp y como Partner.',
+  'No se permiten autoreferidos ni cupones aplicados a empresas controladas por el mismo Partner.',
+  'Rutapp puede suspender Partners por fraude, prácticas engañosas o incumplimiento de las políticas.',
+  'Los cambios de términos se comunican con 30 días de anticipación a Partners activos.',
+] as const;
+
+const PROCESS = [
+  { icon: Send, step: '01', title: 'Aplica', text: 'Cuéntanos quién eres y cómo planeas crecer con Rutapp.' },
+  { icon: BadgeCheck, step: '02', title: 'Aprobamos', text: 'Revisamos tu solicitud manualmente, normalmente en 1–3 días.' },
+  { icon: Share2, step: '03', title: 'Comparte', text: 'Obtén tu link, crea cupones y empieza a referir empresas.' },
+  { icon: Wallet, step: '04', title: 'Cobra', text: 'Ve tus comisiones en el panel y recibe tu pago mensual.' },
+] as const;
+
+function levelForCompanies(companies: number): PartnerLevel {
+  return [...PARTNER_LEVELS].reverse().find((level) => companies >= level.min) ?? PARTNER_LEVELS[0];
+}
+
+function money(value: number): string {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <motion.div
+      className={className}
+      initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+      whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.18 }}
+      transition={{ duration: 0.62, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function SectionHeading({ eyebrow, title, description, center = false }: { eyebrow: string; title: ReactNode; description?: string; center?: boolean }) {
+  return (
+    <div className={center ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl'}>
+      <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/80 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-indigo-700">
+        <Sparkles className="h-3.5 w-3.5" />
+        {eyebrow}
+      </div>
+      <h2 className="text-3xl font-black leading-[1.05] tracking-[-0.035em] text-[#0B1327] sm:text-4xl lg:text-[48px]">
+        {title}
+      </h2>
+      {description && <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">{description}</p>}
+    </div>
+  );
+}
+
+function FloatingDot({ className, delay = 0 }: { className: string; delay?: number }) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <motion.span
+      aria-hidden
+      className={className}
+      animate={reduceMotion ? undefined : { y: [0, -12, 0], x: [0, 5, 0] }}
+      transition={{ duration: 6, delay, repeat: Infinity, ease: 'easeInOut' }}
+    />
+  );
+}
 
 export default function PartnersLandingPage() {
+  const reduceMotion = useReducedMotion();
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lada, setLada] = useState('+52');
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [calcCompanies, setCalcCompanies] = useState(15);
+  const [calcTicket, setCalcTicket] = useState(500);
   const [form, setForm] = useState({
-    nombre: '', email: '', telefono: '', motivo: '', experiencia: '', redes: '',
+    nombre: '',
+    email: '',
+    telefono: '',
+    motivo: '',
+    experiencia: '',
+    redes: '',
   });
 
-  // Página pública: limpia SW antiguo si existe para que se vean los últimos cambios.
   useEffect(() => {
-    import('@/pwa/registerSW').then(({ ensureNoSWForPublicPage }) =>
-      ensureNoSWForPublicPage()
-    );
+    void import('@/pwa/registerSW')
+      .then(({ ensureNoSWForPublicPage }) => ensureNoSWForPublicPage())
+      .catch((error: unknown) => console.warn('No se pudo validar el Service Worker de la página pública', error));
   }, []);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const calculatedLevel = useMemo(() => levelForCompanies(calcCompanies), [calcCompanies]);
+  const estimatedMonthly = (calcCompanies * calcTicket * calculatedLevel.pct) / 100;
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!form.nombre.trim() || !form.email.trim()) {
       toast.error('Nombre y correo son obligatorios');
       return;
     }
+
     setLoading(true);
-    const fullPhone = form.telefono.trim() ? `${lada} ${form.telefono.trim()}` : null;
-    const { error } = await supabase.from('partner_solicitudes').insert({
-      nombre: form.nombre.trim(),
-      email: form.email.trim().toLowerCase(),
-      telefono: fullPhone,
-      motivo: form.motivo.trim() || null,
-      experiencia: form.experiencia.trim() || null,
-      redes: form.redes.trim() || null,
-    });
-    setLoading(false);
-    if (error) { toast.error(error.message); return; }
+    try {
+      const fullPhone = form.telefono.trim() ? `${lada} ${form.telefono.trim()}` : null;
+      const normalizedEmail = form.email.trim().toLowerCase();
+      const { error } = await supabase.from('partner_solicitudes').insert({
+        nombre: form.nombre.trim(),
+        email: normalizedEmail,
+        telefono: fullPhone,
+        motivo: form.motivo.trim() || null,
+        experiencia: form.experiencia.trim() || null,
+        redes: form.redes.trim() || null,
+      });
+      if (error) throw error;
 
-    // Fire-and-forget WhatsApp welcome message (no bloquea el flujo)
-    if (fullPhone) {
-      supabase.functions.invoke('partner-welcome', {
-        body: {
-          nombre: form.nombre.trim(),
-          telefono: fullPhone,
-          email: form.email.trim().toLowerCase(),
-        },
-      }).catch(() => { /* silent */ });
+      if (fullPhone) {
+        void supabase.functions
+          .invoke('partner-welcome', {
+            body: { nombre: form.nombre.trim(), telefono: fullPhone, email: normalizedEmail },
+          })
+          .then(({ error: welcomeError }) => {
+            if (welcomeError) console.warn('La solicitud se guardó, pero falló el mensaje de bienvenida', welcomeError);
+          })
+          .catch((welcomeError: unknown) => {
+            console.warn('La solicitud se guardó, pero falló el mensaje de bienvenida', welcomeError);
+          });
+      }
+
+      setSent(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo enviar la solicitud';
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
-
-    setSent(true);
   };
 
   return (
     <MarketingShell>
-      <div className="text-gray-900 bg-white -mt-16">
       <Seo
         title="Programa de Partners · Rutapp"
-        description="Únete al programa de partners de Rutapp: comisiones recurrentes, cupones personalizados y dashboard de ventas para socios e integradores."
+        description="Convierte empresas que recomiendas en ingresos recurrentes. Hasta 30% de comisión, cupones propios, panel completo y Sandbox incluido."
         path="/partners"
       />
 
+      <div className="overflow-hidden bg-white text-[#0B1327]">
+        {/* HERO */}
+        <section className="relative isolate min-h-[760px] overflow-hidden border-b border-slate-100 px-5 pb-20 pt-14 sm:px-6 lg:px-8 lg:pb-28 lg:pt-20">
+          <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_15%_20%,rgba(68,91,216,0.13),transparent_32%),radial-gradient(circle_at_82%_20%,rgba(255,107,26,0.12),transparent_30%),linear-gradient(180deg,#fff_0%,#fafbff_100%)]" />
+          <img
+            src={heroImg}
+            alt=""
+            aria-hidden
+            className="absolute right-[-16%] top-[-5%] -z-10 h-[620px] w-[760px] rounded-full object-cover opacity-[0.10] blur-[2px]"
+          />
+          <FloatingDot className="absolute left-[7%] top-36 h-3 w-3 rounded-full bg-indigo-400/50 blur-[1px]" />
+          <FloatingDot className="absolute right-[11%] top-28 h-4 w-4 rounded-full bg-orange-400/50 blur-[1px]" delay={1.2} />
+          <FloatingDot className="absolute right-[30%] top-[42%] h-2 w-2 rounded-full bg-emerald-400/60" delay={2.1} />
 
-      {/* Hero con banner AI */}
-      <section className="relative pt-24 pb-20 px-6 overflow-hidden">
-        {/* Banner imagen de fondo */}
-        <div className="absolute inset-0 -z-10">
-          <img src={heroImg} alt="" width={1920} height={1080} className="w-full h-full object-cover opacity-95" />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.45) 60%, rgba(255,255,255,0.95) 100%)' }} />
-        </div>
+          <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12">
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0, y: 22 }}
+              animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white/90 px-3.5 py-2 text-xs font-bold text-indigo-700 shadow-sm backdrop-blur">
+                <Handshake className="h-4 w-4" /> Programa oficial de Partners Rutapp
+              </div>
+              <h1 className="max-w-3xl text-[44px] font-black leading-[0.98] tracking-[-0.05em] text-[#0B1327] sm:text-6xl lg:text-[72px]">
+                Convierte empresas que recomiendas en{' '}
+                <span className="bg-gradient-to-r from-[#445BD8] via-[#5C5FE4] to-[#FF6B1A] bg-clip-text text-transparent">
+                  ingresos recurrentes.
+                </span>
+              </h1>
+              <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
+                Refiere negocios a Rutapp y gana cada mes mientras sus pagos sigan activos. Nosotros construimos el software; tú construyes una cartera que puede seguir produciendo.
+              </p>
 
-        <div className="max-w-5xl mx-auto text-center pt-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur border border-indigo-100 text-indigo-700 text-xs font-semibold mb-6 shadow-sm">
-            <Sparkles className="h-3.5 w-3.5" /> Programa oficial de Partners Rutapp
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <a
+                  href="#aplicar"
+                  className="group inline-flex h-13 items-center justify-center gap-2 rounded-xl bg-[#0B1327] px-6 text-sm font-bold text-white shadow-[0_14px_40px_-18px_rgba(11,19,39,0.65)] transition-all hover:-translate-y-0.5 hover:bg-[#182440]"
+                >
+                  Aplicar como Partner
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </a>
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-13 items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-white px-6 text-sm font-bold text-emerald-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-emerald-50"
+                >
+                  <MessageCircle className="h-4 w-4" /> Resolver una duda
+                </a>
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
+                {['$0 para entrar', 'Sandbox incluido', 'Atribución permanente'].map((item) => (
+                  <span key={item} className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> {item}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              className="relative mx-auto w-full max-w-[690px]"
+              initial={reduceMotion ? false : { opacity: 0, scale: 0.96, x: 30 }}
+              animate={reduceMotion ? undefined : { opacity: 1, scale: 1, x: 0 }}
+              transition={{ duration: 0.85, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <motion.div
+                className="relative overflow-hidden rounded-[28px] border border-white bg-white/70 p-2 shadow-[0_35px_100px_-35px_rgba(43,58,128,0.45)] backdrop-blur-xl"
+                animate={reduceMotion ? undefined : { y: [0, -8, 0] }}
+                transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <img src={dashboardImg} alt="Dashboard del programa de Partners Rutapp" className="aspect-[1.22/1] w-full rounded-[22px] object-cover" />
+                <div className="pointer-events-none absolute inset-2 rounded-[22px] ring-1 ring-inset ring-black/5" />
+              </motion.div>
+
+              <motion.div
+                className="absolute -bottom-7 -left-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-xl sm:-left-7"
+                animate={reduceMotion ? undefined : { y: [0, 6, 0] }}
+                transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">Comisión potencial</p>
+                <p className="mt-1 text-xl font-black text-[#0B1327]">Hasta 30%</p>
+                <p className="text-xs font-medium text-emerald-600">recurrente</p>
+              </motion.div>
+
+              <motion.div
+                className="absolute -right-2 top-8 hidden rounded-2xl border border-slate-100 bg-white p-4 shadow-xl sm:block"
+                animate={reduceMotion ? undefined : { y: [0, -7, 0] }}
+                transition={{ duration: 5, delay: 0.6, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <DollarSign className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-slate-400">Este mes</p>
+                    <p className="font-black">+$3,420 MXN</p>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
           </div>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.02] mb-6 text-gray-900 drop-shadow-sm">
-            Gana <span style={{ color: PRIMARY }}>comisiones</span><br />
-            <span className="bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${PRIMARY}, ${ACCENT})` }}>recurrentes de por vida</span>
-          </h1>
-          <p className="text-lg md:text-xl text-gray-700 max-w-2xl mx-auto mb-8 font-medium">
-            Refiere empresas a Rutapp y cobra cada mes mientras sigan activas. Crea tus propios cupones, comparte tu link único y administra todo desde tu panel.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-            <a href="#aplicar"
-               className="inline-flex items-center gap-2 px-8 py-4 text-base font-bold text-white rounded-xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition"
-               style={{ background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_DARK})` }}>
-              Aplicar como Partner <ArrowRight className="h-4 w-4" />
-            </a>
-            <a href={WHATSAPP_URL} target="_blank" rel="noreferrer"
-               className="inline-flex items-center gap-2 px-6 py-4 text-base font-semibold rounded-xl border-2 border-emerald-500 text-emerald-700 bg-white hover:bg-emerald-50 transition">
-              <MessageCircle className="h-5 w-5" /> Tengo dudas, escribir por WhatsApp
-            </a>
-          </div>
 
-          {/* Stats strip */}
-          <div className="mt-14 grid grid-cols-3 gap-4 max-w-3xl mx-auto">
+          <Reveal className="mx-auto mt-24 grid max-w-6xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 shadow-sm sm:grid-cols-4">
             {[
-              { v: 'Hasta 30%', l: 'comisión recurrente' },
-              { v: 'De por vida', l: 'mientras paguen' },
-              { v: '0$', l: 'costo de entrada' },
-            ].map((s, i) => (
-              <div key={i} className="bg-white/90 backdrop-blur rounded-2xl px-4 py-5 border border-gray-100 shadow-sm">
-                <div className="text-2xl md:text-3xl font-black" style={{ color: PRIMARY }}>{s.v}</div>
-                <div className="text-xs md:text-sm text-gray-600 mt-1 font-medium">{s.l}</div>
+              { icon: TrendingUp, value: 'Hasta 30%', label: 'comisión recurrente' },
+              { icon: InfinityIcon, value: 'De por vida', label: 'mientras existan pagos elegibles' },
+              { icon: CircleDollarSign, value: '$0', label: 'costo de entrada' },
+              { icon: Beaker, value: 'Sandbox', label: 'incluido al aprobarte' },
+            ].map(({ icon: Icon, value, label }) => (
+              <div key={value} className="bg-white px-5 py-5 sm:px-6">
+                <Icon className="mb-3 h-5 w-5 text-indigo-600" />
+                <p className="text-xl font-black tracking-tight sm:text-2xl">{value}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{label}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
+          </Reveal>
+        </section>
 
-      {/* Beneficios principales */}
-      <section className="py-20 px-6 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3" style={{ background: 'hsl(230,55%,96%)', color: PRIMARY }}>BENEFICIOS</span>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight">Todo lo que necesitas para crecer</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { icon: DollarSign, title: 'Comisión recurrente', text: 'Ganas un % de cada pago mensual de tus referidos. Mientras sigan activos, sigues cobrando.', color: PRIMARY },
-              { icon: Tag, title: 'Cupones a tu marca', text: 'Crea cupones personalizados con descuentos. El descuento sale de tu comisión, tú decides cuánto regalas.', color: ACCENT },
-              { icon: BarChart3, title: 'Panel completo', text: 'Dashboard con tus empresas referidas, comisiones generadas, pagadas y pendientes en tiempo real.', color: PRIMARY },
-              { icon: Link2, title: 'Link único de referido', text: 'Tu link rastreable para compartir en redes, blog o WhatsApp. Atribución automática y permanente.', color: ACCENT },
-              { icon: Wallet, title: 'Pagos puntuales', text: 'Transferencias mensuales una vez superes los $500 MXN acumulados. Sin trabas.', color: PRIMARY },
-              { icon: ShieldCheck, title: 'Atribución de por vida', text: 'Una vez que una empresa es tuya, lo es para siempre. Sin fechas de vencimiento ni letras chicas.', color: ACCENT },
-            ].map((b, i) => (
-              <Card key={i} className="p-6 border-gray-100 hover:shadow-xl hover:-translate-y-1 transition group">
-                <div className="h-12 w-12 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition"
-                     style={{ background: `${b.color}15`, color: b.color }}>
-                  <b.icon className="h-6 w-6" />
-                </div>
-                <h3 className="font-bold text-lg mb-2">{b.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{b.text}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+        {/* VALUE / BUSINESS MODEL */}
+        <section className="px-5 py-24 sm:px-6 lg:px-8 lg:py-32">
+          <div className="mx-auto max-w-7xl">
+            <Reveal>
+              <SectionHeading
+                eyebrow="El modelo"
+                title={<>Una recomendación puede convertirse en <span className="text-[#445BD8]">una cartera.</span></>}
+                description="No es una comisión de una sola venta. El valor está en acumular empresas activas y construir un ingreso mensual que crece contigo."
+                center
+              />
+            </Reveal>
 
-      {/* Panel preview con imagen */}
-      <section className="py-20 px-6" style={{ background: 'linear-gradient(135deg, hsl(230,55%,97%), hsl(25,100%,97%))' }}>
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 bg-white" style={{ color: PRIMARY }}>TU PANEL</span>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-5">
-              Un dashboard pensado para <span style={{ color: PRIMARY }}>partners</span>
-            </h2>
-            <p className="text-lg text-gray-700 mb-6">
-              Controla tu negocio de referidos como un profesional. Mide, optimiza y escala.
-            </p>
-            <ul className="space-y-3">
+            <div className="mt-14 grid gap-5 lg:grid-cols-3">
               {[
-                { icon: Users, t: 'Lista de empresas referidas con su estatus de suscripción.' },
-                { icon: TrendingUp, t: 'Comisiones generadas, pagadas y pendientes mes a mes.' },
-                { icon: Tag, t: 'Crea, edita y desactiva tus cupones en segundos.' },
-                { icon: LineChart, t: 'Reportes con gráficos de crecimiento y conversión.' },
-              ].map((it, i) => (
-                <li key={i} className="flex gap-3 items-start">
-                  <div className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${PRIMARY}15`, color: PRIMARY }}>
-                    <it.icon className="h-4 w-4" />
-                  </div>
-                  <span className="text-gray-700 pt-1">{it.t}</span>
-                </li>
+                { icon: MousePointerClick, number: '01', title: 'Tú abres la puerta', text: 'Compartes tu link, haces una demo o recomiendas Rutapp a una empresa que realmente puede usarlo.' },
+                { icon: Building2, number: '02', title: 'Rutapp opera el producto', text: 'La empresa contrata, usa la plataforma y paga su suscripción. Tú puedes seguir acompañando la relación.' },
+                { icon: TrendingUp, number: '03', title: 'Tu cartera acumula valor', text: 'Cada pago elegible genera la comisión correspondiente a tu nivel. Más empresas activas, mayor porcentaje.' },
+              ].map((item, index) => (
+                <Reveal key={item.number} delay={index * 0.08}>
+                  <motion.div
+                    className="group relative h-full overflow-hidden rounded-3xl border border-slate-200 bg-white p-7 shadow-[0_16px_50px_-34px_rgba(15,23,42,0.35)]"
+                    whileHover={reduceMotion ? undefined : { y: -6 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <div className="absolute right-4 top-1 text-[74px] font-black tracking-[-0.08em] text-slate-50">{item.number}</div>
+                    <div className="relative grid h-11 w-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600">
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="relative mt-8 text-xl font-black tracking-tight">{item.title}</h3>
+                    <p className="relative mt-3 text-sm leading-6 text-slate-600">{item.text}</p>
+                  </motion.div>
+                </Reveal>
               ))}
-            </ul>
-          </div>
-          <div className="relative">
-            <img src={dashboardImg} alt="Panel Partners Rutapp" width={1024} height={1024} loading="lazy"
-                 className="w-full rounded-3xl shadow-2xl" />
-            <div className="absolute -bottom-4 -right-4 bg-white rounded-2xl shadow-xl p-4 border border-gray-100 hidden sm:flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ background: '#10B98115', color: '#10B981' }}>
-                <DollarSign className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="text-[10px] text-gray-500 uppercase font-bold">Este mes</div>
-                <div className="text-lg font-black text-gray-900">+$3,420 MXN</div>
-              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Cupones — con imagen */}
-      <section className="py-20 px-6 bg-white">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-          <div className="md:order-2">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3" style={{ background: `${ACCENT}15`, color: ACCENT }}>CUPONES</span>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-5">
-              Crea cupones <span style={{ color: ACCENT }}>con tu marca</span>
-            </h2>
-            <p className="text-lg text-gray-700 mb-6">
-              Usa cupones como herramienta de venta. Tú eliges cuánto descuento ofrecer y cuánto sacrificas de tu comisión.
-            </p>
-            <Card className="p-6 border-2" style={{ borderColor: `${ACCENT}30`, background: `${ACCENT}05` }}>
-              <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: ACCENT }}>Fórmula</div>
-              <div className="font-mono text-xl md:text-2xl font-bold text-gray-900">
-                (% Partner − % Cupón) × Monto pagado
+        {/* CALCULATOR */}
+        <section className="border-y border-slate-200 bg-[#0B1327] px-5 py-20 text-white sm:px-6 lg:px-8 lg:py-24">
+          <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
+            <Reveal>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-indigo-200">
+                <Calculator className="h-3.5 w-3.5" /> Simulador de potencial
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-white p-3 rounded-lg border border-gray-100">
-                  <div className="text-gray-500 text-xs">Sin cupón</div>
-                  <div className="font-bold">20% × $500 = <span className="text-emerald-600">$100</span></div>
+              <h2 className="mt-5 text-4xl font-black leading-[1.04] tracking-[-0.04em] sm:text-5xl">
+                Visualiza lo que pasa cuando tu cartera crece.
+              </h2>
+              <p className="mt-5 max-w-xl text-base leading-7 text-slate-300">
+                Mueve los controles. El simulador usa los niveles publicados y muestra una estimación simple antes de cupones, bajas, reembolsos o impuestos.
+              </p>
+              <div className="mt-8 grid grid-cols-2 gap-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <p className="text-xs text-slate-400">Nivel estimado</p>
+                  <p className="mt-1 text-2xl font-black" style={{ color: calculatedLevel.tone }}>{calculatedLevel.name}</p>
                 </div>
-                <div className="bg-white p-3 rounded-lg border border-gray-100">
-                  <div className="text-gray-500 text-xs">Con cupón 5%</div>
-                  <div className="font-bold">15% × $475 = <span className="text-emerald-600">$71.25</span></div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <p className="text-xs text-slate-400">Comisión</p>
+                  <p className="mt-1 text-2xl font-black">{calculatedLevel.pct}%</p>
                 </div>
               </div>
-            </Card>
-          </div>
-          <div className="md:order-1 flex justify-center">
-            <img src={couponImg} alt="Cupones Partners" width={1024} height={1024} loading="lazy"
-                 className="w-full max-w-md rounded-3xl" />
-          </div>
-        </div>
-      </section>
+            </Reveal>
 
-      {/* NIVELES — Sube de comisión */}
-      <section className="py-20 px-6" style={{ background: 'linear-gradient(180deg, #ffffff, hsl(230,55%,97%))' }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3" style={{ background: `${ACCENT}15`, color: ACCENT }}>NIVELES DE PARTNER</span>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
-              Sube de nivel, <span style={{ color: PRIMARY }}>gana más</span>
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-              Tu comisión crece con cada empresa activa que refieras. Empiezas en 10% y puedes llegar hasta <strong>30% recurrente</strong>.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {[
-              { emoji: '🥉', nombre: 'Starter',  pct: 10, rango: '1 – 4 empresas',   color: '#CD7F32', bono: null },
-              { emoji: '🥈', nombre: 'Growth',   pct: 15, rango: '5 – 14 empresas',  color: '#9CA3AF', bono: null },
-              { emoji: '🥇', nombre: 'Pro',      pct: 20, rango: '15 – 29 empresas', color: '#FCD34D', bono: '+$500 bono' },
-              { emoji: '💎', nombre: 'Elite',    pct: 25, rango: '30 – 59 empresas', color: '#06B6D4', bono: '+$1,500 bono', popular: true },
-              { emoji: '👑', nombre: 'Legend',   pct: 30, rango: '60+ empresas',     color: '#A855F7', bono: '+$5,000 bono' },
-            ].map((n, i) => (
-              <Card key={i} className="relative p-5 hover:-translate-y-1 transition border-2" style={{ borderColor: n.popular ? n.color : 'transparent', background: n.popular ? `${n.color}08` : 'white' }}>
-                {n.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold text-white shadow whitespace-nowrap" style={{ background: n.color }}>
-                    MÁS POPULAR
-                  </div>
-                )}
-                <div className="text-4xl mb-2">{n.emoji}</div>
-                <div className="font-black text-lg" style={{ color: n.color }}>{n.nombre}</div>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-3xl font-black">{n.pct}%</span>
-                  <span className="text-xs text-gray-500">recurrente</span>
-                </div>
-                <div className="text-xs text-gray-600 mt-2 font-medium">{n.rango}</div>
-                {n.bono && (
-                  <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${n.color}20`, color: n.color }}>
-                    <Gift className="h-3 w-3" /> {n.bono}
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
-
-          <div className="mt-10 grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-            {[
-              { icon: TrendingUp, t: 'Sube automático', d: 'Al cierre de mes, si alcanzas el umbral, subes de nivel solo.' },
-              { icon: ShieldCheck, t: 'Período de gracia', d: 'Si pierdes empresas, mantienes tu nivel 60 días.' },
-              { icon: Rocket, t: 'Aplica al siguiente cobro', d: 'La nueva comisión se usa en las facturas posteriores.' },
-            ].map((it, i) => (
-              <div key={i} className="flex gap-3 bg-white p-4 rounded-xl border border-gray-100">
-                <div className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${PRIMARY}15`, color: PRIMARY }}>
-                  <it.icon className="h-4 w-4" />
-                </div>
+            <Reveal delay={0.08}>
+              <div className="rounded-[28px] border border-white/10 bg-white/[0.06] p-6 shadow-2xl backdrop-blur sm:p-8">
                 <div>
-                  <div className="font-bold text-sm">{it.t}</div>
-                  <div className="text-xs text-gray-600 mt-0.5">{it.d}</div>
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-300">Empresas activas referidas</p>
+                      <p className="mt-1 text-3xl font-black">{calcCompanies}</p>
+                    </div>
+                    <p className="text-xs text-slate-400">1–80</p>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={80}
+                    value={calcCompanies}
+                    onChange={(event) => setCalcCompanies(Number(event.target.value))}
+                    className="mt-5 w-full accent-[#6C7CF0]"
+                    aria-label="Empresas activas referidas"
+                  />
+                </div>
+
+                <div className="mt-7 border-t border-white/10 pt-7">
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-300">Pago mensual promedio ilustrativo</p>
+                      <p className="mt-1 text-3xl font-black">{money(calcTicket)}</p>
+                    </div>
+                    <p className="text-xs text-slate-400">$300–$2,000</p>
+                  </div>
+                  <input
+                    type="range"
+                    min={300}
+                    max={2000}
+                    step={50}
+                    value={calcTicket}
+                    onChange={(event) => setCalcTicket(Number(event.target.value))}
+                    className="mt-5 w-full accent-[#FF7C35]"
+                    aria-label="Pago mensual promedio ilustrativo"
+                  />
+                </div>
+
+                <div className="mt-8 rounded-2xl bg-white p-5 text-[#0B1327] sm:p-6">
+                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Comisión mensual estimada</p>
+                  <motion.p
+                    key={estimatedMonthly}
+                    initial={reduceMotion ? false : { opacity: 0.4, y: 6 }}
+                    animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                    className="mt-2 text-4xl font-black tracking-[-0.04em] sm:text-5xl"
+                  >
+                    {money(estimatedMonthly)}
+                  </motion.p>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    Ejemplo orientativo: {calcCompanies} empresas × {money(calcTicket)} × {calculatedLevel.pct}%. No constituye promesa de ingresos.
+                  </p>
                 </div>
               </div>
-            ))}
+            </Reveal>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Cómo empezar — pasos */}
-      <section className="py-20 px-6" style={{ background: 'hsl(230, 55%, 97%)' }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 bg-white" style={{ color: PRIMARY }}>PROCESO</span>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight">Empezar es <span style={{ color: PRIMARY }}>muy fácil</span></h2>
-          </div>
-          <div className="grid md:grid-cols-4 gap-6">
-            {[
-              { n: '1', icon: Rocket, t: 'Aplica', d: 'Llena el formulario o escríbenos por WhatsApp.' },
-              { n: '2', icon: ShieldCheck, t: 'Aprobamos', d: 'Revisamos en 1-3 días y te damos acceso.' },
-              { n: '3', icon: Gift, t: 'Comparte', d: 'Usa tu link único y crea tus cupones.' },
-              { n: '4', icon: Wallet, t: 'Cobra', d: 'Recibe tu comisión cada mes por transferencia.' },
-            ].map((s, i) => (
-              <div key={i} className="relative">
-                <Card className="p-6 h-full border-gray-100 bg-white hover:shadow-lg transition">
-                  <div className="absolute -top-3 -left-3 h-9 w-9 rounded-full flex items-center justify-center text-white font-black text-sm shadow-lg"
-                       style={{ background: `linear-gradient(135deg, ${PRIMARY}, ${ACCENT})` }}>
-                    {s.n}
-                  </div>
-                  <s.icon className="h-7 w-7 mb-3" style={{ color: PRIMARY }} />
-                  <h3 className="font-bold text-lg mb-1">{s.t}</h3>
-                  <p className="text-sm text-gray-600">{s.d}</p>
-                </Card>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        {/* BENEFITS */}
+        <section className="px-5 py-24 sm:px-6 lg:px-8 lg:py-32">
+          <div className="mx-auto max-w-7xl">
+            <Reveal>
+              <SectionHeading
+                eyebrow="Tu sistema de ventas"
+                title={<>No sólo te damos una comisión. Te damos <span className="text-[#445BD8]">herramientas para vender.</span></>}
+                description="Todo lo esencial para prospectar, atribuir, medir y cobrar sin trabajar con hojas sueltas o cálculos improvisados."
+              />
+            </Reveal>
 
-      {/* Políticas */}
-      <section className="py-20 px-6 bg-white">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-10">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3" style={{ background: 'hsl(230,55%,96%)', color: PRIMARY }}>REGLAS DEL JUEGO</span>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight">Políticas del programa</h2>
-          </div>
-          <div className="space-y-3">
-            {[
-              'Atribución por link único de referido o cupón al momento del registro. La empresa queda asignada de forma permanente al partner.',
-              'Las comisiones se generan únicamente sobre pagos efectivamente cobrados (suscripción mensual). Pagos cancelados o reembolsados no generan comisión.',
-              'El cupón nunca puede ser mayor que tu porcentaje de comisión. Si lo iguala, tu comisión en esa venta es cero.',
-              'Los pagos a partners se hacen manualmente vía transferencia, mínimo $500 MXN acumulados, una vez al mes.',
-              'Un usuario sólo puede tener un rol: o eres cliente de Rutapp, o eres Partner. No ambos con el mismo correo.',
-              'No está permitido aplicar tu propio cupón a una empresa que tú mismo controles (autoreferido). Estas comisiones se cancelan.',
-              'Rutapp se reserva el derecho de suspender o dar de baja partners que incumplan estas políticas o realicen prácticas engañosas.',
-              'El programa puede cambiar términos con aviso previo de 30 días para partners activos.',
-            ].map((p, i) => (
-              <div key={i} className="flex gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: PRIMARY }} />
-                <p className="text-sm text-gray-700">{p}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Sandbox Partner */}
-      <section className="py-20 px-6 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider mb-3">
-              🧪 Exclusivo Partners
+            <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {BENEFITS.map((benefit, index) => (
+                <Reveal key={benefit.title} delay={(index % 3) * 0.06}>
+                  <motion.article
+                    whileHover={reduceMotion ? undefined : { y: -5 }}
+                    className="group h-full rounded-2xl border border-slate-200 bg-white p-6 transition-shadow hover:shadow-[0_20px_50px_-32px_rgba(68,91,216,0.45)]"
+                  >
+                    <div className="grid h-11 w-11 place-items-center rounded-xl bg-slate-50 text-[#445BD8] transition-all group-hover:bg-indigo-50 group-hover:scale-105">
+                      <benefit.icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="mt-5 text-lg font-black tracking-tight">{benefit.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{benefit.text}</p>
+                  </motion.article>
+                </Reveal>
+              ))}
             </div>
-            <h2 className="text-3xl md:text-4xl font-black mb-3">Pruébalo antes de promocionarlo</h2>
-            <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
-              Al aprobarte como Partner recibes un <strong>Sandbox personal</strong> con todo Rutapp desbloqueado. Aprende el sistema, ensaya demos y resuelve dudas básicas de tus referidos sin necesidad de tu propia suscripción.
-            </p>
           </div>
+        </section>
 
-          <div className="rounded-3xl p-8 md:p-10 border-2 border-orange-200 bg-gradient-to-br from-orange-50 via-white to-amber-50 shadow-xl">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div>
-                <h3 className="text-2xl font-black mb-4 text-gray-900">¿Qué incluye tu Sandbox?</h3>
-                <ul className="space-y-3 text-sm">
-                  {[
-                    'Hasta 10 clientes de prueba',
-                    'Hasta 20 productos en tu catálogo',
-                    'Hasta 50 ventas registradas',
-                    'POS, App Móvil, Logística y Reportes activos',
-                    'Permanente mientras seas Partner activo',
-                  ].map((t) => (
-                    <li key={t} className="flex items-start gap-2">
-                      <div className="h-5 w-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">✓</div>
-                      <span className="text-gray-700">{t}</span>
-                    </li>
+        {/* DASHBOARD */}
+        <section className="relative overflow-hidden bg-[#F6F7FD] px-5 py-24 sm:px-6 lg:px-8 lg:py-32">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-200 to-transparent" />
+          <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.8fr_1.2fr]">
+            <Reveal>
+              <SectionHeading
+                eyebrow="Tu panel"
+                title={<>Tu negocio de referidos, <span className="text-[#445BD8]">visible de verdad.</span></>}
+                description="No tienes que preguntarnos cuánto llevas. El panel concentra las empresas que referiste, su avance y el dinero que se está generando."
+              />
+              <div className="mt-8 space-y-4">
+                {[
+                  { icon: Users, text: 'Empresas referidas y estado de suscripción.' },
+                  { icon: LineChart, text: 'Comisiones generadas, pendientes y pagadas mes a mes.' },
+                  { icon: Tag, text: 'Cupones creados, uso y control desde tu cuenta.' },
+                  { icon: TrendingUp, text: 'Gráficas para entender crecimiento y conversión.' },
+                ].map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    {text}
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+
+            <Reveal delay={0.08}>
+              <motion.div
+                className="relative"
+                whileHover={reduceMotion ? undefined : { scale: 1.012 }}
+                transition={{ duration: 0.35 }}
+              >
+                <div className="absolute -inset-8 -z-10 rounded-full bg-indigo-300/20 blur-3xl" />
+                <img
+                  src={dashboardImg}
+                  alt="Panel de Partners Rutapp con empresas referidas, comisiones y gráficas"
+                  loading="lazy"
+                  className="w-full rounded-[28px] border border-white shadow-[0_35px_90px_-36px_rgba(54,67,139,0.42)]"
+                />
+                <motion.div
+                  className="absolute -bottom-7 left-5 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-xl sm:left-auto sm:right-5"
+                  animate={reduceMotion ? undefined : { y: [0, -7, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Comisión este mes</p>
+                  <p className="mt-1 text-xl font-black text-emerald-600">+$3,420 MXN</p>
+                </motion.div>
+              </motion.div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* LEVELS */}
+        <section className="px-5 py-24 sm:px-6 lg:px-8 lg:py-32">
+          <div className="mx-auto max-w-7xl">
+            <Reveal>
+              <SectionHeading
+                eyebrow="Niveles"
+                title={<>Tu porcentaje no se queda quieto. <span className="text-[#445BD8]">Crece contigo.</span></>}
+                description="El nivel se determina por empresas activas. Alcanzas el siguiente umbral y la nueva comisión se utiliza en cobros posteriores."
+                center
+              />
+            </Reveal>
+
+            <div className="mt-14 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {PARTNER_LEVELS.map((level, index) => (
+                <Reveal key={level.name} delay={index * 0.055}>
+                  <motion.article
+                    whileHover={reduceMotion ? undefined : { y: -7 }}
+                    className={`relative h-full overflow-hidden rounded-2xl border bg-white p-5 ${level.featured ? 'border-cyan-400 shadow-[0_20px_55px_-30px_rgba(6,175,201,0.55)]' : 'border-slate-200'}`}
+                  >
+                    {level.featured && (
+                      <div className="absolute right-0 top-0 rounded-bl-xl bg-cyan-500 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white">
+                        Más popular
+                      </div>
+                    )}
+                    <div className="text-3xl">{level.icon}</div>
+                    <h3 className="mt-4 font-black" style={{ color: level.tone }}>{level.name}</h3>
+                    <div className="mt-3 flex items-end gap-1">
+                      <span className="text-4xl font-black tracking-[-0.04em]">{level.pct}%</span>
+                      <span className="pb-1 text-xs text-slate-400">recurrente</span>
+                    </div>
+                    <p className="mt-3 text-xs font-semibold text-slate-500">{level.range}</p>
+                    {level.bonus && (
+                      <div className="mt-4 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold" style={{ color: level.tone, backgroundColor: `${level.tone}14` }}>
+                        <Gift className="h-3 w-3" /> {level.bonus}
+                      </div>
+                    )}
+                  </motion.article>
+                </Reveal>
+              ))}
+            </div>
+
+            <div className="mt-7 grid gap-3 md:grid-cols-3">
+              {[
+                { icon: TrendingUp, title: 'Sube automático', text: 'Al cierre de mes, si alcanzas el umbral, el sistema reconoce tu nuevo nivel.' },
+                { icon: ShieldCheck, title: '60 días de gracia', text: 'Si pierdes empresas, conservas temporalmente tu nivel antes de una posible baja.' },
+                { icon: Rocket, title: 'Aplica a cobros posteriores', text: 'La nueva tasa se utiliza en las facturas elegibles que ocurren después del cambio.' },
+              ].map(({ icon: Icon, title, text }, index) => (
+                <Reveal key={title} delay={index * 0.06}>
+                  <div className="flex h-full gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                    <Icon className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" />
+                    <div>
+                      <p className="text-sm font-black">{title}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-600">{text}</p>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* COUPONS */}
+        <section className="overflow-hidden border-y border-orange-100 bg-[#FFF9F5] px-5 py-24 sm:px-6 lg:px-8 lg:py-32">
+          <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2">
+            <Reveal className="order-2 lg:order-1">
+              <motion.div className="relative mx-auto max-w-[520px]" whileHover={reduceMotion ? undefined : { rotate: -1.2, scale: 1.02 }}>
+                <div className="absolute inset-12 -z-10 rounded-full bg-orange-300/25 blur-3xl" />
+                <img src={couponImg} alt="Cupones personalizados para Partners Rutapp" loading="lazy" className="w-full rounded-[28px]" />
+              </motion.div>
+            </Reveal>
+
+            <Reveal className="order-1 lg:order-2" delay={0.06}>
+              <SectionHeading
+                eyebrow="Cupones"
+                title={<>Convierte parte de tu comisión en <span className="text-[#FF6B1A]">una herramienta de cierre.</span></>}
+                description="El descuento no sale de una caja negra: sale de tu porcentaje. Tú eliges cuánto ofrecer y el cálculo permanece visible."
+              />
+
+              <div className="mt-8 overflow-hidden rounded-2xl border border-orange-200 bg-white shadow-sm">
+                <div className="border-b border-orange-100 bg-orange-50 px-5 py-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-orange-600">Fórmula</p>
+                  <p className="mt-1 font-mono text-lg font-black sm:text-xl">(% Partner − % Cupón) × Monto pagado</p>
+                </div>
+                <div className="grid gap-px bg-slate-200 sm:grid-cols-2">
+                  <div className="bg-white p-5">
+                    <p className="text-xs text-slate-400">Sin cupón</p>
+                    <p className="mt-2 font-bold">20% × $500 = <span className="text-emerald-600">$100</span></p>
+                  </div>
+                  <div className="bg-white p-5">
+                    <p className="text-xs text-slate-400">Con cupón 5%</p>
+                    <p className="mt-2 font-bold">15% × $475 = <span className="text-emerald-600">$71.25</span></p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* SANDBOX */}
+        <section className="px-5 py-24 sm:px-6 lg:px-8 lg:py-32">
+          <div className="mx-auto max-w-7xl">
+            <Reveal>
+              <div className="relative overflow-hidden rounded-[32px] bg-[#101A35] p-7 text-white shadow-[0_35px_90px_-45px_rgba(16,26,53,0.7)] sm:p-10 lg:p-14">
+                <div className="absolute -right-24 -top-32 h-96 w-96 rounded-full bg-orange-500/20 blur-3xl" />
+                <div className="absolute -bottom-36 left-[30%] h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
+                <div className="relative grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-300/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-orange-200">
+                      <Beaker className="h-3.5 w-3.5" /> Exclusivo Partners
+                    </div>
+                    <h2 className="mt-5 text-4xl font-black leading-[1.04] tracking-[-0.04em] sm:text-5xl">
+                      No promociones algo que no conoces. <span className="text-orange-400">Pruébalo primero.</span>
+                    </h2>
+                    <p className="mt-5 max-w-xl text-base leading-7 text-slate-300">
+                      Al aprobarte recibes un Sandbox personal para aprender Rutapp, preparar demos y responder preguntas básicas sin contratar una cuenta productiva.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur">
+                      <p className="text-xs font-black uppercase tracking-[0.13em] text-emerald-300">Incluye</p>
+                      <ul className="mt-4 space-y-3 text-sm text-slate-200">
+                        {['Hasta 10 clientes de prueba', 'Hasta 20 productos', 'Hasta 50 ventas', 'POS, App Móvil, Logística y Reportes', 'Activo mientras seas Partner'].map((item) => (
+                          <li key={item} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur">
+                      <p className="text-xs font-black uppercase tracking-[0.13em] text-orange-300">No es una cuenta productiva</p>
+                      <p className="mt-4 text-sm leading-6 text-slate-300">El Sandbox es tu laboratorio. Tiene límites deliberados para demos y aprendizaje.</p>
+                      <ul className="mt-4 space-y-2 text-sm text-slate-300">
+                        <li>— Sin facturación CFDI</li>
+                        <li>— Sin envíos masivos de WhatsApp</li>
+                        <li>— Sin catálogo público compartible</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* PROCESS */}
+        <section className="bg-[#F7F8FC] px-5 py-24 sm:px-6 lg:px-8 lg:py-28">
+          <div className="mx-auto max-w-7xl">
+            <Reveal>
+              <SectionHeading eyebrow="Cómo empezar" title={<>De “me interesa” a tu primer referido en <span className="text-[#445BD8]">cuatro pasos.</span></>} center />
+            </Reveal>
+            <div className="relative mt-14 grid gap-4 md:grid-cols-4">
+              <div className="absolute left-[12%] right-[12%] top-7 hidden h-px bg-gradient-to-r from-indigo-200 via-orange-200 to-indigo-200 md:block" />
+              {PROCESS.map((item, index) => (
+                <Reveal key={item.step} delay={index * 0.08}>
+                  <div className="relative h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="relative z-10 grid h-14 w-14 place-items-center rounded-2xl bg-[#0B1327] text-white shadow-lg">
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    <p className="mt-6 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-500">Paso {item.step}</p>
+                    <h3 className="mt-2 text-xl font-black">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.text}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ + POLICIES */}
+        <section className="px-5 py-24 sm:px-6 lg:px-8 lg:py-32">
+          <div className="mx-auto grid max-w-7xl gap-16 lg:grid-cols-[1fr_0.9fr]">
+            <div>
+              <Reveal>
+                <SectionHeading eyebrow="Preguntas frecuentes" title={<>Lo importante, <span className="text-[#445BD8]">sin letra chiquita.</span></>} />
+              </Reveal>
+              <div className="mt-9 divide-y divide-slate-200 border-y border-slate-200">
+                {FAQS.map((faq, index) => {
+                  const isOpen = openFaq === index;
+                  return (
+                    <div key={faq.q}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenFaq(isOpen ? null : index)}
+                        className="flex w-full items-center justify-between gap-5 py-5 text-left"
+                        aria-expanded={isOpen}
+                      >
+                        <span className="font-bold text-[#0B1327]">{faq.q}</span>
+                        <motion.span animate={reduceMotion ? undefined : { rotate: isOpen ? 180 : 0 }}>
+                          <ChevronDown className="h-4 w-4 text-slate-400" />
+                        </motion.span>
+                      </button>
+                      <motion.div
+                        initial={false}
+                        animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.28 }}
+                        className="overflow-hidden"
+                      >
+                        <p className="max-w-2xl pb-5 pr-8 text-sm leading-6 text-slate-600">{faq.a}</p>
+                      </motion.div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Reveal delay={0.08}>
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 sm:p-8">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.13em] text-slate-400">Reglas del programa</p>
+                    <h3 className="text-xl font-black">Políticas claras desde el inicio</h3>
+                  </div>
+                </div>
+                <div className="mt-6 space-y-3">
+                  {POLICIES.map((policy) => (
+                    <div key={policy} className="flex gap-3 rounded-xl bg-white p-3.5 text-xs leading-5 text-slate-600 ring-1 ring-slate-200">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
+                      {policy}
+                    </div>
                   ))}
-                </ul>
-              </div>
-              <div className="bg-white rounded-2xl p-6 border border-orange-100">
-                <h4 className="text-sm font-bold text-orange-700 uppercase tracking-wider mb-3">¿Por qué con límites?</h4>
-                <p className="text-sm text-gray-600 mb-4">
-                  Para que ningún Partner use el Sandbox como sistema productivo gratis. Tu sandbox es tu <strong>laboratorio</strong>: aquí pruebas todo, pero los clientes reales necesitan su propia cuenta Rutapp.
-                </p>
-                <div className="text-xs text-gray-500 space-y-1">
-                  <div>❌ Sin facturación CFDI</div>
-                  <div>❌ Sin envíos masivos de WhatsApp</div>
-                  <div>❌ Sin catálogo público compartible</div>
                 </div>
               </div>
-            </div>
+            </Reveal>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA WhatsApp */}
-      <section className="py-16 px-6">
-        <div className="max-w-4xl mx-auto rounded-3xl p-8 md:p-12 text-center text-white shadow-2xl"
-             style={{ background: `linear-gradient(135deg, #10B981, #059669)` }}>
-          <MessageCircle className="h-12 w-12 mx-auto mb-4" />
-          <h2 className="text-3xl md:text-4xl font-black mb-3">¿Tienes dudas antes de aplicar?</h2>
-          <p className="text-emerald-50 mb-6 text-lg">Escríbenos directo por WhatsApp y te respondemos personalmente.</p>
-          <a href={WHATSAPP_URL} target="_blank" rel="noreferrer"
-             className="inline-flex items-center gap-2 px-8 py-4 bg-white text-emerald-700 rounded-xl font-bold text-base shadow-lg hover:scale-105 transition">
-            <MessageCircle className="h-5 w-5" /> Hablar por WhatsApp
-          </a>
-        </div>
-      </section>
-
-      {/* Form */}
-      <section id="aplicar" className="py-20 px-6 bg-gray-50">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-10">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl mb-4 shadow-lg"
-                 style={{ background: `linear-gradient(135deg, ${PRIMARY}, ${ACCENT})`, color: 'white' }}>
-              <Handshake className="h-7 w-7" />
-            </div>
-            <h2 className="text-3xl md:text-5xl font-black mb-3">Aplica para ser Partner</h2>
-            <p className="text-gray-600">Revisamos cada solicitud manualmente. Te avisaremos por correo cuando sea aprobada.</p>
-          </div>
-
-          {sent ? (
-            <Card className="p-10 text-center border-emerald-200 bg-emerald-50">
-              <CheckCircle2 className="h-14 w-14 text-emerald-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold mb-2">¡Solicitud enviada!</h3>
-              <p className="text-gray-700 mb-6">Te enviaremos un correo cuando tu solicitud sea revisada (normalmente en 1-3 días).</p>
-              <Link to="/" className="text-sm font-semibold underline" style={{ color: PRIMARY }}>Volver al inicio</Link>
-            </Card>
-          ) : (
-            <Card className="p-8 shadow-xl border-gray-100">
-              <form onSubmit={submit} className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Nombre completo *</Label>
-                    <Input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
-                  </div>
-                  <div>
-                    <Label>Correo electrónico *</Label>
-                    <Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-                  </div>
-                </div>
-                <div>
-                  <Label>Teléfono / WhatsApp</Label>
-                  <div className="flex gap-2">
-                    <select
-                      value={lada}
-                      onChange={e => setLada(e.target.value)}
-                      className="h-10 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[130px]"
-                      aria-label="Lada"
-                    >
-                      {LADAS.map((l, i) => (
-                        <option key={`${l.code}-${i}`} value={l.code}>{l.flag} {l.name} ({l.code})</option>
-                      ))}
-                    </select>
-                    <Input
-                      type="tel"
-                      value={form.telefono}
-                      onChange={e => setForm({ ...form, telefono: e.target.value.replace(/[^0-9 ]/g, '') })}
-                      placeholder="55 1234 5678"
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label>¿Por qué quieres ser Partner?</Label>
-                  <Textarea rows={3} value={form.motivo} onChange={e => setForm({ ...form, motivo: e.target.value })}
-                    placeholder="Cuéntanos qué te motiva, a quién planeas referir..." />
-                </div>
-                <div>
-                  <Label>Experiencia previa</Label>
-                  <Textarea rows={2} value={form.experiencia} onChange={e => setForm({ ...form, experiencia: e.target.value })}
-                    placeholder="¿Vendes software? ¿Eres consultor? ¿Tienes una agencia?" />
-                </div>
-                <div>
-                  <Label>Redes / Sitio web</Label>
-                  <Input value={form.redes} onChange={e => setForm({ ...form, redes: e.target.value })} placeholder="@usuario, link, etc." />
-                </div>
-                <Button type="submit" disabled={loading} className="w-full h-12 text-base font-bold text-white shadow-lg"
-                        style={{ background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_DARK})` }}>
-                  {loading ? 'Enviando...' : 'Enviar solicitud'}
-                </Button>
-                <p className="text-xs text-gray-500 text-center">
-                  ¿Prefieres preguntar primero?{' '}
-                  <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="text-emerald-700 font-semibold underline">
-                    Escríbenos por WhatsApp
+        {/* FINAL CTA */}
+        <section className="px-5 pb-10 sm:px-6 lg:px-8">
+          <Reveal className="mx-auto max-w-7xl">
+            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#445BD8] via-[#445BD8] to-[#FF6B1A] px-7 py-12 text-center text-white shadow-[0_28px_80px_-35px_rgba(68,91,216,0.65)] sm:px-10 lg:py-16">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(255,255,255,.18),transparent_25%),radial-gradient(circle_at_90%_80%,rgba(255,255,255,.12),transparent_30%)]" />
+              <div className="relative mx-auto max-w-3xl">
+                <Trophy className="mx-auto h-9 w-9 text-white/90" />
+                <h2 className="mt-5 text-3xl font-black tracking-[-0.04em] sm:text-5xl">Tu próxima recomendación puede ser el inicio de una cartera.</h2>
+                <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-white/80">Aplica al programa o pregúntanos primero. No necesitas pagar para empezar.</p>
+                <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+                  <a href="#aplicar" className="group inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-black text-[#0B1327] shadow-lg transition hover:-translate-y-0.5">
+                    Aplicar como Partner <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </a>
-                </p>
-              </form>
-            </Card>
-          )}
-        </div>
-      </section>
+                  <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/35 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20">
+                    <MessageCircle className="h-4 w-4" /> Hablar por WhatsApp
+                  </a>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </section>
 
-      {/* Floating WhatsApp */}
-      <a href={WHATSAPP_URL} target="_blank" rel="noreferrer"
-         className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-2xl hover:scale-110 transition"
-         aria-label="WhatsApp">
-        <MessageCircle className="h-7 w-7" />
-      </a>
+        {/* APPLICATION FORM */}
+        <section id="aplicar" className="scroll-mt-20 bg-[#F7F8FC] px-5 py-24 sm:px-6 lg:px-8 lg:py-28">
+          <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <Reveal>
+              <div className="lg:sticky lg:top-24">
+                <div className="grid h-13 w-13 place-items-center rounded-2xl bg-[#0B1327] text-white shadow-lg">
+                  <Handshake className="h-6 w-6" />
+                </div>
+                <h2 className="mt-6 text-4xl font-black leading-[1.05] tracking-[-0.04em] sm:text-5xl">Aplica para ser Partner.</h2>
+                <p className="mt-4 max-w-md text-base leading-7 text-slate-600">Revisamos cada solicitud manualmente. Si tu perfil encaja, recibirás acceso al panel y a tu Sandbox.</p>
+                <div className="mt-7 space-y-3 text-sm text-slate-600">
+                  <p className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-indigo-600" /> Revisión habitual en 1–3 días.</p>
+                  <p className="flex items-center gap-2"><Globe2 className="h-4 w-4 text-indigo-600" /> Programa abierto a múltiples países.</p>
+                  <p className="flex items-center gap-2"><Zap className="h-4 w-4 text-indigo-600" /> Sin costo de activación.</p>
+                </div>
+              </div>
+            </Reveal>
+
+            <Reveal delay={0.06}>
+              {sent ? (
+                <div className="rounded-3xl border border-emerald-200 bg-white p-10 text-center shadow-sm">
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-50 text-emerald-600">
+                    <CheckCircle2 className="h-8 w-8" />
+                  </div>
+                  <h3 className="mt-5 text-2xl font-black">Solicitud enviada</h3>
+                  <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">Te avisaremos por correo cuando revisemos tu solicitud. Normalmente ocurre en 1–3 días.</p>
+                  <Link to="/" className="mt-6 inline-flex text-sm font-bold text-indigo-600 hover:underline">Volver al inicio</Link>
+                </div>
+              ) : (
+                <form onSubmit={submit} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.4)] sm:p-8">
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="partner-name">Nombre completo *</Label>
+                      <Input id="partner-name" value={form.nombre} onChange={(event) => setForm((current) => ({ ...current, nombre: event.target.value }))} required className="mt-1.5 h-11" autoComplete="name" />
+                    </div>
+                    <div>
+                      <Label htmlFor="partner-email">Correo electrónico *</Label>
+                      <Input id="partner-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required className="mt-1.5 h-11" autoComplete="email" />
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <Label htmlFor="partner-phone">Teléfono / WhatsApp</Label>
+                    <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
+                      <select
+                        value={lada}
+                        onChange={(event) => setLada(event.target.value)}
+                        className="h-11 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring sm:w-[205px]"
+                        aria-label="Código de país"
+                      >
+                        {LADAS.map((option, index) => (
+                          <option key={`${option.code}-${option.name}-${index}`} value={option.code}>{option.flag} {option.name} ({option.code})</option>
+                        ))}
+                      </select>
+                      <Input
+                        id="partner-phone"
+                        type="tel"
+                        value={form.telefono}
+                        onChange={(event) => setForm((current) => ({ ...current, telefono: event.target.value.replace(/[^0-9 ]/g, '') }))}
+                        placeholder="55 1234 5678"
+                        className="h-11 flex-1"
+                        autoComplete="tel"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <Label htmlFor="partner-why">¿Por qué quieres ser Partner?</Label>
+                    <Textarea id="partner-why" rows={3} value={form.motivo} onChange={(event) => setForm((current) => ({ ...current, motivo: event.target.value }))} placeholder="Cuéntanos qué te motiva y a quién planeas referir..." className="mt-1.5" />
+                  </div>
+
+                  <div className="mt-5">
+                    <Label htmlFor="partner-experience">Experiencia previa</Label>
+                    <Textarea id="partner-experience" rows={3} value={form.experiencia} onChange={(event) => setForm((current) => ({ ...current, experiencia: event.target.value }))} placeholder="¿Vendes software? ¿Eres consultor? ¿Tienes una agencia o comunidad?" className="mt-1.5" />
+                  </div>
+
+                  <div className="mt-5">
+                    <Label htmlFor="partner-social">Redes / sitio web</Label>
+                    <Input id="partner-social" value={form.redes} onChange={(event) => setForm((current) => ({ ...current, redes: event.target.value }))} placeholder="@usuario, https://..., etc." className="mt-1.5 h-11" />
+                  </div>
+
+                  <Button type="submit" disabled={loading} className="mt-7 h-12 w-full bg-[#0B1327] text-base font-black text-white hover:bg-[#182440]">
+                    {loading ? 'Enviando solicitud...' : 'Enviar solicitud'}
+                  </Button>
+                  <p className="mt-4 text-center text-xs text-slate-500">
+                    ¿Prefieres preguntar primero?{' '}
+                    <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="font-bold text-emerald-700 hover:underline">Escríbenos por WhatsApp</a>
+                  </p>
+                </form>
+              )}
+            </Reveal>
+          </div>
+        </section>
+
+        <motion.a
+          href={WHATSAPP_URL}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Hablar por WhatsApp"
+          className="fixed bottom-5 right-5 z-50 grid h-14 w-14 place-items-center rounded-full bg-emerald-500 text-white shadow-[0_14px_35px_-10px_rgba(16,185,129,0.65)]"
+          whileHover={reduceMotion ? undefined : { scale: 1.08, y: -2 }}
+          whileTap={reduceMotion ? undefined : { scale: 0.96 }}
+        >
+          <MessageCircle className="h-6 w-6" />
+        </motion.a>
       </div>
     </MarketingShell>
   );
