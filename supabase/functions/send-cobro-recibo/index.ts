@@ -97,15 +97,11 @@ Deno.serve(async (req) => {
 
   // Fire both channels in parallel
   const emailPromise = cliente.email
-    ? supabase.functions.invoke('send-transactional-email', {
-        body: {
-          templateName: 'cobro-recibo',
-          recipientEmail: cliente.email,
-          idempotencyKey: `cobro-recibo-${cobro_id}`,
-          templateData,
-        },
+    ? sendAppEmail('cobro-recibo', cliente.email, {
+        idempotencyKey: `cobro-recibo-${cobro_id}`,
+        templateData,
       })
-    : Promise.resolve({ data: { skipped: 'no_email' }, error: null } as any)
+    : Promise.resolve({ sent: false, reason: 'no_email' } as any)
 
   const waMessage =
     `Hola ${cliente.nombre || ''}, recibimos tu pago por ${montoFmt} (${fechaFmt}).` +
