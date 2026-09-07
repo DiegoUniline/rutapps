@@ -128,16 +128,23 @@ Deno.serve(async (req) => {
 
   const [emailRes, waRes] = await Promise.allSettled([emailPromise, waPromise])
 
-  const emailStatus = emailRes.status === 'fulfilled'
-    ? ((emailRes.value as any)?.error ? 'failed' : (cliente.email ? 'sent' : 'skipped'))
-    : 'failed'
+  const emailValue = emailRes.status === 'fulfilled' ? (emailRes.value as any) : null
+  const emailStatus = !cliente.email
+    ? 'skipped'
+    : emailRes.status !== 'fulfilled'
+      ? 'failed'
+      : emailValue?.sent
+        ? 'sent'
+        : emailValue?.reason === 'recipient_suppressed'
+          ? 'skipped'
+          : 'failed'
   const waStatus = waRes.status === 'fulfilled'
     ? ((waRes.value as any)?.error ? 'failed' : (cliente.telefono ? 'sent' : 'skipped'))
     : 'failed'
 
   const errors: string[] = []
   if (emailStatus === 'failed') {
-    const e = emailRes.status === 'fulfilled' ? (emailRes.value as any)?.error : emailRes.reason
+    const e = emailRes.status === 'fulfilled' ? emailValue?.error : emailRes.reason
     errors.push(`email: ${e?.message || String(e)}`)
   }
   if (waStatus === 'failed') {
