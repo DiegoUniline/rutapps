@@ -17,6 +17,11 @@ export interface CommissionCompany {
   id: string;
   nombre: string;
   created_at: string;
+  subscriptions?: Array<{
+    status: string | null;
+    current_period_end: string | null;
+    trial_ends_at: string | null;
+  }>;
 }
 
 export interface CommissionAttribution {
