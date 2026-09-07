@@ -161,7 +161,6 @@ const CatalogoPublicoPage = lazy(() => import("@/pages/CatalogoPublicoPage"));
 const PagarPage = lazy(() => import("@/pages/PagarPage"));
 const FacturaRedirectPage = lazy(() => import("@/pages/FacturaRedirectPage"));
 const EstadoCuentaPublicoPage = lazy(() => import("@/pages/EstadoCuentaPublicoPage"));
-const UnsubscribePage = lazy(() => import("@/pages/UnsubscribePage"));
 const PartnersLandingPage = lazy(() => import("@/pages/PartnersLandingPage"));
 const PartnerTermsPage = lazy(() => import("@/pages/PartnerTermsPage"));
 const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
@@ -452,7 +451,6 @@ function AuthenticatedAppRoutes() {
           <Route path="/factura/:folio" element={<FacturaRedirectPage />} />
           <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />
           <Route path="/cotizacion/:token" element={<CotizacionPublicaPage />} />
-          <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/partners" element={<PartnersLandingPage />} />
           <Route path="/partners/terminos" element={<PartnerTermsPage />} />
           <Route path="/tutoriales" element={<TutorialesPage />} />
@@ -893,7 +891,6 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
 
       <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
       <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />
-      <Route path="/unsubscribe" element={<UnsubscribePage />} />
       <Route path="/partner" element={<PartnerLayout />}>
         <Route index element={<PartnerDashboard />} />
         <Route path="empresas" element={<PartnerEmpresas />} />

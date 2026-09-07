@@ -435,7 +435,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
       if (key === 'correo') return empresa.email;
       if (key === 'telefono') return empresa.telefono;
       if (key === 'alta') return empresa.created_at;
-      if (key === 'estado') return getEffectiveStatus(sub);
+      if (key === 'estado') return getEffectiveCompanyStatus(sub);
       if (key === 'plan') return audit?.db_subscription?.plan_nombre || sub?.plan_id;
       if (key === 'max_usuarios') return sub?.max_usuarios;
       if (key === 'usuarios_rutapp') return audit?.active_user_count;
