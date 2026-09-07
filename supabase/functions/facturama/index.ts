@@ -1142,32 +1142,24 @@ async function enviarCorreo(supabase: any, body: any) {
 
   const { data: emp } = await supabase.from("empresas").select("nombre").eq("id", cfdi.empresa_id).single();
 
-  // Invocar send-transactional-email
-  const invokeRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-transactional-email`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+  // Enviar el correo por la entrega de correo administrada
+  const emailResult = await sendAppEmail("cfdi-envio", email_to, {
+    idempotencyKey: `cfdi-${cfdi_id}-${Date.now()}`,
+    templateData: {
+      empresaNombre: emp?.nombre || "",
+      folio: cfdi.folio || "",
+      serie: cfdi.serie || "",
+      uuid: cfdi.folio_fiscal || "",
+      total: cfdi.total,
+      pdfUrl: cfdi.pdf_url || "",
+      xmlUrl: cfdi.xml_url || "",
+      mensaje: mensaje || "",
+      emailCc: email_cc || "",
     },
-    body: JSON.stringify({
-      templateName: "cfdi-envio",
-      recipientEmail: email_to,
-      idempotencyKey: `cfdi-${cfdi_id}-${Date.now()}`,
-      templateData: {
-        empresaNombre: emp?.nombre || "",
-        folio: cfdi.folio || "",
-        serie: cfdi.serie || "",
-        uuid: cfdi.folio_fiscal || "",
-        total: cfdi.total,
-        pdfUrl: cfdi.pdf_url || "",
-        xmlUrl: cfdi.xml_url || "",
-        mensaje: mensaje || "",
-        emailCc: email_cc || "",
-      },
-    }),
   });
-  const invokeText = await invokeRes.text();
-  if (!invokeRes.ok) throw new Error(`No se pudo encolar el correo: ${invokeText}`);
+  if (!emailResult.sent && emailResult.reason === "failed") {
+    throw new Error(`No se pudo enviar el correo: ${emailResult.error}`);
+  }
 
   await supabase.from("cfdis").update({
     enviado_at: new Date().toISOString(),
