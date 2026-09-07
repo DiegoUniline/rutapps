@@ -122,6 +122,75 @@ AS $$
     );
 $$;
 
+-- La función histórica usaba nombres de columnas sin alias. Como RETURNS TABLE
+-- crea variables PL/pgSQL con esos mismos nombres, PostgreSQL podía interpretar
+-- empresas_min, empresas_max y orden de dos formas. Todos los campos quedan
+-- calificados para eliminar la ambigüedad.
+CREATE OR REPLACE FUNCTION public.get_partner_nivel(_partner_id uuid)
+RETURNS TABLE(
+  nivel_id uuid, nombre text, orden int, comision_pct numeric,
+  empresas_min int, empresas_max int, emoji text, color text,
+  empresas_actuales int, empresas_para_siguiente int,
+  siguiente_nombre text, siguiente_pct numeric
+)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  v_count int;
+  v_partner record;
+  v_nivel record;
+  v_pct_efectivo numeric;
+  v_siguiente record;
+BEGIN
+  v_count := public.get_partner_active_empresas(_partner_id);
+
+  SELECT p.* INTO v_partner
+  FROM public.partners p
+  WHERE p.id = _partner_id;
+
+  SELECT pn.* INTO v_nivel
+  FROM public.partner_niveles pn
+  WHERE pn.empresas_min <= v_count
+    AND (pn.empresas_max IS NULL OR pn.empresas_max >= v_count)
+  ORDER BY pn.orden DESC
+  LIMIT 1;
+
+  IF v_nivel.id IS NULL THEN
+    RETURN;
+  END IF;
+
+  v_pct_efectivo := v_nivel.comision_pct;
+  IF v_partner.peor_nivel_pct_60d IS NOT NULL
+     AND v_partner.peor_nivel_fecha > now() - interval '60 days'
+     AND v_partner.peor_nivel_pct_60d > v_pct_efectivo THEN
+    v_pct_efectivo := v_partner.peor_nivel_pct_60d;
+  END IF;
+
+  SELECT pn.* INTO v_siguiente
+  FROM public.partner_niveles pn
+  WHERE pn.orden > v_nivel.orden
+  ORDER BY pn.orden ASC
+  LIMIT 1;
+
+  RETURN QUERY SELECT
+    v_nivel.id,
+    v_nivel.nombre,
+    v_nivel.orden,
+    v_pct_efectivo,
+    v_nivel.empresas_min,
+    v_nivel.empresas_max,
+    v_nivel.emoji,
+    v_nivel.color,
+    v_count,
+    CASE
+      WHEN v_siguiente.empresas_min IS NULL THEN 0
+      ELSE GREATEST(v_siguiente.empresas_min - v_count, 0)
+    END,
+    v_siguiente.nombre,
+    v_siguiente.comision_pct;
+END;
+$$;
+
 -- Tope autoritativo de cupón. Usa el nivel efectivo, incluida la gracia de 60 días.
 CREATE OR REPLACE FUNCTION public.get_partner_coupon_cap(_partner_id uuid)
 RETURNS numeric
