@@ -1934,6 +1934,163 @@ export type Database = {
           },
         ]
       }
+      commission_audit_log: {
+        Row: {
+          action: "created" | "updated" | "deleted"
+          changed_by: string | null
+          created_at: string
+          entity_id: string
+          entity_type: "person" | "client_attribution"
+          id: string
+          new_data: Json | null
+          previous_data: Json | null
+          reason: string | null
+        }
+        Insert: {
+          action: "created" | "updated" | "deleted"
+          changed_by?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: "person" | "client_attribution"
+          id?: string
+          new_data?: Json | null
+          previous_data?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          action?: "created" | "updated" | "deleted"
+          changed_by?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: "person" | "client_attribution"
+          id?: string
+          new_data?: Json | null
+          previous_data?: Json | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      commission_client_attributions: {
+        Row: {
+          captured_at: string
+          captured_by_id: string | null
+          channel: string
+          created_at: string
+          empresa_id: string
+          id: string
+          managed_by_id: string | null
+          notes: string | null
+          recorded_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          captured_at?: string
+          captured_by_id?: string | null
+          channel?: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          managed_by_id?: string | null
+          notes?: string | null
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          captured_at?: string
+          captured_by_id?: string | null
+          channel?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          managed_by_id?: string | null
+          notes?: string | null
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_client_attributions_captured_by_id_fkey"
+            columns: ["captured_by_id"]
+            isOneToOne: false
+            referencedRelation: "commission_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_client_attributions_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_client_attributions_managed_by_id_fkey"
+            columns: ["managed_by_id"]
+            isOneToOne: false
+            referencedRelation: "commission_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_people: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          manager_id: string | null
+          name: string
+          notes: string | null
+          partner_id: string | null
+          person_type: "internal" | "partner"
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          manager_id?: string | null
+          name: string
+          notes?: string | null
+          partner_id?: string | null
+          person_type: "internal" | "partner"
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          manager_id?: string | null
+          name?: string
+          notes?: string | null
+          partner_id?: string | null
+          person_type?: "internal" | "partner"
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_people_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "commission_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_people_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comision_esquemas: {
         Row: {
           activo: boolean
@@ -9686,6 +9843,31 @@ export type Database = {
           total_nuevo: number
           venta_id: string
         }[]
+      }
+      admin_save_commission_person: {
+        Args: {
+          p_change_reason?: string | null
+          p_email?: string | null
+          p_is_active?: boolean
+          p_manager_id?: string | null
+          p_name?: string | null
+          p_notes?: string | null
+          p_person_id?: string | null
+          p_phone?: string | null
+        }
+        Returns: Database["public"]["Tables"]["commission_people"]["Row"]
+      }
+      admin_set_commission_client_attribution: {
+        Args: {
+          p_captured_at?: string | null
+          p_captured_by_id?: string | null
+          p_change_reason?: string | null
+          p_channel?: string
+          p_empresa_id: string
+          p_managed_by_id?: string | null
+          p_notes?: string | null
+        }
+        Returns: Database["public"]["Tables"]["commission_client_attributions"]["Row"]
       }
       admin_sync_duplicados: {
         Args: never
