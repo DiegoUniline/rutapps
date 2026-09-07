@@ -7,12 +7,12 @@ ALTER TABLE public.ventas
   ADD COLUMN IF NOT EXISTS tienda_checkout_request_id uuid;
 
 CREATE UNIQUE INDEX IF NOT EXISTS ventas_tienda_checkout_request_uidx
-  ON public.ventas (tienda_checkout_request_id)
+  ON public.ventas (empresa_id, tienda_checkout_request_id)
   WHERE tienda_checkout_request_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.tienda_checkout_attempts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id uuid NOT NULL UNIQUE,
+  request_id uuid NOT NULL,
   empresa_id uuid REFERENCES public.empresas(id) ON DELETE CASCADE,
   cliente_id uuid REFERENCES public.clientes(id) ON DELETE SET NULL,
   tienda_cliente_id uuid REFERENCES public.tienda_clientes(id) ON DELETE SET NULL,
@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS public.tienda_checkout_attempts (
   http_status integer,
   first_attempt_at timestamptz NOT NULL DEFAULT now(),
   last_attempt_at timestamptz NOT NULL DEFAULT now(),
-  succeeded_at timestamptz
+  succeeded_at timestamptz,
+  UNIQUE (slug, request_id)
 );
 
 CREATE INDEX IF NOT EXISTS tienda_checkout_attempts_empresa_fecha_idx
@@ -75,7 +76,7 @@ BEGIN
     1, GREATEST(COALESCE(p_item_count, 0), 0), left(p_error_code, 100),
     left(p_error_message, 1000), p_http_status, now()
   )
-  ON CONFLICT (request_id) DO UPDATE SET
+  ON CONFLICT (slug, request_id) DO UPDATE SET
     empresa_id = COALESCE(EXCLUDED.empresa_id, public.tienda_checkout_attempts.empresa_id),
     cliente_id = COALESCE(EXCLUDED.cliente_id, public.tienda_checkout_attempts.cliente_id),
     tienda_cliente_id = COALESCE(EXCLUDED.tienda_cliente_id, public.tienda_checkout_attempts.tienda_cliente_id),
@@ -143,20 +144,22 @@ BEGIN
     p_request_id, p_empresa_id, p_cliente_id, p_tienda_cliente_id, p_slug,
     'processing', CASE WHEN jsonb_typeof(p_lineas) = 'array' THEN jsonb_array_length(p_lineas) ELSE 0 END, 1, now()
   )
-  ON CONFLICT (request_id) DO UPDATE SET
+  ON CONFLICT (slug, request_id) DO UPDATE SET
     attempt_count = public.tienda_checkout_attempts.attempt_count + 1,
     last_attempt_at = now();
 
   SELECT * INTO v_venta
   FROM public.ventas
-  WHERE tienda_checkout_request_id = p_request_id;
+  WHERE empresa_id = p_empresa_id
+    AND cliente_id = p_cliente_id
+    AND tienda_checkout_request_id = p_request_id;
 
   IF FOUND THEN
     UPDATE public.tienda_checkout_attempts
        SET status = 'succeeded', venta_id = v_venta.id, folio = v_venta.folio,
            error_code = NULL, error_message = NULL, http_status = 200,
            succeeded_at = COALESCE(succeeded_at, now()), last_attempt_at = now()
-     WHERE request_id = p_request_id;
+     WHERE slug = p_slug AND request_id = p_request_id;
     RETURN jsonb_build_object(
       'ok', true, 'venta_id', v_venta.id, 'folio', v_venta.folio, 'duplicate', true
     );
@@ -251,7 +254,7 @@ BEGIN
        SET status = 'succeeded', venta_id = v_venta.id, folio = v_venta.folio,
            error_code = NULL, error_message = NULL, http_status = 200,
            succeeded_at = now(), last_attempt_at = now()
-     WHERE request_id = p_request_id;
+     WHERE slug = p_slug AND request_id = p_request_id;
 
     RETURN jsonb_build_object(
       'ok', true, 'venta_id', v_venta.id, 'folio', v_venta.folio, 'duplicate', false
@@ -259,13 +262,15 @@ BEGIN
   EXCEPTION WHEN unique_violation THEN
     SELECT * INTO v_venta
     FROM public.ventas
-    WHERE tienda_checkout_request_id = p_request_id;
+    WHERE empresa_id = p_empresa_id
+      AND cliente_id = p_cliente_id
+      AND tienda_checkout_request_id = p_request_id;
     IF FOUND THEN
       UPDATE public.tienda_checkout_attempts
          SET status = 'succeeded', venta_id = v_venta.id, folio = v_venta.folio,
              error_code = NULL, error_message = NULL, http_status = 200,
              succeeded_at = COALESCE(succeeded_at, now()), last_attempt_at = now()
-       WHERE request_id = p_request_id;
+       WHERE slug = p_slug AND request_id = p_request_id;
       RETURN jsonb_build_object(
         'ok', true, 'venta_id', v_venta.id, 'folio', v_venta.folio, 'duplicate', true
       );
@@ -281,7 +286,7 @@ BEGIN
            error_message = left(concat_ws(' · ', v_error_message, NULLIF(v_error_detail, ''), NULLIF(v_error_hint, '')), 1000),
            http_status = CASE WHEN SQLSTATE IN ('22023', '23503') THEN 400 ELSE 500 END,
            last_attempt_at = now()
-     WHERE request_id = p_request_id;
+     WHERE slug = p_slug AND request_id = p_request_id;
     RETURN jsonb_build_object(
       'ok', false,
       'code', CASE WHEN SQLSTATE IN ('22023', '23503') THEN 'invalid_order' ELSE 'database_error' END,
