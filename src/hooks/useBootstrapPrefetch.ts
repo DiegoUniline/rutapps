@@ -47,10 +47,10 @@ export function useBootstrapPrefetch() {
         },
       }),
       qc.prefetchQuery({
-        queryKey: ['almacenes', eid],
+        queryKey: ['almacenes', eid, false],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', eid).eq('activo', true).order('nombre');
+          const { data } = await supabase.from('almacenes').select('id, nombre, es_merma').eq('empresa_id', eid).eq('activo', true).eq('es_merma', false).order('nombre');
           return data ?? [];
         },
       }),
@@ -122,14 +122,14 @@ export function useBootstrapPrefetch() {
     const runHeavyPrefetch = () => {
       void Promise.all([
         qc.prefetchQuery({
-          queryKey: ['productos-select', eid],
+          queryKey: ['productos-select', eid, 'nombres-contextuales'],
           staleTime: CATALOG_STALE_TIME,
           queryFn: async () => {
             // Esperar a los catálogos ligeros para poder enriquecer con nombres.
             await lightCatalogsReady;
             const rows = await fetchAllPages<any>((from, to) =>
               supabase.from('productos')
-                .select('id, codigo, nombre, precio_principal, costo, cantidad, clasificacion_id, lista_id, marca_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, maneja_lote, es_granel, unidad_granel, vender_sin_stock, usa_listas_precio')
+                .select('id, codigo, nombre, nombre_compra, nombre_venta, nombre_ticket, formula, precio_principal, costo, cantidad, clasificacion_id, lista_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, es_granel, unidad_granel, vender_sin_stock, usa_listas_precio, maneja_lote')
                 .eq('empresa_id', eid)
                 .eq('status', 'activo')
                 .order('nombre')
@@ -145,10 +145,10 @@ export function useBootstrapPrefetch() {
             await lightCatalogsReady;
             const rows = await fetchAllPages<any>((from, to) =>
               supabase.from('clientes')
-                .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url')
+                .select('id, codigo, nombre, telefono, lada, contacto, email, rfc, direccion, colonia, requiere_factura, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url')
                 .eq('empresa_id', eid)
                 .eq('status', 'activo')
-                .order('orden', { ascending: true })
+                .order('nombre', { ascending: true })
                 .range(from, to)
             );
             return enrichClientes(rows, qc, eid);

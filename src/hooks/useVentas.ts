@@ -448,63 +448,60 @@ export function useVenta(id?: string) {
       // falla, entonces sí usamos IndexedDB como respaldo.
       {
         try {
-          // Cargar el encabezado primero evita que una relación secundaria o una
-          // respuesta anidada cortada convierta toda la venta en un error opaco.
-          const { data: venta, error: ventaError } = await supabase
-            .from('ventas')
-            .select('*')
-            .eq('id', id!)
-            .eq('empresa_id', empresa!.id)
-            .maybeSingle();
-          if (ventaError) throw new Error(`Encabezado de la venta: ${ventaError.message}`);
-          if (!venta) {
+          const optionalOne = async (
+            table: 'clientes' | 'profiles' | 'tarifas' | 'almacenes',
+            recordId: string | null | undefined,
+            columns: string,
+            label: string,
+          ) => {
+            if (!recordId) return null;
+            const { data, error } = await supabase.from(table).select(columns).eq('id', recordId).maybeSingle();
+            if (error) throw new Error(`${label}: ${error.message}`);
+            return data;
+          };
+
+          // Primera ronda: encabezado y partidas son independientes y se pueden
+          // consultar al mismo tiempo. Mantenerlas separadas conserva errores
+          // precisos sin pagar dos viajes consecutivos al servidor.
+          const [ventaResult, lineasResult] = await Promise.all([
+            supabase.from('ventas').select('*').eq('id', id!).eq('empresa_id', empresa!.id).maybeSingle(),
+            supabase.from('venta_lineas').select('*').eq('venta_id', id!).order('created_at', { ascending: true }),
+          ]);
+          if (ventaResult.error) throw new Error(`Encabezado de la venta: ${ventaResult.error.message}`);
+          if (!ventaResult.data) {
             serverRespondedWithoutVenta = true;
           } else {
-            const optionalOne = async (
-              table: 'clientes' | 'profiles' | 'tarifas' | 'almacenes',
-              recordId: string | null | undefined,
-              columns: string,
-              label: string,
-            ) => {
-              if (!recordId) return null;
-              const { data, error } = await supabase.from(table).select(columns).eq('id', recordId).maybeSingle();
-              if (error) throw new Error(`${label}: ${error.message}`);
-              return data;
-            };
-
-            const [lineasResult, cliente, vendedor, tarifa, almacen] = await Promise.all([
-              supabase.from('venta_lineas').select('*').eq('venta_id', venta.id).order('created_at', { ascending: true }),
-              optionalOne('clientes', venta.cliente_id, 'nombre, tarifa_id, lista_precio_id', 'Cliente'),
-              optionalOne('profiles', venta.vendedor_id, 'nombre, telefono', 'Vendedor'),
-              optionalOne('tarifas', venta.tarifa_id, 'nombre', 'Tarifa'),
-              optionalOne('almacenes', venta.almacen_id, 'nombre', 'Almacén'),
-            ]);
             if (lineasResult.error) throw new Error(`Partidas de la venta: ${lineasResult.error.message}`);
 
+            const venta = ventaResult.data;
             const lineas = lineasResult.data ?? [];
             const productoIds = [...new Set(lineas.map(linea => linea.producto_id).filter(Boolean))] as string[];
             const loteIds = [...new Set(lineas.map(linea => linea.lote_id).filter(Boolean))] as string[];
             const unidadLineaIds = [...new Set(lineas.map(linea => linea.unidad_id).filter(Boolean))] as string[];
 
-            const [productosResult, lotesResult] = await Promise.all([
+            // Segunda ronda: todos los catálogos acotados a los IDs de esta
+            // venta se resuelven en paralelo. Productos trae su unidad base en
+            // el mismo request; así el detalle completo requiere solo 2 rondas.
+            const [cliente, vendedor, tarifa, almacen, productosResult, lotesResult, unidadesResult] = await Promise.all([
+              optionalOne('clientes', venta.cliente_id, 'nombre, tarifa_id, lista_precio_id', 'Cliente'),
+              optionalOne('profiles', venta.vendedor_id, 'nombre, telefono', 'Vendedor'),
+              optionalOne('tarifas', venta.tarifa_id, 'nombre', 'Tarifa'),
+              optionalOne('almacenes', venta.almacen_id, 'nombre', 'Almacén'),
               productoIds.length
-                ? supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, unidad_venta_id, es_granel, unidad_granel').in('id', productoIds)
+                ? supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, unidad_venta_id, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(nombre, abreviatura)').in('id', productoIds)
                 : Promise.resolve({ data: [], error: null }),
               loteIds.length
                 ? supabase.from('lotes').select('id, codigo').in('id', loteIds)
                 : Promise.resolve({ data: [], error: null }),
+              unidadLineaIds.length
+                ? supabase.from('unidades').select('id, nombre, abreviatura').in('id', unidadLineaIds)
+                : Promise.resolve({ data: [], error: null }),
             ]);
             if (productosResult.error) throw new Error(`Productos de la venta: ${productosResult.error.message}`);
             if (lotesResult.error) throw new Error(`Lotes de la venta: ${lotesResult.error.message}`);
-
-            const productos = productosResult.data ?? [];
-            const unidadProductoIds = productos.map(producto => producto.unidad_venta_id).filter(Boolean) as string[];
-            const unidadIds = [...new Set([...unidadLineaIds, ...unidadProductoIds])];
-            const unidadesResult = unidadIds.length
-              ? await supabase.from('unidades').select('id, nombre, abreviatura').in('id', unidadIds)
-              : { data: [], error: null };
             if (unidadesResult.error) throw new Error(`Unidades de la venta: ${unidadesResult.error.message}`);
 
+            const productos = productosResult.data ?? [];
             const productosPorId = new Map((productos ?? []).map(producto => [producto.id, producto]));
             const lotesPorId = new Map((lotesResult.data ?? []).map(lote => [lote.id, lote]));
             const unidadesPorId = new Map((unidadesResult.data ?? []).map(unidad => [unidad.id, unidad]));
@@ -512,9 +509,7 @@ export function useVenta(id?: string) {
               const producto = linea.producto_id ? productosPorId.get(linea.producto_id) : null;
               return {
                 ...linea,
-                productos: producto
-                  ? { ...producto, unidades_venta: producto.unidad_venta_id ? unidadesPorId.get(producto.unidad_venta_id) ?? null : null }
-                  : null,
+                productos: producto ?? null,
                 lotes: linea.lote_id ? lotesPorId.get(linea.lote_id) ?? null : null,
                 unidades: linea.unidad_id ? unidadesPorId.get(linea.unidad_id) ?? null : null,
               };

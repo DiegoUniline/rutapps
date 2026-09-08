@@ -463,13 +463,13 @@ export function useAlmacenes(opts?: { includeMermas?: boolean }) {
 export function useUnidadesSat() {
   return useQuery({ queryKey: ['unidades_sat'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades_sat').select('id, clave, nombre').order('nombre'); return data as UnidadSat[]; }});
 }
-export function useProductosForSelect() {
+export function useProductosForSelect(enabled = true) {
   const { empresa } = useAuth();
   const qc = useQueryClient();
   return useQuery({
     queryKey: ['productos-select', empresa?.id, 'nombres-contextuales'],
     staleTime: CATALOG_STALE,
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && enabled,
     queryFn: async () => {
       // Se removieron los LEFT JOIN LATERAL a `unidades` (venta y compra):
       // multiplicaban el costo CPU en Postgres. Los objetos
