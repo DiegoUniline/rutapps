@@ -38,6 +38,7 @@ import KpiExtras from './dashboard/sections/KpiExtras';
 import TabEquipo from './dashboard/sections/TabEquipo';
 import TabCartera from './dashboard/sections/TabCartera';
 import TabInventario from './dashboard/sections/TabInventario';
+import TabClientes from './dashboard/sections/TabClientes';
 import TabMetas from './dashboard/sections/TabMetas';
 import ClientesSinCompraModal from './dashboard/sections/ClientesSinCompraModal';
 import { useMonthlyGoal } from './dashboard/hooks/useMonthlyGoal';
@@ -1082,7 +1083,10 @@ export default function DashboardPage() {
             <BarChart3 className="h-3.5 w-3.5 mr-2" /> Resumen
           </TabsTrigger>
           <TabsTrigger value="rankings" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
-            <TrendingUp className="h-3.5 w-3.5 mr-2" /> Productos y Clientes
+            <TrendingUp className="h-3.5 w-3.5 mr-2" /> Rankings
+          </TabsTrigger>
+          <TabsTrigger value="clientes-inteligencia" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+            <Users className="h-3.5 w-3.5 mr-2" /> Clientes
           </TabsTrigger>
           <TabsTrigger value="evolucion" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <Activity className="h-3.5 w-3.5 mr-2" /> Evolución mensual
@@ -1276,6 +1280,15 @@ export default function DashboardPage() {
             topProductos={topProductos ?? []}
             topClientesAll={topClientsAll}
             money={money}
+          />
+        </TabsContent>
+
+        {/* === INTELIGENCIA DE CLIENTES === */}
+        <TabsContent value="clientes-inteligencia" className="mt-4">
+          <TabClientes
+            enabled={activeTab === 'clientes-inteligencia'}
+            money={money}
+            cSym={cSym}
           />
         </TabsContent>
 
