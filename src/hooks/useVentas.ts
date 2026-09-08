@@ -436,6 +436,8 @@ export function useVenta(id?: string) {
     queryKey: ['venta', id],
     networkMode: 'always',
     queryFn: async () => {
+      let serverError: unknown = null;
+      let serverSaidMissing = false;
       // Try server first (only if online). Any network error falls back to IndexedDB.
       if (typeof navigator === 'undefined' || navigator.onLine) {
         try {
@@ -446,8 +448,10 @@ export function useVenta(id?: string) {
             .maybeSingle();
           if (error) throw error;
           if (data) return data as Venta;
+          serverSaidMissing = true;
         } catch (err) {
           // Network/fetch error: fall through to local cache
+          serverError = err;
           console.warn('[useVenta] server fetch failed, trying offline cache:', err);
         }
       }
@@ -491,9 +495,14 @@ export function useVenta(id?: string) {
         }
       } catch { /* IndexedDB not available */ }
 
-      return null as unknown as Venta;
+      // Sólo devolvemos null cuando el servidor confirmó que la venta no existe.
+      // Si falló la red/petición y tampoco hay copia local, lanzamos el error para
+      // que React Query reintente en vez de dejar la pantalla de detalle en blanco.
+      if (serverSaidMissing) return null as unknown as Venta;
+      throw serverError ?? new Error('No se pudo cargar la venta. Revisa tu conexión.');
     },
     enabled: !!id,
+    retry: 3,
   });
 }
 

@@ -57,7 +57,7 @@ export function useVentaForm() {
   const { profile, user, empresa } = useAuth();
   const manejaLotes = !!(empresa as any)?.maneja_lotes;
   const isNew = id === 'nuevo';
-  const { data: existingVenta, isLoading } = useVenta(isNew ? undefined : id);
+  const { data: existingVenta, isLoading, isError: ventaError, refetch: refetchVenta } = useVenta(isNew ? undefined : id);
   const saveVenta = useSaveVenta();
   const saveLinea = useSaveVentaLinea();
   const deleteLinea = useDeleteVentaLinea();
@@ -1069,7 +1069,7 @@ export function useVentaForm() {
   };
 
   return {
-    id, isNew, form, lineas, setLineas, dirty, readOnly, isLoading,
+    id, isNew, form, lineas, setLineas, dirty, readOnly, isLoading, existingVenta, ventaError, refetchVenta,
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
