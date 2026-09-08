@@ -436,6 +436,8 @@ export function useVenta(id?: string) {
     queryKey: ['venta', id],
     networkMode: 'always',
     queryFn: async () => {
+      let serverError: unknown = null;
+      let serverSaidMissing = false;
       // Try server first (only if online). Any network error falls back to IndexedDB.
       if (typeof navigator === 'undefined' || navigator.onLine) {
         try {
