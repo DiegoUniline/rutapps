@@ -448,8 +448,10 @@ export function useVenta(id?: string) {
             .maybeSingle();
           if (error) throw error;
           if (data) return data as Venta;
+          serverSaidMissing = true;
         } catch (err) {
           // Network/fetch error: fall through to local cache
+          serverError = err;
           console.warn('[useVenta] server fetch failed, trying offline cache:', err);
         }
       }
