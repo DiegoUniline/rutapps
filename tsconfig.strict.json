@@ -17,6 +17,7 @@
     "src/lib/paymentDistribution.ts",
     "src/lib/saldoFavor.ts",
     "src/lib/syncErrorClassify.ts",
+    "src/lib/ventaLoadGuard.ts",
     "src/pages/CompraForm/types.ts"
   ]
 }
