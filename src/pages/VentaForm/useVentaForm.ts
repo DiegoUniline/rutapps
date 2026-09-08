@@ -57,16 +57,21 @@ export function useVentaForm() {
   const { profile, user, empresa } = useAuth();
   const manejaLotes = !!(empresa as any)?.maneja_lotes;
   const isNew = id === 'nuevo';
-  const { data: existingVenta, isLoading } = useVenta(isNew ? undefined : id);
+  const ventaQuery = useVenta(isNew ? undefined : id);
+  const { data: existingVenta, isLoading, error: ventaLoadError } = ventaQuery;
   const saveVenta = useSaveVenta();
   const saveLinea = useSaveVentaLinea();
   const deleteLinea = useDeleteVentaLinea();
   const deleteVenta = useDeleteVenta();
   const queryClient = useQueryClient();
-  const { data: clientesList } = useClientes();
-  const { data: productosListRaw } = useProductosForSelect();
-  const { data: tarifasList } = useTarifasForSelect();
-  const { data: almacenesList } = useAlmacenes();
+  const clientesQuery = useClientes();
+  const productosQuery = useProductosForSelect();
+  const tarifasQuery = useTarifasForSelect();
+  const almacenesQuery = useAlmacenes();
+  const { data: clientesList } = clientesQuery;
+  const { data: productosListRaw } = productosQuery;
+  const { data: tarifasList } = tarifasQuery;
+  const { data: almacenesList } = almacenesQuery;
   const crearEntrega = useCrearEntrega();
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
@@ -1070,6 +1075,13 @@ export function useVentaForm() {
 
   return {
     id, isNew, form, lineas, setLineas, dirty, readOnly, isLoading,
+    ventaLoadError,
+    catalogLoadError: clientesQuery.error ?? productosQuery.error ?? tarifasQuery.error ?? almacenesQuery.error,
+    retryInitialLoad: async () => {
+      const retries: Promise<unknown>[] = [clientesQuery.refetch(), productosQuery.refetch(), tarifasQuery.refetch(), almacenesQuery.refetch()];
+      if (!isNew) retries.push(ventaQuery.refetch());
+      await Promise.allSettled(retries);
+    },
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
