@@ -20,21 +20,25 @@ export function readStoredPageSize(): PageSizeOption {
   return 50;
 }
 
-/** Per-module page size. Falls back to the global preference, then to 50. */
-export function readStoredPageSizeFor(moduleKey?: string): PageSizeOption {
+/**
+ * Per-module page size. By default it inherits the legacy global preference.
+ * Heavy transactional lists can opt out so selecting "Todos" in a small
+ * catalog never makes them request thousands of rows on first load.
+ */
+export function readStoredPageSizeFor(moduleKey?: string, inheritGlobal = true): PageSizeOption {
   if (!moduleKey) return readStoredPageSize();
   try {
     const v = coerce(localStorage.getItem(`${DEFAULT_STORAGE_KEY}:${moduleKey}`));
     if (v) return v;
   } catch {}
-  return readStoredPageSize();
+  return inheritGlobal ? readStoredPageSize() : 50;
 }
 
-export function writeStoredPageSizeFor(size: PageSizeOption, moduleKey?: string) {
+export function writeStoredPageSizeFor(size: PageSizeOption, moduleKey?: string, syncGlobal = true) {
   try {
     if (moduleKey) localStorage.setItem(`${DEFAULT_STORAGE_KEY}:${moduleKey}`, String(size));
     // Keep the global preference in sync so new modules inherit the last choice.
-    localStorage.setItem(DEFAULT_STORAGE_KEY, String(size));
+    if (syncGlobal) localStorage.setItem(DEFAULT_STORAGE_KEY, String(size));
   } catch {}
 }
 
