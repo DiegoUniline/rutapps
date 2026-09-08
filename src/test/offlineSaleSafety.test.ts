@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPromotionCacheUsable } from '@/lib/offlinePromotionSafety';
+import { getPromotionReadinessCopy, isPromotionCacheUsable } from '@/lib/offlinePromotionSafety';
 import { mergeLocalRow } from '@/lib/localRowMerge';
 import {
   isPublicGeneralClient,
@@ -19,6 +19,19 @@ describe('seguridad de promociones offline', () => {
   it('bloquea una lectura rota y acepta filas legacy comprobables', () => {
     expect(isPromotionCacheUsable({ cacheReadFailed: true, cachedRowCount: 4, lastSuccessfulSyncAt: 123 })).toBe(false);
     expect(isPromotionCacheUsable({ cacheReadFailed: false, cachedRowCount: 1, lastSuccessfulSyncAt: null })).toBe(true);
+  });
+
+  it('explica cómo recuperar una caché que no está preparada', () => {
+    expect(getPromotionReadinessCopy({ status: 'error', promotionCount: 0, isOnline: false })).toEqual({
+      tone: 'warning',
+      title: 'Promociones sin preparar',
+      description: 'Conéctate a internet, vuelve a Ruta, pulsa Sincronizar y después regresa a esta venta.',
+    });
+  });
+
+  it('confirma explícitamente que cero promociones es un estado válido', () => {
+    expect(getPromotionReadinessCopy({ status: 'ready', promotionCount: 0, isOnline: true }).description)
+      .toContain('Puedes continuar');
   });
 });
 

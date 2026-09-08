@@ -18,6 +18,7 @@ import { StepPago } from './StepPago';
 import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
 import { usePermisos } from '@/hooks/usePermisos';
 import MobileNoAccess from '@/components/ruta/MobileNoAccess';
+import { PromotionReadinessNotice } from '@/components/PromotionReadinessNotice';
 
 function RutaNuevaVentaInner() {
   const { hasPermisoMovil } = usePermisos();
@@ -138,6 +139,14 @@ function RutaNuevaVentaInner() {
           <div className="whitespace-pre-wrap leading-snug">{h.clienteNotasFiscales}</div>
         </div>
       )}
+
+      <PromotionReadinessNotice
+        status={h.promosLoading ? 'loading' : h.promosError || !h.promocionesActivas ? 'error' : 'ready'}
+        promotionCount={h.promocionesActivas?.length ?? 0}
+        onRetry={() => { void h.refetchPromos(); }}
+        showReady={h.step === 'pago'}
+        className="mx-3 mt-2"
+      />
 
       {h.step === 'tipo' && !h.sinCompra && <StepTipo sinCompra={h.sinCompra} setSinCompra={h.setSinCompra} setTipoVenta={h.setTipoVenta} setCondicionPago={h.setCondicionPago} setStep={h.setStep} urlClienteId={h.urlClienteId} clienteId={h.clienteId} canDoDevoluciones={h.canDoDevoluciones} setSoloDevolucion={h.setSoloDevolucion} />}
       {h.step === 'tipo' && h.sinCompra && <StepSinCompra clienteNombre={h.clienteNombre} motivoSinCompra={h.motivoSinCompra} setMotivoSinCompra={h.setMotivoSinCompra} notas={h.notas} setNotas={h.setNotas} savingSinCompra={h.savingSinCompra} setSavingSinCompra={h.setSavingSinCompra} setSinCompra={h.setSinCompra} saveVisita={h.saveVisita} markVisited={h.markVisited} clienteId={h.clienteId} urlClienteId={h.urlClienteId} navigate={h.navigate} />}

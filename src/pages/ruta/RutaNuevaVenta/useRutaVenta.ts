@@ -1043,8 +1043,16 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     }
     // Nunca guardar una venta cuando las promociones no se pudieron cargar:
     // se cobraría a precio completo sin descuento y sin ningún aviso.
-    if (promosError || promosLoading || !promocionesActivas) {
-      toast.error('No se pudieron cargar las promociones. Sincroniza antes de cobrar.');
+    if (promosLoading) {
+      toast.info('Espera mientras verificamos las promociones antes de cobrar.');
+      return;
+    }
+    if (promosError || !promocionesActivas) {
+      toast.error('Promociones sin preparar', {
+        description: navigator.onLine
+          ? 'Pulsa “Comprobar” en el aviso e intenta nuevamente.'
+          : 'Conéctate, sincroniza desde Ruta y vuelve a esta venta.',
+      });
       try { refetchPromos(); } catch { /* ignore */ }
       return;
     }
@@ -1634,6 +1642,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     currentStepIdx, routeSteps, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
     addToCart, addGranelLine, updateQty, removeFromCart, getItemInCart, getMaxQty, getDispSigned, setItemQty,
     pendingGratis, autoPromosOn,
+    promosError, promosLoading, promocionesActivas, refetchPromos,
 
     addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,

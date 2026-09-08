@@ -40,6 +40,7 @@ import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 import { buildPosTicketPayments } from '@/lib/posTicketPayments';
 import { resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
+import { PromotionReadinessNotice } from '@/components/PromotionReadinessNotice';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
@@ -441,7 +442,12 @@ export default function PuntoVentaPage() {
   }, [cart.length, productos, getProductPricing]);
 
   // ---- Promotions engine ----
-  const { data: promocionesActivas } = usePromocionesActivas();
+  const {
+    data: promocionesActivas,
+    isError: promocionesError,
+    isLoading: promocionesLoading,
+    refetch: refetchPromociones,
+  } = usePromocionesActivas();
 
   const promoResultsRaw = useMemo(() => {
     if (!promocionesActivas?.length || cart.length === 0) return [] as PromoResult[];
@@ -837,6 +843,16 @@ export default function PuntoVentaPage() {
   // Save sale
   const handleCobrar = async () => {
     if (!empresa || !user || cart.length === 0) return;
+    if (promocionesLoading) {
+      toast.info('Espera mientras verificamos las promociones antes de cobrar.');
+      return;
+    }
+    if (promocionesError || !promocionesActivas) {
+      toast.error('Promociones sin preparar', {
+        description: 'Pulsa “Comprobar” en el aviso antes de cobrar.',
+      });
+      return;
+    }
     if (turnoLoading) {
       toast.error('Espera mientras se verifica el turno activo');
       return;
@@ -1243,6 +1259,13 @@ export default function PuntoVentaPage() {
           </div>
 
           {/* Active promotions banner */}
+          <PromotionReadinessNotice
+            status={promocionesLoading ? 'loading' : promocionesError || !promocionesActivas ? 'error' : 'ready'}
+            promotionCount={promocionesActivas?.length ?? 0}
+            onRetry={() => { void refetchPromociones(); }}
+            className="mx-3 sm:mx-4 mb-2"
+          />
+
           {promocionesActivas && promocionesActivas.length > 0 && (
             <div className="px-3 sm:px-4 pb-2">
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
