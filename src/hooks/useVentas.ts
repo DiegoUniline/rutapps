@@ -442,8 +442,11 @@ export function useVenta(id?: string) {
     queryFn: async () => {
       let serverError: unknown = null;
       let serverRespondedWithoutVenta = false;
-      // Try server first (only if online). Any network error falls back to IndexedDB.
-      if (typeof navigator === 'undefined' || navigator.onLine) {
+      // Intentar siempre el servidor. `navigator.onLine` puede reportar `false`
+      // aunque la PWA sí tenga salida a Internet (Android, redes corporativas o
+      // cambios Wi-Fi/datos). La petición real es la única fuente confiable; si
+      // falla, entonces sí usamos IndexedDB como respaldo.
+      {
         try {
           // Cargar el encabezado primero evita que una relación secundaria o una
           // respuesta anidada cortada convierta toda la venta en un error opaco.
