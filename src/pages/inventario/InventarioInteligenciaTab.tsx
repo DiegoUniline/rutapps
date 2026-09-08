@@ -232,16 +232,21 @@ function useIntelligenceHistory(windowDays: number) {
     queryFn: async () => {
       const empresaId = empresa!.id;
       // La RPC es nueva y aún no está en los tipos generados de Supabase.
+      // Llamar con .call(supabase, …): supabase.rpc usa `this` internamente
+      // (this.rest) y rompe si se invoca el método suelto.
       const rpc = supabase.rpc as unknown as (
         fn: string,
         args: Record<string, unknown>,
       ) => Promise<{ data: unknown; error: { code?: string } | null }>;
-      const { data, error } = await rpc('fn_inventory_intelligence_snapshot', {
+      const { data, error } = await rpc.call(supabase, 'fn_inventory_intelligence_snapshot', {
         p_empresa_id: empresaId,
         p_window_days: windowDays,
       });
       if (!error && data) return normalizeSnapshot(data);
-      if (error && !['PGRST202', '42883'].includes(error.code || '')) throw error;
+      // PGRST202/42883: función no desplegada. 57014: statement timeout (la
+      // versión sin SECURITY DEFINER excede el límite por RLS por fila). En
+      // esos casos se usa el cálculo legacy en cliente.
+      if (error && !['PGRST202', '42883', '57014'].includes(error.code || '')) throw error;
       return loadLegacySnapshot(empresaId, windowDays);
     },
   });
