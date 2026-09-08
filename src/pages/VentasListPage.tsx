@@ -16,7 +16,15 @@ import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { ListPage, SCROLL_AREA } from '@/components/layout/ListPage';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
-import { useVentasPaginated, useVentaLineasPaginated, useVentasResumen, useVentaLineasResumen, useDeleteVenta } from '@/hooks/useVentas';
+import {
+  useVentasPaginated,
+  useVentaLineasPaginated,
+  useVentasResumen,
+  useVentaLineasResumen,
+  useVentasResumenAgregado,
+  useVentaLineasResumenAgregado,
+  useDeleteVenta,
+} from '@/hooks/useVentas';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -31,6 +39,7 @@ import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { totalEfectivoVenta, saldoRealVenta } from '@/lib/ventaCerrada';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
+import { computeVentasListSummary } from '@/lib/ventasListSummary';
 import { BulkCerrarPedidosDialog } from '@/components/venta/BulkCerrarPedidosDialog';
 import { RepararPromocionesButton } from '@/components/venta/RepararPromocionesButton';
 
@@ -102,8 +111,12 @@ export default function VentasListPage() {
   const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, clienteFilter, promocionFilter, viewMode === 'productos');
   // Totales sobre TODO el filtro (no solo la página). Al agrupar, la lista ya
   // trae todas las filas (fetchAll), así que evitamos la doble consulta.
-  const { data: ventasResumenRows } = useVentasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, promocionFilter, viewMode === 'ventas' && !groupBy, clienteFilter);
-  const { data: lineasResumenAll } = useVentaLineasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, viewMode === 'productos' && !groupBy, clienteFilter, promocionFilter);
+  const ventasResumenRpc = useVentasResumenAgregado(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, promocionFilter, viewMode === 'ventas' && !groupBy, clienteFilter);
+  const lineasResumenRpc = useVentaLineasResumenAgregado(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, viewMode === 'productos' && !groupBy, clienteFilter, promocionFilter);
+  // Fallback de compatibilidad: solo descarga el conjunto completo si la RPC no
+  // existe o falla. Con la migración aplicada estas consultas quedan apagadas.
+  const { data: ventasResumenRows } = useVentasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, promocionFilter, viewMode === 'ventas' && !groupBy && ventasResumenRpc.isError, clienteFilter);
+  const { data: lineasResumenLegacy } = useVentaLineasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, viewMode === 'productos' && !groupBy && lineasResumenRpc.isError, clienteFilter, promocionFilter);
   const { data: clientesList } = useClientes();
   const { data: vendedoresList } = useVendedoresForFilter();
 
@@ -340,26 +353,15 @@ export default function VentasListPage() {
 
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
   // Totales calculados sobre TODO el filtro (resumenSource), no solo la página.
-  const totalVentas = resumenSource.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
-  const totalSaldo = resumenSource.reduce((s, v) => s + saldoRealVenta(v as any), 0);
-  // Desglose fiscal reconstruido desde las líneas (cuadra con la tabla y el detalle).
-  const resumenVentas = resumenSource.reduce((acc, v: any) => {
-    const ivaMonto = Number(v.iva_total) || 0;
-    const iepsMonto = Number(v.ieps_total) || 0;
-    const impuestos = ivaMonto + iepsMonto;
-    const gravable = Math.max(0, (Number(v.total) || 0) - impuestos);
-    const lineDesc = computeResumenFromLineas(v.venta_lineas ?? []).descuento;
-    const promoAplicada = (v.promocion_aplicada ?? []).reduce((s: number, p: any) => s + (Number(p?.descuento_aplicado) || 0), 0);
-    const descuento = Math.max(lineDesc, promoAplicada, Number(v.descuento_total) || 0);
-    acc.subtotal += gravable + descuento;
-    acc.descuento += descuento;
-    acc.impuestos += impuestos;
-    return acc;
-  }, { subtotal: 0, descuento: 0, impuestos: 0 });
-  const totalPagado = resumenSource.reduce((s, v: any) => s + Math.max(0, totalEfectivoVenta(v) - saldoRealVenta(v)), 0);
+  const resumenVentasLocal = useMemo(() => computeVentasListSummary(resumenSource), [resumenSource]);
+  const resumenVentas = !groupBy && ventasResumenRpc.data ? ventasResumenRpc.data : resumenVentasLocal;
+  const totalVentas = resumenVentas.total;
+  const totalSaldo = resumenVentas.saldo;
+  const totalPagado = resumenVentas.pagado;
   // Vista Productos: totales de todo el filtro (fallback a la página al agrupar/cargar).
-  const totalLineas = (!groupBy && lineasResumenAll) ? lineasResumenAll.total : productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
-  const totalCantidad = (!groupBy && lineasResumenAll) ? lineasResumenAll.cantidad : productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
+  const lineasResumenAll = !groupBy ? (lineasResumenRpc.data ?? lineasResumenLegacy) : undefined;
+  const totalLineas = lineasResumenAll ? lineasResumenAll.total : productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
+  const totalCantidad = lineasResumenAll ? lineasResumenAll.cantidad : productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
 
   // Totales SOLO de la página visible (para la barra fija de abajo).
   const pageResumen = ventas.reduce((acc, v: any) => {
