@@ -24,7 +24,7 @@ function useInventoryBase() {
       const [products, stockRows, warehousesResult] = await Promise.all([
         fetchAllPages<IntelligenceProduct>((from, to) => supabase
           .from('productos')
-          .select('id,codigo,nombre,cantidad,costo,precio_principal,status,dias_cobertura,lead_time_dias,min,max,maneja_lote,created_at')
+          .select('id,codigo,nombre,cantidad,costo,precio_principal,status,dias_cobertura,lead_time_dias,min,max,maneja_lote,created_at,clasificacion_id,marca_id,proveedor_preferido_id,clasificaciones(nombre),marcas(nombre),proveedores!productos_proveedor_preferido_id_fkey(nombre)')
           .eq('empresa_id', empresaId)
           .eq('status', 'activo')
           .order('nombre')
@@ -45,6 +45,9 @@ function useInventoryBase() {
       return {
         products: products.map(product => ({
           ...product,
+          categoryName: getRelationName((product as unknown as { clasificaciones?: unknown }).clasificaciones, 'Sin categoría'),
+          brandName: getRelationName((product as unknown as { marcas?: unknown }).marcas, 'Sin marca'),
+          providerName: getRelationName((product as unknown as { proveedores?: unknown }).proveedores, 'Sin proveedor'),
           stockTotal: hasStockRows ? (totalByProduct.get(product.id) || 0) : Number(product.cantidad || 0),
         })),
         stockRows,
@@ -52,6 +55,15 @@ function useInventoryBase() {
       };
     },
   });
+}
+
+function getRelationName(value: unknown, fallback: string) {
+  const relation = Array.isArray(value) ? value[0] : value;
+  if (relation && typeof relation === 'object' && 'nombre' in relation) {
+    const name = String((relation as { nombre?: unknown }).nombre || '').trim();
+    if (name) return name;
+  }
+  return fallback;
 }
 
 export default function InteligenciaAlmacenPage() {

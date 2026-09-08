@@ -655,6 +655,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const location = useLocation();
   const isVentaForm = isVentaFormPath(location.pathname);
+  const isLongInventoryReport = location.pathname === '/almacen/inteligencia';
   useProductosRealtime();
   useFeatureFlags();
 
@@ -688,6 +689,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { favorites } = useFavorites();
 
   // Inject Favoritos as a dynamic module right after Dashboard with user favorites as children
+  const manejaLotes = Boolean((empresa as { maneja_lotes?: boolean } | null)?.maneja_lotes);
   const visibleNavItems = useMemo(() => {
     const favItem: NavItem = {
       label: 'Favoritos',
@@ -701,7 +703,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const dashIdx = baseVisibleNavItems.findIndex(i => i.path === '/dashboard');
     const insertAt = dashIdx >= 0 ? dashIdx + 1 : 0;
     // Lotes solo se muestra si la empresa tiene el módulo de lotes activado.
-    const manejaLotes = !!(empresa as any)?.maneja_lotes;
     const withLoteGate = baseVisibleNavItems.map(it => {
       if (!it.children) return it;
       const children = it.children.filter(c => c.path !== '/almacen/lotes' || manejaLotes);
@@ -712,7 +713,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       favItem,
       ...withLoteGate.slice(insertAt),
     ];
-  }, [baseVisibleNavItems, favorites, (empresa as any)?.maneja_lotes]);
+  }, [baseVisibleNavItems, favorites, manejaLotes]);
 
   const closeMobile = () => setMobileOpen(false);
 
@@ -857,13 +858,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Desktop layout with sidebar
   return (
-    <div className="flex-1 min-h-0 h-full overflow-hidden flex flex-col bg-background">
+    <div className={cn(
+      'flex-1 flex flex-col bg-background',
+      isLongInventoryReport ? 'min-h-[100dvh] h-auto overflow-visible' : 'min-h-0 h-full overflow-hidden',
+    )}>
       <SandboxBanner />
       <NotificationRuntime bannersOnly />
-      <div className="flex-1 flex min-h-0">
+      <div className={cn(
+        'flex',
+        isLongInventoryReport ? 'flex-none min-h-[100dvh] items-stretch' : 'flex-1 min-h-0',
+      )}>
       <aside
         className={cn(
-          "h-full shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 overflow-hidden",
+          "shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 overflow-hidden",
+          isLongInventoryReport ? 'sticky top-0 h-[100dvh]' : 'h-full',
           collapsed ? "w-[52px]" : "w-56"
         )}
       >
@@ -941,7 +949,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      <div className={cn(
+        'flex-1 flex flex-col min-w-0',
+        isLongInventoryReport ? 'min-h-[100dvh] h-auto overflow-visible' : 'h-full overflow-hidden',
+      )}>
         <div className="shrink-0 flex items-center justify-between gap-2 px-4 border-b border-border bg-card min-h-10">
           <div className="flex-1 min-w-0"><SuperAdminEmpresaSelector /></div>
           <div className="flex items-center gap-1 shrink-0">
@@ -964,7 +975,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="shrink-0"><Breadcrumb /></div>
-        <main className="flex-1 min-h-0 overflow-y-auto">
+        <main className={cn(isLongInventoryReport ? 'flex-none overflow-visible' : 'flex-1 min-h-0 overflow-y-auto')}>
           {children}
         </main>
         {!isVentaForm && <div className="shrink-0"><UnilineFooter /></div>}

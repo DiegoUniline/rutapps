@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   AlertTriangle, ArrowDownRight, ArrowUpRight, Boxes, CalendarClock,
   CircleDollarSign, Clock3, Download, History, PackageCheck,
-  ShieldAlert, ShoppingCart, TrendingUp, Warehouse,
+  Layers3, ShieldAlert, ShoppingCart, Tags, TrendingUp, Truck, Warehouse,
 } from 'lucide-react';
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
@@ -41,6 +41,12 @@ export type IntelligenceProduct = {
   max: number | null;
   maneja_lote: boolean;
   created_at: string;
+  clasificacion_id: string | null;
+  marca_id: string | null;
+  proveedor_preferido_id: string | null;
+  categoryName: string;
+  brandName: string;
+  providerName: string;
   stockTotal: number;
 };
 
@@ -70,7 +76,18 @@ type IntelligenceHistory = {
   lotStock: IntelligenceLotStock[];
   source: 'database' | 'fallback';
 };
-type DashboardTab = 'resumen' | 'capital' | 'caducidades' | 'movimientos' | 'reabasto' | 'abc';
+type DashboardTab = 'resumen' | 'capital' | 'dimensiones' | 'caducidades' | 'movimientos' | 'reabasto' | 'abc';
+type DimensionMode = 'categoryName' | 'brandName' | 'providerName';
+type DimensionGroup = {
+  name: string;
+  productCount: number;
+  stockUnits: number;
+  capital: number;
+  stoppedCapital: number;
+  noMovementProducts: number;
+  revenue: number;
+  criticalProducts: number;
+};
 
 const MAX_HISTORY_DAYS = 365;
 const HEALTH_COLORS: Record<InventoryHealth, string> = {
@@ -84,6 +101,11 @@ const EXPIRATION_LABELS: Record<ExpirationHealth, string> = {
 };
 const EXPIRATION_COLORS: Record<ExpirationHealth, string> = {
   vencido: '#DC2626', critico: '#F97316', proximo: '#F59E0B', vigilancia: '#EAB308', vigente: '#10B981', sin_fecha: '#94A3B8',
+};
+const DIMENSION_CONFIG: Record<DimensionMode, { label: string; singular: string; icon: React.ElementType }> = {
+  categoryName: { label: 'Categorías', singular: 'Categoría', icon: Layers3 },
+  brandName: { label: 'Marcas', singular: 'Marca', icon: Tags },
+  providerName: { label: 'Proveedores', singular: 'Proveedor', icon: Truck },
 };
 
 const isoDaysAgo = (days: number) => {
@@ -233,6 +255,10 @@ export default function InventarioInteligenciaTab({
   const history = useIntelligenceHistory(windowDays);
   const [tab, setTab] = useState<DashboardTab>('resumen');
   const [healthFilter, setHealthFilter] = useState<'todos' | InventoryHealth>('todos');
+  const [categoryFilter, setCategoryFilter] = useState('todos');
+  const [brandFilter, setBrandFilter] = useState('todos');
+  const [providerFilter, setProviderFilter] = useState('todos');
+  const [dimensionMode, setDimensionMode] = useState<DimensionMode>('categoryName');
   const [expirationStatus, setExpirationStatus] = useState<'todos' | 'riesgo' | ExpirationHealth>('todos');
   const [expirationFrom, setExpirationFrom] = useState('');
   const [expirationTo, setExpirationTo] = useState('');
@@ -275,12 +301,56 @@ export default function InventarioInteligenciaTab({
 
   const abc = useMemo(() => getAbcClasses(analytics), [analytics]);
   const normalizedSearch = search.trim().toLowerCase();
+  const dimensionOptions = useMemo(() => ({
+    categories: [...new Set(analytics.map(product => product.categoryName))].sort((a, b) => a.localeCompare(b, 'es')),
+    brands: [...new Set(analytics.map(product => product.brandName))].sort((a, b) => a.localeCompare(b, 'es')),
+    providers: [...new Set(analytics.map(product => product.providerName))].sort((a, b) => a.localeCompare(b, 'es')),
+  }), [analytics]);
   const filtered = useMemo(() => analytics.filter(product => {
     const matchesSearch = !normalizedSearch
       || product.nombre.toLowerCase().includes(normalizedSearch)
       || product.codigo.toLowerCase().includes(normalizedSearch);
-    return matchesSearch && (healthFilter === 'todos' || product.health === healthFilter);
-  }), [analytics, normalizedSearch, healthFilter]);
+    return matchesSearch
+      && (healthFilter === 'todos' || product.health === healthFilter)
+      && (categoryFilter === 'todos' || product.categoryName === categoryFilter)
+      && (brandFilter === 'todos' || product.brandName === brandFilter)
+      && (providerFilter === 'todos' || product.providerName === providerFilter);
+  }), [analytics, normalizedSearch, healthFilter, categoryFilter, brandFilter, providerFilter]);
+  const filteredProductIds = useMemo(() => new Set(filtered.map(product => product.id)), [filtered]);
+  const facetedProductIds = useMemo(() => new Set(analytics.filter(product =>
+    (healthFilter === 'todos' || product.health === healthFilter)
+    && (categoryFilter === 'todos' || product.categoryName === categoryFilter)
+    && (brandFilter === 'todos' || product.brandName === brandFilter)
+    && (providerFilter === 'todos' || product.providerName === providerFilter)
+  ).map(product => product.id)), [analytics, healthFilter, categoryFilter, brandFilter, providerFilter]);
+  const hasProductFilters = Boolean(normalizedSearch) || healthFilter !== 'todos' || categoryFilter !== 'todos' || brandFilter !== 'todos' || providerFilter !== 'todos';
+
+  const dimensionGroups = useMemo(() => {
+    const build = (key: DimensionMode) => {
+      const groups = new Map<string, DimensionGroup>();
+      filtered.forEach(product => {
+        const name = product[key];
+        const group = groups.get(name) || { name, productCount: 0, stockUnits: 0, capital: 0, stoppedCapital: 0, noMovementProducts: 0, revenue: 0, criticalProducts: 0 };
+        group.productCount += 1;
+        group.stockUnits += Math.max(0, Number(product.stockTotal || 0));
+        group.capital += product.inventoryValue;
+        group.revenue += product.revenue;
+        if (product.health === 'detenido') {
+          group.stoppedCapital += product.inventoryValue;
+          group.noMovementProducts += 1;
+        }
+        if (['agotado', 'critico', 'reorden'].includes(product.health)) group.criticalProducts += 1;
+        groups.set(name, group);
+      });
+      return [...groups.values()].sort((a, b) => b.capital - a.capital);
+    };
+    return {
+      categoryName: build('categoryName'),
+      brandName: build('brandName'),
+      providerName: build('providerName'),
+    };
+  }, [filtered]);
+  const activeDimensionGroups = dimensionGroups[dimensionMode];
 
   const lotRows = useMemo(() => {
     return (history.data?.lotStock || []).map(stock => {
@@ -305,9 +375,10 @@ export default function InventarioInteligenciaTab({
     }).filter((row): row is NonNullable<typeof row> => Boolean(row));
   }, [history.data, productMap, warehouseMap]);
 
-  const searchedLots = useMemo(() => !normalizedSearch ? lotRows : lotRows.filter(row =>
-    row.productName.toLowerCase().includes(normalizedSearch) || row.productCode.toLowerCase().includes(normalizedSearch) || row.lotCode.toLowerCase().includes(normalizedSearch)
-  ), [lotRows, normalizedSearch]);
+  const searchedLots = useMemo(() => lotRows.filter(row => {
+    const matchesText = !normalizedSearch || row.productName.toLowerCase().includes(normalizedSearch) || row.productCode.toLowerCase().includes(normalizedSearch) || row.lotCode.toLowerCase().includes(normalizedSearch);
+    return matchesText && facetedProductIds.has(row.productId);
+  }), [lotRows, normalizedSearch, facetedProductIds]);
 
   const visibleLots = useMemo(() => searchedLots.filter(row => {
     if (expirationStatus === 'riesgo' && !['vencido', 'critico', 'proximo'].includes(row.health)) return false;
@@ -360,10 +431,9 @@ export default function InventarioInteligenciaTab({
   }, [history.data]);
 
   const recentMovements = useMemo(() => (history.data?.movements || []).filter(movement => {
-    if (!normalizedSearch) return true;
-    const product = movement.producto_id ? productMap.get(movement.producto_id) : null;
-    return Boolean(product && (product.nombre.toLowerCase().includes(normalizedSearch) || product.codigo.toLowerCase().includes(normalizedSearch)));
-  }), [history.data, normalizedSearch, productMap]);
+    if (!movement.producto_id) return !hasProductFilters;
+    return filteredProductIds.has(movement.producto_id);
+  }), [history.data, hasProductFilters, filteredProductIds]);
 
   const topStopped = useMemo(() => filtered.filter(product => product.stockTotal > 0 && ['detenido', 'lento'].includes(product.health)).sort((a, b) => b.inventoryValue - a.inventoryValue), [filtered]);
   const restock = useMemo(() => filtered.filter(product => ['agotado', 'critico', 'reorden'].includes(product.health)).sort((a, b) => (a.coverageDays ?? -1) - (b.coverageDays ?? -1)), [filtered]);
@@ -423,6 +493,19 @@ export default function InventarioInteligenciaTab({
             <option value="todos">Todos los diagnósticos</option>
             {(Object.keys(HEALTH_LABELS) as InventoryHealth[]).map(health => <option key={health} value={health}>{HEALTH_LABELS[health]}</option>)}
           </select>
+          <select aria-label="Filtrar por categoría" value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)} className="h-9 max-w-52 rounded-md border bg-background px-3 text-sm">
+            <option value="todos">Todas las categorías</option>
+            {dimensionOptions.categories.map(name => <option key={name} value={name}>{name}</option>)}
+          </select>
+          <select aria-label="Filtrar por marca" value={brandFilter} onChange={event => setBrandFilter(event.target.value)} className="h-9 max-w-52 rounded-md border bg-background px-3 text-sm">
+            <option value="todos">Todas las marcas</option>
+            {dimensionOptions.brands.map(name => <option key={name} value={name}>{name}</option>)}
+          </select>
+          <select aria-label="Filtrar por proveedor" value={providerFilter} onChange={event => setProviderFilter(event.target.value)} className="h-9 max-w-52 rounded-md border bg-background px-3 text-sm">
+            <option value="todos">Todos los proveedores</option>
+            {dimensionOptions.providers.map(name => <option key={name} value={name}>{name}</option>)}
+          </select>
+          {(healthFilter !== 'todos' || categoryFilter !== 'todos' || brandFilter !== 'todos' || providerFilter !== 'todos') && <Button variant="ghost" size="sm" onClick={() => { setHealthFilter('todos'); setCategoryFilter('todos'); setBrandFilter('todos'); setProviderFilter('todos'); }}>Limpiar filtros</Button>}
           {history.isFetching && !history.isLoading && <span className="text-xs text-muted-foreground">Actualizando…</span>}
           <Button variant="outline" size="sm" onClick={exportAnalysis}><Download className="mr-1 h-4 w-4" /> Exportar análisis</Button>
         </div>
@@ -441,6 +524,7 @@ export default function InventarioInteligenciaTab({
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="resumen">Resumen ejecutivo</TabsTrigger>
           <TabsTrigger value="capital">Capital y rotación</TabsTrigger>
+          <TabsTrigger value="dimensiones">Categoría · marca · proveedor</TabsTrigger>
           <TabsTrigger value="caducidades">Caducidades {expiryRisks.length > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5">{expiryRisks.length}</Badge>}</TabsTrigger>
           <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
           <TabsTrigger value="reabasto">Reabasto {restock.length > 0 && <Badge className="ml-1 h-5 bg-amber-500 px-1.5">{restock.length}</Badge>}</TabsTrigger>
@@ -492,6 +576,53 @@ export default function InventarioInteligenciaTab({
           ]} empty="No hay productos para mostrar.">
             {filtered.slice().sort((a, b) => b.inventoryValue - a.inventoryValue).map(product => <TableRow key={product.id}>
               <TableCell><ProductoCell product={product}/></TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.stockTotal)}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmt(product.inventoryValue)}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.soldUnits)}</TableCell><TableCell className="text-center tabular-nums">{product.coverageDays == null ? 'Sin demanda' : `${Math.round(product.coverageDays)} d`}</TableCell><TableCell className="text-center tabular-nums">{formatDate(product.lastSaleAt)}</TableCell><TableCell className="text-center tabular-nums">{product.health === 'detenido' ? `${product.idleDays} días` : '—'}</TableCell><TableCell className="text-center"><HealthBadge health={product.health}/></TableCell>
+            </TableRow>)}
+          </DataTable>
+        </TabsContent>
+
+        <TabsContent value="dimensiones" className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            {(Object.keys(DIMENSION_CONFIG) as DimensionMode[]).map(mode => {
+              const config = DIMENSION_CONFIG[mode];
+              const rows = dimensionGroups[mode];
+              const capital = rows.reduce((sum, row) => sum + row.capital, 0);
+              const stopped = rows.reduce((sum, row) => sum + row.stoppedCapital, 0);
+              return <button key={mode} onClick={() => setDimensionMode(mode)} className={cn('rounded-xl border bg-card p-4 text-left transition hover:border-primary/50', dimensionMode === mode && 'border-primary ring-2 ring-primary/15')}>
+                <div className="flex items-center justify-between"><config.icon className="h-5 w-5 text-primary"/><Badge variant="outline">{rows.length}</Badge></div>
+                <p className="mt-3 font-bold">{config.label}</p>
+                <p className="mt-1 text-sm font-black">{fmt(capital)}</p>
+                <p className="text-xs text-muted-foreground">Detenido: {fmt(stopped)}</p>
+              </button>;
+            })}
+          </div>
+
+          {dimensionMode === 'providerName' && <p className="text-xs text-muted-foreground">
+            El análisis por proveedor utiliza el proveedor preferido de cada producto para evitar duplicar existencias y capital cuando un artículo tiene varias opciones de compra.
+          </p>}
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <ChartCard title={`Capital por ${DIMENSION_CONFIG[dimensionMode].singular.toLowerCase()}`} subtitle="Capital total frente al capital sin movimiento">
+              <ResponsiveContainer width="100%" height={Math.max(300, Math.min(520, activeDimensionGroups.slice(0, 12).length * 38))}>
+                <BarChart data={activeDimensionGroups.slice(0, 12)} layout="vertical" margin={{ left: 20, right: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false}/><XAxis type="number" tickFormatter={shortMoney} tick={{ fontSize: 10 }}/><YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10 }}/>
+                  <ChartTooltip formatter={(value: number) => fmt(value)}/><Legend/><Bar dataKey="capital" name="Capital total" fill="#4F46E5" radius={[0, 5, 5, 0]}/><Bar dataKey="stoppedCapital" name="Capital detenido" fill="#DC2626" radius={[0, 5, 5, 0]}/>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+            <Card><CardHeader><CardTitle className="text-base">Lectura del filtro actual</CardTitle></CardHeader><CardContent className="space-y-3">
+              <Insight icon={Layers3} title="Productos analizados" text={`${fmtNum(filtered.length)} productos coinciden con la búsqueda y filtros activos.`}/>
+              <Insight icon={Clock3} title="Sin movimiento" text={`${fmtNum(activeDimensionGroups.reduce((sum, row) => sum + row.noMovementProducts, 0))} productos tienen capital detenido por 90 días o más.`}/>
+              <Insight icon={ShieldAlert} title="Requieren acción" text={`${fmtNum(activeDimensionGroups.reduce((sum, row) => sum + row.criticalProducts, 0))} productos están agotados, críticos o en punto de reorden.`}/>
+            </CardContent></Card>
+          </div>
+
+          <DataTable headers={[
+            { label: DIMENSION_CONFIG[dimensionMode].singular }, { label: 'Productos', align: 'right' }, { label: 'Unidades', align: 'right' },
+            { label: 'Capital', align: 'right' }, { label: 'Capital detenido', align: 'right' }, { label: 'Sin movimiento', align: 'center' },
+            { label: `Ingresos ${windowDays}d`, align: 'right' }, { label: 'Requieren acción', align: 'center' },
+          ]} empty="No hay información para los filtros seleccionados.">
+            {activeDimensionGroups.map(row => <TableRow key={row.name}>
+              <TableCell className="font-semibold">{row.name}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(row.productCount)}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(row.stockUnits)}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmt(row.capital)}</TableCell><TableCell className="text-right font-semibold text-destructive tabular-nums">{fmt(row.stoppedCapital)}</TableCell><TableCell className="text-center tabular-nums">{fmtNum(row.noMovementProducts)}</TableCell><TableCell className="text-right tabular-nums">{fmt(row.revenue)}</TableCell><TableCell className="text-center tabular-nums">{fmtNum(row.criticalProducts)}</TableCell>
             </TableRow>)}
           </DataTable>
         </TabsContent>
@@ -575,7 +706,11 @@ export default function InventarioInteligenciaTab({
           ]} empty="No hay ventas suficientes para clasificar.">
             {abc.filter(product => {
               const matchesSearch = !normalizedSearch || product.nombre.toLowerCase().includes(normalizedSearch) || product.codigo.toLowerCase().includes(normalizedSearch);
-              return matchesSearch && (healthFilter === 'todos' || product.health === healthFilter);
+              return matchesSearch
+                && (healthFilter === 'todos' || product.health === healthFilter)
+                && (categoryFilter === 'todos' || product.categoryName === categoryFilter)
+                && (brandFilter === 'todos' || product.brandName === brandFilter)
+                && (providerFilter === 'todos' || product.providerName === providerFilter);
             }).map(product => <TableRow key={product.id}><TableCell className="text-center"><Badge className={cn(product.abcClass === 'A' && 'bg-emerald-600', product.abcClass === 'B' && 'bg-amber-500', product.abcClass === 'C' && 'bg-slate-500')}>{product.abcClass}</Badge></TableCell><TableCell><ProductoCell product={product}/></TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.soldUnits)}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmt(product.revenue)}</TableCell><TableCell className="text-right tabular-nums">{(product.cumulativePct * 100).toFixed(1)}%</TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.stockTotal)}</TableCell><TableCell className="text-right tabular-nums">{fmt(product.inventoryValue)}</TableCell><TableCell className="text-center"><HealthBadge health={product.health}/></TableCell></TableRow>)}
           </DataTable>
         </TabsContent>
