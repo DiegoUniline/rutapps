@@ -495,9 +495,14 @@ export function useVenta(id?: string) {
         }
       } catch { /* IndexedDB not available */ }
 
-      return null as unknown as Venta;
+      // Sólo devolvemos null cuando el servidor confirmó que la venta no existe.
+      // Si falló la red/petición y tampoco hay copia local, lanzamos el error para
+      // que React Query reintente en vez de dejar la pantalla de detalle en blanco.
+      if (serverSaidMissing) return null as unknown as Venta;
+      throw serverError ?? new Error('No se pudo cargar la venta. Revisa tu conexión.');
     },
     enabled: !!id,
+    retry: 3,
   });
 }
 
