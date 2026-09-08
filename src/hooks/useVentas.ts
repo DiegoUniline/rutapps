@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist';
+import { createVentaLoadError } from '@/lib/ventaLoadGuard';
 import type { Venta, VentaLinea } from '@/types';
 
 /**
@@ -435,7 +436,11 @@ export function useVenta(id?: string) {
   return useQuery({
     queryKey: ['venta', id],
     networkMode: 'always',
+    retry: (failureCount) => failureCount < 2,
+    retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     queryFn: async () => {
+      let serverError: unknown = null;
+      let serverRespondedWithoutVenta = false;
       // Try server first (only if online). Any network error falls back to IndexedDB.
       if (typeof navigator === 'undefined' || navigator.onLine) {
         try {
@@ -446,9 +451,11 @@ export function useVenta(id?: string) {
             .maybeSingle();
           if (error) throw error;
           if (data) return data as Venta;
+          serverRespondedWithoutVenta = true;
         } catch (err) {
           // Network/fetch error: fall through to local cache
           console.warn('[useVenta] server fetch failed, trying offline cache:', err);
+          serverError = err;
         }
       }
 
@@ -491,7 +498,10 @@ export function useVenta(id?: string) {
         }
       } catch { /* IndexedDB not available */ }
 
-      return null as unknown as Venta;
+      // Nunca convertir un error/no-encontrado en una venta vacía. El formulario
+      // usa este error para mostrar Reintentar y evita que el usuario guarde por
+      // accidente sobre una pantalla que aparenta ser una venta nueva.
+      throw createVentaLoadError(serverError, serverRespondedWithoutVenta);
     },
     enabled: !!id,
   });
