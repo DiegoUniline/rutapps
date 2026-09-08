@@ -392,7 +392,7 @@ export default function VentaFormPage() {
       <div className="w-full max-w-none p-2.5 sm:p-3 space-y-2.5">
         <div className="bg-card border border-border rounded-md p-3">
           {readOnly && <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />Esta venta está {form.status} y no se puede editar.</div>}
-          {!isNew && form.tipo !== 'saldo_inicial' && Number(form.total) > 0 && lineas.filter(l => l.producto_id).length === 0 && (
+          {!isNew && String(form.tipo) !== 'saldo_inicial' && Number(form.total) > 0 && lineas.filter(l => l.producto_id).length === 0 && (
             <div className="mb-3 text-xs bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 rounded">
               Esta venta llegó sin sus productos: el equipo móvil registró el total pero las partidas todavía no se subieron. Pide al vendedor que abra la App Móvil con señal para completar el envío.
             </div>
