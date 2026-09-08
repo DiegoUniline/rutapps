@@ -59,7 +59,7 @@ describe('identidad de Público general', () => {
 
 describe('reparación local de una venta pendiente', () => {
   it('agrega cliente_id sin perder folio, total ni saldo', () => {
-    const repaired = mergeLocalRow(
+    const repaired = mergeLocalRow<Record<string, unknown>>(
       { id: 'venta-1', folio: 'VTA-0008', total: 207.70, saldo_pendiente: 207.70 },
       { cliente_id: 'publico-general' },
     );
