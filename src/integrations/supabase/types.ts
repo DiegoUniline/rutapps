@@ -9111,7 +9111,7 @@ export type Database = {
           cerrado_at: string | null
           cerrado_por: string | null
           cerrado_snapshot: Json | null
-          cliente_id: string | null
+          cliente_id: string
           comision_volumen_pago_id: string | null
           concepto: string | null
           condicion_pago: Database["public"]["Enums"]["condicion_pago"]
@@ -9152,7 +9152,7 @@ export type Database = {
           cerrado_at?: string | null
           cerrado_por?: string | null
           cerrado_snapshot?: Json | null
-          cliente_id?: string | null
+          cliente_id: string
           comision_volumen_pago_id?: string | null
           concepto?: string | null
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
@@ -9193,7 +9193,7 @@ export type Database = {
           cerrado_at?: string | null
           cerrado_por?: string | null
           cerrado_snapshot?: Json | null
-          cliente_id?: string | null
+          cliente_id?: string
           comision_volumen_pago_id?: string | null
           concepto?: string | null
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
@@ -10134,12 +10134,21 @@ export type Database = {
         Returns: undefined
       }
       count_active_users: { Args: { p_empresa_id: string }; Returns: number }
+      crear_mi_cupon_partner_v2: {
+        Args: {
+          p_codigo: string
+          p_nombre: string
+          p_plan_id?: string
+          p_porcentaje: number
+          p_un_uso_por_empresa?: boolean
+          p_vigencia_tipo?: string
+          p_vigente_desde?: string
+          p_vigente_hasta?: string
+        }
+        Returns: Json
+      }
       deduct_timbre: {
         Args: { p_cfdi_id: string; p_empresa_id: string; p_user_id: string }
-        Returns: boolean
-      }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
       delete_empresa_cascade: {
@@ -10152,11 +10161,6 @@ export type Database = {
       }
       desactivar_cupones_partner_fuera_limite: {
         Args: { _partner_id: string }
-        Returns: number
-      }
-      email_queue_dispatch: { Args: never; Returns: undefined }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
         Returns: number
       }
       ensure_almacen_mermas: { Args: { _empresa_id: string }; Returns: string }
@@ -10188,10 +10192,6 @@ export type Database = {
         }[]
       }
       fn_factor_neto_compra: { Args: { p_compra_id: string }; Returns: number }
-      fn_inventory_intelligence_snapshot: {
-        Args: { p_empresa_id: string; p_window_days?: number }
-        Returns: Json
-      }
       fn_log_solicitud_traspaso: {
         Args: {
           p_accion: string
@@ -10366,6 +10366,7 @@ export type Database = {
       is_sandbox_empresa: { Args: { p_empresa_id: string }; Returns: boolean }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       limpiar_consumo_datos_antiguo: { Args: never; Returns: undefined }
+      listar_planes_cupon_partner: { Args: never; Returns: Json }
       log_venta_historial: {
         Args: {
           _accion: string
@@ -10375,15 +10376,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
-      }
+      mis_cupones_partner: { Args: never; Returns: Json }
       next_folio: {
         Args: { p_empresa_id: string; prefix: string }
         Returns: string
@@ -10424,14 +10417,6 @@ export type Database = {
         Returns: undefined
       }
       reactivar_usuario: { Args: { p_profile_id: string }; Returns: Json }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
-      }
       reasignar_entregas_bulk: {
         Args: {
           p_entrega_ids: string[]
