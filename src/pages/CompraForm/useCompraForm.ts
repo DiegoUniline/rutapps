@@ -39,6 +39,7 @@ export function useCompraForm() {
   const [dirty, setDirty] = useState(false);
   const [editingExisting, setEditingExisting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [showPago, setShowPago] = useState(false);
   const [addingPago, setAddingPago] = useState(false);
   const [newPago, setNewPago] = useState({ fecha: todayLocal(), metodo_pago: 'transferencia', referencia: '', notas: '', monto: 0 });
@@ -346,57 +347,32 @@ export function useCompraForm() {
   };
 
   const handleCancel = async () => {
-    if (!form.id) return;
+    if (!form.id || cancelling) return;
+    setCancelling(true);
     try {
-      // Revertir cualquier mercancía ya recibida, sin importar el status (puede haber recepción parcial en confirmada)
-      if (form.status !== 'cancelada') {
-        const validLines = lineas.filter(l => l.producto_id && (Number(l.cantidad_recibida) || 0) > 0); const today = todayLocal();
-        const updates: Array<Promise<void>> = [];
-        for (const l of validLines) {
-          const piezas = Math.max(0, Number(l.cantidad_recibida) || 0);
-          if (piezas <= 0) continue;
+      const { data, error } = await supabase.rpc('cancelar_compra_segura' as any, {
+        p_compra_id: form.id,
+      });
+      if (error) throw new Error(error.message);
 
-          // Deduct from stock_almacen (trigger auto-recalcs productos.cantidad)
-          if (form.almacen_id) {
-            updates.push((async () => {
-              const { data: sa } = await supabase.from('stock_almacen')
-                .select('id, cantidad')
-                .eq('almacen_id', form.almacen_id)
-                .eq('producto_id', l.producto_id!)
-                .maybeSingle();
-              if (sa) {
-                const nuevoStock = (sa.cantidad ?? 0) - piezas;
-                if (nuevoStock < 0) {
-                  const { data: prod } = await supabase.from('productos').select('nombre, vender_sin_stock').eq('id', l.producto_id!).maybeSingle();
-                  if (!prod?.vender_sin_stock) {
-                    throw new Error(`Stock insuficiente para "${prod?.nombre ?? l.producto_id}". Disponible: ${sa.cantidad ?? 0}, solicitado: ${piezas}`);
-                  }
-                }
-                await supabase.from('stock_almacen').update({
-                  cantidad: nuevoStock,
-                  updated_at: new Date().toISOString(),
-                } as any).eq('id', sa.id);
-              }
-            })());
-          }
-
-          updates.push((async () => {
-            await supabase.from('movimientos_inventario').insert({
-              empresa_id: empresa!.id, tipo: 'salida',
-              producto_id: l.producto_id!, cantidad: piezas,
-              almacen_origen_id: form.almacen_id,
-              referencia_tipo: 'compra', referencia_id: form.id,
-              user_id: user?.id, fecha: today,
-              notas: `Cancelación compra ${form.folio ?? form.id.slice(0, 8)}`
-            } as any);
-          })());
-        }
-        await Promise.all(updates);
-      }
-      await Promise.all([supabase.from('pago_compras').delete().eq('compra_id', form.id), supabase.from('compras').update({ status: 'cancelada', saldo_pendiente: 0 } as any).eq('id', form.id)]);
-      setForm(f => ({ ...f, status: 'cancelada', saldo_pendiente: 0 })); toast.success('Compra cancelada');
-      await Promise.all([qc.refetchQueries({ queryKey: ['compra', form.id] }), qc.refetchQueries({ queryKey: ['pagos-compra', form.id] }), qc.refetchQueries({ queryKey: ['compras'] }), qc.refetchQueries({ queryKey: ['inventario'] }), qc.refetchQueries({ queryKey: ['productos'] })]);
-    } catch (err: any) { toast.error(err.message || 'Error al cancelar'); }
+      const result = data as { ya_cancelada?: boolean } | null;
+      setForm(f => ({ ...f, status: 'cancelada', saldo_pendiente: 0 }));
+      toast.success(result?.ya_cancelada ? 'La compra ya estaba cancelada' : 'Compra cancelada');
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ['compra', form.id] }),
+        qc.refetchQueries({ queryKey: ['pagos-compra', form.id] }),
+        qc.invalidateQueries({ queryKey: ['compras'] }),
+        qc.invalidateQueries({ queryKey: ['inventario'] }),
+        qc.invalidateQueries({ queryKey: ['inventario-inteligencia'] }),
+        qc.invalidateQueries({ queryKey: ['productos'] }),
+        qc.invalidateQueries({ queryKey: ['stock-almacen'] }),
+        qc.invalidateQueries({ queryKey: ['kardex-ubicacion'] }),
+      ]);
+    } catch (err: any) {
+      toast.error(err.message || 'Error al cancelar');
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const totalPagado = pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0;
@@ -419,7 +395,7 @@ export function useCompraForm() {
 
   return {
     id, navigate, isNew, empresa, form, setForm, lineas, setLineas, dirty, isEditable,
-    editingExisting, saving, inventoryImpact, beginEditing, cancelEditing,
+    editingExisting, saving, cancelling, inventoryImpact, beginEditing, cancelEditing,
     totals, totalPagado, saldoActual, pagos, proveedoresList, productosList, almacenesList,
     isLoading, addingPago, setAddingPago, newPago, setNewPago, confirmDialog, setConfirmDialog,
     requestPin, PinDialog, updateField, updateLinea, addLine, removeLine,
