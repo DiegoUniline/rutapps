@@ -16,7 +16,6 @@
     "src/lib/currency.ts",
     "src/lib/paymentDistribution.ts",
     "src/lib/saldoFavor.ts",
-    "src/lib/ventasListSummary.ts",
     "src/lib/syncErrorClassify.ts",
     "src/pages/CompraForm/types.ts"
   ]
