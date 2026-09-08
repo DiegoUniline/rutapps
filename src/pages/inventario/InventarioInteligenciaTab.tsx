@@ -24,7 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ProductoLink } from '@/components/links/EntityLinks';
 
 export type IntelligenceProduct = {
@@ -56,6 +56,20 @@ type Movement = {
 };
 type Lot = { id: string; producto_id: string; codigo: string; fecha_caducidad: string | null; fecha_fabricacion: string | null; costo: number | null; activo: boolean; created_at: string };
 type LotStock = { lote_id: string; producto_id: string; almacen_id: string; cantidad: number };
+type ProductSales = { producto_id: string; sold_units: number; revenue: number; last_sale_at: string | null };
+type LastInbound = { producto_id: string; last_inbound_at: string };
+type MovementTrend = { fecha: string; tipo: Movement['tipo']; cantidad: number };
+type IntelligenceLotStock = LotStock & Pick<Lot, 'codigo' | 'fecha_caducidad' | 'fecha_fabricacion' | 'costo' | 'created_at'>;
+type IntelligenceHistory = {
+  productSales: ProductSales[];
+  lastInbound: LastInbound[];
+  movementTrend: MovementTrend[];
+  movements: Movement[];
+  movementCount: number;
+  movementTypeCounts: Partial<Record<Movement['tipo'], number>>;
+  lotStock: IntelligenceLotStock[];
+  source: 'database' | 'fallback';
+};
 type DashboardTab = 'resumen' | 'capital' | 'caducidades' | 'movimientos' | 'reabasto' | 'abc';
 
 const MAX_HISTORY_DAYS = 365;
@@ -79,42 +93,129 @@ const isoDaysAgo = (days: number) => {
 };
 const formatDate = (value?: string | null) => value ? new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString('es-MX') : '—';
 const shortMoney = (value: number) => new Intl.NumberFormat('es-MX', { notation: 'compact', maximumFractionDigits: 1 }).format(value || 0);
+const getMovementReferenceRoute = (type: string | null, id: string | null) => {
+  if (!type || !id) return null;
+  if (['venta', 'venta_ruta', 'cancelacion_venta', 'reverso_borrador'].includes(type)) return `/ventas/${id}`;
+  if (type === 'compra') return `/almacen/compras/${id}`;
+  if (type === 'traspaso') return `/almacen/traspasos/${id}`;
+  if (type === 'entrega') return `/entregas/${id}`;
+  if (type === 'auditoria') return `/almacen/auditorias/${id}/resultados`;
+  return null;
+};
 
-function useIntelligenceHistory() {
+function normalizeSnapshot(value: unknown): IntelligenceHistory {
+  const snapshot = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  return {
+    productSales: (Array.isArray(snapshot.sales_by_product) ? snapshot.sales_by_product : []) as ProductSales[],
+    lastInbound: (Array.isArray(snapshot.last_inbound) ? snapshot.last_inbound : []) as LastInbound[],
+    movementTrend: (Array.isArray(snapshot.movement_trend) ? snapshot.movement_trend : []) as MovementTrend[],
+    movements: (Array.isArray(snapshot.recent_movements) ? snapshot.recent_movements : []) as Movement[],
+    movementCount: Number(snapshot.movement_count || 0),
+    movementTypeCounts: (snapshot.movement_type_counts && typeof snapshot.movement_type_counts === 'object'
+      ? snapshot.movement_type_counts
+      : {}) as Partial<Record<Movement['tipo'], number>>,
+    lotStock: (Array.isArray(snapshot.lot_stock) ? snapshot.lot_stock : []) as IntelligenceLotStock[],
+    source: 'database',
+  };
+}
+
+async function loadLegacySnapshot(empresaId: string, windowDays: number): Promise<IntelligenceHistory> {
+  const historyCutoff = isoDaysAgo(MAX_HISTORY_DAYS);
+  const windowCutoff = isoDaysAgo(windowDays);
+  const [sales, movements, lots, lotStock] = await Promise.all([
+    fetchAllPages<Sale>((from, to) => supabase.from('ventas').select('id,fecha').eq('empresa_id', empresaId).neq('status', 'cancelado').gte('fecha', historyCutoff).range(from, to)),
+    fetchAllPages<Movement>((from, to) => supabase.from('movimientos_inventario')
+      .select('id,fecha,created_at,tipo,cantidad,producto_id,lote_id,referencia_tipo,referencia_id,almacen_origen_id,almacen_destino_id,notas')
+      .eq('empresa_id', empresaId).gte('fecha', historyCutoff).order('created_at', { ascending: false }).range(from, to)),
+    fetchAllPages<Lot>((from, to) => supabase.from('lotes')
+      .select('id,producto_id,codigo,fecha_caducidad,fecha_fabricacion,costo,activo,created_at')
+      .eq('empresa_id', empresaId).eq('activo', true).range(from, to)),
+    fetchAllPages<LotStock>((from, to) => supabase.from('stock_lotes')
+      .select('lote_id,producto_id,almacen_id,cantidad').eq('empresa_id', empresaId).gt('cantidad', 0).range(from, to)),
+  ]);
+
+  const saleDate = new Map(sales.map(sale => [sale.id, sale.fecha]));
+  const lines: Array<SaleLine & { fecha: string }> = [];
+  const chunks: string[][] = [];
+  for (let index = 0; index < sales.length; index += 200) chunks.push(sales.slice(index, index + 200).map(sale => sale.id));
+
+  // Respaldo temporal: procesa hasta ocho bloques simultáneos en vez de uno por uno.
+  for (let index = 0; index < chunks.length; index += 8) {
+    const batch = await Promise.all(chunks.slice(index, index + 8).map(ids => fetchAllPages<SaleLine>((from, to) => supabase.from('venta_lineas')
+      .select('venta_id,producto_id,cantidad,total').in('venta_id', ids).range(from, to))));
+    batch.flat().forEach(line => {
+      const fecha = saleDate.get(line.venta_id);
+      if (fecha) lines.push({ ...line, fecha });
+    });
+  }
+
+  const salesStats = new Map<string, ProductSales>();
+  lines.forEach(line => {
+    if (!line.producto_id) return;
+    const row = salesStats.get(line.producto_id) || { producto_id: line.producto_id, sold_units: 0, revenue: 0, last_sale_at: null };
+    if (!row.last_sale_at || line.fecha > row.last_sale_at) row.last_sale_at = line.fecha;
+    if (line.fecha >= windowCutoff) {
+      row.sold_units += Number(line.cantidad || 0);
+      row.revenue += Number(line.total || 0);
+    }
+    salesStats.set(line.producto_id, row);
+  });
+
+  const inbound = new Map<string, string>();
+  movements.forEach(movement => {
+    if (!movement.producto_id || movement.tipo !== 'entrada') return;
+    const prior = inbound.get(movement.producto_id);
+    if (!prior || movement.fecha > prior) inbound.set(movement.producto_id, movement.fecha);
+  });
+
+  const currentMovements = movements.filter(movement => movement.fecha >= windowCutoff);
+  const bucketDays = windowDays > 90 ? 7 : 1;
+  const trend = new Map<string, MovementTrend>();
+  currentMovements.forEach(movement => {
+    const date = new Date(`${movement.fecha}T00:00:00Z`);
+    if (bucketDays === 7) date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+    const fecha = date.toISOString().slice(0, 10);
+    const key = `${fecha}-${movement.tipo}`;
+    const row = trend.get(key) || { fecha, tipo: movement.tipo, cantidad: 0 };
+    row.cantidad += Math.abs(Number(movement.cantidad || 0));
+    trend.set(key, row);
+  });
+
+  const counts: Partial<Record<Movement['tipo'], number>> = {};
+  currentMovements.forEach(movement => { counts[movement.tipo] = (counts[movement.tipo] || 0) + 1; });
+  const lotMap = new Map(lots.map(lot => [lot.id, lot]));
+
+  return {
+    productSales: [...salesStats.values()],
+    lastInbound: [...inbound].map(([producto_id, last_inbound_at]) => ({ producto_id, last_inbound_at })),
+    movementTrend: [...trend.values()].sort((a, b) => a.fecha.localeCompare(b.fecha)),
+    movements: currentMovements.slice(0, 500),
+    movementCount: currentMovements.length,
+    movementTypeCounts: counts,
+    lotStock: lotStock.flatMap(stock => {
+      const lot = lotMap.get(stock.lote_id);
+      return lot ? [{ ...stock, codigo: lot.codigo, fecha_caducidad: lot.fecha_caducidad, fecha_fabricacion: lot.fecha_fabricacion, costo: lot.costo, created_at: lot.created_at }] : [];
+    }),
+    source: 'fallback',
+  };
+}
+
+function useIntelligenceHistory(windowDays: number) {
   const { empresa } = useAuth();
-  return useQuery({
-    queryKey: ['inventory-intelligence-history', empresa?.id],
+  return useQuery<IntelligenceHistory>({
+    queryKey: ['inventory-intelligence-history-v2', empresa?.id, windowDays],
     enabled: Boolean(empresa?.id),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    placeholderData: previous => previous,
     queryFn: async () => {
       const empresaId = empresa!.id;
-      const cutoff = isoDaysAgo(MAX_HISTORY_DAYS);
-      const [sales, movements, lots, lotStock] = await Promise.all([
-        fetchAllPages<Sale>((from, to) => supabase.from('ventas').select('id,fecha').eq('empresa_id', empresaId).neq('status', 'cancelado').gte('fecha', cutoff).range(from, to)),
-        fetchAllPages<Movement>((from, to) => supabase.from('movimientos_inventario')
-          .select('id,fecha,created_at,tipo,cantidad,producto_id,lote_id,referencia_tipo,referencia_id,almacen_origen_id,almacen_destino_id,notas')
-          .eq('empresa_id', empresaId).gte('fecha', cutoff).order('created_at', { ascending: false }).range(from, to)),
-        fetchAllPages<Lot>((from, to) => supabase.from('lotes')
-          .select('id,producto_id,codigo,fecha_caducidad,fecha_fabricacion,costo,activo,created_at')
-          .eq('empresa_id', empresaId).eq('activo', true).range(from, to)),
-        fetchAllPages<LotStock>((from, to) => supabase.from('stock_lotes')
-          .select('lote_id,producto_id,almacen_id,cantidad').eq('empresa_id', empresaId).gt('cantidad', 0).range(from, to)),
-      ]);
-
-      const saleDate = new Map(sales.map(sale => [sale.id, sale.fecha]));
-      const lines: Array<SaleLine & { fecha: string }> = [];
-      const saleIds = sales.map(sale => sale.id);
-      const chunkSize = 200;
-      for (let index = 0; index < saleIds.length; index += chunkSize) {
-        const ids = saleIds.slice(index, index + chunkSize);
-        const chunk = await fetchAllPages<SaleLine>((from, to) => supabase.from('venta_lineas')
-          .select('venta_id,producto_id,cantidad,total').in('venta_id', ids).range(from, to));
-        chunk.forEach(line => {
-          const fecha = saleDate.get(line.venta_id);
-          if (fecha) lines.push({ ...line, fecha });
-        });
-      }
-      return { sales, saleLines: lines, movements, lots, lotStock };
+      const { data, error } = await supabase.rpc('fn_inventory_intelligence_snapshot', {
+        p_empresa_id: empresaId,
+        p_window_days: windowDays,
+      });
+      if (!error && data) return normalizeSnapshot(data);
+      if (error && !['PGRST202', '42883'].includes(error.code || '')) throw error;
+      return loadLegacySnapshot(empresaId, windowDays);
     },
   });
 }
@@ -128,86 +229,77 @@ export default function InventarioInteligenciaTab({
   search: string;
 }) {
   const { fmt } = useCurrency();
-  const history = useIntelligenceHistory();
   const [windowDays, setWindowDays] = useState(60);
+  const history = useIntelligenceHistory(windowDays);
   const [tab, setTab] = useState<DashboardTab>('resumen');
+  const [healthFilter, setHealthFilter] = useState<'todos' | InventoryHealth>('todos');
   const [expirationStatus, setExpirationStatus] = useState<'todos' | 'riesgo' | ExpirationHealth>('todos');
   const [expirationFrom, setExpirationFrom] = useState('');
   const [expirationTo, setExpirationTo] = useState('');
-  const cutoff = isoDaysAgo(windowDays);
 
   const productMap = useMemo(() => new Map(productos.map(product => [product.id, product])), [productos]);
   const warehouseMap = useMemo(() => new Map(warehouses.map(warehouse => [warehouse.id, warehouse])), [warehouses]);
 
   const analytics = useMemo(() => {
-    const soldUnits = new Map<string, number>();
-    const revenue = new Map<string, number>();
-    const lastSale = new Map<string, string>();
-    (history.data?.saleLines || []).forEach(line => {
-      if (!line.producto_id) return;
-      const prior = lastSale.get(line.producto_id);
-      if (!prior || line.fecha > prior) lastSale.set(line.producto_id, line.fecha);
-      if (line.fecha < cutoff) return;
-      soldUnits.set(line.producto_id, (soldUnits.get(line.producto_id) || 0) + Number(line.cantidad || 0));
-      revenue.set(line.producto_id, (revenue.get(line.producto_id) || 0) + Number(line.total || 0));
-    });
+    const sales = new Map((history.data?.productSales || []).map(row => [row.producto_id, row]));
+    const lastInbound = new Map((history.data?.lastInbound || []).map(row => [row.producto_id, row.last_inbound_at]));
 
-    const lastInbound = new Map<string, string>();
-    (history.data?.movements || []).forEach(movement => {
-      if (!movement.producto_id || movement.tipo !== 'entrada') return;
-      const prior = lastInbound.get(movement.producto_id);
-      if (!prior || movement.fecha > prior) lastInbound.set(movement.producto_id, movement.fecha);
-    });
-
-    return productos.map(product => ({
-      ...product,
-      soldUnits: soldUnits.get(product.id) || 0,
-      revenue: revenue.get(product.id) || 0,
-      lastSaleAt: lastSale.get(product.id) || null,
-      lastInboundAt: lastInbound.get(product.id) || null,
-      ...analyzeInventoryProduct({
+    return productos.map(product => {
+      const productSales = sales.get(product.id);
+      const soldUnits = Number(productSales?.sold_units || 0);
+      const lastSaleAt = productSales?.last_sale_at || null;
+      const lastInboundAt = lastInbound.get(product.id) || null;
+      return {
+        ...product,
+        soldUnits,
+        revenue: Number(productSales?.revenue || 0),
+        lastSaleAt,
+        lastInboundAt,
+        ...analyzeInventoryProduct({
         id: product.id,
         stock: product.stockTotal,
         cost: Number(product.costo || 0),
         price: Number(product.precio_principal || 0),
-        soldUnits: soldUnits.get(product.id) || 0,
+        soldUnits,
         windowDays,
         targetCoverageDays: Number(product.dias_cobertura || 14),
         leadTimeDays: Number(product.lead_time_dias || 0),
         minimumStock: product.min,
         createdAt: product.created_at,
-        lastSaleAt: lastSale.get(product.id),
-        lastInboundAt: lastInbound.get(product.id),
+        lastSaleAt,
+        lastInboundAt,
       }),
-    }));
-  }, [productos, history.data, cutoff, windowDays]);
+      };
+    });
+  }, [productos, history.data, windowDays]);
 
   const abc = useMemo(() => getAbcClasses(analytics), [analytics]);
   const normalizedSearch = search.trim().toLowerCase();
-  const filtered = useMemo(() => !normalizedSearch ? analytics : analytics.filter(product =>
-    product.nombre.toLowerCase().includes(normalizedSearch) || product.codigo.toLowerCase().includes(normalizedSearch)
-  ), [analytics, normalizedSearch]);
+  const filtered = useMemo(() => analytics.filter(product => {
+    const matchesSearch = !normalizedSearch
+      || product.nombre.toLowerCase().includes(normalizedSearch)
+      || product.codigo.toLowerCase().includes(normalizedSearch);
+    return matchesSearch && (healthFilter === 'todos' || product.health === healthFilter);
+  }), [analytics, normalizedSearch, healthFilter]);
 
   const lotRows = useMemo(() => {
-    const lotsById = new Map((history.data?.lots || []).map(lot => [lot.id, lot]));
     return (history.data?.lotStock || []).map(stock => {
-      const lot = lotsById.get(stock.lote_id);
       const product = productMap.get(stock.producto_id);
       const warehouse = warehouseMap.get(stock.almacen_id);
-      if (!lot || !product) return null;
-      const expiration = getExpirationHealth(lot.fecha_caducidad);
+      if (!product) return null;
+      const expiration = getExpirationHealth(stock.fecha_caducidad);
       return {
         id: `${stock.lote_id}-${stock.almacen_id}`,
-        lotId: lot.id,
-        lotCode: lot.codigo,
+        lotId: stock.lote_id,
+        lotCode: stock.codigo,
         productId: product.id,
         productCode: product.codigo,
         productName: product.nombre,
         warehouse: warehouse?.nombre || 'Almacén',
         quantity: Number(stock.cantidad || 0),
-        expirationDate: lot.fecha_caducidad,
-        manufactureDate: lot.fecha_fabricacion,
-        value: Number(stock.cantidad || 0) * Number(lot.costo ?? product.costo ?? 0),
+        expirationDate: stock.fecha_caducidad,
+        manufactureDate: stock.fecha_fabricacion,
+        value: Number(stock.cantidad || 0) * Number(stock.costo ?? product.costo ?? 0),
         ...expiration,
       };
     }).filter((row): row is NonNullable<typeof row> => Boolean(row));
@@ -254,28 +346,24 @@ export default function InventarioInteligenciaTab({
   })).filter(row => row.value > 0).sort((a, b) => b.value - a.value), [warehouses, stockRows, productMap]);
 
   const movementTrend = useMemo(() => {
-    const bucketDays = windowDays > 90 ? 7 : 1;
     const buckets = new Map<string, { date: string; entradas: number; salidas: number; transferencias: number }>();
-    (history.data?.movements || []).filter(movement => movement.fecha >= cutoff).forEach(movement => {
-      const date = new Date(`${movement.fecha}T00:00:00Z`);
-      if (bucketDays === 7) date.setUTCDate(date.getUTCDate() - date.getUTCDay());
-      const key = date.toISOString().slice(0, 10);
+    (history.data?.movementTrend || []).forEach(row => {
+      const key = row.fecha.slice(0, 10);
       const bucket = buckets.get(key) || { date: key, entradas: 0, salidas: 0, transferencias: 0 };
-      const quantity = Math.abs(Number(movement.cantidad || 0));
-      if (movement.tipo === 'entrada') bucket.entradas += quantity;
-      else if (movement.tipo === 'salida') bucket.salidas += quantity;
+      const quantity = Math.abs(Number(row.cantidad || 0));
+      if (row.tipo === 'entrada') bucket.entradas += quantity;
+      else if (row.tipo === 'salida') bucket.salidas += quantity;
       else bucket.transferencias += quantity;
       buckets.set(key, bucket);
     });
     return [...buckets.values()].sort((a, b) => a.date.localeCompare(b.date)).map(row => ({ ...row, label: formatDate(row.date) }));
-  }, [history.data, cutoff, windowDays]);
+  }, [history.data]);
 
   const recentMovements = useMemo(() => (history.data?.movements || []).filter(movement => {
-    if (movement.fecha < cutoff) return false;
     if (!normalizedSearch) return true;
     const product = movement.producto_id ? productMap.get(movement.producto_id) : null;
     return Boolean(product && (product.nombre.toLowerCase().includes(normalizedSearch) || product.codigo.toLowerCase().includes(normalizedSearch)));
-  }), [history.data, cutoff, normalizedSearch, productMap]);
+  }), [history.data, normalizedSearch, productMap]);
 
   const topStopped = useMemo(() => filtered.filter(product => product.stockTotal > 0 && ['detenido', 'lento'].includes(product.health)).sort((a, b) => b.inventoryValue - a.inventoryValue), [filtered]);
   const restock = useMemo(() => filtered.filter(product => ['agotado', 'critico', 'reorden'].includes(product.health)).sort((a, b) => (a.coverageDays ?? -1) - (b.coverageDays ?? -1)), [filtered]);
@@ -313,7 +401,7 @@ export default function InventarioInteligenciaTab({
     { label: 'Riesgo por caducidad', value: fmt(totals.expiryRisk), detail: `${lotRows.filter(row => ['vencido', 'critico', 'proximo'].includes(row.health)).length} lotes ≤ 30 días`, icon: CalendarClock, color: 'text-destructive', target: 'caducidades' as DashboardTab },
     { label: 'Requieren acción', value: String(totals.criticalProducts), detail: 'agotados, quiebre o reorden', icon: ShieldAlert, color: 'text-amber-600', target: 'reabasto' as DashboardTab },
     { label: 'Venta potencial', value: fmt(totals.potentialValue), detail: `margen potencial ${fmt(totals.potentialMargin)}`, icon: TrendingUp, color: 'text-emerald-600', target: 'capital' as DashboardTab },
-    { label: `Movimientos ${windowDays}d`, value: fmtNum(recentMovements.length), detail: `${fmtNum(recentMovements.filter(m => m.tipo === 'entrada').length)} entradas · ${fmtNum(recentMovements.filter(m => m.tipo === 'salida').length)} salidas`, icon: History, color: 'text-blue-600', target: 'movimientos' as DashboardTab },
+    { label: `Movimientos ${windowDays}d`, value: fmtNum(history.data?.movementCount || 0), detail: `${fmtNum(Number(history.data?.movementTypeCounts.entrada || 0))} entradas · ${fmtNum(Number(history.data?.movementTypeCounts.salida || 0))} salidas`, icon: History, color: 'text-blue-600', target: 'movimientos' as DashboardTab },
   ];
 
   if (history.isLoading) return <div className="rounded-xl border bg-card p-12 text-center text-sm text-muted-foreground">Leyendo ventas, movimientos y lotes…</div>;
@@ -331,6 +419,11 @@ export default function InventarioInteligenciaTab({
           <select id="inventory-window" value={windowDays} onChange={event => setWindowDays(Number(event.target.value))} className="h-9 rounded-md border bg-background px-3 text-sm">
             {[30, 60, 90, 180, 365].map(days => <option key={days} value={days}>Últimos {days} días</option>)}
           </select>
+          <select aria-label="Filtrar por diagnóstico" value={healthFilter} onChange={event => setHealthFilter(event.target.value as typeof healthFilter)} className="h-9 rounded-md border bg-background px-3 text-sm">
+            <option value="todos">Todos los diagnósticos</option>
+            {(Object.keys(HEALTH_LABELS) as InventoryHealth[]).map(health => <option key={health} value={health}>{HEALTH_LABELS[health]}</option>)}
+          </select>
+          {history.isFetching && !history.isLoading && <span className="text-xs text-muted-foreground">Actualizando…</span>}
           <Button variant="outline" size="sm" onClick={exportAnalysis}><Download className="mr-1 h-4 w-4" /> Exportar análisis</Button>
         </div>
       </div>
@@ -443,10 +536,11 @@ export default function InventarioInteligenciaTab({
           <DataTable headers={['Fecha', 'Tipo', 'Producto', 'Cantidad', 'Origen', 'Destino', 'Referencia / nota']} empty="No hay movimientos en este periodo.">
             {recentMovements.slice(0, 500).map(movement => {
               const product = movement.producto_id ? productMap.get(movement.producto_id) : null;
-              return <TableRow key={movement.id}><TableCell>{formatDate(movement.fecha)}<div className="text-[10px] text-muted-foreground">{new Date(movement.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div></TableCell><TableCell><MovementBadge type={movement.tipo}/></TableCell><TableCell>{product ? <ProductoCell product={product}/> : 'Sin producto'}</TableCell><TableCell className="text-right font-semibold">{fmtNum(Math.abs(Number(movement.cantidad || 0)))}</TableCell><TableCell>{movement.almacen_origen_id ? warehouseMap.get(movement.almacen_origen_id)?.nombre || 'Almacén' : 'Externo'}</TableCell><TableCell>{movement.almacen_destino_id ? warehouseMap.get(movement.almacen_destino_id)?.nombre || 'Almacén' : 'Externo'}</TableCell><TableCell><span className="text-xs font-medium">{movement.referencia_tipo || 'Movimiento manual'}</span>{movement.notas && <div className="max-w-xs truncate text-[10px] text-muted-foreground">{movement.notas}</div>}</TableCell></TableRow>;
+              const referenceRoute = getMovementReferenceRoute(movement.referencia_tipo, movement.referencia_id);
+              return <TableRow key={movement.id}><TableCell>{formatDate(movement.fecha)}<div className="text-[10px] text-muted-foreground">{new Date(movement.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div></TableCell><TableCell><MovementBadge type={movement.tipo}/></TableCell><TableCell>{product ? <ProductoCell product={product}/> : 'Sin producto'}</TableCell><TableCell className="text-right font-semibold">{fmtNum(Math.abs(Number(movement.cantidad || 0)))}</TableCell><TableCell>{movement.almacen_origen_id ? warehouseMap.get(movement.almacen_origen_id)?.nombre || 'Almacén' : 'Externo'}</TableCell><TableCell>{movement.almacen_destino_id ? warehouseMap.get(movement.almacen_destino_id)?.nombre || 'Almacén' : 'Externo'}</TableCell><TableCell>{referenceRoute ? <Link to={referenceRoute} className="text-xs font-medium text-primary hover:underline">{movement.referencia_tipo}</Link> : <span className="text-xs font-medium">{movement.referencia_tipo || 'Movimiento manual'}</span>}{movement.notas && <div className="max-w-xs truncate text-[10px] text-muted-foreground">{movement.notas}</div>}</TableCell></TableRow>;
             })}
           </DataTable>
-          {recentMovements.length > 500 && <p className="text-center text-xs text-muted-foreground">Se muestran los 500 movimientos más recientes de {fmtNum(recentMovements.length)}. Usa la exportación o el Kardex para el detalle completo.</p>}
+          {(history.data?.movementCount || 0) > 500 && <p className="text-center text-xs text-muted-foreground">Se muestran los 500 movimientos más recientes de {fmtNum(history.data?.movementCount || 0)}. Usa la exportación o el Kardex para el detalle completo.</p>}
         </TabsContent>
 
         <TabsContent value="reabasto" className="space-y-4">
@@ -461,7 +555,10 @@ export default function InventarioInteligenciaTab({
         <TabsContent value="abc" className="space-y-4">
           <div className="rounded-xl border bg-card p-4 text-sm"><b>A</b> concentra aproximadamente el primer 80% de ingresos, <b>B</b> el siguiente 15% y <b>C</b> el restante. El producto que cruza cada umbral conserva la clase que ayudó a completar.</div>
           <DataTable headers={['Clase', 'Producto', `Unidades ${windowDays}d`, `Ingresos ${windowDays}d`, '% acumulado', 'Stock', 'Capital', 'Diagnóstico']} empty="No hay ventas suficientes para clasificar.">
-            {abc.filter(product => !normalizedSearch || product.nombre.toLowerCase().includes(normalizedSearch) || product.codigo.toLowerCase().includes(normalizedSearch)).map(product => <TableRow key={product.id}><TableCell><Badge className={cn(product.abcClass === 'A' && 'bg-emerald-600', product.abcClass === 'B' && 'bg-amber-500', product.abcClass === 'C' && 'bg-slate-500')}>{product.abcClass}</Badge></TableCell><TableCell><ProductoCell product={product}/></TableCell><TableCell className="text-right">{fmtNum(product.soldUnits)}</TableCell><TableCell className="text-right font-semibold">{fmt(product.revenue)}</TableCell><TableCell className="text-right">{(product.cumulativePct * 100).toFixed(1)}%</TableCell><TableCell className="text-right">{fmtNum(product.stockTotal)}</TableCell><TableCell className="text-right">{fmt(product.inventoryValue)}</TableCell><TableCell><HealthBadge health={product.health}/></TableCell></TableRow>)}
+            {abc.filter(product => {
+              const matchesSearch = !normalizedSearch || product.nombre.toLowerCase().includes(normalizedSearch) || product.codigo.toLowerCase().includes(normalizedSearch);
+              return matchesSearch && (healthFilter === 'todos' || product.health === healthFilter);
+            }).map(product => <TableRow key={product.id}><TableCell><Badge className={cn(product.abcClass === 'A' && 'bg-emerald-600', product.abcClass === 'B' && 'bg-amber-500', product.abcClass === 'C' && 'bg-slate-500')}>{product.abcClass}</Badge></TableCell><TableCell><ProductoCell product={product}/></TableCell><TableCell className="text-right">{fmtNum(product.soldUnits)}</TableCell><TableCell className="text-right font-semibold">{fmt(product.revenue)}</TableCell><TableCell className="text-right">{(product.cumulativePct * 100).toFixed(1)}%</TableCell><TableCell className="text-right">{fmtNum(product.stockTotal)}</TableCell><TableCell className="text-right">{fmt(product.inventoryValue)}</TableCell><TableCell><HealthBadge health={product.health}/></TableCell></TableRow>)}
           </DataTable>
         </TabsContent>
       </Tabs>
@@ -479,11 +576,11 @@ function Insight({ icon: Icon, title, text }: { icon: React.ElementType; title: 
 
 function DataTable({ headers, children, empty }: { headers: string[]; children: React.ReactNode; empty: string }) {
   const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
-  return <div className="overflow-x-auto rounded-xl border bg-card"><Table><TableHeader><TableRow>{headers.map(header => <TableHead key={header} className="whitespace-nowrap text-[11px]">{header}</TableHead>)}</TableRow></TableHeader><TableBody>{hasRows ? children : <TableRow><TableCell colSpan={headers.length} className="py-12 text-center text-sm text-muted-foreground">{empty}</TableCell></TableRow>}</TableBody></Table></div>;
+  return <div className="rounded-xl border bg-card max-md:overflow-x-auto md:overflow-visible"><table className="w-full caption-bottom text-sm"><TableHeader className="sticky top-0 z-20 bg-card shadow-[0_1px_0_hsl(var(--border))]"><TableRow>{headers.map(header => <TableHead key={header} className="whitespace-nowrap bg-card text-[11px]">{header}</TableHead>)}</TableRow></TableHeader><TableBody>{hasRows ? children : <TableRow><TableCell colSpan={headers.length} className="py-12 text-center text-sm text-muted-foreground">{empty}</TableCell></TableRow>}</TableBody></table></div>;
 }
 
 function ProductoCell({ product }: { product: Pick<IntelligenceProduct, 'id' | 'codigo' | 'nombre'> }) {
-  return <div className="min-w-[180px]"><ProductoLink id={product.id}>{product.nombre}</ProductoLink><div className="text-[10px] text-muted-foreground">{product.codigo}</div></div>;
+  return <div className="min-w-[180px]"><ProductoLink id={product.id}>{product.nombre}</ProductoLink><div className="flex items-center gap-2 text-[10px] text-muted-foreground"><span>{product.codigo}</span><Link to={`/almacen/kardex?prod=${product.id}`} className="inline-flex items-center gap-1 text-primary hover:underline"><History className="h-3 w-3"/>Kardex</Link></div></div>;
 }
 
 function HealthBadge({ health }: { health: InventoryHealth }) {

@@ -10181,6 +10181,10 @@ export type Database = {
         }[]
       }
       fn_factor_neto_compra: { Args: { p_compra_id: string }; Returns: number }
+      fn_inventory_intelligence_snapshot: {
+        Args: { p_empresa_id: string; p_window_days?: number }
+        Returns: Json
+      }
       fn_log_solicitud_traspaso: {
         Args: {
           p_accion: string
