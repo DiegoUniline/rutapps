@@ -80,13 +80,13 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
 }
 
 /** All clients (for lookups/selectors — not for list pages) */
-export function useClientes(search?: string, statusFilter?: string) {
+export function useClientes(search?: string, statusFilter?: string, enabled = true) {
   const { empresa } = useAuth();
   const qc = useQueryClient();
   return useQuery({
     queryKey: ['clientes', empresa?.id, search, statusFilter],
     staleTime: CATALOG_STALE,
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && enabled,
     queryFn: async () => {
       // Mismo motivo que useClientesPaginated: joins fuera, enriquecer en cliente.
       const rows = await fetchAllPages<any>((from, to) => {
