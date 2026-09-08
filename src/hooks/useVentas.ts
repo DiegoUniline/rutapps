@@ -6,9 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist';
-import { normalizeVentaLineasListSummary, normalizeVentasListSummary } from '@/lib/ventasListSummary';
 import type { Venta, VentaLinea } from '@/types';
-import type { Database } from '@/integrations/supabase/types';
 
 /**
  * IDs de ventas de la empresa que traen promoción.
@@ -25,108 +23,6 @@ async function fetchVentaIdsConPromo(empresaId: string): Promise<string[]> {
   for (const r of (aplicadas.data ?? []) as any[]) if (r.venta_id) ids.add(r.venta_id);
   for (const r of (gratis.data ?? []) as any[]) if (r.venta_id) ids.add(r.venta_id);
   return [...ids];
-}
-
-type StatusVenta = Database['public']['Enums']['status_venta'];
-type TipoVenta = Database['public']['Enums']['tipo_venta'];
-type CondicionPago = Database['public']['Enums']['condicion_pago'];
-
-function splitFilter<T extends string = string>(value?: string): T[] | undefined {
-  if (!value || value === 'todos') return undefined;
-  const values = value.split(',').filter(Boolean);
-  return values.length > 0 ? values as T[] : undefined;
-}
-
-function ventasSummaryArgs(
-  empresaId: string,
-  profileId: string | null,
-  filterOwn: boolean,
-  search?: string,
-  statusFilter?: string,
-  tipoFilter?: string,
-  condicionFilter?: string,
-  vendedorFilter?: string,
-  dateFrom?: string,
-  dateTo?: string,
-  promoFilter?: 'si' | 'no',
-  clienteFilter?: string,
-) {
-  return {
-    p_empresa_id: empresaId,
-    p_vendedor_scope: filterOwn ? profileId ?? undefined : undefined,
-    p_statuses: splitFilter<StatusVenta>(statusFilter),
-    p_tipos: splitFilter<TipoVenta>(tipoFilter),
-    p_condiciones: splitFilter<CondicionPago>(condicionFilter),
-    p_vendedor_ids: splitFilter(vendedorFilter),
-    p_cliente_ids: splitFilter(clienteFilter),
-    p_fecha_desde: dateFrom || undefined,
-    p_fecha_hasta: dateTo || undefined,
-    p_promocion: promoFilter,
-    p_search: search?.trim() || undefined,
-  };
-}
-
-/**
- * Resumen agregado de una sola fila. La llave empieza con `ventas` para que
- * las invalidaciones existentes (Realtime, cobros, edición) lo refresquen.
- */
-export function useVentasResumenAgregado(search?: string, statusFilter?: string, tipoFilter?: string, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, promoFilter?: 'si' | 'no', enabled = true, clienteFilter?: string) {
-  const { empresa } = useAuth();
-  const { seeAll, profileId } = useDataVisibility('ventas');
-  const filterOwn = !seeAll && !!profileId;
-
-  return useQuery({
-    queryKey: ['ventas', 'resumen-agregado', empresa?.id, search, statusFilter, tipoFilter, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, promoFilter ?? 'todas'],
-    enabled: !!empresa?.id && enabled,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('fn_ventas_resumen', ventasSummaryArgs(
-        empresa!.id,
-        profileId,
-        filterOwn,
-        search,
-        statusFilter,
-        tipoFilter,
-        condicionFilter,
-        vendedorFilter,
-        dateFrom,
-        dateTo,
-        promoFilter,
-        clienteFilter,
-      ));
-      if (error) throw error;
-      return normalizeVentasListSummary(data);
-    },
-  });
-}
-
-/** Totales agregados de la pestaña Productos, también en una sola fila. */
-export function useVentaLineasResumenAgregado(search?: string, statusFilter?: string, tipoFilter?: string, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, enabled = true, clienteFilter?: string, promoFilter?: 'si' | 'no') {
-  const { empresa } = useAuth();
-  const { seeAll, profileId } = useDataVisibility('ventas');
-  const filterOwn = !seeAll && !!profileId;
-
-  return useQuery({
-    queryKey: ['venta-lineas', 'resumen-agregado', empresa?.id, search, statusFilter, tipoFilter, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, promoFilter ?? 'todas'],
-    enabled: !!empresa?.id && enabled,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('fn_venta_lineas_resumen', ventasSummaryArgs(
-        empresa!.id,
-        profileId,
-        filterOwn,
-        search,
-        statusFilter,
-        tipoFilter,
-        condicionFilter,
-        vendedorFilter,
-        dateFrom,
-        dateTo,
-        promoFilter,
-        clienteFilter,
-      ));
-      if (error) throw error;
-      return normalizeVentaLineasListSummary(data);
-    },
-  });
 }
 
 /** Paginated ventas for list views. When fetchAll=true, returns all matching rows (used for grouping). */
@@ -227,8 +123,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
 }
 
 /**
- * Fallback legado del resumen sobre TODO el filtro. Solo se habilita si la RPC
- * agregada no está instalada o falla, para que la pantalla nunca quede bloqueada.
+ * Resumen (totales) de ventas sobre TODO el filtro — no solo la página visible.
  * Trae todas las filas que cumplen los filtros con un SELECT ligero (solo los
  * campos que necesitan los totales) y las devuelve para que la página calcule
  * el resumen con la misma lógica que las filas (totalEfectivoVenta, saldoReal,
@@ -310,7 +205,7 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
 }
 
 /**
- * Fallback legado del resumen de líneas. Solo se habilita si falla la RPC.
+ * Resumen (totales) de líneas de venta sobre TODO el filtro (vista Productos).
  * Devuelve la suma de cantidad y de importe de línea del conjunto completo.
  * OJO: mantener los filtros en sync con `useVentaLineasPaginated`.
  */
