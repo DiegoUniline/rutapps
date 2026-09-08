@@ -262,6 +262,36 @@ export type Database = {
           },
         ]
       }
+      auditoria_reparaciones_inventario: {
+        Row: {
+          clave: string
+          created_at: string
+          ejecutado_por: string
+          empresa_id: string
+          id: number
+          motivo: string
+          respaldo: Json
+        }
+        Insert: {
+          clave: string
+          created_at?: string
+          ejecutado_por?: string
+          empresa_id: string
+          id?: never
+          motivo: string
+          respaldo: Json
+        }
+        Update: {
+          clave?: string
+          created_at?: string
+          ejecutado_por?: string
+          empresa_id?: string
+          id?: never
+          motivo?: string
+          respaldo?: Json
+        }
+        Relationships: []
+      }
       auditorias: {
         Row: {
           almacen_id: string | null
@@ -10079,6 +10109,7 @@ export type Database = {
         Args: { p_desde: string; p_hasta: string; p_vendedor_id: string }
         Returns: Json
       }
+      cancelar_compra_segura: { Args: { p_compra_id: string }; Returns: Json }
       cancelar_entregas_bulk: {
         Args: { p_entrega_ids: string[]; p_motivo?: string; p_user_id?: string }
         Returns: Json
@@ -10192,6 +10223,10 @@ export type Database = {
         }[]
       }
       fn_factor_neto_compra: { Args: { p_compra_id: string }; Returns: number }
+      fn_inventory_intelligence_snapshot: {
+        Args: { p_empresa_id: string; p_window_days?: number }
+        Returns: Json
+      }
       fn_log_solicitud_traspaso: {
         Args: {
           p_accion: string
