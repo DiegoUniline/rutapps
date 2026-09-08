@@ -231,7 +231,12 @@ function useIntelligenceHistory(windowDays: number) {
     placeholderData: previous => previous,
     queryFn: async () => {
       const empresaId = empresa!.id;
-      const { data, error } = await supabase.rpc('fn_inventory_intelligence_snapshot', {
+      // La RPC es nueva y aún no está en los tipos generados de Supabase.
+      const rpc = supabase.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: { code?: string } | null }>;
+      const { data, error } = await rpc('fn_inventory_intelligence_snapshot', {
         p_empresa_id: empresaId,
         p_window_days: windowDays,
       });
