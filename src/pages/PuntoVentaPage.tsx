@@ -39,6 +39,7 @@ import {
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 import { buildPosTicketPayments } from '@/lib/posTicketPayments';
+import { resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
@@ -895,38 +896,13 @@ export default function PuntoVentaPage() {
       }
       let totalAppliedToAccountsPOS = 0;
 
-      // Resolve a valid client for "Público general" so contado sales can always register cobros
-      let clientePublicoId: string | null = null;
-      if (!clienteId && condicion === 'contado') {
-        const { data: publicClient, error: publicClientLookupErr } = await supabase
-          .from('clientes')
-          .select('id')
-          .eq('empresa_id', empresa.id)
-          .eq('status', 'activo')
-          .in('nombre', ['Público general', 'Publico general', 'Público General', 'Publico General'])
-          .limit(1)
-          .maybeSingle();
-
-        if (publicClientLookupErr) throw publicClientLookupErr;
-
-        if (publicClient?.id) {
-          clientePublicoId = publicClient.id;
-        } else {
-          const { data: createdPublicClient, error: publicClientCreateErr } = await supabase
-            .from('clientes')
-            .insert({
-              empresa_id: empresa.id,
-              nombre: 'Público general',
-              status: 'activo',
-              credito: false,
-              vendedor_id: vendedorId,
-            })
-            .select('id')
-            .single();
-
-          if (publicClientCreateErr) throw publicClientCreateErr;
-          clientePublicoId = createdPublicClient.id;
-        }
+      // Punto de Venta y Ruta comparten la misma identidad contable. La RPC
+      // serializa la creación y evita clientes "Público general" duplicados.
+      const clientePublicoId = !clienteId
+        ? await resolvePublicGeneralClientId(empresa.id)
+        : null;
+      if (!clienteId && !clientePublicoId) {
+        throw new Error('No se pudo asignar el cliente Público general. Sincroniza e intenta nuevamente.');
       }
 
       const ventaClienteId = clienteId ?? clientePublicoId;

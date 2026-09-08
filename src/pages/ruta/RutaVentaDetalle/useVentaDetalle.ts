@@ -24,6 +24,7 @@ import { resolveProductPricing, type ProductForPricing, type TarifaLineaRule } f
 import { buildSalePricingSnapshot, calculateSaleLineAmounts } from '@/lib/salePricing';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { saldoVentaTrasEditar } from '@/lib/ventaEditBalance';
+import { resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
 
 export function useVentaDetalle() {
   const { id } = useParams();
@@ -524,10 +525,30 @@ export function useVentaDetalle() {
       if (!empresa?.id) throw new Error('Sin empresa');
       const online = typeof navigator === 'undefined' || navigator.onLine;
 
+      // Repara de forma segura ventas históricas de Público general que fueron
+      // creadas offline con cliente_id nulo. La venta se corrige ANTES del
+      // cobro; si no existe una identidad comprobable, no se registra nada.
+      const cobroClienteId = clienteId ?? await resolvePublicGeneralClientId(empresa.id);
+      if (!cobroClienteId) {
+        throw new Error('Esta venta no tiene cliente asociado y Público general no está sincronizado. Conéctate y sincroniza antes de cobrar.');
+      }
+      if (!clienteId) {
+        if (online) {
+          const { error: repairError } = await supabase
+            .from('ventas')
+            .update({ cliente_id: cobroClienteId })
+            .eq('id', venta.id)
+            .eq('empresa_id', empresa.id);
+          if (repairError) throw repairError;
+        } else {
+          await queueOperation('ventas', 'update', { id: venta.id, cliente_id: cobroClienteId });
+        }
+      }
+
       const fechaCobro = todayInTimezone(empresa.zona_horaria);
       const cobroPayload = {
         empresa_id: empresa.id,
-        cliente_id: clienteId,
+        cliente_id: cobroClienteId,
         user_id: user.id,
         monto: roundMoney(totalACobrar),
         metodo_pago: metodoPago,
@@ -565,13 +586,13 @@ export function useVentaDetalle() {
       // contenido del pago. Si se reenvía offline (doble-toque, resync) el id
       // coincide y el upsert no duplica. Online, la RPC asigna el id real.
       const firmaCobro = aplicaciones.map(a => `${a.venta_id}:${a.monto_aplicado}`).sort().join(',');
-      let cobroId = await deterministicUuid('cobro', empresa.id, clienteId, fechaCobro, metodoPago, roundMoney(totalACobrar), firmaCobro);
+      let cobroId = await deterministicUuid('cobro', empresa.id, cobroClienteId, fechaCobro, metodoPago, roundMoney(totalACobrar), firmaCobro);
 
       if (aplicaciones.length > 0) {
         if (online) {
           const { data: createdCobroId, error: cobroErr } = await (supabase as any).rpc('aplicar_cobro', {
             p_empresa_id: empresa.id,
-            p_cliente_id: clienteId,
+            p_cliente_id: cobroClienteId,
             p_monto: roundMoney(totalACobrar),
             p_metodo: metodoPago,
             p_referencia: referenciaPago || null,

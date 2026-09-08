@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { todayInTimezone } from '@/lib/utils';
 import { offlineDb } from '@/lib/offlineDb';
+import { isPromotionCacheUsable } from '@/lib/offlinePromotionSafety';
 
 
 export interface Promocion {
@@ -56,7 +57,7 @@ export function usePromocionesActivas() {
     enabled: !!empresaId,
     // Si no se pudieron cargar, reintentar: NUNCA vender sin promociones por
     // un fallo de red silencioso.
-    retry: 3,
+    retry: (failureCount) => (typeof navigator === 'undefined' || navigator.onLine) && failureCount < 3,
     refetchOnReconnect: true,
     queryFn: async () => {
       const today = todayInTimezone(empresa?.zona_horaria);
@@ -71,9 +72,12 @@ export function usePromocionesActivas() {
         return true;
       }).sort((a: any, b: any) => (b.prioridad ?? 0) - (a.prioridad ?? 0)) as Promocion[];
 
-      // Try server first
+      // Try server first sólo cuando el navegador reporta conexión. En un
+      // arranque offline no esperamos timeouts ni gastamos reintentos.
       let serverFailed = false;
+      const shouldTryServer = typeof navigator === 'undefined' || navigator.onLine;
       try {
+        if (!shouldTryServer) throw new Error('Sin conexión');
         const { data, error } = await supabase
           .from('promociones')
           .select('*')
@@ -86,7 +90,26 @@ export function usePromocionesActivas() {
           // Cache for offline use
           try {
             const all = await supabase.from('promociones').select('*').eq('empresa_id', empresaId!);
-            if (all.data) await offlineDb.promociones.bulkPut(all.data);
+            if (all.error) throw all.error;
+            if (all.data) {
+              const allRows = all.data as Promocion[];
+              const now = Date.now();
+              const previous = await offlineDb.cacheTimestamps.get('promociones');
+              await offlineDb.transaction('rw', offlineDb.promociones, offlineDb.cacheTimestamps, async () => {
+                await offlineDb.promociones.where('empresa_id').equals(empresaId!).delete();
+                if (allRows.length > 0) await offlineDb.promociones.bulkPut(allRows);
+                await offlineDb.cacheTimestamps.put({
+                  ...previous,
+                  table: 'promociones',
+                  lastSync: now,
+                  lastSuccessAt: now,
+                  lastFullAt: now,
+                  rowCount: allRows.length,
+                  lastError: undefined,
+                  lastErrorAt: undefined,
+                });
+              });
+            }
           } catch { /* ignore */ }
           return data as Promocion[];
         }
@@ -94,17 +117,27 @@ export function usePromocionesActivas() {
       } catch { serverFailed = true; }
 
       // Offline fallback: read from IndexedDB
-      let cached: any[] = [];
+      let cached: Promocion[] = [];
       let cacheFailed = false;
+      let lastSuccessfulSyncAt: number | null = null;
       try {
-        cached = await offlineDb.promociones.where('empresa_id').equals(empresaId!).toArray();
+        const [rows, timestamp] = await Promise.all([
+          offlineDb.promociones.where('empresa_id').equals(empresaId!).toArray(),
+          offlineDb.cacheTimestamps.get('promociones'),
+        ]);
+        cached = rows;
+        lastSuccessfulSyncAt = timestamp?.lastSuccessAt ?? timestamp?.lastSync ?? null;
       } catch { cacheFailed = true; }
 
       // CRÍTICO: si el servidor falló y la caché local está vacía o rota, NO
       // devolver [] (eso hacía que la venta se guardara SIN promociones y sin
       // ningún aviso). Se lanza el error para que la query quede en estado
       // "error" y la pantalla de venta pueda bloquear/avisar.
-      if (serverFailed && (cacheFailed || cached.length === 0)) {
+      if (serverFailed && !isPromotionCacheUsable({
+        cacheReadFailed: cacheFailed,
+        cachedRowCount: cached.length,
+        lastSuccessfulSyncAt,
+      })) {
         throw new Error('No se pudieron cargar las promociones');
       }
       return filterVigentes(cached);
@@ -463,4 +496,3 @@ export function getPendingProductoGratis(
   }
   return out;
 }
-

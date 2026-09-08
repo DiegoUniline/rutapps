@@ -5,6 +5,7 @@ import { isDataSaverEnabled } from './dataSaver';
 import { backupSyncQueueToStorage, clearStorageBackup } from './offlineBackup';
 import { hasRealConnection } from './connectivity';
 import { classifySyncError } from './syncErrorClassify';
+import { mergeLocalRow } from './localRowMerge';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -70,7 +71,13 @@ export async function queueOperations(operations: QueuedOperation[]) {
       if (localTable) {
         if (op.operation === 'delete') await localTable.delete(keyValue);
         else if (isMany) await localTable.bulkPut(op.data);
-        else await localTable.put(op.data);
+        else if (op.operation === 'update') {
+          // Un update parcial no debe reemplazar la fila completa en IndexedDB.
+          // Eso borraba localmente total, folio, saldo y demás campos hasta la
+          // siguiente descarga. Se refleja como merge igual que en PostgreSQL.
+          const current = await localTable.get(keyValue);
+          await localTable.put(mergeLocalRow(current, op.data));
+        } else await localTable.put(op.data);
       }
 
       const existing = await offlineDb.syncQueue
@@ -460,4 +467,3 @@ export async function retryAllQueueItems(): Promise<number> {
   }
   return items.length;
 }
-

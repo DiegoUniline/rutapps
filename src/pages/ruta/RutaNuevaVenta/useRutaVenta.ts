@@ -30,6 +30,7 @@ import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { STEPS } from './types';
 import { nextVisitDate } from '@/lib/nextVisitDate';
 import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
+import { isPublicGeneralClient, resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -539,7 +540,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return clientes;
   }, [clientes, seeAllClientes, clientesVisibilidad, profile?.id]);
 
-  const filteredClientes = clientesVisibles?.filter(c => !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) || c.codigo?.toLowerCase().includes(searchCliente.toLowerCase()));
+  const filteredClientes = clientesVisibles?.filter(c => !isPublicGeneralClient(c))
+    .filter(c => !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) || c.codigo?.toLowerCase().includes(searchCliente.toLowerCase()));
   const productosDisponibles = useMemo(() => {
     if (!productos) return [];
     if (tipoVenta === 'pedido') return productos;
@@ -1092,31 +1094,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
 
       const applyPayment = totalACobrar > 0;
 
-      // Resolve "Público general" client when no client was selected, so cobros (NOT NULL cliente_id) can be registered
-      let clientePublicoId: string | null = null;
-      if (!clienteId) {
-        try {
-          const { data: publicClient } = await supabase
-            .from('clientes')
-            .select('id')
-            .eq('empresa_id', empresa.id)
-            .eq('status', 'activo')
-            .in('nombre', ['Público general', 'Publico general', 'Público General', 'Publico General'])
-            .limit(1)
-            .maybeSingle();
-          if (publicClient?.id) {
-            clientePublicoId = publicClient.id;
-          } else {
-            const { data: createdPublicClient } = await supabase
-              .from('clientes')
-              .insert({ empresa_id: empresa.id, nombre: 'Público general', status: 'activo', credito: false, vendedor_id: profile?.id || null })
-              .select('id')
-              .single();
-            clientePublicoId = createdPublicClient?.id ?? null;
-          }
-        } catch (e) { console.error('Error resolviendo Público general:', e); }
+      // Público general es un cliente contable real y estable. Se resuelve
+      // primero desde IndexedDB para funcionar sin señal; nunca se permite
+      // encolar una venta/cobro con cliente_id nulo.
+      const ventaClienteId = clienteId ?? await resolvePublicGeneralClientId(empresa.id);
+      if (!ventaClienteId) {
+        throw new Error('Público general no está sincronizado en este dispositivo. Conéctate y pulsa Sincronizar antes de guardar esta venta.');
       }
-      const ventaClienteId = clienteId ?? clientePublicoId;
 
       // saldo_pendiente starts as full total; will be reduced after payments are applied
       const tarifaId = clienteTarifaId || selectedClienteData?.tarifa_id || null;

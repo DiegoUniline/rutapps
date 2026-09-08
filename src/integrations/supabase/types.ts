@@ -1536,6 +1536,7 @@ export type Database = {
           direccion: string | null
           email: string | null
           empresa_id: string
+          es_publico_general: boolean
           facturama_correo_facturacion: string | null
           facturama_cp: string | null
           facturama_id: string | null
@@ -1587,6 +1588,7 @@ export type Database = {
           direccion?: string | null
           email?: string | null
           empresa_id: string
+          es_publico_general?: boolean
           facturama_correo_facturacion?: string | null
           facturama_cp?: string | null
           facturama_id?: string | null
@@ -1638,6 +1640,7 @@ export type Database = {
           direccion?: string | null
           email?: string | null
           empresa_id?: string
+          es_publico_general?: boolean
           facturama_correo_facturacion?: string | null
           facturama_cp?: string | null
           facturama_id?: string | null
@@ -10157,6 +10160,10 @@ export type Database = {
         Returns: number
       }
       ensure_almacen_mermas: { Args: { _empresa_id: string }; Returns: string }
+      ensure_cliente_publico_general: {
+        Args: { p_empresa_id: string }
+        Returns: string
+      }
       enviar_solicitud_traspaso: {
         Args: { p_solicitud_id: string }
         Returns: undefined
