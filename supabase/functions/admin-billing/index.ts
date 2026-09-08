@@ -1,5 +1,10 @@
 import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import {
+  classifyBillingInvoiceOrigin,
+  invoiceMetadataPeriod,
+  periodsOverlap,
+} from "../_shared/billing-safety.ts";
 
 const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
 
@@ -306,6 +311,87 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
+    const liveStripeStatuses = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"]);
+
+    async function assertManualRenewalIsSafe(params: {
+      empresaId: string;
+      customerId?: string | null;
+      stripeSubscriptionId?: string | null;
+      periodoInicio: string;
+      periodoFin: string;
+    }) {
+      if (!params.periodoInicio || !params.periodoFin || params.periodoInicio >= params.periodoFin) {
+        throw new Error("El periodo de la renovación no es válido");
+      }
+
+      if (params.stripeSubscriptionId) {
+        try {
+          const automaticSub = await stripe.subscriptions.retrieve(params.stripeSubscriptionId);
+          if (liveStripeStatuses.has(automaticSub.status)) {
+            throw new Error(
+              `Cobro bloqueado: Stripe ya administra automáticamente esta suscripción (${automaticSub.id}, estado ${automaticSub.status}). No generes una renovación manual.`,
+            );
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message.startsWith("Cobro bloqueado:")) throw error;
+          throw new Error(
+            "Cobro bloqueado: no fue posible verificar la suscripción automática en Stripe. Intenta nuevamente antes de crear una factura manual.",
+          );
+        }
+      }
+
+      const { data: localInvoices, error: localError } = await supabase
+        .from("facturas")
+        .select("id, numero_factura, estado, periodo_inicio, periodo_fin, stripe_invoice_id")
+        .eq("empresa_id", params.empresaId)
+        .in("estado", ["pendiente", "procesando", "parcial", "pagada"])
+        .or("tipo.is.null,tipo.neq.additional_charge")
+        .lt("periodo_inicio", params.periodoFin)
+        .gt("periodo_fin", params.periodoInicio)
+        .limit(1);
+      if (localError) throw localError;
+      if (localInvoices?.length) {
+        const conflict = localInvoices[0];
+        throw new Error(
+          `Cobro bloqueado: el periodo ${params.periodoInicio} a ${params.periodoFin} ya está cubierto por la factura ${conflict.numero_factura || conflict.stripe_invoice_id || conflict.id} (${conflict.estado}).`,
+        );
+      }
+
+      if (!params.customerId) return;
+      const stripeInvoices = await stripe.invoices.list({
+        customer: params.customerId,
+        status: "all",
+        limit: 100,
+        expand: ["data.lines.data"],
+      });
+      const stripeConflict = stripeInvoices.data.find((candidate: any) => {
+        if (!["draft", "open", "paid"].includes(String(candidate.status || ""))) return false;
+        if (Number(candidate.total ?? candidate.amount_due ?? candidate.amount_paid ?? 0) <= 0) return false;
+        if (candidate.metadata?.tipo === "additional_charge" || candidate.metadata?.affects_subscription === "0") return false;
+
+        const explicit = invoiceMetadataPeriod(candidate.metadata);
+        const firstLine = candidate.lines?.data?.[0];
+        const stripePeriod = firstLine?.period ? {
+          inicio: new Date(firstLine.period.start * 1000).toISOString().slice(0, 10),
+          fin: new Date(firstLine.period.end * 1000).toISOString().slice(0, 10),
+        } : null;
+        if (stripePeriod && stripePeriod.inicio === stripePeriod.fin) {
+          const end = new Date(`${stripePeriod.fin}T12:00:00.000Z`);
+          end.setUTCDate(end.getUTCDate() + 1);
+          stripePeriod.fin = end.toISOString().slice(0, 10);
+        }
+        const period = explicit || stripePeriod;
+        return period
+          ? periodsOverlap(period.inicio, period.fin, params.periodoInicio, params.periodoFin)
+          : false;
+      });
+      if (stripeConflict) {
+        throw new Error(
+          `Cobro bloqueado: Stripe ya tiene la factura ${stripeConflict.number || stripeConflict.id} para ese periodo (${stripeConflict.status}).`,
+        );
+      }
+    }
+
     async function syncSubscriptionSeatsForEmpresa(empresaId: string) {
       const [subscriptionRes, activeProfilesRes] = await Promise.all([
         supabase.from("subscriptions")
@@ -418,13 +504,32 @@ Deno.serve(async (req) => {
           }
         }
         const empresa = empRes.data;
-        const enriched = collected.map((inv: any) => ({
-          ...inv,
-          paid_at: inv.status_transitions?.paid_at || null,
-          empresa_id: empresaIdParam,
-          empresa_nombre: empresa?.nombre || null,
-          empresa_email: empresa?.email || null,
-        })).sort((a, b) => (b.created || 0) - (a.created || 0));
+        const enriched = collected.map((inv: any) => {
+          const subscriptionId = getStripeObjectId(inv.subscription)
+            || getStripeObjectId(inv.parent?.subscription_details?.subscription);
+          const invoiceOrigin = classifyBillingInvoiceOrigin({
+            source: inv.metadata?.source,
+            billingReason: inv.billing_reason,
+            stripeSubscriptionId: subscriptionId,
+          });
+          return {
+            ...inv,
+            paid_at: inv.status_transitions?.paid_at || null,
+            subscription_id: subscriptionId,
+            invoice_origin: invoiceOrigin,
+            invoice_origin_label: {
+              manual: "Manual / Panel Master",
+              automatic: "Automática de Stripe",
+              reminder: "Recordatorio automático",
+              unknown: "Sin clasificar",
+            }[invoiceOrigin],
+            invoice_type: inv.metadata?.tipo || null,
+            invoice_source: inv.metadata?.source || null,
+            empresa_id: empresaIdParam,
+            empresa_nombre: empresa?.nombre || null,
+            empresa_email: empresa?.email || null,
+          };
+        }).sort((a, b) => (b.created || 0) - (a.created || 0));
 
         return new Response(JSON.stringify({ invoices: enriched }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -574,6 +679,20 @@ Deno.serve(async (req) => {
         const trulyPaid = amountRemaining === 0 && (inv.amount_paid || 0) > 0;
         const realStatus = trulyPaid ? 'paid' : (inv.status || 'open');
 
+        const subscriptionId = getStripeObjectId(inv.subscription)
+          || getStripeObjectId(inv.parent?.subscription_details?.subscription);
+        const invoiceOrigin = classifyBillingInvoiceOrigin({
+          source: inv.metadata?.source,
+          billingReason: inv.billing_reason,
+          stripeSubscriptionId: subscriptionId,
+        });
+        const originLabels = {
+          manual: "Manual / Panel Master",
+          automatic: "Automática de Stripe",
+          reminder: "Recordatorio automático",
+          unknown: "Sin clasificar",
+        } as const;
+
         return {
           id: inv.id,
           number: inv.number,
@@ -591,13 +710,17 @@ Deno.serve(async (req) => {
           customer_email: custEmail,
           customer_name: custName,
           customer_id: custId || null,
-          subscription_id: typeof inv.subscription === 'string' ? inv.subscription : (inv.subscription?.id || null),
+          subscription_id: subscriptionId,
           attempt_count: inv.attempt_count || 0,
           attempted: !!inv.attempted,
           next_payment_attempt: inv.next_payment_attempt || null,
           paid_at: inv.status_transitions?.paid_at || null,
           collection_method: inv.collection_method || null,
           billing_reason: inv.billing_reason || null,
+          invoice_origin: invoiceOrigin,
+          invoice_origin_label: originLabels[invoiceOrigin],
+          invoice_type: inv.metadata?.tipo || null,
+          invoice_source: inv.metadata?.source || null,
           empresa_id: empresa?.id || resolvedId || null,
           empresa_nombre: empresa?.nombre || inv?.metadata?.empresa_nombre || null,
           description: inv.lines?.data?.[0]?.description || "Suscripción Rutapp",
@@ -1104,43 +1227,9 @@ Deno.serve(async (req) => {
 
     // ─── Create invoice manually (legacy) ───
     if (action === "create_invoice") {
-      const { email, amount, description, days_until_due } = body;
-      if (!email || !amount) throw new Error("email y amount requeridos");
-
-      const customers = await stripe.customers.list({ email, limit: 1 });
-      let customerId: string;
-      if (customers.data.length > 0) {
-        customerId = customers.data[0].id;
-      } else {
-        const c = await stripe.customers.create({ email });
-        customerId = c.id;
-      }
-
-      const invoice = await stripe.invoices.create({
-        customer: customerId,
-        collection_method: "send_invoice",
-        days_until_due: days_until_due || 1,
-        auto_advance: true,
-      });
-
-      await stripe.invoiceItems.create({
-        customer: customerId,
-        invoice: invoice.id,
-        amount,
-        currency: "mxn",
-        description: description || "Suscripción Rutapp",
-      });
-
-      const finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
-      await stripe.invoices.sendInvoice(invoice.id);
-
-      return new Response(JSON.stringify({
-        invoice_id: finalizedInv.id,
-        hosted_url: finalizedInv.hosted_invoice_url,
-        status: finalizedInv.status,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      throw new Error(
+        "Acción deshabilitada por seguridad: usa una renovación con empresa, periodo e idempotencia para evitar cobros duplicados.",
+      );
     }
 
     // ─── One-time additional charge ───
@@ -1231,6 +1320,7 @@ Deno.serve(async (req) => {
           periodo_inicio: periodoInicio,
           periodo_fin: periodoFin,
           request_id: requestId,
+          source: "admin_empresa_detail",
         },
       }, { idempotencyKey: `${idempotencyBase}-invoice` });
 
@@ -1343,6 +1433,7 @@ Deno.serve(async (req) => {
         plan_nombre,
         periodo_inicio: periodoInicioInput,
         periodo_fin: periodoFinInput,
+        request_id,
       } = body;
 
       if (!empresa_id) throw new Error("empresa_id requerido");
@@ -1379,9 +1470,17 @@ Deno.serve(async (req) => {
 
       const { data: subRow } = await supabase
         .from("subscriptions")
-        .select("id")
+        .select("id, stripe_customer_id, stripe_subscription_id")
         .eq("empresa_id", empresa_id)
         .maybeSingle();
+
+      await assertManualRenewalIsSafe({
+        empresaId: empresa_id,
+        customerId: subRow?.stripe_customer_id,
+        stripeSubscriptionId: subRow?.stripe_subscription_id,
+        periodoInicio,
+        periodoFin,
+      });
 
       if (crear_con_stripe === false) {
         const folioManual = `RUT-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
@@ -1419,7 +1518,9 @@ Deno.serve(async (req) => {
       }
 
       // Find or create Stripe customer
-      const customers = await stripe.customers.list({ email: clientEmail, limit: 1 });
+      const customers = subRow?.stripe_customer_id
+        ? { data: [{ id: subRow.stripe_customer_id }] }
+        : await stripe.customers.list({ email: clientEmail, limit: 1 });
       let customerId: string;
       if (customers.data.length > 0) {
         customerId = customers.data[0].id;
@@ -1432,6 +1533,20 @@ Deno.serve(async (req) => {
         });
         customerId = c.id;
       }
+
+      // Repite la comprobación con el customer resuelto para cubrir facturas
+      // creadas directamente en Stripe que aún no llegaron a la tabla local.
+      await assertManualRenewalIsSafe({
+        empresaId: empresa_id,
+        customerId,
+        stripeSubscriptionId: subRow?.stripe_subscription_id,
+        periodoInicio,
+        periodoFin,
+      });
+
+      const requestId = String(request_id || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+      if (!requestId) throw new Error("request_id requerido para crear una renovación segura");
+      const idempotencyBase = `rutapp-renewal-${empresa_id}-${requestId}`;
 
       const invoice = await stripe.invoices.create({
         customer: customerId,
@@ -1447,8 +1562,13 @@ Deno.serve(async (req) => {
           plan_id: plan_id || "",
           descuento_pct: String(descPct),
           descuento_permanente: descuento_permanente ? "1" : "0",
+          periodo_inicio: periodoInicio,
+          periodo_fin: periodoFin,
+          affects_subscription: "1",
+          request_id: requestId,
+          source: "admin_empresa_detail",
         },
-      });
+      }, { idempotencyKey: `${idempotencyBase}-invoice` });
 
       await stripe.invoiceItems.create({
         customer: customerId,
@@ -1456,7 +1576,7 @@ Deno.serve(async (req) => {
         amount: Math.round(subtotal * 100),
         currency: "mxn",
         description: `${labelPlan}: ${num_usuarios} usuario${num_usuarios > 1 ? "s" : ""} × ${meses} mes${meses > 1 ? "es" : ""} × $${precio_por_usuario_mes}/usuario/mes`,
-      });
+      }, { idempotencyKey: `${idempotencyBase}-item` });
 
       if (descMonto > 0) {
         await stripe.invoiceItems.create({
@@ -1465,10 +1585,13 @@ Deno.serve(async (req) => {
           amount: -Math.round(descMonto * 100),
           currency: "mxn",
           description: `Descuento ${descPct}%`,
-        });
+        }, { idempotencyKey: `${idempotencyBase}-discount` });
       }
 
-      let finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
+      let finalizedInv = await stripe.invoices.retrieve(invoice.id);
+      if (finalizedInv.status === "draft") {
+        finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
+      }
       try {
         if (finalizedInv.status === "open") finalizedInv = await stripe.invoices.pay(invoice.id);
       } catch (_) {
@@ -1476,9 +1599,7 @@ Deno.serve(async (req) => {
       }
 
       // Insert row in `facturas` so it appears in the client's "Mi Suscripción" page
-      const { data: facturaRow, error: facturaErr } = await supabase
-        .from("facturas")
-        .insert({
+      const facturaPayload = {
           empresa_id,
           suscripcion_id: subRow?.id || null,
           numero_factura: finalizedInv.number || null,
@@ -1496,9 +1617,17 @@ Deno.serve(async (req) => {
           fecha_pago: finalizedInv.status === "paid" ? new Date().toISOString() : null,
           fecha_vencimiento: vencimiento.toISOString(),
           stripe_invoice_id: finalizedInv.id,
-        })
-        .select()
-        .single();
+        };
+      const { data: existingFactura } = await supabase
+        .from("facturas")
+        .select("id")
+        .eq("stripe_invoice_id", finalizedInv.id)
+        .limit(1)
+        .maybeSingle();
+      const facturaQuery = existingFactura?.id
+        ? supabase.from("facturas").update(facturaPayload).eq("id", existingFactura.id)
+        : supabase.from("facturas").insert(facturaPayload);
+      const { data: facturaRow, error: facturaErr } = await facturaQuery.select().single();
       if (facturaErr) console.error("[admin-billing] insert factura error:", facturaErr);
 
       if (finalizedInv.status === "paid" && subRow?.id) {
@@ -1634,6 +1763,7 @@ Deno.serve(async (req) => {
         items, concepto, days_until_due, plan_nombre, num_usuarios, timbres,
         descuento_plan_pct, descuento_extra_pct, total_centavos, mensaje_personal,
         enviar_email, enviar_whatsapp, telefono_envio, correo_envio,
+        meses, request_id,
       } = body;
 
       if (!empresa_id) throw new Error("empresa_id requerido");
@@ -1654,8 +1784,17 @@ Deno.serve(async (req) => {
       }
       if (!clientEmail) throw new Error("No se encontró email para esta empresa");
 
+      const { data: subRow, error: subError } = await supabase
+        .from("subscriptions")
+        .select("id, stripe_customer_id, stripe_subscription_id, current_period_end")
+        .eq("empresa_id", empresa_id)
+        .maybeSingle();
+      if (subError) throw subError;
+
       // Find or create Stripe customer
-      const customers = await stripe.customers.list({ email: clientEmail, limit: 1 });
+      const customers = subRow?.stripe_customer_id
+        ? { data: [{ id: subRow.stripe_customer_id }] }
+        : await stripe.customers.list({ email: clientEmail, limit: 1 });
       let customerId: string;
       if (customers.data.length > 0) {
         customerId = customers.data[0].id;
@@ -1669,17 +1808,47 @@ Deno.serve(async (req) => {
         customerId = c.id;
       }
 
+      const renewalMonths = Math.max(1, Number(meses) || 1);
+      const today = datePart(new Date());
+      const currentEnd = datePart(subRow?.current_period_end);
+      const periodoInicio = currentEnd && currentEnd > today ? currentEnd : today;
+      const periodoFin = addMonthsDatePart(periodoInicio, renewalMonths);
+      await assertManualRenewalIsSafe({
+        empresaId: empresa_id,
+        customerId,
+        stripeSubscriptionId: subRow?.stripe_subscription_id,
+        periodoInicio,
+        periodoFin,
+      });
+
+      const requestId = String(request_id || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+      if (!requestId) throw new Error("request_id requerido para crear una factura segura");
+      const idempotencyBase = `rutapp-pro-renewal-${empresa_id}-${requestId}`;
+
       // Create invoice in Stripe
       const invoice = await stripe.invoices.create({
         customer: customerId,
         collection_method: "send_invoice",
         days_until_due: days_until_due || 3,
         auto_advance: true,
-        metadata: { empresa_id, plan: plan_nombre, usuarios: String(num_usuarios) },
-      });
+        description: concepto || `Suscripción Rutapp ${plan_nombre || "Empresa"}`,
+        metadata: {
+          empresa_id,
+          plan: plan_nombre,
+          usuarios: String(num_usuarios),
+          num_usuarios: String(num_usuarios),
+          meses: String(renewalMonths),
+          tipo: "subscription_renewal",
+          affects_subscription: "1",
+          periodo_inicio: periodoInicio,
+          periodo_fin: periodoFin,
+          request_id: requestId,
+          source: "admin_invoices_tab",
+        },
+      }, { idempotencyKey: `${idempotencyBase}-invoice` });
 
       // Add line items
-      for (const item of (items || [])) {
+      for (const [index, item] of (items || []).entries()) {
         if (item.amount === 0) continue;
         await stripe.invoiceItems.create({
           customer: customerId,
@@ -1687,13 +1856,48 @@ Deno.serve(async (req) => {
           amount: item.amount,
           currency: "mxn",
           description: item.description,
-        });
+        }, { idempotencyKey: `${idempotencyBase}-item-${index}` });
       }
 
-      const finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
+      let finalizedInv = await stripe.invoices.retrieve(invoice.id);
+      if (finalizedInv.status === "draft") {
+        finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
+      }
+
+      const facturaPayload = {
+        empresa_id,
+        suscripcion_id: subRow?.id || null,
+        numero_factura: finalizedInv.number || null,
+        concepto: concepto || `Suscripción Rutapp ${plan_nombre || "Empresa"}`,
+        periodo_inicio: periodoInicio,
+        periodo_fin: periodoFin,
+        num_usuarios: Math.max(1, Number(num_usuarios) || 1),
+        precio_unitario: Math.max(0, Number(total_centavos || 0) / 100 / Math.max(1, Number(num_usuarios) || 1)),
+        subtotal: Math.max(0, Number(total_centavos || 0) / 100),
+        total: Math.max(0, Number(total_centavos || 0) / 100),
+        estado: finalizedInv.status === "paid" ? "pagada" : "pendiente",
+        tipo: "subscription_renewal",
+        es_prorrateo: false,
+        fecha_pago: finalizedInv.status === "paid" ? new Date().toISOString() : null,
+        fecha_vencimiento: finalizedInv.due_date
+          ? new Date(finalizedInv.due_date * 1000).toISOString()
+          : null,
+        stripe_invoice_id: finalizedInv.id,
+      };
+      const { data: existingFactura } = await supabase
+        .from("facturas")
+        .select("id")
+        .eq("stripe_invoice_id", finalizedInv.id)
+        .limit(1)
+        .maybeSingle();
+      const facturaQuery = existingFactura?.id
+        ? supabase.from("facturas").update(facturaPayload).eq("id", existingFactura.id)
+        : supabase.from("facturas").insert(facturaPayload);
+      const { error: facturaError } = await facturaQuery;
+      if (facturaError) throw facturaError;
 
       // Auto-credit timbres if included in invoice
-      if (timbres && timbres > 0) {
+      if (timbres && timbres > 0 && !existingFactura?.id) {
         await supabase.rpc("add_timbres", {
           p_empresa_id: empresa_id,
           p_cantidad: timbres,

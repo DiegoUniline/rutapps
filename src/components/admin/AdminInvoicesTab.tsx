@@ -29,9 +29,13 @@ interface AdminInvoice {
   attempt_count?: number; attempted?: boolean;
   next_payment_attempt?: number | null; paid_at?: number | null;
   collection_method?: string | null; billing_reason?: string | null;
+  invoice_origin?: InvoiceOrigin; invoice_origin_label?: string;
+  invoice_type?: string | null; invoice_source?: string | null;
 }
 
 type PaymentState = 'all' | 'paid' | 'failed' | 'pending' | 'draft' | 'void';
+type InvoiceOrigin = 'manual' | 'automatic' | 'reminder' | 'unknown';
+type InvoiceOriginFilter = 'all' | InvoiceOrigin;
 type InvoiceView = 'detail' | 'company' | 'client' | 'matrix';
 type DatePreset = 'all' | 'today' | 'week' | 'month' | 'last_month' | 'custom';
 
@@ -142,12 +146,23 @@ function invoiceCustomerKey(invoice: AdminInvoice): string {
     || `invoice:${invoice.id}`;
 }
 
+function isSubscriptionInvoice(invoice: AdminInvoice): boolean {
+  const reason = String(invoice.billing_reason || '').toLowerCase();
+  const description = String(invoice.description || '').toLowerCase();
+  return Boolean(invoice.subscription_id)
+    || reason === 'subscription_cycle'
+    || reason === 'subscription_create'
+    || description.includes('suscrip')
+    || description.includes('renovaci');
+}
+
 export default function AdminInvoicesTab() {
   const [invoices, setInvoices] = useState<AdminInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<PaymentState>('all');
   const [empresaFilter, setEmpresaFilter] = useState('all');
+  const [originFilter, setOriginFilter] = useState<InvoiceOriginFilter>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [datePreset, setDatePreset] = useState<DatePreset>('all');
@@ -155,6 +170,7 @@ export default function AdminInvoicesTab() {
   const [selectedInvoice, setSelectedInvoice] = useState<AdminInvoice | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createRequestId, setCreateRequestId] = useState('');
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
@@ -255,6 +271,11 @@ export default function AdminInvoicesTab() {
 
   const fmtMXN = (v: number) => `$${v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  function openCreateInvoice() {
+    setCreateRequestId(crypto.randomUUID());
+    setShowCreate(true);
+  }
+
   async function handleCreateInvoice() {
     if (!form.empresa_id) { toast.error('Selecciona una empresa'); return; }
     if (form.num_usuarios < 1) { toast.error('Mínimo 1 usuario'); return; }
@@ -304,6 +325,7 @@ export default function AdminInvoicesTab() {
             concepto,
             days_until_due: form.dias_pagar,
             plan_nombre: selectedPlan.nombre,
+            meses: selectedPlan.meses || 1,
             num_usuarios: form.num_usuarios,
             timbres: form.timbres,
             descuento_plan_pct: selectedPlan.descuento_pct,
@@ -314,6 +336,7 @@ export default function AdminInvoicesTab() {
             enviar_whatsapp: form.enviar_whatsapp,
             telefono_envio: fullPhone,
             correo_envio: form.correo,
+            request_id: createRequestId || crypto.randomUUID(),
           }),
         }
       );
@@ -382,12 +405,30 @@ export default function AdminInvoicesTab() {
     return <Badge variant="outline" className={styles[state]}>{PAYMENT_STATE_LABELS[state]}</Badge>;
   };
 
+  const originBadge = (invoice: AdminInvoice) => {
+    const origin = invoice.invoice_origin || 'unknown';
+    const labels: Record<InvoiceOrigin, string> = {
+      manual: 'Manual',
+      automatic: 'Automática',
+      reminder: 'Recordatorio',
+      unknown: 'Sin clasificar',
+    };
+    const styles: Record<InvoiceOrigin, string> = {
+      manual: 'border-orange-300 bg-orange-50 text-orange-800',
+      automatic: 'border-blue-200 bg-blue-50 text-blue-700',
+      reminder: 'border-violet-200 bg-violet-50 text-violet-700',
+      unknown: 'border-slate-200 bg-slate-50 text-slate-600',
+    };
+    return <Badge variant="outline" className={styles[origin]}>{labels[origin]}</Badge>;
+  };
+
   const baseFiltered = invoices.filter(invoice => {
     const q = search.trim().toLowerCase();
     const invoiceDate = new Date(invoice.created * 1000);
     const from = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
     const to = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
     if (empresaFilter !== 'all' && invoice.empresa_id !== empresaFilter) return false;
+    if (originFilter !== 'all' && (invoice.invoice_origin || 'unknown') !== originFilter) return false;
     if (from && invoiceDate < from) return false;
     if (to && invoiceDate > to) return false;
     if (!q) return true;
@@ -411,6 +452,7 @@ export default function AdminInvoicesTab() {
     if (key === 'cliente') return invoice.customer_email || invoice.customer_name;
     if (key === 'folio') return invoice.number;
     if (key === 'descripcion') return invoice.description;
+    if (key === 'origen') return invoice.invoice_origin_label || invoice.invoice_origin;
     if (key === 'status') return getPaymentState(invoice);
     if (key === 'intentos') return invoice.attempt_count || 0;
     if (key === 'total') return invoice.amount_due || 0;
@@ -430,17 +472,20 @@ export default function AdminInvoicesTab() {
     return sum + Math.max(0, remaining);
   }, 0) / 100;
 
-  const paidByCustomerDateAndAmount = new Map<string, AdminInvoice[]>();
+  const paidByCustomerPeriodAndAmount = new Map<string, AdminInvoice[]>();
   for (const invoice of paidInvoices) {
     const paidAmount = invoice.amount_paid || 0;
     if (paidAmount <= 0) continue;
     const paidDate = new Date((invoice.paid_at || invoice.created) * 1000);
-    const key = `${invoiceCustomerKey(invoice)}|${localDateKey(paidDate)}|${paidAmount}|${invoice.currency}`;
-    const matches = paidByCustomerDateAndAmount.get(key) || [];
+    const dateKey = isSubscriptionInvoice(invoice)
+      ? localDateKey(paidDate).slice(0, 7)
+      : localDateKey(paidDate);
+    const key = `${invoiceCustomerKey(invoice)}|${dateKey}|${paidAmount}|${invoice.currency}`;
+    const matches = paidByCustomerPeriodAndAmount.get(key) || [];
     matches.push(invoice);
-    paidByCustomerDateAndAmount.set(key, matches);
+    paidByCustomerPeriodAndAmount.set(key, matches);
   }
-  const possibleDuplicateSets = [...paidByCustomerDateAndAmount.values()].filter(matches => matches.length > 1);
+  const possibleDuplicateSets = [...paidByCustomerPeriodAndAmount.values()].filter(matches => matches.length > 1);
   const possibleDuplicateIds = new Set(possibleDuplicateSets.flatMap(matches => matches.map(invoice => invoice.id)));
   const possibleDuplicateAmount = possibleDuplicateSets.reduce((sum, matches) => {
     const [, ...possibleExtras] = matches.sort((a, b) => (a.paid_at || a.created) - (b.paid_at || b.created));
@@ -551,6 +596,7 @@ export default function AdminInvoicesTab() {
     setSearch('');
     setStatusFilter('all');
     setEmpresaFilter('all');
+    setOriginFilter('all');
     setDateFrom('');
     setDateTo('');
     setDatePreset('all');
@@ -580,7 +626,7 @@ export default function AdminInvoicesTab() {
               <Button size="sm" variant="outline" onClick={load} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar
               </Button>
-              <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Button size="sm" onClick={openCreateInvoice}>
                 <Plus className="h-4 w-4 mr-1.5" /> Nueva factura
               </Button>
             </div>
@@ -610,7 +656,7 @@ export default function AdminInvoicesTab() {
             </button>
             <button
               type="button"
-              onClick={() => { setStatusFilter('paid'); setInvoiceView('client'); }}
+              onClick={() => { setStatusFilter('paid'); setOriginFilter('all'); setInvoiceView('client'); }}
               className={`rounded-xl border p-3 text-left transition-colors ${possibleDuplicateSets.length > 0 ? 'border-red-300 bg-red-50 hover:bg-red-100/70' : 'border-border/60 hover:bg-muted/40'}`}
             >
               <div className="flex items-center justify-between text-xs text-red-700"><span>Posibles dobles</span><AlertTriangle className="h-4 w-4" /></div>
@@ -620,7 +666,7 @@ export default function AdminInvoicesTab() {
           </div>
 
           <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-2.5">
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.5fr)_minmax(200px,1fr)_150px_150px_auto]">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.4fr)_minmax(190px,1fr)_minmax(175px,.85fr)_145px_145px_auto]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Empresa, cliente, correo, folio o ID Stripe..." value={search} onChange={event => setSearch(event.target.value)} className="pl-9 bg-background" />
@@ -630,6 +676,18 @@ export default function AdminInvoicesTab() {
                 value={empresaFilter}
                 onChange={setEmpresaFilter}
                 placeholder="Todas las empresas"
+              />
+              <ModalSelect
+                options={[
+                  { value: 'all', label: 'Todos los orígenes' },
+                  { value: 'manual', label: 'Creadas manualmente' },
+                  { value: 'automatic', label: 'Automáticas de Stripe' },
+                  { value: 'reminder', label: 'Recordatorios automáticos' },
+                  { value: 'unknown', label: 'Sin clasificar' },
+                ]}
+                value={originFilter}
+                onChange={value => setOriginFilter(value as InvoiceOriginFilter)}
+                placeholder="Todos los orígenes"
               />
               <Input type="date" value={dateFrom} onChange={event => { setDateFrom(event.target.value); setDatePreset('custom'); }} className="bg-background" aria-label="Fecha inicial" />
               <Input type="date" value={dateTo} onChange={event => { setDateTo(event.target.value); setDatePreset('custom'); }} className="bg-background" aria-label="Fecha final" />
@@ -685,6 +743,7 @@ export default function AdminInvoicesTab() {
                   <SortableTh sortKey="cliente" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Cliente (Stripe)</SortableTh>
                   <SortableTh sortKey="folio" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Folio</SortableTh>
                   <SortableTh sortKey="descripcion" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Descripción</SortableTh>
+                  <SortableTh sortKey="origen" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Origen</SortableTh>
                   <SortableTh sortKey="status" sort={invoiceSort} onToggle={toggleInvoiceSort} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</SortableTh>
                   <SortableTh sortKey="intentos" sort={invoiceSort} onToggle={toggleInvoiceSort} align="center" className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">Intentos</SortableTh>
                   <SortableTh sortKey="total" sort={invoiceSort} onToggle={toggleInvoiceSort} align="right" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Total</SortableTh>
@@ -696,7 +755,7 @@ export default function AdminInvoicesTab() {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Sin facturas con estos filtros</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">Sin facturas con estos filtros</TableCell></TableRow>
                 ) : sortedInvoices.map(inv => {
                   const remaining = typeof inv.amount_remaining === 'number' ? inv.amount_remaining : (inv.amount_due - (inv.amount_paid || 0));
                   const paymentState = getPaymentState(inv);
@@ -713,6 +772,7 @@ export default function AdminInvoicesTab() {
                     <TableCell className="text-sm text-muted-foreground">{inv.customer_email || inv.customer_name || '—'}</TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground">{inv.number || '—'}</TableCell>
                     <TableCell className="text-sm truncate max-w-[200px] text-muted-foreground">{inv.description}</TableCell>
+                    <TableCell>{originBadge(inv)}</TableCell>
                     <TableCell>
                       <div className="flex flex-col items-start gap-1">
                         {statusBadge(paymentState)}
@@ -925,6 +985,9 @@ export default function AdminInvoicesTab() {
                     ['ID factura Stripe', selectedInvoice.id],
                     ['ID cliente Stripe', selectedInvoice.customer_id || '—'],
                     ['ID suscripción Stripe', selectedInvoice.subscription_id || '—'],
+                    ['Origen', selectedInvoice.invoice_origin_label || 'Sin clasificar'],
+                    ['Tipo interno', selectedInvoice.invoice_type || '—'],
+                    ['Fuente', selectedInvoice.invoice_source || '—'],
                     ['Descripción', selectedInvoice.description || '—'],
                     ['Generada', dateTime(selectedInvoice.created)],
                     ['Vencimiento', dateTime(selectedInvoice.due_date)],
@@ -969,6 +1032,14 @@ export default function AdminInvoicesTab() {
             </DialogTitle>
             <DialogDescription>Selecciona la empresa, plan y usuarios para generar la factura automáticamente.</DialogDescription>
           </DialogHeader>
+
+          <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              Esta factura es solo para empresas sin renovación automática activa. Antes de crearla,
+              RutApp comprobará Stripe y los periodos pagados; si detecta cobertura, bloqueará el cobro.
+            </p>
+          </div>
 
           <div className="space-y-5 pt-2">
             {/* Empresa selector */}

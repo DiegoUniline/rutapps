@@ -72,6 +72,18 @@ Deno.serve(async (req) => {
 
     for (const sub of allSubs) {
       try {
+        // Una suscripción existente en Stripe ya genera y reintenta sus propias
+        // facturas. Crear además un recordatorio manual produce dos cuentas por
+        // cobrar para el mismo ciclo.
+        if (sub.stripe_subscription_id) {
+          results.push({
+            sub_id: sub.id,
+            status: "skipped",
+            reason: "Stripe subscription handles renewal",
+          });
+          continue;
+        }
+
         // Get empresa email via profile
         const { data: profile } = await supabase
           .from("profiles")
@@ -86,6 +98,31 @@ Deno.serve(async (req) => {
         if (!userData?.user?.email) continue;
 
         const email = userData.user.email;
+        const periodoInicio = String(
+          sub.status === "trial" ? sub.trial_ends_at : sub.current_period_end,
+        ).split("T")[0];
+        const periodoFinDate = new Date(`${periodoInicio}T12:00:00.000Z`);
+        periodoFinDate.setUTCMonth(periodoFinDate.getUTCMonth() + 1);
+        const periodoFin = periodoFinDate.toISOString().slice(0, 10);
+
+        const { data: localCoverage, error: coverageError } = await supabase
+          .from("facturas")
+          .select("id, numero_factura, estado")
+          .eq("empresa_id", sub.empresa_id)
+          .in("estado", ["pendiente", "procesando", "parcial", "pagada"])
+          .or("tipo.is.null,tipo.neq.additional_charge")
+          .lt("periodo_inicio", periodoFin)
+          .gt("periodo_fin", periodoInicio)
+          .limit(1);
+        if (coverageError) throw coverageError;
+        if (localCoverage?.length) {
+          results.push({
+            sub_id: sub.id,
+            status: "skipped",
+            reason: `period already covered by ${localCoverage[0].numero_factura || localCoverage[0].id}`,
+          });
+          continue;
+        }
 
         // Find or create Stripe customer
         let customerId = sub.stripe_customer_id;
@@ -128,7 +165,16 @@ Deno.serve(async (req) => {
           collection_method: "send_invoice",
           days_until_due: 1,
           auto_advance: true,
-        });
+          metadata: {
+            empresa_id: sub.empresa_id,
+            tipo: "subscription_renewal",
+            affects_subscription: "1",
+            meses: "1",
+            periodo_inicio: periodoInicio,
+            periodo_fin: periodoFin,
+            source: "create-invoice-reminder",
+          },
+        }, { idempotencyKey: `rutapp-reminder-${sub.id}-${periodoInicio}-invoice` });
 
         const amount = plan ? Math.round(plan.precio_por_usuario * 100) : 30000; // default $300 MXN
         const description = sub.status === "trial"
@@ -141,7 +187,7 @@ Deno.serve(async (req) => {
           amount,
           currency: "mxn",
           description,
-        });
+        }, { idempotencyKey: `rutapp-reminder-${sub.id}-${periodoInicio}-item` });
 
         // Finalize invoice so it can be paid
         await stripe.invoices.finalizeInvoice(invoice.id);
