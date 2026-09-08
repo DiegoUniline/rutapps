@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2, Ban, Lock } from 'lucide-react';
+import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2, Ban, Lock, Loader2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -18,13 +18,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
 import { useVentasPaginated, useVentaLineasPaginated, useVentasResumen, useVentaLineasResumen, useDeleteVenta } from '@/hooks/useVentas';
 import { usePermisos } from '@/hooks/usePermisos';
-import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData, dateGroupLabel, dateGroupSortKey } from '@/hooks/useListPreferences';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
-import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePagination';
+import { readStoredPageSizeFor, writeStoredPageSizeFor, type PageSizeOption } from '@/hooks/useTablePagination';
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { mergePdfBlobs } from '@/lib/mergePdfs';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
@@ -42,7 +41,7 @@ import { VentasDesktopTable } from './ventas/VentasDesktopTable';
 import { VentasProductosTable } from './ventas/VentasProductosTable';
 import { VentasMobileList } from './ventas/VentasMobileList';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
-import { useVendedoresForFilter } from '@/hooks/useFilterOptions';
+import { useClientesForFilter, useVendedoresForFilter } from '@/hooks/useFilterOptions';
 
 function getNumericPageSize(ps: PageSizeOption): number {
   return ps === 'all' ? 10000 : ps;
@@ -52,10 +51,13 @@ export default function VentasListPage() {
   const { empresa } = useAuth();
   // Realtime: refresca lista al haber cambios en ventas/entregas/cobros (otro dispositivo)
   useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas']] });
-  useRealtimeInvalidate({ table: 'venta_lineas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas']], tenantColumn: null });
+  // venta_lineas sí tiene empresa_id. Sin este filtro un Super Admin recibía
+  // eventos de TODAS las empresas y su tabla podía volver a consultarse aunque
+  // el movimiento perteneciera a otro cliente de RutApp.
+  useRealtimeInvalidate({ table: 'venta_lineas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas']] });
   useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['entregas']] });
   useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['cxc'], ['saldos']] });
-  useRealtimeInvalidate({ table: 'clientes', empresaId: empresa?.id, queryKeys: [['ventas'], ['clientes']] });
+  useRealtimeInvalidate({ table: 'clientes', empresaId: empresa?.id, queryKeys: [['ventas'], ['clientes'], ['clientes-filter']] });
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { fmt: fmtCurrency } = useCurrency();
@@ -68,7 +70,12 @@ export default function VentasListPage() {
   const [viewMode, setViewMode] = useState<'ventas' | 'productos'>('ventas');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<PageSizeOption>(readStoredPageSize);
+  // Ventas conserva su tamaño por módulo. No hereda el valor global porque
+  // "Todos" en otro catálogo podía convertir esta consulta en 10,000 ventas.
+  const [pageSize, setPageSize] = useState<PageSizeOption>(() => {
+    const stored = readStoredPageSizeFor('ventas', false);
+    return stored === 'all' ? 50 : stored;
+  });
   const { filters, groupBy, groupByLevels, dateFrom, dateTo, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('ventas');
   const setDateFrom = (val: string) => setDates(val, dateTo);
   const setDateTo = (val: string) => setDates(dateFrom, val);
@@ -100,11 +107,24 @@ export default function VentasListPage() {
   const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter, clienteFilter, viewMode === 'ventas');
 
   const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, clienteFilter, promocionFilter, viewMode === 'productos');
+  const primaryRowsReady = viewMode === 'ventas' ? ventasData !== undefined : lineasData !== undefined;
+  const [loadHistoricalSummary, setLoadHistoricalSummary] = useState(false);
+
+  // La tabla visible tiene prioridad. El resumen histórico puede abarcar miles
+  // de ventas y partidas; arrancarlo después evita que compita por red/CPU con
+  // la primera página sin modificar una sola cifra del cálculo final.
+  useEffect(() => {
+    setLoadHistoricalSummary(false);
+    if (!primaryRowsReady || groupBy) return;
+    const timer = window.setTimeout(() => setLoadHistoricalSummary(true), 250);
+    return () => window.clearTimeout(timer);
+  }, [primaryRowsReady, groupBy, viewMode, search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, promocionFilter]);
+
   // Totales sobre TODO el filtro (no solo la página). Al agrupar, la lista ya
   // trae todas las filas (fetchAll), así que evitamos la doble consulta.
-  const { data: ventasResumenRows } = useVentasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, promocionFilter, viewMode === 'ventas' && !groupBy, clienteFilter);
-  const { data: lineasResumenAll } = useVentaLineasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, viewMode === 'productos' && !groupBy, clienteFilter, promocionFilter);
-  const { data: clientesList } = useClientes();
+  const { data: ventasResumenRows, isFetching: isFetchingVentasResumen, isError: ventasResumenError } = useVentasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, promocionFilter, viewMode === 'ventas' && !groupBy && loadHistoricalSummary, clienteFilter);
+  const { data: lineasResumenAll, isFetching: isFetchingLineasResumen, isError: lineasResumenError } = useVentaLineasResumen(search, statusFilter, tipoFilter, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, viewMode === 'productos' && !groupBy && loadHistoricalSummary, clienteFilter, promocionFilter);
+  const { data: clientesList } = useClientesForFilter();
   const { data: vendedoresList } = useVendedoresForFilter();
 
   const FILTER_OPTIONS = useMemo(() => {
@@ -116,16 +136,19 @@ export default function VentasListPage() {
   const ventasRaw = ventasData?.rows ?? [];
   const ventas = ventasRaw;
 
-  // Filas para los TOTALES: todo el filtro. Al agrupar, `ventasRaw` ya son todas.
-  // Si no, usamos el resumen completo (fallback a la página mientras carga).
+  // Filas para los TOTALES: todo el filtro. Nunca presentamos la página actual
+  // como si fuera el total histórico mientras el resumen sigue cargando.
   const resumenSource = useMemo(
-    () => groupBy ? ventasRaw : (ventasResumenRows ?? ventasRaw),
+    () => groupBy ? ventasRaw : (ventasResumenRows ?? []),
     [groupBy, ventasResumenRows, ventasRaw],
   );
 
   // Active dataset depending on view mode
   const isProductView = viewMode === 'productos';
   const productRows = lineasData?.rows ?? [];
+  const historicalSummaryReady = !!groupBy || (isProductView ? lineasResumenAll !== undefined : ventasResumenRows !== undefined);
+  const historicalSummaryFetching = !groupBy && (isProductView ? isFetchingLineasResumen : isFetchingVentasResumen);
+  const historicalSummaryError = !groupBy && (isProductView ? lineasResumenError : ventasResumenError);
 
   const total = isProductView
     ? (lineasData?.total ?? 0)
@@ -137,7 +160,11 @@ export default function VentasListPage() {
   const pageData = ventas;
   const allSelected = pageData.length > 0 && pageData.every(v => selected.has(v.id));
 
-  const handlePageSizeChange = (size: PageSizeOption) => { setPageSize(size); setPage(1); try { localStorage.setItem('table-page-size', String(size)); } catch {} };
+  const handlePageSizeChange = (size: PageSizeOption) => {
+    setPageSize(size);
+    setPage(1);
+    writeStoredPageSizeFor(size, 'ventas', false);
+  };
   const toggleAll = () => { allSelected ? setSelected(new Set()) : setSelected(new Set(pageData.map(v => v.id))); };
   const toggleOne = (id: string) => { const next = new Set(selected); next.has(id) ? next.delete(id) : next.add(id); setSelected(next); };
 
@@ -511,24 +538,43 @@ export default function VentasListPage() {
               {isProductView ? (
                 <>
                   <span><strong className="text-foreground">{total}</strong> líneas</span>
-                  <span>Cantidad: <strong className="text-foreground">{totalCantidad}</strong></span>
-                  <span>Total: <strong className="text-foreground">{fmt(totalLineas)}</strong></span>
+                  {!historicalSummaryReady ? (
+                    <span className={cn('inline-flex items-center gap-1', historicalSummaryError && 'text-destructive')}>
+                      {!historicalSummaryError && <Loader2 className={cn('h-3 w-3', historicalSummaryFetching && 'animate-spin')} />}
+                      {historicalSummaryError ? 'Totales no disponibles' : 'Calculando totales…'}
+                    </span>
+                  ) : (
+                    <>
+                      <span>Cantidad: <strong className="text-foreground">{totalCantidad}</strong></span>
+                      <span>Total: <strong className="text-foreground">{fmt(totalLineas)}</strong></span>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
                   <span><strong className="text-foreground">{total}</strong> venta{total !== 1 ? 's' : ''}</span>
-                  <span>Subtotal s/imp: <strong className="text-foreground">{fmt(resumenVentas.subtotal)}</strong></span>
-                  {resumenVentas.descuento > 0.005 && <span>Desc: <strong className="text-destructive">-{fmt(resumenVentas.descuento)}</strong></span>}
-                  <span>Imp: <strong className="text-foreground">{fmt(resumenVentas.impuestos)}</strong></span>
-                  <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
-                  <span>Pagado: <strong className="text-success">{fmt(totalPagado)}</strong></span>
-                  {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
+                  {!historicalSummaryReady ? (
+                    <span className={cn('inline-flex items-center gap-1', historicalSummaryError && 'text-destructive')}>
+                      {!historicalSummaryError && <Loader2 className={cn('h-3 w-3', historicalSummaryFetching && 'animate-spin')} />}
+                      {historicalSummaryError ? 'Totales no disponibles' : 'Calculando totales…'}
+                    </span>
+                  ) : (
+                    <>
+                      <span>Subtotal s/imp: <strong className="text-foreground">{fmt(resumenVentas.subtotal)}</strong></span>
+                      {resumenVentas.descuento > 0.005 && <span>Desc: <strong className="text-destructive">-{fmt(resumenVentas.descuento)}</strong></span>}
+                      <span>Imp: <strong className="text-foreground">{fmt(resumenVentas.impuestos)}</strong></span>
+                      <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
+                      <span>Pagado: <strong className="text-success">{fmt(totalPagado)}</strong></span>
+                      {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
+                    </>
+                  )}
                 </>
               )}
             </div>
             {!groupBy && (
               <TablePagination
                 from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize}
+                allowAll={false}
                 onPageSizeChange={handlePageSizeChange}
                 onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
                 onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
