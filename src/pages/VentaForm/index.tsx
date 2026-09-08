@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermisos } from '@/hooks/usePermisos';
 import { condicionPagoDesdeCliente } from '@/lib/condicionPago';
@@ -55,7 +56,7 @@ export default function VentaFormPage() {
   const { data: vendedoresList } = useVendedores();
   const manejaLotesEmpresa = useManejaLotes();
   const {
-    id, isNew, form, lineas, setLineas, readOnly, isLoading,
+    id, isNew, form, lineas, setLineas, readOnly, isLoading, ventaLoadError, catalogLoadError, retryInitialLoad,
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
@@ -222,9 +223,46 @@ export default function VentaFormPage() {
     }
   }, [form.id, form.cliente_id, totals.total, empresa, user, saveVenta, handleAddPago, queryClient]);
 
-  if (!isNew && isLoading) return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
+  if (!isNew && isLoading) return (
+    <div className="p-4 min-h-full space-y-3">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Cargando la venta y sus productos…
+      </div>
+      <TableSkeleton rows={6} cols={4} />
+    </div>
+  );
+
+  if (!isNew && ventaLoadError) {
+    const detail = ventaLoadError instanceof Error ? ventaLoadError.message : 'No fue posible consultar la venta.';
+    return (
+      <div className="min-h-full p-4 sm:p-6">
+        <div className="mx-auto mt-8 max-w-xl rounded-lg border border-destructive/40 bg-destructive/5 p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+            <div className="min-w-0 flex-1 space-y-3">
+              <div>
+                <h2 className="font-semibold text-foreground">No se pudo cargar esta venta</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Tus datos no se modificaron. Revisa la conexión y vuelve a intentarlo.</p>
+                <p className="mt-2 break-words text-xs text-destructive">{detail}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => void retryInitialLoad()} className="btn-odoo-primary text-xs">
+                  <RefreshCw className="h-3.5 w-3.5" /> Reintentar
+                </button>
+                <button type="button" onClick={() => navigate('/ventas')} className="btn-odoo-secondary text-xs">Volver a Ventas</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
+  const savedClienteId = form.cliente_id as string | null | undefined;
+  if (savedClienteId && !clienteOptions.some(option => option.value === savedClienteId)) {
+    clienteOptions.unshift({ value: savedClienteId, label: (form as any).clientes?.nombre || 'Cliente de la venta' });
+  }
   const tarifaOptions = (tarifasList ?? []).map(t => ({ value: t.id, label: t.nombre }));
   const almacenOptions = (() => {
     const opts = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
@@ -237,7 +275,7 @@ export default function VentaFormPage() {
     }
     return opts;
   })();
-  const clienteSel = clientesList?.find(c => c.id === form.cliente_id);
+  const clienteSel = clientesList?.find(c => c.id === form.cliente_id) ?? (form as any).clientes;
   const clienteNombre = clienteSel?.nombre;
   const clienteNotasFiscales = (clienteSel as any)?.notas_fiscales as string | undefined;
   const registradoPorId = (form as any).creado_por ?? (isNew ? profile?.id : null);
@@ -390,6 +428,17 @@ export default function VentaFormPage() {
         </div>
       )}
       <div className="w-full max-w-none p-2.5 sm:p-3 space-y-2.5">
+        {catalogLoadError && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+              La venta cargó, pero uno o más catálogos no respondieron. Los datos guardados permanecen intactos.
+            </span>
+            <button type="button" onClick={() => void retryInitialLoad()} className="btn-odoo-secondary text-xs">
+              <RefreshCw className="h-3.5 w-3.5" /> Reintentar catálogos
+            </button>
+          </div>
+        )}
         <div className="bg-card border border-border rounded-md p-3">
           {readOnly && <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />Esta venta está {form.status} y no se puede editar.</div>}
           <VentaFormFields form={form} readOnly={readOnly} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
