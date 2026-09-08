@@ -68,8 +68,12 @@ export function useVentaForm() {
   const deleteLinea = useDeleteVentaLinea();
   const deleteVenta = useDeleteVenta();
   const queryClient = useQueryClient();
-  const clientesQuery = useClientes();
-  const productosQuery = useProductosForSelect();
+  // En una venta existente primero cargamos su detalle aislado. Los catálogos
+  // completos (que pueden contener miles de filas) arrancan después y ya no
+  // compiten con la información que el usuario necesita ver de inmediato.
+  const canLoadEditorCatalogs = isNew || !!existingVenta;
+  const clientesQuery = useClientes('', 'activo', canLoadEditorCatalogs);
+  const productosQuery = useProductosForSelect(canLoadEditorCatalogs);
   const tarifasQuery = useTarifasForSelect();
   const almacenesQuery = useAlmacenes();
   const { data: clientesList } = clientesQuery;
