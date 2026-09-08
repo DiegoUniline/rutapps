@@ -1069,7 +1069,7 @@ export function useVentaForm() {
   };
 
   return {
-    id, isNew, form, lineas, setLineas, dirty, readOnly, isLoading,
+    id, isNew, form, lineas, setLineas, dirty, readOnly, isLoading, existingVenta, ventaError, refetchVenta,
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
