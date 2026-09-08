@@ -55,7 +55,7 @@ export default function VentaFormPage() {
   const { data: vendedoresList } = useVendedores();
   const manejaLotesEmpresa = useManejaLotes();
   const {
-    id, isNew, form, lineas, setLineas, readOnly, isLoading,
+    id, isNew, form, lineas, setLineas, readOnly, isLoading, existingVenta, ventaError, refetchVenta,
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
