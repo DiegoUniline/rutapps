@@ -91,6 +91,8 @@ export interface CustomerIntelligenceDetail {
     codigo: string | null;
     nombre: string;
     unit: string;
+    category_name: string;
+    brand_name: string;
     history_qty: number;
     history_total: number;
     recent_qty: number;
@@ -174,14 +176,31 @@ export function useCustomerIntelligenceDetail(
     gcTime: 15 * 60 * 1000,
     retry: 1,
     queryFn: async () => {
-      const { data, error } = await rpcClient.rpc('fn_customer_intelligence_detail', {
-        p_empresa_id: empresa!.id,
-        p_cliente_id: clientId,
-        p_months: months,
-        p_window_days: windowDays,
-      });
-      if (error) throw error;
-      return data as CustomerIntelligenceDetail;
+      const params = { p_empresa_id: empresa!.id, p_cliente_id: clientId };
+      const [detailResult, dimensionResult] = await Promise.all([
+        rpcClient.rpc('fn_customer_intelligence_detail', {
+          ...params,
+          p_months: months,
+          p_window_days: windowDays,
+        }),
+        rpcClient.rpc('fn_customer_intelligence_product_dimensions', params),
+      ]);
+      if (detailResult.error) throw detailResult.error;
+
+      const detail = detailResult.data as CustomerIntelligenceDetail;
+      const dimensionRows = Array.isArray(dimensionResult.data)
+        ? dimensionResult.data as Array<{ id: string; category_name?: string | null; brand_name?: string | null }>
+        : [];
+      const dimensionByProduct = new Map(dimensionRows.map(row => [row.id, row]));
+
+      return {
+        ...detail,
+        products: (detail.products ?? []).map(product => ({
+          ...product,
+          category_name: dimensionByProduct.get(product.id)?.category_name || 'Sin categoría',
+          brand_name: dimensionByProduct.get(product.id)?.brand_name || 'Sin marca',
+        })),
+      } as CustomerIntelligenceDetail;
     },
   });
 }

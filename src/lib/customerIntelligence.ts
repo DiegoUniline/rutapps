@@ -101,3 +101,73 @@ export function numericChange(current: number, previous: number): number | null 
   if (previous > 0) return ((current - previous) / previous) * 100;
   return current > 0 ? 100 : null;
 }
+
+export type CustomerProductTrend = 'detenido' | 'bajando' | 'creciendo' | 'estable';
+export type CustomerProductDimension = 'category' | 'brand';
+
+export interface CustomerProductForAnalysis {
+  id: string;
+  category_name?: string | null;
+  brand_name?: string | null;
+  recent_qty: number;
+  previous_qty: number;
+  recent_total: number;
+  previous_total: number;
+  trend: CustomerProductTrend;
+}
+
+export interface CustomerDimensionSummary {
+  name: string;
+  products: number;
+  stopped_products: number;
+  declining_products: number;
+  growing_products: number;
+  recent_qty: number;
+  previous_qty: number;
+  recent_total: number;
+  previous_total: number;
+  change_pct: number | null;
+  revenue_gap: number;
+}
+
+/** Agrupa movimientos ya calculados por PostgreSQL; no vuelve a interpretar ventas. */
+export function summarizeCustomerProducts(
+  products: CustomerProductForAnalysis[],
+  dimension: CustomerProductDimension,
+): CustomerDimensionSummary[] {
+  const grouped = new Map<string, Omit<CustomerDimensionSummary, 'change_pct' | 'revenue_gap'>>();
+
+  for (const product of products) {
+    const rawName = dimension === 'category' ? product.category_name : product.brand_name;
+    const name = rawName?.trim() || (dimension === 'category' ? 'Sin categoría' : 'Sin marca');
+    const current = grouped.get(name) ?? {
+      name,
+      products: 0,
+      stopped_products: 0,
+      declining_products: 0,
+      growing_products: 0,
+      recent_qty: 0,
+      previous_qty: 0,
+      recent_total: 0,
+      previous_total: 0,
+    };
+
+    current.products += 1;
+    current.stopped_products += product.trend === 'detenido' ? 1 : 0;
+    current.declining_products += product.trend === 'bajando' ? 1 : 0;
+    current.growing_products += product.trend === 'creciendo' ? 1 : 0;
+    current.recent_qty += Number(product.recent_qty) || 0;
+    current.previous_qty += Number(product.previous_qty) || 0;
+    current.recent_total += Number(product.recent_total) || 0;
+    current.previous_total += Number(product.previous_total) || 0;
+    grouped.set(name, current);
+  }
+
+  return [...grouped.values()]
+    .map(row => ({
+      ...row,
+      change_pct: numericChange(row.recent_total, row.previous_total),
+      revenue_gap: Math.max(0, row.previous_total - row.recent_total),
+    }))
+    .sort((a, b) => b.revenue_gap - a.revenue_gap || b.recent_total - a.recent_total || a.name.localeCompare(b.name));
+}

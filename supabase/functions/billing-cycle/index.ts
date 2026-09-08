@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
 
         const { data: cuponUso } = await supabase
           .from("cupon_usos")
-          .select("id, meses_restantes, cupon_id, cupones:cupon_id(descuento_pct, acumulable)")
+          .select("id, meses_restantes, cupon_id, cupones:cupon_id(descuento_pct, acumulable, activo, vigencia_inicio, vigencia_fin)")
           .eq("empresa_id", sub.empresa_id)
           .order("aplicado_at", { ascending: false })
           .limit(1)
@@ -225,21 +225,26 @@ Deno.serve(async (req) => {
         let cuponDescuento = 0;
         if (cuponUso && (cuponUso.meses_restantes === null || cuponUso.meses_restantes > 0)) {
           const cupon = cuponUso.cupones as any;
-          if (cupon) {
+          const today = new Date().toISOString().slice(0, 10);
+          const dentroDeVigencia = cupon
+            && cupon.activo !== false
+            && (!cupon.vigencia_inicio || cupon.vigencia_inicio <= today)
+            && (!cupon.vigencia_fin || cupon.vigencia_fin >= today);
+          if (dentroDeVigencia) {
             cuponDescuento = cupon.descuento_pct || 0;
             if (cupon.acumulable) {
               descuento = Math.min(100, descuento + cuponDescuento);
             } else {
               descuento = Math.max(descuento, cuponDescuento);
             }
-          }
-          if (cuponUso.meses_restantes !== null) {
-            const consumed = Math.min(cuponUso.meses_restantes, planMeses);
-            const newMeses = Math.max(0, cuponUso.meses_restantes - consumed);
-            await supabase.from("cupon_usos").update({ meses_restantes: newMeses }).eq("id", cuponUso.id);
-            if (newMeses <= 0 && cupon?.acumulable) {
-              const baseDiscount = sub.descuento_porcentaje || 0;
-              await supabase.from("subscriptions").update({ descuento_porcentaje: baseDiscount }).eq("id", sub.id);
+            if (cuponUso.meses_restantes !== null) {
+              const consumed = Math.min(cuponUso.meses_restantes, planMeses);
+              const newMeses = Math.max(0, cuponUso.meses_restantes - consumed);
+              await supabase.from("cupon_usos").update({ meses_restantes: newMeses }).eq("id", cuponUso.id);
+              if (newMeses <= 0 && cupon?.acumulable) {
+                const baseDiscount = sub.descuento_porcentaje || 0;
+                await supabase.from("subscriptions").update({ descuento_porcentaje: baseDiscount }).eq("id", sub.id);
+              }
             }
           }
         }

@@ -5,6 +5,7 @@ import {
   customerAction,
   isCustomerSegment,
   numericChange,
+  summarizeCustomerProducts,
 } from '@/lib/customerIntelligence';
 
 describe('customer intelligence helpers', () => {
@@ -34,5 +35,27 @@ describe('customer intelligence helpers', () => {
     expect(customerAction('en_riesgo', 8)).toContain('8 días');
     expect(customerAction('bajando')).toContain('productos');
     expect(customerAction('nuevo')).toContain('segunda compra');
+  });
+
+  it('reveals revenue gaps by category without changing product calculations', () => {
+    const result = summarizeCustomerProducts([
+      { id: '1', category_name: 'Bebidas', brand_name: 'A', previous_qty: 10, recent_qty: 0, previous_total: 500, recent_total: 0, trend: 'detenido' },
+      { id: '2', category_name: 'Bebidas', brand_name: 'B', previous_qty: 10, recent_qty: 5, previous_total: 300, recent_total: 150, trend: 'bajando' },
+      { id: '3', category_name: 'Botanas', brand_name: 'A', previous_qty: 5, recent_qty: 10, previous_total: 100, recent_total: 200, trend: 'creciendo' },
+    ], 'category');
+
+    expect(result[0]).toMatchObject({
+      name: 'Bebidas', products: 2, stopped_products: 1,
+      declining_products: 1, previous_total: 800, recent_total: 150,
+      revenue_gap: 650,
+    });
+    expect(result[0].change_pct).toBeCloseTo(-81.25);
+  });
+
+  it('keeps uncatalogued products visible in dimension analysis', () => {
+    const result = summarizeCustomerProducts([
+      { id: '1', previous_qty: 1, recent_qty: 1, previous_total: 20, recent_total: 20, trend: 'estable' },
+    ], 'brand');
+    expect(result[0].name).toBe('Sin marca');
   });
 });

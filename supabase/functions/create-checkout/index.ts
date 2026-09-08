@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
 
     const { data: cuponUso } = await supabase
       .from("cupon_usos")
-      .select("meses_restantes, cupones:cupon_id(id, descuento_pct, acumulable, activo, partner_id)")
+      .select("meses_restantes, cupones:cupon_id(id, descuento_pct, acumulable, activo, partner_id, vigencia_inicio, vigencia_fin)")
       .eq("empresa_id", empresa_id)
       .order("aplicado_at", { ascending: false })
       .limit(1)
@@ -168,7 +168,11 @@ Deno.serve(async (req) => {
     let cuponAcumulable = false;
     if (cuponUso && (cuponUso.meses_restantes === null || cuponUso.meses_restantes > 0)) {
       const cupon = cuponUso.cupones as any;
-      if (cupon?.activo !== false) {
+      const today = new Date().toISOString().slice(0, 10);
+      const dentroDeVigencia = cupon
+        && (!cupon.vigencia_inicio || cupon.vigencia_inicio <= today)
+        && (!cupon.vigencia_fin || cupon.vigencia_fin >= today);
+      if (cupon?.activo !== false && dentroDeVigencia) {
         if (cupon.partner_id) {
           const { data: cap, error: capError } = await supabase.rpc("get_partner_coupon_cap", {
             _partner_id: cupon.partner_id,
