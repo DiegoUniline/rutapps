@@ -10269,6 +10269,50 @@ export type Database = {
         Args: { p_venta_id: string }
         Returns: undefined
       }
+      fn_venta_lineas_resumen: {
+        Args: {
+          p_cliente_ids?: string[]
+          p_condiciones?: Database["public"]["Enums"]["condicion_pago"][]
+          p_empresa_id: string
+          p_fecha_desde?: string
+          p_fecha_hasta?: string
+          p_promocion?: string
+          p_search?: string
+          p_statuses?: Database["public"]["Enums"]["status_venta"][]
+          p_tipos?: Database["public"]["Enums"]["tipo_venta"][]
+          p_vendedor_ids?: string[]
+          p_vendedor_scope?: string
+        }
+        Returns: {
+          cantidad: number
+          lineas_count: number
+          total: number
+        }[]
+      }
+      fn_ventas_resumen: {
+        Args: {
+          p_cliente_ids?: string[]
+          p_condiciones?: Database["public"]["Enums"]["condicion_pago"][]
+          p_empresa_id: string
+          p_fecha_desde?: string
+          p_fecha_hasta?: string
+          p_promocion?: string
+          p_search?: string
+          p_statuses?: Database["public"]["Enums"]["status_venta"][]
+          p_tipos?: Database["public"]["Enums"]["tipo_venta"][]
+          p_vendedor_ids?: string[]
+          p_vendedor_scope?: string
+        }
+        Returns: {
+          descuento: number
+          impuestos: number
+          pagado: number
+          saldo: number
+          subtotal_sin_impuestos: number
+          total_efectivo: number
+          ventas_count: number
+        }[]
+      }
       generar_bonos_partner: { Args: { _partner_id: string }; Returns: number }
       generar_recibo_volumen: {
         Args: {
