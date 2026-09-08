@@ -32,6 +32,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 
 import { cn, todayInTimezone, zonedDayRangeISO } from '@/lib/utils';
 import { tocaVisitaPorFrecuencia } from '@/lib/frecuenciaVisita';
+import {
+  isPendingDeliveryThrough,
+  wasDeliveredInRange,
+  type SupervisorDeliveryMetricRow,
+} from '@/lib/supervisorDeliveryMetrics';
 
 import { useCurrency } from '@/hooks/useCurrency';
 import { FullscreenControl, Map as MapGL, Marker, NavigationControl, Popup, type MapRef } from 'react-map-gl/maplibre';
@@ -55,6 +60,14 @@ const ROUTE_COLORS = [
 type DashboardSeller = { id: string; user_id: string; nombre: string; aliases: string[] };
 type MarkerPoint = { id: string; nombre: string; lat: number; lng: number; visitado: boolean; diasSinComprar: number | null; vendedorNombre: string; vendedorId: string; orden: number | null; outOfRange: boolean; outOfRangeMeters: number | null };
 type SellerLocation = { id: string; nombre: string; lat: number; lng: number; hora: string };
+type SupervisorDeliveryRow = SupervisorDeliveryMetricRow & {
+  id: string;
+  vendedor_id?: string | null;
+  vendedor_ruta_id?: string | null;
+  cliente_id?: string | null;
+  clientes?: { nombre?: string | null } | null;
+  folio?: string | null;
+};
 
 /** Distancia máxima (m) para considerar que una venta/visita se hizo "en el cliente" */
 const VISIT_RADIUS_METERS = 100;
@@ -171,12 +184,51 @@ export default function SupervisorDashboardPage() {
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false }).range(from, to)),
   });
 
+  const entregasCompletionRange = useMemo(
+    () => zonedDayRangeISO(desde, empresa?.zona_horaria, hasta),
+    [desde, hasta, empresa?.zona_horaria],
+  );
+
   const { data: entregasHoy } = useQuery({
-    queryKey: ['supervisor-entregas-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
-    queryFn: async () => fetchAllPages<any>((from, to) =>
-      supabase.from('entregas')
-        .select('id, vendedor_id, vendedor_ruta_id, status, cliente_id, clientes(nombre), folio')
-        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).range(from, to)),
+    queryKey: ['supervisor-entregas-hoy', desde, hasta, entregasCompletionRange.start, entregasCompletionRange.end, empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const columns = 'id, vendedor_id, vendedor_ruta_id, status, fecha, fecha_entrega, validado_at, cliente_id, clientes(nombre), folio';
+      const [completed, legacyCompleted, pending] = await Promise.all([
+        // Lo entregado se atribuye al instante real de entrega, no al día programado.
+        fetchAllPages<SupervisorDeliveryRow>((from, to) => supabase.from('entregas')
+          .select(columns)
+          .eq('empresa_id', empresa!.id)
+          .eq('status', 'hecho')
+          .gte('fecha_entrega', entregasCompletionRange.start)
+          .lte('fecha_entrega', entregasCompletionRange.end)
+          .range(from, to)),
+        // Compatibilidad con entregas históricas que solo guardaron validado_at.
+        fetchAllPages<SupervisorDeliveryRow>((from, to) => supabase.from('entregas')
+          .select(columns)
+          .eq('empresa_id', empresa!.id)
+          .eq('status', 'hecho')
+          .is('fecha_entrega', null)
+          .gte('validado_at', entregasCompletionRange.start)
+          .lte('validado_at', entregasCompletionRange.end)
+          .range(from, to)),
+        // La carga pendiente es acumulada: incluye entregas vencidas aún abiertas.
+        fetchAllPages<SupervisorDeliveryRow>((from, to) => supabase.from('entregas')
+          .select(columns)
+          .eq('empresa_id', empresa!.id)
+          .not('status', 'in', '(hecho,cancelado,no_entregado)')
+          .lte('fecha', hasta)
+          .range(from, to)),
+      ]);
+
+      const unique = new Map<string, SupervisorDeliveryRow>();
+      [...completed, ...legacyCompleted, ...pending].forEach((row) => {
+        if (wasDeliveredInRange(row, entregasCompletionRange) || isPendingDeliveryThrough(row, hasta)) {
+          unique.set(row.id, row);
+        }
+      });
+      return [...unique.values()];
+    },
   });
 
   const visitasRange = useMemo(() => zonedDayRangeISO(desde, empresa?.zona_horaria, hasta), [desde, hasta, empresa?.zona_horaria]);
@@ -626,10 +678,11 @@ export default function SupervisorDashboardPage() {
     const clientesVisitados = clienteActivity.filter((c) => c.visitado).length;
     const clientesPorVisitar = Math.max(clienteActivity.length - clientesVisitados, 0);
     const entregasHechas = filteredEntregas.filter((e) => e.status === 'hecho').length;
+    const entregasPendientes = filteredEntregas.filter((e) => isPendingDeliveryThrough(e, hasta)).length;
     const ticketPromedio = filteredVentas.length > 0 ? totalVentas / filteredVentas.length : 0;
     const efectividad = clienteActivity.length > 0 ? Math.round((clientesVisitados / clienteActivity.length) * 100) : 0;
-    return { totalVentas, totalCobros, numVentas: filteredVentas.length, numCobros: filteredCobros.length, clientesVisitados, clientesPorVisitar, entregasHechas, entregasTotal: filteredEntregas.length, ticketPromedio, efectividad };
-  }, [filteredVentas, filteredCobros, filteredEntregas, clienteActivity]);
+    return { totalVentas, totalCobros, numVentas: filteredVentas.length, numCobros: filteredCobros.length, clientesVisitados, clientesPorVisitar, entregasHechas, entregasPendientes, ticketPromedio, efectividad };
+  }, [filteredVentas, filteredCobros, filteredEntregas, clienteActivity, hasta]);
 
   // Weekly chart data — per seller breakdown
   const weeklyPerSeller = useMemo(() => {
@@ -790,7 +843,12 @@ export default function SupervisorDashboardPage() {
           <KpiCard icon={TrendingUp} label="Ticket prom." value={fmtMoney(dashboardStats.ticketPromedio)} sub="por venta" />
           <KpiCard icon={CheckCircle2} label="Visitados" value={`${dashboardStats.clientesVisitados}/${dashboardStats.clientesVisitados + dashboardStats.clientesPorVisitar}`} sub={`${dashboardStats.efectividad}% cobertura`} color="text-emerald-600" />
           <KpiCard icon={Clock} label="Pendientes" value={String(dashboardStats.clientesPorVisitar)} sub="sin visitar" color="text-destructive" />
-          <KpiCard icon={Truck} label="Entregas" value={`${dashboardStats.entregasHechas}/${dashboardStats.entregasTotal}`} sub="completadas" />
+          <KpiCard
+            icon={Truck}
+            label={isRangeMode ? 'Entregadas' : 'Entregado hoy'}
+            value={String(dashboardStats.entregasHechas)}
+            sub={`${dashboardStats.entregasPendientes} pendientes acumuladas`}
+          />
           <KpiCard icon={Activity} label="Efectividad" value={`${dashboardStats.efectividad}%`} sub="del día" color={dashboardStats.efectividad >= 80 ? 'text-emerald-600' : 'text-destructive'} />
           <KpiCard icon={RotateCcw} label="Devol." value={`${devolucionesStats.totalUnidades}`} sub={`${devolucionesStats.count} registros`} color="text-destructive" />
         </div>
@@ -977,7 +1035,7 @@ export default function SupervisorDashboardPage() {
                         <div className="grid grid-cols-3 gap-1.5">
                           <MiniStat label="Ventas" value={String(seller.ventas)} sub={fmtMoney(seller.totalVentas)} />
                           <MiniStat label="Cobros" value={String(seller.cobros)} sub={fmtMoney(seller.totalCobros)} />
-                          <MiniStat label="Entregas" value={`${seller.entregasHecho}/${seller.entregas}`} />
+                          <MiniStat label="Entregas" value={`${seller.entregasHecho} hechas`} sub={`${seller.entregas - seller.entregasHecho} pendientes`} />
                         </div>
                       </button>
                     );

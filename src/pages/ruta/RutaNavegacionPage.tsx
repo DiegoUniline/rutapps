@@ -427,8 +427,12 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
 
   const handleVisited = async (stop: Stop) => {
     if (stop.tipo === 'entrega' && stop.entregaRef) {
+      const completedAt = new Date().toISOString();
       await offlineMutate('entregas', 'update', {
-        ...stop.entregaRef, status: 'hecho', validado_at: new Date().toISOString(),
+        ...stop.entregaRef,
+        status: 'hecho',
+        validado_at: completedAt,
+        fecha_entrega: completedAt,
       });
       refetchEntregas();
     }

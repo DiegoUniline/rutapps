@@ -81,7 +81,7 @@ function tzOffsetMinutes(date: Date, tz: string): number {
   const parts = Object.fromEntries(dtf.formatToParts(date).map(p => [p.type, p.value])) as Record<string, string>;
   const asUTC = Date.UTC(
     Number(parts.year), Number(parts.month) - 1, Number(parts.day),
-    Number(parts.hour) % 24, Number(parts.minute), Number(parts.second),
+    Number(parts.hour) % 24, Number(parts.minute), Number(parts.second), date.getUTCMilliseconds(),
   );
   return (asUTC - date.getTime()) / 60000;
 }
@@ -94,7 +94,15 @@ export function zonedDayRangeISO(ymd: string, tz?: string | null, endYmd?: strin
   const zone = tz || 'America/Mexico_City';
   const toInstant = (ymdStr: string, endOfDay: boolean): Date => {
     const [y, m, d] = ymdStr.split('-').map(Number);
-    const naive = Date.UTC(y, m - 1, d, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0);
+    const naive = Date.UTC(
+      y,
+      m - 1,
+      d,
+      endOfDay ? 23 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 999 : 0,
+    );
     let guess = new Date(naive);
     for (let i = 0; i < 2; i++) {
       const off = tzOffsetMinutes(guess, zone);
@@ -105,7 +113,7 @@ export function zonedDayRangeISO(ymd: string, tz?: string | null, endYmd?: strin
   try {
     return { start: toInstant(ymd, false).toISOString(), end: toInstant(endYmd ?? ymd, true).toISOString() };
   } catch {
-    return { start: `${ymd}T00:00:00Z`, end: `${endYmd ?? ymd}T23:59:59Z` };
+    return { start: `${ymd}T00:00:00.000Z`, end: `${endYmd ?? ymd}T23:59:59.999Z` };
   }
 }
 
