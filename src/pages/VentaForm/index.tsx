@@ -224,6 +224,25 @@ export default function VentaFormPage() {
 
   if (!isNew && isLoading) return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
 
+  if (!isNew && !existingVenta) return (
+    <div className="p-6 min-h-full flex flex-col items-center justify-center gap-3 text-center">
+      <p className="text-sm font-medium text-foreground">
+        {ventaError ? 'No se pudo cargar esta venta' : 'Esta venta ya no existe'}
+      </p>
+      <p className="text-xs text-muted-foreground max-w-md">
+        {ventaError
+          ? 'Hubo un problema de conexión al traer la información. Intenta de nuevo.'
+          : 'Es posible que se haya eliminado o que pertenezca a otra empresa.'}
+      </p>
+      <div className="flex gap-2">
+        {ventaError && (
+          <button onClick={() => refetchVenta()} className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium">Reintentar</button>
+        )}
+        <button onClick={() => navigate('/ventas')} className="h-8 px-3 rounded-md border border-border text-xs font-medium">Volver a Ventas</button>
+      </div>
+    </div>
+  );
+
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
   const tarifaOptions = (tarifasList ?? []).map(t => ({ value: t.id, label: t.nombre }));
   const almacenOptions = (() => {
