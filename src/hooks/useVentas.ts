@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist';
+import { createVentaLoadError } from '@/lib/ventaLoadGuard';
 import type { Venta, VentaLinea } from '@/types';
 
 /**
@@ -432,27 +433,103 @@ export function useVentas(search?: string, statusFilter?: string, tipoFilter?: s
 }
 
 export function useVenta(id?: string) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['venta', id],
+    queryKey: ['venta', empresa?.id, id],
     networkMode: 'always',
+    retry: (failureCount) => failureCount < 2,
+    retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     queryFn: async () => {
       let serverError: unknown = null;
-      let serverSaidMissing = false;
+      let serverRespondedWithoutVenta = false;
       // Try server first (only if online). Any network error falls back to IndexedDB.
       if (typeof navigator === 'undefined' || navigator.onLine) {
         try {
-          const { data, error } = await supabase
+          // Cargar el encabezado primero evita que una relación secundaria o una
+          // respuesta anidada cortada convierta toda la venta en un error opaco.
+          const { data: venta, error: ventaError } = await supabase
             .from('ventas')
-            .select('*, clientes(nombre, tarifa_id, lista_precio_id), vendedores:profiles!vendedor_id(nombre, telefono), tarifas(nombre), almacenes(nombre), venta_lineas(*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, unidad_venta_id, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(nombre, abreviatura)), lotes(codigo), unidades(nombre, abreviatura))')
+            .select('*')
             .eq('id', id!)
+            .eq('empresa_id', empresa!.id)
             .maybeSingle();
-          if (error) throw error;
-          if (data) return data as Venta;
-          serverSaidMissing = true;
+          if (ventaError) throw new Error(`Encabezado de la venta: ${ventaError.message}`);
+          if (!venta) {
+            serverRespondedWithoutVenta = true;
+          } else {
+            const optionalOne = async (
+              table: 'clientes' | 'profiles' | 'tarifas' | 'almacenes',
+              recordId: string | null | undefined,
+              columns: string,
+              label: string,
+            ) => {
+              if (!recordId) return null;
+              const { data, error } = await supabase.from(table).select(columns).eq('id', recordId).maybeSingle();
+              if (error) throw new Error(`${label}: ${error.message}`);
+              return data;
+            };
+
+            const [lineasResult, cliente, vendedor, tarifa, almacen] = await Promise.all([
+              supabase.from('venta_lineas').select('*').eq('venta_id', venta.id).order('created_at', { ascending: true }),
+              optionalOne('clientes', venta.cliente_id, 'nombre, tarifa_id, lista_precio_id', 'Cliente'),
+              optionalOne('profiles', venta.vendedor_id, 'nombre, telefono', 'Vendedor'),
+              optionalOne('tarifas', venta.tarifa_id, 'nombre', 'Tarifa'),
+              optionalOne('almacenes', venta.almacen_id, 'nombre', 'Almacén'),
+            ]);
+            if (lineasResult.error) throw new Error(`Partidas de la venta: ${lineasResult.error.message}`);
+
+            const lineas = lineasResult.data ?? [];
+            const productoIds = [...new Set(lineas.map(linea => linea.producto_id).filter(Boolean))] as string[];
+            const loteIds = [...new Set(lineas.map(linea => linea.lote_id).filter(Boolean))] as string[];
+            const unidadLineaIds = [...new Set(lineas.map(linea => linea.unidad_id).filter(Boolean))] as string[];
+
+            const [productosResult, lotesResult] = await Promise.all([
+              productoIds.length
+                ? supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, unidad_venta_id, es_granel, unidad_granel').in('id', productoIds)
+                : Promise.resolve({ data: [], error: null }),
+              loteIds.length
+                ? supabase.from('lotes').select('id, codigo').in('id', loteIds)
+                : Promise.resolve({ data: [], error: null }),
+            ]);
+            if (productosResult.error) throw new Error(`Productos de la venta: ${productosResult.error.message}`);
+            if (lotesResult.error) throw new Error(`Lotes de la venta: ${lotesResult.error.message}`);
+
+            const productos = productosResult.data ?? [];
+            const unidadProductoIds = productos.map(producto => producto.unidad_venta_id).filter(Boolean) as string[];
+            const unidadIds = [...new Set([...unidadLineaIds, ...unidadProductoIds])];
+            const unidadesResult = unidadIds.length
+              ? await supabase.from('unidades').select('id, nombre, abreviatura').in('id', unidadIds)
+              : { data: [], error: null };
+            if (unidadesResult.error) throw new Error(`Unidades de la venta: ${unidadesResult.error.message}`);
+
+            const productosPorId = new Map((productos ?? []).map(producto => [producto.id, producto]));
+            const lotesPorId = new Map((lotesResult.data ?? []).map(lote => [lote.id, lote]));
+            const unidadesPorId = new Map((unidadesResult.data ?? []).map(unidad => [unidad.id, unidad]));
+            const ventaLineas = lineas.map(linea => {
+              const producto = linea.producto_id ? productosPorId.get(linea.producto_id) : null;
+              return {
+                ...linea,
+                productos: producto
+                  ? { ...producto, unidades_venta: producto.unidad_venta_id ? unidadesPorId.get(producto.unidad_venta_id) ?? null : null }
+                  : null,
+                lotes: linea.lote_id ? lotesPorId.get(linea.lote_id) ?? null : null,
+                unidades: linea.unidad_id ? unidadesPorId.get(linea.unidad_id) ?? null : null,
+              };
+            });
+
+            return {
+              ...venta,
+              clientes: cliente,
+              vendedores: vendedor,
+              tarifas: tarifa,
+              almacenes: almacen,
+              venta_lineas: ventaLineas,
+            } as unknown as Venta;
+          }
         } catch (err) {
           // Network/fetch error: fall through to local cache
-          serverError = err;
           console.warn('[useVenta] server fetch failed, trying offline cache:', err);
+          serverError = err;
         }
       }
 
@@ -495,14 +572,12 @@ export function useVenta(id?: string) {
         }
       } catch { /* IndexedDB not available */ }
 
-      // Sólo devolvemos null cuando el servidor confirmó que la venta no existe.
-      // Si falló la red/petición y tampoco hay copia local, lanzamos el error para
-      // que React Query reintente en vez de dejar la pantalla de detalle en blanco.
-      if (serverSaidMissing) return null as unknown as Venta;
-      throw serverError ?? new Error('No se pudo cargar la venta. Revisa tu conexión.');
+      // Nunca convertir un error/no-encontrado en una venta vacía. El formulario
+      // usa este error para mostrar Reintentar y evita que el usuario guarde por
+      // accidente sobre una pantalla que aparenta ser una venta nueva.
+      throw createVentaLoadError(serverError, serverRespondedWithoutVenta);
     },
-    enabled: !!id,
-    retry: 3,
+    enabled: !!id && !!empresa?.id,
   });
 }
 
