@@ -60,7 +60,10 @@ export function useVendedoresForFilter() {
 }
 
 /**
- * Offline-first hook for client filter dropdowns (lightweight, only id/codigo/nombre).
+ * Offline-first hook for client filter dropdowns and sale-list actions.
+ * It intentionally returns only the small subset needed by those screens;
+ * loading the full enriched customer catalog here adds several unrelated
+ * catalog requests and delays the transactional table.
  */
 export function useClientesForFilter() {
   const { empresa } = useAuth();
@@ -76,9 +79,16 @@ export function useClientesForFilter() {
           const cached = await offlineDb.clientes
             .where('empresa_id').equals(empresa!.id).toArray();
           return (cached as any[])
-            .map(c => ({ id: c.id, codigo: c.codigo ?? null, nombre: c.nombre ?? '' }))
+            .map(c => ({
+              id: c.id,
+              codigo: c.codigo ?? null,
+              nombre: c.nombre ?? '',
+              telefono: c.telefono ?? null,
+              lada: c.lada ?? null,
+              requiere_factura: c.requiere_factura === true,
+            }))
             .sort((a, b) => a.nombre.localeCompare(b.nombre));
-        } catch { return [] as { id: string; codigo: string | null; nombre: string }[]; }
+        } catch { return [] as Array<{ id: string; codigo: string | null; nombre: string; telefono: string | null; lada: string | null; requiere_factura: boolean }>; }
       };
 
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -89,11 +99,18 @@ export function useClientesForFilter() {
       try {
         const { data, error } = await supabase
           .from('clientes')
-          .select('id, codigo, nombre')
+          .select('id, codigo, nombre, telefono, lada, requiere_factura')
           .eq('empresa_id', empresa!.id)
           .order('nombre');
         if (!error && data) {
-          return data.map(c => ({ id: c.id, codigo: c.codigo ?? null, nombre: c.nombre ?? '' }));
+          return data.map(c => ({
+            id: c.id,
+            codigo: c.codigo ?? null,
+            nombre: c.nombre ?? '',
+            telefono: c.telefono ?? null,
+            lada: c.lada ?? null,
+            requiere_factura: c.requiere_factura === true,
+          }));
         }
         if (error) throw error;
       } catch (err) {
@@ -101,7 +118,7 @@ export function useClientesForFilter() {
         if (cached.length > 0) return cached;
         console.error('Error fetching clientes:', err);
       }
-      return [] as { id: string; codigo: string | null; nombre: string }[];
+      return [] as Array<{ id: string; codigo: string | null; nombre: string; telefono: string | null; lada: string | null; requiere_factura: boolean }>;
     },
   });
 }

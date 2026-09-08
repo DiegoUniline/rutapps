@@ -19,6 +19,8 @@ interface TablePaginationProps {
   isLoading?: boolean;
   /** Compact = single line, no labels. Default true. Use false for legacy inline use. */
   compact?: boolean;
+  /** Large transactional tables can hide "Todos" to keep requests bounded. */
+  allowAll?: boolean;
   className?: string;
 }
 
@@ -39,7 +41,7 @@ const SIZE_OPTIONS: { value: PageSizeOption; label: string }[] = [
 export function TablePagination({
   from, to, total, page, totalPages, pageSize,
   onPageSizeChange, onPrev, onNext,
-  isLoading, compact = true, className,
+  isLoading, compact = true, allowAll = true, className,
 }: TablePaginationProps) {
   if (total === 0 && !isLoading) return null;
 
@@ -74,7 +76,7 @@ export function TablePagination({
           onPageSizeChange(v === 'all' ? 'all' : (Number(v) as PageSizeOption));
         }}
       >
-        {SIZE_OPTIONS.map(o => (
+        {SIZE_OPTIONS.filter(o => allowAll || o.value !== 'all').map(o => (
           <option key={String(o.value)} value={String(o.value)}>{o.label}</option>
         ))}
       </select>
