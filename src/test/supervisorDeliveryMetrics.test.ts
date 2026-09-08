@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   actualDeliveryTimestamp,
+  deliveryBelongsToSeller,
+  deliveryMatchesStatusFilter,
   isPendingDeliveryThrough,
   wasDeliveredInRange,
 } from '@/lib/supervisorDeliveryMetrics';
@@ -64,6 +66,26 @@ describe('métricas de entrega del supervisor', () => {
       fecha_entrega: null,
       validado_at: null,
     })).toBeNull();
+  });
+
+  it('mantiene consistentes las pestañas Todas, Entregadas y Pendientes', () => {
+    const done = { status: 'hecho', fecha: '2026-09-01' };
+    const pending = { status: 'cargado', fecha: '2026-09-07' };
+    const cancelled = { status: 'cancelado', fecha: '2026-09-07' };
+
+    expect(deliveryMatchesStatusFilter(done, 'entregadas', '2026-09-08')).toBe(true);
+    expect(deliveryMatchesStatusFilter(pending, 'entregadas', '2026-09-08')).toBe(false);
+    expect(deliveryMatchesStatusFilter(pending, 'pendientes', '2026-09-08')).toBe(true);
+    expect(deliveryMatchesStatusFilter(done, 'todas', '2026-09-08')).toBe(true);
+    expect(deliveryMatchesStatusFilter(pending, 'todas', '2026-09-08')).toBe(true);
+    expect(deliveryMatchesStatusFilter(cancelled, 'todas', '2026-09-08')).toBe(false);
+  });
+
+  it('respeta al vendedor filtrado tanto por asignación original como por ruta', () => {
+    expect(deliveryBelongsToSeller({ vendedor_id: 'seller-a' }, ['seller-a'])).toBe(true);
+    expect(deliveryBelongsToSeller({ vendedor_id: 'seller-a', vendedor_ruta_id: 'seller-b' }, ['seller-a'])).toBe(true);
+    expect(deliveryBelongsToSeller({ vendedor_id: 'seller-a', vendedor_ruta_id: 'seller-b' }, ['seller-b'])).toBe(true);
+    expect(deliveryBelongsToSeller({ vendedor_id: 'seller-a', vendedor_ruta_id: 'seller-b' }, ['seller-c'])).toBe(false);
   });
 
   it('incluye hasta el último milisegundo del día local', () => {

@@ -9,22 +9,26 @@ import { useQuery } from '@tanstack/react-query';
 import { useVendedores } from '@/hooks/useClientes';
 import { Link } from 'react-router-dom';
 import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, Info, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, todayInTimezone, zonedDayRangeISO } from '@/lib/utils';
+import { deliveryMatchesStatusFilter, isPendingDeliveryThrough, wasDeliveredInRange } from '@/lib/supervisorDeliveryMetrics';
 import { Badge } from '@/components/ui/badge';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { toast } from 'sonner';
 import MyLocationMarkerML from '@/components/MyLocationMarkerML';
 import LiveVendedoresLayerML from '@/components/LiveVendedoresLayerML';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 // OpenFreeMap = tiles MapLibre gratuitos, sin API key, sin watermark.
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/bright';
 const DEFAULT_CENTER = { lng: -102.5528, lat: 23.6345 };
-const today = new Date().toISOString().split('T')[0];
+type DeliveryMapFilter = 'pendientes' | 'entregadas' | 'todas' | 'sinGps';
 
 
 export default function MapaVentasPage() {
   const { user, empresa } = useAuth();
+  const today = todayInTimezone(empresa?.zona_horaria);
   const [fechaEntregas, setFechaEntregas] = useState(today);
+  const [mapFilter, setMapFilter] = useState<DeliveryMapFilter>('pendientes');
   const [vendedorFilter, setVendedorFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [panelOpen, setPanelOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
@@ -55,29 +59,74 @@ export default function MapaVentasPage() {
   });
 
   const { data: vendedores } = useVendedores();
+  useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['mapa-entregas']] });
+
+  const completionRange = useMemo(
+    () => zonedDayRangeISO(fechaEntregas, empresa?.zona_horaria),
+    [fechaEntregas, empresa?.zona_horaria],
+  );
 
   const { data: entregasData, isLoading: loadingEntregas } = useQuery({
-    queryKey: ['mapa-entregas', empresa?.id, fechaEntregas, vendedorFilter],
+    queryKey: ['mapa-entregas', empresa?.id, fechaEntregas, completionRange.start, completionRange.end, vendedorFilter],
     queryFn: async () => {
       const { fetchAllPages } = await import('@/lib/supabasePaginate');
-      return fetchAllPages<any>((from, to) => {
-        let q = supabase
+      const columns = 'id, folio, fecha, fecha_entrega, validado_at, status, orden_entrega, notas, cliente_id, vendedor_id, vendedor_ruta_id, clientes(id, nombre, codigo, gps_lat, gps_lng, direccion, colonia), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre), vendedor_ruta:profiles!entregas_vendedor_ruta_id_profiles_fkey(nombre)';
+      const withSeller = (query: any) => vendedorFilter
+        ? query.or(`vendedor_id.eq.${vendedorFilter},vendedor_ruta_id.eq.${vendedorFilter}`)
+        : query;
+
+      const [completed, legacyCompleted, pending] = await Promise.all([
+        fetchAllPages<any>((from, to) => withSeller(supabase
           .from('entregas')
-          .select('id, folio, fecha, status, orden_entrega, notas, cliente_id, vendedor_id, vendedor_ruta_id, clientes(id, nombre, codigo, gps_lat, gps_lng, direccion, colonia), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre), vendedor_ruta:profiles!entregas_vendedor_ruta_id_profiles_fkey(nombre)')
+          .select(columns)
           .eq('empresa_id', empresa!.id)
-          .eq('fecha', fechaEntregas)
-          .in('status', ['surtido', 'asignado', 'cargado', 'en_ruta'])
+          .eq('status', 'hecho')
+          .gte('fecha_entrega', completionRange.start)
+          .lte('fecha_entrega', completionRange.end)
           .order('orden_entrega', { ascending: true })
-          .range(from, to);
-        if (vendedorFilter) q = q.or(`vendedor_id.eq.${vendedorFilter},vendedor_ruta_id.eq.${vendedorFilter}`);
-        return q;
+          .order('id', { ascending: true })
+          .range(from, to))),
+        fetchAllPages<any>((from, to) => withSeller(supabase
+          .from('entregas')
+          .select(columns)
+          .eq('empresa_id', empresa!.id)
+          .eq('status', 'hecho')
+          .is('fecha_entrega', null)
+          .gte('validado_at', completionRange.start)
+          .lte('validado_at', completionRange.end)
+          .order('orden_entrega', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to))),
+        fetchAllPages<any>((from, to) => withSeller(supabase
+          .from('entregas')
+          .select(columns)
+          .eq('empresa_id', empresa!.id)
+          .not('status', 'in', '(hecho,cancelado,no_entregado)')
+          .lte('fecha', fechaEntregas)
+          .order('fecha', { ascending: true })
+          .order('orden_entrega', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to))),
+      ]);
+
+      const unique = new Map<string, any>();
+      [...completed, ...legacyCompleted, ...pending].forEach((row) => {
+        if (wasDeliveredInRange(row, completionRange) || isPendingDeliveryThrough(row, fechaEntregas)) {
+          unique.set(row.id, row);
+        }
       });
+      return [...unique.values()];
     },
     enabled: !!empresa?.id,
   });
 
+  const visibleEntregas = useMemo(() => (entregasData ?? []).filter((entrega: any) => {
+    if (mapFilter === 'sinGps') return !entrega.clientes?.gps_lat || !entrega.clientes?.gps_lng;
+    return deliveryMatchesStatusFilter(entrega, mapFilter, fechaEntregas);
+  }), [entregasData, mapFilter, fechaEntregas]);
+
   const entregasConGps = useMemo(() => {
-    const filtered = (entregasData ?? []).filter((e: any) => e.clientes?.gps_lat && e.clientes?.gps_lng);
+    const filtered = visibleEntregas.filter((e: any) => e.clientes?.gps_lat && e.clientes?.gps_lng);
     const groups = new Map<string, any[]>();
     for (const e of filtered) {
       const key = `${Number(e.clientes.gps_lat).toFixed(5)},${Number(e.clientes.gps_lng).toFixed(5)}`;
@@ -104,16 +153,22 @@ export default function MapaVentasPage() {
       }
     }
     return result;
-  }, [entregasData]);
+  }, [visibleEntregas]);
 
   const stats = useMemo(() => {
-    const all = entregasData ?? [];
+    const all = visibleEntregas;
     return {
       total: all.length,
       conGps: entregasConGps.length,
       sinGps: all.length - entregasConGps.length,
+      entregadas: (entregasData ?? []).filter((e: any) => e.status === 'hecho').length,
+      pendientes: (entregasData ?? []).filter((e: any) => isPendingDeliveryThrough(e, fechaEntregas)).length,
     };
-  }, [entregasData, entregasConGps]);
+  }, [visibleEntregas, entregasConGps, entregasData, fechaEntregas]);
+
+  useEffect(() => {
+    setSelectedEntrega((current: any) => current && entregasConGps.some((entrega: any) => entrega.id === current.id) ? current : null);
+  }, [entregasConGps]);
 
   // Auto-fit bounds when entregas change
   useEffect(() => {
@@ -137,7 +192,7 @@ export default function MapaVentasPage() {
   const routeCoords = useMemo<[number, number][]>(() => {
     const coords: [number, number][] = [];
     if (originPoint) coords.push([originPoint.lng, originPoint.lat]);
-    entregasConGps.forEach((e: any) => {
+    entregasConGps.filter((e: any) => e.status !== 'hecho').forEach((e: any) => {
       coords.push([Number(e.clientes.gps_lng), Number(e.clientes.gps_lat)]);
     });
     return coords;
@@ -194,10 +249,13 @@ export default function MapaVentasPage() {
 
 
   const STATUS_COLORS: Record<string, string> = {
+    borrador: '#64748b',
+    listo: '#0ea5e9',
     surtido: '#3b82f6',
     asignado: '#f59e0b',
     cargado: '#8b5cf6',
-    en_ruta: '#22c55e',
+    en_ruta: '#06b6d4',
+    hecho: '#16a34a',
   };
 
   const activeFiltersCount = [vendedorFilter].filter(Boolean).length;
@@ -256,9 +314,11 @@ export default function MapaVentasPage() {
             )}
             <div className="bg-primary/10 rounded-lg px-3 py-1.5 text-center">
               <div className="text-lg font-bold text-primary">{stats.total}</div>
-              <div className="text-[10px] text-muted-foreground font-medium">Entregas</div>
+              <div className="text-[10px] text-muted-foreground font-medium capitalize">{mapFilter === 'sinGps' ? 'Sin GPS' : mapFilter}</div>
             </div>
             <div className="flex flex-col text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-600" />{stats.entregadas} entregadas</span>
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500" />{stats.pendientes} pendientes</span>
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-primary" />{stats.conGps} en mapa</span>
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-muted-foreground/40" />{stats.sinGps} sin GPS</span>
             </div>
@@ -296,7 +356,7 @@ export default function MapaVentasPage() {
 
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
           <Info className="h-3.5 w-3.5 shrink-0" />
-          <span>El orden de visita lo define la configuración de ruta de cada cliente. La línea azul sigue las calles reales conectando los puntos en ese orden.</span>
+          <span>Verde significa entregada realmente en la fecha elegida. Por entregar incluye los atrasos aún abiertos; la ruta azul se calcula únicamente con esos pendientes.</span>
         </div>
       </div>
 
@@ -311,7 +371,10 @@ export default function MapaVentasPage() {
         >
           <PanelEntregas
             entregasData={entregasData ?? []}
+            visibleEntregas={visibleEntregas}
             entregasConGps={entregasConGps}
+            tab={mapFilter}
+            setTab={setMapFilter}
             selectedEntrega={selectedEntrega}
             setSelectedEntrega={setSelectedEntrega}
             STATUS_COLORS={STATUS_COLORS}
@@ -332,6 +395,13 @@ export default function MapaVentasPage() {
           {loadingEntregas && (
             <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center pointer-events-none">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          )}
+          {!loadingEntregas && entregasConGps.length === 0 && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 rounded-lg border border-border bg-card/95 px-4 py-2 text-xs font-medium text-muted-foreground shadow-lg">
+              {mapFilter === 'sinGps'
+                ? `${visibleEntregas.length} entregas necesitan ubicación del cliente`
+                : 'No hay entregas con GPS para este filtro'}
             </div>
           )}
           {settingOrigin && (
@@ -402,6 +472,7 @@ export default function MapaVentasPage() {
               const numero = idx + 1;
               const color = STATUS_COLORS[e.status] ?? '#714BF4';
               const isSelected = selectedEntrega?.id === e.id;
+              const delivered = e.status === 'hecho';
               return (
                 <Marker
                   key={e.id}
@@ -424,9 +495,9 @@ export default function MapaVentasPage() {
                       height: 28,
                       fontSize: 11,
                     }}
-                    title={`#${numero} · ${e.folio} - ${e.clientes.nombre}`}
+                    title={`${delivered ? 'Entregada' : `#${numero}`} · ${e.folio} - ${e.clientes.nombre}`}
                   >
-                    {numero}
+                    {delivered ? '✓' : numero}
                   </div>
                 </Marker>
               );
@@ -447,12 +518,18 @@ export default function MapaVentasPage() {
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-sm font-mono">{selectedEntrega.folio}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${STATUS_COLORS[selectedEntrega.status]}20`, color: STATUS_COLORS[selectedEntrega.status] }}>
-                      {selectedEntrega.status.replace('_', ' ')}
+                      {selectedEntrega.status === 'hecho' ? 'Entregada' : selectedEntrega.status.replace('_', ' ')}
                     </span>
                   </div>
                   <div className="text-xs text-gray-600 font-medium mb-0.5">{selectedEntrega.clientes?.nombre}</div>
                   {selectedEntrega.clientes?.direccion && <div className="text-xs text-gray-500 mb-1">{selectedEntrega.clientes.direccion}</div>}
                   {selectedEntrega.vendedor_ruta?.nombre && <div className="text-[10px] text-gray-400">Ruta: {selectedEntrega.vendedor_ruta.nombre}</div>}
+                  <div className="text-[10px] text-gray-400">Programada: {selectedEntrega.fecha}</div>
+                  {selectedEntrega.status === 'hecho' && (
+                    <div className="text-[10px] font-medium text-green-700">
+                      Entregada: {new Date(selectedEntrega.fecha_entrega ?? selectedEntrega.validado_at).toLocaleString('es-MX', { timeZone: empresa?.zona_horaria || 'America/Mexico_City' })}
+                    </div>
+                  )}
                   {selectedEntrega.orden_entrega > 0 && <div className="text-[10px] text-gray-400">Orden: #{selectedEntrega.orden_entrega}</div>}
                   <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-gray-100">
                     <Link to={`/logistica/entregas/${selectedEntrega.id}`} className="text-xs text-blue-600 hover:underline">Ver entrega</Link>
@@ -476,24 +553,29 @@ export default function MapaVentasPage() {
 }
 
 // ============================================================
-// Panel lateral con tabs: Ruta optimizada / Todas / Sin GPS
+// Panel lateral: las pestañas controlan simultáneamente tabla y mapa.
 // ============================================================
 function PanelEntregas({
   entregasData,
+  visibleEntregas,
   entregasConGps,
+  tab,
+  setTab,
   selectedEntrega,
   setSelectedEntrega,
   STATUS_COLORS,
   mapRef,
 }: {
   entregasData: any[];
+  visibleEntregas: any[];
   entregasConGps: any[];
+  tab: DeliveryMapFilter;
+  setTab: (tab: DeliveryMapFilter) => void;
   selectedEntrega: any | null;
   setSelectedEntrega: (e: any) => void;
   STATUS_COLORS: Record<string, string>;
   mapRef: React.MutableRefObject<MapRef | null>;
 }) {
-  const [tab, setTab] = useState<'ruta' | 'todas' | 'sinGps'>('ruta');
   const sinGps = useMemo(
     () => (entregasData ?? []).filter((e: any) => !e.clientes?.gps_lat || !e.clientes?.gps_lng),
     [entregasData]
@@ -502,9 +584,9 @@ function PanelEntregas({
   // Las entregas ya vienen ordenadas por `orden_entrega` (definido en la ruta del cliente)
   const filaList: any[] = useMemo(() => {
     if (tab === 'sinGps') return sinGps;
-    if (tab === 'todas') return entregasData;
-    return entregasConGps;
-  }, [tab, entregasConGps, entregasData, sinGps]);
+    const positioned = new Map(entregasConGps.map((entrega: any) => [entrega.id, entrega]));
+    return visibleEntregas.map((entrega: any) => positioned.get(entrega.id) ?? entrega);
+  }, [tab, visibleEntregas, entregasConGps, sinGps]);
 
   const handleRowClick = (e: any) => {
     setSelectedEntrega(e);
@@ -514,7 +596,8 @@ function PanelEntregas({
   };
 
   const tabs = [
-    { id: 'ruta' as const, label: 'Por entregar', count: entregasConGps.length, icon: Route },
+    { id: 'pendientes' as const, label: 'Por entregar', count: entregasData.filter((e: any) => e.status !== 'hecho').length, icon: Route },
+    { id: 'entregadas' as const, label: 'Entregadas', count: entregasData.filter((e: any) => e.status === 'hecho').length, icon: Truck },
     { id: 'todas' as const, label: 'Todas', count: entregasData.length, icon: Truck },
     { id: 'sinGps' as const, label: 'Sin GPS', count: sinGps.length, icon: MapPin },
   ];
@@ -532,12 +615,12 @@ function PanelEntregas({
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors",
+                "flex-1 min-w-0 flex items-center justify-center gap-1 px-1 py-2.5 text-[10px] font-medium border-b-2 transition-colors",
                 active ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
               <Icon className="h-3.5 w-3.5" />
-              <span>{t.label}</span>
+              <span className="truncate">{t.label}</span>
               <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-bold", active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
                 {t.count}
               </span>
@@ -570,6 +653,7 @@ function PanelEntregas({
               {filaList.map((e: any, idx: number) => {
                 const isSelected = selectedEntrega?.id === e.id;
                 const hasGps = !!(e.clientes?.gps_lat && e.clientes?.gps_lng);
+                const delivered = e.status === 'hecho';
                 return (
                   <tr
                     key={e.id}
@@ -582,8 +666,8 @@ function PanelEntregas({
                   >
                     <td className="px-2 py-2">
                       {hasGps ? (
-                        <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px] font-bold">
-                          {idx + 1}
+                        <div className={cn("w-6 h-6 rounded-full text-white flex items-center justify-center text-[11px] font-bold", delivered ? "bg-green-600" : "bg-primary")}>
+                          {delivered ? '✓' : idx + 1}
                         </div>
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[11px] font-bold">
@@ -603,7 +687,7 @@ function PanelEntregas({
                         className="text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap"
                         style={{ backgroundColor: `${STATUS_COLORS[e.status]}20`, color: STATUS_COLORS[e.status] }}
                       >
-                        {e.status.replace('_', ' ')}
+                        {delivered ? 'Entregada' : e.status.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="px-2 py-2 text-muted-foreground truncate max-w-[80px] text-[10px]">
@@ -628,4 +712,3 @@ function PanelEntregas({
     </>
   );
 }
-

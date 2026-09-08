@@ -33,6 +33,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { cn, todayInTimezone, zonedDayRangeISO } from '@/lib/utils';
 import { tocaVisitaPorFrecuencia } from '@/lib/frecuenciaVisita';
 import {
+  deliveryBelongsToSeller,
+  deliveryMatchesStatusFilter,
   isPendingDeliveryThrough,
   wasDeliveredInRange,
   type SupervisorDeliveryMetricRow,
@@ -65,8 +67,24 @@ type SupervisorDeliveryRow = SupervisorDeliveryMetricRow & {
   vendedor_id?: string | null;
   vendedor_ruta_id?: string | null;
   cliente_id?: string | null;
-  clientes?: { nombre?: string | null } | null;
+  clientes?: {
+    id?: string | null;
+    nombre?: string | null;
+    gps_lat?: number | null;
+    gps_lng?: number | null;
+    direccion?: string | null;
+  } | null;
   folio?: string | null;
+  orden_entrega?: number | null;
+};
+
+type SupervisorMapPoint = MarkerPoint & {
+  kind?: 'cliente' | 'entrega';
+  clientId?: string | null;
+  folio?: string | null;
+  status?: string | null;
+  scheduledDate?: string | null;
+  completedAt?: string | null;
 };
 
 /** Distancia máxima (m) para considerar que una venta/visita se hizo "en el cliente" */
@@ -114,6 +132,8 @@ export default function SupervisorDashboardPage() {
   const [hasta, setHasta] = useState(today);
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
   const [visitFilter, setVisitFilter] = useState<'todos' | 'visitados' | 'pendientes'>('todos');
+  const [mapMode, setMapMode] = useState<'visitas' | 'entregas'>('visitas');
+  const [deliveryMapFilter, setDeliveryMapFilter] = useState<'todas' | 'entregadas' | 'pendientes'>('todas');
   const [soloHoy, setSoloHoy] = useState(true);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   // Recorrido histórico de un vendedor (línea sobre el mapa)
@@ -193,7 +213,7 @@ export default function SupervisorDashboardPage() {
     queryKey: ['supervisor-entregas-hoy', desde, hasta, entregasCompletionRange.start, entregasCompletionRange.end, empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const columns = 'id, vendedor_id, vendedor_ruta_id, status, fecha, fecha_entrega, validado_at, cliente_id, clientes(nombre), folio';
+      const columns = 'id, vendedor_id, vendedor_ruta_id, status, fecha, fecha_entrega, validado_at, orden_entrega, cliente_id, clientes(id, nombre, gps_lat, gps_lng, direccion), folio';
       const [completed, legacyCompleted, pending] = await Promise.all([
         // Lo entregado se atribuye al instante real de entrega, no al día programado.
         fetchAllPages<SupervisorDeliveryRow>((from, to) => supabase.from('entregas')
@@ -202,6 +222,7 @@ export default function SupervisorDashboardPage() {
           .eq('status', 'hecho')
           .gte('fecha_entrega', entregasCompletionRange.start)
           .lte('fecha_entrega', entregasCompletionRange.end)
+          .order('id', { ascending: true })
           .range(from, to)),
         // Compatibilidad con entregas históricas que solo guardaron validado_at.
         fetchAllPages<SupervisorDeliveryRow>((from, to) => supabase.from('entregas')
@@ -211,6 +232,7 @@ export default function SupervisorDashboardPage() {
           .is('fecha_entrega', null)
           .gte('validado_at', entregasCompletionRange.start)
           .lte('validado_at', entregasCompletionRange.end)
+          .order('id', { ascending: true })
           .range(from, to)),
         // La carga pendiente es acumulada: incluye entregas vencidas aún abiertas.
         fetchAllPages<SupervisorDeliveryRow>((from, to) => supabase.from('entregas')
@@ -218,6 +240,7 @@ export default function SupervisorDashboardPage() {
           .eq('empresa_id', empresa!.id)
           .not('status', 'in', '(hecho,cancelado,no_entregado)')
           .lte('fecha', hasta)
+          .order('id', { ascending: true })
           .range(from, to)),
       ]);
 
@@ -491,7 +514,9 @@ export default function SupervisorDashboardPage() {
   const filteredVentas = useMemo(() => (ventasHoy ?? []).filter((v) => !selectedAliases || selectedAliases.includes(v.vendedor_id)), [ventasHoy, selectedAliases]);
   const filteredCobros = useMemo(() => (cobrosHoy ?? []).filter((c) => !selectedSeller || c.user_id === selectedSeller.user_id), [cobrosHoy, selectedSeller]);
   const filteredGastos = useMemo(() => (gastosHoy ?? []).filter((g) => !selectedAliases || selectedAliases.includes(g.vendedor_id)), [gastosHoy, selectedAliases]);
-  const filteredEntregas = useMemo(() => (entregasHoy ?? []).filter((e) => { if (!selectedAliases) return true; return selectedAliases.includes(e.vendedor_ruta_id || e.vendedor_id); }), [entregasHoy, selectedAliases]);
+  const filteredEntregas = useMemo(() => (entregasHoy ?? []).filter((e) => {
+    return deliveryBelongsToSeller(e, selectedAliases);
+  }), [entregasHoy, selectedAliases]);
   const filteredVisitas = useMemo(() => (visitasHoy ?? []).filter((v) => !selectedSeller || v.user_id === selectedSeller.user_id), [visitasHoy, selectedSeller]);
   const filteredDevoluciones = useMemo(() => (devolucionesHoy ?? []).filter((d: any) => !selectedAliases || selectedAliases.includes(d.vendedor_id)), [devolucionesHoy, selectedAliases]);
 
@@ -653,6 +678,39 @@ export default function SupervisorDashboardPage() {
       outOfRange: measuredOutOfRange, outOfRangeMeters: measuredOutOfRange ? oor!.meters : null,
     };
   }), [clienteActivity, outOfRangeByClient]);
+
+  const deliveryMapRows = useMemo(
+    () => filteredEntregas.filter((entrega) => deliveryMatchesStatusFilter(entrega, deliveryMapFilter, hasta)),
+    [filteredEntregas, deliveryMapFilter, hasta],
+  );
+
+  const deliveryMapMarkers = useMemo<SupervisorMapPoint[]>(() => deliveryMapRows
+    .filter((entrega) => entrega.clientes?.gps_lat && entrega.clientes?.gps_lng)
+    .map((entrega) => {
+      const vendedorId = entrega.vendedor_ruta_id || entrega.vendedor_id || '';
+      const delivered = entrega.status === 'hecho';
+      return {
+        id: entrega.id,
+        kind: 'entrega' as const,
+        clientId: entrega.cliente_id,
+        folio: entrega.folio,
+        status: entrega.status,
+        scheduledDate: entrega.fecha,
+        completedAt: entrega.fecha_entrega ?? entrega.validado_at ?? null,
+        nombre: entrega.clientes?.nombre ?? 'Cliente sin nombre',
+        lat: Number(entrega.clientes!.gps_lat),
+        lng: Number(entrega.clientes!.gps_lng),
+        visitado: delivered,
+        diasSinComprar: null,
+        vendedorNombre: sellerNameMap.get(vendedorId) ?? 'Sin asignar',
+        vendedorId,
+        orden: entrega.orden_entrega ?? null,
+        outOfRange: false,
+        outOfRangeMeters: null,
+      };
+    }), [deliveryMapRows, sellerNameMap]);
+
+  const supervisorMapMarkers = mapMode === 'entregas' ? deliveryMapMarkers : mapMarkers;
 
 
   const sellerLocations = useMemo<SellerLocation[]>(() => {
@@ -819,18 +877,38 @@ export default function SupervisorDashboardPage() {
             </button>
           ))}
           <div className="w-px h-5 bg-border mx-1" />
-          {(['todos', 'visitados', 'pendientes'] as const).map((k) => (
-            <button key={k} onClick={() => setVisitFilter(k)}
+          {(['visitas', 'entregas'] as const).map((mode) => (
+            <button key={mode} onClick={() => setMapMode(mode)}
               className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors capitalize",
-                visitFilter === k ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
-              {k}
+                mapMode === mode ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+              {mode === 'visitas' ? 'Mapa de visitas' : 'Mapa de entregas'}
             </button>
           ))}
-          <button onClick={() => setSoloHoy(!soloHoy)}
-            className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
-              soloHoy ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
-            📅 {diaHoyLabel.slice(0, 3)}
-          </button>
+          <div className="w-px h-5 bg-border mx-1" />
+          {mapMode === 'visitas' ? (
+            <>
+              {(['todos', 'visitados', 'pendientes'] as const).map((k) => (
+                <button key={k} onClick={() => setVisitFilter(k)}
+                  className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors capitalize",
+                    visitFilter === k ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                  {k}
+                </button>
+              ))}
+              <button onClick={() => setSoloHoy(!soloHoy)}
+                className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  soloHoy ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                📅 {diaHoyLabel.slice(0, 3)}
+              </button>
+            </>
+          ) : (
+            (['todas', 'entregadas', 'pendientes'] as const).map((filter) => (
+              <button key={filter} onClick={() => setDeliveryMapFilter(filter)}
+                className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors capitalize",
+                  deliveryMapFilter === filter ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                {filter}
+              </button>
+            ))
+          )}
         </div>
       </div>
 
@@ -848,6 +926,8 @@ export default function SupervisorDashboardPage() {
             label={isRangeMode ? 'Entregadas' : 'Entregado hoy'}
             value={String(dashboardStats.entregasHechas)}
             sub={`${dashboardStats.entregasPendientes} pendientes acumuladas`}
+            active={mapMode === 'entregas'}
+            onClick={() => { setMapMode('entregas'); setDeliveryMapFilter('todas'); }}
           />
           <KpiCard icon={Activity} label="Efectividad" value={`${dashboardStats.efectividad}%`} sub="del día" color={dashboardStats.efectividad >= 80 ? 'text-emerald-600' : 'text-destructive'} />
           <KpiCard icon={RotateCcw} label="Devol." value={`${devolucionesStats.totalUnidades}`} sub={`${devolucionesStats.count} registros`} color="text-destructive" />
@@ -912,16 +992,18 @@ export default function SupervisorDashboardPage() {
         <div className="lg:flex-[3] flex flex-col min-w-0 h-[50vh] lg:h-auto shrink-0 lg:shrink">
           <div className="relative flex-1 min-h-0">
             <SupervisorMap
-              markers={mapMarkers}
+              markers={supervisorMapMarkers}
+              mode={mapMode}
+              timezone={empresa?.zona_horaria}
               sellerLocations={sellerLocations}
-              selectedClientId={selectedClientId}
+              selectedClientId={mapMode === 'visitas' ? selectedClientId : null}
               onSelectClient={handleSelectClient}
-              recorridoUserId={recorridoUserId}
+              recorridoUserId={mapMode === 'visitas' ? recorridoUserId : null}
               recorridoFecha={recorridoFecha}
-              multiRoutes={multiRouteEntries}
+              multiRoutes={mapMode === 'visitas' ? multiRouteEntries : []}
             />
             {/* Selector flotante: ver recorrido de un vendedor en una fecha */}
-            <div className="absolute top-2 left-2 right-2 sm:right-auto z-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs">
+            {mapMode === 'visitas' && <div className="absolute top-2 left-2 right-2 sm:right-auto z-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-foreground shrink-0">Recorrido:</span>
                 <select
@@ -953,18 +1035,23 @@ export default function SupervisorDashboardPage() {
                   </button>
                 )}
               </div>
-            </div>
+            </div>}
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 py-1.5 border-t border-border bg-muted/20 shrink-0">
             <span className="inline-flex items-center gap-1.5">
               <svg width="12" height="16" viewBox="0 0 28 40"><path d="M14 38 C14 38 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 38 14 38 Z" fill="#22c55e" stroke="#fff" strokeWidth="1.5"/><polyline points="9,20 13,24 20,15" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span className="text-[10px] text-muted-foreground">Visitado</span>
+              <span className="text-[10px] text-muted-foreground">{mapMode === 'entregas' ? 'Entregada' : 'Visitado'}</span>
             </span>
             <span className="inline-flex items-center gap-1.5">
               <svg width="12" height="16" viewBox="0 0 28 40"><path d="M14 38 C14 38 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 38 14 38 Z" fill="#ef4444" stroke="#fff" strokeWidth="1.5"/><line x1="10" y1="15" x2="18" y2="23" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/><line x1="18" y1="15" x2="10" y2="23" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/></svg>
-              <span className="text-[10px] text-muted-foreground">Pendiente</span>
+              <span className="text-[10px] text-muted-foreground">{mapMode === 'entregas' ? 'Por entregar' : 'Pendiente'}</span>
             </span>
-            {recorridoUserId && (
+            {mapMode === 'entregas' && (
+              <span className="text-[10px] text-muted-foreground">
+                {deliveryMapMarkers.length} en mapa · {deliveryMapRows.length - deliveryMapMarkers.length} sin GPS
+              </span>
+            )}
+            {mapMode === 'visitas' && recorridoUserId && (
               <span className="inline-flex items-center gap-1.5 ml-auto">
                 <span className="inline-block w-3 h-1 rounded" style={{ backgroundColor: '#3b82f6' }} />
                 <span className="text-[10px] text-muted-foreground hidden sm:inline">Recorrido del día · A=inicio · B=fin · # paradas (≥5min)</span>
@@ -1572,11 +1659,20 @@ export default function SupervisorDashboardPage() {
 // SUB-COMPONENTS
 // ═══════════════════════════════════════════════════════
 
-function KpiCard({ icon: Icon, label, value, sub, color }: {
-  icon: any; label: string; value: string; sub?: string; color?: string;
+function KpiCard({ icon: Icon, label, value, sub, color, active, onClick }: {
+  icon: any; label: string; value: string; sub?: string; color?: string; active?: boolean; onClick?: () => void;
 }) {
+  const Component = onClick ? 'button' : 'div';
   return (
-    <div className="rounded-xl border border-border bg-background/50 p-2.5 sm:p-3 min-w-0">
+    <Component
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className={cn(
+        "rounded-xl border bg-background/50 p-2.5 sm:p-3 min-w-0 text-left transition-colors",
+        active ? "border-primary ring-1 ring-primary/20 bg-primary/5" : "border-border",
+        onClick && "cursor-pointer hover:border-primary/60",
+      )}
+    >
       <div className="flex items-center gap-1.5 mb-1">
         <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
           <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -1585,7 +1681,7 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
       </div>
       <p className={cn("text-[15px] sm:text-lg font-bold tabular-nums leading-tight truncate", color ?? "text-foreground")}>{value}</p>
       {sub && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</p>}
-    </div>
+    </Component>
   );
 }
 
@@ -1603,8 +1699,10 @@ function EmptyBlock({ text }: { text: string }) {
   return <div className="rounded-xl border border-dashed border-border bg-card/50 p-4 text-[12px] text-muted-foreground text-center">{text}</div>;
 }
 
-function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSelectClient, recorridoUserId, recorridoFecha, multiRoutes = [] }: {
-  markers: MarkerPoint[];
+function SupervisorMap({ markers, mode = 'visitas', timezone, sellerLocations = [], selectedClientId, onSelectClient, recorridoUserId, recorridoFecha, multiRoutes = [] }: {
+  markers: SupervisorMapPoint[];
+  mode?: 'visitas' | 'entregas';
+  timezone?: string | null;
   sellerLocations?: SellerLocation[];
   selectedClientId?: string | null;
   onSelectClient?: (id: string) => void;
@@ -1612,7 +1710,7 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
   recorridoFecha?: string;
   multiRoutes?: RouteResultEntry[];
 }) {
-  const [selected, setSelected] = useState<MarkerPoint | null>(null);
+  const [selected, setSelected] = useState<SupervisorMapPoint | null>(null);
   const [selectedSellerLoc, setSelectedSellerLoc] = useState<SellerLocation | null>(null);
   const mapRef = useRef<MapRef | null>(null);
 
@@ -1658,7 +1756,7 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
 
   useEffect(() => {
     if (!selectedClientId || !mapRef.current) return;
-    const marker = markers.find(m => m.id === selectedClientId);
+    const marker = markers.find(m => m.id === selectedClientId || m.clientId === selectedClientId);
     if (marker) {
       mapRef.current.flyTo({ center: [marker.lng, marker.lat], zoom: 16, duration: 500 });
       setSelected(marker);
@@ -1667,7 +1765,11 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
 
   useEffect(() => { fitBounds(); }, [fitBounds]);
 
-  if (markers.length === 0 && sellerLocations.length === 0) return <div className="flex-1 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
+  useEffect(() => {
+    setSelected((current) => current && markers.some((marker) => marker.id === current.id) ? current : null);
+  }, [markers]);
+
+  if (markers.length === 0 && sellerLocations.length === 0) return <div className="flex-1 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">{mode === 'entregas' ? 'No hay entregas geolocalizadas con este filtro.' : 'Sin clientes geolocalizados.'}</div>;
 
   const clientesById = new Map(markers.map(m => [m.id, {
     id: m.id,
@@ -1703,7 +1805,7 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
             event.originalEvent.stopPropagation();
             setSelected(m);
             setSelectedSellerLoc(null);
-            onSelectClient?.(m.id);
+            if (m.kind !== 'entrega') onSelectClient?.(m.clientId ?? m.id);
           }}
         >
           <button type="button" className="block transition-transform hover:scale-110"
@@ -1730,7 +1832,7 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
             event.originalEvent.stopPropagation();
             setSelected(m);
             setSelectedSellerLoc(null);
-            onSelectClient?.(m.id);
+            if (m.kind !== 'entrega') onSelectClient?.(m.clientId ?? m.id);
           }}
         >
           <button type="button" className="h-9 w-9 rounded-full bg-transparent"
@@ -1766,10 +1868,13 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
         <Popup longitude={selected.lng} latitude={selected.lat} anchor="bottom" offset={32}
           closeOnClick={false} onClose={() => setSelected(null)}>
           <div className="space-y-1 p-1 text-xs text-foreground">
-            {selected.orden != null && <p className="font-bold text-sm">#{selected.orden}</p>}
+            {selected.kind === 'entrega' && selected.folio && <p className="font-bold text-sm">{selected.folio}</p>}
+            {selected.kind !== 'entrega' && selected.orden != null && <p className="font-bold text-sm">#{selected.orden}</p>}
             <p className="font-semibold">{selected.nombre}</p>
             <p style={{ color: '#6b7280' }}>{selected.vendedorNombre}</p>
-            <p>{selected.visitado ? '✅ Visitado' : '⏳ Pendiente'}</p>
+            <p>{selected.visitado ? (selected.kind === 'entrega' ? '✅ Entregada' : '✅ Visitado') : (selected.kind === 'entrega' ? '⏳ Por entregar' : '⏳ Pendiente')}</p>
+            {selected.kind === 'entrega' && selected.scheduledDate && <p>Programada: {selected.scheduledDate}</p>}
+            {selected.kind === 'entrega' && selected.completedAt && <p>Entregada: {new Date(selected.completedAt).toLocaleString('es-MX', { timeZone: timezone || 'America/Mexico_City' })}</p>}
             {selected.outOfRange && (
               <p style={{ color: '#b45309', fontWeight: 600 }}>
                 ⚠️ Venta registrada a {selected.outOfRangeMeters ?? '?'} m del cliente (fuera del rango de {VISIT_RADIUS_METERS} m)

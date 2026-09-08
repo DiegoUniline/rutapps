@@ -3,7 +3,11 @@ export type SupervisorDeliveryMetricRow = {
   fecha?: string | null;
   fecha_entrega?: string | null;
   validado_at?: string | null;
+  vendedor_id?: string | null;
+  vendedor_ruta_id?: string | null;
 };
+
+export type DeliveryStatusFilter = 'todas' | 'entregadas' | 'pendientes';
 
 const CLOSED_WITHOUT_DELIVERY = new Set(['cancelado', 'no_entregado']);
 
@@ -38,3 +42,20 @@ export function isPendingDeliveryThrough(
   return Boolean(row.fecha && row.fecha <= throughDate);
 }
 
+export function deliveryMatchesStatusFilter(
+  row: SupervisorDeliveryMetricRow,
+  filter: DeliveryStatusFilter,
+  throughDate: string,
+): boolean {
+  if (filter === 'entregadas') return row.status === 'hecho';
+  if (filter === 'pendientes') return isPendingDeliveryThrough(row, throughDate);
+  return row.status === 'hecho' || isPendingDeliveryThrough(row, throughDate);
+}
+
+export function deliveryBelongsToSeller(
+  row: SupervisorDeliveryMetricRow,
+  sellerIds?: readonly string[] | null,
+): boolean {
+  if (!sellerIds) return true;
+  return sellerIds.includes(row.vendedor_ruta_id ?? '') || sellerIds.includes(row.vendedor_id ?? '');
+}
