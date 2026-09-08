@@ -452,8 +452,10 @@ export function useAlmacenes(opts?: { includeMermas?: boolean }) {
         const { data, error } = await q;
         if (error) throw error;
         return (data || []) as unknown as Almacen[];
-      } catch {
-        return (await readCache()) as unknown as Almacen[];
+      } catch (error) {
+        const cached = await readCache();
+        if (cached.length > 0) return cached as unknown as Almacen[];
+        throw error;
       }
     },
   });
@@ -493,7 +495,8 @@ export function useTarifasForSelect() {
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('tarifas').select('id, nombre, tipo, activa, moneda').eq('empresa_id', empresa!.id).eq('activa', true).order('nombre');
+      const { data, error } = await supabase.from('tarifas').select('id, nombre, tipo, activa, moneda').eq('empresa_id', empresa!.id).eq('activa', true).order('nombre');
+      if (error) throw error;
       return data ?? [];
     },
   });
