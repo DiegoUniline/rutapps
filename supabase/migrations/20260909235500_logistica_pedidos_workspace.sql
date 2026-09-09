@@ -92,6 +92,36 @@ WITH base AS (
       OR COALESCE(v.folio, '') ILIKE '%' || BTRIM(p_search) || '%'
       OR COALESCE(c.nombre, '') ILIKE '%' || BTRIM(p_search) || '%'
     )
+    -- Si se filtra por levantamiento, recortar ventas ANTES de tocar entregas/líneas.
+    AND (
+      COALESCE(p_fecha_tipo, 'levantamiento') = 'programada'
+      OR (
+        (p_fecha_desde IS NULL OR v.fecha::date >= p_fecha_desde)
+        AND (p_fecha_hasta IS NULL OR v.fecha::date <= p_fecha_hasta)
+      )
+    )
+    -- Para fecha programada, reducir candidatos usando fecha original o una entrega
+    -- que caiga en el rango. El filtro exacto se valida después contra la fecha
+    -- programada actual (máxima entrega activa).
+    AND (
+      COALESCE(p_fecha_tipo, 'levantamiento') <> 'programada'
+      OR (p_fecha_desde IS NULL AND p_fecha_hasta IS NULL)
+      OR (
+        (
+          v.fecha_entrega IS NOT NULL
+          AND (p_fecha_desde IS NULL OR v.fecha_entrega::date >= p_fecha_desde)
+          AND (p_fecha_hasta IS NULL OR v.fecha_entrega::date <= p_fecha_hasta)
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM public.entregas ex
+          WHERE ex.pedido_id = v.id
+            AND ex.status::text <> 'cancelado'
+            AND (p_fecha_desde IS NULL OR ex.fecha::date >= p_fecha_desde)
+            AND (p_fecha_hasta IS NULL OR ex.fecha::date <= p_fecha_hasta)
+        )
+      )
+    )
 ),
 entrega_meta AS (
   SELECT
@@ -123,7 +153,7 @@ filtered AS (
   LEFT JOIN entrega_meta em ON em.pedido_id = b.id
   WHERE
     (
-      p_fecha_tipo = 'programada'
+      COALESCE(p_fecha_tipo, 'levantamiento') = 'programada'
       AND (p_fecha_desde IS NULL OR COALESCE(em.fecha_programada_actual, b.fecha_entrega_original) >= p_fecha_desde)
       AND (p_fecha_hasta IS NULL OR COALESCE(em.fecha_programada_actual, b.fecha_entrega_original) <= p_fecha_hasta)
     )
@@ -277,7 +307,7 @@ SELECT
   CASE WHEN f.total_demanda > 0 THEN ROUND((f.total_entregado / f.total_demanda) * 100)::int ELSE 0 END AS pct_entregado,
   f.vendedor_ruta_id,
   CASE
-    WHEN p_fecha_tipo = 'programada' THEN COALESCE(f.fecha_programada, f.fecha)
+    WHEN COALESCE(p_fecha_tipo, 'levantamiento') = 'programada' THEN COALESCE(f.fecha_programada, f.fecha)
     ELSE f.fecha
   END AS sort_date
 FROM final_calc f
@@ -288,4 +318,4 @@ GRANT EXECUTE ON FUNCTION public.fn_logistica_pedidos_workspace(uuid, date, date
   TO authenticated;
 
 COMMENT ON FUNCTION public.fn_logistica_pedidos_workspace(uuid, date, date, text, uuid[], text)
-IS 'Resumen operativo de pedidos para Logística. Evita enviar líneas y entregas completas en la carga inicial.';
+IS 'Resumen operativo de pedidos para Logística. Filtra primero y evita enviar líneas/entregas completas en la carga inicial.';
