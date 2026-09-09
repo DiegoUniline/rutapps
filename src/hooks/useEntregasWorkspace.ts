@@ -14,7 +14,7 @@ export function useEntregasWorkspaceCounts(search?: string, vendedorFilter?: str
   const deferredSearch = useDeferredValue((search ?? '').trim());
 
   return useQuery({
-    queryKey: ['entregas-workspace-counts', empresa?.id, deferredSearch, vendedorFilter],
+    queryKey: ['entregas-list', 'counts', empresa?.id, deferredSearch, vendedorFilter],
     enabled: !!empresa?.id,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
@@ -61,7 +61,8 @@ export function useEntregasWorkspaceList({
 
   return useQuery({
     queryKey: [
-      'entregas-workspace-list',
+      'entregas-list',
+      'workspace',
       empresa?.id,
       deferredSearch,
       vendedorFilter,
@@ -100,7 +101,7 @@ export function useEntregaWorkspaceLineas(entregaId?: string | null) {
   const { empresa } = useAuth();
 
   return useQuery({
-    queryKey: ['entrega-workspace-lineas', entregaId],
+    queryKey: ['entregas-list', 'lineas', entregaId],
     enabled: !!empresa?.id && !!entregaId,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
