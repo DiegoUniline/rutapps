@@ -198,7 +198,7 @@ function NavList({ tab, selectedEmpresaId, onSelect, signOut, navigate }: NavLis
   );
 }
 
-export default function SuperAdminPage() {
+export default function SuperAdminPage({ initialTab }: { initialTab?: TabKey }) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
@@ -206,10 +206,12 @@ export default function SuperAdminPage() {
   const [selectedEmpresaTab, setSelectedEmpresaTab] = useState<'usuarios' | 'facturas' | 'pagos' | 'historial'>('usuarios');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [tab, setTab] = useState<TabKey>(() => {
+    if (initialTab) return initialTab;
     const saved = sessionStorage.getItem('sa-tab') as TabKey | null;
     return saved || 'empresas';
   });
 
+  useEffect(() => { if (initialTab) setTab(initialTab); }, [initialTab]);
   useEffect(() => { sessionStorage.setItem('sa-tab', tab); }, [tab]);
 
   useEffect(() => {
@@ -224,9 +226,11 @@ export default function SuperAdminPage() {
   if (!isSuperAdmin) return <Navigate to="/dashboard" replace />;
 
   const handleSelect = (k: TabKey) => {
+    sessionStorage.setItem('sa-tab', k);
     setTab(k);
     setSelectedEmpresaId(null);
     setMobileOpen(false);
+    if (initialTab) navigate('/super-admin');
   };
 
   const activeLabel = NAV_GROUPS.flatMap(g => g.items).find(n => n.key === tab)?.label ?? 'Panel Master';

@@ -551,6 +551,7 @@ function AuthenticatedAppRoutes() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/super-admin" element={<SuperAdminPage />} />
+            <Route path="/super-admin/crm/:empresaId" element={<SuperAdminPage initialTab="trial_crm" />} />
             <Route path="/super-admin/partners" element={<SuperAdminPartnersPage />} />
             <Route path="/super-admin/partners/:partnerId" element={<PartnerAdminDetailPage />} />
             <Route path="/super-admin/database-health" element={<DatabaseHealthPage />} />
