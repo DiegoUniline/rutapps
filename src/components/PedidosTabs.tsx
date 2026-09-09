@@ -6,7 +6,7 @@ import '@/styles/pedidos-workspace.css';
 import '@/styles/pedidos-workspace-compact.css';
 
 const TABS = [
-  { label: 'Pendientes', path: '/logistica/pedidos' },
+  { label: 'Pedidos', path: '/logistica/pedidos' },
   { label: 'Entregas', path: '/logistica/entregas' },
   { label: 'Concentrado a surtir', path: '/logistica/concentrado' },
 ];
