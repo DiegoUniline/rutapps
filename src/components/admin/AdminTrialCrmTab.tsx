@@ -178,6 +178,14 @@ const rpcClient = supabase as unknown as {
   rpc: (name: string, params?: Record<string, unknown>) => Promise<RpcResponse>;
 };
 
+export type CrmScope = 'admin' | 'team';
+/** Misma pantalla para Panel Master y portal interno; solo cambian las funciones y la ruta. */
+const rpcFor = (scope: CrmScope, action: string) =>
+  scope === 'team' ? `fn_team_crm_${action}` : `fn_admin_trial_crm_${action}`;
+const basePathFor = (scope: CrmScope) => (scope === 'team' ? '/equipo' : '/super-admin');
+
+
+
 const dateLabel = (value?: string | null, pattern = 'dd MMM yyyy') => {
   if (!value) return '—';
   const date = new Date(value);
