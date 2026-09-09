@@ -12,11 +12,13 @@ interface TeamAccessMember {
   id: string;
   name: string;
   email: string;
+  user_id?: string | null;
 }
 
 interface DirectCredentials {
   email: string;
   password: string;
+  changed?: boolean;
 }
 
 interface TeamAccessDialogProps {
@@ -39,17 +41,18 @@ const functionErrorMessage = async (error: unknown) => {
 };
 
 export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamAccessDialogProps) {
-  const [mode, setMode] = useState<'invite' | 'direct'>('invite');
+  const hasAccount = Boolean(member?.user_id);
+  const [mode, setMode] = useState<'invite' | 'direct' | 'reset_password'>('invite');
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [credentials, setCredentials] = useState<DirectCredentials | null>(null);
 
   useEffect(() => {
     if (!member) return;
-    setMode('invite');
+    setMode(member.user_id ? 'reset_password' : 'invite');
     setPassword('');
     setCredentials(null);
-  }, [member?.id]);
+  }, [member?.id, member?.user_id]);
 
   const close = () => {
     if (saving) return;
@@ -67,13 +70,13 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
 
   const copyCredentials = async () => {
     if (!credentials) return;
-    await navigator.clipboard.writeText(`Usuario: ${credentials.email}\nContraseña temporal: ${credentials.password}`);
+    await navigator.clipboard.writeText(`Usuario: ${credentials.email}\nContraseña: ${credentials.password}`);
     toast.success('Credenciales copiadas');
   };
 
   const createAccess = async () => {
     if (!member) return;
-    if (mode === 'direct' && password && password.length < 8) {
+    if ((mode === 'direct' || mode === 'reset_password') && password && password.length < 8) {
       toast.error('La contraseña debe tener al menos 8 caracteres');
       return;
     }
@@ -84,7 +87,7 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
         body: {
           person_id: member.id,
           access_mode: mode,
-          ...(mode === 'direct' && password ? { temporary_password: password } : {}),
+          ...((mode === 'direct' || mode === 'reset_password') && password ? { temporary_password: password } : {}),
         },
       });
       if (error) throw new Error(await functionErrorMessage(error));
@@ -96,19 +99,23 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
         return;
       }
 
-      if (result?.existing_account) {
+      if (mode === 'direct' && result?.existing_account) {
         toast.success('Cuenta existente vinculada correctamente');
         await finishAndClose();
         return;
       }
 
       const temporaryPassword = String(result?.temporary_password || '');
-      if (!temporaryPassword) throw new Error('La cuenta se creó, pero no se recibió la contraseña temporal');
-      setCredentials({ email: String(result?.email || member.email), password: temporaryPassword });
-      toast.success('Acceso directo creado');
+      if (!temporaryPassword) throw new Error(mode === 'reset_password' ? 'La contraseña cambió, pero no se recibió la nueva clave' : 'La cuenta se creó, pero no se recibió la contraseña temporal');
+      setCredentials({
+        email: String(result?.email || member.email),
+        password: temporaryPassword,
+        changed: mode === 'reset_password',
+      });
+      toast.success(mode === 'reset_password' ? 'Contraseña actualizada' : 'Acceso directo creado');
       await onCompleted();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo crear el acceso');
+      toast.error(error instanceof Error ? error.message : 'No se pudo administrar el acceso');
     } finally {
       setSaving(false);
     }
@@ -117,22 +124,22 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
   return <Dialog open={!!member} onOpenChange={open => { if (!open) close(); }}>
     <DialogContent className="max-w-xl">
       <DialogHeader>
-        <DialogTitle>Dar acceso a {member?.name}</DialogTitle>
+        <DialogTitle>{hasAccount ? `Administrar acceso de ${member?.name}` : `Dar acceso a ${member?.name}`}</DialogTitle>
         <DialogDescription>{member?.email}</DialogDescription>
       </DialogHeader>
 
       {credentials ? <div className="space-y-4">
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-          <div className="mb-3 flex items-center gap-2 font-bold text-emerald-700"><Check className="h-4 w-4" />Cuenta creada y activa</div>
+          <div className="mb-3 flex items-center gap-2 font-bold text-emerald-700"><Check className="h-4 w-4" />{credentials.changed ? 'Contraseña actualizada' : 'Cuenta creada y activa'}</div>
           <p className="text-xs text-muted-foreground">Estas credenciales se muestran una sola vez. La contraseña no se guarda en las tablas de RutApp.</p>
           <div className="mt-4 grid gap-3">
             <div><Label>Usuario</Label><Input readOnly value={credentials.email} /></div>
-            <div><Label>Contraseña temporal</Label><Input readOnly value={credentials.password} className="font-mono font-bold" /></div>
+            <div><Label>{credentials.changed ? 'Nueva contraseña' : 'Contraseña temporal'}</Label><Input readOnly value={credentials.password} className="font-mono font-bold" /></div>
           </div>
         </div>
         <Button className="w-full" variant="outline" onClick={copyCredentials}><Copy className="mr-2 h-4 w-4" />Copiar usuario y contraseña</Button>
       </div> : <div className="space-y-5">
-        <div className="grid gap-3 sm:grid-cols-2">
+        {!hasAccount ? <div className="grid gap-3 sm:grid-cols-2">
           <button type="button" onClick={() => setMode('invite')} className={cn('rounded-xl border p-4 text-left transition', mode === 'invite' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50')}>
             <Mail className="mb-3 h-5 w-5" />
             <p className="font-bold">Invitación por correo</p>
@@ -143,16 +150,19 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
             <p className="font-bold">Acceso directo</p>
             <p className="mt-1 text-xs text-muted-foreground">No envía correo. Sirve también para direcciones inventadas con formato válido.</p>
           </button>
-        </div>
+        </div> : <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 font-bold"><KeyRound className="h-5 w-5" />Cambiar contraseña</div>
+          <p className="mt-1 text-xs text-muted-foreground">El Super Admin sustituirá la contraseña actual. No se necesita correo de recuperación ni conocer la contraseña anterior.</p>
+        </div>}
 
-        {mode === 'direct' && <div className="space-y-2 rounded-xl border p-4">
-          <Label>Contraseña temporal (opcional)</Label>
+        {(mode === 'direct' || mode === 'reset_password') && <div className="space-y-2 rounded-xl border p-4">
+          <Label>{mode === 'reset_password' ? 'Nueva contraseña (opcional)' : 'Contraseña temporal (opcional)'}</Label>
           <Input type="text" value={password} onChange={event => setPassword(event.target.value)} placeholder="Déjala vacía para generar una segura" autoComplete="off" />
           <p className="text-[11px] text-muted-foreground">Si la dejas vacía, el servidor genera una contraseña segura y te la muestra una sola vez.</p>
         </div>}
 
         <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-muted-foreground">
-          <ShieldCheck className="mr-1 inline h-4 w-4 text-amber-600" />El correo se usa como nombre de usuario. En acceso directo no necesita existir un buzón real, pero sí debe conservar un formato de email válido.
+          <ShieldCheck className="mr-1 inline h-4 w-4 text-amber-600" />La contraseña nunca se guarda en las tablas del sistema. Solo Supabase Auth conserva el hash de autenticación.
         </div>
       </div>}
 
@@ -160,7 +170,7 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
         <Button variant="outline" onClick={close} disabled={saving}>{credentials ? 'Cerrar' : 'Cancelar'}</Button>
         {!credentials && <Button onClick={createAccess} disabled={saving}>
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {mode === 'invite' ? 'Enviar invitación' : 'Crear acceso directo'}
+          {mode === 'invite' ? 'Enviar invitación' : mode === 'reset_password' ? 'Cambiar contraseña' : 'Crear acceso directo'}
         </Button>}
       </DialogFooter>
     </DialogContent>
