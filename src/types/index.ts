@@ -142,6 +142,8 @@ export interface Cliente {
   facturama_regimen_fiscal?: string;
   facturama_uso_cfdi?: string;
   facturama_cp?: string;
+  facturama_direccion_fiscal?: string;
+  facturama_forma_pago?: string;
   facturama_correo_facturacion?: string;
   facturama_id?: string;
   notas_fiscales?: string;
