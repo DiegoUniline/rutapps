@@ -97,15 +97,21 @@ export default function ConcentradoSurtidoPage() {
   const { data: vendedoresList = [], isLoading: loadingVendedores } = useVendedoresForFilter();
 
   // Almacenes desde los que se surtirá (multi). Default: "Almacén General" si existe.
-  const { data: almacenesList = [] } = useAlmacenes();
+  // La consulta principal espera a resolver este default para evitar la doble carga inicial
+  // (primero sin almacén y enseguida otra vez con AlmGeneral).
+  const { data: almacenesList = [], isLoading: loadingAlmacenes } = useAlmacenes();
   const [almacenFilter, setAlmacenFilter] = useState<string[]>([]);
   const [almacenInit, setAlmacenInit] = useState(false);
   useEffect(() => {
-    if (almacenInit || almacenesList.length === 0) return;
+    if (almacenInit || loadingAlmacenes) return;
+    if (almacenesList.length === 0) {
+      setAlmacenInit(true);
+      return;
+    }
     const general = almacenesList.find(a => /general/i.test(a.nombre || ''));
     setAlmacenFilter(general ? [general.id] : [almacenesList[0].id]);
     setAlmacenInit(true);
-  }, [almacenesList, almacenInit]);
+  }, [almacenesList, almacenInit, loadingAlmacenes]);
   const almacenesKey = almacenFilter.slice().sort().join(',');
 
   // Agrupador
@@ -119,7 +125,10 @@ export default function ConcentradoSurtidoPage() {
   const vendedoresKey = vendedorFilter.slice().sort().join(',');
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey, almacenesKey],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && almacenInit,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    placeholderData: previous => previous,
     queryFn: async () => {
       const statuses = statusFilter.length > 0
         ? statusFilter
@@ -142,47 +151,52 @@ export default function ConcentradoSurtidoPage() {
         return { rows: [] as Row[], ventas: [] as VentaLite[], pedidos: [] as PedidoRow[] };
       }
 
-      // 2) Líneas de esas ventas
-      const lineas = await fetchAllPages<LineaRow>((from, to) =>
-        supabase.from('venta_lineas')
-          .select('producto_id, cantidad, venta_id')
-          .in('venta_id', ventaIds)
-          .range(from, to)
-      );
-
-      // 3) Entregas ya hechas para esos pedidos (descontar)
-      const entregaLineas = await fetchAllPages<EntregaLineaRow>((from, to) =>
-        supabase.from('entrega_lineas')
-          .select('producto_id, cantidad_entregada, entregas!inner(pedido_id, status)')
-          .in('entregas.pedido_id', ventaIds)
-          .in('entregas.status', ['surtido', 'cargado', 'hecho'] as any)
-          .range(from, to)
-      );
-
-      // 4) Productos involucrados
-      const productoIds = Array.from(new Set(lineas.map(l => l.producto_id)));
-      const productos = productoIds.length === 0 ? [] : await fetchAllPages<ProductoRow>((from, to) =>
-        supabase.from('productos')
-          .select('id, codigo, nombre, cantidad, costo, proveedor_preferido_id')
-          .in('id', productoIds)
-          .range(from, to)
-      );
-      const prodMap = new Map(productos.map(p => [p.id, p]));
-
-      // 4b) Stock por almacén(es) seleccionado(s). Si no hay ninguno, cae al total del producto.
-      const stockPorProducto = new Map<string, number>();
-      if (almacenFilter.length > 0 && productoIds.length > 0) {
-        const stockRows = await fetchAllPages<{ producto_id: string; cantidad: number | null }>((from, to) =>
-          supabase.from('stock_almacen')
-            .select('producto_id, cantidad')
-            .eq('empresa_id', empresa!.id)
-            .in('almacen_id', almacenFilter)
-            .in('producto_id', productoIds)
+      // Líneas de venta y líneas ya surtidas no dependen entre sí: se leen en paralelo.
+      const [lineas, entregaLineas] = await Promise.all([
+        fetchAllPages<LineaRow>((from, to) =>
+          supabase.from('venta_lineas')
+            .select('producto_id, cantidad, venta_id')
+            .in('venta_id', ventaIds)
             .range(from, to)
-        );
-        for (const r of stockRows) {
-          stockPorProducto.set(r.producto_id, (stockPorProducto.get(r.producto_id) ?? 0) + Number(r.cantidad || 0));
-        }
+        ),
+        fetchAllPages<EntregaLineaRow>((from, to) =>
+          supabase.from('entrega_lineas')
+            .select('producto_id, cantidad_entregada, entregas!inner(pedido_id, status)')
+            .in('entregas.pedido_id', ventaIds)
+            .in('entregas.status', ['surtido', 'cargado', 'hecho'] as any)
+            .range(from, to)
+        ),
+      ]);
+
+      // Productos involucrados
+      const productoIds = Array.from(new Set(lineas.map(l => l.producto_id)));
+
+      // Catálogo de productos y stock tampoco dependen entre sí: se leen en paralelo.
+      const [productos, stockRows] = await Promise.all([
+        productoIds.length === 0
+          ? Promise.resolve([] as ProductoRow[])
+          : fetchAllPages<ProductoRow>((from, to) =>
+              supabase.from('productos')
+                .select('id, codigo, nombre, cantidad, costo, proveedor_preferido_id')
+                .in('id', productoIds)
+                .range(from, to)
+            ),
+        almacenFilter.length > 0 && productoIds.length > 0
+          ? fetchAllPages<{ producto_id: string; cantidad: number | null }>((from, to) =>
+              supabase.from('stock_almacen')
+                .select('producto_id, cantidad')
+                .eq('empresa_id', empresa!.id)
+                .in('almacen_id', almacenFilter)
+                .in('producto_id', productoIds)
+                .range(from, to)
+            )
+          : Promise.resolve([] as { producto_id: string; cantidad: number | null }[]),
+      ]);
+
+      const prodMap = new Map(productos.map(p => [p.id, p]));
+      const stockPorProducto = new Map<string, number>();
+      for (const r of stockRows) {
+        stockPorProducto.set(r.producto_id, (stockPorProducto.get(r.producto_id) ?? 0) + Number(r.cantidad || 0));
       }
 
       // Agregaciones

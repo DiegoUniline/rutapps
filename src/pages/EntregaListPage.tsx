@@ -13,7 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import SearchableSelect from '@/components/SearchableSelect';
 import ModalSelect from '@/components/ModalSelect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useEntregasList, useVendedoresList, useAsignarEntrega, useCargarEntrega, useAsignarYCargar } from '@/hooks/useEntregas';
+import { useVendedoresList, useAsignarEntrega, useCargarEntrega, useAsignarYCargar } from '@/hooks/useEntregas';
+import { useEntregasWorkspaceCounts, useEntregasWorkspaceList, useEntregaWorkspaceLineas } from '@/hooks/useEntregasWorkspace';
 import { fmtDate, fmtDateTime, cn , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ClienteLink } from '@/components/links/EntityLinks';
@@ -51,8 +52,18 @@ export default function EntregaListPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cargarProgress, setCargarProgress] = useState<{ current: number; total: number; folio?: string; title?: string } | null>(null);
 
-  // Always fetch ALL entregas (no status filter) so counts are correct
-  const { data: allEntregas, isLoading } = useEntregasList(search, vendedorFilter);
+  // Los conteos conservan el alcance anterior (búsqueda + vendedor), pero sólo
+  // descargan id/status. La lista operativa sí aplica estado/ruta/fecha en servidor.
+  const { data: countRows = [] } = useEntregasWorkspaceCounts(search, vendedorFilter);
+  const { data: allEntregas = [], isLoading } = useEntregasWorkspaceList({
+    search,
+    vendedorFilter,
+    statusFilter,
+    rutaFilter,
+    fechaDesde,
+    fechaHasta,
+  });
+  const { data: expandedLineas = [], isLoading: isLoadingExpandedLineas } = useEntregaWorkspaceLineas(expandedId);
   const { data: vendedores } = useVendedoresList();
 
   const { data: almacenesList } = useQuery({
@@ -68,25 +79,19 @@ export default function EntregaListPage() {
   const vendedorOptions = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
 
   const counts = {
-    total: allEntregas?.length ?? 0,
-    borrador: allEntregas?.filter(e => (e as any).status === 'borrador').length ?? 0,
-    surtido: allEntregas?.filter(e => (e as any).status === 'surtido').length ?? 0,
-    asignado: allEntregas?.filter(e => (e as any).status === 'asignado').length ?? 0,
-    cargado: allEntregas?.filter(e => (e as any).status === 'cargado').length ?? 0,
-    en_ruta: allEntregas?.filter(e => (e as any).status === 'en_ruta').length ?? 0,
-    hecho: allEntregas?.filter(e => (e as any).status === 'hecho').length ?? 0,
-    no_entregado: allEntregas?.filter(e => (e as any).status === 'no_entregado').length ?? 0,
+    total: countRows.length,
+    borrador: countRows.filter(e => (e as any).status === 'borrador').length,
+    surtido: countRows.filter(e => (e as any).status === 'surtido').length,
+    asignado: countRows.filter(e => (e as any).status === 'asignado').length,
+    cargado: countRows.filter(e => (e as any).status === 'cargado').length,
+    en_ruta: countRows.filter(e => (e as any).status === 'en_ruta').length,
+    hecho: countRows.filter(e => (e as any).status === 'hecho').length,
+    no_entregado: countRows.filter(e => (e as any).status === 'no_entregado').length,
   };
 
-  // Filter locally by selected tab + extra filters
-  const filtered = useMemo(() => {
-    let list = allEntregas ?? [];
-    if (statusFilter !== 'todos') list = list.filter((e: any) => e.status === statusFilter);
-    if (rutaFilter !== 'todos') list = list.filter((e: any) => (e.vendedor_ruta_id ?? '') === (rutaFilter === 'sin_ruta' ? '' : rutaFilter));
-    if (fechaDesde) list = list.filter((e: any) => (e.fecha ?? '').slice(0, 10) >= fechaDesde);
-    if (fechaHasta) list = list.filter((e: any) => (e.fecha ?? '').slice(0, 10) <= fechaHasta);
-    return list;
-  }, [allEntregas, statusFilter, rutaFilter, fechaDesde, fechaHasta]);
+  // Los filtros ya se aplicaron en PostgreSQL. Este memo mantiene la misma
+  // variable usada por selección/acciones sin volver a recorrer filtros pesados.
+  const filtered = useMemo(() => allEntregas ?? [], [allEntregas]);
 
   // borrador, surtido, asignado can be bulk-processed
   const selectableIds = useMemo(() =>
@@ -396,6 +401,16 @@ export default function EntregaListPage() {
     bulkCargarMut.mutate();
   };
 
+  const statusChipLabel = STATUS_BADGE[statusFilter]?.label ?? statusFilter;
+  const vendedorChipLabel = vendedorFilter === 'todos'
+    ? ''
+    : (vendedores ?? []).find(v => v.id === vendedorFilter)?.nombre ?? 'Vendedor';
+  const rutaChipLabel = rutaFilter === 'todos'
+    ? ''
+    : rutaFilter === 'sin_ruta'
+      ? 'Sin ruta asignada'
+      : (vendedores ?? []).find(v => v.id === rutaFilter)?.nombre ?? 'Ruta';
+
   return (
     <ListPage scroll>
       {cargarProgress && (
@@ -547,6 +562,27 @@ export default function EntregaListPage() {
         )}
       </div>
 
+      {(statusFilter !== 'todos' || vendedorFilter !== 'todos' || rutaFilter !== 'todos') && (
+        <div data-pedidos-active-filters className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-medium text-muted-foreground mr-1">Filtros activos</span>
+          {statusFilter !== 'todos' && (
+            <button type="button" onClick={() => setStatusFilter('todos')} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary/15">
+              Estado: {statusChipLabel} <span aria-hidden>×</span>
+            </button>
+          )}
+          {vendedorFilter !== 'todos' && (
+            <button type="button" onClick={() => setVendedorFilter('todos')} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-muted/60">
+              Vendedor: {vendedorChipLabel} <span aria-hidden>×</span>
+            </button>
+          )}
+          {rutaFilter !== 'todos' && (
+            <button type="button" onClick={() => setRutaFilter('todos')} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-muted/60">
+              Ruta: {rutaChipLabel} <span aria-hidden>×</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <Table>
@@ -589,7 +625,8 @@ export default function EntregaListPage() {
               const badge = STATUS_BADGE[e.status] ?? STATUS_BADGE.borrador;
               const canSelect = selectableIds.has(e.id);
 
-              // Derive unique origin warehouses from lines (real source of stock)
+              // La lista sólo trae almacenes origen ligeros; el detalle de producto
+              // se solicita únicamente para la entrega expandida.
               const lineOrigins = new Map<string, string>();
               for (const l of (e.entrega_lineas ?? [])) {
                 const id = l?.almacen_origen_id;
@@ -610,14 +647,13 @@ export default function EntregaListPage() {
                 originTitle = originNames.join(', ');
               }
 
-              // Destino = almacén-ruta del vendedor asignado (vendedor_ruta_id) o, si no hay, del vendedor original
               const destinoNombre =
                 e.vendedor_ruta?.almacen_destino?.nombre ??
                 e.vendedores?.almacen_destino?.nombre ??
                 null;
 
               const isExpanded = expandedId === e.id;
-              const lineas = e.entrega_lineas ?? [];
+              const lineas = isExpanded ? (expandedLineas ?? []) : [];
 
               return (
                 <Fragment key={e.id}>
@@ -664,13 +700,15 @@ export default function EntregaListPage() {
                         <div className="flex items-center justify-between">
                           <h3 className="text-[12px] font-semibold text-foreground flex items-center gap-1.5">
                             <Package className="h-3.5 w-3.5" />
-                            Productos ({lineas.length})
+                            {isLoadingExpandedLineas ? 'Productos (cargando…)' : `Productos (${lineas.length})`}
                           </h3>
                           <Button size="sm" variant="outline" onClick={(ev) => { ev.stopPropagation(); navigate(`/logistica/entregas/${e.id}`); }}>
                             Abrir entrega
                           </Button>
                         </div>
-                        {lineas.length === 0 ? (
+                        {isLoadingExpandedLineas ? (
+                          <p className="text-[12px] text-muted-foreground py-3">Cargando productos de esta entrega…</p>
+                        ) : lineas.length === 0 ? (
                           <p className="text-[12px] text-muted-foreground py-2">Sin productos</p>
                         ) : (
                           <div className="bg-card border border-border rounded-lg overflow-hidden">

@@ -38,6 +38,15 @@ export function PedidosTabs() {
     setMode('list');
   }, [pathname]);
 
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFiltersOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [filtersOpen]);
+
   // Presentation-only state shared by the three logistics pages. It never touches page data.
   useEffect(() => {
     document.body.dataset.pedidosPage = page;
@@ -52,61 +61,73 @@ export function PedidosTabs() {
   }, [page, mode, filtersOpen]);
 
   return (
-    <div data-pedidos-tabs className="overflow-x-auto">
-      <div className="pedidos-workspace-row">
-        <nav className="pedidos-primary-nav" aria-label="Logística de pedidos">
-          {TABS.map((t) => (
-            <NavLink
-              key={t.path}
-              to={t.path}
-              end
-              className="pedidos-primary-link"
-              data-active={pathname === t.path ? 'true' : 'false'}
-            >
-              {t.label}
-            </NavLink>
-          ))}
-        </nav>
+    <>
+      {filtersOpen && (
+        <button
+          type="button"
+          className="pedidos-filter-backdrop"
+          aria-label="Cerrar filtros"
+          onClick={() => setFiltersOpen(false)}
+        />
+      )}
 
-        <div className="pedidos-workspace-tools">
-          <button
-            type="button"
-            className="pedidos-view-button border border-border bg-background"
-            data-active={filtersOpen ? 'true' : 'false'}
-            aria-pressed={filtersOpen}
-            onClick={() => setFiltersOpen(v => !v)}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>Filtros</span>
-          </button>
+      <div data-pedidos-tabs className="overflow-x-auto">
+        <div className="pedidos-workspace-row">
+          <nav className="pedidos-primary-nav" aria-label="Logística de pedidos">
+            {TABS.map((t) => (
+              <NavLink
+                key={t.path}
+                to={t.path}
+                end
+                className="pedidos-primary-link"
+                data-active={pathname === t.path ? 'true' : 'false'}
+              >
+                {t.label}
+              </NavLink>
+            ))}
+          </nav>
 
-          <div className="pedidos-view-switch" aria-label="Tipo de vista">
+          <div className="pedidos-workspace-tools">
             <button
               type="button"
-              className="pedidos-view-button"
-              data-active={mode === 'list' ? 'true' : 'false'}
-              aria-pressed={mode === 'list'}
-              onClick={() => setMode('list')}
-              title="Vista operativa"
+              className="pedidos-view-button border border-border bg-background"
+              data-active={filtersOpen ? 'true' : 'false'}
+              aria-pressed={filtersOpen}
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen(v => !v)}
             >
-              <List className="h-3.5 w-3.5" />
-              <span>Operación</span>
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span>Filtros</span>
             </button>
-            <button
-              type="button"
-              className="pedidos-view-button"
-              data-active={mode === 'stats' ? 'true' : 'false'}
-              aria-pressed={mode === 'stats'}
-              onClick={() => setMode('stats')}
-              title="Vista de estadísticas"
-            >
-              <BarChart3 className="h-3.5 w-3.5" />
-              <span>Estadísticas</span>
-            </button>
+
+            <div className="pedidos-view-switch" aria-label="Tipo de vista">
+              <button
+                type="button"
+                className="pedidos-view-button"
+                data-active={mode === 'list' ? 'true' : 'false'}
+                aria-pressed={mode === 'list'}
+                onClick={() => setMode('list')}
+                title="Vista operativa"
+              >
+                <List className="h-3.5 w-3.5" />
+                <span>Operación</span>
+              </button>
+              <button
+                type="button"
+                className="pedidos-view-button"
+                data-active={mode === 'stats' ? 'true' : 'false'}
+                aria-pressed={mode === 'stats'}
+                onClick={() => setMode('stats')}
+                title="Vista de estadísticas"
+              >
+                <BarChart3 className="h-3.5 w-3.5" />
+                <span>Estadísticas</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
