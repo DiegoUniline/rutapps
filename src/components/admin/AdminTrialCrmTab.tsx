@@ -281,7 +281,7 @@ function LeadDetailView({
   const loadHistory = async () => {
     setHistoryLoading(true);
     try {
-      const { data, error } = await rpcClient.rpc('fn_admin_trial_crm_history', { p_empresa_id: lead.empresa_id });
+      const { data, error } = await rpcClient.rpc(rpcFor(scope, 'history'), { p_empresa_id: lead.empresa_id });
       if (error) throw error;
       setHistory(Array.isArray(data) ? data as TrialCrmActivity[] : []);
     } catch (error) {
@@ -306,7 +306,7 @@ function LeadDetailView({
   const save = async () => {
     setSaving(true);
     try {
-      const { error } = await rpcClient.rpc('fn_admin_trial_crm_save', {
+      const { error } = await rpcClient.rpc(rpcFor(scope, 'save'), {
         p_empresa_id: lead.empresa_id,
         p_stage: stage,
         p_assigned_to: assignedTo || null,
