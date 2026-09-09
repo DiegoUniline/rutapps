@@ -10828,6 +10828,7 @@ export type Database = {
         Args: { p_venta_id: string }
         Returns: undefined
       }
+      fn_team_crm_detail: { Args: { p_empresa_id: string }; Returns: Json }
       fn_team_crm_log_contact: {
         Args: { p_channel: string; p_empresa_id: string }
         Returns: Json
