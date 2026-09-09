@@ -1,0 +1,162 @@
+/* Ajuste fino del workspace Logística > Pedidos.
+   Sólo presentación: no altera consultas, cálculos, estados ni mutaciones. */
+
+/* Los encabezados redundantes debajo de las 3 tabs dejan de consumir altura. */
+body[data-pedidos-page="pendientes"] [data-pedidos-tabs] + .flex.items-center.justify-between.flex-wrap.gap-2 > h1,
+body[data-pedidos-page="entregas"] [data-pedidos-tabs] + .flex.items-center.justify-between > h1,
+body[data-pedidos-page="concentrado"] [data-pedidos-tabs] + .flex.items-center.justify-between.flex-wrap.gap-2 > div:first-child {
+  display: none !important;
+}
+
+/* El trigger de filtros se alinea con la barra operativa y usa el mismo azul del rango. */
+[data-pedidos-tabs] {
+  position: relative;
+  overflow: visible !important;
+}
+
+[data-pedidos-tabs] [data-pedidos-filter-trigger] {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  z-index: 20;
+  height: 36px;
+  padding: 0 .8rem;
+  border-color: hsl(var(--primary)) !important;
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  box-shadow: 0 1px 2px hsl(var(--primary) / .18);
+}
+
+[data-pedidos-tabs] [data-pedidos-filter-trigger]:hover,
+[data-pedidos-tabs] [data-pedidos-filter-trigger][data-active="true"] {
+  background: hsl(var(--primary) / .9) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+/* ───────────────── Pendientes ───────────────── */
+/* Normal: sólo Rango → Buscar; fecha-base y vendedor quedan dentro de Filtros. */
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border {
+  display: grid !important;
+  grid-template-columns: auto minmax(260px, 520px);
+  justify-content: center;
+  align-items: end !important;
+  column-gap: .65rem !important;
+  padding-right: 108px !important;
+  min-height: 42px;
+}
+
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(1),
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(3) {
+  display: none !important;
+}
+
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) {
+  grid-column: 1;
+  min-width: 220px;
+}
+
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(4) {
+  grid-column: 2;
+  width: 100%;
+  max-width: 520px !important;
+  min-width: 260px;
+}
+
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > button {
+  display: none !important;
+}
+
+/* ───────────────── Entregas ───────────────── */
+/* Normal: Rango → Buscar. Vendedor y Ruta viven en la ventana de filtros. */
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 {
+  display: grid !important;
+  grid-template-columns: auto minmax(260px, 520px);
+  justify-content: center;
+  align-items: end !important;
+  column-gap: .65rem !important;
+  padding-right: 108px !important;
+  min-height: 42px;
+}
+
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2),
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(3) {
+  display: none !important;
+}
+
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) {
+  display: block !important;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 220px;
+}
+
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(1) {
+  display: block !important;
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  max-width: 520px !important;
+  min-width: 260px;
+}
+
+/* Las acciones masivas siguen disponibles, pero bajan a una segunda línea sólo cuando existen. */
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > button {
+  grid-row: 2;
+}
+
+/* ─────────────── Concentrado a surtir ─────────────── */
+/* Rango permanece como control principal. Tipo de fecha y accesos rápidos viven en Filtros. */
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
+  display: flex !important;
+  justify-content: center;
+  align-items: end !important;
+  padding-right: 108px !important;
+  min-height: 42px;
+}
+
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(1),
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(3) {
+  display: none !important;
+}
+
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2) {
+  order: 1;
+  min-width: 220px;
+}
+
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > .ml-auto {
+  order: 4;
+  flex-basis: 100%;
+  justify-content: flex-end;
+  margin-left: 0 !important;
+  margin-top: .25rem;
+}
+
+/* En Estadísticas el control flotante de filtros no necesita invadir el dashboard. */
+body[data-pedidos-mode="stats"] [data-pedidos-tabs] [data-pedidos-filter-trigger] {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  [data-pedidos-tabs] {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+  }
+
+  [data-pedidos-tabs] [data-pedidos-filter-trigger] {
+    position: static;
+    height: 32px;
+  }
+
+  body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border,
+  body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 {
+    display: flex !important;
+    justify-content: flex-start;
+    padding-right: 0 !important;
+  }
+
+  body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
+    justify-content: flex-start;
+    padding-right: 0 !important;
+  }
+}
