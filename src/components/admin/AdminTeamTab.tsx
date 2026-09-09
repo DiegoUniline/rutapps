@@ -246,13 +246,26 @@ export default function AdminTeamTab() {
     setInviting(member.id);
     try {
       const { data: result, error } = await supabase.functions.invoke('admin-team-account', { body: { person_id: member.id } });
-      if (error) throw error;
+      if (error) {
+        // Intenta leer el mensaje real devuelto por la función
+        let detail = '';
+        const response = (error as unknown as { context?: Response }).context;
+        if (response && typeof response.text === 'function') {
+          try {
+            const body = await response.clone().text();
+            const parsed = body ? JSON.parse(body) : null;
+            detail = parsed?.error || body || '';
+          } catch { /* respuesta sin JSON */ }
+        }
+        throw new Error(detail || error.message || 'No se pudo contactar al servicio de accesos');
+      }
       if (result?.error) throw new Error(result.error);
       toast.success(result?.invited ? 'Invitación enviada por correo' : 'Cuenta existente vinculada correctamente');
       await load();
     } catch (error) { toast.error(errorText(error)); }
     finally { setInviting(null); }
   };
+
 
   const openAssignment = (company: TeamCompany) => {
     setAssignmentCompany(company);
