@@ -93,16 +93,31 @@ function zonedDateTimeToUtcIso(dateISO: string, time: string, timeZone?: string 
 
 /* ─── Section Card helper ─── */
 function SectionCard({ title, icon: Icon, children, className }: { title: string; icon: React.ElementType; children: React.ReactNode; className?: string }) {
+  const startsCollapsed = /^(Productos vendidos|Cobros recibidos|Gastos|Devoluciones|Productos que cuadran|Stock actual)/i.test(title);
+  const [isOpen, setIsOpen] = useState(!startsCollapsed);
+
   return (
-    <div className={cn("bg-card border border-border/70 rounded-xl overflow-hidden", className)}>
-      <div className="px-5 py-3 border-b border-border/70 bg-muted/20 flex items-center gap-2">
+    <section className={cn("bg-card border border-border/70 rounded-xl", className)}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(v => !v)}
+        aria-expanded={isOpen}
+        className={cn(
+          "w-full px-5 py-3 bg-muted/20 flex items-center gap-2 text-left transition-colors hover:bg-muted/35 rounded-t-xl",
+          isOpen ? "border-b border-border/70" : "rounded-b-xl"
+        )}
+      >
         <Icon className="h-4 w-4 text-primary shrink-0" />
-        <h3 className="text-xs font-semibold text-foreground tracking-wide">{title}</h3>
-      </div>
-      <div className="p-5">
-        {children}
-      </div>
-    </div>
+        <h3 className="min-w-0 flex-1 text-xs font-semibold text-foreground tracking-wide">{title}</h3>
+        <span className="hidden sm:inline text-[10px] font-medium text-muted-foreground">{isOpen ? 'Contraer' : 'Expandir'}</span>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
+      </button>
+      {isOpen && (
+        <div className="p-5 min-w-0 [&_table]:w-full [&_th]:whitespace-normal [&_td]:break-words [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-20 [&_thead_th]:bg-muted [&_tfoot_tr]:sticky [&_tfoot_tr]:bottom-0 [&_tfoot_tr]:z-10 [&_tfoot_tr]:shadow-sm xl:[&_.overflow-x-auto]:overflow-visible">
+          {children}
+        </div>
+      )}
+    </section>
   );
 }
 
