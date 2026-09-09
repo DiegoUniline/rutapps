@@ -134,5 +134,5 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
       </TabsContent>
     </Tabs>
     <DialogFooter><Button variant="outline" onClick={close} disabled={saving||permissionSaving}>Cerrar</Button></DialogFooter>
-  </Dialog>;
+  </DialogContent></Dialog>;
 }
