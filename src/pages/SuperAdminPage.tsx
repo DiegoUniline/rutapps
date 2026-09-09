@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet, FlaskConical, ChevronDown, ScanSearch, CircleDollarSign, Target } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet, FlaskConical, ChevronDown, ScanSearch, CircleDollarSign, Target, UsersRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminInactivosTab from '@/components/admin/AdminInactivosTab';
@@ -32,11 +32,12 @@ import AdminBroadcastTab from '@/components/admin/AdminBroadcastTab';
 import AdminBillingAuditTab from '@/components/admin/AdminBillingAuditTab';
 import AdminCommissionsTab from '@/components/admin/AdminCommissionsTab';
 import AdminTrialCrmTab from '@/components/admin/AdminTrialCrmTab';
+import AdminTeamTab from '@/components/admin/AdminTeamTab';
 
 type TabKey =
   | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'pagos' | 'whatsapp'
   | 'notifications' | 'payment_requests' | 'anuncios' | 'publicidad' | 'cobros'
-  | 'incompletos' | 'trial_crm' | 'flags' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'commissions' | 'inactivos' | 'control' | 'wa_bot' | 'broadcast' | 'billing_audit';
+  | 'incompletos' | 'trial_crm' | 'team' | 'flags' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'commissions' | 'inactivos' | 'control' | 'wa_bot' | 'broadcast' | 'billing_audit';
 
 type NavItem = { key: TabKey; label: string; icon: LucideIcon; danger?: boolean };
 type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] };
@@ -53,6 +54,7 @@ const NAV_GROUPS: NavGroup[] = [
     id: 'clientes', label: 'Empresas y usuarios', icon: Building2,
     items: [
       { key: 'empresas', label: 'Empresas', icon: Building2 },
+      { key: 'team', label: 'Equipo', icon: UsersRound },
       { key: 'trial_crm', label: 'CRM recuperación', icon: Target },
       { key: 'incompletos', label: 'Registros incompletos', icon: UserX },
       { key: 'inactivos', label: 'Inactivos', icon: ShieldAlert, danger: true },
@@ -272,6 +274,7 @@ export default function SuperAdminPage({ initialTab }: { initialTab?: TabKey }) 
             <>
               {tab === 'dashboard' && <AdminStatsTab onSelectEmpresa={(id) => { setSelectedEmpresaTab('usuarios'); setSelectedEmpresaId(id); }} />}
               {tab === 'empresas' && <AdminEmpresasTab onSelectEmpresa={(id) => { setSelectedEmpresaTab('usuarios'); setSelectedEmpresaId(id); }} />}
+              {tab === 'team' && <AdminTeamTab />}
               {tab === 'trial_crm' && <AdminTrialCrmTab />}
               {tab === 'subscriptions' && <AdminSubscriptionsTab />}
               {tab === 'billing_audit' && <AdminBillingAuditTab />}
