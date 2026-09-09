@@ -13,6 +13,7 @@ interface TeamAccessMember {
   name: string;
   email: string;
   user_id?: string | null;
+  email_is_fictitious?: boolean;
 }
 
 interface DirectCredentials {
@@ -42,6 +43,7 @@ const functionErrorMessage = async (error: unknown) => {
 
 export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamAccessDialogProps) {
   const hasAccount = Boolean(member?.user_id);
+  const isFictitious = Boolean(member?.email_is_fictitious);
   const [mode, setMode] = useState<'invite' | 'direct' | 'reset_password'>('invite');
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
@@ -49,10 +51,10 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
 
   useEffect(() => {
     if (!member) return;
-    setMode(member.user_id ? 'reset_password' : 'invite');
+    setMode(member.user_id ? 'reset_password' : member.email_is_fictitious ? 'direct' : 'invite');
     setPassword('');
     setCredentials(null);
-  }, [member?.id, member?.user_id]);
+  }, [member?.id, member?.user_id, member?.email_is_fictitious]);
 
   const close = () => {
     if (saving) return;
@@ -99,20 +101,14 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
         return;
       }
 
-      if (mode === 'direct' && result?.existing_account) {
-        toast.success('Cuenta existente vinculada correctamente');
-        await finishAndClose();
-        return;
-      }
-
       const temporaryPassword = String(result?.temporary_password || '');
-      if (!temporaryPassword) throw new Error(mode === 'reset_password' ? 'La contraseña cambió, pero no se recibió la nueva clave' : 'La cuenta se creó, pero no se recibió la contraseña temporal');
+      if (!temporaryPassword) throw new Error(mode === 'reset_password' ? 'La contraseña cambió, pero no se recibió la nueva clave' : 'La cuenta se activó, pero no se recibió la contraseña temporal');
       setCredentials({
         email: String(result?.email || member.email),
         password: temporaryPassword,
-        changed: mode === 'reset_password',
+        changed: mode === 'reset_password' || Boolean(result?.existing_account),
       });
-      toast.success(mode === 'reset_password' ? 'Contraseña actualizada' : 'Acceso directo creado');
+      toast.success(mode === 'reset_password' || result?.existing_account ? 'Contraseña actualizada y cuenta confirmada' : 'Acceso directo creado');
       await onCompleted();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo administrar el acceso');
@@ -139,20 +135,25 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
         </div>
         <Button className="w-full" variant="outline" onClick={copyCredentials}><Copy className="mr-2 h-4 w-4" />Copiar usuario y contraseña</Button>
       </div> : <div className="space-y-5">
-        {!hasAccount ? <div className="grid gap-3 sm:grid-cols-2">
-          <button type="button" onClick={() => setMode('invite')} className={cn('rounded-xl border p-4 text-left transition', mode === 'invite' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50')}>
+        {isFictitious && <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-4 text-sm">
+          <b>Correo ficticio / solo usuario</b>
+          <p className="mt-1 text-xs text-muted-foreground">No se enviará ninguna invitación. La cuenta quedará confirmada directamente y no pedirá verificar este correo.</p>
+        </div>}
+
+        {!hasAccount ? <div className={cn('grid gap-3', !isFictitious && 'sm:grid-cols-2')}>
+          {!isFictitious && <button type="button" onClick={() => setMode('invite')} className={cn('rounded-xl border p-4 text-left transition', mode === 'invite' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50')}>
             <Mail className="mb-3 h-5 w-5" />
             <p className="font-bold">Invitación por correo</p>
             <p className="mt-1 text-xs text-muted-foreground">Para un correo real. Supabase envía el enlace para aceptar la invitación.</p>
-          </button>
+          </button>}
           <button type="button" onClick={() => setMode('direct')} className={cn('rounded-xl border p-4 text-left transition', mode === 'direct' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50')}>
             <KeyRound className="mb-3 h-5 w-5" />
             <p className="font-bold">Acceso directo</p>
-            <p className="mt-1 text-xs text-muted-foreground">No envía correo. Sirve también para direcciones inventadas con formato válido.</p>
+            <p className="mt-1 text-xs text-muted-foreground">No envía correo. La cuenta queda activa con usuario y contraseña.</p>
           </button>
         </div> : <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
           <div className="flex items-center gap-2 font-bold"><KeyRound className="h-5 w-5" />Cambiar contraseña</div>
-          <p className="mt-1 text-xs text-muted-foreground">El Super Admin sustituirá la contraseña actual. No se necesita correo de recuperación ni conocer la contraseña anterior.</p>
+          <p className="mt-1 text-xs text-muted-foreground">El Super Admin sustituirá la contraseña actual. {isFictitious ? 'Además se confirmará la cuenta para que nunca solicite validar el correo ficticio.' : 'No se necesita conocer la contraseña anterior.'}</p>
         </div>}
 
         {(mode === 'direct' || mode === 'reset_password') && <div className="space-y-2 rounded-xl border p-4">
