@@ -1,0 +1,258 @@
+/* Logística > Pedidos workspace
+   Presentation only: no business state, calculations or data queries live here. */
+
+[data-pedidos-tabs] {
+  margin-bottom: .5rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+[data-pedidos-tabs] .pedidos-workspace-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-width: 0;
+}
+
+[data-pedidos-tabs] .pedidos-primary-nav {
+  display: flex;
+  align-items: center;
+  gap: .125rem;
+  min-width: max-content;
+}
+
+[data-pedidos-tabs] .pedidos-primary-link {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 .75rem;
+  border-bottom: 2px solid transparent;
+  color: hsl(var(--muted-foreground));
+  font-size: .8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+[data-pedidos-tabs] .pedidos-primary-link:hover {
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted) / .35);
+}
+
+[data-pedidos-tabs] .pedidos-primary-link[data-active="true"] {
+  color: hsl(var(--primary));
+  border-bottom-color: hsl(var(--primary));
+  background: hsl(var(--primary) / .07);
+}
+
+[data-pedidos-tabs] .pedidos-workspace-tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: .375rem;
+  flex: 0 0 auto;
+}
+
+[data-pedidos-tabs] .pedidos-view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: .125rem;
+  padding: 2px;
+  border: 1px solid hsl(var(--border));
+  border-radius: .45rem;
+  background: hsl(var(--muted) / .25);
+}
+
+[data-pedidos-tabs] .pedidos-view-button {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  height: 28px;
+  padding: 0 .55rem;
+  border-radius: .3rem;
+  color: hsl(var(--muted-foreground));
+  font-size: .75rem;
+  font-weight: 500;
+  transition: color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+[data-pedidos-tabs] .pedidos-view-button:hover {
+  color: hsl(var(--foreground));
+}
+
+[data-pedidos-tabs] .pedidos-view-button[data-active="true"] {
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  box-shadow: 0 1px 2px hsl(var(--foreground) / .08);
+}
+
+/* ───────────────── Pendientes ───────────────── */
+
+/* KPI cards become an explicit analytics view instead of permanent chrome. */
+body[data-pedidos-page="pendientes"] [data-pedidos-tabs] ~ .grid.grid-cols-3.gap-3 {
+  display: none !important;
+}
+
+body[data-pedidos-page="pendientes"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .grid.grid-cols-3.gap-3 {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .625rem !important;
+}
+
+/* Closed filters keep the operational search visible, while date/vendor controls stay out of the way. */
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  gap: .5rem !important;
+}
+
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(-n+3) {
+  display: none !important;
+}
+
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(4) {
+  max-width: 520px;
+  min-width: min(100%, 300px);
+}
+
+body[data-pedidos-page="pendientes"][data-pedidos-filters="open"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border {
+  padding: .625rem !important;
+  gap: .5rem !important;
+}
+
+/* Analytics hides the operational table but keeps status context visible. */
+body[data-pedidos-page="pendientes"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.overflow-hidden {
+  display: none !important;
+}
+
+body[data-pedidos-page="pendientes"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border {
+  display: none !important;
+}
+
+/* ───────────────── Entregas ───────────────── */
+
+/* Search remains available at all times; operational filters expand only on demand. */
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(n+2) {
+  display: none !important;
+}
+
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > div:first-of-type {
+  max-width: 520px !important;
+  min-width: min(100%, 300px);
+}
+
+body[data-pedidos-page="entregas"][data-pedidos-filters="open"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 {
+  padding: .625rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: .5rem;
+  background: hsl(var(--card));
+  gap: .5rem !important;
+}
+
+/* In analytics, the existing status counts become the dashboard — no new metrics/calculations. */
+body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.border-b.border-border.gap-0.overflow-x-auto {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .5rem !important;
+  overflow: visible !important;
+  border-bottom: 0 !important;
+}
+
+body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.border-b.border-border.gap-0.overflow-x-auto > button {
+  min-height: 66px;
+  padding: .65rem .75rem !important;
+  text-align: left;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: .5rem;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+
+body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.border-b.border-border.gap-0.overflow-x-auto > button:hover {
+  background: hsl(var(--muted) / .35);
+}
+
+body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3,
+body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.overflow-hidden {
+  display: none !important;
+}
+
+/* ─────────────── Concentrado a surtir ─────────────── */
+
+/* The large filter card is available on demand instead of permanently consuming the viewport. */
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
+  display: none !important;
+}
+
+body[data-pedidos-page="concentrado"][data-pedidos-filters="open"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
+  padding: .625rem !important;
+  gap: .5rem !important;
+}
+
+/* Existing KPI calculations are reserved for the analytics view. */
+body[data-pedidos-page="concentrado"] [data-pedidos-tabs] ~ .grid.grid-cols-2.gap-2 {
+  display: none !important;
+}
+
+body[data-pedidos-page="concentrado"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .grid.grid-cols-2.gap-2 {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .625rem !important;
+}
+
+/* Keep exception feedback thin; success should not consume operational space. */
+body[data-pedidos-page="concentrado"] [data-pedidos-tabs] ~ [class*="bg-success/10"] {
+  display: none !important;
+}
+
+body[data-pedidos-page="concentrado"] [data-pedidos-tabs] ~ [class*="bg-destructive/10"] {
+  padding: .5rem .65rem !important;
+  font-size: .75rem !important;
+  line-height: 1.2rem;
+}
+
+/* Statistics is a distinct representation: no operational table or order/product toggle underneath it. */
+body[data-pedidos-page="concentrado"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.items-center.gap-1.w-fit,
+body[data-pedidos-page="concentrado"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.overflow-hidden {
+  display: none !important;
+}
+
+/* List tables: maximize density without changing cells, values or row actions. */
+body[data-pedidos-mode="list"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.overflow-hidden {
+  border-radius: .45rem !important;
+}
+
+body[data-pedidos-page="concentrado"] [data-pedidos-tabs] ~ .flex.items-center.gap-1.w-fit {
+  margin-top: .125rem !important;
+}
+
+@media (max-width: 900px) {
+  [data-pedidos-tabs] .pedidos-workspace-row {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  [data-pedidos-tabs] .pedidos-workspace-tools {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  body[data-pedidos-page="pendientes"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .grid.grid-cols-3.gap-3,
+  body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.border-b.border-border.gap-0.overflow-x-auto,
+  body[data-pedidos-page="concentrado"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .grid.grid-cols-2.gap-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  body[data-pedidos-page="pendientes"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .grid.grid-cols-3.gap-3,
+  body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.border-b.border-border.gap-0.overflow-x-auto,
+  body[data-pedidos-page="concentrado"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .grid.grid-cols-2.gap-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  [data-pedidos-tabs] .pedidos-view-button span {
+    display: none;
+  }
+}
