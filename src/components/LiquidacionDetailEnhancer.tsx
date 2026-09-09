@@ -130,7 +130,8 @@ function applyTab(dom: DetailDom, tab: TabKey) {
 
     const classification = classifySection(child);
     const isSummaryKpis = classification === 'other' && index === Math.max(headerIndex, navIndex) + 1;
-    const keepAlways = classification === 'other' && !isSummaryKpis;
+    const hasSectionHeading = !!child.querySelector('h3');
+    const keepAlways = classification === 'other' && !isSummaryKpis && !hasSectionHeading;
     const visible = (tab === 'resumen' && (classification === 'resumen' || isSummaryKpis)) || classification === tab || keepAlways;
     child.style.display = visible ? '' : 'none';
   });
