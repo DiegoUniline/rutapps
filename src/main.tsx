@@ -7,7 +7,6 @@ import CrmPitchHeaderActions from "./components/admin/CrmPitchHeaderActions";
 import GlobalCrmCancellationInsight from "./components/admin/GlobalCrmCancellationInsight";
 import GlobalCrmCancellationsList from "./components/admin/GlobalCrmCancellationsList";
 import AdminCallPitchLibrary from "./components/admin/AdminCallPitchLibrary";
-import LiquidacionDetailEnhancer from "./components/LiquidacionDetailEnhancer";
 import "./index.css";
 import { startAutoBackup, restoreFromStorageBackup } from "./lib/offlineBackup";
 import { initObservability } from "./lib/observability";
@@ -61,7 +60,6 @@ if (isPreviewHost || isInIframe) {
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
     <App />
-    <LiquidacionDetailEnhancer />
     <GlobalCrmPitchLauncher />
     <CrmPitchHeaderActions />
     <GlobalCrmCancellationInsight />

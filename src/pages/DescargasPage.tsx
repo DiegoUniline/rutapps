@@ -11,7 +11,7 @@ import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, useDescargasLiveCuadre, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useVendedores } from '@/hooks/useClientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw, Trash2 } from 'lucide-react';
+import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw, Trash2, Boxes, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -94,16 +94,26 @@ function zonedDateTimeToUtcIso(dateISO: string, time: string, timeZone?: string 
 /* ─── Section Card helper ─── */
 function SectionCard({ title, icon: Icon, children, className }: { title: string; icon: React.ElementType; children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("border-t border-border", className)}>
-      <div className="px-5 py-4">
-        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-          <Icon className="h-4 w-4" /> {title}
-        </h3>
+    <div className={cn("bg-card border border-border rounded-xl shadow-sm overflow-hidden", className)}>
+      <div className="px-5 py-3.5 border-b border-table-border bg-muted/30 flex items-center gap-2">
+        <Icon className="h-4 w-4 text-primary shrink-0" />
+        <h3 className="text-[13px] font-bold text-foreground uppercase tracking-wide">{title}</h3>
+      </div>
+      <div className="p-5">
         {children}
       </div>
     </div>
   );
 }
+
+/* ─── Table style tokens (matches list-view density across the app) ─── */
+const THEAD_TR = "text-[11px] uppercase tracking-wide text-muted-foreground border-b border-table-border bg-muted/40";
+const TH = "text-left py-2.5 px-3 font-semibold";
+const TBODY_TR = "border-b border-table-border/70 even:bg-muted/15 hover:bg-table-hover transition-colors";
+const TD = "py-2.5 px-3 text-[13px]";
+const TFOOT_TR = "border-t-2 border-border bg-muted/30 font-bold text-[13px]";
+
+type LiqTabKey = 'todo' | 'resumen' | 'ventas' | 'productos' | 'cobros' | 'entregas' | 'gastos' | 'devoluciones' | 'inventario';
 
 /* ─── Detail / Approve panel — Full activity breakdown ─── */
 
@@ -121,6 +131,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   // Bodega destino a la que regresa el producto físico al aprobar (si se descargó el camión).
   const [destinoAlmacenId, setDestinoAlmacenId] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<LiqTabKey>('todo');
 
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
@@ -575,14 +586,27 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     onError: (e: any) => toast.error(e.message),
   });
 
+  const tabDefs: Array<{ key: LiqTabKey; label: string; icon: React.ElementType; count?: number }> = [
+    { key: 'todo', label: 'Todo', icon: LayoutDashboard },
+    { key: 'resumen', label: 'Resumen', icon: DollarSign },
+    { key: 'ventas', label: 'Ventas', icon: ShoppingCart, count: ventasActivas.length },
+    { key: 'productos', label: 'Productos', icon: PackageCheck, count: productosArr.length },
+    { key: 'cobros', label: 'Cobros', icon: CreditCard, count: (cobros || []).length },
+    { key: 'entregas', label: 'Entregas', icon: Truck, count: entregasList.length },
+    { key: 'gastos', label: 'Gastos', icon: TrendingDown, count: (gastos || []).length },
+    { key: 'devoluciones', label: 'Devoluciones', icon: RotateCcw, count: devLineas.length },
+    { key: 'inventario', label: 'Inventario / carga', icon: Boxes },
+  ];
+  const show = (key: Exclude<LiqTabKey, 'todo'>) => activeTab === 'todo' || activeTab === key;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-lg max-w-5xl w-full max-h-[90dvh] overflow-auto">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      <div className="flex flex-col h-full w-full overflow-hidden">
         {/* Header */}
-        <div className="p-5 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between shrink-0 bg-card">
           <div>
             <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-              <PackageCheck className="h-5 w-5" /> Revisión completa de liquidación
+              <PackageCheck className="h-5 w-5 text-primary" /> Revisión completa de liquidación
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {(descarga as any).vendedores?.nombre ?? 'Sin vendedor'} — {
@@ -752,8 +776,47 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           </div>
         </div>
 
+        {/* Tabs nav */}
+        <div className="shrink-0 border-b border-border bg-card/95 backdrop-blur px-5 overflow-x-auto">
+          <div className="flex items-center gap-1.5 py-2 w-max min-w-full">
+            {tabDefs.map(tab => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold transition-colors',
+                    active
+                      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                      : 'border-transparent bg-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {tab.label}
+                  {tab.count != null && (
+                    <span className={cn(
+                      'min-w-5 rounded-full px-1.5 py-0.5 text-center text-[9px] font-black',
+                      active ? 'bg-primary-foreground/15 text-primary-foreground' : 'bg-muted text-muted-foreground',
+                    )}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto">
+        <div className="max-w-[1500px] mx-auto w-full px-5 py-5 space-y-4">
+
         {/* ═══ RESUMEN GENERAL ═══ */}
-        <div className="px-5 py-4">
+        {show('resumen') && (
+        <div className="bg-card border border-border rounded-xl shadow-sm p-5">
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
             <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Ventas contado</div>
@@ -794,8 +857,10 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             </div>
           </div>
         </div>
+        )}
 
         {/* ═══ CUADRE DE EFECTIVO ═══ */}
+        {show('resumen') && (
         <SectionCard title="Cuadre de efectivo" icon={DollarSign}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Vendor declared */}
@@ -945,43 +1010,47 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             </div>
           </div>
         </SectionCard>
+        )}
 
         {/* ═══ VENTAS DEL PERIODO ═══ */}
+        {show('ventas') && (
         <SectionCard title={`Ventas del periodo (${ventasActivas.length})`} icon={ShoppingCart}>
           {ventasActivas.length > 0 ? (
-            <table className="w-full text-[12px]">
+            <div className="overflow-x-auto -mx-5 px-5">
+            <table className="w-full">
               <thead>
-                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-2">Folio</th>
-                  <th className="text-left py-2">Cliente</th>
-                  <th className="text-left py-2">Pago</th>
-                  <th className="text-left py-2">Estado</th>
-                  <th className="text-right py-2">Total</th>
+                <tr className={THEAD_TR}>
+                  <th className={TH}>Folio</th>
+                  <th className={TH}>Cliente</th>
+                  <th className={TH}>Pago</th>
+                  <th className={TH}>Estado</th>
+                  <th className={cn(TH, "text-right")}>Total</th>
                 </tr>
               </thead>
               <tbody>
                 {ventasActivas.map((v: any) => (
-                  <tr key={v.id} className="border-b border-border/50">
-                    <td className="py-1.5 font-mono text-foreground">{v.folio ?? '—'}</td>
-                    <td className="py-1.5">{v.clientes?.nombre ?? '—'}</td>
-                    <td className="py-1.5">
+                  <tr key={v.id} className={TBODY_TR}>
+                    <td className={cn(TD, "font-mono text-foreground")}>{v.folio ?? '—'}</td>
+                    <td className={TD}>{v.clientes?.nombre ?? '—'}</td>
+                    <td className={TD}>
                       <span className={cn(
-                        "text-[10px] px-1.5 py-0.5 rounded-full font-semibold",
+                        "text-[11px] px-2 py-0.5 rounded-full font-semibold",
                         v.condicion_pago === 'contado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
                       )}>{v.condicion_pago}</span>
                     </td>
-                    <td className="py-1.5 text-[10px] text-muted-foreground">{v.status}</td>
-                    <td className="py-1.5 text-right font-semibold">{fmt(Number(v.total))}</td>
+                    <td className={cn(TD, "text-[11px] text-muted-foreground")}>{v.status}</td>
+                    <td className={cn(TD, "text-right font-semibold")}>{fmt(Number(v.total))}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t border-border font-bold text-[12px]">
-                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Total ventas activas:</td>
-                  <td className="py-2 text-right">{fmt(totalVentasGeneral)}</td>
+                <tr className={TFOOT_TR}>
+                  <td colSpan={4} className="py-3 px-3 text-right text-muted-foreground">Total ventas activas:</td>
+                  <td className="py-3 px-3 text-right">{fmt(totalVentasGeneral)}</td>
                 </tr>
               </tfoot>
             </table>
+            </div>
           ) : <p className="text-sm text-muted-foreground">Sin ventas en este periodo</p>}
 
           {/* Cancelled sales */}
@@ -990,7 +1059,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               <div className="text-[11px] font-semibold text-destructive uppercase mb-2">Ventas canceladas ({ventasCanceladas.length})</div>
               <div className="space-y-1">
                 {ventasCanceladas.map((v: any) => (
-                  <div key={v.id} className="flex items-center justify-between bg-destructive/5 rounded px-3 py-1.5 text-[12px]">
+                  <div key={v.id} className="flex items-center justify-between bg-destructive/5 rounded px-3 py-2 text-[13px]">
                     <span className="font-mono">{v.folio ?? '—'}</span>
                     <span>{v.clientes?.nombre ?? '—'}</span>
                     <span className="font-semibold text-destructive line-through">{fmt(Number(v.total))}</span>
@@ -1000,106 +1069,120 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             </div>
           )}
         </SectionCard>
+        )}
 
         {/* ═══ PRODUCTOS VENDIDOS (AGREGADO) ═══ */}
+        {show('productos') && (
         <SectionCard title={`Productos vendidos (${productosArr.length})`} icon={PackageCheck}>
           {productosArr.length > 0 ? (
-            <table className="w-full text-[12px]">
+            <div className="overflow-x-auto -mx-5 px-5">
+            <table className="w-full">
               <thead>
-                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-2">Producto</th>
-                  <th className="text-left py-2">Código</th>
-                  <th className="text-right py-2">Cantidad</th>
-                  <th className="text-right py-2">Total</th>
+                <tr className={THEAD_TR}>
+                  <th className={TH}>Producto</th>
+                  <th className={TH}>Código</th>
+                  <th className={cn(TH, "text-right")}>Cantidad</th>
+                  <th className={cn(TH, "text-right")}>Total</th>
                 </tr>
               </thead>
               <tbody>
                 {productosArr.map((p, i) => (
-                  <tr key={i} className="border-b border-border/50">
-                    <td className="py-1.5 font-medium">{p.nombre}</td>
-                    <td className="py-1.5 font-mono text-muted-foreground">{p.codigo}</td>
-                    <td className="py-1.5 text-right">{p.cantidad}</td>
-                    <td className="py-1.5 text-right font-semibold">{fmt(p.total)}</td>
+                  <tr key={i} className={TBODY_TR}>
+                    <td className={cn(TD, "font-medium")}>{p.nombre}</td>
+                    <td className={cn(TD, "font-mono text-muted-foreground")}>{p.codigo}</td>
+                    <td className={cn(TD, "text-right")}>{p.cantidad}</td>
+                    <td className={cn(TD, "text-right font-semibold")}>{fmt(p.total)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           ) : <p className="text-sm text-muted-foreground">Sin productos vendidos en este periodo</p>}
         </SectionCard>
+        )}
 
         {/* ═══ COBROS RECIBIDOS ═══ */}
+        {show('cobros') && (
         <SectionCard title={`Cobros recibidos (${(cobros || []).length})`} icon={CreditCard}>
           {(cobros || []).length > 0 ? (
             <>
-              <div className="flex flex-wrap gap-2 mb-3">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {Object.entries(cobrosPorMetodo).map(([metodo, total]) => (
-                  <div key={metodo} className="bg-card rounded-md px-3 py-2 text-[12px]">
+                  <div key={metodo} className="bg-muted/40 border border-border rounded-md px-3 py-2 text-[13px]">
                     <span className="text-muted-foreground capitalize">{metodo}:</span>{' '}
                     <span className="font-bold">{fmt(total)}</span>
                   </div>
                 ))}
               </div>
-              <table className="w-full text-[12px]">
+              <div className="overflow-x-auto -mx-5 px-5">
+              <table className="w-full">
                 <thead>
-                  <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-2">Cliente</th>
-                    <th className="text-left py-2">Método</th>
-                    <th className="text-left py-2">Referencia</th>
-                    <th className="text-right py-2">Monto</th>
+                  <tr className={THEAD_TR}>
+                    <th className={TH}>Cliente</th>
+                    <th className={TH}>Método</th>
+                    <th className={TH}>Referencia</th>
+                    <th className={cn(TH, "text-right")}>Monto</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(cobros || []).map((c: any) => (
-                    <tr key={c.id} className="border-b border-border/50">
-                      <td className="py-1.5">{c.clientes?.nombre ?? '—'}</td>
-                      <td className="py-1.5 capitalize">{c.metodo_pago}</td>
-                      <td className="py-1.5 text-muted-foreground font-mono">{c.referencia || '—'}</td>
-                      <td className="py-1.5 text-right font-semibold">{fmt(Number(c.monto))}</td>
+                    <tr key={c.id} className={TBODY_TR}>
+                      <td className={TD}>{c.clientes?.nombre ?? '—'}</td>
+                      <td className={cn(TD, "capitalize")}>{c.metodo_pago}</td>
+                      <td className={cn(TD, "text-muted-foreground font-mono")}>{c.referencia || '—'}</td>
+                      <td className={cn(TD, "text-right font-semibold")}>{fmt(Number(c.monto))}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t border-border font-bold">
-                    <td colSpan={3} className="py-2 text-right text-muted-foreground">Total cobros:</td>
-                    <td className="py-2 text-right">{fmt(totalCobros)}</td>
+                  <tr className={TFOOT_TR}>
+                    <td colSpan={3} className="py-3 px-3 text-right text-muted-foreground">Total cobros:</td>
+                    <td className="py-3 px-3 text-right">{fmt(totalCobros)}</td>
                   </tr>
                 </tfoot>
               </table>
+              </div>
             </>
           ) : <p className="text-sm text-muted-foreground">Sin cobros en este periodo</p>}
         </SectionCard>
+        )}
 
         {/* ═══ GASTOS ═══ */}
+        {show('gastos') && (
         <SectionCard title={`Gastos (${(gastos || []).length})`} icon={TrendingDown}>
           {(gastos || []).length > 0 ? (
-            <table className="w-full text-[12px]">
+            <div className="overflow-x-auto -mx-5 px-5">
+            <table className="w-full">
               <thead>
-                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-2">Concepto</th>
-                  <th className="text-left py-2">Notas</th>
-                  <th className="text-right py-2">Monto</th>
+                <tr className={THEAD_TR}>
+                  <th className={TH}>Concepto</th>
+                  <th className={TH}>Notas</th>
+                  <th className={cn(TH, "text-right")}>Monto</th>
                 </tr>
               </thead>
               <tbody>
                 {(gastos || []).map((g: any) => (
-                  <tr key={g.id} className="border-b border-border/50">
-                    <td className="py-1.5 font-medium">{g.concepto}</td>
-                    <td className="py-1.5 text-muted-foreground">{g.notas || '—'}</td>
-                    <td className="py-1.5 text-right font-semibold text-destructive">-{fmt(Number(g.monto))}</td>
+                  <tr key={g.id} className={TBODY_TR}>
+                    <td className={cn(TD, "font-medium")}>{g.concepto}</td>
+                    <td className={cn(TD, "text-muted-foreground")}>{g.notas || '—'}</td>
+                    <td className={cn(TD, "text-right font-semibold text-destructive")}>-{fmt(Number(g.monto))}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t border-border font-bold">
-                  <td colSpan={2} className="py-2 text-right text-muted-foreground">Total gastos:</td>
-                  <td className="py-2 text-right text-destructive">-{fmt(totalGastos)}</td>
+                <tr className={TFOOT_TR}>
+                  <td colSpan={2} className="py-3 px-3 text-right text-muted-foreground">Total gastos:</td>
+                  <td className="py-3 px-3 text-right text-destructive">-{fmt(totalGastos)}</td>
                 </tr>
               </tfoot>
             </table>
+            </div>
           ) : <p className="text-sm text-muted-foreground">Sin gastos en este periodo</p>}
         </SectionCard>
+        )}
 
         {/* ═══ DEVOLUCIONES ═══ */}
+        {show('devoluciones') && (
         <SectionCard title={`Devoluciones (${totalDevUnidades} uds · ${devLineas.length} líneas)`} icon={RotateCcw}>
           {devLineas.length > 0 ? (
             <>
@@ -1110,37 +1193,38 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   </span>
                 </div>
               )}
-              <table className="w-full text-[12px]">
+              <div className="overflow-x-auto -mx-5 px-5">
+              <table className="w-full">
                 <thead>
-                  <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-2">Producto</th>
-                    <th className="text-left py-2">Cliente</th>
-                    <th className="text-right py-2">Cant.</th>
-                    <th className="text-left py-2">Motivo</th>
-                    <th className="text-left py-2">Acción</th>
-                    <th className="text-right py-2">Crédito</th>
+                  <tr className={THEAD_TR}>
+                    <th className={TH}>Producto</th>
+                    <th className={TH}>Cliente</th>
+                    <th className={cn(TH, "text-right")}>Cant.</th>
+                    <th className={TH}>Motivo</th>
+                    <th className={TH}>Acción</th>
+                    <th className={cn(TH, "text-right")}>Crédito</th>
                   </tr>
                 </thead>
                 <tbody>
                   {devLineas.map((d, i) => (
-                    <tr key={i} className="border-b border-border/50">
-                      <td className="py-1.5">
+                    <tr key={i} className={TBODY_TR}>
+                      <td className={TD}>
                         <span className="font-medium">{d.nombre}</span>
-                        {d.codigo && <span className="text-muted-foreground font-mono ml-1 text-[10px]">{d.codigo}</span>}
+                        {d.codigo && <span className="text-muted-foreground font-mono ml-1 text-[11px]">{d.codigo}</span>}
                       </td>
-                      <td className="py-1.5 text-muted-foreground">{d.cliente}</td>
-                      <td className="py-1.5 text-right font-semibold">{d.cantidad}</td>
-                      <td className="py-1.5">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-card border border-border text-foreground font-medium">
+                      <td className={cn(TD, "text-muted-foreground")}>{d.cliente}</td>
+                      <td className={cn(TD, "text-right font-semibold")}>{d.cantidad}</td>
+                      <td className={TD}>
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-card border border-border text-foreground font-medium">
                           {MOTIVO_LABELS[d.motivo] ?? d.motivo.replace(/_/g, ' ')}
                         </span>
                       </td>
-                      <td className="py-1.5">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent text-foreground font-medium">
+                      <td className={TD}>
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent text-foreground font-medium">
                           {ACCION_LABELS[d.accion] ?? d.accion}
                         </span>
                       </td>
-                      <td className="py-1.5 text-right font-semibold">
+                      <td className={cn(TD, "text-right font-semibold")}>
                         {d.monto_credito > 0 ? <span className="text-destructive">{fmt(d.monto_credito)}</span> : '—'}
                       </td>
                     </tr>
@@ -1148,18 +1232,21 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 </tbody>
                 {totalDevCredito > 0 && (
                   <tfoot>
-                    <tr className="border-t border-border font-bold text-[12px]">
-                      <td colSpan={5} className="py-2 text-right text-muted-foreground">Total crédito:</td>
-                      <td className="py-2 text-right text-destructive">{fmt(totalDevCredito)}</td>
+                    <tr className={TFOOT_TR}>
+                      <td colSpan={5} className="py-3 px-3 text-right text-muted-foreground">Total crédito:</td>
+                      <td className="py-3 px-3 text-right text-destructive">{fmt(totalDevCredito)}</td>
                     </tr>
                   </tfoot>
                 )}
               </table>
+              </div>
             </>
           ) : <p className="text-sm text-muted-foreground">Sin devoluciones en este periodo</p>}
         </SectionCard>
+        )}
 
         {/* ═══ ENTREGAS REALIZADAS ═══ */}
+        {show('entregas') && (
         <SectionCard title={`Entregas realizadas (${entregasList.length})`} icon={Truck}>
           {entregasList.length > 0 ? (
             <div className="space-y-3">
@@ -1169,9 +1256,9 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 const udsEntregadas = lineas.filter(l => l.hecho).reduce((s, l) => s + (Number(l.cantidad_entregada) || 0), 0);
                 const udsNoEntregadas = lineas.filter(l => !l.hecho).reduce((s, l) => s + (Number(l.cantidad ?? l.cantidad_entregada) || 0), 0);
                 return (
-                  <div key={e.id} className="border border-border rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 bg-muted/40 flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-3 text-[12px]">
+                  <div key={e.id} className="border border-table-border rounded-lg overflow-hidden">
+                    <div className="px-3 py-2.5 bg-muted/40 flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-3 text-[13px]">
                         <span className="font-mono font-semibold text-foreground">{e.folio ?? '—'}</span>
                         <span className="text-muted-foreground">Pedido <span className="font-mono">{e.ventas?.folio ?? '—'}</span></span>
                         <span className="text-foreground">{e.clientes?.nombre ?? '—'}</span>
@@ -1188,24 +1275,24 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                       </div>
                     </div>
                     {lineas.length > 0 ? (
-                      <table className="w-full text-[12px]">
+                      <table className="w-full text-[13px]">
                         <thead>
-                          <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                            <th className="text-left py-1.5 px-3">Producto</th>
-                            <th className="text-left py-1.5">Código</th>
-                            <th className="text-right py-1.5">Pedidas</th>
-                            <th className="text-right py-1.5">Entregadas</th>
-                            <th className="text-center py-1.5 px-3">Estado</th>
+                          <tr className="text-[11px] text-muted-foreground uppercase border-b border-table-border bg-muted/20">
+                            <th className="text-left py-2 px-3">Producto</th>
+                            <th className="text-left py-2">Código</th>
+                            <th className="text-right py-2">Pedidas</th>
+                            <th className="text-right py-2">Entregadas</th>
+                            <th className="text-center py-2 px-3">Estado</th>
                           </tr>
                         </thead>
                         <tbody>
                           {lineas.map((l: any, i: number) => (
-                            <tr key={i} className="border-b border-border/40 last:border-b-0">
-                              <td className="py-1.5 px-3">{l.productos?.nombre ?? '—'}</td>
-                              <td className="py-1.5 font-mono text-muted-foreground">{l.productos?.codigo ?? ''}</td>
-                              <td className="py-1.5 text-right">{Number(l.cantidad ?? 0)}</td>
-                              <td className="py-1.5 text-right font-semibold">{Number(l.cantidad_entregada ?? 0)}</td>
-                              <td className="py-1.5 px-3 text-center">
+                            <tr key={i} className="border-b border-table-border/60 last:border-b-0 hover:bg-table-hover transition-colors">
+                              <td className="py-2 px-3">{l.productos?.nombre ?? '—'}</td>
+                              <td className="py-2 font-mono text-muted-foreground">{l.productos?.codigo ?? ''}</td>
+                              <td className="py-2 text-right">{Number(l.cantidad ?? 0)}</td>
+                              <td className="py-2 text-right font-semibold">{Number(l.cantidad_entregada ?? 0)}</td>
+                              <td className="py-2 px-3 text-center">
                                 {l.hecho ? (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold">
                                     <CheckCircle2 className="h-3 w-3" /> Entregado
@@ -1226,7 +1313,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   </div>
                 );
               })}
-              <div className="flex items-center justify-end gap-4 text-[12px] font-bold pt-2 border-t border-border">
+              <div className="flex items-center justify-end gap-4 text-[13px] font-bold pt-3 border-t border-border">
                 <span className="text-muted-foreground">Totales:</span>
                 <span>{totalEntregaUnidades} uds entregadas</span>
                 <span>{fmt(totalEntregaMonto)}</span>
@@ -1234,26 +1321,31 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             </div>
           ) : <p className="text-sm text-muted-foreground">Sin entregas en este periodo</p>}
         </SectionCard>
+        )}
 
-        {/* ═══ STOCK EN ALMACÉN ═══ */}
+        {/* ═══ STOCK EN ALMACÉN Y CUADRE DE PRODUCTOS ═══ */}
+        {show('inventario') && (
+        <>
         {incluirStock && stockItems.length > 0 && (
           <SectionCard title={`Stock — ${almacenNombre}`} icon={Package}>
-            <table className="w-full text-[12px]">
+            <div className="overflow-x-auto -mx-5 px-5">
+            <table className="w-full">
               <thead>
-                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-1.5">Producto</th>
-                  <th className="text-right py-1.5">Existencia</th>
+                <tr className={THEAD_TR}>
+                  <th className={TH}>Producto</th>
+                  <th className={cn(TH, "text-right")}>Existencia</th>
                 </tr>
               </thead>
               <tbody>
                 {stockItems.map((p: any, i: number) => (
-                  <tr key={i} className="border-b border-border/50">
-                    <td className="py-1">{p.nombre} <span className="text-muted-foreground font-mono text-[10px]">{p.codigo}</span></td>
-                    <td className="py-1 text-right font-semibold">{p.cantidad}</td>
+                  <tr key={i} className={TBODY_TR}>
+                    <td className={TD}>{p.nombre} <span className="text-muted-foreground font-mono text-[11px]">{p.codigo}</span></td>
+                    <td className={cn(TD, "text-right font-semibold")}>{p.cantidad}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </SectionCard>
         )}
         {incluirStock && stockItems.length === 0 && (
@@ -1264,13 +1356,13 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
 
         {(lineas || []).length > 0 && (
           <SectionCard title="Cuadre de productos (carga)" icon={PackageCheck}>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               {(lineas || []).map((l: any) => {
                 const d = Number(l.diferencia);
                 return (
                   <div key={l.id} className={cn(
-                    "flex items-center justify-between rounded px-3 py-1.5 text-[12px]",
-                    d !== 0 ? "bg-amber-50 border border-amber-200" : "bg-card"
+                    "flex items-center justify-between rounded-md px-3 py-2 text-[13px]",
+                    d !== 0 ? "bg-amber-50 border border-amber-200" : "bg-muted/20 border border-transparent"
                   )}>
                     <span className="font-medium">{(l as any).productos?.nombre}</span>
                     <div className="flex items-center gap-3">
@@ -1288,10 +1380,12 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             </div>
           </SectionCard>
         )}
+        </>
+        )}
 
         {/* ═══ ADMIN ACTIONS ═══ */}
         {isPendiente && (
-          <div className="p-5 border-t border-border space-y-3">
+          <div className="bg-card border border-border rounded-xl shadow-sm p-5 space-y-3">
             {descarga.descargo_camion && (
               <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
                 <label className="text-[11px] font-semibold text-amber-800 uppercase block mb-1 flex items-center gap-1">
@@ -1332,11 +1426,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         )}
 
         {descarga.notas_supervisor && !isPendiente && (
-          <div className="px-5 py-3 border-t border-border">
+          <div className="bg-card border border-border rounded-xl shadow-sm px-5 py-4">
             <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-1">Notas del administrador</div>
             <p className="text-[13px] text-foreground">{descarga.notas_supervisor}</p>
           </div>
         )}
+
+        </div>
+        </div>
       </div>
     </div>
   );
