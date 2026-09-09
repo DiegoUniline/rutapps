@@ -108,6 +108,12 @@ export function PedidosTabs() {
 
   return (
     <>
+      <style>{`
+        body[data-pedidos-page="entregas"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > button:not([class*="gap-1.5"]) {
+          display: none !important;
+        }
+      `}</style>
+
       {filtersOpen && (
         <button
           type="button"
