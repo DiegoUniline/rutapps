@@ -1,3 +1,4 @@
+import { useDeferredValue } from 'react';
 import { todayLocal } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -9,10 +10,15 @@ export type StatusEntrega = 'borrador' | 'surtido' | 'asignado' | 'cargado' | 'e
 
 export function useEntregasList(search?: string, vendedorFilter?: string, statusFilter?: string) {
   const { empresa } = useAuth();
+  const deferredSearch = useDeferredValue((search ?? '').trim());
+
   return useQuery({
-    queryKey: ['entregas-list', empresa?.id, search, vendedorFilter, statusFilter],
+    queryKey: ['entregas-list', empresa?.id, deferredSearch, vendedorFilter, statusFilter],
     enabled: !!empresa?.id,
-    staleTime: 30_000,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: previous => previous,
     queryFn: async () => {
       return fetchAllPages((from, to) => {
         let q = supabase
@@ -22,7 +28,7 @@ export function useEntregasList(search?: string, vendedorFilter?: string, status
           .order('created_at', { ascending: false })
           .range(from, to);
 
-        if (search) q = q.or(`folio.ilike.%${search}%`);
+        if (deferredSearch) q = q.or(`folio.ilike.%${deferredSearch}%`);
         if (vendedorFilter && vendedorFilter !== 'todos') q = q.eq('vendedor_id', vendedorFilter);
         if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
         return q;
