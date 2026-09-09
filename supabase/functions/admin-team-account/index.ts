@@ -20,6 +20,8 @@ const generateTemporaryPassword = () => {
   return password;
 };
 
+type AccessMode = 'invite' | 'direct' | 'reset_password';
+
 Deno.serve(async request => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -40,16 +42,16 @@ Deno.serve(async request => {
 
     const admin = createClient(supabaseUrl, serviceKey);
     const { data: isSuperAdmin } = await admin.rpc('is_super_admin', { p_user_id: callerId });
-    if (!isSuperAdmin) return json({ error: 'Solo un super administrador puede dar acceso al equipo' }, 403);
+    if (!isSuperAdmin) return json({ error: 'Solo un super administrador puede administrar accesos del equipo' }, 403);
 
     const body = await request.json();
     const personId = body?.person_id as string | undefined;
-    const accessMode = (body?.access_mode || 'invite') as 'invite' | 'direct';
+    const accessMode = (body?.access_mode || 'invite') as AccessMode;
     const requestedPassword = typeof body?.temporary_password === 'string' ? body.temporary_password.trim() : '';
     if (!personId) return json({ error: 'Falta el integrante' }, 400);
-    if (!['invite', 'direct'].includes(accessMode)) return json({ error: 'Modalidad de acceso inválida' }, 400);
-    if (accessMode === 'direct' && requestedPassword && requestedPassword.length < 8) {
-      return json({ error: 'La contraseña temporal debe tener al menos 8 caracteres' }, 400);
+    if (!['invite', 'direct', 'reset_password'].includes(accessMode)) return json({ error: 'Modalidad de acceso inválida' }, 400);
+    if ((accessMode === 'direct' || accessMode === 'reset_password') && requestedPassword && requestedPassword.length < 8) {
+      return json({ error: 'La contraseña debe tener al menos 8 caracteres' }, 400);
     }
 
     const { data: person, error: personError } = await admin
@@ -60,7 +62,7 @@ Deno.serve(async request => {
     if (personError || !person || person.person_type !== 'internal') {
       return json({ error: 'El integrante interno no existe' }, 404);
     }
-    if (!person.is_active) return json({ error: 'Reactiva al integrante antes de darle acceso' }, 409);
+    if (!person.is_active) return json({ error: 'Reactiva al integrante antes de administrar su acceso' }, 409);
     if (!person.email) return json({ error: 'El integrante necesita un correo' }, 409);
 
     const email = person.email.trim().toLowerCase();
@@ -76,6 +78,31 @@ Deno.serve(async request => {
     const existingAccount = Boolean(userId);
     let invited = false;
     let temporaryPassword: string | null = null;
+
+    if (accessMode === 'reset_password') {
+      if (!userId) return json({ error: 'Este integrante todavía no tiene una cuenta vinculada' }, 409);
+      temporaryPassword = requestedPassword || generateTemporaryPassword();
+      const { error: updateError } = await admin.auth.admin.updateUserById(userId, {
+        password: temporaryPassword,
+      });
+      if (updateError) return json({ error: updateError.message || 'No se pudo cambiar la contraseña' }, 400);
+
+      const { error: linkError } = await admin.rpc('admin_link_team_account', {
+        p_person_id: person.id,
+        p_user_id: userId,
+      });
+      if (linkError) throw linkError;
+
+      return json({
+        ok: true,
+        user_id: userId,
+        existing_account: true,
+        access_mode: accessMode,
+        password_changed: true,
+        email,
+        temporary_password: temporaryPassword,
+      });
+    }
 
     if (!userId && accessMode === 'invite') {
       const siteUrl = (Deno.env.get('SITE_URL') || request.headers.get('origin') || 'https://rutapp.mx').replace(/\/$/, '');
