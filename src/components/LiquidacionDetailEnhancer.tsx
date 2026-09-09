@@ -25,6 +25,7 @@ type DetailDom = {
   header: HTMLElement;
   navHost: HTMLElement;
   main: HTMLElement;
+  pageRoot: HTMLElement;
 };
 
 const TABS: Array<{ key: TabKey; label: string; icon: typeof LayoutDashboard }> = [
@@ -80,7 +81,8 @@ function findDetail(): DetailDom | null {
   const panel = header.parentElement;
   const overlay = panel?.parentElement;
   const main = overlay?.closest<HTMLElement>('main');
-  if (!(panel instanceof HTMLElement) || !(overlay instanceof HTMLElement) || !(main instanceof HTMLElement)) return null;
+  const pageRoot = overlay?.parentElement;
+  if (!(panel instanceof HTMLElement) || !(overlay instanceof HTMLElement) || !(main instanceof HTMLElement) || !(pageRoot instanceof HTMLElement)) return null;
 
   let navHost = panel.querySelector<HTMLElement>('[data-liquidacion-detail-nav="true"]');
   if (!navHost) {
@@ -89,7 +91,7 @@ function findDetail(): DetailDom | null {
     header.insertAdjacentElement('afterend', navHost);
   }
 
-  return { panel, overlay, header, navHost, main };
+  return { panel, overlay, header, navHost, main, pageRoot };
 }
 
 function classifySection(element: HTMLElement): SectionKey {
@@ -103,7 +105,7 @@ function classifySection(element: HTMLElement): SectionKey {
   if (headingText.includes('cuadre de efectivo')) return 'resumen';
   if (headingText.includes('ventas del periodo')) return 'ventas';
   if (headingText.includes('productos vendidos')) return 'productos';
-  if (headingText.includes('cobros recibidos')) return 'cobros';
+  if (headingText.includes('cobros recibidos') || headingText.includes('abonos por cliente')) return 'cobros';
   if (headingText.includes('entregas realizadas')) return 'entregas';
   if (headingText.startsWith('gastos')) return 'gastos';
   if (headingText.includes('devoluciones')) return 'devoluciones';
@@ -118,69 +120,74 @@ function directContent(dom: DetailDom) {
   );
 }
 
+function pageSiblings(dom: DetailDom) {
+  return Array.from(dom.pageRoot.children).filter((child): child is HTMLElement =>
+    child instanceof HTMLElement && child !== dom.overlay
+  );
+}
+
 function cardify(element: HTMLElement) {
   setStyle(element, 'min-width', '0');
-  setStyle(element, 'background', 'hsl(var(--card))');
-  setStyle(element, 'border', '1px solid hsl(var(--border))');
-  setStyle(element, 'border-radius', '12px');
-  setStyle(element, 'overflow', 'hidden');
-  setStyle(element, 'box-shadow', '0 1px 2px rgb(0 0 0 / 0.03)');
+  setStyle(element, 'background', 'hsl(var(--card))', true);
+  setStyle(element, 'border', '1px solid hsl(var(--border))', true);
+  setStyle(element, 'border-radius', '14px', true);
+  setStyle(element, 'box-shadow', '0 1px 2px rgb(0 0 0 / 0.035)');
 
   element.querySelectorAll<HTMLElement>('table').forEach(table => {
     setStyle(table, 'width', '100%');
     setStyle(table, 'border-collapse', 'collapse');
   });
-  element.querySelectorAll<HTMLElement>('thead th').forEach(cell => {
-    setStyle(cell, 'padding-top', '8px');
-    setStyle(cell, 'padding-bottom', '8px');
-  });
-  element.querySelectorAll<HTMLElement>('tbody td').forEach(cell => {
-    setStyle(cell, 'padding-top', '7px');
-    setStyle(cell, 'padding-bottom', '7px');
-  });
 }
 
-function applyShellBounds(dom: DetailDom) {
-  const { overlay, panel, header, navHost, main } = dom;
-  const rect = main.getBoundingClientRect();
-  const headerHeight = Math.max(58, header.getBoundingClientRect().height);
+/**
+ * Convierte el modal original en una vista real dentro del área central de RutApp.
+ * La lista queda desmontada visualmente mientras existe el detalle, pero el sidebar,
+ * selector de empresa, buscador y breadcrumb permanecen visibles.
+ */
+function applyInlineShell(dom: DetailDom) {
+  const { overlay, panel, header, navHost, pageRoot } = dom;
+
+  pageSiblings(dom).forEach(sibling => setStyle(sibling, 'display', 'none', true));
+
+  setStyle(pageRoot, 'padding', '0', true);
+  setStyle(pageRoot, 'margin', '0', true);
+  setStyle(pageRoot, 'max-width', 'none', true);
+  setStyle(pageRoot, 'background', 'hsl(var(--background))', true);
 
   overlay.dataset.liquidacionEnhanced = 'true';
-  setStyle(overlay, 'position', 'fixed', true);
+  setStyle(overlay, 'position', 'relative', true);
   setStyle(overlay, 'inset', 'auto', true);
-  setStyle(overlay, 'left', `${Math.max(0, rect.left)}px`, true);
-  setStyle(overlay, 'top', `${Math.max(0, rect.top)}px`, true);
-  setStyle(overlay, 'width', `${Math.max(320, rect.width)}px`, true);
-  setStyle(overlay, 'height', `${Math.max(320, rect.height)}px`, true);
+  setStyle(overlay, 'display', 'block', true);
+  setStyle(overlay, 'width', '100%', true);
+  setStyle(overlay, 'height', 'auto', true);
+  setStyle(overlay, 'min-height', '100%', true);
   setStyle(overlay, 'padding', '0', true);
-  setStyle(overlay, 'background', 'hsl(var(--muted) / 0.28)', true);
-  setStyle(overlay, 'align-items', 'stretch', true);
-  setStyle(overlay, 'justify-content', 'stretch', true);
-  setStyle(overlay, 'z-index', '35', true);
+  setStyle(overlay, 'margin', '0', true);
+  setStyle(overlay, 'background', 'hsl(var(--background))', true);
+  setStyle(overlay, 'z-index', 'auto', true);
 
   setStyle(panel, 'width', '100%', true);
   setStyle(panel, 'max-width', 'none', true);
-  setStyle(panel, 'height', '100%', true);
+  setStyle(panel, 'height', 'auto', true);
   setStyle(panel, 'max-height', 'none', true);
+  setStyle(panel, 'margin', '0', true);
   setStyle(panel, 'border-radius', '0', true);
   setStyle(panel, 'border', '0', true);
-  setStyle(panel, 'overflow-y', 'auto', true);
-  setStyle(panel, 'overflow-x', 'hidden', true);
-  setStyle(panel, 'background', 'hsl(var(--muted) / 0.22)', true);
-  setStyle(panel, 'scrollbar-gutter', 'stable');
+  setStyle(panel, 'overflow', 'visible', true);
+  setStyle(panel, 'background', 'hsl(var(--background))', true);
 
   setStyle(header, 'position', 'sticky', true);
   setStyle(header, 'top', '0', true);
   setStyle(header, 'z-index', '30', true);
   setStyle(header, 'background', 'hsl(var(--card))', true);
   setStyle(header, 'box-shadow', '0 1px 0 hsl(var(--border))', true);
-  setStyle(header, 'padding-top', '12px');
-  setStyle(header, 'padding-bottom', '12px');
+  setStyle(header, 'padding', '14px 20px', true);
 
+  const headerHeight = Math.max(58, header.getBoundingClientRect().height);
   setStyle(navHost, 'position', 'sticky', true);
   setStyle(navHost, 'top', `${headerHeight}px`, true);
   setStyle(navHost, 'z-index', '25', true);
-  setStyle(navHost, 'background', 'hsl(var(--background) / 0.96)', true);
+  setStyle(navHost, 'background', 'hsl(var(--background) / 0.98)', true);
   setStyle(navHost, 'backdrop-filter', 'blur(12px)', true);
   setStyle(navHost, 'border-bottom', '1px solid hsl(var(--border))', true);
 }
@@ -215,53 +222,53 @@ function previewHeight(key: SectionKey) {
     case 'ventas':
     case 'productos':
     case 'cobros':
-      return '390px';
+      return '285px';
     case 'entregas':
-      return '480px';
+      return '340px';
     case 'gastos':
     case 'devoluciones':
     case 'inventario':
-      return '330px';
+      return '250px';
     default:
       return 'none';
   }
 }
 
 function applyTodo(dom: DetailDom) {
-  const rect = dom.main.getBoundingClientRect();
-  const wide = rect.width >= 1120;
+  const wide = dom.main.getBoundingClientRect().width >= 1080;
 
   setStyle(dom.panel, 'display', 'grid', true);
   setStyle(dom.panel, 'grid-template-columns', wide ? 'repeat(12, minmax(0, 1fr))' : 'minmax(0, 1fr)', true);
-  setStyle(dom.panel, 'column-gap', '16px', true);
-  setStyle(dom.panel, 'row-gap', '16px', true);
+  setStyle(dom.panel, 'column-gap', '14px', true);
+  setStyle(dom.panel, 'row-gap', '14px', true);
   setStyle(dom.panel, 'align-content', 'start', true);
-  setStyle(dom.panel, 'padding', '0 18px 24px', true);
+  setStyle(dom.panel, 'padding', '0 16px 24px', true);
 
   [dom.header, dom.navHost].forEach(element => {
     setStyle(element, 'grid-column', '1 / -1', true);
-    setStyle(element, 'margin-left', '-18px', true);
-    setStyle(element, 'margin-right', '-18px', true);
+    setStyle(element, 'margin-left', '-16px', true);
+    setStyle(element, 'margin-right', '-16px', true);
   });
 
   directContent(dom).forEach(element => {
     const key = classifySection(element);
     element.dataset.liqSection = key;
-    element.style.removeProperty('display');
+    element.style.setProperty('display', 'block', 'important');
     cardify(element);
     setStyle(element, 'grid-column', todoColumn(key, wide), true);
     setStyle(element, 'margin', '0', true);
-    setStyle(element, 'max-width', 'none', true);
     setStyle(element, 'width', 'auto', true);
+    setStyle(element, 'max-width', 'none', true);
 
     const maxHeight = previewHeight(key);
     if (maxHeight !== 'none') {
+      // Todo = vista ejecutiva. No crea scrolls internos: recorta el bloque y
+      // la pestaña correspondiente muestra el detalle completo.
       setStyle(element, 'max-height', maxHeight, true);
-      setStyle(element, 'overflow-y', 'auto', true);
-      setStyle(element, 'overscroll-behavior', 'contain');
+      setStyle(element, 'overflow', 'hidden', true);
     } else {
-      element.style.removeProperty('max-height');
-      if (key !== 'other') setStyle(element, 'overflow-y', 'visible');
+      setStyle(element, 'max-height', 'none', true);
+      setStyle(element, 'overflow', 'visible', true);
     }
   });
 }
@@ -274,11 +281,11 @@ function tabMatches(tab: TabKey, section: SectionKey) {
 
 function applyFocusedTab(dom: DetailDom, tab: Exclude<TabKey, 'todo'>) {
   setStyle(dom.panel, 'display', 'block', true);
-  setStyle(dom.panel, 'padding', '0 0 28px', true);
-  dom.header.style.removeProperty('margin-left');
-  dom.header.style.removeProperty('margin-right');
-  dom.navHost.style.removeProperty('margin-left');
-  dom.navHost.style.removeProperty('margin-right');
+  setStyle(dom.panel, 'padding', '0 0 32px', true);
+  setStyle(dom.header, 'margin-left', '0', true);
+  setStyle(dom.header, 'margin-right', '0', true);
+  setStyle(dom.navHost, 'margin-left', '0', true);
+  setStyle(dom.navHost, 'margin-right', '0', true);
 
   directContent(dom).forEach(element => {
     const key = classifySection(element);
@@ -289,7 +296,7 @@ function applyFocusedTab(dom: DetailDom, tab: Exclude<TabKey, 'todo'>) {
 
     cardify(element);
     setStyle(element, 'width', 'calc(100% - 32px)', true);
-    setStyle(element, 'max-width', '1480px', true);
+    setStyle(element, 'max-width', '1500px', true);
     setStyle(element, 'margin', '16px auto 0', true);
     setStyle(element, 'max-height', 'none', true);
     setStyle(element, 'overflow', 'visible', true);
@@ -299,7 +306,7 @@ function applyFocusedTab(dom: DetailDom, tab: Exclude<TabKey, 'todo'>) {
 function restoreDetail(dom: DetailDom | null) {
   if (!dom) return;
   delete dom.overlay.dataset.liquidacionEnhanced;
-  [dom.overlay, dom.panel, dom.header, dom.navHost, ...directContent(dom)].forEach(restoreStyle);
+  [dom.pageRoot, dom.overlay, dom.panel, dom.header, dom.navHost, ...pageSiblings(dom), ...directContent(dom)].forEach(restoreStyle);
   dom.navHost.remove();
 }
 
@@ -308,10 +315,7 @@ function countForSection(element: HTMLElement, key: SectionKey) {
   const match = heading.match(/\(([^)]+)\)/);
   if (!match) return null;
   const raw = match[1].trim();
-  if (key === 'devoluciones') {
-    const first = raw.match(/\d+/)?.[0];
-    return first ?? raw;
-  }
+  if (key === 'devoluciones') return raw.match(/\d+/)?.[0] ?? raw;
   return raw.split('·')[0].trim();
 }
 
@@ -346,13 +350,15 @@ export default function LiquidacionDetailEnhancer() {
           setDom(next);
 
           resizeObserver = new ResizeObserver(() => {
-            if (current) applyShellBounds(current);
+            if (!current) return;
+            applyInlineShell(current);
+            setRevision(value => value + 1);
           });
           resizeObserver.observe(next.main);
           resizeObserver.observe(next.header);
         }
 
-        applyShellBounds(next);
+        applyInlineShell(next);
         setRevision(value => value + 1);
       });
     };
@@ -373,33 +379,33 @@ export default function LiquidacionDetailEnhancer() {
 
   useEffect(() => {
     if (!dom) return;
-    applyShellBounds(dom);
+    applyInlineShell(dom);
     if (activeTab === 'todo') applyTodo(dom);
     else applyFocusedTab(dom, activeTab);
-    dom.panel.scrollTo({ top: 0, behavior: 'smooth' });
   }, [dom, activeTab, revision]);
 
   const counts = useMemo(() => {
+    if (!dom) return {} as Partial<Record<TabKey, string>>;
     const result: Partial<Record<TabKey, string>> = {};
-    if (!dom) return result;
-
     directContent(dom).forEach(element => {
       const key = classifySection(element);
-      if (!['ventas', 'productos', 'cobros', 'entregas', 'gastos', 'devoluciones'].includes(key)) return;
+      if (key === 'other' || key === 'summary' || key === 'supervision' || key === 'resumen') return;
       const count = countForSection(element, key);
       if (count != null) result[key as TabKey] = count;
     });
     return result;
+    // revision intentionally refreshes counts after async queries render.
   }, [dom, revision]);
 
   if (!dom) return null;
 
   return createPortal(
-    <div className="mx-auto flex w-full max-w-[1500px] items-center gap-1.5 overflow-x-auto px-4 py-2.5 sm:px-5">
-      <div className="mr-2 hidden shrink-0 items-center gap-2 border-r border-border pr-4 text-xs font-black text-foreground xl:flex">
+    <div className="mx-auto flex w-full max-w-[1600px] items-center gap-1.5 overflow-x-auto px-4 py-2.5 sm:px-5">
+      <div className="mr-2 hidden shrink-0 items-center gap-2 text-xs font-black text-foreground lg:flex">
         <ReceiptText className="h-4 w-4 text-primary" />
         Auditoría de liquidación
       </div>
+
       {TABS.map(tab => {
         const Icon = tab.icon;
         const active = activeTab === tab.key;
@@ -412,25 +418,23 @@ export default function LiquidacionDetailEnhancer() {
               'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold transition-colors',
               active
                 ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                : 'border-transparent bg-transparent text-muted-foreground hover:border-border hover:bg-card hover:text-foreground',
+                : 'border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground',
             )}
           >
             <Icon className="h-3.5 w-3.5" />
             {tab.label}
             {counts[tab.key] != null && (
-              <span className={cn(
-                'min-w-5 rounded-full px-1.5 py-0.5 text-center text-[9px] font-black',
-                active ? 'bg-primary-foreground/15 text-primary-foreground' : 'bg-muted text-muted-foreground',
-              )}>
+              <span className={cn('ml-0.5 rounded px-1 text-[9px]', active ? 'bg-white/15 text-primary-foreground' : 'bg-muted text-muted-foreground')}>
                 {counts[tab.key]}
               </span>
             )}
           </button>
         );
       })}
-      <span className="ml-auto hidden whitespace-nowrap text-[10px] font-medium text-muted-foreground 2xl:block">
+
+      <div className="ml-auto hidden shrink-0 text-[10px] font-medium text-muted-foreground 2xl:block">
         Todo = vista ejecutiva · pestaña = detalle completo
-      </span>
+      </div>
     </div>,
     dom.navHost,
   );
