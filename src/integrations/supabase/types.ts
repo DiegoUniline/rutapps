@@ -14,6 +14,174 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_trial_crm_activities: {
+        Row: {
+          activity_type: string
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          id: string
+          new_stage: string | null
+          note: string | null
+          outcome: string | null
+          previous_stage: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          id?: string
+          new_stage?: string | null
+          note?: string | null
+          outcome?: string | null
+          previous_stage?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          id?: string
+          new_stage?: string | null
+          note?: string | null
+          outcome?: string | null
+          previous_stage?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_trial_crm_activities_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_trial_crm_deletions: {
+        Row: {
+          age_days: number
+          deleted_at: string
+          deleted_by: string | null
+          email: string | null
+          empresa_id: string
+          empresa_nombre: string
+          id: string
+          licencia: string | null
+          reason: string
+          snapshot: Json
+          telefono: string | null
+        }
+        Insert: {
+          age_days: number
+          deleted_at?: string
+          deleted_by?: string | null
+          email?: string | null
+          empresa_id: string
+          empresa_nombre: string
+          id?: string
+          licencia?: string | null
+          reason: string
+          snapshot: Json
+          telefono?: string | null
+        }
+        Update: {
+          age_days?: number
+          deleted_at?: string
+          deleted_by?: string | null
+          email?: string | null
+          empresa_id?: string
+          empresa_nombre?: string
+          id?: string
+          licencia?: string | null
+          reason?: string
+          snapshot?: Json
+          telefono?: string | null
+        }
+        Relationships: []
+      }
+      admin_trial_crm_leads: {
+        Row: {
+          assigned_to: string | null
+          contact_attempts: number
+          converted_at: string | null
+          coupon_assigned_at: string | null
+          coupon_id: string | null
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          last_contact_at: string | null
+          lost_at: string | null
+          lost_by: string | null
+          lost_reason: string | null
+          next_follow_up_at: string | null
+          notes: string | null
+          stage: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          contact_attempts?: number
+          converted_at?: string | null
+          coupon_assigned_at?: string | null
+          coupon_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          last_contact_at?: string | null
+          lost_at?: string | null
+          lost_by?: string | null
+          lost_reason?: string | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          stage?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          contact_attempts?: number
+          converted_at?: string | null
+          coupon_assigned_at?: string | null
+          coupon_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          last_contact_at?: string | null
+          lost_at?: string | null
+          lost_by?: string | null
+          lost_reason?: string | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          stage?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_trial_crm_leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "commission_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_trial_crm_leads_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "cupones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_trial_crm_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ajustes_inventario: {
         Row: {
           almacen_id: string | null
@@ -2058,6 +2226,8 @@ export type Database = {
           captured_at: string
           captured_by_id: string | null
           channel: string
+          commission_starts_at: string | null
+          commissioned_by_id: string | null
           created_at: string
           empresa_id: string
           id: string
@@ -2070,6 +2240,8 @@ export type Database = {
           captured_at?: string
           captured_by_id?: string | null
           channel?: string
+          commission_starts_at?: string | null
+          commissioned_by_id?: string | null
           created_at?: string
           empresa_id: string
           id?: string
@@ -2082,6 +2254,8 @@ export type Database = {
           captured_at?: string
           captured_by_id?: string | null
           channel?: string
+          commission_starts_at?: string | null
+          commissioned_by_id?: string | null
           created_at?: string
           empresa_id?: string
           id?: string
@@ -2094,6 +2268,13 @@ export type Database = {
           {
             foreignKeyName: "commission_client_attributions_captured_by_id_fkey"
             columns: ["captured_by_id"]
+            isOneToOne: false
+            referencedRelation: "commission_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_client_attributions_commissioned_by_id_fkey"
+            columns: ["commissioned_by_id"]
             isOneToOne: false
             referencedRelation: "commission_people"
             referencedColumns: ["id"]
@@ -4198,6 +4379,154 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_commission_entries: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          base_amount: number
+          commission_amount: number
+          commission_fixed_amount: number
+          commission_mode: string
+          commission_pct: number
+          created_at: string
+          empresa_id: string
+          factura_id: string
+          id: string
+          invoice_number: string | null
+          paid_at: string | null
+          payment_number: number
+          payout_id: string | null
+          period: string
+          person_id: string
+          reversal_reason: string | null
+          reversed_at: string | null
+          rule_snapshot: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          base_amount: number
+          commission_amount: number
+          commission_fixed_amount?: number
+          commission_mode: string
+          commission_pct?: number
+          created_at?: string
+          empresa_id: string
+          factura_id: string
+          id?: string
+          invoice_number?: string | null
+          paid_at?: string | null
+          payment_number: number
+          payout_id?: string | null
+          period: string
+          person_id: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          rule_snapshot: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          base_amount?: number
+          commission_amount?: number
+          commission_fixed_amount?: number
+          commission_mode?: string
+          commission_pct?: number
+          created_at?: string
+          empresa_id?: string
+          factura_id?: string
+          id?: string
+          invoice_number?: string | null
+          paid_at?: string | null
+          payment_number?: number
+          payout_id?: string | null
+          period?: string
+          person_id?: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          rule_snapshot?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_commission_entries_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_commission_entries_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: true
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_commission_entries_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "internal_commission_payouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_commission_entries_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "commission_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internal_commission_payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          method: string | null
+          notes: string | null
+          paid_at: string
+          paid_by: string | null
+          person_id: string
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          paid_at?: string
+          paid_by?: string | null
+          person_id: string
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          paid_at?: string
+          paid_by?: string | null
+          person_id?: string
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_commission_payouts_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "commission_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internal_notification_reads: {
         Row: {
           notification_id: string
@@ -5800,6 +6129,104 @@ export type Database = {
           usuarios_incluidos?: number
         }
         Relationships: []
+      }
+      platform_team_member_audit_log: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_data: Json | null
+          person_id: string
+          previous_data: Json | null
+          reason: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          person_id: string
+          previous_data?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          person_id?: string
+          previous_data?: Json | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      platform_team_members: {
+        Row: {
+          access_level: string
+          access_scope: string
+          commission_fixed_amount: number
+          commission_mode: string
+          commission_payment_limit: number | null
+          commission_pct: number
+          created_at: string
+          created_by: string | null
+          invited_at: string | null
+          job_title: string | null
+          last_access_at: string | null
+          permissions: Json
+          person_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_level?: string
+          access_scope?: string
+          commission_fixed_amount?: number
+          commission_mode?: string
+          commission_payment_limit?: number | null
+          commission_pct?: number
+          created_at?: string
+          created_by?: string | null
+          invited_at?: string | null
+          job_title?: string | null
+          last_access_at?: string | null
+          permissions?: Json
+          person_id: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_level?: string
+          access_scope?: string
+          commission_fixed_amount?: number
+          commission_mode?: string
+          commission_payment_limit?: number | null
+          commission_pct?: number
+          created_at?: string
+          created_by?: string | null
+          invited_at?: string | null
+          job_title?: string | null
+          last_access_at?: string | null
+          permissions?: Json
+          person_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_team_members_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: true
+            referencedRelation: "commission_people"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       producto_almacen_config: {
         Row: {
@@ -9936,6 +10363,20 @@ export type Database = {
         }
         Returns: number
       }
+      admin_link_team_account: {
+        Args: { p_person_id: string; p_user_id: string }
+        Returns: Json
+      }
+      admin_pay_internal_commissions: {
+        Args: {
+          p_entry_ids: string[]
+          p_method?: string
+          p_notes?: string
+          p_person_id: string
+          p_reference?: string
+        }
+        Returns: Json
+      }
       admin_reparar_promociones: {
         Args: { _desde?: string; _empresa_id?: string }
         Returns: {
@@ -9979,6 +10420,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_save_team_member: {
+        Args: {
+          p_access_level?: string
+          p_access_scope?: string
+          p_change_reason?: string
+          p_commission_fixed_amount?: number
+          p_commission_mode?: string
+          p_commission_payment_limit?: number
+          p_commission_pct?: number
+          p_email?: string
+          p_job_title?: string
+          p_manager_id?: string
+          p_name?: string
+          p_notes?: string
+          p_person_id?: string
+          p_phone?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       admin_set_commission_client_attribution: {
         Args: {
           p_captured_at?: string
@@ -9993,6 +10454,8 @@ export type Database = {
           captured_at: string
           captured_by_id: string | null
           channel: string
+          commission_starts_at: string | null
+          commissioned_by_id: string | null
           created_at: string
           empresa_id: string
           id: string
@@ -10007,6 +10470,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      admin_set_internal_commission_status: {
+        Args: { p_entry_id: string; p_reason?: string; p_status: string }
+        Returns: Json
+      }
+      admin_set_team_company_assignment: {
+        Args: {
+          p_commissioned_by_id?: string
+          p_empresa_id: string
+          p_managed_by_id?: string
+          p_reason?: string
+        }
+        Returns: Json
       }
       admin_sync_duplicados: {
         Args: never
@@ -10203,6 +10679,71 @@ export type Database = {
         Args: { p_solicitud_id: string }
         Returns: undefined
       }
+      fn_admin_team_workspace: { Args: never; Returns: Json }
+      fn_admin_trial_crm_create_offer: {
+        Args: {
+          p_discount_pct?: number
+          p_empresa_id: string
+          p_months?: number
+          p_note?: string
+          p_valid_days?: number
+        }
+        Returns: Json
+      }
+      fn_admin_trial_crm_delete_candidate: {
+        Args: { p_confirmation: string; p_empresa_id: string; p_reason: string }
+        Returns: Json
+      }
+      fn_admin_trial_crm_history: {
+        Args: { p_empresa_id: string }
+        Returns: Json
+      }
+      fn_admin_trial_crm_log_contact: {
+        Args: { p_channel: string; p_empresa_id: string }
+        Returns: Json
+      }
+      fn_admin_trial_crm_mark_lost: {
+        Args: { p_empresa_id: string; p_outcome?: string; p_reason: string }
+        Returns: Json
+      }
+      fn_admin_trial_crm_restore_lost: {
+        Args: { p_empresa_id: string; p_note?: string }
+        Returns: Json
+      }
+      fn_admin_trial_crm_save: {
+        Args: {
+          p_activity_type?: string
+          p_assigned_to?: string
+          p_empresa_id: string
+          p_next_follow_up_at?: string
+          p_note?: string
+          p_outcome?: string
+          p_stage: string
+        }
+        Returns: Json
+      }
+      fn_admin_trial_crm_snapshot: {
+        Args: { p_max_age_days?: number; p_min_age_days?: number }
+        Returns: Json
+      }
+      fn_admin_trial_crm_workspace: { Args: { p_days?: number }; Returns: Json }
+      fn_customer_intelligence_detail: {
+        Args: {
+          p_cliente_id: string
+          p_empresa_id: string
+          p_months?: number
+          p_window_days?: number
+        }
+        Returns: Json
+      }
+      fn_customer_intelligence_snapshot: {
+        Args: {
+          p_empresa_id: string
+          p_inactive_days?: number
+          p_window_days?: number
+        }
+        Returns: Json
+      }
       fn_disponible_almacen: {
         Args: { p_almacen_id: string; p_producto_id: string }
         Returns: number
@@ -10227,6 +10768,20 @@ export type Database = {
         Args: { p_empresa_id: string; p_window_days?: number }
         Returns: Json
       }
+      fn_inventory_kardex_at_date: {
+        Args: {
+          p_almacen_id: string
+          p_empresa_id: string
+          p_fecha_desde: string
+          p_fecha_hasta: string
+          p_producto_id: string
+        }
+        Returns: Json
+      }
+      fn_inventory_stock_at_date: {
+        Args: { p_empresa_id: string; p_fecha: string }
+        Returns: Json
+      }
       fn_log_solicitud_traspaso: {
         Args: {
           p_accion: string
@@ -10236,6 +10791,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_my_team_access: { Args: never; Returns: Json }
       fn_netear_linea_promo: { Args: { _linea_id: string }; Returns: undefined }
       fn_recalc_venta_header: {
         Args: { p_venta_id: string }
@@ -10269,6 +10825,22 @@ export type Database = {
         Args: { p_venta_id: string }
         Returns: undefined
       }
+      fn_team_crm_log_contact: {
+        Args: { p_channel: string; p_empresa_id: string }
+        Returns: Json
+      }
+      fn_team_crm_save: {
+        Args: {
+          p_activity_type?: string
+          p_empresa_id: string
+          p_next_follow_up_at?: string
+          p_note?: string
+          p_outcome?: string
+          p_stage: string
+        }
+        Returns: Json
+      }
+      fn_team_portal_snapshot: { Args: never; Returns: Json }
       fn_venta_lineas_resumen: {
         Args: {
           p_cliente_ids?: string[]
@@ -10416,6 +10988,10 @@ export type Database = {
           ventas_max: number
         }[]
       }
+      get_team_visible_people: {
+        Args: { p_user_id?: string }
+        Returns: string[]
+      }
       get_user_archive_summary: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -10440,6 +11016,10 @@ export type Database = {
       is_email_blacklisted: { Args: { p_email: string }; Returns: boolean }
       is_empresa_admin: {
         Args: { p_empresa_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_platform_team_member: {
+        Args: { p_user_id?: string }
         Returns: boolean
       }
       is_sandbox_empresa: { Args: { p_empresa_id: string }; Returns: boolean }
