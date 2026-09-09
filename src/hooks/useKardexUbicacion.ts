@@ -24,6 +24,23 @@ export interface KardexUbicacionRow {
   destino_nombre: string | null;
 }
 
+interface KardexMovementRecord {
+  id: string;
+  fecha: string;
+  created_at: string;
+  tipo: string;
+  cantidad: number;
+  referencia_tipo: string | null;
+  referencia_id: string | null;
+  notas: string | null;
+  producto_id: string | null;
+  user_id: string | null;
+  almacen_origen_id: string | null;
+  almacen_destino_id: string | null;
+  vendedor_destino_id: string | null;
+  lote_id: string | null;
+}
+
 /**
  * Fetches inventory movements. All parameters are optional:
  *   - productoId + ubicacionId  → kardex con saldo corrido (vista clásica)
@@ -48,7 +65,7 @@ export function useKardexUbicacion(
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { fetchAllPages } = await import('@/lib/supabasePaginate');
-      return await fetchAllPages<any>((from, to) => {
+      return await fetchAllPages<KardexMovementRecord>((from, to) => {
         let q = supabase
           .from('movimientos_inventario')
           .select('id, fecha, created_at, tipo, cantidad, referencia_tipo, referencia_id, notas, producto_id, user_id, almacen_origen_id, almacen_destino_id, vendedor_destino_id, lote_id')
@@ -61,9 +78,9 @@ export function useKardexUbicacion(
         if (fechaHasta) q = q.lte('fecha', fechaHasta);
 
         if (ubicacionId) {
-          q = q.or(
-            `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
-          );
+          // La ubicación, no el enum, determina el signo. Esto incluye
+          // transferencias y cualquier movimiento válido con origen/destino.
+          q = q.or(`almacen_origen_id.eq.${ubicacionId},almacen_destino_id.eq.${ubicacionId}`);
         }
 
         return q.range(from, to);
@@ -93,11 +110,11 @@ export function useKardexUbicacion(
     // Saldo corrido solo cuando hay producto + ubicacion
     const computeSaldo = !!productoId && !!ubicacionId;
     let saldo = 0;
-    return query.data.map((m: any) => {
+    return query.data.map((m: KardexMovementRecord) => {
       let delta = 0;
       if (ubicacionId) {
-        // entrada/salida relative to the selected almacen (filtered above)
-        delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
+        delta = (m.almacen_destino_id === ubicacionId ? Number(m.cantidad) || 0 : 0)
+          - (m.almacen_origen_id === ubicacionId ? Number(m.cantidad) || 0 : 0);
       } else {
         delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
       }
@@ -106,8 +123,7 @@ export function useKardexUbicacion(
       const destino_nombre = m.almacen_destino_id && almMap[m.almacen_destino_id] ? almMap[m.almacen_destino_id].nombre : null;
       return { ...m, delta, saldo: computeSaldo ? saldo : 0, origen_nombre, destino_nombre };
     });
-  }, [query.data, almacenesQuery.data, ubicacionId, ubicacionTipo, productoId]);
+  }, [query.data, almacenesQuery.data, ubicacionId, productoId]);
 
   return { ...query, rows };
 }
-

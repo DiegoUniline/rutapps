@@ -26,12 +26,12 @@ export function ReporteStockFecha({ hasta }: { desde: string; hasta: string }) {
   // "A la fecha" usa UNA sola fecha de corte (no un rango). Default: hoy.
   const [fecha, setFecha] = useState(hasta || todayLocal());
 
-  const { data: rows = [], isLoading } = useQuery<StockRow[]>({
+  const { data: rows = [], isLoading, isError, error, refetch } = useQuery<StockRow[]>({
     queryKey: ['reporte-stock-fecha', empresaId, fecha],
     enabled: hasEmpresa(empresaId),
     queryFn: async () => {
       const eid = requireEmpresa(empresaId, 'ReporteStockFecha');
-      const { data, error } = await supabase.rpc('stock_a_la_fecha', { p_empresa_id: eid, p_fecha: fecha } as any);
+      const { data, error } = await supabase.rpc('stock_a_la_fecha', { p_empresa_id: eid, p_fecha: fecha });
       if (error) throw error;
       return (data ?? []) as StockRow[];
     },
@@ -55,7 +55,15 @@ export function ReporteStockFecha({ hasta }: { desde: string; hasta: string }) {
         <Card label="Almacenes" value={String(almacenesUnicos)} />
       </div>
 
-      <div className="border border-border rounded-lg overflow-x-auto">
+      {isError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <p className="font-semibold">No se pudo reconstruir el stock a la fecha.</p>
+          <p className="mt-1 text-xs">{error instanceof Error ? error.message : 'Revisa que la migración de inventario histórico esté instalada.'}</p>
+          <button type="button" onClick={() => refetch()} className="mt-2 text-xs font-semibold underline">Reintentar</button>
+        </div>
+      )}
+
+      {!isError && <div className="border border-border rounded-lg overflow-x-auto">
         <table className="w-full text-[12px]">
           <thead className="bg-accent/40 text-muted-foreground uppercase text-[10px] font-semibold">
             <tr>
@@ -78,7 +86,7 @@ export function ReporteStockFecha({ hasta }: { desde: string; hasta: string }) {
             {isLoading && <tr><td colSpan={3} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>}
           </tbody>
         </table>
-      </div>
+      </div>}
     </div>
   );
 }

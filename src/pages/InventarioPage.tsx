@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery } from '@tanstack/react-query';
-import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign, ChevronRight, ArrowLeft, Download, Boxes } from 'lucide-react';
+import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign, ChevronRight, ArrowLeft, Download, Boxes, CalendarClock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,9 @@ import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { EntityMultiSelect, type MSOption } from '@/components/reportes/EntityMultiSelect';
 import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibilityMenu';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
+import InventarioStockFechaTab from '@/pages/inventario/InventarioStockFechaTab';
 
-type ViewMode = 'resumen' | 'almacen' | 'rutas' | 'demanda';
+type ViewMode = 'resumen' | 'almacen' | 'rutas' | 'demanda' | 'historico';
 
 function useInventarioData() {
   const { empresa } = useAuth();
@@ -369,6 +370,7 @@ export default function InventarioPage() {
       ? [{ key: 'demanda' as ViewMode, label: 'Almacén General (Demanda)', icon: Boxes }]
       : []),
     { key: 'rutas', label: 'Rutas activas', icon: Truck },
+    { key: 'historico', label: 'Stock a la fecha', icon: CalendarClock },
   ];
 
   return (
@@ -380,7 +382,7 @@ export default function InventarioPage() {
       </h1>
 
       {/* Summary cards */}
-      {data && (
+      {data && view !== 'historico' && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <SummaryCard icon={Warehouse} label="Almacenes" value={`${fmtNum(data.totales.stockTipoAlmacen)} uds`} sub={`Costo: ${fmt(data.totales.valorCostoTipoAlmacen)}`} color="text-primary" />
           <SummaryCard icon={Truck} label="Rutas" value={`${fmtNum(data.totales.stockTipoRuta)} uds`} sub={`Costo: ${fmt(data.totales.valorCostoTipoRuta)}`} color="text-warning" />
@@ -433,7 +435,7 @@ export default function InventarioPage() {
       </div>
 
       {/* Search + stock filter */}
-      {view !== 'rutas' && (
+      {view !== 'rutas' && view !== 'historico' && (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative max-w-sm flex-1 min-w-[200px]">
@@ -506,7 +508,9 @@ export default function InventarioPage() {
 
 
 
-      {isLoading && <p className="text-muted-foreground">Cargando...</p>}
+      {isLoading && view !== 'historico' && <p className="text-muted-foreground">Cargando...</p>}
+
+      {view === 'historico' && <InventarioStockFechaTab />}
 
       {/* Resumen view */}
       {view === 'resumen' && data && (
