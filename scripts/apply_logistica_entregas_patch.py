@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Re-run marker: integrate from the latest branch head after DB index migration.
 source = Path('src/pages/EntregaListPageLegacy.tsx')
 target = Path('src/pages/EntregaListPage.tsx')
 text = source.read_text(encoding='utf-8')
