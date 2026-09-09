@@ -6170,6 +6170,7 @@ export type Database = {
           commission_pct: number
           created_at: string
           created_by: string | null
+          email_is_fictitious: boolean
           invited_at: string | null
           job_title: string | null
           last_access_at: string | null
@@ -6189,6 +6190,7 @@ export type Database = {
           commission_pct?: number
           created_at?: string
           created_by?: string | null
+          email_is_fictitious?: boolean
           invited_at?: string | null
           job_title?: string | null
           last_access_at?: string | null
@@ -6208,6 +6210,7 @@ export type Database = {
           commission_pct?: number
           created_at?: string
           created_by?: string | null
+          email_is_fictitious?: boolean
           invited_at?: string | null
           job_title?: string | null
           last_access_at?: string | null
