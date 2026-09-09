@@ -10,6 +10,16 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
 });
 
+const generateTemporaryPassword = () => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const symbols = '!@#$%';
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  let password = 'Rt!9';
+  for (let index = 0; index < 12; index += 1) password += alphabet[bytes[index] % alphabet.length];
+  password += symbols[bytes[12] % symbols.length];
+  return password;
+};
+
 Deno.serve(async request => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -32,8 +42,15 @@ Deno.serve(async request => {
     const { data: isSuperAdmin } = await admin.rpc('is_super_admin', { p_user_id: callerId });
     if (!isSuperAdmin) return json({ error: 'Solo un super administrador puede dar acceso al equipo' }, 403);
 
-    const { person_id: personId } = await request.json();
+    const body = await request.json();
+    const personId = body?.person_id as string | undefined;
+    const accessMode = (body?.access_mode || 'invite') as 'invite' | 'direct';
+    const requestedPassword = typeof body?.temporary_password === 'string' ? body.temporary_password.trim() : '';
     if (!personId) return json({ error: 'Falta el integrante' }, 400);
+    if (!['invite', 'direct'].includes(accessMode)) return json({ error: 'Modalidad de acceso inválida' }, 400);
+    if (accessMode === 'direct' && requestedPassword && requestedPassword.length < 8) {
+      return json({ error: 'La contraseña temporal debe tener al menos 8 caracteres' }, 400);
+    }
 
     const { data: person, error: personError } = await admin
       .from('commission_people')
@@ -56,8 +73,11 @@ Deno.serve(async request => {
       if (pageData.users.length < 1000) break;
     }
 
+    const existingAccount = Boolean(userId);
     let invited = false;
-    if (!userId) {
+    let temporaryPassword: string | null = null;
+
+    if (!userId && accessMode === 'invite') {
       const siteUrl = (Deno.env.get('SITE_URL') || request.headers.get('origin') || 'https://rutapp.mx').replace(/\/$/, '');
       const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
         redirectTo: `${siteUrl}/equipo`,
@@ -68,13 +88,33 @@ Deno.serve(async request => {
       invited = true;
     }
 
+    if (!userId && accessMode === 'direct') {
+      temporaryPassword = requestedPassword || generateTemporaryPassword();
+      const { data: created, error: createError } = await admin.auth.admin.createUser({
+        email,
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: { full_name: person.name, account_type: 'rutapp_team' },
+      });
+      if (createError || !created.user) return json({ error: createError?.message || 'No se pudo crear la cuenta directa' }, 400);
+      userId = created.user.id;
+    }
+
     const { error: linkError } = await admin.rpc('admin_link_team_account', {
       p_person_id: person.id,
       p_user_id: userId,
     });
     if (linkError) throw linkError;
 
-    return json({ ok: true, user_id: userId, invited, existing_account: !invited });
+    return json({
+      ok: true,
+      user_id: userId,
+      invited,
+      existing_account: existingAccount,
+      access_mode: accessMode,
+      email,
+      temporary_password: temporaryPassword,
+    });
   } catch (error) {
     console.error('admin-team-account', error);
     return json({ error: error instanceof Error ? error.message : 'No se pudo preparar la cuenta' }, 500);
