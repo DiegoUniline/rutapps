@@ -324,13 +324,15 @@ function LeadDetailView({
     finally { setSaving(false); }
   };
 
-  const canDelete = canDeleteTrialLead({
+  // El equipo interno ve todo el expediente, pero eliminar empresas y crear
+  // ofertas siguen siendo acciones exclusivas del super admin.
+  const canDelete = scope === 'admin' && canDeleteTrialLead({
     stage: lead.crm_stage, deletionEligible: lead.deletion_eligible,
     validSales: lead.valid_sales, paidInvoices: lead.paid_invoices,
     stripeSubscriptionId: lead.stripe_subscription_id,
   });
   const isLost = isLostTrialCrmStage(lead.crm_stage);
-  const canOffer = !isLost && canOfferTrialLead({
+  const canOffer = scope === 'admin' && !isLost && canOfferTrialLead({
     validSales: lead.valid_sales, paidInvoices: lead.paid_invoices,
     stripeSubscriptionId: lead.stripe_subscription_id,
     subscriptionStatus: lead.subscription_status,
