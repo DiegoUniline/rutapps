@@ -85,6 +85,20 @@
   box-shadow: 0 1px 2px hsl(var(--foreground) / .08);
 }
 
+/* El botón Filtros abre una ventana flotante real; nunca vuelve a empujar la tabla hacia abajo. */
+.pedidos-filter-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  border: 0;
+  background: hsl(var(--foreground) / .18);
+  backdrop-filter: blur(1px);
+}
+
+body[data-pedidos-filters="open"] {
+  overflow: hidden;
+}
+
 /* ───────────────── Pendientes ───────────────── */
 
 /* KPI cards become an explicit analytics view instead of permanent chrome. */
@@ -98,26 +112,39 @@ body[data-pedidos-page="pendientes"][data-pedidos-mode="stats"] [data-pedidos-ta
   gap: .625rem !important;
 }
 
-/* Closed filters keep the operational search visible, while date/vendor controls stay out of the way. */
+/* Cerrado: fecha + búsqueda siempre visibles. El resto vive en la ventana Filtros. */
 body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border {
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
   gap: .5rem !important;
+  align-items: end !important;
 }
 
-body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(-n+3) {
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(3) {
   display: none !important;
 }
 
 body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(4) {
   max-width: 520px;
-  min-width: min(100%, 300px);
+  min-width: min(100%, 260px);
 }
 
+/* Abierto: el bloque existente se convierte en popover modal tipo ERP/Odoo. */
 body[data-pedidos-page="pendientes"][data-pedidos-filters="open"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border {
-  padding: .625rem !important;
-  gap: .5rem !important;
+  position: fixed !important;
+  z-index: 50 !important;
+  top: 92px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: min(900px, calc(100vw - 32px)) !important;
+  max-height: calc(100vh - 124px) !important;
+  overflow: auto !important;
+  padding: 1rem !important;
+  gap: .75rem !important;
+  border-radius: .75rem !important;
+  background: hsl(var(--card)) !important;
+  box-shadow: 0 24px 70px hsl(var(--foreground) / .22) !important;
 }
 
 /* Analytics hides the operational table but keeps status context visible. */
@@ -131,22 +158,33 @@ body[data-pedidos-page="pendientes"][data-pedidos-mode="stats"] [data-pedidos-ta
 
 /* ───────────────── Entregas ───────────────── */
 
-/* Search remains available at all times; operational filters expand only on demand. */
-body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(n+2) {
+/* Cerrado: búsqueda + rango de fechas siempre visibles; vendedor/ruta quedan en Filtros. */
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2),
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(3) {
   display: none !important;
 }
 
 body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 > div:first-of-type {
   max-width: 520px !important;
-  min-width: min(100%, 300px);
+  min-width: min(100%, 260px);
 }
 
+/* Abierto: todos los filtros disponibles aparecen juntos en una ventana flotante. */
 body[data-pedidos-page="entregas"][data-pedidos-filters="open"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3 {
-  padding: .625rem;
-  border: 1px solid hsl(var(--border));
-  border-radius: .5rem;
-  background: hsl(var(--card));
-  gap: .5rem !important;
+  position: fixed !important;
+  z-index: 50 !important;
+  top: 92px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: min(920px, calc(100vw - 32px)) !important;
+  max-height: calc(100vh - 124px) !important;
+  overflow: auto !important;
+  padding: 1rem !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: .75rem !important;
+  background: hsl(var(--card)) !important;
+  gap: .75rem !important;
+  box-shadow: 0 24px 70px hsl(var(--foreground) / .22) !important;
 }
 
 /* In analytics, the existing status counts become the dashboard — no new metrics/calculations. */
@@ -188,26 +226,39 @@ body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs
 
 /* ─────────────── Concentrado a surtir ─────────────── */
 
-/* The large filter card collapses to its action row so Generar compras stays permanently reachable. */
+/* Cerrado: tipo de fecha + rango + accesos rápidos + acciones permanecen visibles. */
 body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
-  gap: .375rem !important;
-  justify-content: flex-end;
+  gap: .5rem !important;
 }
 
-body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:not(:nth-of-type(4)) {
+/* Oculta las zonas grandes de filtros; se abren desde Filtros. */
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > .w-full.space-y-1,
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > .w-full.grid {
   display: none !important;
 }
 
-body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) {
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > .ml-auto {
   margin-left: auto !important;
 }
 
+/* Abierto: filtros completos en popup; no aumenta la altura del módulo. */
 body[data-pedidos-page="concentrado"][data-pedidos-filters="open"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
-  padding: .625rem !important;
-  gap: .5rem !important;
+  position: fixed !important;
+  z-index: 50 !important;
+  top: 92px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: min(980px, calc(100vw - 32px)) !important;
+  max-height: calc(100vh - 124px) !important;
+  overflow: auto !important;
+  padding: 1rem !important;
+  gap: .75rem !important;
+  border-radius: .75rem !important;
+  background: hsl(var(--card)) !important;
+  box-shadow: 0 24px 70px hsl(var(--foreground) / .22) !important;
 }
 
 /* Existing KPI calculations are reserved for the analytics view. */
@@ -264,6 +315,14 @@ body[data-pedidos-page="concentrado"] [data-pedidos-tabs] ~ .flex.items-center.g
   body[data-pedidos-page="concentrado"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .grid.grid-cols-2.gap-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
+
+  body[data-pedidos-filters="open"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border,
+  body[data-pedidos-filters="open"] [data-pedidos-tabs] ~ .flex.flex-wrap.items-end.gap-3,
+  body[data-pedidos-filters="open"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
+    top: 72px !important;
+    width: calc(100vw - 20px) !important;
+    max-height: calc(100vh - 92px) !important;
+  }
 }
 
 @media (max-width: 560px) {
@@ -275,5 +334,10 @@ body[data-pedidos-page="concentrado"] [data-pedidos-tabs] ~ .flex.items-center.g
 
   [data-pedidos-tabs] .pedidos-view-button span {
     display: none;
+  }
+
+  body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:first-of-type,
+  body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:first-of-type {
+    display: none !important;
   }
 }
