@@ -457,8 +457,9 @@ function LostLeadsView({ leads, onOpen, onRestore, onContact, restoringId }: {
   );
 }
 
-export default function AdminTrialCrmTab() {
+export default function AdminTrialCrmTab({ scope = 'admin' }: { scope?: CrmScope } = {}) {
   const navigate = useNavigate();
+  const basePath = basePathFor(scope);
   const { empresaId: crmEmpresaId } = useParams<{ empresaId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [snapshot, setSnapshot] = useState<TrialCrmSnapshot | null>(null);
@@ -499,10 +500,12 @@ export default function AdminTrialCrmTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const workspace = await rpcClient.rpc('fn_admin_trial_crm_workspace', { p_days: operationsDays });
+      const workspace = await rpcClient.rpc(rpcFor(scope, 'workspace'), { p_days: operationsDays });
       if (!workspace.error) {
         setWorkspaceReady(true);
         setSnapshot(workspace.data as TrialCrmSnapshot);
+      } else if (scope === 'team') {
+        throw workspace.error;
       } else {
         const message = workspace.error.message || '';
         if (!message.includes('fn_admin_trial_crm_workspace') && !message.includes('schema cache')) throw workspace.error;
@@ -513,7 +516,7 @@ export default function AdminTrialCrmTab() {
       }
     } catch (error) { toast.error(errorText(error)); }
     finally { setLoading(false); }
-  }, [operationsDays]);
+  }, [operationsDays, scope]);
 
   useEffect(() => { void load(); }, [load]);
 
