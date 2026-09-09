@@ -10846,30 +10846,18 @@ export type Database = {
         Args: { p_empresa_id: string; p_note?: string }
         Returns: Json
       }
-      fn_team_crm_save:
-        | {
-            Args: {
-              p_activity_type?: string
-              p_assigned_to: string
-              p_empresa_id: string
-              p_next_follow_up_at?: string
-              p_note?: string
-              p_outcome?: string
-              p_stage: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_activity_type?: string
-              p_empresa_id: string
-              p_next_follow_up_at?: string
-              p_note?: string
-              p_outcome?: string
-              p_stage: string
-            }
-            Returns: Json
-          }
+      fn_team_crm_save: {
+        Args: {
+          p_activity_type?: string
+          p_assigned_to: string
+          p_empresa_id: string
+          p_next_follow_up_at?: string
+          p_note?: string
+          p_outcome?: string
+          p_stage: string
+        }
+        Returns: Json
+      }
       fn_team_crm_workspace: { Args: { p_days?: number }; Returns: Json }
       fn_team_portal_snapshot: { Args: never; Returns: Json }
       fn_venta_lineas_resumen: {
