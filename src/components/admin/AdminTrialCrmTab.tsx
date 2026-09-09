@@ -544,7 +544,7 @@ export default function AdminTrialCrmTab({ scope = 'admin' }: { scope?: CrmScope
     });
   }, [snapshot?.leads, search, stage, setup, age, assigned, special]);
 
-  const openLead = (lead: TrialCrmLead) => navigate(`/super-admin/crm/${lead.empresa_id}`);
+  const openLead = (lead: TrialCrmLead) => navigate(`${basePath}/crm/${lead.empresa_id}`);
   const openOffer = (lead: TrialCrmLead) => {
     if (isLostTrialCrmStage(lead.crm_stage)) {
       toast.error('Reactiva el prospecto antes de crear una nueva oferta.');
@@ -563,7 +563,7 @@ export default function AdminTrialCrmTab({ scope = 'admin' }: { scope?: CrmScope
     if (!lostLead) return;
     setLostSaving(true);
     try {
-      const { error } = await rpcClient.rpc('fn_admin_trial_crm_mark_lost', {
+      const { error } = await rpcClient.rpc(rpcFor(scope, 'mark_lost'), {
         p_empresa_id: lostLead.empresa_id,
         p_reason: lostReason,
         p_outcome: lostOutcome,
@@ -572,7 +572,7 @@ export default function AdminTrialCrmTab({ scope = 'admin' }: { scope?: CrmScope
       toast.success(`${lostLead.nombre} se movió a Perdidos`);
       setLostLead(null);
       await load();
-      navigate('/super-admin?crm=perdidos');
+      navigate(`${basePath}?crm=perdidos`);
     } catch (error) { toast.error(errorText(error)); }
     finally { setLostSaving(false); }
   };
@@ -580,7 +580,7 @@ export default function AdminTrialCrmTab({ scope = 'admin' }: { scope?: CrmScope
   const restoreLost = async (lead: TrialCrmLead) => {
     setRestoreSavingId(lead.empresa_id);
     try {
-      const { error } = await rpcClient.rpc('fn_admin_trial_crm_restore_lost', {
+      const { error } = await rpcClient.rpc(rpcFor(scope, 'restore_lost'), {
         p_empresa_id: lead.empresa_id,
         p_note: 'Reactivado manualmente desde la vista de Perdidos',
       });
@@ -596,7 +596,7 @@ export default function AdminTrialCrmTab({ scope = 'admin' }: { scope?: CrmScope
       toast.warning('El contacto se abrió, pero instala la actualización SQL para medirlo automáticamente.');
       return;
     }
-    void rpcClient.rpc('fn_admin_trial_crm_log_contact', {
+    void rpcClient.rpc(rpcFor(scope, 'log_contact'), {
       p_empresa_id: lead.empresa_id,
       p_channel: channel,
     }).then(({ error }) => {
@@ -636,7 +636,7 @@ export default function AdminTrialCrmTab({ scope = 'admin' }: { scope?: CrmScope
       toast.success(`${deleteLead.nombre} y sus datos fueron eliminados`);
       setDeleteLead(null);
       await load();
-      if (crmEmpresaId === deleteLead.empresa_id) navigate('/super-admin');
+      if (crmEmpresaId === deleteLead.empresa_id) navigate(basePath);
     } catch (error) { toast.error(errorText(error)); }
     finally { setDeleting(false); }
   };
@@ -660,9 +660,9 @@ export default function AdminTrialCrmTab({ scope = 'admin' }: { scope?: CrmScope
         loading && !snapshot ? (
           <div className="flex min-h-[520px] items-center justify-center gap-2 rounded-xl border border-border text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Cargando expediente CRM…</div>
         ) : detailLead ? (
-          <LeadDetailView lead={detailLead} assignees={snapshot?.assignees ?? []} onBack={() => navigate(isLostTrialCrmStage(detailLead.crm_stage) ? '/super-admin?crm=perdidos' : '/super-admin')} onUpdated={load} onOffer={openOffer} onDelete={openDelete} onMarkLost={openMarkLost} onContact={logContact} />
+          <LeadDetailView lead={detailLead} assignees={snapshot?.assignees ?? []} scope={scope} onBack={() => navigate(isLostTrialCrmStage(detailLead.crm_stage) ? `${basePath}?crm=perdidos` : basePath)} onUpdated={load} onOffer={openOffer} onDelete={openDelete} onMarkLost={openMarkLost} onContact={logContact} />
         ) : (
-          <div className="flex min-h-[420px] flex-col items-center justify-center rounded-xl border border-border bg-card p-6 text-center"><AlertTriangle className="h-10 w-10 text-amber-500" /><h2 className="mt-4 text-lg font-black">Este prospecto ya no está disponible en recuperación</h2><p className="mt-2 max-w-lg text-sm text-muted-foreground">Puede haber registrado su primera venta, haber sido eliminado o la dirección no corresponde a una empresa válida.</p><Button className="mt-5" onClick={() => navigate('/super-admin')}><ArrowLeft className="mr-2 h-4 w-4" />Volver al CRM</Button></div>
+          <div className="flex min-h-[420px] flex-col items-center justify-center rounded-xl border border-border bg-card p-6 text-center"><AlertTriangle className="h-10 w-10 text-amber-500" /><h2 className="mt-4 text-lg font-black">Este prospecto ya no está disponible en recuperación</h2><p className="mt-2 max-w-lg text-sm text-muted-foreground">Puede haber registrado su primera venta, haber sido eliminado o la dirección no corresponde a una empresa válida.</p><Button className="mt-5" onClick={() => navigate(basePath)}><ArrowLeft className="mr-2 h-4 w-4" />Volver al CRM</Button></div>
         )
       ) : <>
       <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.07] via-card to-card p-5">
@@ -732,7 +732,7 @@ export default function AdminTrialCrmTab({ scope = 'admin' }: { scope?: CrmScope
           </TabsContent>
 
           <TabsContent value="operatividad">
-            <OperationsView operations={snapshot.operations} days={operationsDays} onDaysChange={setOperationsDays} onOpenLead={empresaId => navigate(`/super-admin/crm/${empresaId}`)} />
+            <OperationsView operations={snapshot.operations} days={operationsDays} onDaysChange={setOperationsDays} onOpenLead={empresaId => navigate(`${basePath}/crm/${empresaId}`)} />
           </TabsContent>
 
           <TabsContent value="perdidos">
