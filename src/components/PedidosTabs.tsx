@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, List, SlidersHorizontal } from 'lucide-react';
 import '@/styles/pedidos-workspace.css';
+import '@/styles/pedidos-workspace-compact.css';
 
 const TABS = [
   { label: 'Pendientes', path: '/logistica/pedidos' },
