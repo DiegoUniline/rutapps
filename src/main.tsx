@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import GlobalCrmPitchLauncher from "./components/admin/GlobalCrmPitchLauncher";
+import CrmPitchHeaderActions from "./components/admin/CrmPitchHeaderActions";
 import GlobalCrmCancellationInsight from "./components/admin/GlobalCrmCancellationInsight";
 import GlobalCrmCancellationsList from "./components/admin/GlobalCrmCancellationsList";
 import AdminCallPitchLibrary from "./components/admin/AdminCallPitchLibrary";
@@ -60,6 +61,7 @@ createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
     <App />
     <GlobalCrmPitchLauncher />
+    <CrmPitchHeaderActions />
     <GlobalCrmCancellationInsight />
     <GlobalCrmCancellationsList />
     <AdminCallPitchLibrary />
