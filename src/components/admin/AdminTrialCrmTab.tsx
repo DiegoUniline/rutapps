@@ -256,9 +256,10 @@ function ContactButtons({ lead, onContact }: { lead: TrialCrmLead; onContact?: (
 }
 
 function LeadDetailView({
-  lead, assignees, onBack, onUpdated, onOffer, onDelete, onMarkLost, onContact,
+  lead, assignees, onBack, onUpdated, onOffer, onDelete, onMarkLost, onContact, scope = 'admin',
 }: {
   lead: TrialCrmLead;
+  scope?: CrmScope;
   assignees: TrialCrmSnapshot['assignees'];
   onBack: () => void;
   onUpdated: () => Promise<void>;
