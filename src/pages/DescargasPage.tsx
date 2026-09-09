@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { Package } from 'lucide-react';
 import HelpButton from '@/components/HelpButton';
@@ -11,7 +11,7 @@ import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, useDescargasLiveCuadre, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useVendedores } from '@/hooks/useClientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw, Trash2, Boxes, LayoutDashboard } from 'lucide-react';
+import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw, Trash2, Boxes, LayoutDashboard, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -132,6 +132,15 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   // Bodega destino a la que regresa el producto físico al aprobar (si se descargó el camión).
   const [destinoAlmacenId, setDestinoAlmacenId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<LiqTabKey>('todo');
+  const [expandedEntregaId, setExpandedEntregaId] = useState<string | null>(null);
+
+  // Este panel cubre toda la pantalla; sin esto, la página de fondo (la lista
+  // de liquidaciones) conserva su propio scroll y aparecen dos barras a la vez.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, []);
 
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
@@ -452,6 +461,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     setEfectivoDraft('');
     setEditingFecha(false);
     setFechaDraft('');
+    setActiveTab('todo');
+    setExpandedEntregaId(null);
   }, [descarga.id]);
 
   useEffect(() => {
@@ -1095,6 +1106,13 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className={TFOOT_TR}>
+                  <td colSpan={2} className="py-3 px-3 text-right text-muted-foreground">Total ({productosArr.length} productos):</td>
+                  <td className="py-3 px-3 text-right">{productosArr.reduce((s, p) => s + p.cantidad, 0)}</td>
+                  <td className="py-3 px-3 text-right">{fmt(productosArr.reduce((s, p) => s + p.total, 0))}</td>
+                </tr>
+              </tfoot>
             </table>
             </div>
           ) : <p className="text-sm text-muted-foreground">Sin productos vendidos en este periodo</p>}
@@ -1230,14 +1248,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     </tr>
                   ))}
                 </tbody>
-                {totalDevCredito > 0 && (
-                  <tfoot>
-                    <tr className={TFOOT_TR}>
-                      <td colSpan={5} className="py-3 px-3 text-right text-muted-foreground">Total crédito:</td>
-                      <td className="py-3 px-3 text-right text-destructive">{fmt(totalDevCredito)}</td>
-                    </tr>
-                  </tfoot>
-                )}
+                <tfoot>
+                  <tr className={TFOOT_TR}>
+                    <td colSpan={2} className="py-3 px-3 text-right text-muted-foreground">Total ({devLineas.length} líneas):</td>
+                    <td className="py-3 px-3 text-right">{totalDevUnidades}</td>
+                    <td colSpan={2} />
+                    <td className="py-3 px-3 text-right text-destructive">{totalDevCredito > 0 ? fmt(totalDevCredito) : '—'}</td>
+                  </tr>
+                </tfoot>
               </table>
               </div>
             </>
@@ -1249,75 +1267,109 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         {show('entregas') && (
         <SectionCard title={`Entregas realizadas (${entregasList.length})`} icon={Truck}>
           {entregasList.length > 0 ? (
-            <div className="space-y-3">
-              {entregasList.map((e: any) => {
-                const lineas = (e.entrega_lineas || []) as any[];
-                const fechaRealEntrega = e.validado_at || e.fecha_entrega || e.fecha;
-                const udsEntregadas = lineas.filter(l => l.hecho).reduce((s, l) => s + (Number(l.cantidad_entregada) || 0), 0);
-                const udsNoEntregadas = lineas.filter(l => !l.hecho).reduce((s, l) => s + (Number(l.cantidad ?? l.cantidad_entregada) || 0), 0);
-                return (
-                  <div key={e.id} className="border border-table-border rounded-lg overflow-hidden">
-                    <div className="px-3 py-2.5 bg-muted/40 flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-3 text-[13px]">
-                        <span className="font-mono font-semibold text-foreground">{e.folio ?? '—'}</span>
-                        <span className="text-muted-foreground">Pedido <span className="font-mono">{e.ventas?.folio ?? '—'}</span></span>
-                        <span className="text-foreground">{e.clientes?.nombre ?? '—'}</span>
-                        <span className="text-muted-foreground">{fmtDate(fechaRealEntrega)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px]">
-                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">{udsEntregadas} entregadas</span>
-                        {udsNoEntregadas > 0 && (
-                          <span className="px-2 py-0.5 rounded-full bg-destructive/10 text-destructive font-semibold">{udsNoEntregadas} no entregadas</span>
-                        )}
-                        {e.ventas?.total != null && (
-                          <span className="font-bold text-foreground ml-2">{fmt(Number(e.ventas.total))}</span>
-                        )}
-                      </div>
-                    </div>
-                    {lineas.length > 0 ? (
-                      <table className="w-full text-[13px]">
-                        <thead>
-                          <tr className="text-[11px] text-muted-foreground uppercase border-b border-table-border bg-muted/20">
-                            <th className="text-left py-2 px-3">Producto</th>
-                            <th className="text-left py-2">Código</th>
-                            <th className="text-right py-2">Pedidas</th>
-                            <th className="text-right py-2">Entregadas</th>
-                            <th className="text-center py-2 px-3">Estado</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lineas.map((l: any, i: number) => (
-                            <tr key={i} className="border-b border-table-border/60 last:border-b-0 hover:bg-table-hover transition-colors">
-                              <td className="py-2 px-3">{l.productos?.nombre ?? '—'}</td>
-                              <td className="py-2 font-mono text-muted-foreground">{l.productos?.codigo ?? ''}</td>
-                              <td className="py-2 text-right">{Number(l.cantidad ?? 0)}</td>
-                              <td className="py-2 text-right font-semibold">{Number(l.cantidad_entregada ?? 0)}</td>
-                              <td className="py-2 px-3 text-center">
-                                {l.hecho ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold">
-                                    <CheckCircle2 className="h-3 w-3" /> Entregado
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-semibold" title={l.motivo_no_entrega || ''}>
-                                    <XCircle className="h-3 w-3" /> No entregado{l.motivo_no_entrega ? ` · ${l.motivo_no_entrega}` : ''}
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <p className="text-xs text-muted-foreground px-3 py-2">Sin productos en esta entrega</p>
-                    )}
-                  </div>
-                );
-              })}
-              <div className="flex items-center justify-end gap-4 text-[13px] font-bold pt-3 border-t border-border">
-                <span className="text-muted-foreground">Totales:</span>
-                <span>{totalEntregaUnidades} uds entregadas</span>
-                <span>{fmt(totalEntregaMonto)}</span>
-              </div>
+            <div className="overflow-x-auto -mx-5 px-5">
+            <table className="w-full">
+              <thead>
+                <tr className={THEAD_TR}>
+                  <th className={TH}>Folio</th>
+                  <th className={TH}>Pedido</th>
+                  <th className={TH}>Cliente</th>
+                  <th className={TH}>Fecha</th>
+                  <th className={cn(TH, "text-right")}>Entregadas</th>
+                  <th className={cn(TH, "text-right")}>No entregadas</th>
+                  <th className={cn(TH, "text-right")}>Total</th>
+                  <th className={cn(TH, "w-8")} />
+                </tr>
+              </thead>
+              <tbody>
+                {entregasList.map((e: any) => {
+                  const lineas = (e.entrega_lineas || []) as any[];
+                  const fechaRealEntrega = e.validado_at || e.fecha_entrega || e.fecha;
+                  const udsEntregadas = lineas.filter(l => l.hecho).reduce((s, l) => s + (Number(l.cantidad_entregada) || 0), 0);
+                  const udsPedidas = lineas.reduce((s, l) => s + (Number(l.cantidad) || 0), 0);
+                  const udsNoEntregadas = lineas.filter(l => !l.hecho).reduce((s, l) => s + (Number(l.cantidad ?? l.cantidad_entregada) || 0), 0);
+                  const expanded = expandedEntregaId === e.id;
+                  return (
+                    <Fragment key={e.id}>
+                      <tr
+                        className={cn(TBODY_TR, "cursor-pointer")}
+                        onClick={() => setExpandedEntregaId(expanded ? null : e.id)}
+                      >
+                        <td className={cn(TD, "font-mono font-semibold text-foreground")}>{e.folio ?? '—'}</td>
+                        <td className={cn(TD, "font-mono text-muted-foreground")}>{e.ventas?.folio ?? '—'}</td>
+                        <td className={TD}>{e.clientes?.nombre ?? '—'}</td>
+                        <td className={cn(TD, "text-muted-foreground")}>{fmtDate(fechaRealEntrega)}</td>
+                        <td className={cn(TD, "text-right font-semibold text-green-700")}>{udsEntregadas}</td>
+                        <td className={cn(TD, "text-right font-semibold", udsNoEntregadas > 0 ? "text-destructive" : "text-muted-foreground")}>{udsNoEntregadas > 0 ? udsNoEntregadas : '—'}</td>
+                        <td className={cn(TD, "text-right font-semibold")}>{e.ventas?.total != null ? fmt(Number(e.ventas.total)) : '—'}</td>
+                        <td className={cn(TD, "text-center")}>
+                          <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform inline-block", expanded && "rotate-180")} />
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr className="border-b border-table-border/70">
+                          <td colSpan={8} className="bg-muted/10 p-0">
+                            {lineas.length > 0 ? (
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="text-[11px] text-muted-foreground uppercase border-b border-table-border bg-muted/20">
+                                    <th className="text-left py-2 pl-8 pr-3">Producto</th>
+                                    <th className="text-left py-2">Código</th>
+                                    <th className="text-right py-2">Pedidas</th>
+                                    <th className="text-right py-2">Entregadas</th>
+                                    <th className="text-center py-2 pr-8">Estado</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {lineas.map((l: any, i: number) => (
+                                    <tr key={i} className="border-b border-table-border/40 last:border-b-0 hover:bg-table-hover transition-colors">
+                                      <td className="py-2 pl-8 pr-3">{l.productos?.nombre ?? '—'}</td>
+                                      <td className="py-2 font-mono text-muted-foreground">{l.productos?.codigo ?? ''}</td>
+                                      <td className="py-2 text-right">{Number(l.cantidad ?? 0)}</td>
+                                      <td className="py-2 text-right font-semibold">{Number(l.cantidad_entregada ?? 0)}</td>
+                                      <td className="py-2 pr-8 text-center">
+                                        {l.hecho ? (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold">
+                                            <CheckCircle2 className="h-3 w-3" /> Entregado
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-semibold" title={l.motivo_no_entrega || ''}>
+                                            <XCircle className="h-3 w-3" /> No entregado{l.motivo_no_entrega ? ` · ${l.motivo_no_entrega}` : ''}
+                                          </span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                                <tfoot>
+                                  <tr className="border-t border-border bg-muted/20 font-bold text-[12px]">
+                                    <td colSpan={2} className="py-2 pl-8 pr-3 text-right text-muted-foreground">Subtotal de la entrega:</td>
+                                    <td className="py-2 text-right">{udsPedidas}</td>
+                                    <td className="py-2 text-right">{udsEntregadas}</td>
+                                    <td className="pr-8" />
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            ) : (
+                              <p className="text-xs text-muted-foreground pl-8 pr-3 py-3">Sin productos en esta entrega</p>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className={TFOOT_TR}>
+                  <td colSpan={4} className="py-3 px-3 text-right text-muted-foreground">Totales ({entregasList.length} entregas):</td>
+                  <td className="py-3 px-3 text-right">{totalEntregaUnidades}</td>
+                  <td />
+                  <td className="py-3 px-3 text-right">{fmt(totalEntregaMonto)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
             </div>
           ) : <p className="text-sm text-muted-foreground">Sin entregas en este periodo</p>}
         </SectionCard>
