@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  TRIAL_CRM_ACTIVE_STAGES,
+  TRIAL_CRM_LOST_STAGES,
   TRIAL_CRM_STAGES,
   TRIAL_CRM_STAGE_INFO,
   canDeleteTrialLead,
   canOfferTrialLead,
+  isLostTrialCrmStage,
   normalizeWhatsappPhone,
   trialLeadPriority,
 } from '@/lib/adminTrialCrm';
@@ -14,6 +17,15 @@ describe('admin trial CRM safeguards', () => {
       expect(TRIAL_CRM_STAGE_INFO[stage].label).toBeTruthy();
       expect(TRIAL_CRM_STAGE_INFO[stage].color).toMatch(/^#/);
     }
+  });
+
+  it('keeps lost stages outside the active recovery pipeline', () => {
+    expect(TRIAL_CRM_LOST_STAGES).toEqual(['no_interesado', 'descartado']);
+    expect(TRIAL_CRM_ACTIVE_STAGES).not.toContain('no_interesado');
+    expect(TRIAL_CRM_ACTIVE_STAGES).not.toContain('descartado');
+    expect(TRIAL_CRM_ACTIVE_STAGES).not.toContain('convertido');
+    expect(isLostTrialCrmStage('no_interesado')).toBe(true);
+    expect(isLostTrialCrmStage('seguimiento')).toBe(false);
   });
 
   it('only enables deletion after commercial discard and financial validation', () => {

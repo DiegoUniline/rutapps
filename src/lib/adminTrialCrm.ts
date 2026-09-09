@@ -5,6 +5,11 @@ export const TRIAL_CRM_STAGES = [
 
 export type TrialCrmStage = typeof TRIAL_CRM_STAGES[number];
 
+export const TRIAL_CRM_LOST_STAGES: readonly TrialCrmStage[] = ['no_interesado', 'descartado'];
+export const TRIAL_CRM_ACTIVE_STAGES = TRIAL_CRM_STAGES.filter(
+  stage => !TRIAL_CRM_LOST_STAGES.includes(stage) && stage !== 'convertido',
+);
+
 export const TRIAL_CRM_STAGE_INFO: Record<TrialCrmStage, {
   label: string;
   color: string;
@@ -31,6 +36,10 @@ export const TRIAL_SETUP_INFO: Record<TrialSetupLevel, { label: string; badgeCla
 
 export function isTrialCrmStage(value: unknown): value is TrialCrmStage {
   return typeof value === 'string' && TRIAL_CRM_STAGES.includes(value as TrialCrmStage);
+}
+
+export function isLostTrialCrmStage(stage: TrialCrmStage): boolean {
+  return TRIAL_CRM_LOST_STAGES.includes(stage);
 }
 
 export function canDeleteTrialLead(input: {
