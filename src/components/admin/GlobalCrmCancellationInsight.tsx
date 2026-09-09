@@ -33,6 +33,13 @@ const REASON_LABELS: Record<string, string> = {
   otro_sistema: 'Cambió de sistema',
 };
 
+const REASON_MESSAGES: Record<string, string> = {
+  costo: 'El precio no se ajusta a su presupuesto.',
+  funciones: 'No encontró las funciones que necesita para su negocio.',
+  soporte: 'No recibió la ayuda o el soporte que necesitaba.',
+  otro_sistema: 'Encontró otra solución que se adapta mejor a su operación.',
+};
+
 function formatDate(value?: string | null) {
   if (!value) return 'Fecha no disponible';
   const date = new Date(value);
@@ -104,6 +111,7 @@ export default function GlobalCrmCancellationInsight() {
 
   const row = event.row;
   const reason = row.reason ? (REASON_LABELS[row.reason] ?? row.reason) : 'Motivo no disponible';
+  const reasonMessage = row.reason ? (REASON_MESSAGES[row.reason] ?? 'Motivo registrado por el cliente durante la cancelación.') : 'No hay una descripción adicional disponible para este motivo.';
   const retained = !event.cancelled && row.discount_accepted === true;
 
   return (
@@ -136,14 +144,18 @@ export default function GlobalCrmCancellationInsight() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Motivo</p>
             <p className="mt-1 text-[15px] font-bold text-foreground">{reason}</p>
+            <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">{reasonMessage}</p>
           </div>
 
-          {row.reason_detail && (
-            <div className="rounded-xl border border-border bg-muted/35 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Lo que escribió</p>
-              <p className="mt-1.5 whitespace-pre-wrap text-[13px] leading-relaxed text-foreground">{row.reason_detail}</p>
-            </div>
-          )}
+          <div className="rounded-xl border border-border bg-muted/35 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Comentario del cliente</p>
+            <p className={cn(
+              'mt-1.5 whitespace-pre-wrap text-[13px] leading-relaxed',
+              row.reason_detail ? 'text-foreground' : 'italic text-muted-foreground',
+            )}>
+              {row.reason_detail || 'No dejó un comentario adicional; solo seleccionó el motivo de cancelación.'}
+            </p>
+          </div>
 
           <div className="grid grid-cols-2 gap-2 text-[11px]">
             <div className="rounded-lg bg-muted/40 px-2.5 py-2">
