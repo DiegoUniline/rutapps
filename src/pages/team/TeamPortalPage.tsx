@@ -6,7 +6,9 @@ import {
   CircleDollarSign, Clock3, History, LayoutDashboard, Loader2, LogOut, Mail,
   MessageCircle, Phone, RefreshCw, Search, ShieldCheck, Target, UsersRound, Wallet,
 } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import AdminTrialCrmTab from '@/components/admin/AdminTrialCrmTab';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -89,9 +91,11 @@ function Metric({label,value,detail,icon:Icon}:{label:string;value:string;detail
 
 export default function TeamPortalPage(){
   const{profile,signOut}=useAuth();
+  const navigate=useNavigate();
+  const{empresaId:crmEmpresaId}=useParams<{empresaId?:string}>();
+  const openLeadCrm=(lead:PortalLead)=>navigate(`/equipo/crm/${lead.empresa_id}`);
   const[data,setData]=useState<PortalSnapshot|null>(null);
   const[loading,setLoading]=useState(true);
-  const[selectedLead,setSelectedLead]=useState<PortalLead|null>(null);
   const[search,setSearch]=useState('');
   const[stage,setStage]=useState('todos');
   const[setup,setSetup]=useState('todos');
@@ -118,7 +122,6 @@ export default function TeamPortalPage(){
 
   if(loading&&!data)return <div className="flex min-h-[100dvh] items-center justify-center gap-2 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin"/>Cargando Mi equipo…</div>;
   if(!data)return <div className="flex min-h-[100dvh] items-center justify-center p-6"><Card className="max-w-md"><CardContent className="p-8 text-center"><ShieldCheck className="mx-auto h-10 w-10 text-amber-500"/><h1 className="mt-4 text-xl font-black">Acceso interno no disponible</h1><p className="mt-2 text-sm text-muted-foreground">Pide al administrador que revise tu vinculación.</p><Button className="mt-5" onClick={()=>signOut()}>Cerrar sesión</Button></CardContent></Card></div>;
-  if(selectedLead)return <TeamCrmDetail lead={selectedLead} onBack={()=>setSelectedLead(null)} onUpdated={load} onContact={openContact}/>;
 
   const activeLeads=filteredLeads.filter(l=>!['no_interesado','descartado','convertido'].includes(l.stage));
   const lostLeads=filteredLeads.filter(l=>['no_interesado','descartado'].includes(l.stage));
@@ -126,16 +129,11 @@ export default function TeamPortalPage(){
   return <div className="min-h-[100dvh] bg-muted/20">
     <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur"><div className="mx-auto flex max-w-[1900px] items-center gap-3 px-4 py-3"><div className="rounded-xl bg-primary p-2 text-primary-foreground"><UsersRound className="h-5 w-5"/></div><div className="min-w-0 flex-1"><p className="font-black">Equipo RutApp</p><p className="truncate text-[10px] text-muted-foreground">{data.me.name} · {data.me.job_title||TEAM_LEVEL_LABELS[data.me.access_level]}</p></div>{profile?.empresa_id&&<Button variant="outline" size="sm" onClick={()=>{window.location.href='/dashboard';}}><Building2 className="mr-2 h-4 w-4"/>Mi empresa</Button>}<Button variant="ghost" size="icon" onClick={()=>signOut()}><LogOut className="h-4 w-4"/></Button></div></header>
     <main className="mx-auto max-w-[1900px] space-y-3 p-3 sm:p-4">
-      <Tabs defaultValue="crm" className="space-y-3"><div className="flex items-center gap-2 overflow-x-auto rounded-xl border bg-card p-1"><TabsList className="h-auto w-max min-w-0 flex-1 justify-start bg-transparent"><TabsTrigger value="inicio"><LayoutDashboard className="mr-2 h-4 w-4"/>Mi día</TabsTrigger><TabsTrigger value="crm"><Target className="mr-2 h-4 w-4"/>CRM</TabsTrigger><TabsTrigger value="empresas"><Building2 className="mr-2 h-4 w-4"/>Empresas</TabsTrigger><TabsTrigger value="comisiones"><CircleDollarSign className="mr-2 h-4 w-4"/>Comisiones</TabsTrigger><TabsTrigger value="actividad"><Activity className="mr-2 h-4 w-4"/>Actividad</TabsTrigger></TabsList><Button variant="outline" size="sm" className="mr-1 shrink-0" onClick={()=>void load()} disabled={loading}><RefreshCw className={cn('mr-2 h-4 w-4',loading&&'animate-spin')}/>Actualizar</Button></div>
-        <TabsContent value="inicio" className="grid gap-4 xl:grid-cols-2"><Card><CardContent className="p-0"><div className="border-b p-4"><h2 className="font-black">Seguimientos vencidos</h2></div><CompactLeadList leads={activeLeads.filter(l=>l.next_follow_up_at&&new Date(l.next_follow_up_at)<new Date()).slice(0,20)} onOpen={setSelectedLead}/></CardContent></Card><Card><CardContent className="p-0"><div className="border-b p-4"><h2 className="font-black">Actividad reciente</h2></div><ActivityList activities={data.activities.slice(0,20)}/></CardContent></Card></TabsContent>
+      <Tabs defaultValue="crm" value={crmEmpresaId?'crm':undefined} className="space-y-3"><div className="flex items-center gap-2 overflow-x-auto rounded-xl border bg-card p-1"><TabsList className="h-auto w-max min-w-0 flex-1 justify-start bg-transparent"><TabsTrigger value="inicio"><LayoutDashboard className="mr-2 h-4 w-4"/>Mi día</TabsTrigger><TabsTrigger value="crm"><Target className="mr-2 h-4 w-4"/>CRM</TabsTrigger><TabsTrigger value="empresas"><Building2 className="mr-2 h-4 w-4"/>Empresas</TabsTrigger><TabsTrigger value="comisiones"><CircleDollarSign className="mr-2 h-4 w-4"/>Comisiones</TabsTrigger><TabsTrigger value="actividad"><Activity className="mr-2 h-4 w-4"/>Actividad</TabsTrigger></TabsList><Button variant="outline" size="sm" className="mr-1 shrink-0" onClick={()=>void load()} disabled={loading}><RefreshCw className={cn('mr-2 h-4 w-4',loading&&'animate-spin')}/>Actualizar</Button></div>
+        <TabsContent value="inicio" className="grid gap-4 xl:grid-cols-2"><Card><CardContent className="p-0"><div className="border-b p-4"><h2 className="font-black">Seguimientos vencidos</h2></div><CompactLeadList leads={activeLeads.filter(l=>l.next_follow_up_at&&new Date(l.next_follow_up_at)<new Date()).slice(0,20)} onOpen={openLeadCrm}/></CardContent></Card><Card><CardContent className="p-0"><div className="border-b p-4"><h2 className="font-black">Actividad reciente</h2></div><ActivityList activities={data.activities.slice(0,20)}/></CardContent></Card></TabsContent>
 
         <TabsContent value="crm" className="space-y-4">
-          <Card className="overflow-hidden"><CardContent className="p-0">
-            <div className="border-b p-5"><div className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-black">Prospectos sin primera venta</h2><p className="mt-1 text-sm text-muted-foreground">{activeLeads.length} resultados con los filtros actuales</p></div><Target className="h-5 w-5 text-primary"/></div>
-              <div className="mt-4 grid grid-cols-1 gap-2 lg:grid-cols-[minmax(320px,1.4fr)_repeat(4,minmax(170px,1fr))]"><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input className="pl-9" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar empresa, licencia, correo, teléfono o responsable…"/></div><select className="h-10 rounded-md border bg-background px-3 text-sm" value={stage} onChange={e=>setStage(e.target.value)}><option value="todos">Todas las etapas</option><option value="sin_contactar">Sin contactar</option><option value="por_contactar">Por contactar</option><option value="contactado">Contactado</option><option value="interesado">Interesado</option><option value="seguimiento">Seguimiento</option><option value="no_localizado">No localizado</option></select><select className="h-10 rounded-md border bg-background px-3 text-sm" value={setup} onChange={e=>setSetup(e.target.value)}><option value="todos">Toda configuración</option><option value="sin_configurar">No configuró nada</option><option value="exploro">Exploró el sistema</option><option value="casi_listo">Casi listo</option></select><select className="h-10 rounded-md border bg-background px-3 text-sm" value={age} onChange={e=>setAge(e.target.value)}><option value="todos">Cualquier antigüedad</option><option value="0-7">0–7 días</option><option value="8-30">8–30 días</option><option value="31-90">31–90 días</option><option value="91-36500">Más de 90 días</option></select><select className="h-10 rounded-md border bg-background px-3 text-sm" value={special} onChange={e=>setSpecial(e.target.value)}><option value="todos">Todos los casos</option><option value="seguimiento_vencido">Seguimiento vencido</option><option value="con_oferta">Con oferta</option></select></div>
-            </div>
-            <Tabs defaultValue="activos"><div className="border-b px-4 pt-3"><TabsList><TabsTrigger value="activos">Activos ({activeLeads.length})</TabsTrigger><TabsTrigger value="perdidos">Perdidos ({lostLeads.length})</TabsTrigger></TabsList></div><TabsContent value="activos" className="m-0"><MasterLeadTable leads={activeLeads} onOpen={setSelectedLead} onContact={openContact}/></TabsContent><TabsContent value="perdidos" className="m-0"><MasterLeadTable leads={lostLeads} onOpen={setSelectedLead} onContact={openContact}/></TabsContent></Tabs>
-          </CardContent></Card>
+          <AdminTrialCrmTab scope="team" />
         </TabsContent>
 
         <TabsContent value="empresas"><CompaniesTable companies={data.companies}/></TabsContent>
