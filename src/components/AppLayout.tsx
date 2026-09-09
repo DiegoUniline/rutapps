@@ -13,7 +13,7 @@ import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
   DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download, ShieldAlert, PlayCircle, LifeBuoy,
-  Tag, ClipboardList, Star, ShoppingBag, ScanBarcode, Percent
+  Tag, ClipboardList, Star, ShoppingBag, ScanBarcode, Percent, UsersRound
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
@@ -26,6 +26,7 @@ import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import SandboxBanner from '@/components/SandboxBanner';
 import { useProductosRealtime } from '@/hooks/useData';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { usePlatformTeam } from '@/hooks/usePlatformTeam';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -522,11 +523,12 @@ function Breadcrumb() {
   );
 }
 
-function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setupComplete, onOpenPalette }: {
+function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, hasTeamAccess, setupComplete, onOpenPalette }: {
   collapsed: boolean;
   onNavigate?: () => void;
   visibleNavItems: NavItem[];
   isSuperAdmin: boolean;
+  hasTeamAccess: boolean;
   setupComplete: boolean | undefined;
   onOpenPalette?: () => void;
 }) {
@@ -634,6 +636,21 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setu
           {!collapsed && <span>Panel Master</span>}
         </Link>
       )}
+      {hasTeamAccess && (
+        <Link
+          to="/equipo"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all mt-1",
+            collapsed ? "justify-center px-2" : "",
+            "text-primary hover:bg-sidebar-hover"
+          )}
+          title={collapsed ? 'Equipo RutApp' : undefined}
+        >
+          <UsersRound className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Equipo RutApp</span>}
+        </Link>
+      )}
     </nav>
   );
 }
@@ -650,6 +667,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { empresa, profile, signOut, user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
+  const { data: teamAccess } = usePlatformTeam();
   const { data: setupComplete } = useSetupComplete();
   const { hasModulo, loading: permisosLoading } = usePermisos();
   const isMobile = useIsMobile();
@@ -743,6 +761,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     onNavigate={closeMobile}
                     visibleNavItems={visibleNavItems}
                     isSuperAdmin={isSuperAdmin}
+                    hasTeamAccess={!!teamAccess?.has_access}
                     setupComplete={setupComplete}
                     onOpenPalette={() => setPaletteOpen(true)}
                   />
@@ -893,6 +912,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           collapsed={collapsed}
           visibleNavItems={visibleNavItems}
           isSuperAdmin={isSuperAdmin}
+          hasTeamAccess={!!teamAccess?.has_access}
           setupComplete={setupComplete}
           onOpenPalette={() => setPaletteOpen(true)}
         />

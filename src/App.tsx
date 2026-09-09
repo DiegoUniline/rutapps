@@ -24,6 +24,7 @@ import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
 import { showAppError } from "@/lib/globalError";
 import { usePartner } from "@/hooks/usePartner";
+import { usePlatformTeam } from "@/hooks/usePlatformTeam";
 import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
 import BroadcastListener from "@/components/BroadcastListener";
 import GlobalColumnResizer from "@/components/global/GlobalColumnResizer";
@@ -133,6 +134,7 @@ const PartnerEmpresas = lazy(() => import("@/pages/partner/PartnerEmpresas"));
 const PartnerCupones = lazy(() => import("@/pages/partner/PartnerCupones"));
 const PartnerComisiones = lazy(() => import("@/pages/partner/PartnerComisiones"));
 const PartnerPerfil = lazy(() => import("@/pages/partner/PartnerPerfil"));
+const TeamPortalPage = lazy(() => import("@/pages/team/TeamPortalPage"));
 const DatabaseHealthPage = lazy(() => import("@/pages/DatabaseHealthPage"));
 const SyncHealthPage = lazy(() => import("@/pages/SyncHealthPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
@@ -303,6 +305,7 @@ function AppRoutes() {
 
 function AuthenticatedAppRoutes() {
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, empresa } = useAuth();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const subscription = useSubscription();
   const cardCapture = useNeedsCardCapture();
@@ -355,6 +358,24 @@ function AuthenticatedAppRoutes() {
 
   // Partner-only user (tiene partner row pero NO profile de empresa) → solo panel /partner
   const partnerQ = usePartner();
+  const teamQ = usePlatformTeam();
+  const hasTeamAccess = !!teamQ.data?.has_access;
+  const isTeamRoute = location.pathname === '/equipo' || location.pathname.startsWith('/equipo/');
+
+  // El acceso interno es independiente de la empresa del usuario y nunca concede Super Admin.
+  // Si también tiene una empresa, solo entra al portal interno al visitar /equipo.
+  if (user && !loading && !teamQ.isLoading && hasTeamAccess && (isTeamRoute || !profile)) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/equipo" element={<TeamPortalPage />} />
+          <Route path="/tutoriales" element={<TutorialesPage />} />
+          <Route path="/soporte" element={<SoportePage />} />
+          <Route path="*" element={<Navigate to="/equipo" replace />} />
+        </Routes>
+      </Suspense>
+    );
+  }
   const isPartnerOnly = !!user && !profile && !loading && !!partnerQ.data;
   if (isPartnerOnly) {
     return (
@@ -552,6 +573,7 @@ function AuthenticatedAppRoutes() {
           <Routes>
             <Route path="/super-admin" element={<SuperAdminPage />} />
             <Route path="/super-admin/crm/:empresaId" element={<SuperAdminPage initialTab="trial_crm" />} />
+            <Route path="/super-admin/equipo/:personId" element={<SuperAdminPage initialTab="team" />} />
             <Route path="/super-admin/partners" element={<SuperAdminPartnersPage />} />
             <Route path="/super-admin/partners/:partnerId" element={<PartnerAdminDetailPage />} />
             <Route path="/super-admin/database-health" element={<DatabaseHealthPage />} />
