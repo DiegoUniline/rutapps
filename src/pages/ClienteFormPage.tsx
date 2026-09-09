@@ -28,6 +28,7 @@ const defaultCliente: Partial<Cliente> = {
   credito: false, limite_credito: 0, dias_credito: 0, orden: 0, status: 'activo',
   requiere_factura: false, facturama_rfc: '', facturama_razon_social: '',
   facturama_regimen_fiscal: '', facturama_uso_cfdi: '', facturama_cp: '',
+  facturama_direccion_fiscal: '', facturama_forma_pago: '',
   facturama_correo_facturacion: '', notas_fiscales: '',
   fecha_alta: todayLocal(),
 };
@@ -243,6 +244,10 @@ export default function ClienteFormPage() {
     queryKey: ['cat_uso_cfdi'], staleTime: 10 * 60 * 1000,
     queryFn: async () => { const { data } = await supabase.from('cat_uso_cfdi').select('clave, descripcion').eq('activo', true).order('clave'); return data ?? []; },
   });
+  const { data: catFormaPago } = useQuery({
+    queryKey: ['cat_forma_pago'], staleTime: 10 * 60 * 1000,
+    queryFn: async () => { const { data } = await supabase.from('cat_forma_pago').select('clave, descripcion').eq('activo', true).order('clave'); return data ?? []; },
+  });
 
   const [form, setForm] = useState<Partial<Cliente>>(defaultCliente);
   const [originalForm, setOriginalForm] = useState<Partial<Cliente>>(defaultCliente);
@@ -410,6 +415,7 @@ export default function ClienteFormPage() {
         facturama_razon_social: d.razon_social || prev.facturama_razon_social,
         facturama_regimen_fiscal: d.regimen_fiscal || prev.facturama_regimen_fiscal,
         facturama_cp: d.cp || prev.facturama_cp,
+        facturama_direccion_fiscal: d.direccion || prev.facturama_direccion_fiscal,
         rfc: d.rfc || prev.rfc,
         direccion: d.direccion || prev.direccion,
         colonia: d.colonia || prev.colonia,
@@ -687,6 +693,7 @@ export default function ClienteFormPage() {
                     <OdooField label="Razón Social" value={form.facturama_razon_social} onChange={v => set('facturama_razon_social', v)} placeholder="Razón social como aparece en constancia" />
                     <OdooField label="Régimen Fiscal" value={form.facturama_regimen_fiscal} onChange={v => set('facturama_regimen_fiscal', v)} type="select"
                       options={(catRegimen ?? []).map(r => ({ value: r.clave, label: `${r.clave} - ${r.descripcion}` }))} />
+                    <OdooField label="Dirección fiscal" value={form.facturama_direccion_fiscal} onChange={v => set('facturama_direccion_fiscal', v)} placeholder="Calle, número, colonia, ciudad y estado" />
                   </>
                 )}
               </div>
@@ -696,6 +703,8 @@ export default function ClienteFormPage() {
                     <OdooField label="Uso CFDI" value={form.facturama_uso_cfdi} onChange={v => set('facturama_uso_cfdi', v)} type="select"
                       options={(catUsoCfdi ?? []).map(u => ({ value: u.clave, label: `${u.clave} - ${u.descripcion}` }))} />
                     <OdooField label="Código Postal" value={form.facturama_cp} onChange={v => set('facturama_cp', v)} placeholder="C.P. fiscal del receptor" />
+                    <OdooField label="Forma de pago" value={form.facturama_forma_pago} onChange={v => set('facturama_forma_pago', v)} type="select"
+                      options={(catFormaPago ?? []).map(fp => ({ value: fp.clave, label: `${fp.clave} - ${fp.descripcion}` }))} />
                     <OdooField label="Correo Facturación" value={form.facturama_correo_facturacion} onChange={v => set('facturama_correo_facturacion', v)} placeholder="email@ejemplo.com" />
                     <div>
                       <label className="label-odoo">Notas fiscales</label>
