@@ -159,13 +159,22 @@ body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs
 }
 
 body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.border-b.border-border.gap-0.overflow-x-auto > button {
-  min-height: 66px;
+  min-height: 70px;
   padding: .65rem .75rem !important;
   text-align: left;
   border: 1px solid hsl(var(--border)) !important;
   border-radius: .5rem;
   background: hsl(var(--card));
   color: hsl(var(--foreground));
+}
+
+body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.border-b.border-border.gap-0.overflow-x-auto > button > span {
+  display: block;
+  margin: .2rem 0 0 !important;
+  color: hsl(var(--foreground)) !important;
+  font-size: 1.15rem !important;
+  font-weight: 700;
+  line-height: 1.25rem;
 }
 
 body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs] ~ .flex.border-b.border-border.gap-0.overflow-x-auto > button:hover {
@@ -179,9 +188,21 @@ body[data-pedidos-page="entregas"][data-pedidos-mode="stats"] [data-pedidos-tabs
 
 /* ─────────────── Concentrado a surtir ─────────────── */
 
-/* The large filter card is available on demand instead of permanently consuming the viewport. */
+/* The large filter card collapses to its action row so Generar compras stays permanently reachable. */
 body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  gap: .375rem !important;
+  justify-content: flex-end;
+}
+
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:not(:nth-of-type(4)) {
   display: none !important;
+}
+
+body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) {
+  margin-left: auto !important;
 }
 
 body[data-pedidos-page="concentrado"][data-pedidos-filters="open"] [data-pedidos-tabs] ~ .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
