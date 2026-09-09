@@ -369,6 +369,7 @@ function AuthenticatedAppRoutes() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/equipo" element={<TeamPortalPage />} />
+          <Route path="/equipo/crm/:empresaId" element={<TeamPortalPage />} />
           <Route path="/tutoriales" element={<TutorialesPage />} />
           <Route path="/soporte" element={<SoportePage />} />
           <Route path="*" element={<Navigate to="/equipo" replace />} />
