@@ -58,6 +58,13 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
     onClose();
   };
 
+  const finishAndClose = async () => {
+    await onCompleted();
+    setCredentials(null);
+    setPassword('');
+    onClose();
+  };
+
   const copyCredentials = async () => {
     if (!credentials) return;
     await navigator.clipboard.writeText(`Usuario: ${credentials.email}\nContraseña temporal: ${credentials.password}`);
@@ -85,15 +92,13 @@ export default function TeamAccessDialog({ member, onClose, onCompleted }: TeamA
 
       if (mode === 'invite') {
         toast.success(result?.existing_account ? 'Cuenta existente vinculada correctamente' : 'Invitación enviada por correo');
-        await onCompleted();
-        close();
+        await finishAndClose();
         return;
       }
 
       if (result?.existing_account) {
         toast.success('Cuenta existente vinculada correctamente');
-        await onCompleted();
-        close();
+        await finishAndClose();
         return;
       }
 
