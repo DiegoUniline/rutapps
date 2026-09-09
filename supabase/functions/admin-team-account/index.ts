@@ -46,7 +46,7 @@ Deno.serve(async request => {
 
     const body = await request.json();
     const personId = body?.person_id as string | undefined;
-    const accessMode = (body?.access_mode || 'invite') as AccessMode;
+    let accessMode = (body?.access_mode || 'invite') as AccessMode;
     const requestedPassword = typeof body?.temporary_password === 'string' ? body.temporary_password.trim() : '';
     if (!personId) return json({ error: 'Falta el integrante' }, 400);
     if (!['invite', 'direct', 'reset_password'].includes(accessMode)) return json({ error: 'Modalidad de acceso inválida' }, 400);
@@ -65,14 +65,25 @@ Deno.serve(async request => {
     if (!person.is_active) return json({ error: 'Reactiva al integrante antes de administrar su acceso' }, 409);
     if (!person.email) return json({ error: 'El integrante necesita un correo' }, 409);
 
+    const { data: teamMember, error: teamError } = await admin
+      .from('platform_team_members')
+      .select('user_id, email_is_fictitious')
+      .eq('person_id', personId)
+      .maybeSingle();
+    if (teamError) throw teamError;
+    const emailIsFictitious = Boolean(teamMember?.email_is_fictitious);
+    if (emailIsFictitious && accessMode === 'invite') accessMode = 'direct';
+
     const email = person.email.trim().toLowerCase();
-    let userId: string | null = null;
-    for (let page = 1; page <= 10 && !userId; page += 1) {
-      const { data: pageData, error: usersError } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
-      if (usersError) throw usersError;
-      const match = pageData.users.find(user => user.email?.toLowerCase() === email);
-      userId = match?.id ?? null;
-      if (pageData.users.length < 1000) break;
+    let userId: string | null = teamMember?.user_id ?? null;
+    if (!userId) {
+      for (let page = 1; page <= 10 && !userId; page += 1) {
+        const { data: pageData, error: usersError } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+        if (usersError) throw usersError;
+        const match = pageData.users.find(user => user.email?.toLowerCase() === email);
+        userId = match?.id ?? null;
+        if (pageData.users.length < 1000) break;
+      }
     }
 
     const existingAccount = Boolean(userId);
@@ -84,6 +95,8 @@ Deno.serve(async request => {
       temporaryPassword = requestedPassword || generateTemporaryPassword();
       const { error: updateError } = await admin.auth.admin.updateUserById(userId, {
         password: temporaryPassword,
+        ...(emailIsFictitious ? { email_confirm: true } : {}),
+        user_metadata: { full_name: person.name, account_type: 'rutapp_team', email_is_fictitious: emailIsFictitious },
       });
       if (updateError) return json({ error: updateError.message || 'No se pudo cambiar la contraseña' }, 400);
 
@@ -99,6 +112,7 @@ Deno.serve(async request => {
         existing_account: true,
         access_mode: accessMode,
         password_changed: true,
+        email_is_fictitious: emailIsFictitious,
         email,
         temporary_password: temporaryPassword,
       });
@@ -108,7 +122,7 @@ Deno.serve(async request => {
       const siteUrl = (Deno.env.get('SITE_URL') || request.headers.get('origin') || 'https://rutapp.mx').replace(/\/$/, '');
       const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
         redirectTo: `${siteUrl}/equipo`,
-        data: { full_name: person.name, account_type: 'rutapp_team' },
+        data: { full_name: person.name, account_type: 'rutapp_team', email_is_fictitious: false },
       });
       if (inviteError || !invite.user) return json({ error: inviteError?.message || 'No se pudo enviar la invitación' }, 400);
       userId = invite.user.id;
@@ -121,10 +135,18 @@ Deno.serve(async request => {
         email,
         password: temporaryPassword,
         email_confirm: true,
-        user_metadata: { full_name: person.name, account_type: 'rutapp_team' },
+        user_metadata: { full_name: person.name, account_type: 'rutapp_team', email_is_fictitious: emailIsFictitious },
       });
       if (createError || !created.user) return json({ error: createError?.message || 'No se pudo crear la cuenta directa' }, 400);
       userId = created.user.id;
+    } else if (userId && accessMode === 'direct') {
+      temporaryPassword = requestedPassword || generateTemporaryPassword();
+      const { error: convertError } = await admin.auth.admin.updateUserById(userId, {
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: { full_name: person.name, account_type: 'rutapp_team', email_is_fictitious: emailIsFictitious },
+      });
+      if (convertError) return json({ error: convertError.message || 'No se pudo activar el acceso directo' }, 400);
     }
 
     const { error: linkError } = await admin.rpc('admin_link_team_account', {
@@ -139,6 +161,7 @@ Deno.serve(async request => {
       invited,
       existing_account: existingAccount,
       access_mode: accessMode,
+      email_is_fictitious: emailIsFictitious,
       email,
       temporary_password: temporaryPassword,
     });
