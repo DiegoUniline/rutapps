@@ -1,6 +1,7 @@
-import { NavLink } from 'react-router-dom';
-import { useEffect } from 'react';
-import { cn } from '@/lib/utils';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { BarChart3, List, SlidersHorizontal } from 'lucide-react';
+import '@/styles/pedidos-workspace.css';
 
 const TABS = [
   { label: 'Pendientes', path: '/logistica/pedidos' },
@@ -15,29 +16,96 @@ const prefetchTabs = () => {
   import('@/pages/logistica/ConcentradoSurtidoPage');
 };
 
+type WorkspaceMode = 'list' | 'stats';
+type WorkspacePage = 'pendientes' | 'entregas' | 'concentrado';
+
 export function PedidosTabs() {
+  const { pathname } = useLocation();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [mode, setMode] = useState<WorkspaceMode>('list');
+
+  const page = useMemo<WorkspacePage>(() => {
+    if (pathname.startsWith('/logistica/entregas')) return 'entregas';
+    if (pathname.startsWith('/logistica/concentrado')) return 'concentrado';
+    return 'pendientes';
+  }, [pathname]);
+
   useEffect(() => { prefetchTabs(); }, []);
+
+  // Each section opens in its operational list; filters are intentionally on demand.
+  useEffect(() => {
+    setFiltersOpen(false);
+    setMode('list');
+  }, [pathname]);
+
+  // Presentation-only state shared by the three logistics pages. It never touches page data.
+  useEffect(() => {
+    document.body.dataset.pedidosPage = page;
+    document.body.dataset.pedidosMode = mode;
+    document.body.dataset.pedidosFilters = filtersOpen ? 'open' : 'closed';
+
+    return () => {
+      delete document.body.dataset.pedidosPage;
+      delete document.body.dataset.pedidosMode;
+      delete document.body.dataset.pedidosFilters;
+    };
+  }, [page, mode, filtersOpen]);
+
   return (
-    <div className="border-b mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto">
-      <nav className="flex gap-1 min-w-max py-1.5">
-        {TABS.map((t) => (
-          <NavLink
-            key={t.path}
-            to={t.path}
-            end
-            className={({ isActive }) =>
-              cn(
-                'px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-md transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              )
-            }
+    <div data-pedidos-tabs className="overflow-x-auto">
+      <div className="pedidos-workspace-row">
+        <nav className="pedidos-primary-nav" aria-label="Logística de pedidos">
+          {TABS.map((t) => (
+            <NavLink
+              key={t.path}
+              to={t.path}
+              end
+              className="pedidos-primary-link"
+              data-active={pathname === t.path ? 'true' : 'false'}
+            >
+              {t.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="pedidos-workspace-tools">
+          <button
+            type="button"
+            className="pedidos-view-button border border-border bg-background"
+            data-active={filtersOpen ? 'true' : 'false'}
+            aria-pressed={filtersOpen}
+            onClick={() => setFiltersOpen(v => !v)}
           >
-            {t.label}
-          </NavLink>
-        ))}
-      </nav>
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span>Filtros</span>
+          </button>
+
+          <div className="pedidos-view-switch" aria-label="Tipo de vista">
+            <button
+              type="button"
+              className="pedidos-view-button"
+              data-active={mode === 'list' ? 'true' : 'false'}
+              aria-pressed={mode === 'list'}
+              onClick={() => setMode('list')}
+              title="Vista operativa"
+            >
+              <List className="h-3.5 w-3.5" />
+              <span>Operación</span>
+            </button>
+            <button
+              type="button"
+              className="pedidos-view-button"
+              data-active={mode === 'stats' ? 'true' : 'false'}
+              aria-pressed={mode === 'stats'}
+              onClick={() => setMode('stats')}
+              title="Vista de estadísticas"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span>Estadísticas</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
