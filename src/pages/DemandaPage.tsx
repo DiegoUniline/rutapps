@@ -48,10 +48,11 @@ function usePedidosPendientes(filters: DemandaFilters) {
           .eq('empresa_id', empresa!.id)
           .eq('tipo', 'pedido')
           .in('status', filters.statuses as any)
-          .gte(filters.fechaTipo, filters.desde)
-          .lte(filters.fechaTipo, filters.hasta)
           .order(filters.fechaTipo, { ascending: true })
           .range(from, to);
+        // Un rango vacío significa TODO el histórico: no mandar gte/lte vacíos a PostgREST.
+        if (filters.desde) q = q.gte(filters.fechaTipo, filters.desde);
+        if (filters.hasta) q = q.lte(filters.fechaTipo, filters.hasta);
         if (filters.vendedorIds && filters.vendedorIds.length > 0) q = q.in('vendedor_id', filters.vendedorIds);
         return q;
       });
@@ -60,18 +61,27 @@ function usePedidosPendientes(filters: DemandaFilters) {
       const pedidoIds = pedidos.map(p => p.id);
       let entregasData: any[] = [];
       if (pedidoIds.length > 0) {
-        // Chunk pedidoIds to avoid URL limits, paginate each chunk
+        // Chunk pedidoIds to avoid URL limits. Process a few chunks concurrently so
+        // a large historical query does not wait for every group sequentially.
         const chunkSize = 200;
+        const chunkConcurrency = 4;
+        const chunks: string[][] = [];
         for (let i = 0; i < pedidoIds.length; i += chunkSize) {
-          const chunk = pedidoIds.slice(i, i + chunkSize);
-          const part = await fetchAllPages<any>((from, to) =>
-            supabase
-              .from('entregas')
-            .select('pedido_id, status, fecha, fecha_entrega, vendedor_ruta_id, entrega_lineas(producto_id, cantidad_entregada)')
-              .in('pedido_id', chunk)
-              .range(from, to)
-          );
-          entregasData.push(...part);
+          chunks.push(pedidoIds.slice(i, i + chunkSize));
+        }
+
+        for (let i = 0; i < chunks.length; i += chunkConcurrency) {
+          const batch = chunks.slice(i, i + chunkConcurrency);
+          const parts = await Promise.all(batch.map(chunk =>
+            fetchAllPages<any>((from, to) =>
+              supabase
+                .from('entregas')
+                .select('pedido_id, status, fecha, fecha_entrega, vendedor_ruta_id, entrega_lineas(producto_id, cantidad_entregada)')
+                .in('pedido_id', chunk)
+                .range(from, to)
+            )
+          ));
+          for (const part of parts) entregasData.push(...part);
         }
       }
 
@@ -869,8 +879,8 @@ export default function DemandaPage() {
           <Select value={fechaTipo} onValueChange={(v: any) => setFechaTipo(v)}>
             <SelectTrigger className="h-9 w-[170px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="fecha">Fecha de pedido</SelectItem>
-              <SelectItem value="fecha_entrega">Fecha de entrega</SelectItem>
+              <SelectItem value="fecha">Fecha de levantamiento</SelectItem>
+              <SelectItem value="fecha_entrega">Fecha programada de entrega</SelectItem>
             </SelectContent>
           </Select>
         </div>
