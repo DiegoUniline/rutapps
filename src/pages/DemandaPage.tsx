@@ -1,5 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
-import React, { useState, useMemo, Fragment } from 'react';
+import React, { useState, useMemo, Fragment, useDeferredValue } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -32,149 +32,204 @@ interface DemandaFilters {
   hasta: string;
   fechaTipo: 'fecha' | 'fecha_entrega';
   vendedorIds?: string[];
-  statuses: string[]; // which ventas.status to load
+  search?: string;
 }
 
 function usePedidosPendientes(filters: DemandaFilters) {
   const { empresa } = useAuth();
+
   return useQuery({
-    queryKey: ['demanda', empresa?.id, filters],
+    queryKey: ['demanda', 'workspace-rpc', empresa?.id, filters],
     enabled: !!empresa?.id,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: previous => previous,
     queryFn: async () => {
-      const pedidos = await fetchAllPages<any>((from, to) => {
-        let q = supabase
-          .from('ventas')
-          .select('*, clientes(nombre, direccion, telefono), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
-          .eq('empresa_id', empresa!.id)
-          .eq('tipo', 'pedido')
-          .in('status', filters.statuses as any)
-          .gte(filters.fechaTipo, filters.desde)
-          .lte(filters.fechaTipo, filters.hasta)
-          .order(filters.fechaTipo, { ascending: true })
-          .range(from, to);
-        if (filters.vendedorIds && filters.vendedorIds.length > 0) q = q.in('vendedor_id', filters.vendedorIds);
-        return q;
-      });
+      const rows = await fetchAllPages<any>((from, to) =>
+        (supabase as any)
+          .rpc('fn_logistica_pedidos_workspace', {
+            p_empresa_id: empresa!.id,
+            p_fecha_desde: filters.desde || null,
+            p_fecha_hasta: filters.hasta || null,
+            p_fecha_tipo: filters.fechaTipo === 'fecha_entrega' ? 'programada' : 'levantamiento',
+            p_vendedor_ids: filters.vendedorIds?.length ? filters.vendedorIds : null,
+            p_search: filters.search?.trim() || null,
+          })
+          .order('sort_date', { ascending: false })
+          .range(from, to)
+      );
 
-      // Get delivered quantities from entregas
-      const pedidoIds = pedidos.map(p => p.id);
-      let entregasData: any[] = [];
-      if (pedidoIds.length > 0) {
-        // Chunk pedidoIds to avoid URL limits, paginate each chunk
-        const chunkSize = 200;
-        for (let i = 0; i < pedidoIds.length; i += chunkSize) {
-          const chunk = pedidoIds.slice(i, i + chunkSize);
-          const part = await fetchAllPages<any>((from, to) =>
-            supabase
-              .from('entregas')
-            .select('pedido_id, status, fecha, fecha_entrega, vendedor_ruta_id, entrega_lineas(producto_id, cantidad_entregada)')
-              .in('pedido_id', chunk)
-              .range(from, to)
-          );
-          entregasData.push(...part);
-        }
-      }
-
-      // Three maps:
-      //  - generadaMap: entrega creada pero aún NO surtida del almacén (status='borrador')
-      //  - surtidoMap: ya surtido del almacén (status surtido/asignado/cargado/en_ruta/hecho)
-      //  - entregadoMap: entregado al cliente (status='hecho')
-      const SURTIDO_STATUSES = new Set(['surtido', 'asignado', 'cargado', 'en_ruta', 'hecho']);
-      const generadaMap: Record<string, Record<string, number>> = {};
-      const surtidoMap: Record<string, Record<string, number>> = {};
-      const entregadoMap: Record<string, Record<string, number>> = {};
-      const enRutaSet = new Set<string>(); // pedidos con al menos una entrega en_ruta/asignado/cargado
-      const pedidoMeta: Record<string, { fecha?: string | null; vendedorRutaId?: string | null; fechaEntrega?: string | null }> = {};
-      for (const e of entregasData) {
-        if (!e.pedido_id || e.status === 'cancelado') continue;
-        // Track latest active entrega meta (fecha programada + repartidor + fecha entrega)
-        const prev = pedidoMeta[e.pedido_id];
-        if (!prev || (e.fecha && (!prev.fecha || new Date(e.fecha) > new Date(prev.fecha)))) {
-          pedidoMeta[e.pedido_id] = { fecha: e.fecha ?? prev?.fecha ?? null, vendedorRutaId: e.vendedor_ruta_id ?? prev?.vendedorRutaId ?? null, fechaEntrega: prev?.fechaEntrega ?? null };
-        } else if (!prev.vendedorRutaId && e.vendedor_ruta_id) {
-          prev.vendedorRutaId = e.vendedor_ruta_id;
-        }
-        // Track actual delivery date from completed entregas
-        if (e.status === 'hecho' && e.fecha_entrega) {
-          const current = pedidoMeta[e.pedido_id];
-          if (current) {
-            if (!current.fechaEntrega || new Date(e.fecha_entrega) > new Date(current.fechaEntrega)) {
-              current.fechaEntrega = e.fecha_entrega;
-            }
-          } else {
-            pedidoMeta[e.pedido_id] = { fecha: e.fecha ?? null, vendedorRutaId: e.vendedor_ruta_id ?? null, fechaEntrega: e.fecha_entrega };
-          }
-        }
-        if (e.status === 'borrador') {
-          if (!generadaMap[e.pedido_id]) generadaMap[e.pedido_id] = {};
-          for (const l of (e.entrega_lineas ?? [])) {
-            generadaMap[e.pedido_id][l.producto_id] = (generadaMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
-          }
-        } else if (SURTIDO_STATUSES.has(e.status)) {
-          if (!surtidoMap[e.pedido_id]) surtidoMap[e.pedido_id] = {};
-          for (const l of (e.entrega_lineas ?? [])) {
-            surtidoMap[e.pedido_id][l.producto_id] = (surtidoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
-          }
-          if (e.status === 'asignado' || e.status === 'cargado' || e.status === 'en_ruta') {
-            enRutaSet.add(e.pedido_id);
-          }
-          if (e.status === 'hecho') {
-            if (!entregadoMap[e.pedido_id]) entregadoMap[e.pedido_id] = {};
-            for (const l of (e.entrega_lineas ?? [])) {
-              entregadoMap[e.pedido_id][l.producto_id] = (entregadoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
-            }
-          }
-        }
-      }
-
-      return pedidos.map(p => {
-        const generada = generadaMap[p.id] ?? {};
-        const surtido = surtidoMap[p.id] ?? {};
-        const entregado = entregadoMap[p.id] ?? {};
-        const lineasConPendiente = (p.venta_lineas ?? []).map((l: any) => ({
-          ...l,
-          cantidad_generada: generada[l.producto_id] ?? 0,
-          cantidad_surtida: surtido[l.producto_id] ?? 0,
-          cantidad_entregada: entregado[l.producto_id] ?? 0,
-          cantidad_pendiente: l.cantidad - (surtido[l.producto_id] ?? 0) - (generada[l.producto_id] ?? 0),
-        }));
-        const totalPendiente = lineasConPendiente.reduce((s: number, l: any) => s + Math.max(0, l.cantidad_pendiente), 0);
-        const totalGenerada = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_generada, 0);
-        const totalSurtido = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_surtida, 0);
-        const totalEntregado = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_entregada, 0);
-        const totalDemanda = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad, 0);
-        const fullyDelivered = totalDemanda > 0 && totalEntregado >= totalDemanda;
-        const fullySurtido = totalDemanda > 0 && totalSurtido >= totalDemanda;
-        const fullyGenerada = !fullySurtido && totalDemanda > 0 && (totalGenerada + totalSurtido) >= totalDemanda;
-        const enRuta = !fullyDelivered && enRutaSet.has(p.id);
-        // Estado derivado tipo Odoo
-        let estadoOdoo: 'pendiente_surtir' | 'en_surtido' | 'surtido_completo' | 'surtido_parcial' | 'en_ruta' | 'entregado' | null = null;
-        if (fullyDelivered) estadoOdoo = 'entregado';
-        else if (enRuta) estadoOdoo = 'en_ruta';
-        else if (fullySurtido) estadoOdoo = 'surtido_completo';
-        else if (totalSurtido > 0) estadoOdoo = 'surtido_parcial';
-        else if (totalGenerada > 0 && fullyGenerada) estadoOdoo = 'pendiente_surtir';
-        else if (totalGenerada > 0) estadoOdoo = 'en_surtido';
-        return {
-          ...p,
-          venta_lineas: lineasConPendiente,
-          totalPendiente, totalGenerada, totalSurtido, totalEntregado, totalDemanda,
-          pctGenerada: totalDemanda > 0 ? Math.round((totalGenerada / totalDemanda) * 100) : 0,
-          pctSurtido: totalDemanda > 0 ? Math.round((totalSurtido / totalDemanda) * 100) : 0,
-          pctEntregado: totalDemanda > 0 ? Math.round((totalEntregado / totalDemanda) * 100) : 0,
-          fullyGenerada,
-          fullySurtido,
-          fullyDelivered,
-          enRuta,
-          estadoOdoo,
-          fechaProgramada: pedidoMeta[p.id]?.fecha ?? null,
-          vendedorRutaId: pedidoMeta[p.id]?.vendedorRutaId ?? null,
-          fechaEntrega: pedidoMeta[p.id]?.fechaEntrega ?? null,
-        };
-      });
+      return rows.map((row: any) => ({
+        id: row.id,
+        folio: row.folio,
+        cliente_id: row.cliente_id,
+        clientes: {
+          nombre: row.cliente_nombre,
+          direccion: row.cliente_direccion,
+          telefono: row.cliente_telefono,
+        },
+        vendedor_id: row.vendedor_id,
+        vendedores: { nombre: row.vendedor_nombre },
+        status: row.status,
+        fecha: row.fecha,
+        total: Number(row.total ?? 0),
+        cerrado_at: row.cerrado_at,
+        notas: row.notas,
+        totalPendiente: Number(row.total_pendiente ?? 0),
+        totalGenerada: Number(row.total_generada ?? 0),
+        totalSurtido: Number(row.total_surtido ?? 0),
+        totalEntregado: Number(row.total_entregado ?? 0),
+        totalDemanda: Number(row.total_demanda ?? 0),
+        totalValorPendiente: Number(row.total_valor_pendiente ?? 0),
+        lineasPendientes: Number(row.lineas_pendientes ?? 0),
+        pctGenerada: Number(row.pct_generada ?? 0),
+        pctSurtido: Number(row.pct_surtido ?? 0),
+        pctEntregado: Number(row.pct_entregado ?? 0),
+        fullyGenerada: !!row.fully_generada,
+        fullySurtido: !!row.fully_surtido,
+        fullyDelivered: !!row.fully_delivered,
+        enRuta: !!row.en_ruta,
+        estadoOdoo: row.estado_odoo,
+        fechaProgramada: row.fecha_programada,
+        vendedorRutaId: row.vendedor_ruta_id,
+        fechaEntrega: row.fecha_entrega_real,
+      }));
     },
   });
 }
+
+async function fetchPedidoLineas(pedidoIds: string[]) {
+  const ids = Array.from(new Set(pedidoIds.filter(Boolean)));
+  const result: Record<string, any[]> = {};
+  for (const id of ids) result[id] = [];
+  if (ids.length === 0) return result;
+
+  const lineas: any[] = [];
+  const entregas: any[] = [];
+  const chunkSize = 150;
+  const concurrency = 4;
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += chunkSize) chunks.push(ids.slice(i, i + chunkSize));
+
+  for (let i = 0; i < chunks.length; i += concurrency) {
+    const batch = chunks.slice(i, i + concurrency);
+    const batchResults = await Promise.all(batch.map(async chunk => {
+      const [ventasPart, entregasPart] = await Promise.all([
+        fetchAllPages<any>((from, to) =>
+          supabase
+            .from('venta_lineas')
+            .select('id, venta_id, producto_id, unidad_id, lote_id, cantidad, descripcion, precio_unitario, productos(id, codigo, nombre, unidades:unidad_venta_id(abreviatura))')
+            .in('venta_id', chunk)
+            .order('created_at', { ascending: true })
+            .range(from, to)
+        ),
+        fetchAllPages<any>((from, to) =>
+          supabase
+            .from('entregas')
+            .select('pedido_id, status, entrega_lineas(producto_id, cantidad_entregada)')
+            .in('pedido_id', chunk)
+            .neq('status', 'cancelado')
+            .range(from, to)
+        ),
+      ]);
+      return { ventasPart, entregasPart };
+    }));
+
+    for (const part of batchResults) {
+      lineas.push(...part.ventasPart);
+      entregas.push(...part.entregasPart);
+    }
+  }
+
+  const generada: Record<string, Record<string, number>> = {};
+  const surtida: Record<string, Record<string, number>> = {};
+  const entregada: Record<string, Record<string, number>> = {};
+  const SURTIDO_STATUSES = new Set(['surtido', 'asignado', 'cargado', 'en_ruta', 'hecho']);
+
+  for (const e of entregas) {
+    if (!e.pedido_id) continue;
+    for (const l of (e.entrega_lineas ?? [])) {
+      if (!l.producto_id) continue;
+      const qty = Number(l.cantidad_entregada ?? 0);
+      if (e.status === 'borrador') {
+        generada[e.pedido_id] ??= {};
+        generada[e.pedido_id][l.producto_id] = (generada[e.pedido_id][l.producto_id] ?? 0) + qty;
+      } else if (SURTIDO_STATUSES.has(e.status)) {
+        surtida[e.pedido_id] ??= {};
+        surtida[e.pedido_id][l.producto_id] = (surtida[e.pedido_id][l.producto_id] ?? 0) + qty;
+        if (e.status === 'hecho') {
+          entregada[e.pedido_id] ??= {};
+          entregada[e.pedido_id][l.producto_id] = (entregada[e.pedido_id][l.producto_id] ?? 0) + qty;
+        }
+      }
+    }
+  }
+
+  for (const l of lineas) {
+    const pedidoId = l.venta_id;
+    const productoId = l.producto_id;
+    const cantidadGenerada = productoId ? (generada[pedidoId]?.[productoId] ?? 0) : 0;
+    const cantidadSurtida = productoId ? (surtida[pedidoId]?.[productoId] ?? 0) : 0;
+    const cantidadEntregada = productoId ? (entregada[pedidoId]?.[productoId] ?? 0) : 0;
+    const cantidad = Number(l.cantidad ?? 0);
+
+    result[pedidoId] ??= [];
+    result[pedidoId].push({
+      ...l,
+      cantidad,
+      precio_unitario: Number(l.precio_unitario ?? 0),
+      cantidad_generada: cantidadGenerada,
+      cantidad_surtida: cantidadSurtida,
+      cantidad_entregada: cantidadEntregada,
+      cantidad_pendiente: cantidad - cantidadSurtida - cantidadGenerada,
+    });
+  }
+
+  return result;
+}
+
+function PedidoLineasRows({ pedidoId, fmt }: { pedidoId: string; fmt: (n: number) => string }) {
+  const { data: lineas = [], isLoading, isError } = useQuery({
+    queryKey: ['demanda', 'lineas', pedidoId],
+    enabled: !!pedidoId,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const byPedido = await fetchPedidoLineas([pedidoId]);
+      return byPedido[pedidoId] ?? [];
+    },
+  });
+
+  if (isLoading) {
+    return <tr><td colSpan={9} className="py-3 text-center text-muted-foreground">Cargando productos…</td></tr>;
+  }
+  if (isError) {
+    return <tr><td colSpan={9} className="py-3 text-center text-destructive">No se pudieron cargar los productos.</td></tr>;
+  }
+  if (lineas.length === 0) {
+    return <tr><td colSpan={9} className="py-3 text-center text-muted-foreground">Sin productos</td></tr>;
+  }
+
+  return (
+    <>
+      {lineas.map((l: any) => (
+        <tr key={l.id} className="border-b border-border/40 last:border-0">
+          <td className="py-1 pr-2 font-mono text-[11px]">{l.productos?.codigo ?? '—'}</td>
+          <td className="py-1 pr-2">{l.productos?.nombre ?? l.descripcion ?? '—'}</td>
+          <td className="py-1 pr-2 text-right">{l.cantidad} {l.productos?.unidades?.abreviatura ?? ''}</td>
+          <td className="py-1 pr-2 text-right text-blue-700">{l.cantidad_generada}</td>
+          <td className="py-1 pr-2 text-right text-amber-700">{l.cantidad_surtida}</td>
+          <td className="py-1 pr-2 text-right text-green-700">{l.cantidad_entregada}</td>
+          <td className={cn("py-1 pr-2 text-right font-medium", l.cantidad_pendiente > 0 ? "text-foreground" : "text-muted-foreground")}>{Math.max(0, l.cantidad_pendiente)}</td>
+          <td className="py-1 pr-2 text-right">{fmt(l.precio_unitario)}</td>
+          <td className="py-1 text-right font-medium">{fmt(l.cantidad * l.precio_unitario)}</td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
 
 
 // ─── Component ────────────────────────────────────────────
@@ -197,13 +252,14 @@ export default function DemandaPage() {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  // Always load all relevant statuses; filter client-side per tab
-  const statusesForTab = ['borrador', 'confirmado', 'entregado'];
+  const deferredSearch = useDeferredValue(search);
 
-  const { data: pedidos, isLoading } = usePedidosPendientes({
-    desde, hasta, fechaTipo,
+  const { data: pedidos, isLoading, error: pedidosError } = usePedidosPendientes({
+    desde,
+    hasta,
+    fechaTipo,
     vendedorIds: vendedorFilter.length > 0 ? vendedorFilter : undefined,
-    statuses: statusesForTab,
+    search: deferredSearch,
   });
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -291,6 +347,11 @@ export default function DemandaPage() {
 
   const selectedPedidos = filtered.filter(p => selectedIds.has(p.id));
 
+  const hydrateSelectedPedidos = async () => {
+    const byPedido = await fetchPedidoLineas(selectedPedidos.map(p => p.id));
+    return selectedPedidos.map(p => ({ ...p, venta_lineas: byPedido[p.id] ?? [] }));
+  };
+
   // Confirm pedidos (single or bulk)
   const confirmarPedidoMut = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -315,11 +376,12 @@ export default function DemandaPage() {
   const crearEntregasMut = useMutation({
     mutationFn: async () => {
       if (selectedPedidos.length === 0) throw new Error('Selecciona al menos un pedido');
+      const pedidosConLineas = await hydrateSelectedPedidos();
 
       const createdIds: string[] = [];
 
       // Auto-confirm any borrador in the batch first
-      const borradorIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
+      const borradorIds = pedidosConLineas.filter(p => p.status === 'borrador').map(p => p.id);
       if (borradorIds.length > 0) {
         const { error: cErr } = await supabase
           .from('ventas')
@@ -329,7 +391,7 @@ export default function DemandaPage() {
         if (cErr) throw cErr;
       }
 
-      for (const pedido of selectedPedidos) {
+      for (const pedido of pedidosConLineas) {
         const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
         if (pendientes.length === 0) continue;
 
@@ -395,6 +457,7 @@ export default function DemandaPage() {
     mutationFn: async () => {
       if (!almacenId) throw new Error('Selecciona un almacén');
       if (selectedPedidos.length === 0) throw new Error('Selecciona al menos un pedido');
+      const pedidosConLineas = await hydrateSelectedPedidos();
 
       // Si se eligió repartidor en este diálogo, validar que tenga almacén
       // para poder transicionar a 'cargado' y disparar el trigger de BD que
@@ -413,7 +476,7 @@ export default function DemandaPage() {
       }
 
       // 1) Auto-confirm borradores
-      const borradorIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
+      const borradorIds = pedidosConLineas.filter(p => p.status === 'borrador').map(p => p.id);
       if (borradorIds.length > 0) {
         await supabase.from('ventas').update({ status: 'confirmado' }).in('id', borradorIds).eq('status', 'borrador');
       }
@@ -421,7 +484,7 @@ export default function DemandaPage() {
 
       // 2) Get current stock for all needed products in this almacen
       const productoIds = Array.from(new Set(
-        selectedPedidos.flatMap(p => p.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0).map((l: any) => l.producto_id))
+        pedidosConLineas.flatMap(p => p.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0).map((l: any) => l.producto_id))
       ));
       const stockMap: Record<string, number> = {};
       if (productoIds.length > 0) {
@@ -440,7 +503,7 @@ export default function DemandaPage() {
 
       const fully: any[] = [], partial: any[] = [], none: any[] = [], errors: any[] = [];
 
-      for (const pedido of selectedPedidos) {
+      for (const pedido of pedidosConLineas) {
         try {
           const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
           if (pendientes.length === 0) continue;
@@ -764,9 +827,7 @@ export default function DemandaPage() {
   // Totals
   const totalPedidos = filtered.length;
   const totalLineasPendientes = filtered.reduce((s, p) => s + p.totalPendiente, 0);
-  const totalValorPendiente = filtered.reduce((s, p) => {
-    return s + p.venta_lineas.reduce((ls: number, l: any) => ls + Math.max(0, l.cantidad_pendiente) * l.precio_unitario, 0);
-  }, 0);
+  const totalValorPendiente = filtered.reduce((s, p) => s + Number(p.totalValorPendiente ?? 0), 0);
 
   return (
     <ListPage scroll>
@@ -869,8 +930,8 @@ export default function DemandaPage() {
           <Select value={fechaTipo} onValueChange={(v: any) => setFechaTipo(v)}>
             <SelectTrigger className="h-9 w-[170px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="fecha">Fecha de pedido</SelectItem>
-              <SelectItem value="fecha_entrega">Fecha de entrega</SelectItem>
+              <SelectItem value="fecha">Fecha de levantamiento</SelectItem>
+              <SelectItem value="fecha_entrega">Fecha programada de entrega</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -970,6 +1031,11 @@ export default function DemandaPage() {
 
 
       {isLoading && <p className="text-muted-foreground">Cargando...</p>}
+      {pedidosError && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          No se pudieron cargar los pedidos: {(pedidosError as any)?.message ?? 'error de consulta'}
+        </div>
+      )}
 
       {/* Pedidos table */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -1121,19 +1187,7 @@ export default function DemandaPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {(pedido.venta_lineas ?? []).map((l: any) => (
-                              <tr key={l.id} className="border-b border-border/40 last:border-0">
-                                <td className="py-1 pr-2 font-mono text-[11px]">{l.productos?.codigo ?? '—'}</td>
-                                <td className="py-1 pr-2">{l.productos?.nombre ?? l.descripcion ?? '—'}</td>
-                                <td className="py-1 pr-2 text-right">{l.cantidad} {l.productos?.unidades?.abreviatura ?? ''}</td>
-                                <td className="py-1 pr-2 text-right text-blue-700">{l.cantidad_generada}</td>
-                                <td className="py-1 pr-2 text-right text-amber-700">{l.cantidad_surtida}</td>
-                                <td className="py-1 pr-2 text-right text-green-700">{l.cantidad_entregada}</td>
-                                <td className={cn("py-1 pr-2 text-right font-medium", l.cantidad_pendiente > 0 ? "text-foreground" : "text-muted-foreground")}>{Math.max(0, l.cantidad_pendiente)}</td>
-                                <td className="py-1 pr-2 text-right">{fmt(l.precio_unitario)}</td>
-                                <td className="py-1 text-right font-medium">{fmt(l.cantidad * l.precio_unitario)}</td>
-                              </tr>
-                            ))}
+                            <PedidoLineasRows pedidoId={pedido.id} fmt={fmt} />
                           </tbody>
                         </table>
                       </div>
@@ -1198,7 +1252,7 @@ export default function DemandaPage() {
                     <tr key={p.id} className="border-b border-border/50">
                       <td className="px-3 py-1.5 font-mono font-bold">{p.folio}</td>
                       <td className="px-3 py-1.5">{p.clientes?.nombre ?? '—'}</td>
-                      <td className="px-3 py-1.5 text-right">{p.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0).length}</td>
+                      <td className="px-3 py-1.5 text-right">{p.lineasPendientes}</td>
                       <td className="px-3 py-1.5 text-right font-medium">{p.totalPendiente}</td>
                     </tr>
                   ))}

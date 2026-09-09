@@ -10,11 +10,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SearchableSelect from '@/components/SearchableSelect';
 import ModalSelect from '@/components/ModalSelect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useVendedoresList, useAsignarEntrega, useCargarEntrega, useAsignarYCargar } from '@/hooks/useEntregas';
-import { useEntregasWorkspaceCounts, useEntregasWorkspaceList, useEntregaWorkspaceLineas } from '@/hooks/useEntregasWorkspace';
+import { useEntregasWorkspaceCounts, useEntregasWorkspaceList, useEntregaWorkspaceLineas, type EntregaFechaTipo } from '@/hooks/useEntregasWorkspace';
 import { fmtDate, fmtDateTime, cn , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ClienteLink } from '@/components/links/EntityLinks';
@@ -42,6 +43,7 @@ export default function EntregaListPage() {
   const [rutaFilter, setRutaFilter] = useState('todos');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [fechaTipo, setFechaTipo] = useState<EntregaFechaTipo>('programada');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showSurtirDialog, setShowSurtirDialog] = useState(false);
@@ -52,14 +54,14 @@ export default function EntregaListPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cargarProgress, setCargarProgress] = useState<{ current: number; total: number; folio?: string; title?: string } | null>(null);
 
-  // Los conteos conservan el alcance anterior (búsqueda + vendedor), pero sólo
-  // descargan id/status. La lista operativa sí aplica estado/ruta/fecha en servidor.
-  const { data: countRows = [] } = useEntregasWorkspaceCounts(search, vendedorFilter);
+  // Los conteos se calculan en PostgreSQL; la lista aplica estado/ruta/fecha en servidor.
+  const { data: counts = { total: 0, borrador: 0, surtido: 0, asignado: 0, cargado: 0, en_ruta: 0, hecho: 0, no_entregado: 0 } } = useEntregasWorkspaceCounts(search, vendedorFilter);
   const { data: allEntregas = [], isLoading } = useEntregasWorkspaceList({
     search,
     vendedorFilter,
     statusFilter,
     rutaFilter,
+    fechaTipo,
     fechaDesde,
     fechaHasta,
   });
@@ -77,17 +79,6 @@ export default function EntregaListPage() {
 
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
   const vendedorOptions = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
-
-  const counts = {
-    total: countRows.length,
-    borrador: countRows.filter(e => (e as any).status === 'borrador').length,
-    surtido: countRows.filter(e => (e as any).status === 'surtido').length,
-    asignado: countRows.filter(e => (e as any).status === 'asignado').length,
-    cargado: countRows.filter(e => (e as any).status === 'cargado').length,
-    en_ruta: countRows.filter(e => (e as any).status === 'en_ruta').length,
-    hecho: countRows.filter(e => (e as any).status === 'hecho').length,
-    no_entregado: countRows.filter(e => (e as any).status === 'no_entregado').length,
-  };
 
   // Los filtros ya se aplicaron en PostgreSQL. Este memo mantiene la misma
   // variable usada por selección/acciones sin volver a recorrer filtros pesados.
@@ -506,12 +497,24 @@ export default function EntregaListPage() {
             placeholder="Ruta..."
           />
         </div>
+        <div className="min-w-[220px]">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Filtrar fecha por</label>
+          <Select value={fechaTipo} onValueChange={(value) => setFechaTipo(value as EntregaFechaTipo)}>
+            <SelectTrigger className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="levantamiento">Fecha de levantamiento</SelectItem>
+              <SelectItem value="programada">Fecha programada de entrega</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div>
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Rango de fechas</label>
           <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }} />
         </div>
-        {(rutaFilter !== 'todos' || fechaDesde || fechaHasta || vendedorFilter !== 'todos') && (
-          <Button variant="ghost" size="sm" onClick={() => { setRutaFilter('todos'); setFechaDesde(''); setFechaHasta(''); setVendedorFilter('todos'); }}>
+        {(rutaFilter !== 'todos' || fechaDesde || fechaHasta || vendedorFilter !== 'todos' || fechaTipo !== 'programada') && (
+          <Button variant="ghost" size="sm" onClick={() => { setRutaFilter('todos'); setFechaDesde(''); setFechaHasta(''); setFechaTipo('programada'); setVendedorFilter('todos'); }}>
             Limpiar
           </Button>
         )}
