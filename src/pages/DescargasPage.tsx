@@ -94,10 +94,10 @@ function zonedDateTimeToUtcIso(dateISO: string, time: string, timeZone?: string 
 /* ─── Section Card helper ─── */
 function SectionCard({ title, icon: Icon, children, className }: { title: string; icon: React.ElementType; children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("bg-card border border-border rounded-xl shadow-sm overflow-hidden", className)}>
-      <div className="px-5 py-3.5 border-b border-table-border bg-muted/30 flex items-center gap-2">
+    <div className={cn("bg-card border border-border/70 rounded-xl overflow-hidden", className)}>
+      <div className="px-5 py-3 border-b border-border/70 bg-muted/20 flex items-center gap-2">
         <Icon className="h-4 w-4 text-primary shrink-0" />
-        <h3 className="text-[13px] font-bold text-foreground uppercase tracking-wide">{title}</h3>
+        <h3 className="text-xs font-semibold text-foreground tracking-wide">{title}</h3>
       </div>
       <div className="p-5">
         {children}
@@ -113,9 +113,10 @@ const TBODY_TR = "border-b border-table-border/70 even:bg-muted/15 hover:bg-tabl
 const TD = "py-2.5 px-3 text-[13px]";
 const TFOOT_TR = "border-t-2 border-border bg-muted/30 font-bold text-[13px]";
 
-type LiqTabKey = 'todo' | 'resumen' | 'ventas' | 'productos' | 'cobros' | 'entregas' | 'gastos' | 'devoluciones' | 'inventario';
+type LiqTabKey = 'resumen' | 'ventas' | 'entregas' | 'inventario' | 'incidencias';
+type LiqSectionKey = 'resumen' | 'ventas' | 'productos' | 'cobros' | 'entregas' | 'gastos' | 'devoluciones' | 'inventario';
 
-/* ─── Detail / Approve panel — Full activity breakdown ─── */
+/* ─── Detail / Approve workspace ─── */
 
 function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => void }) {
   const { user, empresa, profile } = useAuth();
@@ -131,16 +132,9 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   // Bodega destino a la que regresa el producto físico al aprobar (si se descargó el camión).
   const [destinoAlmacenId, setDestinoAlmacenId] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<LiqTabKey>('todo');
+  const [activeTab, setActiveTab] = useState<LiqTabKey>('resumen');
   const [expandedEntregaId, setExpandedEntregaId] = useState<string | null>(null);
-
-  // Este panel cubre toda la pantalla; sin esto, la página de fondo (la lista
-  // de liquidaciones) conserva su propio scroll y aparecen dos barras a la vez.
-  useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prevOverflow; };
-  }, []);
+  const [mostrarSinDiferencias, setMostrarSinDiferencias] = useState(false);
 
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
@@ -292,8 +286,6 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
-
-
   // --- Stock del almacén asignado al vendedor ---
   const { data: vendedorAlmacen } = useQuery({
     queryKey: ['vendedor-almacen', descarga.vendedor_id],
@@ -326,7 +318,6 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     codigo: s.productos?.codigo || '',
     cantidad: Number(s.cantidad) || 0,
   })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
-
 
   const ventasActivas = (ventasDia || []).filter((v: any) => v.status !== 'cancelado');
   const ventasCanceladas = (ventasDia || []).filter((v: any) => v.status === 'cancelado');
@@ -445,12 +436,23 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const totalDevCredito = devLineas.reduce((s, l) => s + l.monto_credito, 0);
 
   const conDiferencias = (lineas || []).filter((l: any) => Number(l.diferencia) !== 0);
+  const sinDiferencias = (lineas || []).filter((l: any) => Number(l.diferencia) === 0);
   const currentStatus = statusOverride ?? descarga.status;
   const isPendiente = currentStatus === 'pendiente';
-  const dif = Number(descarga.diferencia_efectivo);
 
   // Effective cash expected: cobros efectivo - gastos (NOT ventas contado — a cash sale may be paid via transfer)
   const efectivoSistema = (cobrosPorMetodo['efectivo'] || 0) - totalGastos;
+  const diferenciaCuadre = Number(descarga.efectivo_entregado) - efectivoSistema;
+  const entregasConIncidencia = entregasList.filter((e: any) =>
+    (e.entrega_lineas || []).some((l: any) => !l.hecho)
+  ).length;
+  const sinAlertasOperativas = Math.abs(diferenciaCuadre) < 0.005 && conDiferencias.length === 0 && entregasConIncidencia === 0;
+  const incidentCount =
+    (Math.abs(diferenciaCuadre) >= 0.005 ? 1 : 0) +
+    conDiferencias.length +
+    entregasConIncidencia +
+    ventasCanceladas.length +
+    devLineas.length;
 
   // Corte de un solo día (no ligado a carga, sin rango) → se puede editar la fecha.
   const esCorteDeUnDia = !descarga.carga_id && (!descarga.fecha_inicio || !descarga.fecha_fin || descarga.fecha_inicio === descarga.fecha_fin);
@@ -461,8 +463,9 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     setEfectivoDraft('');
     setEditingFecha(false);
     setFechaDraft('');
-    setActiveTab('todo');
+    setActiveTab('resumen');
     setExpandedEntregaId(null);
+    setMostrarSinDiferencias(false);
   }, [descarga.id]);
 
   useEffect(() => {
@@ -598,54 +601,63 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   });
 
   const tabDefs: Array<{ key: LiqTabKey; label: string; icon: React.ElementType; count?: number }> = [
-    { key: 'todo', label: 'Todo', icon: LayoutDashboard },
-    { key: 'resumen', label: 'Resumen', icon: DollarSign },
-    { key: 'ventas', label: 'Ventas', icon: ShoppingCart, count: ventasActivas.length },
-    { key: 'productos', label: 'Productos', icon: PackageCheck, count: productosArr.length },
-    { key: 'cobros', label: 'Cobros', icon: CreditCard, count: (cobros || []).length },
+    { key: 'resumen', label: 'Resumen', icon: LayoutDashboard },
+    { key: 'ventas', label: 'Ventas y cobros', icon: ShoppingCart, count: ventasActivas.length + (cobros || []).length },
     { key: 'entregas', label: 'Entregas', icon: Truck, count: entregasList.length },
-    { key: 'gastos', label: 'Gastos', icon: TrendingDown, count: (gastos || []).length },
-    { key: 'devoluciones', label: 'Devoluciones', icon: RotateCcw, count: devLineas.length },
-    { key: 'inventario', label: 'Inventario / carga', icon: Boxes },
+    { key: 'inventario', label: 'Inventario', icon: Boxes, count: conDiferencias.length || undefined },
+    { key: 'incidencias', label: 'Incidencias', icon: AlertTriangle, count: incidentCount || undefined },
   ];
-  const show = (key: Exclude<LiqTabKey, 'todo'>) => activeTab === 'todo' || activeTab === key;
+
+  const show = (key: LiqSectionKey) => {
+    if (activeTab === 'ventas') return key === 'ventas' || key === 'productos' || key === 'cobros';
+    if (activeTab === 'incidencias') return key === 'gastos' || key === 'devoluciones';
+    return activeTab === key;
+  };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
-      <div className="flex flex-col h-full w-full overflow-hidden">
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between shrink-0 bg-card">
-          <div>
-            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-              <PackageCheck className="h-5 w-5 text-primary" /> Revisión completa de liquidación
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {(descarga as any).vendedores?.nombre ?? 'Sin vendedor'} — {
-                descarga.fecha_inicio && descarga.fecha_fin && descarga.fecha_inicio !== descarga.fecha_fin
+    <div className="min-h-full bg-background">
+      {/* Header integrado al shell */}
+      <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
+        <div className="px-4 py-4 border-b border-border/70 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0" onClick={onClose} title="Volver a descargas">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-bold text-foreground">Liquidación de ruta</h2>
+                {(() => {
+                  const s = STATUS_MAP[currentStatus] || STATUS_MAP.pendiente;
+                  return (
+                    <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold", s.color)}>
+                      <s.icon className="h-3 w-3" /> {s.label}
+                    </span>
+                  );
+                })()}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1 truncate">
+                <span className="font-medium text-foreground">{(descarga as any).vendedores?.nombre ?? 'Sin vendedor'}</span>
+                <span className="mx-2 text-border">•</span>
+                {descarga.fecha_inicio && descarga.fecha_fin && descarga.fecha_inicio !== descarga.fecha_fin
                   ? `${fmtDate(descarga.fecha_inicio)} al ${fmtDate(descarga.fecha_fin)}`
-                  : fmtDate(descarga.fecha)
-              }
-            </p>
-            {!descarga.vendedor_id && (
-              <p className="text-xs font-semibold text-destructive mt-1">
-                ⚠️ Liquidación SIN vendedor — el corte NO es confiable (no se puede filtrar por vendedor). Recomendado: elimínala y vuelve a liquidar desde la ruta.
+                  : fmtDate(descarga.fecha)}
               </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {(() => {
-              const s = STATUS_MAP[currentStatus] || STATUS_MAP.pendiente;
-              return (
-                <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold", s.color)}>
-                  <s.icon className="h-3 w-3" /> {s.label}
-                </span>
-              );
-            })()}
-            <div className="flex items-center gap-1.5">
-              <input type="checkbox" id="liq-stock" checked={incluirStock} onChange={e => setIncluirStock(e.target.checked)} className="accent-primary" />
-              <label htmlFor="liq-stock" className="text-[10px] cursor-pointer text-muted-foreground">Stock</label>
+              {!descarga.vendedor_id && (
+                <p className="text-xs font-semibold text-destructive mt-1.5">
+                  Liquidación sin vendedor: el corte no es confiable porque no puede filtrarse correctamente por vendedor.
+                </p>
+              )}
             </div>
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={async () => {
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+            {activeTab === 'inventario' && (
+              <label className="inline-flex h-8 items-center gap-2 rounded-md border border-border px-2.5 text-xs text-muted-foreground cursor-pointer hover:bg-muted/40">
+                <input type="checkbox" checked={incluirStock} onChange={e => setIncluirStock(e.target.checked)} className="accent-primary" />
+                Ver stock
+              </label>
+            )}
+            <Button variant="ghost" size="sm" className="text-xs gap-1.5" onClick={async () => {
               try {
                 const ticketData = {
                   empresaNombre: empresa?.nombre ?? '',
@@ -661,7 +673,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   })),
                   gastos: (gastos || []).map((g: any) => ({ concepto: g.concepto ?? '—', monto: Number(g.monto) || 0 })),
                   devoluciones: devLineas.map(d => ({ nombre: d.nombre, cantidad: d.cantidad, motivo: d.motivo })),
-                    cuadre: {
+                  cuadre: {
                     totalContado, totalCredito,
                     cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0,
                     cobrosTransferencia: cobrosPorMetodo['transferencia'] || 0,
@@ -697,7 +709,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             }}>
               <Receipt className="h-3.5 w-3.5" /> Ticket
             </Button>
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={async () => {
+            <Button variant="ghost" size="sm" className="text-xs gap-1.5" onClick={async () => {
               try {
                 const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
                 const blob = await generarLiquidacionPdf({
@@ -763,16 +775,18 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               <Button
                 onClick={() => reabrirMutation.mutate()}
                 disabled={reabrirMutation.isPending}
+                variant="outline"
                 size="sm"
-                className="text-xs gap-1 bg-amber-500 text-white hover:bg-amber-600 border-none"
+                className="text-xs gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
               >
-                <RefreshCw className="h-3.5 w-3.5" /> Reabrir para editar
+                <RefreshCw className="h-3.5 w-3.5" /> Reabrir
               </Button>
             )}
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="text-xs gap-1 text-destructive border-destructive/40 hover:bg-destructive/10"
+              className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              title="Eliminar liquidación"
               disabled={eliminarMutation.isPending}
               onClick={() => {
                 const msg = currentStatus === 'aprobada'
@@ -781,15 +795,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 if (window.confirm(msg)) eliminarMutation.mutate();
               }}
             >
-              <Trash2 className="h-3.5 w-3.5" /> Eliminar
+              <Trash2 className="h-4 w-4" />
             </Button>
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg px-2">✕</button>
           </div>
         </div>
 
-        {/* Tabs nav */}
-        <div className="shrink-0 border-b border-border bg-card/95 backdrop-blur px-5 overflow-x-auto">
-          <div className="flex items-center gap-1.5 py-2 w-max min-w-full">
+        {/* Tabs */}
+        <div className="px-4 border-b border-border/70 bg-background/95 overflow-x-auto">
+          <div className="flex items-center gap-1 py-2.5 w-max min-w-full">
             {tabDefs.map(tab => {
               const Icon = tab.icon;
               const active = activeTab === tab.key;
@@ -799,18 +812,18 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
                   className={cn(
-                    'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold transition-colors',
+                    'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors',
                     active
-                      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                      : 'border-transparent bg-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground',
+                      ? 'border-border bg-muted text-foreground shadow-sm'
+                      : 'border-transparent bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                   )}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {tab.label}
                   {tab.count != null && (
                     <span className={cn(
-                      'min-w-5 rounded-full px-1.5 py-0.5 text-center text-[9px] font-black',
-                      active ? 'bg-primary-foreground/15 text-primary-foreground' : 'bg-muted text-muted-foreground',
+                      'min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold',
+                      active ? 'bg-background text-foreground' : 'bg-muted text-muted-foreground',
                     )}>
                       {tab.count}
                     </span>
@@ -820,671 +833,912 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             })}
           </div>
         </div>
+      </div>
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[1500px] mx-auto w-full px-5 py-5 space-y-4">
-
-        {/* ═══ RESUMEN GENERAL ═══ */}
-        {show('resumen') && (
-        <div className="bg-card border border-border rounded-xl shadow-sm p-5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-            <div className="bg-card rounded-lg p-3 text-center">
-              <div className="text-[10px] text-muted-foreground uppercase">Ventas contado</div>
-              <div className="text-lg font-bold text-foreground">{fmt(totalContado)}</div>
-              <div className="text-[10px] text-muted-foreground">{ventasContado.length} ventas</div>
-            </div>
-            <div className="bg-card rounded-lg p-3 text-center">
-              <div className="text-[10px] text-muted-foreground uppercase">Ventas crédito</div>
-              <div className="text-lg font-bold text-foreground">{fmt(totalCredito)}</div>
-              <div className="text-[10px] text-muted-foreground">{ventasCredito.length} ventas</div>
-            </div>
-            <div className="bg-card rounded-lg p-3 text-center">
-              <div className="text-[10px] text-muted-foreground uppercase">Cobros recibidos</div>
-              <div className="text-lg font-bold text-foreground">{fmt(totalCobros)}</div>
-              <div className="text-[10px] text-muted-foreground">{(cobros || []).length} cobros</div>
-            </div>
-            <div className="bg-card rounded-lg p-3 text-center">
-              <div className="text-[10px] text-muted-foreground uppercase">Entregas</div>
-              <div className="text-lg font-bold text-foreground">{entregasList.length}</div>
-              <div className="text-[10px] text-muted-foreground">{totalEntregaUnidades} uds</div>
-            </div>
-            <div className="bg-card rounded-lg p-3 text-center">
-              <div className="text-[10px] text-muted-foreground uppercase">Gastos</div>
-              <div className="text-lg font-bold text-destructive">-{fmt(totalGastos)}</div>
-              <div className="text-[10px] text-muted-foreground">{(gastos || []).length} gastos</div>
-            </div>
-            {ventasCanceladas.length > 0 && (
-              <div className="bg-destructive/5 rounded-lg p-3 text-center border border-destructive/20">
-                <div className="text-[10px] text-muted-foreground uppercase">Canceladas</div>
-                <div className="text-lg font-bold text-destructive">{fmt(totalCancelado)}</div>
-                <div className="text-[10px] text-muted-foreground">{ventasCanceladas.length} ventas</div>
+      {/* Workspace 70/30 */}
+      <div className="max-w-[1600px] mx-auto w-full py-5">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">
+          <main className="min-w-0 space-y-4">
+            {activeTab === 'resumen' && (
+              <div className={cn(
+                "rounded-xl border p-5",
+                sinAlertasOperativas
+                  ? "border-green-200 bg-green-50/60 dark:border-green-900 dark:bg-green-950/20"
+                  : "border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20"
+              )}>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                      sinAlertasOperativas
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                    )}>
+                      {sinAlertasOperativas ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-foreground">
+                        {sinAlertasOperativas ? 'Sin alertas operativas' : 'Requiere revisión'}
+                      </h3>
+                      <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                        {sinAlertasOperativas
+                          ? 'El efectivo, las entregas y el conteo de producto no presentan diferencias detectadas.'
+                          : 'Hay diferencias o incidencias que conviene revisar antes de aprobar la liquidación.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 lg:min-w-[420px]">
+                    <div className="rounded-lg bg-background/80 px-3 py-2.5 border border-border/60">
+                      <div className="text-[11px] text-muted-foreground">Esperado</div>
+                      <div className="mt-0.5 text-sm font-bold tabular-nums">{fmt(efectivoSistema)}</div>
+                    </div>
+                    <div className="rounded-lg bg-background/80 px-3 py-2.5 border border-border/60">
+                      <div className="text-[11px] text-muted-foreground">Entregado</div>
+                      <div className="mt-0.5 text-sm font-bold tabular-nums">{fmt(Number(descarga.efectivo_entregado))}</div>
+                    </div>
+                    <div className="rounded-lg bg-background/80 px-3 py-2.5 border border-border/60">
+                      <div className="text-[11px] text-muted-foreground">Diferencia</div>
+                      <div className={cn(
+                        "mt-0.5 text-sm font-bold tabular-nums",
+                        diferenciaCuadre < -0.005 ? "text-destructive" : diferenciaCuadre > 0.005 ? "text-green-700" : "text-foreground"
+                      )}>
+                        {diferenciaCuadre > 0 ? '+' : ''}${fmt(diferenciaCuadre)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
-            <div className="bg-card rounded-lg p-3 text-center">
-              <div className="text-[10px] text-muted-foreground uppercase">Devoluciones</div>
-              <div className="text-lg font-bold text-foreground">{totalDevUnidades}</div>
-              <div className="text-[10px] text-muted-foreground">{devLineas.length} líneas</div>
-            </div>
-          </div>
-        </div>
-        )}
 
-        {/* ═══ CUADRE DE EFECTIVO ═══ */}
-        {show('resumen') && (
-        <SectionCard title="Cuadre de efectivo" icon={DollarSign}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Vendor declared */}
-            <div className="space-y-2">
-              <div className="text-[11px] font-semibold text-muted-foreground uppercase">Declarado por vendedor</div>
-              <div className="bg-card rounded-md p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-[10px] text-muted-foreground">Efectivo entregado</div>
-                  {!editingEfectivo && isPendiente && (
-                    <button
-                      type="button"
-                      onClick={() => { setEfectivoDraft(String(Number(descarga.efectivo_entregado) || 0)); setEditingEfectivo(true); }}
-                      className="text-[10px] text-primary hover:underline font-semibold"
-                    >
-                      Editar
-                    </button>
-                  )}
-                  {!editingEfectivo && !isPendiente && (
-                    <span className="text-[10px] text-muted-foreground italic">
-                      Reabre la liquidación para editar
-                    </span>
-                  )}
+            {/* ═══ RESUMEN GENERAL ═══ */}
+            {show('resumen') && (
+              <div className="bg-card border border-border/70 rounded-xl p-5">
+                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-x-4 gap-y-4">
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">Ventas contado</div>
+                    <div className="mt-1 text-lg font-bold text-foreground">{fmt(totalContado)}</div>
+                    <div className="text-[11px] text-muted-foreground">{ventasContado.length} ventas</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">Ventas crédito</div>
+                    <div className="mt-1 text-lg font-bold text-foreground">{fmt(totalCredito)}</div>
+                    <div className="text-[11px] text-muted-foreground">{ventasCredito.length} ventas</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">Cobros</div>
+                    <div className="mt-1 text-lg font-bold text-foreground">{fmt(totalCobros)}</div>
+                    <div className="text-[11px] text-muted-foreground">{(cobros || []).length} registros</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">Entregas</div>
+                    <div className="mt-1 text-lg font-bold text-foreground">{entregasList.length}</div>
+                    <div className="text-[11px] text-muted-foreground">{totalEntregaUnidades} uds</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">Gastos</div>
+                    <div className="mt-1 text-lg font-bold text-destructive">-{fmt(totalGastos)}</div>
+                    <div className="text-[11px] text-muted-foreground">{(gastos || []).length} registros</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">Devoluciones</div>
+                    <div className="mt-1 text-lg font-bold text-foreground">{totalDevUnidades}</div>
+                    <div className="text-[11px] text-muted-foreground">{devLineas.length} líneas</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">Canceladas</div>
+                    <div className={cn("mt-1 text-lg font-bold", ventasCanceladas.length ? "text-destructive" : "text-foreground")}>{ventasCanceladas.length}</div>
+                    <div className="text-[11px] text-muted-foreground">{ventasCanceladas.length ? fmt(totalCancelado) : 'Sin incidencias'}</div>
+                  </div>
                 </div>
-                {editingEfectivo ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={efectivoDraft}
-                      onChange={(e) => setEfectivoDraft(e.target.value)}
-                      className="h-9 text-base font-bold"
-                      autoFocus
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        const n = Number(efectivoDraft);
-                        if (isNaN(n) || n < 0) { toast.error('Monto inválido'); return; }
-                        editEfectivoMutation.mutate(n);
-                      }}
-                      disabled={editEfectivoMutation.isPending}
-                      className="h-9 text-xs"
-                    >
-                      Guardar
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingEfectivo(false)} className="h-9 text-xs">
-                      Cancelar
-                    </Button>
+              </div>
+            )}
+
+            {/* ═══ CUADRE DE EFECTIVO ═══ */}
+            {show('resumen') && (
+              <SectionCard title="Cuadre de efectivo" icon={DollarSign}>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <div className="space-y-3">
+                    <div className="text-xs font-semibold text-muted-foreground">Declarado por vendedor</div>
+                    <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs text-muted-foreground">Efectivo entregado</div>
+                        {!editingEfectivo && isPendiente && (
+                          <button
+                            type="button"
+                            onClick={() => { setEfectivoDraft(String(Number(descarga.efectivo_entregado) || 0)); setEditingEfectivo(true); }}
+                            className="text-xs text-primary hover:underline font-semibold"
+                          >
+                            Editar
+                          </button>
+                        )}
+                        {!editingEfectivo && !isPendiente && (
+                          <span className="text-[11px] text-muted-foreground">Reabre para editar</span>
+                        )}
+                      </div>
+                      {editingEfectivo ? (
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={efectivoDraft}
+                            onChange={(e) => setEfectivoDraft(e.target.value)}
+                            className="h-9 max-w-[180px] text-base font-bold"
+                            autoFocus
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              const n = Number(efectivoDraft);
+                              if (isNaN(n) || n < 0) { toast.error('Monto inválido'); return; }
+                              editEfectivoMutation.mutate(n);
+                            }}
+                            disabled={editEfectivoMutation.isPending}
+                            className="h-9 text-xs"
+                          >
+                            Guardar
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingEfectivo(false)} className="h-9 text-xs">
+                            Cancelar
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="mt-1 text-2xl font-black text-foreground tabular-nums">{fmt(Number(descarga.efectivo_entregado))}</div>
+                      )}
+                    </div>
+
+                    {esCorteDeUnDia && (
+                      <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-xs text-muted-foreground">Fecha del corte</div>
+                          {!editingFecha && isPendiente && (
+                            <button
+                              type="button"
+                              onClick={() => { setFechaDraft(descarga.fecha || descarga.fecha_inicio || ''); setEditingFecha(true); }}
+                              className="text-xs text-primary hover:underline font-semibold"
+                            >
+                              Editar
+                            </button>
+                          )}
+                          {!editingFecha && !isPendiente && (
+                            <span className="text-[11px] text-muted-foreground">Reabre para editar</span>
+                          )}
+                        </div>
+                        {editingFecha ? (
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <Input
+                              type="date"
+                              value={fechaDraft}
+                              onChange={(e) => setFechaDraft(e.target.value)}
+                              className="h-9 max-w-[180px] text-sm"
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                if (!fechaDraft) { toast.error('Selecciona una fecha'); return; }
+                                editFechaMutation.mutate(fechaDraft);
+                              }}
+                              disabled={editFechaMutation.isPending}
+                              className="h-9 text-xs"
+                            >
+                              Guardar
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setEditingFecha(false)} className="h-9 text-xs">
+                              Cancelar
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-sm font-semibold text-foreground">{fmtDate(descarga.fecha || descarga.fecha_inicio)}</div>
+                        )}
+                      </div>
+                    )}
+
+                    {descarga.notas && (
+                      <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
+                        <div className="text-xs text-muted-foreground mb-1">Observaciones de ruta</div>
+                        <p className="text-sm text-foreground leading-relaxed">{descarga.notas}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="text-xs font-semibold text-muted-foreground">Calculado por sistema</div>
+                    <div className="rounded-lg border border-border/70 p-4 space-y-2 text-sm">
+                      <div className="flex justify-between"><span className="text-muted-foreground">+ Cobros en efectivo</span><span className="font-semibold tabular-nums">{fmt((cobrosPorMetodo['efectivo'] || 0))}</span></div>
+                      {(cobrosPorMetodo['transferencia'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros transferencia</span><span className="font-semibold tabular-nums">{fmt((cobrosPorMetodo['transferencia'] || 0))}</span></div>}
+                      {(cobrosPorMetodo['tarjeta'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros tarjeta</span><span className="font-semibold tabular-nums">{fmt((cobrosPorMetodo['tarjeta'] || 0))}</span></div>}
+                      <div className="flex justify-between"><span className="text-muted-foreground">− Gastos</span><span className="font-semibold text-destructive tabular-nums">-{fmt(totalGastos)}</span></div>
+                      {(gastos || []).length > 0 && (
+                        <div className="pl-3 space-y-1 border-l-2 border-destructive/20 ml-1 py-1">
+                          {(gastos || []).map((g: any) => (
+                            <div key={g.id} className="flex justify-between text-xs">
+                              <span className="text-muted-foreground/80">{g.concepto}</span>
+                              <span className="text-destructive/80 tabular-nums">{fmt(-((Number(g.monto) || 0)))}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="border-t border-border pt-2 flex justify-between font-bold">
+                        <span>Efectivo esperado</span>
+                        <span className="tabular-nums">{fmt(efectivoSistema)}</span>
+                      </div>
+                    </div>
+                    <div className={cn(
+                      "rounded-lg border p-4 flex items-center justify-between",
+                      diferenciaCuadre > 0.005
+                        ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900"
+                        : diferenciaCuadre < -0.005
+                          ? "bg-destructive/5 border-destructive/20"
+                          : "bg-muted/20 border-border/70"
+                    )}>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Diferencia</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{diferenciaCuadre > 0.005 ? 'Sobra' : diferenciaCuadre < -0.005 ? 'Falta' : 'Cuadra'}</div>
+                      </div>
+                      <div className={cn(
+                        "text-2xl font-black tabular-nums",
+                        diferenciaCuadre > 0.005 ? "text-green-700" : diferenciaCuadre < -0.005 ? "text-destructive" : "text-foreground"
+                      )}>
+                        {diferenciaCuadre > 0 ? '+' : ''}${fmt(diferenciaCuadre)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </SectionCard>
+            )}
+
+            {/* ═══ VENTAS DEL PERIODO ═══ */}
+            {show('ventas') && (
+              <SectionCard title={`Ventas del periodo (${ventasActivas.length})`} icon={ShoppingCart}>
+                {ventasActivas.length > 0 ? (
+                  <div className="overflow-x-auto -mx-5 px-5">
+                    <table className="w-full">
+                      <thead>
+                        <tr className={THEAD_TR}>
+                          <th className={TH}>Folio</th>
+                          <th className={TH}>Cliente</th>
+                          <th className={TH}>Pago</th>
+                          <th className={TH}>Estado</th>
+                          <th className={cn(TH, "text-right")}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ventasActivas.map((v: any) => (
+                          <tr key={v.id} className={TBODY_TR}>
+                            <td className={cn(TD, "font-mono text-foreground")}>{v.folio ?? '—'}</td>
+                            <td className={TD}>{v.clientes?.nombre ?? '—'}</td>
+                            <td className={TD}>
+                              <span className={cn(
+                                "text-[11px] px-2 py-0.5 rounded-full font-semibold",
+                                v.condicion_pago === 'contado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                              )}>{v.condicion_pago}</span>
+                            </td>
+                            <td className={cn(TD, "text-[11px] text-muted-foreground")}>{v.status}</td>
+                            <td className={cn(TD, "text-right font-semibold")}>{fmt(Number(v.total))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className={TFOOT_TR}>
+                          <td colSpan={4} className="py-3 px-3 text-right text-muted-foreground">Total ventas activas:</td>
+                          <td className="py-3 px-3 text-right">{fmt(totalVentasGeneral)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ) : <p className="text-sm text-muted-foreground">Sin ventas en este periodo</p>}
+
+                {ventasCanceladas.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-xs font-semibold text-destructive mb-2">Ventas canceladas ({ventasCanceladas.length})</div>
+                    <div className="divide-y divide-border/60 rounded-lg border border-destructive/15 bg-destructive/5">
+                      {ventasCanceladas.map((v: any) => (
+                        <div key={v.id} className="grid grid-cols-[auto_1fr_auto] gap-4 items-center px-3 py-2.5 text-[13px]">
+                          <span className="font-mono">{v.folio ?? '—'}</span>
+                          <span className="truncate">{v.clientes?.nombre ?? '—'}</span>
+                          <span className="font-semibold text-destructive line-through">{fmt(Number(v.total))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </SectionCard>
+            )}
+
+            {/* ═══ PRODUCTOS VENDIDOS ═══ */}
+            {show('productos') && (
+              <SectionCard title={`Productos vendidos (${productosArr.length})`} icon={PackageCheck}>
+                {productosArr.length > 0 ? (
+                  <div className="overflow-x-auto -mx-5 px-5">
+                    <table className="w-full">
+                      <thead>
+                        <tr className={THEAD_TR}>
+                          <th className={TH}>Producto</th>
+                          <th className={TH}>Código</th>
+                          <th className={cn(TH, "text-right")}>Cantidad</th>
+                          <th className={cn(TH, "text-right")}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {productosArr.map((p, i) => (
+                          <tr key={i} className={TBODY_TR}>
+                            <td className={cn(TD, "font-medium")}>{p.nombre}</td>
+                            <td className={cn(TD, "font-mono text-muted-foreground")}>{p.codigo}</td>
+                            <td className={cn(TD, "text-right")}>{p.cantidad}</td>
+                            <td className={cn(TD, "text-right font-semibold")}>{fmt(p.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className={TFOOT_TR}>
+                          <td colSpan={2} className="py-3 px-3 text-right text-muted-foreground">Total ({productosArr.length} productos):</td>
+                          <td className="py-3 px-3 text-right">{productosArr.reduce((s, p) => s + p.cantidad, 0)}</td>
+                          <td className="py-3 px-3 text-right">{fmt(productosArr.reduce((s, p) => s + p.total, 0))}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ) : <p className="text-sm text-muted-foreground">Sin productos vendidos en este periodo</p>}
+              </SectionCard>
+            )}
+
+            {/* ═══ COBROS ═══ */}
+            {show('cobros') && (
+              <SectionCard title={`Cobros recibidos (${(cobros || []).length})`} icon={CreditCard}>
+                {(cobros || []).length > 0 ? (
+                  <>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {Object.entries(cobrosPorMetodo).map(([metodo, total]) => (
+                        <div key={metodo} className="border border-border/70 rounded-lg px-3 py-2 text-[13px] bg-muted/15">
+                          <span className="text-muted-foreground capitalize">{metodo}:</span>{' '}
+                          <span className="font-bold">{fmt(total)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="overflow-x-auto -mx-5 px-5">
+                      <table className="w-full">
+                        <thead>
+                          <tr className={THEAD_TR}>
+                            <th className={TH}>Cliente</th>
+                            <th className={TH}>Método</th>
+                            <th className={TH}>Referencia</th>
+                            <th className={cn(TH, "text-right")}>Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(cobros || []).map((c: any) => (
+                            <tr key={c.id} className={TBODY_TR}>
+                              <td className={TD}>{c.clientes?.nombre ?? '—'}</td>
+                              <td className={cn(TD, "capitalize")}>{c.metodo_pago}</td>
+                              <td className={cn(TD, "text-muted-foreground font-mono")}>{c.referencia || '—'}</td>
+                              <td className={cn(TD, "text-right font-semibold")}>{fmt(Number(c.monto))}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className={TFOOT_TR}>
+                            <td colSpan={3} className="py-3 px-3 text-right text-muted-foreground">Total cobros:</td>
+                            <td className="py-3 px-3 text-right">{fmt(totalCobros)}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </>
+                ) : <p className="text-sm text-muted-foreground">Sin cobros en este periodo</p>}
+              </SectionCard>
+            )}
+
+            {/* ═══ ENTREGAS ═══ */}
+            {show('entregas') && (
+              <SectionCard title={`Entregas realizadas (${entregasList.length})`} icon={Truck}>
+                {entregasList.length > 0 ? (
+                  <div className="overflow-x-auto -mx-5 px-5">
+                    <table className="w-full">
+                      <thead>
+                        <tr className={THEAD_TR}>
+                          <th className={TH}>Folio</th>
+                          <th className={TH}>Pedido</th>
+                          <th className={TH}>Cliente</th>
+                          <th className={TH}>Fecha</th>
+                          <th className={cn(TH, "text-right")}>Entregadas</th>
+                          <th className={cn(TH, "text-right")}>No entregadas</th>
+                          <th className={cn(TH, "text-right")}>Total</th>
+                          <th className={cn(TH, "w-8")} />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {entregasList.map((e: any) => {
+                          const lineas = (e.entrega_lineas || []) as any[];
+                          const fechaRealEntrega = e.validado_at || e.fecha_entrega || e.fecha;
+                          const udsEntregadas = lineas.filter(l => l.hecho).reduce((s, l) => s + (Number(l.cantidad_entregada) || 0), 0);
+                          const udsPedidas = lineas.reduce((s, l) => s + (Number(l.cantidad) || 0), 0);
+                          const udsNoEntregadas = lineas.filter(l => !l.hecho).reduce((s, l) => s + (Number(l.cantidad ?? l.cantidad_entregada) || 0), 0);
+                          const expanded = expandedEntregaId === e.id;
+                          return (
+                            <Fragment key={e.id}>
+                              <tr
+                                className={cn(TBODY_TR, "cursor-pointer")}
+                                onClick={() => setExpandedEntregaId(expanded ? null : e.id)}
+                              >
+                                <td className={cn(TD, "font-mono font-semibold text-foreground")}>{e.folio ?? '—'}</td>
+                                <td className={cn(TD, "font-mono text-muted-foreground")}>{e.ventas?.folio ?? '—'}</td>
+                                <td className={TD}>{e.clientes?.nombre ?? '—'}</td>
+                                <td className={cn(TD, "text-muted-foreground")}>{fmtDate(fechaRealEntrega)}</td>
+                                <td className={cn(TD, "text-right font-semibold text-green-700")}>{udsEntregadas}</td>
+                                <td className={cn(TD, "text-right font-semibold", udsNoEntregadas > 0 ? "text-destructive" : "text-muted-foreground")}>{udsNoEntregadas > 0 ? udsNoEntregadas : '—'}</td>
+                                <td className={cn(TD, "text-right font-semibold")}>{e.ventas?.total != null ? fmt(Number(e.ventas.total)) : '—'}</td>
+                                <td className={cn(TD, "text-center")}>
+                                  <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform inline-block", expanded && "rotate-180")} />
+                                </td>
+                              </tr>
+                              {expanded && (
+                                <tr className="border-b border-table-border/70">
+                                  <td colSpan={8} className="bg-muted/10 p-0">
+                                    {lineas.length > 0 ? (
+                                      <table className="w-full">
+                                        <thead>
+                                          <tr className="text-[11px] text-muted-foreground uppercase border-b border-table-border bg-muted/20">
+                                            <th className="text-left py-2 pl-8 pr-3">Producto</th>
+                                            <th className="text-left py-2">Código</th>
+                                            <th className="text-right py-2">Pedidas</th>
+                                            <th className="text-right py-2">Entregadas</th>
+                                            <th className="text-center py-2 pr-8">Estado</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {lineas.map((l: any, i: number) => (
+                                            <tr key={i} className="border-b border-table-border/40 last:border-b-0 hover:bg-table-hover transition-colors">
+                                              <td className="py-2 pl-8 pr-3">{l.productos?.nombre ?? '—'}</td>
+                                              <td className="py-2 font-mono text-muted-foreground">{l.productos?.codigo ?? ''}</td>
+                                              <td className="py-2 text-right">{Number(l.cantidad ?? 0)}</td>
+                                              <td className="py-2 text-right font-semibold">{Number(l.cantidad_entregada ?? 0)}</td>
+                                              <td className="py-2 pr-8 text-center">
+                                                {l.hecho ? (
+                                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold">
+                                                    <CheckCircle2 className="h-3 w-3" /> Entregado
+                                                  </span>
+                                                ) : (
+                                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-semibold" title={l.motivo_no_entrega || ''}>
+                                                    <XCircle className="h-3 w-3" /> No entregado{l.motivo_no_entrega ? ` · ${l.motivo_no_entrega}` : ''}
+                                                  </span>
+                                                )}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                        <tfoot>
+                                          <tr className="border-t border-border bg-muted/20 font-bold text-[12px]">
+                                            <td colSpan={2} className="py-2 pl-8 pr-3 text-right text-muted-foreground">Subtotal de la entrega:</td>
+                                            <td className="py-2 text-right">{udsPedidas}</td>
+                                            <td className="py-2 text-right">{udsEntregadas}</td>
+                                            <td className="pr-8" />
+                                          </tr>
+                                        </tfoot>
+                                      </table>
+                                    ) : (
+                                      <p className="text-xs text-muted-foreground pl-8 pr-3 py-3">Sin productos en esta entrega</p>
+                                    )}
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr className={TFOOT_TR}>
+                          <td colSpan={4} className="py-3 px-3 text-right text-muted-foreground">Totales ({entregasList.length} entregas):</td>
+                          <td className="py-3 px-3 text-right">{totalEntregaUnidades}</td>
+                          <td />
+                          <td className="py-3 px-3 text-right">{fmt(totalEntregaMonto)}</td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ) : <p className="text-sm text-muted-foreground">Sin entregas en este periodo</p>}
+              </SectionCard>
+            )}
+
+            {/* ═══ INVENTARIO ═══ */}
+            {show('inventario') && (
+              <>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-4 py-3">
+                  <div>
+                    <div className="text-sm font-semibold text-foreground">Revisión de inventario</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {conDiferencias.length > 0
+                        ? `${conDiferencias.length} producto${conDiferencias.length === 1 ? '' : 's'} requiere${conDiferencias.length === 1 ? '' : 'n'} atención.`
+                        : 'El conteo de la carga no presenta diferencias.'}
+                    </div>
+                  </div>
+                  <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                    <Switch checked={incluirStock} onCheckedChange={setIncluirStock} />
+                    Stock actual
+                  </label>
+                </div>
+
+                {conDiferencias.length > 0 && (
+                  <SectionCard title={`Diferencias detectadas (${conDiferencias.length})`} icon={AlertTriangle}>
+                    <div className="divide-y divide-border/60 rounded-lg border border-amber-200 overflow-hidden dark:border-amber-900">
+                      {conDiferencias.map((l: any) => {
+                        const d = Number(l.diferencia);
+                        return (
+                          <div key={l.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-4 items-center px-4 py-3 bg-amber-50/50 dark:bg-amber-950/15 text-[13px]">
+                            <span className="font-semibold truncate">{(l as any).productos?.nombre}</span>
+                            <span className="text-muted-foreground">Sistema <strong className="text-foreground">{Number(l.cantidad_esperada)}</strong></span>
+                            <span className="text-muted-foreground">Físico <strong className="text-foreground">{Number(l.cantidad_real)}</strong></span>
+                            <span className={cn("min-w-[56px] text-right font-black", d > 0 ? "text-green-700" : "text-destructive")}>
+                              {d > 0 ? '+' : ''}{d}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </SectionCard>
+                )}
+
+                {sinDiferencias.length > 0 && (
+                  <SectionCard title={`Productos que cuadran (${sinDiferencias.length})`} icon={CheckCircle2}>
+                    {!mostrarSinDiferencias ? (
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm text-muted-foreground">Estos productos no requieren revisión.</p>
+                        <Button variant="outline" size="sm" className="text-xs" onClick={() => setMostrarSinDiferencias(true)}>
+                          Mostrar {sinDiferencias.length}
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-1">
+                          {sinDiferencias.map((l: any) => (
+                            <div key={l.id} className="flex items-center justify-between rounded-md px-3 py-2 text-[13px] hover:bg-muted/30">
+                              <span className="font-medium">{(l as any).productos?.nombre}</span>
+                              <div className="flex items-center gap-3 text-muted-foreground">
+                                <span>Sistema: {Number(l.cantidad_esperada)}</span>
+                                <span>Físico: {Number(l.cantidad_real)}</span>
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="pt-3 text-right">
+                          <Button variant="ghost" size="sm" className="text-xs" onClick={() => setMostrarSinDiferencias(false)}>
+                            Ocultar productos sin diferencias
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </SectionCard>
+                )}
+
+                {(lineas || []).length === 0 && (
+                  <SectionCard title="Cuadre de productos" icon={PackageCheck}>
+                    <p className="text-sm text-muted-foreground">Esta liquidación no tiene líneas de conteo de carga.</p>
+                  </SectionCard>
+                )}
+
+                {incluirStock && stockItems.length > 0 && (
+                  <SectionCard title={`Stock actual — ${almacenNombre}`} icon={Package}>
+                    <div className="overflow-x-auto -mx-5 px-5">
+                      <table className="w-full">
+                        <thead>
+                          <tr className={THEAD_TR}>
+                            <th className={TH}>Producto</th>
+                            <th className={cn(TH, "text-right")}>Existencia</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stockItems.map((p: any, i: number) => (
+                            <tr key={i} className={TBODY_TR}>
+                              <td className={TD}>{p.nombre} <span className="text-muted-foreground font-mono text-[11px]">{p.codigo}</span></td>
+                              <td className={cn(TD, "text-right font-semibold")}>{p.cantidad}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </SectionCard>
+                )}
+                {incluirStock && stockItems.length === 0 && (
+                  <SectionCard title="Stock actual" icon={Package}>
+                    <p className="text-sm text-muted-foreground italic">No se encontró stock en el almacén asignado.</p>
+                  </SectionCard>
+                )}
+              </>
+            )}
+
+            {/* ═══ INCIDENCIAS ═══ */}
+            {activeTab === 'incidencias' && (
+              <SectionCard title="Incidencias operativas" icon={AlertTriangle}>
+                {incidentCount === 0 ? (
+                  <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50/60 p-4 text-sm dark:border-green-900 dark:bg-green-950/20">
+                    <CheckCircle2 className="h-5 w-5 text-green-700 shrink-0" />
+                    <div>
+                      <div className="font-semibold text-foreground">Sin incidencias detectadas</div>
+                      <div className="text-muted-foreground mt-0.5">No hay faltantes de efectivo, diferencias de inventario, entregas incompletas, devoluciones ni ventas canceladas.</div>
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-xl font-bold text-foreground">{fmt(Number(descarga.efectivo_entregado))}</div>
-                )}
-              </div>
-              {/* Fecha del corte (editable en cortes de un día) */}
-              {esCorteDeUnDia && (
-                <div className="bg-card rounded-md p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-[10px] text-muted-foreground">Fecha del corte</div>
-                    {!editingFecha && isPendiente && (
-                      <button
-                        type="button"
-                        onClick={() => { setFechaDraft(descarga.fecha || descarga.fecha_inicio || ''); setEditingFecha(true); }}
-                        className="text-[10px] text-primary hover:underline font-semibold"
-                      >
-                        Editar
+                  <div className="divide-y divide-border/70 rounded-lg border border-border/70 overflow-hidden">
+                    {Math.abs(diferenciaCuadre) >= 0.005 && (
+                      <div className="flex items-center justify-between gap-4 p-4 bg-destructive/5">
+                        <div className="flex items-center gap-3">
+                          <DollarSign className="h-4 w-4 text-destructive shrink-0" />
+                          <div><div className="text-sm font-semibold">Diferencia de efectivo</div><div className="text-xs text-muted-foreground">El monto entregado no coincide con el efectivo esperado.</div></div>
+                        </div>
+                        <span className="font-bold tabular-nums text-destructive">{diferenciaCuadre > 0 ? '+' : ''}${fmt(diferenciaCuadre)}</span>
+                      </div>
+                    )}
+                    {conDiferencias.length > 0 && (
+                      <button type="button" onClick={() => setActiveTab('inventario')} className="w-full flex items-center justify-between gap-4 p-4 hover:bg-muted/30 text-left">
+                        <div className="flex items-center gap-3">
+                          <Boxes className="h-4 w-4 text-amber-600 shrink-0" />
+                          <div><div className="text-sm font-semibold">Diferencias de inventario</div><div className="text-xs text-muted-foreground">El conteo físico no coincide con el sistema.</div></div>
+                        </div>
+                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">{conDiferencias.length}</span>
                       </button>
                     )}
-                    {!editingFecha && !isPendiente && (
-                      <span className="text-[10px] text-muted-foreground italic">Reabre la liquidación para editar</span>
+                    {entregasConIncidencia > 0 && (
+                      <button type="button" onClick={() => setActiveTab('entregas')} className="w-full flex items-center justify-between gap-4 p-4 hover:bg-muted/30 text-left">
+                        <div className="flex items-center gap-3">
+                          <Truck className="h-4 w-4 text-amber-600 shrink-0" />
+                          <div><div className="text-sm font-semibold">Entregas incompletas</div><div className="text-xs text-muted-foreground">Al menos una entrega contiene producto no entregado.</div></div>
+                        </div>
+                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">{entregasConIncidencia}</span>
+                      </button>
+                    )}
+                    {ventasCanceladas.length > 0 && (
+                      <button type="button" onClick={() => setActiveTab('ventas')} className="w-full flex items-center justify-between gap-4 p-4 hover:bg-muted/30 text-left">
+                        <div className="flex items-center gap-3">
+                          <XCircle className="h-4 w-4 text-destructive shrink-0" />
+                          <div><div className="text-sm font-semibold">Ventas canceladas</div><div className="text-xs text-muted-foreground">Revisa las cancelaciones registradas durante el periodo.</div></div>
+                        </div>
+                        <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-bold text-destructive">{ventasCanceladas.length}</span>
+                      </button>
+                    )}
+                    {devLineas.length > 0 && (
+                      <div className="flex items-center justify-between gap-4 p-4">
+                        <div className="flex items-center gap-3">
+                          <RotateCcw className="h-4 w-4 text-amber-600 shrink-0" />
+                          <div><div className="text-sm font-semibold">Devoluciones</div><div className="text-xs text-muted-foreground">Producto devuelto durante el periodo.</div></div>
+                        </div>
+                        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-foreground">{devLineas.length}</span>
+                      </div>
                     )}
                   </div>
-                  {editingFecha ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <Input
-                        type="date"
-                        value={fechaDraft}
-                        onChange={(e) => setFechaDraft(e.target.value)}
-                        className="h-9 text-sm"
-                        autoFocus
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          if (!fechaDraft) { toast.error('Selecciona una fecha'); return; }
-                          editFechaMutation.mutate(fechaDraft);
-                        }}
-                        disabled={editFechaMutation.isPending}
-                        className="h-9 text-xs"
-                      >
-                        Guardar
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingFecha(false)} className="h-9 text-xs">
-                        Cancelar
-                      </Button>
+                )}
+              </SectionCard>
+            )}
+
+            {/* ═══ GASTOS ═══ */}
+            {show('gastos') && (
+              <SectionCard title={`Gastos (${(gastos || []).length})`} icon={TrendingDown}>
+                {(gastos || []).length > 0 ? (
+                  <div className="overflow-x-auto -mx-5 px-5">
+                    <table className="w-full">
+                      <thead>
+                        <tr className={THEAD_TR}>
+                          <th className={TH}>Concepto</th>
+                          <th className={TH}>Notas</th>
+                          <th className={cn(TH, "text-right")}>Monto</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(gastos || []).map((g: any) => (
+                          <tr key={g.id} className={TBODY_TR}>
+                            <td className={cn(TD, "font-medium")}>{g.concepto}</td>
+                            <td className={cn(TD, "text-muted-foreground")}>{g.notas || '—'}</td>
+                            <td className={cn(TD, "text-right font-semibold text-destructive")}>-{fmt(Number(g.monto))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className={TFOOT_TR}>
+                          <td colSpan={2} className="py-3 px-3 text-right text-muted-foreground">Total gastos:</td>
+                          <td className="py-3 px-3 text-right text-destructive">-{fmt(totalGastos)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ) : <p className="text-sm text-muted-foreground">Sin gastos en este periodo</p>}
+              </SectionCard>
+            )}
+
+            {/* ═══ DEVOLUCIONES ═══ */}
+            {show('devoluciones') && (
+              <SectionCard title={`Devoluciones (${totalDevUnidades} uds · ${devLineas.length} líneas)`} icon={RotateCcw}>
+                {devLineas.length > 0 ? (
+                  <>
+                    {totalDevCredito > 0 && (
+                      <div className="flex items-center gap-2 mb-3 text-xs">
+                        <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">
+                          Crédito total: ${fmt(totalDevCredito)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="overflow-x-auto -mx-5 px-5">
+                      <table className="w-full">
+                        <thead>
+                          <tr className={THEAD_TR}>
+                            <th className={TH}>Producto</th>
+                            <th className={TH}>Cliente</th>
+                            <th className={cn(TH, "text-right")}>Cant.</th>
+                            <th className={TH}>Motivo</th>
+                            <th className={TH}>Acción</th>
+                            <th className={cn(TH, "text-right")}>Crédito</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {devLineas.map((d, i) => (
+                            <tr key={i} className={TBODY_TR}>
+                              <td className={TD}>
+                                <span className="font-medium">{d.nombre}</span>
+                                {d.codigo && <span className="text-muted-foreground font-mono ml-1 text-[11px]">{d.codigo}</span>}
+                              </td>
+                              <td className={cn(TD, "text-muted-foreground")}>{d.cliente}</td>
+                              <td className={cn(TD, "text-right font-semibold")}>{d.cantidad}</td>
+                              <td className={TD}>
+                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-card border border-border text-foreground font-medium">
+                                  {MOTIVO_LABELS[d.motivo] ?? d.motivo.replace(/_/g, ' ')}
+                                </span>
+                              </td>
+                              <td className={TD}>
+                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent text-foreground font-medium">
+                                  {ACCION_LABELS[d.accion] ?? d.accion}
+                                </span>
+                              </td>
+                              <td className={cn(TD, "text-right font-semibold")}>
+                                {d.monto_credito > 0 ? <span className="text-destructive">{fmt(d.monto_credito)}</span> : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className={TFOOT_TR}>
+                            <td colSpan={2} className="py-3 px-3 text-right text-muted-foreground">Total ({devLineas.length} líneas):</td>
+                            <td className="py-3 px-3 text-right">{totalDevUnidades}</td>
+                            <td colSpan={2} />
+                            <td className="py-3 px-3 text-right text-destructive">{totalDevCredito > 0 ? fmt(totalDevCredito) : '—'}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
                     </div>
+                  </>
+                ) : <p className="text-sm text-muted-foreground">Sin devoluciones en este periodo</p>}
+              </SectionCard>
+            )}
+          </main>
+
+          {/* Panel de decisión persistente */}
+          <aside className="xl:sticky xl:top-4 space-y-4">
+            <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
+              <div className="border-b border-border/70 px-5 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold text-muted-foreground tracking-wide">DECISIÓN</div>
+                    <div className="mt-1 text-base font-bold text-foreground">Cuadre de la ruta</div>
+                  </div>
+                  {sinAlertasOperativas ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
                   ) : (
-                    <div className="text-sm font-semibold text-foreground">{fmtDate(descarga.fecha || descarga.fecha_inicio)}</div>
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
                   )}
                 </div>
-              )}
-              {descarga.notas && (
-                <div className="bg-card rounded-md p-3">
-                  <div className="text-[10px] text-muted-foreground uppercase mb-1">Observaciones</div>
-                  <p className="text-[13px] text-foreground">{descarga.notas}</p>
-                </div>
-              )}
-            </div>
-            {/* System calculated */}
-            <div className="space-y-2">
-              <div className="text-[11px] font-semibold text-muted-foreground uppercase">Cuadre de efectivo</div>
-              <div className="bg-card rounded-md p-3 space-y-1.5 text-[12px]">
-                <div className="flex justify-between"><span className="text-muted-foreground">+ Cobros en efectivo</span><span className="font-semibold">{fmt((cobrosPorMetodo['efectivo'] || 0))}</span></div>
-                {(cobrosPorMetodo['transferencia'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros transferencia</span><span className="font-semibold">{fmt((cobrosPorMetodo['transferencia'] || 0))}</span></div>}
-                {(cobrosPorMetodo['tarjeta'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros tarjeta</span><span className="font-semibold">{fmt((cobrosPorMetodo['tarjeta'] || 0))}</span></div>}
-                <div className="flex justify-between"><span className="text-muted-foreground">− Gastos</span><span className="font-semibold text-destructive">-{fmt(totalGastos)}</span></div>
-                {(gastos || []).length > 0 && (
-                  <div className="pl-3 space-y-0.5 border-l-2 border-destructive/20 ml-1">
-                    {(gastos || []).map((g: any) => (
-                      <div key={g.id} className="flex justify-between text-[11px]">
-                        <span className="text-muted-foreground/80">{g.concepto}</span>
-                        <span className="text-destructive/80">{fmt(-((Number(g.monto) || 0)))}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="border-t border-border pt-1.5 flex justify-between font-bold">
-                  <span>Efectivo esperado</span>
-                  <span>{fmt(efectivoSistema)}</span>
-                </div>
               </div>
-              {/* Difference */}
-              {(() => {
-                const d = Number(descarga.efectivo_entregado) - efectivoSistema;
-                return (
-                  <div className={cn(
-                    "rounded-md p-3 text-center",
-                    d > 0 ? "bg-green-50 border border-green-200" : d < 0 ? "bg-destructive/5 border border-destructive/20" : "bg-card"
+              <div className="p-5 space-y-3">
+                <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Efectivo esperado</span><span className="font-semibold tabular-nums">{fmt(efectivoSistema)}</span></div>
+                <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Efectivo entregado</span><span className="font-semibold tabular-nums">{fmt(Number(descarga.efectivo_entregado))}</span></div>
+                <div className="border-t border-border/70 pt-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold">Diferencia</span>
+                  <span className={cn(
+                    "text-xl font-black tabular-nums",
+                    diferenciaCuadre < -0.005 ? "text-destructive" : diferenciaCuadre > 0.005 ? "text-green-700" : "text-foreground"
                   )}>
-                    <div className="text-[10px] text-muted-foreground uppercase">Diferencia</div>
-                    <div className={cn("text-lg font-bold", d > 0 ? "text-green-600" : d < 0 ? "text-destructive" : "text-foreground")}>
-                      {d > 0 ? '+' : ''}${fmt(d)}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground">{d > 0 ? 'Sobra' : d < 0 ? 'Falta' : 'Cuadra'}</div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        </SectionCard>
-        )}
-
-        {/* ═══ VENTAS DEL PERIODO ═══ */}
-        {show('ventas') && (
-        <SectionCard title={`Ventas del periodo (${ventasActivas.length})`} icon={ShoppingCart}>
-          {ventasActivas.length > 0 ? (
-            <div className="overflow-x-auto -mx-5 px-5">
-            <table className="w-full">
-              <thead>
-                <tr className={THEAD_TR}>
-                  <th className={TH}>Folio</th>
-                  <th className={TH}>Cliente</th>
-                  <th className={TH}>Pago</th>
-                  <th className={TH}>Estado</th>
-                  <th className={cn(TH, "text-right")}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ventasActivas.map((v: any) => (
-                  <tr key={v.id} className={TBODY_TR}>
-                    <td className={cn(TD, "font-mono text-foreground")}>{v.folio ?? '—'}</td>
-                    <td className={TD}>{v.clientes?.nombre ?? '—'}</td>
-                    <td className={TD}>
-                      <span className={cn(
-                        "text-[11px] px-2 py-0.5 rounded-full font-semibold",
-                        v.condicion_pago === 'contado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
-                      )}>{v.condicion_pago}</span>
-                    </td>
-                    <td className={cn(TD, "text-[11px] text-muted-foreground")}>{v.status}</td>
-                    <td className={cn(TD, "text-right font-semibold")}>{fmt(Number(v.total))}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className={TFOOT_TR}>
-                  <td colSpan={4} className="py-3 px-3 text-right text-muted-foreground">Total ventas activas:</td>
-                  <td className="py-3 px-3 text-right">{fmt(totalVentasGeneral)}</td>
-                </tr>
-              </tfoot>
-            </table>
-            </div>
-          ) : <p className="text-sm text-muted-foreground">Sin ventas en este periodo</p>}
-
-          {/* Cancelled sales */}
-          {ventasCanceladas.length > 0 && (
-            <div className="mt-4">
-              <div className="text-[11px] font-semibold text-destructive uppercase mb-2">Ventas canceladas ({ventasCanceladas.length})</div>
-              <div className="space-y-1">
-                {ventasCanceladas.map((v: any) => (
-                  <div key={v.id} className="flex items-center justify-between bg-destructive/5 rounded px-3 py-2 text-[13px]">
-                    <span className="font-mono">{v.folio ?? '—'}</span>
-                    <span>{v.clientes?.nombre ?? '—'}</span>
-                    <span className="font-semibold text-destructive line-through">{fmt(Number(v.total))}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </SectionCard>
-        )}
-
-        {/* ═══ PRODUCTOS VENDIDOS (AGREGADO) ═══ */}
-        {show('productos') && (
-        <SectionCard title={`Productos vendidos (${productosArr.length})`} icon={PackageCheck}>
-          {productosArr.length > 0 ? (
-            <div className="overflow-x-auto -mx-5 px-5">
-            <table className="w-full">
-              <thead>
-                <tr className={THEAD_TR}>
-                  <th className={TH}>Producto</th>
-                  <th className={TH}>Código</th>
-                  <th className={cn(TH, "text-right")}>Cantidad</th>
-                  <th className={cn(TH, "text-right")}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {productosArr.map((p, i) => (
-                  <tr key={i} className={TBODY_TR}>
-                    <td className={cn(TD, "font-medium")}>{p.nombre}</td>
-                    <td className={cn(TD, "font-mono text-muted-foreground")}>{p.codigo}</td>
-                    <td className={cn(TD, "text-right")}>{p.cantidad}</td>
-                    <td className={cn(TD, "text-right font-semibold")}>{fmt(p.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className={TFOOT_TR}>
-                  <td colSpan={2} className="py-3 px-3 text-right text-muted-foreground">Total ({productosArr.length} productos):</td>
-                  <td className="py-3 px-3 text-right">{productosArr.reduce((s, p) => s + p.cantidad, 0)}</td>
-                  <td className="py-3 px-3 text-right">{fmt(productosArr.reduce((s, p) => s + p.total, 0))}</td>
-                </tr>
-              </tfoot>
-            </table>
-            </div>
-          ) : <p className="text-sm text-muted-foreground">Sin productos vendidos en este periodo</p>}
-        </SectionCard>
-        )}
-
-        {/* ═══ COBROS RECIBIDOS ═══ */}
-        {show('cobros') && (
-        <SectionCard title={`Cobros recibidos (${(cobros || []).length})`} icon={CreditCard}>
-          {(cobros || []).length > 0 ? (
-            <>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {Object.entries(cobrosPorMetodo).map(([metodo, total]) => (
-                  <div key={metodo} className="bg-muted/40 border border-border rounded-md px-3 py-2 text-[13px]">
-                    <span className="text-muted-foreground capitalize">{metodo}:</span>{' '}
-                    <span className="font-bold">{fmt(total)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="overflow-x-auto -mx-5 px-5">
-              <table className="w-full">
-                <thead>
-                  <tr className={THEAD_TR}>
-                    <th className={TH}>Cliente</th>
-                    <th className={TH}>Método</th>
-                    <th className={TH}>Referencia</th>
-                    <th className={cn(TH, "text-right")}>Monto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(cobros || []).map((c: any) => (
-                    <tr key={c.id} className={TBODY_TR}>
-                      <td className={TD}>{c.clientes?.nombre ?? '—'}</td>
-                      <td className={cn(TD, "capitalize")}>{c.metodo_pago}</td>
-                      <td className={cn(TD, "text-muted-foreground font-mono")}>{c.referencia || '—'}</td>
-                      <td className={cn(TD, "text-right font-semibold")}>{fmt(Number(c.monto))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className={TFOOT_TR}>
-                    <td colSpan={3} className="py-3 px-3 text-right text-muted-foreground">Total cobros:</td>
-                    <td className="py-3 px-3 text-right">{fmt(totalCobros)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-              </div>
-            </>
-          ) : <p className="text-sm text-muted-foreground">Sin cobros en este periodo</p>}
-        </SectionCard>
-        )}
-
-        {/* ═══ GASTOS ═══ */}
-        {show('gastos') && (
-        <SectionCard title={`Gastos (${(gastos || []).length})`} icon={TrendingDown}>
-          {(gastos || []).length > 0 ? (
-            <div className="overflow-x-auto -mx-5 px-5">
-            <table className="w-full">
-              <thead>
-                <tr className={THEAD_TR}>
-                  <th className={TH}>Concepto</th>
-                  <th className={TH}>Notas</th>
-                  <th className={cn(TH, "text-right")}>Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(gastos || []).map((g: any) => (
-                  <tr key={g.id} className={TBODY_TR}>
-                    <td className={cn(TD, "font-medium")}>{g.concepto}</td>
-                    <td className={cn(TD, "text-muted-foreground")}>{g.notas || '—'}</td>
-                    <td className={cn(TD, "text-right font-semibold text-destructive")}>-{fmt(Number(g.monto))}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className={TFOOT_TR}>
-                  <td colSpan={2} className="py-3 px-3 text-right text-muted-foreground">Total gastos:</td>
-                  <td className="py-3 px-3 text-right text-destructive">-{fmt(totalGastos)}</td>
-                </tr>
-              </tfoot>
-            </table>
-            </div>
-          ) : <p className="text-sm text-muted-foreground">Sin gastos en este periodo</p>}
-        </SectionCard>
-        )}
-
-        {/* ═══ DEVOLUCIONES ═══ */}
-        {show('devoluciones') && (
-        <SectionCard title={`Devoluciones (${totalDevUnidades} uds · ${devLineas.length} líneas)`} icon={RotateCcw}>
-          {devLineas.length > 0 ? (
-            <>
-              {totalDevCredito > 0 && (
-                <div className="flex items-center gap-2 mb-3 text-xs">
-                  <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">
-                    Crédito total: ${fmt(totalDevCredito)}
+                    {diferenciaCuadre > 0 ? '+' : ''}${fmt(diferenciaCuadre)}
                   </span>
                 </div>
-              )}
-              <div className="overflow-x-auto -mx-5 px-5">
-              <table className="w-full">
-                <thead>
-                  <tr className={THEAD_TR}>
-                    <th className={TH}>Producto</th>
-                    <th className={TH}>Cliente</th>
-                    <th className={cn(TH, "text-right")}>Cant.</th>
-                    <th className={TH}>Motivo</th>
-                    <th className={TH}>Acción</th>
-                    <th className={cn(TH, "text-right")}>Crédito</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {devLineas.map((d, i) => (
-                    <tr key={i} className={TBODY_TR}>
-                      <td className={TD}>
-                        <span className="font-medium">{d.nombre}</span>
-                        {d.codigo && <span className="text-muted-foreground font-mono ml-1 text-[11px]">{d.codigo}</span>}
-                      </td>
-                      <td className={cn(TD, "text-muted-foreground")}>{d.cliente}</td>
-                      <td className={cn(TD, "text-right font-semibold")}>{d.cantidad}</td>
-                      <td className={TD}>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-card border border-border text-foreground font-medium">
-                          {MOTIVO_LABELS[d.motivo] ?? d.motivo.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                      <td className={TD}>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent text-foreground font-medium">
-                          {ACCION_LABELS[d.accion] ?? d.accion}
-                        </span>
-                      </td>
-                      <td className={cn(TD, "text-right font-semibold")}>
-                        {d.monto_credito > 0 ? <span className="text-destructive">{fmt(d.monto_credito)}</span> : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className={TFOOT_TR}>
-                    <td colSpan={2} className="py-3 px-3 text-right text-muted-foreground">Total ({devLineas.length} líneas):</td>
-                    <td className="py-3 px-3 text-right">{totalDevUnidades}</td>
-                    <td colSpan={2} />
-                    <td className="py-3 px-3 text-right text-destructive">{totalDevCredito > 0 ? fmt(totalDevCredito) : '—'}</td>
-                  </tr>
-                </tfoot>
-              </table>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('inventario')}
+                    className={cn(
+                      "rounded-lg border px-3 py-2.5 text-left transition-colors hover:bg-muted/40",
+                      conDiferencias.length ? "border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20" : "border-border/70 bg-muted/20"
+                    )}
+                  >
+                    <div className="text-[11px] text-muted-foreground">Inventario</div>
+                    <div className="mt-0.5 text-xs font-bold">{conDiferencias.length ? `${conDiferencias.length} diferencias` : 'Cuadra'}</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('entregas')}
+                    className={cn(
+                      "rounded-lg border px-3 py-2.5 text-left transition-colors hover:bg-muted/40",
+                      entregasConIncidencia ? "border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20" : "border-border/70 bg-muted/20"
+                    )}
+                  >
+                    <div className="text-[11px] text-muted-foreground">Entregas</div>
+                    <div className="mt-0.5 text-xs font-bold">{entregasConIncidencia ? `${entregasConIncidencia} incidencias` : 'Sin incidencias'}</div>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('incidencias')}
+                  className={cn(
+                    "w-full rounded-lg border px-3 py-3 text-left text-xs leading-relaxed transition-colors hover:brightness-[0.98]",
+                    sinAlertasOperativas
+                      ? "border-green-200 bg-green-50/60 text-green-800 dark:border-green-900 dark:bg-green-950/20 dark:text-green-300"
+                      : "border-amber-200 bg-amber-50/60 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300"
+                  )}
+                >
+                  {sinAlertasOperativas ? 'Sin alertas críticas detectadas.' : `${incidentCount} señal${incidentCount === 1 ? '' : 'es'} para revisar antes de decidir.`}
+                </button>
               </div>
-            </>
-          ) : <p className="text-sm text-muted-foreground">Sin devoluciones en este periodo</p>}
-        </SectionCard>
-        )}
-
-        {/* ═══ ENTREGAS REALIZADAS ═══ */}
-        {show('entregas') && (
-        <SectionCard title={`Entregas realizadas (${entregasList.length})`} icon={Truck}>
-          {entregasList.length > 0 ? (
-            <div className="overflow-x-auto -mx-5 px-5">
-            <table className="w-full">
-              <thead>
-                <tr className={THEAD_TR}>
-                  <th className={TH}>Folio</th>
-                  <th className={TH}>Pedido</th>
-                  <th className={TH}>Cliente</th>
-                  <th className={TH}>Fecha</th>
-                  <th className={cn(TH, "text-right")}>Entregadas</th>
-                  <th className={cn(TH, "text-right")}>No entregadas</th>
-                  <th className={cn(TH, "text-right")}>Total</th>
-                  <th className={cn(TH, "w-8")} />
-                </tr>
-              </thead>
-              <tbody>
-                {entregasList.map((e: any) => {
-                  const lineas = (e.entrega_lineas || []) as any[];
-                  const fechaRealEntrega = e.validado_at || e.fecha_entrega || e.fecha;
-                  const udsEntregadas = lineas.filter(l => l.hecho).reduce((s, l) => s + (Number(l.cantidad_entregada) || 0), 0);
-                  const udsPedidas = lineas.reduce((s, l) => s + (Number(l.cantidad) || 0), 0);
-                  const udsNoEntregadas = lineas.filter(l => !l.hecho).reduce((s, l) => s + (Number(l.cantidad ?? l.cantidad_entregada) || 0), 0);
-                  const expanded = expandedEntregaId === e.id;
-                  return (
-                    <Fragment key={e.id}>
-                      <tr
-                        className={cn(TBODY_TR, "cursor-pointer")}
-                        onClick={() => setExpandedEntregaId(expanded ? null : e.id)}
-                      >
-                        <td className={cn(TD, "font-mono font-semibold text-foreground")}>{e.folio ?? '—'}</td>
-                        <td className={cn(TD, "font-mono text-muted-foreground")}>{e.ventas?.folio ?? '—'}</td>
-                        <td className={TD}>{e.clientes?.nombre ?? '—'}</td>
-                        <td className={cn(TD, "text-muted-foreground")}>{fmtDate(fechaRealEntrega)}</td>
-                        <td className={cn(TD, "text-right font-semibold text-green-700")}>{udsEntregadas}</td>
-                        <td className={cn(TD, "text-right font-semibold", udsNoEntregadas > 0 ? "text-destructive" : "text-muted-foreground")}>{udsNoEntregadas > 0 ? udsNoEntregadas : '—'}</td>
-                        <td className={cn(TD, "text-right font-semibold")}>{e.ventas?.total != null ? fmt(Number(e.ventas.total)) : '—'}</td>
-                        <td className={cn(TD, "text-center")}>
-                          <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform inline-block", expanded && "rotate-180")} />
-                        </td>
-                      </tr>
-                      {expanded && (
-                        <tr className="border-b border-table-border/70">
-                          <td colSpan={8} className="bg-muted/10 p-0">
-                            {lineas.length > 0 ? (
-                              <table className="w-full">
-                                <thead>
-                                  <tr className="text-[11px] text-muted-foreground uppercase border-b border-table-border bg-muted/20">
-                                    <th className="text-left py-2 pl-8 pr-3">Producto</th>
-                                    <th className="text-left py-2">Código</th>
-                                    <th className="text-right py-2">Pedidas</th>
-                                    <th className="text-right py-2">Entregadas</th>
-                                    <th className="text-center py-2 pr-8">Estado</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {lineas.map((l: any, i: number) => (
-                                    <tr key={i} className="border-b border-table-border/40 last:border-b-0 hover:bg-table-hover transition-colors">
-                                      <td className="py-2 pl-8 pr-3">{l.productos?.nombre ?? '—'}</td>
-                                      <td className="py-2 font-mono text-muted-foreground">{l.productos?.codigo ?? ''}</td>
-                                      <td className="py-2 text-right">{Number(l.cantidad ?? 0)}</td>
-                                      <td className="py-2 text-right font-semibold">{Number(l.cantidad_entregada ?? 0)}</td>
-                                      <td className="py-2 pr-8 text-center">
-                                        {l.hecho ? (
-                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold">
-                                            <CheckCircle2 className="h-3 w-3" /> Entregado
-                                          </span>
-                                        ) : (
-                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-semibold" title={l.motivo_no_entrega || ''}>
-                                            <XCircle className="h-3 w-3" /> No entregado{l.motivo_no_entrega ? ` · ${l.motivo_no_entrega}` : ''}
-                                          </span>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                                <tfoot>
-                                  <tr className="border-t border-border bg-muted/20 font-bold text-[12px]">
-                                    <td colSpan={2} className="py-2 pl-8 pr-3 text-right text-muted-foreground">Subtotal de la entrega:</td>
-                                    <td className="py-2 text-right">{udsPedidas}</td>
-                                    <td className="py-2 text-right">{udsEntregadas}</td>
-                                    <td className="pr-8" />
-                                  </tr>
-                                </tfoot>
-                              </table>
-                            ) : (
-                              <p className="text-xs text-muted-foreground pl-8 pr-3 py-3">Sin productos en esta entrega</p>
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className={TFOOT_TR}>
-                  <td colSpan={4} className="py-3 px-3 text-right text-muted-foreground">Totales ({entregasList.length} entregas):</td>
-                  <td className="py-3 px-3 text-right">{totalEntregaUnidades}</td>
-                  <td />
-                  <td className="py-3 px-3 text-right">{fmt(totalEntregaMonto)}</td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
             </div>
-          ) : <p className="text-sm text-muted-foreground">Sin entregas en este periodo</p>}
-        </SectionCard>
-        )}
 
-        {/* ═══ STOCK EN ALMACÉN Y CUADRE DE PRODUCTOS ═══ */}
-        {show('inventario') && (
-        <>
-        {incluirStock && stockItems.length > 0 && (
-          <SectionCard title={`Stock — ${almacenNombre}`} icon={Package}>
-            <div className="overflow-x-auto -mx-5 px-5">
-            <table className="w-full">
-              <thead>
-                <tr className={THEAD_TR}>
-                  <th className={TH}>Producto</th>
-                  <th className={cn(TH, "text-right")}>Existencia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stockItems.map((p: any, i: number) => (
-                  <tr key={i} className={TBODY_TR}>
-                    <td className={TD}>{p.nombre} <span className="text-muted-foreground font-mono text-[11px]">{p.codigo}</span></td>
-                    <td className={cn(TD, "text-right font-semibold")}>{p.cantidad}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          </SectionCard>
-        )}
-        {incluirStock && stockItems.length === 0 && (
-          <SectionCard title="Stock" icon={Package}>
-            <p className="text-sm text-muted-foreground italic">No se encontró stock en el almacén asignado.</p>
-          </SectionCard>
-        )}
-
-        {(lineas || []).length > 0 && (
-          <SectionCard title="Cuadre de productos (carga)" icon={PackageCheck}>
-            <div className="space-y-1.5">
-              {(lineas || []).map((l: any) => {
-                const d = Number(l.diferencia);
-                return (
-                  <div key={l.id} className={cn(
-                    "flex items-center justify-between rounded-md px-3 py-2 text-[13px]",
-                    d !== 0 ? "bg-amber-50 border border-amber-200" : "bg-muted/20 border border-transparent"
-                  )}>
-                    <span className="font-medium">{(l as any).productos?.nombre}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-muted-foreground">Esp: {Number(l.cantidad_esperada)}</span>
-                      <span className="font-bold">Real: {Number(l.cantidad_real)}</span>
-                      {d !== 0 && (
-                        <span className={cn("font-bold", d > 0 ? "text-green-600" : "text-destructive")}>
-                          {d > 0 ? '+' : ''}{d}
-                        </span>
-                      )}
-                    </div>
+            {isPendiente && (
+              <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4">
+                {descarga.descargo_camion && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+                    <label className="text-xs font-semibold text-amber-800 dark:text-amber-300 block mb-2 flex items-center gap-1.5">
+                      <Truck className="h-3.5 w-3.5" /> Bodega destino
+                    </label>
+                    <SearchableSelect
+                      options={(destinoOpts ?? []).map(a => ({ value: a.id, label: a.nombre }))}
+                      value={destinoAlmacenId}
+                      onChange={setDestinoAlmacenId}
+                      placeholder="Selecciona bodega..."
+                    />
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-2 leading-relaxed">
+                      Al aprobar, el físico entra a esta bodega, el camión queda en 0 y las diferencias quedan registradas como ajuste.
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-          </SectionCard>
-        )}
-        </>
-        )}
-
-        {/* ═══ ADMIN ACTIONS ═══ */}
-        {isPendiente && (
-          <div className="bg-card border border-border rounded-xl shadow-sm p-5 space-y-3">
-            {descarga.descargo_camion && (
-              <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-                <label className="text-[11px] font-semibold text-amber-800 uppercase block mb-1 flex items-center gap-1">
-                  <Truck className="h-3.5 w-3.5" /> Bodega destino del producto (descarga de camión)
-                </label>
-                <SearchableSelect
-                  options={(destinoOpts ?? []).map(a => ({ value: a.id, label: a.nombre }))}
-                  value={destinoAlmacenId}
-                  onChange={setDestinoAlmacenId}
-                  placeholder="Elige la bodega a donde regresa el producto..."
-                />
-                <p className="text-[11px] text-amber-700 mt-1">
-                  Al aprobar, el producto físico entra a esta bodega, el camión queda en 0 y las diferencias se registran como ajuste para revisar.
-                </p>
+                )}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">Notas del administrador</label>
+                  <textarea
+                    value={notasSupervisor}
+                    onChange={e => setNotasSupervisor(e.target.value)}
+                    placeholder="Observaciones sobre esta liquidación..."
+                    className="w-full border border-input bg-background rounded-lg px-3 py-2.5 text-sm min-h-[84px] resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Button
+                    onClick={() => aprobarMutation.mutate('aprobada')}
+                    disabled={aprobarMutation.isPending || (!!descarga.descargo_camion && !destinoAlmacenId)}
+                    className="w-full h-10"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1.5" /> Aprobar liquidación
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => aprobarMutation.mutate('rechazada')}
+                    disabled={aprobarMutation.isPending}
+                    className="w-full h-10 border-destructive/40 text-destructive hover:bg-destructive/10"
+                  >
+                    <XCircle className="h-4 w-4 mr-1.5" /> Rechazar con nota
+                  </Button>
+                </div>
               </div>
             )}
-            <div>
-              <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Notas del administrador</label>
-              <textarea
-                value={notasSupervisor}
-                onChange={e => setNotasSupervisor(e.target.value)}
-                placeholder="Observaciones sobre esta liquidación..."
-                className="w-full border border-input bg-background rounded-md px-3 py-2 text-sm min-h-[60px] focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={() => aprobarMutation.mutate('aprobada')}
-                disabled={aprobarMutation.isPending || (!!descarga.descargo_camion && !destinoAlmacenId)}
-                className="flex-1">
-                <CheckCircle2 className="h-4 w-4 mr-1" /> Aprobar liquidación
-              </Button>
-              <Button variant="outline" onClick={() => aprobarMutation.mutate('rechazada')} disabled={aprobarMutation.isPending}
-                className="flex-1 border-destructive text-destructive hover:bg-destructive/10">
-                <XCircle className="h-4 w-4 mr-1" /> Rechazar con nota
-              </Button>
-            </div>
-          </div>
-        )}
 
-        {descarga.notas_supervisor && !isPendiente && (
-          <div className="bg-card border border-border rounded-xl shadow-sm px-5 py-4">
-            <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-1">Notas del administrador</div>
-            <p className="text-[13px] text-foreground">{descarga.notas_supervisor}</p>
-          </div>
-        )}
+            {descarga.notas_supervisor && !isPendiente && (
+              <div className="rounded-xl border border-border/70 bg-card px-5 py-4">
+                <div className="text-xs text-muted-foreground font-semibold mb-1.5">Notas del administrador</div>
+                <p className="text-sm text-foreground leading-relaxed">{descarga.notas_supervisor}</p>
+              </div>
+            )}
 
-        </div>
+            <div className="rounded-xl border border-border/70 bg-card p-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
+                <div><div className="text-muted-foreground">Ventas</div><div className="font-bold mt-0.5">{ventasActivas.length}</div></div>
+                <div><div className="text-muted-foreground">Cobros</div><div className="font-bold mt-0.5">{(cobros || []).length}</div></div>
+                <div><div className="text-muted-foreground">Entregas</div><div className="font-bold mt-0.5">{entregasList.length}</div></div>
+                <div><div className="text-muted-foreground">Devoluciones</div><div className="font-bold mt-0.5">{devLineas.length}</div></div>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
@@ -2084,7 +2338,6 @@ export default function DescargasPage() {
     setFechaHastaFiltro('');
   };
 
-
   const totalEsperado = filtered.reduce((s, d: any) => s + cuadreDe(d).esperado, 0);
   const totalEntregado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_entregado) || 0), 0);
   const totalDiferencia = filtered.reduce((s, d: any) => s + cuadreDe(d).diferencia, 0);
@@ -2093,13 +2346,20 @@ export default function DescargasPage() {
   // Reset a página 1 al cambiar filtros
   useEffect(() => { pag.resetPage(); }, [filterStatus, filterVendedor, filterTipo, filterDiferencia, fechaDesdeFiltro, fechaHastaFiltro]);
 
-
   const selectedDescarga = descargaDetalle ?? descargas?.find((d: any) => d.id === selectedId);
 
   if (showNew) {
     return (
       <div className="p-4">
         <NuevaDescargaForm onClose={() => setShowNew(false)} />
+      </div>
+    );
+  }
+
+  if (selectedDescarga) {
+    return (
+      <div className="p-4">
+        <DescargaDetalle descarga={selectedDescarga} onClose={() => setSelectedId(null)} />
       </div>
     );
   }
@@ -2136,7 +2396,6 @@ export default function DescargasPage() {
               placeholder="Todos..."
             />
           </div>
-
 
           <div>
             <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Tipo</label>
@@ -2302,11 +2561,6 @@ export default function DescargasPage() {
             onLast={pag.goLast}
           />
         </div>
-
-      )}
-
-      {selectedDescarga && (
-        <DescargaDetalle descarga={selectedDescarga} onClose={() => setSelectedId(null)} />
       )}
     </div>
   );
