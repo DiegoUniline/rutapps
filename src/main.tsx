@@ -2,6 +2,7 @@ import "./lib/cryptoPolyfill";
 import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
+import GlobalCrmPitchLauncher from "./components/admin/GlobalCrmPitchLauncher";
 import "./index.css";
 import { startAutoBackup, restoreFromStorageBackup } from "./lib/offlineBackup";
 import { initObservability } from "./lib/observability";
@@ -55,5 +56,6 @@ if (isPreviewHost || isInIframe) {
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
     <App />
+    <GlobalCrmPitchLauncher />
   </HelmetProvider>
 );
