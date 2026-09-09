@@ -112,11 +112,19 @@ export function useKardexUbicacion(
     let saldo = 0;
     return query.data.map((m: KardexMovementRecord) => {
       let delta = 0;
+      const cantidad = Number(m.cantidad) || 0;
       if (ubicacionId) {
-        delta = (m.almacen_destino_id === ubicacionId ? Number(m.cantidad) || 0 : 0)
-          - (m.almacen_origen_id === ubicacionId ? Number(m.cantidad) || 0 : 0);
+        if (m.referencia_tipo === 'entrega_cargado') {
+          // El surtido ('entrega') ya descontó el almacén origen.
+          // La carga representa únicamente la entrada al almacén/camión destino;
+          // volver a restar el origen duplicaría la salida solo en el Kardex.
+          delta = m.almacen_destino_id === ubicacionId ? cantidad : 0;
+        } else {
+          delta = (m.almacen_destino_id === ubicacionId ? cantidad : 0)
+            - (m.almacen_origen_id === ubicacionId ? cantidad : 0);
+        }
       } else {
-        delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
+        delta = m.tipo === 'entrada' ? cantidad : m.tipo === 'salida' ? -cantidad : 0;
       }
       if (computeSaldo) saldo += delta;
       const origen_nombre = m.almacen_origen_id && almMap[m.almacen_origen_id] ? almMap[m.almacen_origen_id].nombre : null;
