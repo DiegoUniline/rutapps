@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+export type PlatformTeamPermissions = Record<string, boolean | Record<string, boolean>>;
+
 export interface PlatformTeamAccess {
   has_access: boolean;
   person_id?: string;
@@ -10,7 +12,7 @@ export interface PlatformTeamAccess {
   access_level?: 'executive' | 'supervisor' | 'manager';
   access_scope?: 'own' | 'team' | 'all';
   status?: 'invited' | 'active' | 'suspended';
-  permissions?: Record<string, boolean>;
+  permissions?: PlatformTeamPermissions;
 }
 
 const rpcClient = supabase as unknown as {
