@@ -3,7 +3,19 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
-import { useDateRangeField } from '@/contexts/DateRangeFieldContext';
+
+export type EntregaFechaTipo = 'levantamiento' | 'programada';
+
+export interface EntregaWorkspaceCounts {
+  total: number;
+  borrador: number;
+  surtido: number;
+  asignado: number;
+  cargado: number;
+  en_ruta: number;
+  hecho: number;
+  no_entregado: number;
+}
 
 const ENTREGA_STATUSES = [
   'borrador',
@@ -16,33 +28,11 @@ const ENTREGA_STATUSES = [
   'cancelado',
 ] as const;
 
-type CountPredicate = (row: { id: string; status: string }) => boolean;
-
-/**
- * Adapter compatible with the small portion of Array used by EntregaListPage
- * (`length` and `filter(...).length`). It lets the existing operational screen
- * keep its current code while counts are calculated by PostgreSQL instead of
- * downloading every entrega id/status to the browser.
- */
-function makeCountRowsAdapter(counts: Record<string, number>) {
-  const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
-  return {
-    length: total,
-    filter(predicate: CountPredicate) {
-      let matched = 0;
-      for (const [status, count] of Object.entries(counts)) {
-        if (predicate({ id: '', status })) matched += count;
-      }
-      return { length: matched };
-    },
-  };
-}
-
 /**
  * Conteos de la barra de estados.
- * Conserva el alcance anterior (búsqueda + vendedor), pero ahora PostgreSQL
- * devuelve sólo los COUNTs. Antes se descargaba todo el histórico de id/status
- * únicamente para contarlo en el navegador.
+ * Conserva el alcance anterior (búsqueda + vendedor), pero PostgreSQL devuelve
+ * únicamente COUNTs. Antes se descargaba todo el histórico de id/status para
+ * contarlo en el navegador.
  */
 export function useEntregasWorkspaceCounts(search?: string, vendedorFilter?: string) {
   const { empresa } = useAuth();
@@ -55,7 +45,7 @@ export function useEntregasWorkspaceCounts(search?: string, vendedorFilter?: str
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,
     placeholderData: previous => previous,
-    queryFn: async () => {
+    queryFn: async (): Promise<EntregaWorkspaceCounts> => {
       const pairs = await Promise.all(
         ENTREGA_STATUSES.map(async status => {
           let q = supabase
@@ -73,14 +63,24 @@ export function useEntregasWorkspaceCounts(search?: string, vendedorFilter?: str
         }),
       );
 
-      return makeCountRowsAdapter(Object.fromEntries(pairs));
+      const byStatus = Object.fromEntries(pairs) as Record<string, number>;
+      return {
+        total: Object.values(byStatus).reduce((sum, value) => sum + value, 0),
+        borrador: byStatus.borrador ?? 0,
+        surtido: byStatus.surtido ?? 0,
+        asignado: byStatus.asignado ?? 0,
+        cargado: byStatus.cargado ?? 0,
+        en_ruta: byStatus.en_ruta ?? 0,
+        hecho: byStatus.hecho ?? 0,
+        no_entregado: byStatus.no_entregado ?? 0,
+      };
     },
   });
 }
 
 /**
  * Lista operativa. Los filtros de estado/ruta/fecha se aplican en PostgreSQL.
- * Las partidas de entrega ya NO viajan en la carga inicial: productos y almacenes
+ * Las partidas de entrega NO viajan en la carga inicial: productos y almacenes
  * por línea se consultan sólo al expandir una entrega mediante
  * useEntregaWorkspaceLineas(). Para la columna de almacén origen se conserva el
  * almacén de cabecera de la entrega como fallback ligero.
@@ -88,12 +88,17 @@ export function useEntregasWorkspaceCounts(search?: string, vendedorFilter?: str
  * Semántica de fechas:
  * - levantamiento: ventas.fecha del pedido origen.
  * - programada: entregas.fecha.
+ *
+ * Un rango vacío siempre significa TODO el histórico. Incluso si el selector
+ * dice "levantamiento", no se fuerza INNER JOIN si no hay fechas, para no excluir
+ * entregas sin pedido origen.
  */
 export function useEntregasWorkspaceList({
   search,
   vendedorFilter,
   statusFilter,
   rutaFilter,
+  fechaTipo = 'programada',
   fechaDesde,
   fechaHasta,
 }: {
@@ -101,13 +106,13 @@ export function useEntregasWorkspaceList({
   vendedorFilter?: string;
   statusFilter?: string;
   rutaFilter?: string;
+  fechaTipo?: EntregaFechaTipo;
   fechaDesde?: string;
   fechaHasta?: string;
 }) {
   const { empresa } = useAuth();
   const deferredSearch = useDeferredValue((search ?? '').trim());
-  const dateField = useDateRangeField();
-  const fechaTipo = dateField?.value === 'levantamiento' ? 'levantamiento' : 'programada';
+  const filterByLevantamiento = fechaTipo === 'levantamiento' && !!(fechaDesde || fechaHasta);
 
   return useQuery({
     queryKey: [
@@ -128,7 +133,7 @@ export function useEntregasWorkspaceList({
     refetchOnWindowFocus: false,
     placeholderData: previous => previous,
     queryFn: async () => fetchAllPages<any>((from, to) => {
-      const ventasRelation = fechaTipo === 'levantamiento'
+      const ventasRelation = filterByLevantamiento
         ? 'ventas!entregas_pedido_id_fkey!inner(folio, fecha)'
         : 'ventas!entregas_pedido_id_fkey(folio, fecha)';
 
@@ -145,10 +150,10 @@ export function useEntregasWorkspaceList({
       if (rutaFilter === 'sin_ruta') q = q.is('vendedor_ruta_id', null);
       else if (rutaFilter && rutaFilter !== 'todos') q = q.eq('vendedor_ruta_id', rutaFilter);
 
-      if (fechaTipo === 'levantamiento') {
+      if (filterByLevantamiento) {
         if (fechaDesde) q = q.gte('ventas.fecha', fechaDesde);
         if (fechaHasta) q = q.lte('ventas.fecha', fechaHasta);
-      } else {
+      } else if (fechaTipo === 'programada') {
         if (fechaDesde) q = q.gte('fecha', fechaDesde);
         if (fechaHasta) q = q.lte('fecha', fechaHasta);
       }
