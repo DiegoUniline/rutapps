@@ -91,6 +91,7 @@ export function PedidosTabs() {
             <button
               type="button"
               className="pedidos-view-button border border-border bg-background"
+              data-pedidos-filter-trigger
               data-active={filtersOpen ? 'true' : 'false'}
               aria-pressed={filtersOpen}
               aria-expanded={filtersOpen}
