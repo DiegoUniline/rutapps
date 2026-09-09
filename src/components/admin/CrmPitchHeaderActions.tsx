@@ -13,21 +13,60 @@ function currentRoute(): CrmRoute | null {
   return match ? { scope: match[1] as CrmRoute['scope'], empresaId: match[2] } : null;
 }
 
-function findOriginalLauncher(label: 'pitch' | 'config') {
+function buttonText(button: HTMLButtonElement) {
+  return button.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+}
+
+/**
+ * En el detalle del CRM existen dos launchers globales distintos:
+ * 1) el launcher del pitch (Ver pitch / Configurar pitch)
+ * 2) la biblioteca global (Pitch de llamadas)
+ * Ninguno debe flotar encima del expediente.
+ */
+function floatingPitchButtons() {
+  return Array.from(document.querySelectorAll<HTMLButtonElement>('button')).filter(button => {
+    const text = buttonText(button);
+    const isPitchAction =
+      text === 'Ver pitch de llamada' ||
+      text === 'Pitch de llamadas' ||
+      text === 'Configurar pitch';
+    return isPitchAction && !!button.closest<HTMLElement>('.fixed');
+  });
+}
+
+function hideFloatingPitchActions() {
+  const hidden = new Set<HTMLElement>();
+  floatingPitchButtons().forEach(button => {
+    const fixed = button.closest<HTMLElement>('.fixed');
+    if (!fixed || hidden.has(fixed)) return;
+    fixed.dataset.crmPitchHidden = 'true';
+    fixed.style.setProperty('display', 'none', 'important');
+    hidden.add(fixed);
+  });
+}
+
+function restoreFloatingPitchActions() {
+  document.querySelectorAll<HTMLElement>('[data-crm-pitch-hidden="true"]').forEach(element => {
+    element.style.removeProperty('display');
+    delete element.dataset.crmPitchHidden;
+  });
+}
+
+function findLauncherButton(kind: 'pitch' | 'config') {
   const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
   return buttons.find(button => {
-    const text = button.textContent?.trim() ?? '';
-    const isMatch = label === 'pitch'
-      ? text.includes('Ver pitch de llamada')
-      : text.includes('Configurar pitch');
-    return isMatch && !!button.closest('div.fixed.bottom-5.right-5');
+    const text = buttonText(button);
+    if (!button.closest<HTMLElement>('.fixed')) return false;
+    return kind === 'pitch'
+      ? text === 'Ver pitch de llamada'
+      : text === 'Configurar pitch';
   }) ?? null;
 }
 
 function findHeaderActions() {
   const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
   const anchor = buttons.find(button => {
-    const text = button.textContent?.trim() ?? '';
+    const text = buttonText(button);
     return text.includes('Marcar perdido') || text.includes('Crear oferta') || text.includes('Reemplazar oferta');
   });
   if (!anchor) return null;
@@ -51,39 +90,45 @@ export default function CrmPitchHeaderActions() {
 
   useEffect(() => {
     if (!route) {
+      restoreFloatingPitchActions();
       setTarget(null);
       return;
     }
 
+    let scheduled = false;
     const sync = () => {
-      const originalPitch = findOriginalLauncher('pitch');
-      const originalConfig = findOriginalLauncher('config');
-      const floating = originalPitch?.closest<HTMLElement>('div.fixed.bottom-5.right-5')
-        ?? originalConfig?.closest<HTMLElement>('div.fixed.bottom-5.right-5');
-      if (floating) floating.style.display = 'none';
-      setTarget(findHeaderActions());
+      if (scheduled) return;
+      scheduled = true;
+      window.requestAnimationFrame(() => {
+        scheduled = false;
+        hideFloatingPitchActions();
+        setTarget(findHeaderActions());
+      });
     };
 
     sync();
     const observer = new MutationObserver(sync);
     observer.observe(document.body, { childList: true, subtree: true });
-    const timer = window.setTimeout(sync, 250);
+    window.addEventListener('resize', sync);
 
     return () => {
       observer.disconnect();
-      window.clearTimeout(timer);
-      const originalPitch = findOriginalLauncher('pitch');
-      const originalConfig = findOriginalLauncher('config');
-      const floating = originalPitch?.closest<HTMLElement>('div.fixed.bottom-5.right-5')
-        ?? originalConfig?.closest<HTMLElement>('div.fixed.bottom-5.right-5');
-      if (floating) floating.style.display = '';
+      window.removeEventListener('resize', sync);
+      restoreFloatingPitchActions();
     };
   }, [route?.scope, route?.empresaId]);
 
   if (!route || !target) return null;
 
-  const openPitch = () => findOriginalLauncher('pitch')?.click();
-  const openConfig = () => findOriginalLauncher('config')?.click();
+  const openPitch = () => {
+    const source = findLauncherButton('pitch');
+    if (source) source.click();
+  };
+
+  const openConfig = () => {
+    const source = findLauncherButton('config');
+    if (source) source.click();
+  };
 
   return createPortal(
     <>
