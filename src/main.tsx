@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import GlobalCrmPitchLauncher from "./components/admin/GlobalCrmPitchLauncher";
+import GlobalCrmCancellationInsight from "./components/admin/GlobalCrmCancellationInsight";
 import AdminCallPitchLibrary from "./components/admin/AdminCallPitchLibrary";
 import "./index.css";
 import { startAutoBackup, restoreFromStorageBackup } from "./lib/offlineBackup";
@@ -58,6 +59,7 @@ createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
     <App />
     <GlobalCrmPitchLauncher />
+    <GlobalCrmCancellationInsight />
     <AdminCallPitchLibrary />
   </HelmetProvider>
 );
