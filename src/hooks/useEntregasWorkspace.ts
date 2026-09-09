@@ -23,6 +23,7 @@ const ENTREGA_STATUSES = [
   'asignado',
   'cargado',
   'en_ruta',
+  'listo',
   'hecho',
   'no_entregado',
   'cancelado',
