@@ -1737,6 +1737,8 @@ export type Database = {
           es_publico_general: boolean
           facturama_correo_facturacion: string | null
           facturama_cp: string | null
+          facturama_direccion_fiscal: string | null
+          facturama_forma_pago: string | null
           facturama_id: string | null
           facturama_razon_social: string | null
           facturama_regimen_fiscal: string | null
@@ -1789,6 +1791,8 @@ export type Database = {
           es_publico_general?: boolean
           facturama_correo_facturacion?: string | null
           facturama_cp?: string | null
+          facturama_direccion_fiscal?: string | null
+          facturama_forma_pago?: string | null
           facturama_id?: string | null
           facturama_razon_social?: string | null
           facturama_regimen_fiscal?: string | null
@@ -1841,6 +1845,8 @@ export type Database = {
           es_publico_general?: boolean
           facturama_correo_facturacion?: string | null
           facturama_cp?: string | null
+          facturama_direccion_fiscal?: string | null
+          facturama_forma_pago?: string | null
           facturama_id?: string | null
           facturama_razon_social?: string | null
           facturama_regimen_fiscal?: string | null
@@ -4526,6 +4532,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      internal_crm_call_pitch_config: {
+        Row: {
+          config: Json
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config?: Json
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config?: Json
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       internal_notification_reads: {
         Row: {
@@ -10682,6 +10709,12 @@ export type Database = {
         Args: { p_solicitud_id: string }
         Returns: undefined
       }
+      fn_admin_crm_call_pitch_catalog_get: { Args: never; Returns: Json }
+      fn_admin_crm_call_pitch_catalog_save: {
+        Args: { p_catalog: Json }
+        Returns: Json
+      }
+      fn_admin_crm_call_pitch_save: { Args: { p_config: Json }; Returns: Json }
       fn_admin_team_workspace: { Args: never; Returns: Json }
       fn_admin_trial_crm_create_offer: {
         Args: {
@@ -10730,6 +10763,12 @@ export type Database = {
         Returns: Json
       }
       fn_admin_trial_crm_workspace: { Args: { p_days?: number }; Returns: Json }
+      fn_crm_call_pitch_get: { Args: never; Returns: Json }
+      fn_crm_cancellation_insight: {
+        Args: { p_empresa_id: string }
+        Returns: Json
+      }
+      fn_crm_cancellations_list: { Args: never; Returns: Json }
       fn_customer_intelligence_detail: {
         Args: {
           p_cliente_id: string
@@ -10793,6 +10832,50 @@ export type Database = {
           p_solicitud_id: string
         }
         Returns: undefined
+      }
+      fn_logistica_pedidos_workspace: {
+        Args: {
+          p_empresa_id: string
+          p_fecha_desde?: string
+          p_fecha_hasta?: string
+          p_fecha_tipo?: string
+          p_search?: string
+          p_vendedor_ids?: string[]
+        }
+        Returns: {
+          cerrado_at: string
+          cliente_direccion: string
+          cliente_id: string
+          cliente_nombre: string
+          cliente_telefono: string
+          en_ruta: boolean
+          estado_odoo: string
+          fecha: string
+          fecha_entrega_real: string
+          fecha_programada: string
+          folio: string
+          fully_delivered: boolean
+          fully_generada: boolean
+          fully_surtido: boolean
+          id: string
+          lineas_pendientes: number
+          notas: string
+          pct_entregado: number
+          pct_generada: number
+          pct_surtido: number
+          sort_date: string
+          status: string
+          total: number
+          total_demanda: number
+          total_entregado: number
+          total_generada: number
+          total_pendiente: number
+          total_surtido: number
+          total_valor_pendiente: number
+          vendedor_id: string
+          vendedor_nombre: string
+          vendedor_ruta_id: string
+        }[]
       }
       fn_my_team_access: { Args: never; Returns: Json }
       fn_netear_linea_promo: { Args: { _linea_id: string }; Returns: undefined }
