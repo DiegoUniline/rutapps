@@ -5,8 +5,10 @@ import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDateRangeField } from '@/contexts/DateRangeFieldContext';
 import {
   formatDateDMY,
   normalizeDateISO,
@@ -61,6 +63,7 @@ export function DateRangePicker({
 }: DateRangePickerProps) {
 
   const [open, setOpen] = React.useState(false);
+  const dateField = useDateRangeField();
   const initialRange: DateRange | undefined = React.useMemo(() => {
     const f = isoToDate(from);
     const t = isoToDate(to);
@@ -132,7 +135,20 @@ export function DateRangePicker({
   const hasValue = !!(from || to);
 
   return (
-    <div className={cn('inline-flex items-center gap-1', className)}>
+    <div className={cn('inline-flex flex-wrap items-center gap-1', className)}>
+      {dateField && (
+        <Select value={dateField.value} onValueChange={dateField.onChange}>
+          <SelectTrigger className={cn(compact ? 'h-7 w-[180px] text-[11px]' : 'h-9 w-[220px]')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {dateField.options.map(option => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
