@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProveedores, useAlmacenes } from '@/hooks/useData';
-import { fetchAllPages } from '@/lib/supabasePaginate';
 import { fmtMoney } from '@/lib/currency';
 import { todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
@@ -85,6 +84,8 @@ export default function ConcentradoSurtidoPage() {
     setStatusFilter(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
   };
   const [viewMode, setViewMode] = useState<'pedidos' | 'productos'>('pedidos');
+  const [pedidoPage, setPedidoPage] = useState(0);
+  const pedidoPageSize = 50;
 
   // Filtros nuevos: tipo (pedido/venta_directa) y vendedor (multi)
   const TIPO_OPTIONS: { value: string; label: string }[] = [
@@ -123,160 +124,78 @@ export default function ConcentradoSurtidoPage() {
   });
 
   const vendedoresKey = vendedorFilter.slice().sort().join(',');
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey, almacenesKey],
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ['concentrado-surtido-v2', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey, almacenesKey, pedidoPage],
     enabled: !!empresa?.id && almacenInit,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
-    placeholderData: previous => previous,
     queryFn: async () => {
       const statuses = statusFilter.length > 0
         ? statusFilter
         : ['confirmado', 'entregado', 'facturado'];
-      const ventas = await fetchAllPages<VentaLite>((from, to) => {
-        let q = supabase.from('ventas')
-          .select('id, folio, fecha_entrega, fecha, status, tipo, empresa_id, total, cliente_id, vendedor_id, clientes(nombre), vendedor:profiles!ventas_vendedor_id_profiles_fkey(id, nombre)')
-          .eq('empresa_id', empresa!.id)
-          .gte(fechaField, desde)
-          .lte(fechaField, hasta)
-          .in('status', statuses as any)
-          .order(fechaField, { ascending: true })
-          .range(from, to);
-        if (tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter);
-        if (vendedorFilter.length > 0) q = q.in('vendedor_id', vendedorFilter);
-        return q;
+
+      const { data: payload, error } = await (supabase as any).rpc('fn_logistica_concentrado_surtido_v2', {
+        p_empresa_id: empresa!.id,
+        p_fecha_desde: desde || null,
+        p_fecha_hasta: hasta || null,
+        p_fecha_field: fechaField,
+        p_statuses: statuses,
+        p_tipo: tipoFilter,
+        p_vendedor_ids: vendedorFilter.length > 0 ? vendedorFilter : null,
+        p_almacen_ids: almacenFilter.length > 0 ? almacenFilter : null,
+        p_pedido_page_size: pedidoPageSize,
+        p_pedido_offset: pedidoPage * pedidoPageSize,
       });
-      const ventaIds = ventas.map(v => v.id);
-      if (ventaIds.length === 0) {
-        return { rows: [] as Row[], ventas: [] as VentaLite[], pedidos: [] as PedidoRow[] };
-      }
+      if (error) throw error;
 
-      // Líneas de venta y líneas ya surtidas no dependen entre sí: se leen en paralelo.
-      const [lineas, entregaLineas] = await Promise.all([
-        fetchAllPages<LineaRow>((from, to) =>
-          supabase.from('venta_lineas')
-            .select('producto_id, cantidad, venta_id')
-            .in('venta_id', ventaIds)
-            .range(from, to)
-        ),
-        fetchAllPages<EntregaLineaRow>((from, to) =>
-          supabase.from('entrega_lineas')
-            .select('producto_id, cantidad_entregada, entregas!inner(pedido_id, status)')
-            .in('entregas.pedido_id', ventaIds)
-            .in('entregas.status', ['surtido', 'cargado', 'hecho'] as any)
-            .range(from, to)
-        ),
-      ]);
-
-      // Productos involucrados
-      const productoIds = Array.from(new Set(lineas.map(l => l.producto_id)));
-
-      // Catálogo de productos y stock tampoco dependen entre sí: se leen en paralelo.
-      const [productos, stockRows] = await Promise.all([
-        productoIds.length === 0
-          ? Promise.resolve([] as ProductoRow[])
-          : fetchAllPages<ProductoRow>((from, to) =>
-              supabase.from('productos')
-                .select('id, codigo, nombre, cantidad, costo, proveedor_preferido_id')
-                .in('id', productoIds)
-                .range(from, to)
-            ),
-        almacenFilter.length > 0 && productoIds.length > 0
-          ? fetchAllPages<{ producto_id: string; cantidad: number | null }>((from, to) =>
-              supabase.from('stock_almacen')
-                .select('producto_id, cantidad')
-                .eq('empresa_id', empresa!.id)
-                .in('almacen_id', almacenFilter)
-                .in('producto_id', productoIds)
-                .range(from, to)
-            )
-          : Promise.resolve([] as { producto_id: string; cantidad: number | null }[]),
-      ]);
-
-      const prodMap = new Map(productos.map(p => [p.id, p]));
-      const stockPorProducto = new Map<string, number>();
-      for (const r of stockRows) {
-        stockPorProducto.set(r.producto_id, (stockPorProducto.get(r.producto_id) ?? 0) + Number(r.cantidad || 0));
-      }
-
-      // Agregaciones
-      const requerido = new Map<string, number>();
-      for (const l of lineas) requerido.set(l.producto_id, (requerido.get(l.producto_id) ?? 0) + Number(l.cantidad || 0));
-
-      const entregado = new Map<string, number>();
-      for (const el of entregaLineas) entregado.set(el.producto_id, (entregado.get(el.producto_id) ?? 0) + Number(el.cantidad_entregada || 0));
-
-      const rows: Row[] = productoIds.map(pid => {
-        const p = prodMap.get(pid);
-        const req = requerido.get(pid) ?? 0;
-        const ent = entregado.get(pid) ?? 0;
-        const pend = Math.max(0, req - ent);
-        const stock = almacenFilter.length > 0
-          ? Number(stockPorProducto.get(pid) ?? 0)
-          : Number(p?.cantidad ?? 0);
-        const faltante = Math.max(0, pend - stock);
-        return {
-          producto_id: pid,
-          codigo: p?.codigo ?? '—',
-          nombre: p?.nombre ?? '—',
-          requerido: req,
-          entregado: ent,
-          pendiente: pend,
-          stock,
-          faltante,
-          costo: Number(p?.costo ?? 0),
-          proveedor_preferido_id: p?.proveedor_preferido_id ?? null,
-        };
-      }).sort((a, b) => (b.faltante - a.faltante) || a.nombre.localeCompare(b.nombre));
-
-      // Agregación por pedido
-      const reqPorVenta = new Map<string, number>();
-      for (const l of lineas) reqPorVenta.set(l.venta_id, (reqPorVenta.get(l.venta_id) ?? 0) + Number(l.cantidad || 0));
-      const entPorVenta = new Map<string, number>();
-      for (const el of entregaLineas) {
-        const vid = el.entregas?.pedido_id;
-        if (!vid) continue;
-        entPorVenta.set(vid, (entPorVenta.get(vid) ?? 0) + Number(el.cantidad_entregada || 0));
-      }
-      const pedidos: PedidoRow[] = ventas.map(v => {
-        const req = reqPorVenta.get(v.id) ?? 0;
-        const ent = entPorVenta.get(v.id) ?? 0;
-        const pend = Math.max(0, req - ent);
-        let surtido_status: PedidoRow['surtido_status'];
-        if (req === 0) surtido_status = 'sin_lineas';
-        else if (ent <= 0) surtido_status = 'pendiente';
-        else if (pend <= 0) surtido_status = 'surtido';
-        else surtido_status = 'parcial';
-        return {
-          id: v.id,
-          folio: v.folio,
-          fecha_entrega: v.fecha_entrega,
-          status: v.status,
-          tipo: v.tipo ?? null,
-          cliente: v.clientes?.nombre ?? '—',
-          vendedor_id: v.vendedor_id ?? null,
-          vendedor: (v as any).vendedor?.nombre ?? '—',
-          total: Number(v.total ?? 0),
-          requerido: req,
-          entregado: ent,
-          pendiente: pend,
-          surtido_status,
-        };
-      }).sort((a, b) => (a.fecha_entrega ?? '').localeCompare(b.fecha_entrega ?? '') || (a.folio ?? '').localeCompare(b.folio ?? ''));
-
-      return { rows, ventas, pedidos };
+      return {
+        rows: (Array.isArray(payload?.rows) ? payload.rows : []).map((r: any) => ({
+          ...r,
+          requerido: Number(r.requerido ?? 0),
+          entregado: Number(r.entregado ?? 0),
+          pendiente: Number(r.pendiente ?? 0),
+          stock: Number(r.stock ?? 0),
+          faltante: Number(r.faltante ?? 0),
+          costo: Number(r.costo ?? 0),
+        })) as Row[],
+        pedidos: (Array.isArray(payload?.pedidos) ? payload.pedidos : []).map((r: any) => ({
+          ...r,
+          total: Number(r.total ?? 0),
+          requerido: Number(r.requerido ?? 0),
+          entregado: Number(r.entregado ?? 0),
+          pendiente: Number(r.pendiente ?? 0),
+        })) as PedidoRow[],
+        pedidosCount: Number(payload?.pedidos_count ?? 0),
+        productosCount: Number(payload?.productos_count ?? 0),
+        conFaltante: Number(payload?.con_faltante ?? 0),
+        costoFaltante: Number(payload?.costo_faltante ?? 0),
+      };
     },
   });
+
+  useEffect(() => {
+    setPedidoPage(0);
+    setOpenGroups(new Set());
+  }, [desde, hasta, fechaField, statusFilter, tipoFilter, vendedoresKey, almacenesKey]);
+
+  const pedidoTotalCount = data?.pedidosCount ?? 0;
+  const pedidoTotalPages = Math.max(1, Math.ceil(pedidoTotalCount / pedidoPageSize));
+  const pedidoPageStart = pedidoTotalCount === 0 ? 0 : pedidoPage * pedidoPageSize + 1;
+  const pedidoPageEnd = Math.min((pedidoPage + 1) * pedidoPageSize, pedidoTotalCount);
+  const goPedidoPage = (nextPage: number) => {
+    setOpenGroups(new Set());
+    setPedidoPage(Math.min(Math.max(nextPage, 0), Math.max(pedidoTotalPages - 1, 0)));
+  };
 
   const rows = data?.rows ?? [];
   const faltantes = useMemo(() => rows.filter(r => r.faltante > 0), [rows]);
 
   const totales = useMemo(() => ({
-    pedidos: data?.ventas.length ?? 0,
-    productos: rows.length,
-    conFaltante: faltantes.length,
-    costoFaltante: faltantes.reduce((s, r) => s + r.faltante * r.costo, 0),
-  }), [rows, faltantes, data?.ventas.length]);
+    pedidos: data?.pedidosCount ?? 0,
+    productos: data?.productosCount ?? rows.length,
+    conFaltante: data?.conFaltante ?? faltantes.length,
+    costoFaltante: data?.costoFaltante ?? faltantes.reduce((sum, r) => sum + r.faltante * r.costo, 0),
+  }), [rows, faltantes, data?.pedidosCount, data?.productosCount, data?.conFaltante, data?.costoFaltante]);
 
   // ── Export ───────────────────────────────────────────────────
   const exportColumns: ExportColumn[] = [
@@ -759,6 +678,20 @@ export default function ConcentradoSurtidoPage() {
           )}
         </div>
       </div>
+
+      {viewMode === 'pedidos' && pedidoTotalCount > 0 && (
+        <div className="flex items-center justify-between gap-3 border border-border bg-card rounded-lg px-3 py-2">
+          <span className="text-xs text-muted-foreground">
+            {pedidoPageStart}-{pedidoPageEnd} de {pedidoTotalCount} pedido{pedidoTotalCount === 1 ? '' : 's'}
+            {isFetching && !isLoading ? ' · Actualizando…' : ''}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={pedidoPage <= 0 || isFetching} onClick={() => goPedidoPage(pedidoPage - 1)}>Anterior</Button>
+            <span className="text-xs text-muted-foreground tabular-nums">Página {pedidoPage + 1} de {pedidoTotalPages}</span>
+            <Button variant="outline" size="sm" disabled={pedidoPage + 1 >= pedidoTotalPages || isFetching} onClick={() => goPedidoPage(pedidoPage + 1)}>Siguiente</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
