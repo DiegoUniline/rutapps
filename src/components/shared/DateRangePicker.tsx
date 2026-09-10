@@ -26,6 +26,8 @@ export interface DateRangePickerProps {
   placeholder?: string;
   /** Compact trigger button for dense toolbars. */
   compact?: boolean;
+  /** Optional control area rendered at the top of the same date popover. */
+  headerContent?: React.ReactNode;
 }
 
 
@@ -58,6 +60,7 @@ export function DateRangePicker({
   className,
   placeholder = 'Seleccionar rango',
   compact,
+  headerContent,
 }: DateRangePickerProps) {
 
   const [open, setOpen] = React.useState(false);
@@ -149,6 +152,9 @@ export function DateRangePicker({
         </PopoverTrigger>
 
         <PopoverContent className="w-[calc(100vw-1rem)] sm:w-auto max-w-[560px] p-0 pointer-events-auto max-h-[85vh] overflow-hidden" align="start" collisionPadding={8}>
+          {headerContent && (
+            <div className="border-b border-border bg-background p-3">{headerContent}</div>
+          )}
           <div className="flex flex-col sm:flex-row max-h-[85vh]">
             {/* Presets */}
             <div className="flex sm:flex-col gap-1 border-b sm:border-b-0 sm:border-r border-border p-2 sm:min-w-[140px] overflow-x-auto sm:overflow-x-visible shrink-0">

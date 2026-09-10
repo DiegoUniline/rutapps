@@ -24,7 +24,7 @@ import PedidosTabs from '@/components/PedidosTabs';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive'; className?: string }> = {
-  borrador: { label: 'Borrador', variant: 'secondary' },
+  borrador: { label: 'Por surtir', variant: 'secondary' },
   surtido: { label: 'Surtido', variant: 'default' },
   asignado: { label: 'Asignado', variant: 'default' },
   cargado: { label: 'Cargado', variant: 'default' },
@@ -466,14 +466,14 @@ export default function EntregaListPage() {
       {/* Status Tabs */}
       <div className="flex border-b border-border gap-0 overflow-x-auto">
         {[
-          { key: 'todos', label: 'Todos', count: counts.total },
-          { key: 'borrador', label: 'Borrador', count: counts.borrador },
+          { key: 'borrador', label: 'Por surtir', count: counts.borrador },
           { key: 'surtido', label: 'Surtidos', count: counts.surtido },
           { key: 'asignado', label: 'Asignados', count: counts.asignado },
           { key: 'cargado', label: 'Cargados', count: counts.cargado },
           { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
           { key: 'hecho', label: 'Entregadas', count: counts.hecho },
           { key: 'no_entregado', label: 'No entregadas', count: counts.no_entregado },
+          { key: 'todos', label: 'Todos', count: counts.total },
         ].map(tab => (
           <button
             key={tab.key}
@@ -495,7 +495,7 @@ export default function EntregaListPage() {
       <div className="flex flex-wrap items-end gap-3">
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por folio..." className="pl-9 pr-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Buscar por folio, pedido, cliente, vendedor o producto..." className="pl-9 pr-9" value={search} onChange={e => setSearch(e.target.value)} />
           {isFetching && search.trim() && (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" aria-label="Buscando" />
           )}
@@ -522,21 +522,26 @@ export default function EntregaListPage() {
             placeholder="Ruta..."
           />
         </div>
-        <div className="min-w-[220px]">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Filtrar fecha por</label>
-          <Select value={fechaTipo} onValueChange={(value) => setFechaTipo(value as EntregaFechaTipo)}>
-            <SelectTrigger className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="levantamiento">Fecha de levantamiento</SelectItem>
-              <SelectItem value="programada">Fecha programada de entrega</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
         <div>
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Rango de fechas</label>
-          <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }} />
+          <DateRangePicker
+            from={fechaDesde}
+            to={fechaHasta}
+            onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }}
+            headerContent={(
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">¿Qué fecha quieres filtrar?</label>
+                <Select value={fechaTipo} onValueChange={(value) => setFechaTipo(value as EntregaFechaTipo)}>
+                  <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="programada">Fecha programada de entrega</SelectItem>
+                    <SelectItem value="real">Fecha de entrega real</SelectItem>
+                    <SelectItem value="creacion">Fecha de creación de la entrega</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          />
         </div>
         {(rutaFilter !== 'todos' || fechaDesde || fechaHasta || vendedorFilter !== 'todos' || fechaTipo !== 'programada') && (
           <Button variant="ghost" size="sm" onClick={() => { setRutaFilter('todos'); setFechaDesde(''); setFechaHasta(''); setFechaTipo('programada'); setVendedorFilter('todos'); }}>
@@ -611,6 +616,41 @@ export default function EntregaListPage() {
         </div>
       )}
 
+
+      {totalCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card rounded-lg px-3 py-2">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              {pageStart}-{pageEnd} de {totalCount} entrega{totalCount === 1 ? '' : 's'}
+              {isFetching && !isLoading ? ' · Actualizando…' : ''}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">Ver</span>
+              <Select value={String(pageSize)} onValueChange={(value) => { setPageSize(Number(value)); setPage(0); setSelectedIds(new Set()); setExpandedId(null); }}>
+                <SelectTrigger className="h-7 w-[92px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                  <SelectItem value="500">500</SelectItem>
+                  <SelectItem value="0">Todo</SelectItem>
+                </SelectContent>
+              </Select>
+              {showAll && <span className="text-[10px] text-amber-600">Puede tardar más</span>}
+            </div>
+          </div>
+          {!showAll ? (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 0 || isFetching} onClick={() => goToPage(page - 1)}>Anterior</Button>
+              <span className="text-xs text-muted-foreground tabular-nums">Página {page + 1} de {totalPages}</span>
+              <Button variant="outline" size="sm" disabled={page + 1 >= totalPages || isFetching} onClick={() => goToPage(page + 1)}>Siguiente</Button>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">Todas las entregas</span>
+          )}
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <Table>
@@ -622,8 +662,8 @@ export default function EntregaListPage() {
                   onCheckedChange={toggleAll}
                 />
               </TableHead>
-              <TableHead className="text-[11px]">Folio</TableHead>
-              <TableHead className="text-[11px]">Pedido origen</TableHead>
+              <TableHead className="text-[11px]">Entrega</TableHead>
+              <TableHead className="text-[11px]">Pedido</TableHead>
               <TableHead className="text-[11px]">Cliente</TableHead>
               <TableHead className="text-[11px]">Vendedor</TableHead>
               <TableHead className="text-[11px]">Almacén origen</TableHead>
@@ -783,39 +823,6 @@ export default function EntregaListPage() {
         </Table>
       </div>
 
-      {totalCount > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card rounded-lg px-3 py-2">
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
-              {pageStart}-{pageEnd} de {totalCount} entrega{totalCount === 1 ? '' : 's'}
-              {isFetching && !isLoading ? ' · Actualizando…' : ''}
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-muted-foreground">Ver</span>
-              <Select value={String(pageSize)} onValueChange={(value) => { setPageSize(Number(value)); setPage(0); setSelectedIds(new Set()); setExpandedId(null); }}>
-                <SelectTrigger className="h-7 w-[92px] text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="200">200</SelectItem>
-                  <SelectItem value="500">500</SelectItem>
-                  <SelectItem value="0">Todo</SelectItem>
-                </SelectContent>
-              </Select>
-              {showAll && <span className="text-[10px] text-amber-600">Puede tardar más</span>}
-            </div>
-          </div>
-          {!showAll ? (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 0 || isFetching} onClick={() => goToPage(page - 1)}>Anterior</Button>
-              <span className="text-xs text-muted-foreground tabular-nums">Página {page + 1} de {totalPages}</span>
-              <Button variant="outline" size="sm" disabled={page + 1 >= totalPages || isFetching} onClick={() => goToPage(page + 1)}>Siguiente</Button>
-            </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">Todas las entregas</span>
-          )}
-        </div>
-      )}
 
       {/* ─── Dialog: Surtir rápido ─── */}
       <Dialog open={showSurtirDialog} onOpenChange={setShowSurtirDialog}>

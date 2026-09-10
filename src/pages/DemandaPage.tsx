@@ -1054,6 +1054,40 @@ export default function DemandaPage() {
         </div>
       )}
 
+
+      {totalCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-lg bg-card px-3 py-2">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              Mostrando {pageStart.toLocaleString()}–{pageEnd.toLocaleString()} de {totalCount.toLocaleString()} pedidos
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">Ver</span>
+              <Select value={String(pageSize)} onValueChange={(value) => { setPageSize(Number(value)); setPage(0); setSelectedIds(new Set()); setExpanded(new Set()); }}>
+                <SelectTrigger className="h-7 w-[92px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                  <SelectItem value="500">500</SelectItem>
+                  <SelectItem value="0">Todo</SelectItem>
+                </SelectContent>
+              </Select>
+              {showAll && <span className="text-[10px] text-amber-600">Puede tardar más</span>}
+            </div>
+          </div>
+          {!showAll ? (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => goToPage(page - 1)} disabled={page <= 0 || isFetching}>Anterior</Button>
+              <span className="text-xs text-muted-foreground min-w-[100px] text-center">Página {(page + 1).toLocaleString()} de {totalPages.toLocaleString()}</span>
+              <Button variant="outline" size="sm" onClick={() => goToPage(page + 1)} disabled={page + 1 >= totalPages || isFetching}>Siguiente</Button>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">Todos los registros</span>
+          )}
+        </div>
+      )}
+
       {/* Pedidos table */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <Table>
@@ -1198,38 +1232,6 @@ export default function DemandaPage() {
         </Table>
       </div>
 
-      {totalCount > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-lg bg-card px-3 py-2">
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
-              Mostrando {pageStart.toLocaleString()}–{pageEnd.toLocaleString()} de {totalCount.toLocaleString()} pedidos
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-muted-foreground">Ver</span>
-              <Select value={String(pageSize)} onValueChange={(value) => { setPageSize(Number(value)); setPage(0); setSelectedIds(new Set()); setExpanded(new Set()); }}>
-                <SelectTrigger className="h-7 w-[92px] text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="200">200</SelectItem>
-                  <SelectItem value="500">500</SelectItem>
-                  <SelectItem value="0">Todo</SelectItem>
-                </SelectContent>
-              </Select>
-              {showAll && <span className="text-[10px] text-amber-600">Puede tardar más</span>}
-            </div>
-          </div>
-          {!showAll ? (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => goToPage(page - 1)} disabled={page <= 0 || isFetching}>Anterior</Button>
-              <span className="text-xs text-muted-foreground min-w-[100px] text-center">Página {(page + 1).toLocaleString()} de {totalPages.toLocaleString()}</span>
-              <Button variant="outline" size="sm" onClick={() => goToPage(page + 1)} disabled={page + 1 >= totalPages || isFetching}>Siguiente</Button>
-            </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">Todos los registros</span>
-          )}
-        </div>
-      )}
 
       {/* Create entregas dialog */}
       <Dialog open={showCrearDialog} onOpenChange={setShowCrearDialog}>
