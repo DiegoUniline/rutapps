@@ -143,7 +143,7 @@ function commonArgs(empresaId: string, filters: PedidoOperacionFilters) {
   };
 }
 
-export function usePedidosOperacionPage(filters: PedidoOperacionFilters) {
+export function usePedidosOperacionPage(filters: PedidoOperacionFilters): UseQueryResult<PedidoOperacionPageResult> {
   const { empresa } = useAuth();
   const vendedoresKey = (filters.vendedorIds ?? []).slice().sort().join(',');
 
