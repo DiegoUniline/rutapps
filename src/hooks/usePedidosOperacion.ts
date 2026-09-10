@@ -217,7 +217,7 @@ export function usePedidosOperacionCounts(filters: PedidoOperacionFilters): UseQ
   const { empresa } = useAuth();
   const vendedoresKey = (filters.vendedorIds ?? []).slice().sort().join(',');
 
-  return useQuery({
+  return useQuery<PedidoOperacionCountsResult>({
     queryKey: [
       ...pedidosOperacionKeys.counts,
       empresa?.id,
