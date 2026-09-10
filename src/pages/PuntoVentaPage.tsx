@@ -941,7 +941,7 @@ export default function PuntoVentaPage() {
         ieps_total: totals.ieps,
         descuento_total: totals.descuento,
         total: totals.total,
-        saldo_pendiente: condicion === 'credito' ? totals.total : 0,
+        saldo_pendiente: totals.total, // nace con saldo; aplicar_cobro lo reduce sólo cuando existe pago real
         fecha: today,
       }).select('folio').single();
       if (ventaErr) throw ventaErr;

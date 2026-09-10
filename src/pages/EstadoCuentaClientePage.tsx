@@ -1,4 +1,4 @@
-import { pagadoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
+import { pagadoRealVenta, saldoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -217,8 +217,13 @@ export default function EstadoCuentaClientePage() {
   const clientesConSaldo = clientes?.filter(c => c.saldoNeto > 0.01).length ?? 0;
   const clientesConFavor = clientes?.filter(c => c.saldoFavor > 0.01).length ?? 0;
 
-  const ventasPendientes = detalle?.ventas.filter(v => (v.saldo_pendiente ?? 0) > 0.01) ?? [];
-  const ventasPagadas = detalle?.ventas.filter(v => (v.saldo_pendiente ?? 0) <= 0.01) ?? [];
+  // Una venta sólo está liquidada si los cobros activos aplicados cubren su total real.
+  // Nunca usamos saldo_pendiente=0 como prueba de pago porque datos históricos/pedidos
+  // pueden tener ese campo en cero sin una aplicación de cobro real.
+  const ventasPendientes = detalle?.ventas.filter(v => saldoRealVenta(v) > 0.01) ?? [];
+  const ventasPagadas = detalle?.ventas.filter(v =>
+    totalEfectivoVenta(v) > 0.01 && saldoRealVenta(v) <= 0.01
+  ) ?? [];
 
   const handleDescargarPdf = async () => {
     if (!selected || !detalle || !empresa) return;
@@ -246,7 +251,7 @@ export default function EstadoCuentaClientePage() {
           folio: v.folio ?? v.id.slice(0, 8),
           fecha: v.fecha,
           total: totalReal,
-          saldo_pendiente: Math.min(Math.max(0, Number(v.saldo_pendiente ?? 0)), totalReal),
+          saldo_pendiente: saldoRealVenta(v),
           status: v.status,
           condicion_pago: v.condicion_pago ?? '',
         };
@@ -271,11 +276,7 @@ export default function EstadoCuentaClientePage() {
     // Los KPIs usan el mismo universo contable para que cuadren:
     // vendido real = liquidado + saldo pendiente.
     const totalVentas = detalle?.ventas.reduce((sum, v) => sum + totalEfectivoVenta(v), 0) ?? 0;
-    const totalSaldo = detalle?.ventas.reduce((sum, v) => {
-      const totalReal = totalEfectivoVenta(v);
-      const saldo = Math.max(0, Number(v.saldo_pendiente ?? 0));
-      return sum + Math.min(saldo, totalReal);
-    }, 0) ?? 0;
+    const totalSaldo = detalle?.ventas.reduce((sum, v) => sum + saldoRealVenta(v), 0) ?? 0;
     const totalLiquidado = Math.max(0, totalVentas - totalSaldo);
     const totalCobrosRegistrados = detalle?.cobros.reduce((s, c) => s + (c.monto ?? 0), 0) ?? 0;
 
@@ -356,9 +357,9 @@ export default function EstadoCuentaClientePage() {
                     <TableCell className="font-mono text-[11px]">{v.folio ?? v.id.slice(0, 8)}</TableCell>
                     <TableCell className="text-[12px]">{fmtDate(v.fecha)}</TableCell>
                     <TableCell><Badge variant="outline" className="text-[10px]">{v.condicion_pago}</Badge></TableCell>
-                    <TableCell className="text-right text-[12px]">{fmt(v.total ?? 0)}</TableCell>
+                    <TableCell className="text-right text-[12px]">{fmt(totalEfectivoVenta(v))}</TableCell>
                     <TableCell className="text-right text-[12px] text-success">{fmt(pagadoRealVenta(v))}</TableCell>
-                    <TableCell className="text-right font-bold text-success">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
+                    <TableCell className="text-right font-bold text-warning">{fmt(saldoRealVenta(v))}</TableCell>
                   </TableRow>
                 ))}
                 {ventasPendientes.length === 0 && (
@@ -366,9 +367,9 @@ export default function EstadoCuentaClientePage() {
                 )}
               </TableBody>
               {ventasPendientes.length > 0 && (() => {
-                const t = ventasPendientes.reduce((s, v) => s + (v.total ?? 0), 0);
+                const t = ventasPendientes.reduce((s, v) => s + totalEfectivoVenta(v), 0);
                 const p = ventasPendientes.reduce((s, v) => s + pagadoRealVenta(v), 0);
-                const sp = ventasPendientes.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+                const sp = ventasPendientes.reduce((s, v) => s + saldoRealVenta(v), 0);
                 return (
                   <TableFooter>
                     <TableRow>
@@ -396,7 +397,9 @@ export default function EstadoCuentaClientePage() {
                   <TableRow>
                     <TableHead className="text-[11px]">Folio</TableHead>
                     <TableHead className="text-[11px]">Fecha</TableHead>
+                    <TableHead className="text-[11px]">Condición</TableHead>
                     <TableHead className="text-[11px] text-right">Total</TableHead>
+                    <TableHead className="text-[11px] text-right">Pagado</TableHead>
                     <TableHead className="text-[11px]">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -405,19 +408,23 @@ export default function EstadoCuentaClientePage() {
                     <TableRow key={v.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/ventas/${v.id}`)}>
                       <TableCell className="font-mono text-[11px]">{v.folio ?? v.id.slice(0, 8)}</TableCell>
                       <TableCell className="text-[12px]">{fmtDate(v.fecha)}</TableCell>
-                      <TableCell className="text-right text-[12px]">{fmt(v.total ?? 0)}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-[10px]">{v.condicion_pago}</Badge></TableCell>
+                      <TableCell className="text-right text-[12px]">{fmt(totalEfectivoVenta(v))}</TableCell>
+                      <TableCell className="text-right font-bold text-success tabular-nums">{fmt(pagadoRealVenta(v))}</TableCell>
                       <TableCell><Badge variant="secondary" className="text-[10px]">{v.status}</Badge></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
                 {ventasPagadas.length > 0 && (() => {
                   const shown = ventasPagadas.slice(0, 30);
-                  const t = shown.reduce((s, v) => s + (v.total ?? 0), 0);
+                  const t = shown.reduce((s, v) => s + totalEfectivoVenta(v), 0);
+                  const p = shown.reduce((s, v) => s + pagadoRealVenta(v), 0);
                   return (
                     <TableFooter>
                       <TableRow>
-                        <TableCell colSpan={2} className="text-[11px] text-muted-foreground font-semibold">Totales ({shown.length})</TableCell>
+                        <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({shown.length})</TableCell>
                         <TableCell className="text-right font-bold tabular-nums">{fmt(t)}</TableCell>
+                        <TableCell className="text-right font-bold text-success tabular-nums">{fmt(p)}</TableCell>
                         <TableCell />
                       </TableRow>
                     </TableFooter>
