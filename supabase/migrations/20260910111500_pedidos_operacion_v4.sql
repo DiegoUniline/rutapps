@@ -33,6 +33,9 @@ CREATE INDEX IF NOT EXISTS idx_log_pedido_resumen_empresa_bucket
 CREATE INDEX IF NOT EXISTS idx_log_pedido_resumen_empresa_programada
   ON public.logistica_pedido_resumen (empresa_id, fecha_programada DESC, pedido_id);
 
+CREATE INDEX IF NOT EXISTS idx_log_pedido_resumen_empresa_bucket_programada
+  ON public.logistica_pedido_resumen (empresa_id, bucket, fecha_programada DESC, pedido_id);
+
 CREATE INDEX IF NOT EXISTS idx_log_pedido_resumen_empresa_repartidor
   ON public.logistica_pedido_resumen (empresa_id, vendedor_ruta_id, pedido_id)
   WHERE vendedor_ruta_id IS NOT NULL;
@@ -52,7 +55,7 @@ BEGIN
     SELECT 1
     FROM public.ventas v
     WHERE v.id = p_pedido_id
-      AND v.tipo::text = 'pedido'
+      AND v.tipo = 'pedido'
   ) THEN
     DELETE FROM public.logistica_pedido_resumen WHERE pedido_id = p_pedido_id;
     RETURN;
@@ -64,10 +67,10 @@ BEGIN
       v.empresa_id,
       v.status::text AS status,
       v.cerrado_at,
-      v.fecha_entrega::date AS fecha_entrega_original
+      v.fecha_entrega AS fecha_entrega_original
     FROM public.ventas v
     WHERE v.id = p_pedido_id
-      AND v.tipo::text = 'pedido'
+      AND v.tipo = 'pedido'
   ),
   venta_producto AS MATERIALIZED (
     SELECT
@@ -121,8 +124,8 @@ BEGIN
   ),
   entrega_meta AS (
     SELECT
-      MAX(e.fecha::date) FILTER (WHERE e.status::text <> 'cancelado') AS fecha_programada_actual,
-      MAX(e.fecha_entrega::date) FILTER (WHERE e.status::text = 'hecho') AS fecha_entrega_real,
+      MAX(e.fecha) FILTER (WHERE e.status::text <> 'cancelado') AS fecha_programada_actual,
+      MAX(e.fecha_entrega) FILTER (WHERE e.status::text = 'hecho') AS fecha_entrega_real,
       COALESCE(BOOL_OR(e.status::text IN ('asignado','cargado','en_ruta')), false) AS tiene_en_ruta,
       (
         ARRAY_AGG(
@@ -365,7 +368,10 @@ BEGIN
     END IF;
   END IF;
 
-  RETURN COALESCE(NEW, OLD);
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
 $$;
 
@@ -384,9 +390,9 @@ WITH pedidos AS MATERIALIZED (
     v.empresa_id,
     v.status::text AS status,
     v.cerrado_at,
-    v.fecha_entrega::date AS fecha_entrega_original
+    v.fecha_entrega AS fecha_entrega_original
   FROM public.ventas v
-  WHERE v.tipo::text = 'pedido'
+  WHERE v.tipo = 'pedido'
 ),
 venta_producto AS MATERIALIZED (
   SELECT
@@ -447,8 +453,8 @@ metrics AS MATERIALIZED (
 entrega_meta AS MATERIALIZED (
   SELECT
     p.id AS pedido_id,
-    MAX(e.fecha::date) FILTER (WHERE e.status::text <> 'cancelado') AS fecha_programada_actual,
-    MAX(e.fecha_entrega::date) FILTER (WHERE e.status::text = 'hecho') AS fecha_entrega_real,
+    MAX(e.fecha) FILTER (WHERE e.status::text <> 'cancelado') AS fecha_programada_actual,
+    MAX(e.fecha_entrega) FILTER (WHERE e.status::text = 'hecho') AS fecha_entrega_real,
     COALESCE(BOOL_OR(e.status::text IN ('asignado','cargado','en_ruta')), false) AS tiene_en_ruta,
     (
       ARRAY_AGG(
@@ -586,7 +592,7 @@ BEGIN
     LEFT JOIN public.profiles vend ON vend.id = v.vendedor_id
     LEFT JOIN public.profiles rep ON rep.id = r.vendedor_ruta_id
     WHERE v.empresa_id = p_empresa_id
-      AND v.tipo::text = 'pedido'
+      AND v.tipo = 'pedido'
       AND (
         p_vendedor_ids IS NULL
         OR cardinality(p_vendedor_ids) = 0
@@ -595,8 +601,8 @@ BEGIN
       AND (
         COALESCE(p_fecha_tipo, 'levantamiento') = 'programada'
         OR (
-          (p_fecha_desde IS NULL OR v.fecha::date >= p_fecha_desde)
-          AND (p_fecha_hasta IS NULL OR v.fecha::date <= p_fecha_hasta)
+          (p_fecha_desde IS NULL OR v.fecha >= p_fecha_desde)
+          AND (p_fecha_hasta IS NULL OR v.fecha <= p_fecha_hasta)
         )
       )
       AND (
@@ -723,7 +729,7 @@ BEGIN
       v.vendedor_id,
       vend.nombre AS vendedor_nombre,
       v.status::text AS status,
-      v.fecha::date AS fecha,
+      v.fecha AS fecha,
       COALESCE(v.total, 0)::numeric AS total,
       v.cerrado_at,
       r.total_demanda,
@@ -745,8 +751,8 @@ BEGIN
       rep.nombre AS vendedor_ruta_nombre,
       CASE
         WHEN COALESCE(p_fecha_tipo, 'levantamiento') = 'programada'
-          THEN COALESCE(r.fecha_programada, v.fecha_entrega::date, v.fecha::date)
-        ELSE v.fecha::date
+          THEN COALESCE(r.fecha_programada, v.fecha_entrega, v.fecha)
+        ELSE v.fecha
       END AS sort_date,
       v.created_at
     FROM public.ventas v
@@ -755,7 +761,7 @@ BEGIN
     LEFT JOIN public.profiles vend ON vend.id = v.vendedor_id
     LEFT JOIN public.profiles rep ON rep.id = r.vendedor_ruta_id
     WHERE v.empresa_id = p_empresa_id
-      AND v.tipo::text = 'pedido'
+      AND v.tipo = 'pedido'
       AND (
         COALESCE(p_tab, 'pendientes') = 'todos'
         OR r.bucket = COALESCE(p_tab, 'pendientes')
@@ -768,8 +774,8 @@ BEGIN
       AND (
         COALESCE(p_fecha_tipo, 'levantamiento') = 'programada'
         OR (
-          (p_fecha_desde IS NULL OR v.fecha::date >= p_fecha_desde)
-          AND (p_fecha_hasta IS NULL OR v.fecha::date <= p_fecha_hasta)
+          (p_fecha_desde IS NULL OR v.fecha >= p_fecha_desde)
+          AND (p_fecha_hasta IS NULL OR v.fecha <= p_fecha_hasta)
         )
       )
       AND (
@@ -874,7 +880,7 @@ BEGIN
   INTO v_empresa_id
   FROM public.ventas v
   WHERE v.id = p_pedido_id
-    AND v.tipo::text = 'pedido';
+    AND v.tipo = 'pedido';
 
   IF v_empresa_id IS NULL THEN
     RAISE EXCEPTION 'pedido not found' USING ERRCODE = 'P0002';

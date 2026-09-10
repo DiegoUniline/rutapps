@@ -998,7 +998,7 @@ export default function DemandaPage() {
           <Label className="text-[11px] text-muted-foreground">Buscar</Label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Folio, cliente, vendedor o producto..." className="pl-9 pr-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input placeholder="Folio, cliente, vendedor o producto..." className="pl-9 pr-9 h-9" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} />
             {isSearchPending && (
               <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" aria-label="Buscando" />
             )}
