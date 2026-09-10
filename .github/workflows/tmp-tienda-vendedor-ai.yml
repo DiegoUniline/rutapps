@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund --registry=https://registry.npmjs.org
       - name: Typecheck app
-        run: npx tsgo --noEmit -p tsconfig.app.json
+        run: npx tsc --noEmit -p tsconfig.app.json
       - name: Build app
         run: npm run build
       - name: Install Deno
