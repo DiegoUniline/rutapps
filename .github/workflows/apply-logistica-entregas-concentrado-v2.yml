@@ -1,0 +1,47 @@
+name: Apply Logistica Entregas Concentrado V2
+
+on:
+  push:
+    branches:
+      - fix/logistica-entregas-concentrado-v2-20260909
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: fix/logistica-entregas-concentrado-v2-20260909
+          fetch-depth: 0
+
+      - name: Apply targeted patch
+        run: python3 scripts/apply_logistica_entregas_concentrado_v2.py
+
+      - name: Verify diff
+        run: git diff --check
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build application
+        run: bun run build
+
+      - name: Commit integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/EntregaListPage.tsx src/pages/logistica/ConcentradoSurtidoPage.tsx
+          if git diff --cached --quiet; then
+            echo "No integration changes to commit"
+          else
+            git commit -m "perf: paginate entregas and aggregate concentrado server-side"
+            git push origin HEAD:fix/logistica-entregas-concentrado-v2-20260909
+          fi
