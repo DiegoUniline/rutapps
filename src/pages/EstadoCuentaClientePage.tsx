@@ -23,11 +23,12 @@ function useClientesSaldo(desde: string, hasta: string) {
     queryKey: ['clientes-saldo-resumen', empresa?.id, desde, hasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
+      // Un borrador no es una venta financiera: no participa en vendido, saldos ni liquidado.
       let q = supabase
         .from('ventas')
         .select('cliente_id, fecha, saldo_pendiente, total, clientes(id, nombre, codigo, telefono, credito, dias_credito, limite_credito, rfc, direccion)')
         .eq('empresa_id', empresa!.id)
-        .neq('status', 'cancelado');
+        .in('status', ['confirmado', 'entregado', 'facturado']);
       if (desde) q = q.gte('fecha', desde);
       if (hasta) q = q.lte('fecha', hasta);
       const [ventasRes, devsRes, favUsadoRes] = await Promise.all([
@@ -131,12 +132,13 @@ function useClienteDetalle(clienteId: string | null) {
     enabled: !!empresa?.id && !!clienteId,
     queryFn: async () => {
       const [ventasRes, cobrosRes] = await Promise.all([
+        // Estado de cuenta sólo incluye ventas confirmadas/finalizadas; nunca borradores.
         supabase
           .from('ventas')
           .select('id, folio, fecha, total, total_efectivo, cerrado_at, cerrado_snapshot, saldo_pendiente, condicion_pago, status, cobro_aplicaciones(monto_aplicado, cobros!inner(status))')
           .eq('empresa_id', empresa!.id)
           .eq('cliente_id', clienteId!)
-          .neq('status', 'cancelado')
+          .in('status', ['confirmado', 'entregado', 'facturado'])
           .order('fecha', { ascending: false }),
         supabase
           .from('cobros')
@@ -207,8 +209,6 @@ export default function EstadoCuentaClientePage() {
     });
     return list;
   }, [clientes, search, filters]);
-
-
 
   const selected = clientes?.find(c => c.id === selectedId);
 
@@ -303,7 +303,6 @@ export default function EstadoCuentaClientePage() {
           />
         </div>
 
-        {/* Client card */}
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
@@ -334,7 +333,6 @@ export default function EstadoCuentaClientePage() {
           )}
         </div>
 
-        {/* Ventas pendientes */}
         <div>
           <h3 className="text-sm font-semibold mb-2 text-success flex items-center gap-2">
             <CreditCard className="h-4 w-4" /> Ventas con saldo pendiente ({ventasPendientes.length})
@@ -385,7 +383,6 @@ export default function EstadoCuentaClientePage() {
           </div>
         </div>
 
-        {/* Ventas pagadas */}
         {ventasPagadas.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold mb-2 text-success flex items-center gap-2">
@@ -435,7 +432,6 @@ export default function EstadoCuentaClientePage() {
           </div>
         )}
 
-        {/* Cobros */}
         <div>
           <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
             <Banknote className="h-4 w-4" /> Historial de pagos ({detalle?.cobros.length ?? 0})
@@ -480,7 +476,6 @@ export default function EstadoCuentaClientePage() {
     );
   }
 
-  // ── List view ──
   return (
     <div className="p-4 space-y-4 min-h-full">
       <CobranzaTabs />
@@ -507,7 +502,6 @@ export default function EstadoCuentaClientePage() {
           <p className="text-2xl font-bold text-muted-foreground">{clientes?.length ?? 0}</p>
         </div>
       </div>
-
 
       <OdooFilterBar
         search={search}
@@ -586,7 +580,6 @@ export default function EstadoCuentaClientePage() {
               </TableFooter>
             );
           })()}
-
         </Table>
       </div>
     </div>
