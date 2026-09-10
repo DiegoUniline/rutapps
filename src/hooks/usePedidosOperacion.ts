@@ -27,6 +27,55 @@ export const EMPTY_PEDIDO_COUNTS = {
   todos: 0,
 };
 
+export type PedidoOperacionCounts = typeof EMPTY_PEDIDO_COUNTS;
+
+export interface PedidoOperacionRow {
+  id: string;
+  folio: string;
+  cliente_id: string;
+  clientes: { nombre: string };
+  vendedor_id: string;
+  vendedores: { nombre: string };
+  status: string;
+  fecha: string;
+  total: number;
+  cerrado_at: string | null;
+  totalPendiente: number;
+  totalGenerada: number;
+  totalSurtido: number;
+  totalEntregado: number;
+  totalDemanda: number;
+  totalValorPendiente: number;
+  lineasPendientes: number;
+  pctGenerada: number;
+  pctSurtido: number;
+  pctEntregado: number;
+  fullyGenerada: boolean;
+  fullySurtido: boolean;
+  fullyDelivered: boolean;
+  enRuta: boolean;
+  estadoOdoo: string;
+  fechaProgramada: string | null;
+  vendedorRutaId: string | null;
+  vendedorRutaNombre: string | null;
+  fechaEntrega: string | null;
+}
+
+export interface PedidoOperacionPageResult {
+  rows: PedidoOperacionRow[];
+  dbMs: number;
+  payloadBytes: number;
+}
+
+export interface PedidoOperacionCountsResult {
+  counts: PedidoOperacionCounts;
+  totalCount: number;
+  totalPendiente: number;
+  totalValorPendiente: number;
+  dbMs: number;
+  payloadBytes: number;
+}
+
 export const pedidosOperacionKeys = {
   all: ['pedidos-operacion'] as const,
   pages: ['pedidos-operacion', 'page'] as const,
