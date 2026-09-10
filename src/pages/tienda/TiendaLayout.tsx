@@ -1,7 +1,9 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingCart, Search, User, LogOut, Package, KeyRound } from "lucide-react";
+import { ShoppingCart, Search, User, LogOut, Package, KeyRound, Sparkles } from "lucide-react";
 import { useTienda } from "@/tienda/TiendaContext";
+import PedidoAsistente from "@/components/tienda/PedidoAsistente";
+import PedidoSugeridoView from "@/components/tienda/PedidoSugeridoView";
 import "@/tienda/tienda.css";
 
 function useTiendaPWA(t: ReturnType<typeof useTienda>) {
@@ -61,7 +63,6 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
   const base = `/tienda/${t.slug}`;
   useTiendaPWA(t);
 
-
   if (t.loadingConfig) return <div className="tienda-root"><div className="tienda-loading">Cargando tienda…</div></div>;
   if (t.configError || !t.config) return (
     <div className="tienda-root">
@@ -81,6 +82,8 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
   };
 
   const isActive = (path: string) => loc.pathname === path;
+  const suggested = new URLSearchParams(loc.search).get("vista") === "pedido-sugerido";
+  const hideAssistant = loc.pathname.endsWith("/login") || loc.pathname.endsWith("/cambiar-password");
 
   return (
     <div className="tienda-root" data-plantilla={t.config.plantilla || "clasica"}>
@@ -107,6 +110,9 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
           <div className="tienda-header-actions">
             {t.isAuth ? (
               <>
+                <Link to={`${base}?vista=pedido-sugerido`} className="tienda-btn tienda-btn-ghost" title="Pedido sugerido">
+                  <Sparkles size={16} /> <span className="hidden xl:inline">Sugerido</span>
+                </Link>
                 <Link to={`${base}/mis-pedidos`} className="tienda-btn tienda-btn-ghost">
                   <Package size={16} /> Mis pedidos
                 </Link>
@@ -129,10 +135,11 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="tienda-nav">
-          <Link to={base} className={`tienda-nav-chip ${isActive(base) ? "active" : ""}`}>Inicio</Link>
+          <Link to={base} className={`tienda-nav-chip ${isActive(base) && !suggested ? "active" : ""}`}>Inicio</Link>
           <Link to={`${base}/productos`} className={`tienda-nav-chip ${loc.pathname.includes("/productos") ? "active" : ""}`}>
             Catálogo
           </Link>
+          {t.isAuth && <Link to={`${base}?vista=pedido-sugerido`} className={`tienda-nav-chip ${suggested ? "active" : ""}`}>✨ Mi pedido sugerido</Link>}
           {t.isAuth && <Link to={`${base}/mis-pedidos`} className={`tienda-nav-chip ${isActive(`${base}/mis-pedidos`) ? "active" : ""}`}>Mis pedidos</Link>}
           {t.config.whatsapp_pedidos && (
             <a className="tienda-nav-chip" href={`https://wa.me/${t.config.whatsapp_pedidos.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
@@ -142,7 +149,8 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      {children}
+      {suggested ? <PedidoSugeridoView /> : children}
+      {!hideAssistant && <PedidoAsistente />}
 
       <footer className="tienda-footer">
         <p>© {new Date().getFullYear()} {t.empresa?.nombre ?? t.config.nombre_tienda} · Tienda en línea</p>
