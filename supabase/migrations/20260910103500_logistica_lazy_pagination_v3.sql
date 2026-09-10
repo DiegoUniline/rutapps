@@ -19,8 +19,8 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
 DECLARE
-  v_page_size integer := CASE WHEN COALESCE(p_page_size, 50) <= 0 THEN NULL ELSE LEAST(GREATEST(p_page_size, 1), 500) END;
-  v_offset integer := GREATEST(COALESCE(p_offset, 0), 0);
+  v_page_size integer := CASE WHEN COALESCE(p_page_size, 50) <= 0 THEN NULL ELSE LEAST(GREATEST(COALESCE(p_page_size, 50), 1), 500) END;
+  v_offset integer := CASE WHEN COALESCE(p_page_size, 50) <= 0 THEN 0 ELSE GREATEST(COALESCE(p_offset, 0), 0) END;
   v_result jsonb;
 BEGIN
   IF auth.uid() IS NULL THEN
@@ -374,8 +374,8 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
 DECLARE
-  v_page_size integer := CASE WHEN COALESCE(p_page_size, 50) <= 0 THEN NULL ELSE LEAST(GREATEST(p_page_size, 1), 500) END;
-  v_offset integer := GREATEST(COALESCE(p_offset, 0), 0);
+  v_page_size integer := CASE WHEN COALESCE(p_page_size, 50) <= 0 THEN NULL ELSE LEAST(GREATEST(COALESCE(p_page_size, 50), 1), 500) END;
+  v_offset integer := CASE WHEN COALESCE(p_page_size, 50) <= 0 THEN 0 ELSE GREATEST(COALESCE(p_offset, 0), 0) END;
   v_result jsonb;
 BEGIN
   IF auth.uid() IS NULL THEN
@@ -557,7 +557,7 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
 DECLARE
-  v_page_size integer := CASE WHEN COALESCE(p_page_size, 50) <= 0 THEN NULL ELSE LEAST(GREATEST(p_page_size, 1), 500) END;
+  v_page_size integer := CASE WHEN COALESCE(p_page_size, 50) <= 0 THEN NULL ELSE LEAST(GREATEST(COALESCE(p_page_size, 50), 1), 500) END;
   v_offset integer := CASE WHEN COALESCE(p_page_size, 50) <= 0 THEN 0 ELSE GREATEST(COALESCE(p_offset, 0), 0) END;
   v_result jsonb;
 BEGIN

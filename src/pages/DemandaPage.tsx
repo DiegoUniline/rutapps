@@ -57,6 +57,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
     staleTime: 30_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,
+    placeholderData: previous => previous,
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc('fn_logistica_pedidos_workspace_v2', {
         p_empresa_id: empresa!.id,
@@ -1056,7 +1057,7 @@ export default function DemandaPage() {
       )}
 
 
-      {(isLoading || isFetching) && <p className="text-muted-foreground">Cargando pedidos...</p>}
+      {isLoading && <p className="text-muted-foreground">Cargando pedidos...</p>}
       {pedidosError && (
         <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           No se pudieron cargar los pedidos: {(pedidosError as any)?.message ?? 'error de consulta'}

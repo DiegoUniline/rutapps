@@ -124,6 +124,7 @@ export function useEntregasWorkspaceList({
     staleTime: 45_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,
+    placeholderData: previous => previous,
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc('fn_logistica_entregas_workspace_v2', {
         p_empresa_id: empresa!.id,
