@@ -1,5 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
-import React, { useState, useMemo, Fragment, useDeferredValue, useEffect } from 'react';
+import React, { useState, useMemo, Fragment, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -23,113 +23,21 @@ import {
 } from '@/components/ui/dialog';
 import PedidosTabs from '@/components/PedidosTabs';
 import { BulkCerrarPedidosDialog } from '@/components/venta/BulkCerrarPedidosDialog';
+import {
+  EMPTY_PEDIDO_COUNTS,
+  invalidatePedidoOperacion,
+  pedidosOperacionKeys,
+  prefetchPedidoDetalle,
+  useDebouncedValue,
+  usePedidoDetalle,
+  usePedidosOperacionCounts,
+  usePedidosOperacionPage,
+} from '@/hooks/usePedidosOperacion';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 
 // ─── Data hooks ────────────────────────────────────────────
 
-interface DemandaFilters {
-  desde: string;
-  hasta: string;
-  fechaTipo: 'fecha' | 'fecha_entrega';
-  vendedorIds?: string[];
-  search?: string;
-  tab: 'pendientes' | 'generadas' | 'surtidos' | 'en_ruta' | 'entregados' | 'cerrados' | 'todos';
-  page: number;
-  pageSize: number;
-}
-
-const EMPTY_COUNTS = {
-  pendientes: 0,
-  generadas: 0,
-  surtidos: 0,
-  en_ruta: 0,
-  entregados: 0,
-  cerrados: 0,
-  todos: 0,
-};
-
-function usePedidosPendientes(filters: DemandaFilters) {
-  const { empresa } = useAuth();
-
-  return useQuery({
-    queryKey: ['demanda', 'workspace-rpc-v2', empresa?.id, filters],
-    enabled: !!empresa?.id,
-    staleTime: 30_000,
-    gcTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-    placeholderData: previous => previous,
-    queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc('fn_logistica_pedidos_workspace_v2', {
-        p_empresa_id: empresa!.id,
-        p_fecha_desde: filters.desde || null,
-        p_fecha_hasta: filters.hasta || null,
-        p_fecha_tipo: filters.fechaTipo === 'fecha_entrega' ? 'programada' : 'levantamiento',
-        p_vendedor_ids: filters.vendedorIds?.length ? filters.vendedorIds : null,
-        p_search: filters.search?.trim() || null,
-        p_tab: filters.tab,
-        p_page_size: filters.pageSize,
-        p_offset: filters.page * filters.pageSize,
-      });
-      if (error) throw error;
-
-      const payload = data ?? {};
-      const rawRows = Array.isArray(payload.rows) ? payload.rows : [];
-      const rows = rawRows.map((row: any) => ({
-        id: row.id,
-        folio: row.folio,
-        cliente_id: row.cliente_id,
-        clientes: {
-          nombre: row.cliente_nombre,
-          direccion: row.cliente_direccion,
-          telefono: row.cliente_telefono,
-        },
-        vendedor_id: row.vendedor_id,
-        vendedores: { nombre: row.vendedor_nombre },
-        status: row.status,
-        fecha: row.fecha,
-        total: Number(row.total ?? 0),
-        cerrado_at: row.cerrado_at,
-        notas: row.notas,
-        totalPendiente: Number(row.total_pendiente ?? 0),
-        totalGenerada: Number(row.total_generada ?? 0),
-        totalSurtido: Number(row.total_surtido ?? 0),
-        totalEntregado: Number(row.total_entregado ?? 0),
-        totalDemanda: Number(row.total_demanda ?? 0),
-        totalValorPendiente: Number(row.total_valor_pendiente ?? 0),
-        lineasPendientes: Number(row.lineas_pendientes ?? 0),
-        pctGenerada: Number(row.pct_generada ?? 0),
-        pctSurtido: Number(row.pct_surtido ?? 0),
-        pctEntregado: Number(row.pct_entregado ?? 0),
-        fullyGenerada: !!row.fully_generada,
-        fullySurtido: !!row.fully_surtido,
-        fullyDelivered: !!row.fully_delivered,
-        enRuta: !!row.en_ruta,
-        estadoOdoo: row.estado_odoo,
-        fechaProgramada: row.fecha_programada,
-        vendedorRutaId: row.vendedor_ruta_id,
-        fechaEntrega: row.fecha_entrega_real,
-      }));
-
-      const rawCounts = payload.counts ?? {};
-      return {
-        rows,
-        totalCount: Number(payload.total_count ?? 0),
-        totalPendiente: Number(payload.total_pendiente ?? 0),
-        totalValorPendiente: Number(payload.total_valor_pendiente ?? 0),
-        counts: {
-          pendientes: Number(rawCounts.pendientes ?? 0),
-          generadas: Number(rawCounts.generadas ?? 0),
-          surtidos: Number(rawCounts.surtidos ?? 0),
-          en_ruta: Number(rawCounts.en_ruta ?? 0),
-          entregados: Number(rawCounts.entregados ?? 0),
-          cerrados: Number(rawCounts.cerrados ?? 0),
-          todos: Number(rawCounts.todos ?? 0),
-        },
-      };
-    },
-  });
-}
-
+// Batch helper used only after an explicit bulk action; never during initial screen load.
 async function fetchPedidoLineas(pedidoIds: string[]) {
   const ids = Array.from(new Set(pedidoIds.filter(Boolean)));
   const result: Record<string, any[]> = {};
@@ -220,47 +128,98 @@ async function fetchPedidoLineas(pedidoIds: string[]) {
   return result;
 }
 
-function PedidoLineasRows({ pedidoId, fmt }: { pedidoId: string; fmt: (n: number) => string }) {
-  const { data: lineas = [], isLoading, isError } = useQuery({
-    queryKey: ['demanda', 'lineas', pedidoId],
-    enabled: !!pedidoId,
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-    queryFn: async () => {
-      const byPedido = await fetchPedidoLineas([pedidoId]);
-      return byPedido[pedidoId] ?? [];
-    },
-  });
+function PedidoExpandedContent({
+  pedidoId,
+  fmt,
+  onOpen,
+}: {
+  pedidoId: string;
+  fmt: (n: number) => string;
+  onOpen: () => void;
+}) {
+  const { data, isLoading, isError } = usePedidoDetalle(pedidoId, true);
+  const lineas = data?.lineas ?? [];
 
   if (isLoading) {
-    return <tr><td colSpan={9} className="py-3 text-center text-muted-foreground">Cargando productos…</td></tr>;
+    return (
+      <div className="px-6 py-3 space-y-3" aria-label="Cargando productos del pedido">
+        <div className="flex gap-4">
+          <div className="h-3 w-40 rounded bg-muted animate-pulse" />
+          <div className="h-3 w-28 rounded bg-muted animate-pulse" />
+          <div className="h-3 w-48 rounded bg-muted animate-pulse" />
+        </div>
+        <div className="space-y-1.5">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="grid grid-cols-9 gap-3 py-1.5">
+              {Array.from({ length: 9 }).map((_, j) => (
+                <div key={j} className="h-3 rounded bg-muted/80 animate-pulse" />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
+
   if (isError) {
-    return <tr><td colSpan={9} className="py-3 text-center text-destructive">No se pudieron cargar los productos.</td></tr>;
-  }
-  if (lineas.length === 0) {
-    return <tr><td colSpan={9} className="py-3 text-center text-muted-foreground">Sin productos</td></tr>;
+    return (
+      <div className="px-6 py-4 flex items-center justify-between gap-3">
+        <span className="text-[12px] text-destructive">No se pudieron cargar los productos de este pedido.</span>
+        <Button size="sm" variant="outline" onClick={onOpen}>Ver detalle <ExternalLink className="h-3 w-3" /></Button>
+      </div>
+    );
   }
 
   return (
-    <>
-      {lineas.map((l: any) => (
-        <tr key={l.id} className="border-b border-border/40 last:border-0">
-          <td className="py-1 pr-2 font-mono text-[11px]">{l.productos?.codigo ?? '—'}</td>
-          <td className="py-1 pr-2">{l.productos?.nombre ?? l.descripcion ?? '—'}</td>
-          <td className="py-1 pr-2 text-right">{l.cantidad} {l.productos?.unidades?.abreviatura ?? ''}</td>
-          <td className="py-1 pr-2 text-right text-blue-700">{l.cantidad_generada}</td>
-          <td className="py-1 pr-2 text-right text-amber-700">{l.cantidad_surtida}</td>
-          <td className="py-1 pr-2 text-right text-green-700">{l.cantidad_entregada}</td>
-          <td className={cn("py-1 pr-2 text-right font-medium", l.cantidad_pendiente > 0 ? "text-foreground" : "text-muted-foreground")}>{Math.max(0, l.cantidad_pendiente)}</td>
-          <td className="py-1 pr-2 text-right">{fmt(l.precio_unitario)}</td>
-          <td className="py-1 text-right font-medium">{fmt(l.cantidad * l.precio_unitario)}</td>
-        </tr>
-      ))}
-    </>
+    <div className="px-6 py-3 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted-foreground">
+          {data?.clienteDireccion && <span><strong className="text-foreground">Dirección:</strong> {data.clienteDireccion}</span>}
+          {data?.clienteTelefono && <span><strong className="text-foreground">Tel:</strong> {data.clienteTelefono}</span>}
+          {data?.notas && <span><strong className="text-foreground">Notas:</strong> {data.notas}</span>}
+        </div>
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onOpen}>
+          Ver detalle <ExternalLink className="h-3 w-3" />
+        </Button>
+      </div>
+
+      {lineas.length === 0 ? (
+        <p className="py-3 text-center text-[12px] text-muted-foreground">Sin productos</p>
+      ) : (
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="text-muted-foreground border-b border-border">
+              <th className="text-left py-1 pr-2 font-medium">Código</th>
+              <th className="text-left py-1 pr-2 font-medium">Producto</th>
+              <th className="text-right py-1 pr-2 font-medium">Cantidad</th>
+              <th className="text-right py-1 pr-2 font-medium">Generado</th>
+              <th className="text-right py-1 pr-2 font-medium">Surtido</th>
+              <th className="text-right py-1 pr-2 font-medium">Entregado</th>
+              <th className="text-right py-1 pr-2 font-medium">Pendiente</th>
+              <th className="text-right py-1 pr-2 font-medium">Precio</th>
+              <th className="text-right py-1 font-medium">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lineas.map((l: any) => (
+              <tr key={l.id} className="border-b border-border/40 last:border-0">
+                <td className="py-1 pr-2 font-mono text-[11px]">{l.productos?.codigo ?? '—'}</td>
+                <td className="py-1 pr-2">{l.productos?.nombre ?? '—'}</td>
+                <td className="py-1 pr-2 text-right">{l.cantidad} {l.productos?.unidades?.abreviatura ?? ''}</td>
+                <td className="py-1 pr-2 text-right text-blue-700">{l.cantidad_generada}</td>
+                <td className="py-1 pr-2 text-right text-amber-700">{l.cantidad_surtida}</td>
+                <td className="py-1 pr-2 text-right text-green-700">{l.cantidad_entregada}</td>
+                <td className={cn('py-1 pr-2 text-right font-medium', l.cantidad_pendiente > 0 ? 'text-foreground' : 'text-muted-foreground')}>{Math.max(0, l.cantidad_pendiente)}</td>
+                <td className="py-1 pr-2 text-right">{fmt(l.precio_unitario)}</td>
+                <td className="py-1 text-right font-medium">{fmt(l.subtotal ?? l.cantidad * l.precio_unitario)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   );
 }
-
 
 
 // ─── Component ────────────────────────────────────────────
@@ -285,22 +244,28 @@ export default function DemandaPage() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
 
-  const deferredSearch = useDeferredValue(search);
-
-  const { data: pedidosResult, isLoading, isFetching, error: pedidosError } = usePedidosPendientes({
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const operationFilters = useMemo(() => ({
     desde,
     hasta,
     fechaTipo,
     vendedorIds: vendedorFilter.length > 0 ? vendedorFilter : undefined,
-    search: deferredSearch,
+    search: debouncedSearch,
     tab,
     page,
     pageSize,
-  });
+  }), [desde, hasta, fechaTipo, vendedorFilter, debouncedSearch, tab, page, pageSize]);
 
-  const pedidos = pedidosResult?.rows ?? [];
-  const counts = pedidosResult?.counts ?? EMPTY_COUNTS;
-  const totalCount = pedidosResult?.totalCount ?? 0;
+  const pageQuery = usePedidosOperacionPage(operationFilters);
+  const countsQuery = usePedidosOperacionCounts(operationFilters);
+
+  const pedidos = pageQuery.data?.rows ?? [];
+  const counts = countsQuery.data?.counts ?? EMPTY_PEDIDO_COUNTS;
+  const totalCount = countsQuery.data?.totalCount ?? 0;
+  const isLoading = pageQuery.isLoading;
+  const isFetching = pageQuery.isFetching || countsQuery.isFetching;
+  const isSearchPending = !!search.trim() && (search !== debouncedSearch || isFetching);
+  const pedidosError = pageQuery.error ?? countsQuery.error;
   const showAll = pageSize === 0;
   const totalPages = showAll ? 1 : Math.max(1, Math.ceil(totalCount / pageSize));
   const pageStart = totalCount === 0 ? 0 : showAll ? 1 : page * pageSize + 1;
@@ -313,12 +278,13 @@ export default function DemandaPage() {
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
   const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[]; errors: any[] }>(null);
+  const [vendedoresOpen, setVendedoresOpen] = useState(false);
 
   useEffect(() => {
     setPage(0);
     setSelectedIds(new Set());
     setExpanded(new Set());
-  }, [desde, hasta, fechaTipo, vendedorFilter, deferredSearch, tab]);
+  }, [desde, hasta, fechaTipo, vendedorFilter, debouncedSearch, tab]);
 
   const goToPage = (nextPage: number) => {
     const bounded = Math.min(Math.max(nextPage, 0), Math.max(totalPages - 1, 0));
@@ -327,10 +293,28 @@ export default function DemandaPage() {
     setPage(bounded);
   };
 
+  const prefetchTimerRef = useRef<number | null>(null);
+  const scheduleDetallePrefetch = useCallback((pedidoId: string) => {
+    if (prefetchTimerRef.current) window.clearTimeout(prefetchTimerRef.current);
+    prefetchTimerRef.current = window.setTimeout(() => {
+      void prefetchPedidoDetalle(qc, pedidoId);
+      prefetchTimerRef.current = null;
+    }, 180);
+  }, [qc]);
+  const cancelDetallePrefetch = useCallback(() => {
+    if (prefetchTimerRef.current) {
+      window.clearTimeout(prefetchTimerRef.current);
+      prefetchTimerRef.current = null;
+    }
+  }, []);
+  useEffect(() => () => cancelDetallePrefetch(), [cancelDetallePrefetch]);
+
   // Fetch almacenes + vendedores
   const { data: almacenesList } = useQuery({
     queryKey: ['almacenes', empresa?.id],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && (showCrearDialog || showSurtirDialog),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
       return data ?? [];
@@ -339,7 +323,9 @@ export default function DemandaPage() {
 
   const { data: vendedoresList } = useQuery({
     queryKey: ['vendedores-list', empresa?.id],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && (vendedoresOpen || showCrearDialog || showSurtirDialog || showAsignarDialog),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
       return data ?? [];
@@ -372,8 +358,17 @@ export default function DemandaPage() {
   const selectedPedidos = filtered.filter(p => selectedIds.has(p.id));
 
   const hydrateSelectedPedidos = async () => {
-    const byPedido = await fetchPedidoLineas(selectedPedidos.map(p => p.id));
-    return selectedPedidos.map(p => ({ ...p, venta_lineas: byPedido[p.id] ?? [] }));
+    const cached: Record<string, any[]> = {};
+    const missing: string[] = [];
+
+    for (const pedido of selectedPedidos) {
+      const detail = qc.getQueryData<any>(pedidosOperacionKeys.detalle(pedido.id));
+      if (detail?.lineas) cached[pedido.id] = detail.lineas;
+      else missing.push(pedido.id);
+    }
+
+    const fetched = missing.length > 0 ? await fetchPedidoLineas(missing) : {};
+    return selectedPedidos.map(p => ({ ...p, venta_lineas: cached[p.id] ?? fetched[p.id] ?? [] }));
   };
 
   // Confirm pedidos (single or bulk)
@@ -390,8 +385,7 @@ export default function DemandaPage() {
     },
     onSuccess: (ids) => {
       if (ids.length > 0) toast.success(`${ids.length} pedido(s) confirmado(s)`);
-      qc.invalidateQueries({ queryKey: ['demanda'] });
-      qc.invalidateQueries({ queryKey: ['ventas'] });
+      void invalidatePedidoOperacion(qc, ids);
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -462,8 +456,7 @@ export default function DemandaPage() {
     },
     onSuccess: (ids) => {
       toast.success(`${ids.length} entrega(s) creada(s)`);
-      qc.invalidateQueries({ queryKey: ['demanda'] });
-      qc.invalidateQueries({ queryKey: ['ventas'] });
+      void invalidatePedidoOperacion(qc, selectedPedidos.map(p => p.id));
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       setSelectedIds(new Set());
@@ -683,12 +676,10 @@ export default function DemandaPage() {
     onSuccess: (res) => {
       const total = res.fully.length + res.partial.length + res.none.length + res.errors.length;
       toast.success(`${res.fully.length}/${total} completos · ${res.partial.length} parcial · ${res.none.length} sin stock${res.errors.length > 0 ? ` · ${res.errors.length} con error` : ''}`);
-      qc.invalidateQueries({ queryKey: ['demanda'] });
-      qc.invalidateQueries({ queryKey: ['ventas'] });
+      void invalidatePedidoOperacion(qc, selectedPedidos.map(p => p.id));
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       qc.invalidateQueries({ queryKey: ['stock-almacen'] });
-      qc.invalidateQueries({ queryKey: ['productos'] });
       setSelectedIds(new Set());
       setShowSurtirDialog(false);
       setSurtirResult(res);
@@ -810,12 +801,11 @@ export default function DemandaPage() {
       setShowAsignarDialog(false);
       setAsignarRepartidorId('');
       setSelectedIds(new Set());
-      qc.invalidateQueries({ queryKey: ['demanda'] });
+      void invalidatePedidoOperacion(qc, selectedPedidos.map(p => p.id));
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
       qc.invalidateQueries({ queryKey: ['stock-almacen'] });
-      qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['movimientos'] });
     },
     onError: (err: any) => toast.error(err.message),
@@ -839,7 +829,7 @@ export default function DemandaPage() {
     onSuccess: (n) => {
       toast.success(`Entregas canceladas en ${n} pedido(s)`);
       setSelectedIds(new Set());
-      qc.invalidateQueries({ queryKey: ['demanda'] });
+      void invalidatePedidoOperacion(qc, selectedPedidos.map(p => p.id));
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
@@ -850,8 +840,8 @@ export default function DemandaPage() {
 
   // Totals
   const totalPedidos = totalCount;
-  const totalLineasPendientes = Number(pedidosResult?.totalPendiente ?? 0);
-  const totalValorPendiente = Number(pedidosResult?.totalValorPendiente ?? 0);
+  const totalLineasPendientes = Number(countsQuery.data?.totalPendiente ?? 0);
+  const totalValorPendiente = Number(countsQuery.data?.totalValorPendiente ?? 0);
 
   return (
     <ListPage scroll>
@@ -965,7 +955,7 @@ export default function DemandaPage() {
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
-          <Popover>
+          <Popover open={vendedoresOpen} onOpenChange={setVendedoresOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" className="h-9 w-[200px] justify-between font-normal">
                 <span className="truncate">
@@ -1008,8 +998,8 @@ export default function DemandaPage() {
           <Label className="text-[11px] text-muted-foreground">Buscar</Label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Folio o cliente..." className="pl-9 pr-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
-            {isFetching && search.trim() && (
+            <Input placeholder="Folio, cliente, vendedor o producto..." className="pl-9 pr-9 h-9" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} />
+            {isSearchPending && (
               <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" aria-label="Buscando" />
             )}
           </div>
@@ -1105,6 +1095,8 @@ export default function DemandaPage() {
                 <Fragment key={pedido.id}>
                 <TableRow
                   className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isSelected && "bg-primary/5", isExpanded && "bg-accent/30")}
+                  onMouseEnter={() => scheduleDetallePrefetch(pedido.id)}
+                  onMouseLeave={cancelDetallePrefetch}
                   onClick={() => setExpanded(prev => {
                     const next = new Set(prev);
                     if (next.has(pedido.id)) next.delete(pedido.id); else next.add(pedido.id);
@@ -1127,7 +1119,7 @@ export default function DemandaPage() {
                   <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.vendedores?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(pedido.fecha)}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">
-                    {pedido.vendedorRutaId ? (vendedoresList?.find(v => v.id === pedido.vendedorRutaId)?.nombre ?? '—') : <span className="text-muted-foreground/60">Sin asignar</span>}
+                    {pedido.vendedorRutaId ? (pedido.vendedorRutaNombre ?? '—') : <span className="text-muted-foreground/60">Sin asignar</span>}
                   </TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">
                     {pedido.fechaProgramada ? fmtDate(pedido.fechaProgramada) : <span className="text-muted-foreground/60">—</span>}
@@ -1191,37 +1183,11 @@ export default function DemandaPage() {
                 {isExpanded && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={13} className="bg-muted/30 p-0">
-                      <div className="px-6 py-3 space-y-3">
-                        <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted-foreground">
-                          {pedido.clientes?.direccion && <span><strong className="text-foreground">Dirección:</strong> {pedido.clientes.direccion}</span>}
-                          {pedido.clientes?.telefono && <span><strong className="text-foreground">Tel:</strong> {pedido.clientes.telefono}</span>}
-                          {pedido.notas && <span><strong className="text-foreground">Notas:</strong> {pedido.notas}</span>}
-                          <button
-                            className="inline-flex items-center gap-1 text-primary hover:underline"
-                            onClick={e => { e.stopPropagation(); navigate(`/logistica/pedidos/${pedido.id}`); }}
-                          >
-                            Ver detalle <ExternalLink className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <table className="w-full text-[12px]">
-                          <thead>
-                            <tr className="text-muted-foreground border-b border-border">
-                              <th className="text-left py-1 pr-2 font-medium">Código</th>
-                              <th className="text-left py-1 pr-2 font-medium">Producto</th>
-                              <th className="text-right py-1 pr-2 font-medium">Cantidad</th>
-                              <th className="text-right py-1 pr-2 font-medium">Generado</th>
-                              <th className="text-right py-1 pr-2 font-medium">Surtido</th>
-                              <th className="text-right py-1 pr-2 font-medium">Entregado</th>
-                              <th className="text-right py-1 pr-2 font-medium">Pendiente</th>
-                              <th className="text-right py-1 pr-2 font-medium">Precio</th>
-                              <th className="text-right py-1 font-medium">Subtotal</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <PedidoLineasRows pedidoId={pedido.id} fmt={fmt} />
-                          </tbody>
-                        </table>
-                      </div>
+                      <PedidoExpandedContent
+                        pedidoId={pedido.id}
+                        fmt={fmt}
+                        onOpen={() => navigate(`/logistica/pedidos/${pedido.id}`)}
+                      />
                     </TableCell>
                   </TableRow>
                 )}
