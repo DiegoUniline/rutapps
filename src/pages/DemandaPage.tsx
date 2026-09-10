@@ -279,6 +279,8 @@ export default function DemandaPage() {
   const [vendedorRutaId, setVendedorRutaId] = useState('');
   const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[]; errors: any[] }>(null);
   const [vendedoresOpen, setVendedoresOpen] = useState(false);
+  const [showAsignarDialog, setShowAsignarDialog] = useState(false);
+  const [asignarRepartidorId, setAsignarRepartidorId] = useState('');
 
   useEffect(() => {
     setPage(0);
@@ -698,9 +700,6 @@ export default function DemandaPage() {
     const conEntregaParcial = selectedPedidos.some(p => p.totalEntregado > 0 && p.totalEntregado < p.totalDemanda && !p.fullyDelivered);
     return { needsSurtir, surtidosSinRuta, enRutaSel, conEntregaActiva, conEntregaParcial };
   }, [selectedPedidos]);
-
-  const [showAsignarDialog, setShowAsignarDialog] = useState(false);
-  const [asignarRepartidorId, setAsignarRepartidorId] = useState('');
 
   // ── Asignar / Cambiar repartidor en entregas activas ──
   // Además de fijar vendedor_ruta_id, transiciona la entrega:
