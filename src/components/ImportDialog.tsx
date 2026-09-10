@@ -166,7 +166,8 @@ export function ImportDialog({ open, onOpenChange, type }: ImportDialogProps) {
               <ul className="list-disc list-inside space-y-0.5">
                 <li>Descarga la plantilla para ver el formato correcto</li>
                 <li>Si un catálogo (marca, zona, etc.) no existe, se creará automáticamente</li>
-                <li>Si el código ya existe, se actualizarán los datos</li>
+                {type === 'productos' && <li>Si todo tu catálogo usa <strong>Listas de precio</strong>, los productos nuevos importados conservarán ese modo</li>}
+                <li>Si el código ya existe, se actualizarán los datos sin cambiar su modo de precio</li>
                 <li>Los campos <strong>Nombre</strong> {type === 'productos' && <> y <strong>Código</strong></>} son obligatorios</li>
               </ul>
             </div>

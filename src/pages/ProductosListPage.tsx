@@ -3,7 +3,7 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Upload, Trash2, CheckCircle2, FileSpreadsheet, Boxes } from 'lucide-react';
+import { Plus, Upload, Trash2, CheckCircle2, FileSpreadsheet, Boxes, Tags } from 'lucide-react';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -134,6 +134,8 @@ export default function ProductosListPage() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [bulkActivating, setBulkActivating] = useState(false);
   const [confirmActivateOpen, setConfirmActivateOpen] = useState(false);
+  const [bulkPriceMode, setBulkPriceMode] = useState(false);
+  const [confirmAllPriceListsOpen, setConfirmAllPriceListsOpen] = useState(false);
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected);
@@ -204,6 +206,42 @@ export default function ProductosListPage() {
       toast.error(e?.message || 'Error al actualizar');
     } finally {
       setBulkLote(false);
+    }
+  };
+
+  const invalidateProductPricing = () => {
+    ['productos', 'productos-page', 'productos-select', 'pos-productos', 'productos-ajuste', 'producto'].forEach(key =>
+      qc.invalidateQueries({ queryKey: [key] })
+    );
+  };
+
+  const handleBulkPriceLists = async (allProducts = false) => {
+    const ids = Array.from(selected);
+    if (!allProducts && ids.length === 0) return;
+    if (!empresa?.id) { toast.error('No se pudo identificar la empresa actual'); return; }
+
+    setBulkPriceMode(true);
+    try {
+      let query: any = supabase
+        .from('productos')
+        .update({ usa_listas_precio: true } as any)
+        .eq('empresa_id', empresa.id);
+      if (!allProducts) query = query.in('id', ids);
+      const { error } = await query;
+      if (error) throw error;
+
+      if (allProducts) {
+        toast.success('Todos los productos ahora usan Listas de precio');
+        setConfirmAllPriceListsOpen(false);
+      } else {
+        toast.success(`${ids.length} producto${ids.length !== 1 ? 's' : ''} cambiados a Listas de precio`);
+        setSelected(new Set());
+      }
+      invalidateProductPricing();
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo cambiar el modo de precio');
+    } finally {
+      setBulkPriceMode(false);
     }
   };
 
@@ -441,6 +479,14 @@ export default function ProductosListPage() {
                     columns: PRODUCTOS_COLUMNS, data: productos ?? [],
                   })}
                 />
+                <button
+                  onClick={() => setConfirmAllPriceListsOpen(true)}
+                  disabled={bulkPriceMode || !empresa?.id}
+                  className="btn-odoo-secondary shrink-0 gap-1"
+                  title="Cambiar todos los productos de la empresa a Listas de precio"
+                >
+                  <Tags className="h-3.5 w-3.5" /> {bulkPriceMode ? 'Aplicando…' : 'Todos → Listas'}
+                </button>
                 <button onClick={() => setImportOpen(true)} className="btn-odoo-secondary shrink-0 gap-1">
                   <Upload className="h-3.5 w-3.5" /> Importar
                 </button>
@@ -496,6 +542,25 @@ export default function ProductosListPage() {
               className="bg-success text-success-foreground hover:bg-success/90"
             >
               {bulkActivating ? 'Procesando…' : 'Activar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={confirmAllPriceListsOpen} onOpenChange={setConfirmAllPriceListsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cambiar todos a Listas de precio</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se activará el modo <strong>Listas de precio</strong> en todos los productos de esta empresa, incluidos activos, inactivos y borradores. No se borran precios ni reglas existentes. Los productos nuevos que se importen después conservarán este modo automáticamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkPriceMode}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkPriceMode}
+              onClick={(e) => { e.preventDefault(); handleBulkPriceLists(true); }}
+            >
+              {bulkPriceMode ? 'Aplicando…' : 'Cambiar todos'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -571,6 +636,11 @@ export default function ProductosListPage() {
               exportToExcel({ fileName: `Productos-seleccion-${sel.length}`, title: `Productos seleccionados (${sel.length})`, columns: PRODUCTOS_COLUMNS, data: sel });
               toast.success(`${sel.length} productos exportados`);
             },
+          },
+          {
+            label: bulkPriceMode ? 'Aplicando…' : 'Listas de precio',
+            icon: Tags,
+            onClick: () => handleBulkPriceLists(false),
           },
           ...((empresa as any)?.maneja_lotes ? [
             { label: bulkLote ? 'Aplicando…' : 'Maneja lote', icon: Boxes, onClick: () => handleBulkManejaLote(true) },
