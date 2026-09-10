@@ -220,6 +220,24 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id;
 
+  // Si el catálogo completo ya trabaja con Listas de precio, los productos NUEVOS
+  // importados heredan ese modo. Las reimportaciones de productos existentes no
+  // pisan su configuración individual de precio.
+  let defaultUsePriceLists = false;
+  try {
+    const productsTable: any = supabase.from('productos');
+    const [{ count: totalProducts, error: totalError }, { count: listPriceProducts, error: listError }] = await Promise.all([
+      productsTable.select('id', { count: 'exact', head: true }).eq('empresa_id', empresaId),
+      (supabase.from('productos') as any).select('id', { count: 'exact', head: true }).eq('empresa_id', empresaId).eq('usa_listas_precio', true),
+    ]);
+    if (!totalError && !listError && (totalProducts ?? 0) > 0) {
+      defaultUsePriceLists = totalProducts === listPriceProducts;
+    }
+  } catch {
+    // Compatibilidad: si no se puede determinar el modo global, se conserva el
+    // comportamiento previo de la importación.
+  }
+
   // (Stock inicial ya no se toca aquí; no necesitamos almacén por defecto.)
 
   for (let i = 0; i < rows.length; i++) {
@@ -310,13 +328,13 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
           if (error) throw error;
           result.updated++;
         } else {
-          const { data: inserted, error } = await supabase.from('productos').insert(productData).select('id').single();
+          const { data: inserted, error } = await supabase.from('productos').insert({ ...productData, usa_listas_precio: defaultUsePriceLists } as any).select('id').single();
           if (error) throw error;
           productId = inserted.id;
           result.created++;
         }
       } else {
-        const { data: inserted, error } = await supabase.from('productos').insert(productData).select('id').single();
+        const { data: inserted, error } = await supabase.from('productos').insert({ ...productData, usa_listas_precio: defaultUsePriceLists } as any).select('id').single();
         if (error) throw error;
         productId = inserted.id;
         result.created++;
