@@ -1,9 +1,18 @@
-import { useDeferredValue } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type EntregaFechaTipo = 'levantamiento' | 'programada';
+export type EntregaFechaTipo = 'programada' | 'real' | 'creacion' | 'levantamiento';
+
+function useDebouncedValue<T>(value: T, delay = 350) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
 
 export interface EntregaWorkspaceCounts {
   total: number;
@@ -37,7 +46,7 @@ const EMPTY_COUNTS: EntregaWorkspaceCounts = {
  */
 export function useEntregasWorkspaceCounts(search?: string, vendedorFilter?: string) {
   const { empresa } = useAuth();
-  const deferredSearch = useDeferredValue((search ?? '').trim());
+  const deferredSearch = useDebouncedValue((search ?? '').trim(), 350);
 
   return useQuery({
     queryKey: ['entregas-list', 'counts-v2', empresa?.id, deferredSearch, vendedorFilter],
@@ -103,7 +112,7 @@ export function useEntregasWorkspaceList({
   pageSize?: number;
 }) {
   const { empresa } = useAuth();
-  const deferredSearch = useDeferredValue((search ?? '').trim());
+  const deferredSearch = useDebouncedValue((search ?? '').trim(), 350);
 
   return useQuery({
     queryKey: [
