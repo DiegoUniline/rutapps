@@ -200,7 +200,7 @@ async function suggestedOrder(admin: any, cfg: any, empresaId: string, clienteId
   if (error) throw error;
   const saleIds = (sales ?? []).map((v: any) => v.id);
   if (!saleIds.length) return [];
-  const saleDate = new Map((sales ?? []).map((v: any) => [v.id, v.fecha]));
+  const saleDate = new Map<string, string>((sales ?? []).map((v: any) => [String(v.id), String(v.fecha)] as [string, string]));
   const lines: any[] = [];
   for (let i = 0; i < saleIds.length; i += 300) {
     const { data, error: lErr } = await admin.from("venta_lineas").select("venta_id,producto_id,cantidad").in("venta_id", saleIds.slice(i, i + 300));
@@ -209,7 +209,7 @@ async function suggestedOrder(admin: any, cfg: any, empresaId: string, clienteId
   const byProduct = new Map<string, Map<string, number>>();
   for (const l of lines) {
     if (!l.producto_id) continue;
-    const date = saleDate.get(l.venta_id); if (!date) continue;
+    const date = saleDate.get(String(l.venta_id)); if (!date) continue;
     const m = byProduct.get(l.producto_id) ?? new Map<string, number>();
     m.set(date, (m.get(date) ?? 0) + Number(l.cantidad ?? 0)); byProduct.set(l.producto_id, m);
   }

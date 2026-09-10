@@ -52,7 +52,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
     );
     const bits = new Uint8Array(
       await crypto.subtle.deriveBits(
-        { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+        { name: "PBKDF2", salt: new Uint8Array(salt).buffer, iterations, hash: "SHA-256" },
         key,
         256,
       ),
@@ -101,7 +101,7 @@ export async function verifyToken(token: string, secret: string): Promise<Tienda
     if (parts.length !== 3) return null;
     const [h, p, s] = parts;
     const key = await hmacKey(secret);
-    const ok = await crypto.subtle.verify("HMAC", key, b64urlDecode(s), enc.encode(`${h}.${p}`));
+    const ok = await crypto.subtle.verify("HMAC", key, new Uint8Array(b64urlDecode(s)).buffer, enc.encode(`${h}.${p}`));
     if (!ok) return null;
     const payload = JSON.parse(dec.decode(b64urlDecode(p))) as TiendaTokenPayload;
     if (payload.exp < Math.floor(Date.now() / 1000)) return null;
