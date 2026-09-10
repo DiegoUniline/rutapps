@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink, Zap, AlertTriangle, UserPlus, XCircle, Lock } from 'lucide-react';
+import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink, Zap, AlertTriangle, UserPlus, XCircle, Lock, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -282,7 +282,7 @@ export default function DemandaPage() {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
-  const pageSize = 50;
+  const [pageSize, setPageSize] = useState(50);
 
   const deferredSearch = useDeferredValue(search);
 
@@ -300,9 +300,10 @@ export default function DemandaPage() {
   const pedidos = pedidosResult?.rows ?? [];
   const counts = pedidosResult?.counts ?? EMPTY_COUNTS;
   const totalCount = pedidosResult?.totalCount ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-  const pageStart = totalCount === 0 ? 0 : page * pageSize + 1;
-  const pageEnd = Math.min((page + 1) * pageSize, totalCount);
+  const showAll = pageSize === 0;
+  const totalPages = showAll ? 1 : Math.max(1, Math.ceil(totalCount / pageSize));
+  const pageStart = totalCount === 0 ? 0 : showAll ? 1 : page * pageSize + 1;
+  const pageEnd = showAll ? totalCount : Math.min((page + 1) * pageSize, totalCount);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCrearDialog, setShowCrearDialog] = useState(false);
@@ -1006,7 +1007,10 @@ export default function DemandaPage() {
           <Label className="text-[11px] text-muted-foreground">Buscar</Label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Folio o cliente..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input placeholder="Folio o cliente..." className="pl-9 pr-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
+            {isFetching && search.trim() && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" aria-label="Buscando" />
+            )}
           </div>
         </div>
         {(vendedorFilter.length > 0 || search || desde || hasta || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
@@ -1228,21 +1232,35 @@ export default function DemandaPage() {
       </div>
 
       {totalCount > 0 && (
-        <div className="flex items-center justify-between gap-3 border border-border rounded-lg bg-card px-3 py-2">
-          <span className="text-xs text-muted-foreground">
-            Mostrando {pageStart.toLocaleString()}–{pageEnd.toLocaleString()} de {totalCount.toLocaleString()} pedidos
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => goToPage(page - 1)} disabled={page <= 0 || isFetching}>
-              Anterior
-            </Button>
-            <span className="text-xs text-muted-foreground min-w-[100px] text-center">
-              Página {(page + 1).toLocaleString()} de {totalPages.toLocaleString()}
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-lg bg-card px-3 py-2">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              Mostrando {pageStart.toLocaleString()}–{pageEnd.toLocaleString()} de {totalCount.toLocaleString()} pedidos
             </span>
-            <Button variant="outline" size="sm" onClick={() => goToPage(page + 1)} disabled={page + 1 >= totalPages || isFetching}>
-              Siguiente
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">Ver</span>
+              <Select value={String(pageSize)} onValueChange={(value) => { setPageSize(Number(value)); setPage(0); setSelectedIds(new Set()); setExpanded(new Set()); }}>
+                <SelectTrigger className="h-7 w-[92px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                  <SelectItem value="500">500</SelectItem>
+                  <SelectItem value="0">Todo</SelectItem>
+                </SelectContent>
+              </Select>
+              {showAll && <span className="text-[10px] text-amber-600">Puede tardar más</span>}
+            </div>
           </div>
+          {!showAll ? (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => goToPage(page - 1)} disabled={page <= 0 || isFetching}>Anterior</Button>
+              <span className="text-xs text-muted-foreground min-w-[100px] text-center">Página {(page + 1).toLocaleString()} de {totalPages.toLocaleString()}</span>
+              <Button variant="outline" size="sm" onClick={() => goToPage(page + 1)} disabled={page + 1 >= totalPages || isFetching}>Siguiente</Button>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">Todos los registros</span>
+          )}
         </div>
       )}
 

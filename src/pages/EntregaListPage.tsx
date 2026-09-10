@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Search, Package, Zap, PackageCheck, ArrowRightLeft, Calendar, XCircle, ChevronDown } from 'lucide-react';
+import { Truck, Search, Package, Zap, PackageCheck, ArrowRightLeft, Calendar, XCircle, ChevronDown, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,7 @@ export default function EntregaListPage() {
   const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const pageSize = 50;
+  const [pageSize, setPageSize] = useState(50);
   const [cargarProgress, setCargarProgress] = useState<{ current: number; total: number; folio?: string; title?: string } | null>(null);
 
   // V2: una sola llamada trae página + total + conteos. No descarga el histórico completo.
@@ -71,9 +71,10 @@ export default function EntregaListPage() {
   const allEntregas = entregasResult?.rows ?? [];
   const counts = entregasResult?.counts ?? { total: 0, borrador: 0, surtido: 0, asignado: 0, cargado: 0, en_ruta: 0, hecho: 0, no_entregado: 0 };
   const totalCount = entregasResult?.totalCount ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-  const pageStart = totalCount === 0 ? 0 : page * pageSize + 1;
-  const pageEnd = Math.min((page + 1) * pageSize, totalCount);
+  const showAll = pageSize === 0;
+  const totalPages = showAll ? 1 : Math.max(1, Math.ceil(totalCount / pageSize));
+  const pageStart = totalCount === 0 ? 0 : showAll ? 1 : page * pageSize + 1;
+  const pageEnd = showAll ? totalCount : Math.min((page + 1) * pageSize, totalCount);
 
   useEffect(() => {
     setPage(0);
@@ -494,7 +495,10 @@ export default function EntregaListPage() {
       <div className="flex flex-wrap items-end gap-3">
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por folio..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Buscar por folio..." className="pl-9 pr-9" value={search} onChange={e => setSearch(e.target.value)} />
+          {isFetching && search.trim() && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" aria-label="Buscando" />
+          )}
         </div>
         <div className="min-w-[180px]">
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Vendedor</label>
@@ -780,16 +784,36 @@ export default function EntregaListPage() {
       </div>
 
       {totalCount > 0 && (
-        <div className="flex items-center justify-between gap-3 border border-border bg-card rounded-lg px-3 py-2">
-          <span className="text-xs text-muted-foreground">
-            {pageStart}-{pageEnd} de {totalCount} entrega{totalCount === 1 ? '' : 's'}
-            {isFetching && !isLoading ? ' · Actualizando…' : ''}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 0 || isFetching} onClick={() => goToPage(page - 1)}>Anterior</Button>
-            <span className="text-xs text-muted-foreground tabular-nums">Página {page + 1} de {totalPages}</span>
-            <Button variant="outline" size="sm" disabled={page + 1 >= totalPages || isFetching} onClick={() => goToPage(page + 1)}>Siguiente</Button>
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card rounded-lg px-3 py-2">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              {pageStart}-{pageEnd} de {totalCount} entrega{totalCount === 1 ? '' : 's'}
+              {isFetching && !isLoading ? ' · Actualizando…' : ''}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">Ver</span>
+              <Select value={String(pageSize)} onValueChange={(value) => { setPageSize(Number(value)); setPage(0); setSelectedIds(new Set()); setExpandedId(null); }}>
+                <SelectTrigger className="h-7 w-[92px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                  <SelectItem value="500">500</SelectItem>
+                  <SelectItem value="0">Todo</SelectItem>
+                </SelectContent>
+              </Select>
+              {showAll && <span className="text-[10px] text-amber-600">Puede tardar más</span>}
+            </div>
           </div>
+          {!showAll ? (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 0 || isFetching} onClick={() => goToPage(page - 1)}>Anterior</Button>
+              <span className="text-xs text-muted-foreground tabular-nums">Página {page + 1} de {totalPages}</span>
+              <Button variant="outline" size="sm" disabled={page + 1 >= totalPages || isFetching} onClick={() => goToPage(page + 1)}>Siguiente</Button>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">Todas las entregas</span>
+          )}
         </div>
       )}
 
