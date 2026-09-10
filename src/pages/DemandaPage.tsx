@@ -1234,19 +1234,23 @@ export default function DemandaPage() {
 
       {/* Create entregas dialog */}
       <Dialog open={showCrearDialog} onOpenChange={setShowCrearDialog}>
-        <DialogContent className="sm:max-w-lg" onPointerDownOutside={e => e.preventDefault()} onInteractOutside={e => e.preventDefault()}>
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(96vw,1180px)] sm:max-w-5xl max-h-[92dvh] overflow-visible flex flex-col gap-4"
+          onPointerDownOutside={e => e.preventDefault()}
+          onInteractOutside={e => e.preventDefault()}
+        >
+          <DialogHeader className="shrink-0 pr-10">
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Crear {selectedPedidos.length} entrega{selectedPedidos.length > 1 ? 's' : ''}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
+          <div className="space-y-4 py-2 flex-1 min-h-0">
+            <p className="text-sm text-muted-foreground max-w-3xl">
               Se creará una entrega por cada pedido seleccionado con las cantidades pendientes. Después podrás surtir línea a línea desde la entrega.
             </p>
 
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-20">
               <div>
                 <label className="label-odoo">Almacén origen (por defecto)</label>
                 <ModalSelect
@@ -1268,8 +1272,8 @@ export default function DemandaPage() {
             </div>
 
             {/* Preview of selected pedidos */}
-            <div className="border border-border rounded-md max-h-48 overflow-y-auto">
-              <table className="w-full text-[12px]">
+            <div className="border border-border rounded-md h-[min(48dvh,430px)] min-h-[260px] overflow-auto relative z-10 bg-background">
+              <table className="w-full min-w-[720px] text-[12px]">
                 <thead>
                   <tr className="border-b bg-card">
                     <th className="px-3 py-1.5 text-left text-muted-foreground font-medium">Folio</th>
@@ -1291,7 +1295,7 @@ export default function DemandaPage() {
               </table>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t border-border pt-4 bg-background">
             <Button variant="outline" onClick={() => setShowCrearDialog(false)}>Cancelar</Button>
             <Button onClick={() => crearEntregasMut.mutate()} disabled={crearEntregasMut.isPending}>
               <Truck className="h-3.5 w-3.5" />
@@ -1303,17 +1307,22 @@ export default function DemandaPage() {
 
       {/* Surtir masivo dialog */}
       <Dialog open={showSurtirDialog} onOpenChange={setShowSurtirDialog}>
-        <DialogContent className="sm:max-w-lg" onPointerDownOutside={e => e.preventDefault()} onInteractOutside={e => e.preventDefault()}>
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(94vw,920px)] sm:max-w-3xl min-h-[520px] max-h-[90dvh] overflow-visible flex flex-col gap-4"
+          onPointerDownOutside={e => e.preventDefault()}
+          onInteractOutside={e => e.preventDefault()}
+        >
+          <DialogHeader className="shrink-0 pr-10">
             <DialogTitle className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-green-600" />
               Surtir disponible — {selectedPedidos.length} pedido{selectedPedidos.length > 1 ? 's' : ''}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
+          <div className="space-y-5 py-2 flex-1 min-h-0">
+            <p className="text-sm text-muted-foreground max-w-3xl">
               Se creará una entrega por pedido y se surtirá automáticamente <strong>solo lo que haya en stock</strong> del almacén seleccionado. Los pedidos que no se completen quedarán marcados como parciales.
             </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-20">
             <div>
               <label className="label-odoo">Almacén origen *</label>
               <ModalSelect
@@ -1332,8 +1341,9 @@ export default function DemandaPage() {
                 placeholder="Asignar después"
               />
             </div>
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t border-border pt-4 bg-background">
             <Button variant="outline" onClick={() => setShowSurtirDialog(false)}>Cancelar</Button>
             <Button
               onClick={() => surtirMasivoMut.mutate()}
