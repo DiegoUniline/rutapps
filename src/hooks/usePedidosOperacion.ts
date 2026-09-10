@@ -213,7 +213,7 @@ export function usePedidosOperacionPage(filters: PedidoOperacionFilters): UseQue
   });
 }
 
-export function usePedidosOperacionCounts(filters: PedidoOperacionFilters) {
+export function usePedidosOperacionCounts(filters: PedidoOperacionFilters): UseQueryResult<PedidoOperacionCountsResult> {
   const { empresa } = useAuth();
   const vendedoresKey = (filters.vendedorIds ?? []).slice().sort().join(',');
 
