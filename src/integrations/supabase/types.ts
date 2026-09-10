@@ -8598,6 +8598,104 @@ export type Database = {
           },
         ]
       }
+      tienda_solicitudes_cliente: {
+        Row: {
+          ciudad: string | null
+          cliente_id: string | null
+          contacto: string | null
+          created_at: string
+          credito: boolean
+          dias_credito: number
+          direccion: string | null
+          email: string
+          empresa_id: string
+          id: string
+          limite_credito: number
+          lista_precio_id: string | null
+          nombre: string
+          notas_revision: string | null
+          password_hash: string
+          posible_cliente_id: string | null
+          posible_cliente_nombre: string | null
+          posible_motivo: string | null
+          revisado_at: string | null
+          revisado_por: string | null
+          rfc: string | null
+          status: string
+          telefono: string | null
+          tienda_slug: string
+          updated_at: string
+          vendedor_id: string | null
+          zona_id: string | null
+        }
+        Insert: {
+          ciudad?: string | null
+          cliente_id?: string | null
+          contacto?: string | null
+          created_at?: string
+          credito?: boolean
+          dias_credito?: number
+          direccion?: string | null
+          email: string
+          empresa_id: string
+          id?: string
+          limite_credito?: number
+          lista_precio_id?: string | null
+          nombre: string
+          notas_revision?: string | null
+          password_hash: string
+          posible_cliente_id?: string | null
+          posible_cliente_nombre?: string | null
+          posible_motivo?: string | null
+          revisado_at?: string | null
+          revisado_por?: string | null
+          rfc?: string | null
+          status?: string
+          telefono?: string | null
+          tienda_slug: string
+          updated_at?: string
+          vendedor_id?: string | null
+          zona_id?: string | null
+        }
+        Update: {
+          ciudad?: string | null
+          cliente_id?: string | null
+          contacto?: string | null
+          created_at?: string
+          credito?: boolean
+          dias_credito?: number
+          direccion?: string | null
+          email?: string
+          empresa_id?: string
+          id?: string
+          limite_credito?: number
+          lista_precio_id?: string | null
+          nombre?: string
+          notas_revision?: string | null
+          password_hash?: string
+          posible_cliente_id?: string | null
+          posible_cliente_nombre?: string | null
+          posible_motivo?: string | null
+          revisado_at?: string | null
+          revisado_por?: string | null
+          rfc?: string | null
+          status?: string
+          telefono?: string | null
+          tienda_slug?: string
+          updated_at?: string
+          vendedor_id?: string | null
+          zona_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tienda_solicitudes_cliente_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       timbres_movimientos: {
         Row: {
           cantidad: number
