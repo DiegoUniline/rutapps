@@ -14,6 +14,7 @@ import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { CobranzaTabs } from '@/components/CobranzaTabs';
 import { OdooFilterBar, FilterOption } from '@/components/OdooFilterBar';
 import { useListPreferences } from '@/hooks/useListPreferences';
+import AplicarPagoClienteDialog from '@/components/finanzas/AplicarPagoClienteDialog';
 
 /* ── hooks ── */
 function useClientesSaldo(desde: string, hasta: string) {
@@ -162,6 +163,7 @@ export default function EstadoCuentaClientePage() {
   const [hasta, setHasta] = useState('');
   const { filters, toggleFilterValue, setFilter, clearFilters } = useListPreferences('saldos-cliente');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showAplicarPago, setShowAplicarPago] = useState(false);
 
   const { data: clientes, isLoading } = useClientesSaldo(desde, hasta);
   const { data: detalle, isLoading: loadingDetalle } = useClienteDetalle(selectedId);
@@ -280,9 +282,14 @@ export default function EstadoCuentaClientePage() {
           <Button variant="outline" size="sm" className="gap-2" onClick={handleDescargarPdf} disabled={loadingDetalle}>
             <Download className="h-3.5 w-3.5" /> PDF
           </Button>
-          <Button size="sm" className="gap-2" onClick={() => navigate('/finanzas/aplicar-pagos')}>
+          <Button size="sm" className="gap-2" onClick={() => setShowAplicarPago(true)}>
             <Banknote className="h-3.5 w-3.5" /> Aplicar pago
           </Button>
+          <AplicarPagoClienteDialog
+            open={showAplicarPago}
+            onOpenChange={setShowAplicarPago}
+            cliente={{ id: selected.id, nombre: selected.nombre, codigo: selected.codigo }}
+          />
         </div>
 
         {/* Client card */}
