@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bot, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Mic, MicOff, Minus, Plus, Send, ShoppingCart, Sparkles, X } from "lucide-react";
 import { cartKeyOf, formatMoney, fnPost, useTienda } from "@/tienda/TiendaContext";
+import juanLopezAvatar from "@/assets/tienda/juan-lopez-asesor.jpg";
 
 type SellerProduct = {
   id: string;
@@ -42,9 +43,7 @@ const MAX_AUDIO_MS = 45_000;
 const INTRO_VISIT_LIMIT = 5;
 const ASSISTANT_NAME = "Juan López";
 const ASSISTANT_ROLE = "Asesor de pedidos con IA";
-// Lovable colocará aquí la foto final fotorealista de Juan López.
-// Mientras no exista el archivo, la UI muestra un fallback limpio con sus iniciales.
-const JUAN_AVATAR_SRC = "/juan-lopez-asesor.webp";
+const JUAN_AVATAR_SRC = juanLopezAvatar;
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 function JuanAvatar({ size = 44, className = "" }: { size?: number; className?: string }) {
@@ -60,6 +59,9 @@ function JuanAvatar({ size = 44, className = "" }: { size?: number; className?: 
           src={JUAN_AVATAR_SRC}
           alt={ASSISTANT_NAME}
           className="w-full h-full object-cover"
+           width={1024}
+           height={1024}
+           loading="lazy"
           onError={() => setFailed(true)}
         />
       ) : (
