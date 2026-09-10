@@ -2,7 +2,6 @@ import { useDeferredValue } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchAllPages } from '@/lib/supabasePaginate';
 
 export type EntregaFechaTipo = 'levantamiento' | 'programada';
 
@@ -13,86 +12,74 @@ export interface EntregaWorkspaceCounts {
   asignado: number;
   cargado: number;
   en_ruta: number;
+  listo?: number;
   hecho: number;
   no_entregado: number;
+  cancelado?: number;
 }
 
-const ENTREGA_STATUSES = [
-  'borrador',
-  'surtido',
-  'asignado',
-  'cargado',
-  'en_ruta',
-  'listo',
-  'hecho',
-  'no_entregado',
-  'cancelado',
-] as const;
+const EMPTY_COUNTS: EntregaWorkspaceCounts = {
+  total: 0,
+  borrador: 0,
+  surtido: 0,
+  asignado: 0,
+  cargado: 0,
+  en_ruta: 0,
+  listo: 0,
+  hecho: 0,
+  no_entregado: 0,
+  cancelado: 0,
+};
 
 /**
- * Conteos de la barra de estados.
- * Conserva el alcance anterior (búsqueda + vendedor), pero PostgreSQL devuelve
- * únicamente COUNTs. Antes se descargaba todo el histórico de id/status para
- * contarlo en el navegador.
+ * Compatibilidad para consumidores antiguos. Entrega sólo conteos y ya no hace
+ * nueve COUNTs separados: usa la misma función V2 paginada del workspace.
  */
 export function useEntregasWorkspaceCounts(search?: string, vendedorFilter?: string) {
   const { empresa } = useAuth();
   const deferredSearch = useDeferredValue((search ?? '').trim());
 
-  return useQuery<any>({
-    queryKey: ['entregas-list', 'counts', empresa?.id, deferredSearch, vendedorFilter],
+  return useQuery({
+    queryKey: ['entregas-list', 'counts-v2', empresa?.id, deferredSearch, vendedorFilter],
     enabled: !!empresa?.id,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,
-    placeholderData: previous => previous,
     queryFn: async (): Promise<EntregaWorkspaceCounts> => {
-      const pairs = await Promise.all(
-        ENTREGA_STATUSES.map(async status => {
-          let q = supabase
-            .from('entregas')
-            .select('id', { count: 'exact', head: true })
-            .eq('empresa_id', empresa!.id)
-            .eq('status', status as any);
-
-          if (deferredSearch) q = q.or(`folio.ilike.%${deferredSearch}%`);
-          if (vendedorFilter && vendedorFilter !== 'todos') q = q.eq('vendedor_id', vendedorFilter);
-
-          const { count, error } = await q;
-          if (error) throw error;
-          return [status, count ?? 0] as const;
-        }),
-      );
-
-      const byStatus = Object.fromEntries(pairs) as Record<string, number>;
+      const { data, error } = await (supabase as any).rpc('fn_logistica_entregas_workspace_v2', {
+        p_empresa_id: empresa!.id,
+        p_search: deferredSearch || null,
+        p_vendedor_id: vendedorFilter && vendedorFilter !== 'todos' ? vendedorFilter : null,
+        p_status: 'todos',
+        p_ruta: 'todos',
+        p_fecha_tipo: 'programada',
+        p_fecha_desde: null,
+        p_fecha_hasta: null,
+        p_page_size: 1,
+        p_offset: 0,
+      });
+      if (error) throw error;
+      const c = data?.counts ?? {};
       return {
-        total: Object.values(byStatus).reduce((sum, value) => sum + value, 0),
-        borrador: byStatus.borrador ?? 0,
-        surtido: byStatus.surtido ?? 0,
-        asignado: byStatus.asignado ?? 0,
-        cargado: byStatus.cargado ?? 0,
-        en_ruta: byStatus.en_ruta ?? 0,
-        hecho: byStatus.hecho ?? 0,
-        no_entregado: byStatus.no_entregado ?? 0,
+        total: Number(c.total ?? 0),
+        borrador: Number(c.borrador ?? 0),
+        surtido: Number(c.surtido ?? 0),
+        asignado: Number(c.asignado ?? 0),
+        cargado: Number(c.cargado ?? 0),
+        en_ruta: Number(c.en_ruta ?? 0),
+        listo: Number(c.listo ?? 0),
+        hecho: Number(c.hecho ?? 0),
+        no_entregado: Number(c.no_entregado ?? 0),
+        cancelado: Number(c.cancelado ?? 0),
       };
     },
   });
 }
 
 /**
- * Lista operativa. Los filtros de estado/ruta/fecha se aplican en PostgreSQL.
- * Las partidas de entrega NO viajan en la carga inicial: productos y almacenes
- * por línea se consultan sólo al expandir una entrega mediante
- * useEntregaWorkspaceLineas(). Para la columna de almacén origen se conserva el
- * almacén de cabecera de la entrega como fallback ligero.
- *
- * Semántica de fechas:
- * - levantamiento: ventas.fecha del pedido origen.
- * - programada: entregas.fecha.
- *
- * Un rango vacío siempre significa TODO el histórico. Incluso si el selector
- * dice "levantamiento", no se fuerza INNER JOIN si no hay fechas, para no excluir
- * entregas sin pedido origen.
+ * Lista operativa V2. Una sola llamada devuelve la página actual, el total y
+ * los conteos por estado. Las líneas de producto siguen cargándose sólo al
+ * expandir una entrega.
  */
 export function useEntregasWorkspaceList({
   search,
@@ -102,6 +89,8 @@ export function useEntregasWorkspaceList({
   fechaTipo = 'programada',
   fechaDesde,
   fechaHasta,
+  page = 0,
+  pageSize = 50,
 }: {
   search?: string;
   vendedorFilter?: string;
@@ -110,15 +99,16 @@ export function useEntregasWorkspaceList({
   fechaTipo?: EntregaFechaTipo;
   fechaDesde?: string;
   fechaHasta?: string;
+  page?: number;
+  pageSize?: number;
 }) {
   const { empresa } = useAuth();
   const deferredSearch = useDeferredValue((search ?? '').trim());
-  const filterByLevantamiento = fechaTipo === 'levantamiento' && !!(fechaDesde || fechaHasta);
 
   return useQuery({
     queryKey: [
       'entregas-list',
-      'workspace',
+      'workspace-v2',
       empresa?.id,
       deferredSearch,
       vendedorFilter,
@@ -127,40 +117,84 @@ export function useEntregasWorkspaceList({
       fechaTipo,
       fechaDesde,
       fechaHasta,
+      page,
+      pageSize,
     ],
     enabled: !!empresa?.id,
     staleTime: 45_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,
-    placeholderData: previous => previous,
-    queryFn: async () => fetchAllPages<any>((from, to) => {
-      const ventasRelation = filterByLevantamiento
-        ? 'ventas!entregas_pedido_id_fkey!inner(folio, fecha)'
-        : 'ventas!entregas_pedido_id_fkey(folio, fecha)';
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc('fn_logistica_entregas_workspace_v2', {
+        p_empresa_id: empresa!.id,
+        p_search: deferredSearch || null,
+        p_vendedor_id: vendedorFilter && vendedorFilter !== 'todos' ? vendedorFilter : null,
+        p_status: statusFilter || 'todos',
+        p_ruta: rutaFilter || 'todos',
+        p_fecha_tipo: fechaTipo,
+        p_fecha_desde: fechaDesde || null,
+        p_fecha_hasta: fechaHasta || null,
+        p_page_size: pageSize,
+        p_offset: page * pageSize,
+      });
+      if (error) throw error;
 
-      let q = supabase
-        .from('entregas')
-        .select(`id, folio, fecha, fecha_entrega, status, notas, pedido_id, vendedor_id, cliente_id, almacen_id, vendedor_ruta_id, fecha_asignacion, fecha_carga, validado_at, created_at, clientes(nombre), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre, telefono, almacen_destino:almacenes!profiles_almacen_id_fkey(id, nombre)), ${ventasRelation}, almacenes(nombre), vendedor_ruta:profiles!entregas_vendedor_ruta_id_profiles_fkey(nombre, telefono, almacen_destino:almacenes!profiles_almacen_id_fkey(id, nombre))`)
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false })
-        .range(from, to);
+      const payload = data ?? {};
+      const c = payload.counts ?? {};
+      const rows = (Array.isArray(payload.rows) ? payload.rows : []).map((r: any) => ({
+        id: r.id,
+        folio: r.folio,
+        fecha: r.fecha,
+        fecha_entrega: r.fecha_entrega,
+        status: r.status,
+        notas: r.notas,
+        pedido_id: r.pedido_id,
+        vendedor_id: r.vendedor_id,
+        cliente_id: r.cliente_id,
+        almacen_id: r.almacen_id,
+        vendedor_ruta_id: r.vendedor_ruta_id,
+        fecha_asignacion: r.fecha_asignacion,
+        fecha_carga: r.fecha_carga,
+        validado_at: r.validado_at,
+        created_at: r.created_at,
+        clientes: r.cliente_nombre ? { nombre: r.cliente_nombre } : null,
+        ventas: r.pedido_id ? { folio: r.pedido_folio, fecha: r.pedido_fecha } : null,
+        almacenes: r.almacen_nombre ? { nombre: r.almacen_nombre } : null,
+        vendedores: r.vendedor_id ? {
+          nombre: r.vendedor_nombre,
+          telefono: r.vendedor_telefono,
+          almacen_destino: r.vendedor_almacen_destino_id ? {
+            id: r.vendedor_almacen_destino_id,
+            nombre: r.vendedor_almacen_destino_nombre,
+          } : null,
+        } : null,
+        vendedor_ruta: r.vendedor_ruta_id ? {
+          nombre: r.vendedor_ruta_nombre,
+          telefono: r.vendedor_ruta_telefono,
+          almacen_destino: r.vendedor_ruta_almacen_destino_id ? {
+            id: r.vendedor_ruta_almacen_destino_id,
+            nombre: r.vendedor_ruta_almacen_destino_nombre,
+          } : null,
+        } : null,
+      }));
 
-      if (deferredSearch) q = q.or(`folio.ilike.%${deferredSearch}%`);
-      if (vendedorFilter && vendedorFilter !== 'todos') q = q.eq('vendedor_id', vendedorFilter);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
-      if (rutaFilter === 'sin_ruta') q = q.is('vendedor_ruta_id', null);
-      else if (rutaFilter && rutaFilter !== 'todos') q = q.eq('vendedor_ruta_id', rutaFilter);
-
-      if (filterByLevantamiento) {
-        if (fechaDesde) q = q.gte('ventas.fecha', fechaDesde);
-        if (fechaHasta) q = q.lte('ventas.fecha', fechaHasta);
-      } else if (fechaTipo === 'programada') {
-        if (fechaDesde) q = q.gte('fecha', fechaDesde);
-        if (fechaHasta) q = q.lte('fecha', fechaHasta);
-      }
-
-      return q;
-    }),
+      return {
+        rows,
+        totalCount: Number(payload.total_count ?? 0),
+        counts: {
+          total: Number(c.total ?? 0),
+          borrador: Number(c.borrador ?? 0),
+          surtido: Number(c.surtido ?? 0),
+          asignado: Number(c.asignado ?? 0),
+          cargado: Number(c.cargado ?? 0),
+          en_ruta: Number(c.en_ruta ?? 0),
+          listo: Number(c.listo ?? 0),
+          hecho: Number(c.hecho ?? 0),
+          no_entregado: Number(c.no_entregado ?? 0),
+          cancelado: Number(c.cancelado ?? 0),
+        } as EntregaWorkspaceCounts,
+      };
+    },
   });
 }
 
