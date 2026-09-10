@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, json, verifyToken } from "../_shared/tiendaAuth.ts";
 import { resolvePrice, type Rule, type Prod } from "../_shared/tiendaPricing.ts";
+import { handleSellerRequest } from "./seller.ts";
 
 type ExtractedItem = { query: string; cantidad: number };
 type ProductRow = Prod & {
@@ -247,7 +248,7 @@ Deno.serve(async (req) => {
     if (!slug) return json({ error: "slug requerido" }, 400);
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: cfg } = await admin.from("tienda_config")
-      .select("empresa_id,activa,lista_precios_default_id,usar_lista_cliente,almacen_id")
+      .select("empresa_id,activa,nombre_tienda,mensaje_bienvenida,lista_precios_default_id,usar_lista_cliente,almacen_id")
       .eq("slug", slug).maybeSingle();
     if (!cfg?.activa) return json({ error: "Tienda no disponible" }, 404);
 
@@ -257,6 +258,11 @@ Deno.serve(async (req) => {
       if (!payload || payload.empresa_id !== cfg.empresa_id) return json({ error: "Sesión de tienda inválida" }, 401);
     }
 
+    const apiKey = Deno.env.get("OPENAI_API_KEY") ?? undefined;
+    if (body?.action === "welcome" || body?.action === "chat") {
+      return json(await handleSellerRequest({ body, admin, cfg, payload, apiKey }));
+    }
+
     const products = await pageProducts(admin, cfg.empresa_id);
     if (body?.action === "suggested") {
       if (!payload?.cliente_id) return json({ error: "Inicia sesión para ver tu pedido sugerido" }, 401);
@@ -264,7 +270,6 @@ Deno.serve(async (req) => {
     }
 
     let text = String(body?.text ?? "").trim();
-    const apiKey = Deno.env.get("OPENAI_API_KEY") ?? undefined;
     if (body?.audio_base64) text = await transcribeAudio(String(body.audio_base64), String(body.mime_type ?? "audio/webm"), apiKey);
     if (!text || text.length > 4000) return json({ error: "Escribe o graba un pedido válido (máximo 4000 caracteres)." }, 400);
 
