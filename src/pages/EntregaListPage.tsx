@@ -15,7 +15,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import ModalSelect from '@/components/ModalSelect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useVendedoresList, useAsignarEntrega, useCargarEntrega, useAsignarYCargar } from '@/hooks/useEntregas';
-import { useEntregasWorkspaceCounts, useEntregasWorkspaceList, useEntregaWorkspaceLineas, type EntregaFechaTipo } from '@/hooks/useEntregasWorkspace';
+import { useEntregasWorkspaceList, useEntregaWorkspaceLineas, type EntregaFechaTipo } from '@/hooks/useEntregasWorkspace';
 import { fmtDate, fmtDateTime, cn , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ClienteLink } from '@/components/links/EntityLinks';
@@ -52,11 +52,12 @@ export default function EntregaListPage() {
   const [vendedorRutaId, setVendedorRutaId] = useState('');
   const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
   const [cargarProgress, setCargarProgress] = useState<{ current: number; total: number; folio?: string; title?: string } | null>(null);
 
-  // Los conteos se calculan en PostgreSQL; la lista aplica estado/ruta/fecha en servidor.
-  const { data: counts = { total: 0, borrador: 0, surtido: 0, asignado: 0, cargado: 0, en_ruta: 0, hecho: 0, no_entregado: 0 } } = useEntregasWorkspaceCounts(search, vendedorFilter);
-  const { data: allEntregas = [], isLoading } = useEntregasWorkspaceList({
+  // V2: una sola llamada trae página + total + conteos. No descarga el histórico completo.
+  const { data: entregasResult, isLoading, isFetching } = useEntregasWorkspaceList({
     search,
     vendedorFilter,
     statusFilter,
@@ -64,7 +65,27 @@ export default function EntregaListPage() {
     fechaTipo,
     fechaDesde,
     fechaHasta,
+    page,
+    pageSize,
   });
+  const allEntregas = entregasResult?.rows ?? [];
+  const counts = entregasResult?.counts ?? { total: 0, borrador: 0, surtido: 0, asignado: 0, cargado: 0, en_ruta: 0, hecho: 0, no_entregado: 0 };
+  const totalCount = entregasResult?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const pageStart = totalCount === 0 ? 0 : page * pageSize + 1;
+  const pageEnd = Math.min((page + 1) * pageSize, totalCount);
+
+  useEffect(() => {
+    setPage(0);
+    setSelectedIds(new Set());
+    setExpandedId(null);
+  }, [search, vendedorFilter, statusFilter, rutaFilter, fechaTipo, fechaDesde, fechaHasta]);
+
+  const goToPage = (nextPage: number) => {
+    setSelectedIds(new Set());
+    setExpandedId(null);
+    setPage(Math.min(Math.max(nextPage, 0), Math.max(totalPages - 1, 0)));
+  };
   const { data: expandedLineas = [], isLoading: isLoadingExpandedLineas } = useEntregaWorkspaceLineas(expandedId);
   const { data: vendedores } = useVendedoresList();
 
@@ -757,6 +778,20 @@ export default function EntregaListPage() {
           </TableBody>
         </Table>
       </div>
+
+      {totalCount > 0 && (
+        <div className="flex items-center justify-between gap-3 border border-border bg-card rounded-lg px-3 py-2">
+          <span className="text-xs text-muted-foreground">
+            {pageStart}-{pageEnd} de {totalCount} entrega{totalCount === 1 ? '' : 's'}
+            {isFetching && !isLoading ? ' · Actualizando…' : ''}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 0 || isFetching} onClick={() => goToPage(page - 1)}>Anterior</Button>
+            <span className="text-xs text-muted-foreground tabular-nums">Página {page + 1} de {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={page + 1 >= totalPages || isFetching} onClick={() => goToPage(page + 1)}>Siguiente</Button>
+          </div>
+        </div>
+      )}
 
       {/* ─── Dialog: Surtir rápido ─── */}
       <Dialog open={showSurtirDialog} onOpenChange={setShowSurtirDialog}>
