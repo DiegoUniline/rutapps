@@ -4747,6 +4747,87 @@ export type Database = {
           },
         ]
       }
+      logistica_pedido_resumen: {
+        Row: {
+          bucket: string | null
+          empresa_id: string
+          en_ruta: boolean
+          estado_odoo: string | null
+          fecha_entrega_real: string | null
+          fecha_programada: string | null
+          fully_delivered: boolean
+          fully_generada: boolean
+          fully_surtido: boolean
+          lineas_pendientes: number
+          pedido_id: string
+          total_demanda: number
+          total_entregado: number
+          total_generada: number
+          total_pendiente: number
+          total_surtido: number
+          total_valor_pendiente: number
+          updated_at: string
+          vendedor_ruta_id: string | null
+        }
+        Insert: {
+          bucket?: string | null
+          empresa_id: string
+          en_ruta?: boolean
+          estado_odoo?: string | null
+          fecha_entrega_real?: string | null
+          fecha_programada?: string | null
+          fully_delivered?: boolean
+          fully_generada?: boolean
+          fully_surtido?: boolean
+          lineas_pendientes?: number
+          pedido_id: string
+          total_demanda?: number
+          total_entregado?: number
+          total_generada?: number
+          total_pendiente?: number
+          total_surtido?: number
+          total_valor_pendiente?: number
+          updated_at?: string
+          vendedor_ruta_id?: string | null
+        }
+        Update: {
+          bucket?: string | null
+          empresa_id?: string
+          en_ruta?: boolean
+          estado_odoo?: string | null
+          fecha_entrega_real?: string | null
+          fecha_programada?: string | null
+          fully_delivered?: boolean
+          fully_generada?: boolean
+          fully_surtido?: boolean
+          lineas_pendientes?: number
+          pedido_id?: string
+          total_demanda?: number
+          total_entregado?: number
+          total_generada?: number
+          total_pendiente?: number
+          total_surtido?: number
+          total_valor_pendiente?: number
+          updated_at?: string
+          vendedor_ruta_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistica_pedido_resumen_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistica_pedido_resumen_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lotes: {
         Row: {
           activo: boolean
@@ -10833,6 +10914,80 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_logistica_concentrado_pedidos_v3: {
+        Args: {
+          p_empresa_id: string
+          p_fecha_desde?: string
+          p_fecha_field?: string
+          p_fecha_hasta?: string
+          p_offset?: number
+          p_page_size?: number
+          p_statuses?: string[]
+          p_tipo?: string
+          p_vendedor_ids?: string[]
+        }
+        Returns: Json
+      }
+      fn_logistica_concentrado_surtido_v2: {
+        Args: {
+          p_almacen_ids?: string[]
+          p_empresa_id: string
+          p_fecha_desde?: string
+          p_fecha_field?: string
+          p_fecha_hasta?: string
+          p_pedido_offset?: number
+          p_pedido_page_size?: number
+          p_statuses?: string[]
+          p_tipo?: string
+          p_vendedor_ids?: string[]
+        }
+        Returns: Json
+      }
+      fn_logistica_entregas_workspace_v2: {
+        Args: {
+          p_empresa_id: string
+          p_fecha_desde?: string
+          p_fecha_hasta?: string
+          p_fecha_tipo?: string
+          p_offset?: number
+          p_page_size?: number
+          p_ruta?: string
+          p_search?: string
+          p_status?: string
+          p_vendedor_id?: string
+        }
+        Returns: Json
+      }
+      fn_logistica_pedido_detalle_v4: {
+        Args: { p_pedido_id: string }
+        Returns: Json
+      }
+      fn_logistica_pedidos_counts_v4: {
+        Args: {
+          p_empresa_id: string
+          p_fecha_desde?: string
+          p_fecha_hasta?: string
+          p_fecha_tipo?: string
+          p_search?: string
+          p_tab?: string
+          p_vendedor_ids?: string[]
+        }
+        Returns: Json
+      }
+      fn_logistica_pedidos_page_v4: {
+        Args: {
+          p_empresa_id: string
+          p_fecha_desde?: string
+          p_fecha_hasta?: string
+          p_fecha_tipo?: string
+          p_offset?: number
+          p_page_size?: number
+          p_search?: string
+          p_tab?: string
+          p_vendedor_ids?: string[]
+        }
+        Returns: Json
+      }
       fn_logistica_pedidos_workspace: {
         Args: {
           p_empresa_id: string
@@ -10904,6 +11059,10 @@ export type Database = {
       fn_reevaluar_promos_venta: {
         Args: { _venta_id: string }
         Returns: number
+      }
+      fn_refresh_logistica_pedido_resumen: {
+        Args: { p_pedido_id: string }
+        Returns: undefined
       }
       fn_sugerencias_resurtido: {
         Args: { p_almacen_id: string }
