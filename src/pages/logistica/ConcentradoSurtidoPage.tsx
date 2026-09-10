@@ -22,38 +22,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 
-interface VentaLite {
-  id: string;
-  folio: string | null;
-  fecha_entrega: string | null;
-  fecha: string;
-  status: string;
-  tipo: string | null;
-  empresa_id: string;
-  total: number | null;
-  cliente_id: string | null;
-  vendedor_id: string | null;
-  clientes: { nombre: string | null } | null;
-  vendedor: { id: string; nombre: string | null } | null;
-}
-interface LineaRow {
-  producto_id: string;
-  cantidad: number;
-  venta_id: string;
-}
-interface EntregaLineaRow {
-  producto_id: string;
-  cantidad_entregada: number;
-  entregas: { pedido_id: string | null; status: string } | null;
-}
-interface ProductoRow {
-  id: string;
-  codigo: string | null;
-  nombre: string;
-  cantidad: number | null;
-  costo: number | null;
-  proveedor_preferido_id: string | null;
-}
 
 function addDays(iso: string, n: number) {
   const d = new Date(iso + 'T00:00:00');
@@ -85,7 +53,8 @@ export default function ConcentradoSurtidoPage() {
   };
   const [viewMode, setViewMode] = useState<'pedidos' | 'productos'>('pedidos');
   const [pedidoPage, setPedidoPage] = useState(0);
-  const pedidoPageSize = 50;
+  const [pedidoPageSize, setPedidoPageSize] = useState(50);
+  const [expandedPedidoId, setExpandedPedidoId] = useState<string | null>(null);
 
   // Filtros nuevos: tipo (pedido/venta_directa) y vendedor (multi)
   const TIPO_OPTIONS: { value: string; label: string }[] = [
@@ -124,16 +93,61 @@ export default function ConcentradoSurtidoPage() {
   });
 
   const vendedoresKey = vendedorFilter.slice().sort().join(',');
-  const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['concentrado-surtido-v2', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey, almacenesKey, pedidoPage],
-    enabled: !!empresa?.id && almacenInit,
+  const statuses = statusFilter.length > 0
+    ? statusFilter
+    : ['confirmado', 'entregado', 'facturado'];
+
+  // Vista principal: sólo la página de pedidos. No calcula el concentrado global de productos.
+  const {
+    data: pedidoData,
+    isLoading: isLoadingPedidos,
+    isFetching: isFetchingPedidos,
+    refetch: refetchPedidos,
+  } = useQuery({
+    queryKey: ['concentrado-pedidos-v3', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey, pedidoPage, pedidoPageSize],
+    enabled: !!empresa?.id,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    placeholderData: previous => previous,
+    queryFn: async () => {
+      const { data: payload, error } = await (supabase as any).rpc('fn_logistica_concentrado_pedidos_v3', {
+        p_empresa_id: empresa!.id,
+        p_fecha_desde: desde || null,
+        p_fecha_hasta: hasta || null,
+        p_fecha_field: fechaField,
+        p_statuses: statuses,
+        p_tipo: tipoFilter,
+        p_vendedor_ids: vendedorFilter.length > 0 ? vendedorFilter : null,
+        p_page_size: pedidoPageSize,
+        p_offset: pedidoPageSize === 0 ? 0 : pedidoPage * pedidoPageSize,
+      });
+      if (error) throw error;
+      return {
+        pedidos: (Array.isArray(payload?.pedidos) ? payload.pedidos : []).map((r: any) => ({
+          ...r,
+          total: Number(r.total ?? 0),
+          requerido: Number(r.requerido ?? 0),
+          entregado: Number(r.entregado ?? 0),
+          pendiente: Number(r.pendiente ?? 0),
+        })) as PedidoRow[],
+        pedidosCount: Number(payload?.pedidos_count ?? 0),
+      };
+    },
+  });
+
+  // Concentrado global: sólo se ejecuta al entrar a "Por producto" o cuando una
+  // acción (Excel/PDF/Generar compras) realmente necesita esos datos.
+  const {
+    data: productoData,
+    isLoading: isLoadingProductos,
+    isFetching: isFetchingProductos,
+    refetch: refetchProductos,
+  } = useQuery({
+    queryKey: ['concentrado-productos-lazy-v2', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey, almacenesKey],
+    enabled: !!empresa?.id && almacenInit && viewMode === 'productos',
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
-      const statuses = statusFilter.length > 0
-        ? statusFilter
-        : ['confirmado', 'entregado', 'facturado'];
-
       const { data: payload, error } = await (supabase as any).rpc('fn_logistica_concentrado_surtido_v2', {
         p_empresa_id: empresa!.id,
         p_fecha_desde: desde || null,
@@ -143,11 +157,10 @@ export default function ConcentradoSurtidoPage() {
         p_tipo: tipoFilter,
         p_vendedor_ids: vendedorFilter.length > 0 ? vendedorFilter : null,
         p_almacen_ids: almacenFilter.length > 0 ? almacenFilter : null,
-        p_pedido_page_size: pedidoPageSize,
-        p_pedido_offset: pedidoPage * pedidoPageSize,
+        p_pedido_page_size: 1,
+        p_pedido_offset: 0,
       });
       if (error) throw error;
-
       return {
         rows: (Array.isArray(payload?.rows) ? payload.rows : []).map((r: any) => ({
           ...r,
@@ -158,14 +171,6 @@ export default function ConcentradoSurtidoPage() {
           faltante: Number(r.faltante ?? 0),
           costo: Number(r.costo ?? 0),
         })) as Row[],
-        pedidos: (Array.isArray(payload?.pedidos) ? payload.pedidos : []).map((r: any) => ({
-          ...r,
-          total: Number(r.total ?? 0),
-          requerido: Number(r.requerido ?? 0),
-          entregado: Number(r.entregado ?? 0),
-          pendiente: Number(r.pendiente ?? 0),
-        })) as PedidoRow[],
-        pedidosCount: Number(payload?.pedidos_count ?? 0),
         productosCount: Number(payload?.productos_count ?? 0),
         conFaltante: Number(payload?.con_faltante ?? 0),
         costoFaltante: Number(payload?.costo_faltante ?? 0),
@@ -176,26 +181,38 @@ export default function ConcentradoSurtidoPage() {
   useEffect(() => {
     setPedidoPage(0);
     setOpenGroups(new Set());
-  }, [desde, hasta, fechaField, statusFilter, tipoFilter, vendedoresKey, almacenesKey]);
+    setExpandedPedidoId(null);
+  }, [desde, hasta, fechaField, statusFilter, tipoFilter, vendedoresKey]);
 
-  const pedidoTotalCount = data?.pedidosCount ?? 0;
-  const pedidoTotalPages = Math.max(1, Math.ceil(pedidoTotalCount / pedidoPageSize));
-  const pedidoPageStart = pedidoTotalCount === 0 ? 0 : pedidoPage * pedidoPageSize + 1;
-  const pedidoPageEnd = Math.min((pedidoPage + 1) * pedidoPageSize, pedidoTotalCount);
+  const pedidoTotalCount = pedidoData?.pedidosCount ?? 0;
+  const pedidoShowAll = pedidoPageSize === 0;
+  const pedidoTotalPages = pedidoShowAll ? 1 : Math.max(1, Math.ceil(pedidoTotalCount / pedidoPageSize));
+  const pedidoPageStart = pedidoTotalCount === 0 ? 0 : pedidoShowAll ? 1 : pedidoPage * pedidoPageSize + 1;
+  const pedidoPageEnd = pedidoShowAll ? pedidoTotalCount : Math.min((pedidoPage + 1) * pedidoPageSize, pedidoTotalCount);
   const goPedidoPage = (nextPage: number) => {
     setOpenGroups(new Set());
+    setExpandedPedidoId(null);
     setPedidoPage(Math.min(Math.max(nextPage, 0), Math.max(pedidoTotalPages - 1, 0)));
   };
 
-  const rows = data?.rows ?? [];
+  const rows = productoData?.rows ?? [];
   const faltantes = useMemo(() => rows.filter(r => r.faltante > 0), [rows]);
 
+  const ensureProductosData = async () => {
+    if (productoData) return productoData;
+    if (!almacenInit) throw new Error('Todavía se están cargando los almacenes. Intenta de nuevo en un momento.');
+    const result = await refetchProductos();
+    if (result.error) throw result.error;
+    if (!result.data) throw new Error('No se pudo calcular el concentrado de productos.');
+    return result.data;
+  };
+
   const totales = useMemo(() => ({
-    pedidos: data?.pedidosCount ?? 0,
-    productos: data?.productosCount ?? rows.length,
-    conFaltante: data?.conFaltante ?? faltantes.length,
-    costoFaltante: data?.costoFaltante ?? faltantes.reduce((sum, r) => sum + r.faltante * r.costo, 0),
-  }), [rows, faltantes, data?.pedidosCount, data?.productosCount, data?.conFaltante, data?.costoFaltante]);
+    pedidos: pedidoData?.pedidosCount ?? 0,
+    productos: productoData?.productosCount,
+    conFaltante: productoData?.conFaltante,
+    costoFaltante: productoData?.costoFaltante,
+  }), [pedidoData?.pedidosCount, productoData]);
 
   // ── Export ───────────────────────────────────────────────────
   const exportColumns: ExportColumn[] = [
@@ -210,7 +227,7 @@ export default function ConcentradoSurtidoPage() {
     { key: 'proveedor', header: 'Proveedor', width: 22 },
   ];
 
-  const buildExportRows = () => rows.map(r => {
+  const buildExportRows = (sourceRows: Row[]) => sourceRows.map(r => {
     const prov = proveedores?.find(p => p.id === r.proveedor_preferido_id);
     return {
       codigo: r.codigo,
@@ -225,37 +242,43 @@ export default function ConcentradoSurtidoPage() {
     };
   });
 
-  const buildExportOpts = () => ({
+  const buildExportOpts = (sourceRows: Row[]) => ({
     fileName: `concentrado-a-surtir_${desde}_${hasta}`,
     title: 'Concentrado a surtir',
-    subtitle: `${rows.length} producto(s) · ${faltantes.length} con faltante`,
+    subtitle: `${sourceRows.length} producto(s) · ${sourceRows.filter(r => r.faltante > 0).length} con faltante`,
     columns: exportColumns,
-    data: buildExportRows(),
+    data: buildExportRows(sourceRows),
     empresa: empresa?.nombre ?? '',
     empresaInfo: empresa ? { nombre: empresa.nombre ?? '', rfc: (empresa as any).rfc ?? null, email: (empresa as any).email ?? null, logo_url: (empresa as any).logo_url ?? null } : undefined,
     dateRange: { from: desde, to: hasta },
     currencyCode: (empresa as any)?.moneda ?? 'MXN',
   });
 
-  const handleExportExcel = () => {
-    if (rows.length === 0) { toast.error('Nada que exportar'); return; }
-    try { exportToExcel(buildExportOpts()); }
-    catch (err: any) { toast.error(err?.message || 'Error al exportar Excel'); }
+  const handleExportExcel = async () => {
+    try {
+      const source = await ensureProductosData();
+      if (source.rows.length === 0) { toast.error('Nada que exportar'); return; }
+      exportToExcel(buildExportOpts(source.rows));
+    } catch (err: any) { toast.error(err?.message || 'Error al exportar Excel'); }
   };
   const handleExportPdf = async () => {
-    if (rows.length === 0) { toast.error('Nada que exportar'); return; }
-    try { await exportToPDF(buildExportOpts()); }
-    catch (err: any) { toast.error(err?.message || 'Error al exportar PDF'); }
+    try {
+      const source = await ensureProductosData();
+      if (source.rows.length === 0) { toast.error('Nada que exportar'); return; }
+      await exportToPDF(buildExportOpts(source.rows));
+    } catch (err: any) { toast.error(err?.message || 'Error al exportar PDF'); }
   };
 
   const generarCompras = async () => {
     if (!empresa?.id) return;
-    if (faltantes.length === 0) { toast.error('No hay productos con faltante'); return; }
     setGenerando(true);
     try {
+      const source = await ensureProductosData();
+      const faltantesActuales = source.rows.filter(r => r.faltante > 0);
+      if (faltantesActuales.length === 0) { toast.error('No hay productos con faltante'); return; }
       // Agrupar por proveedor preferido
-      const grupos = new Map<string, typeof faltantes>();
-      for (const f of faltantes) {
+      const grupos = new Map<string, Row[]>();
+      for (const f of faltantesActuales) {
         const k = f.proveedor_preferido_id ?? '__sin__';
         if (!grupos.has(k)) grupos.set(k, []);
         grupos.get(k)!.push(f);
@@ -363,19 +386,17 @@ export default function ConcentradoSurtidoPage() {
           <Button size="sm" variant="outline" onClick={() => { const t = todayLocal(); setDesde(t); setHasta(addDays(t, 6)); }}>7 días</Button>
         </div>
         <div className="ml-auto flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => refetch()}>Refrescar</Button>
-          <Button size="sm" variant="outline" onClick={handleExportExcel} disabled={rows.length === 0}>
-            <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
+          <Button size="sm" variant="outline" onClick={() => viewMode === 'productos' ? refetchProductos() : refetchPedidos()}>Refrescar</Button>
+          <Button size="sm" variant="outline" onClick={handleExportExcel} disabled={isFetchingProductos || !almacenInit}>
+            {isFetchingProductos ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />} Excel
           </Button>
-          <Button size="sm" variant="outline" onClick={handleExportPdf} disabled={rows.length === 0}>
-            <FileDown className="w-3.5 h-3.5" /> PDF
+          <Button size="sm" variant="outline" onClick={handleExportPdf} disabled={isFetchingProductos || !almacenInit}>
+            {isFetchingProductos ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />} PDF
           </Button>
-          {faltantes.length > 0 && (
-            <Button size="sm" onClick={generarCompras} disabled={generando} className="bg-primary text-primary-foreground">
-              {generando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShoppingCart className="w-3.5 h-3.5" />}
-              Generar compras ({faltantes.length})
-            </Button>
-          )}
+          <Button size="sm" onClick={generarCompras} disabled={generando || isFetchingProductos || !almacenInit} className="bg-primary text-primary-foreground">
+            {generando || isFetchingProductos ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShoppingCart className="w-3.5 h-3.5" />}
+            Generar compras{productoData ? ` (${faltantes.length})` : ''}
+          </Button>
         </div>
 
         <div className="w-full space-y-1">
@@ -483,13 +504,13 @@ export default function ConcentradoSurtidoPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <KPI label="Pedidos en rango" value={totales.pedidos} />
-        <KPI label="Productos a surtir" value={totales.productos} />
-        <KPI label="Con faltante" value={totales.conFaltante} highlight={totales.conFaltante > 0} />
-        <KPI label="Costo del faltante" value={fmtMoney(totales.costoFaltante)} />
+        <KPI label="Productos a surtir" value={totales.productos ?? '—'} />
+        <KPI label="Con faltante" value={totales.conFaltante ?? '—'} highlight={(totales.conFaltante ?? 0) > 0} />
+        <KPI label="Costo del faltante" value={totales.costoFaltante == null ? '—' : fmtMoney(totales.costoFaltante)} />
       </div>
 
       {/* Aviso */}
-      {!isLoading && faltantes.length > 0 && (
+      {productoData && !isFetchingProductos && faltantes.length > 0 && (
         <div className="bg-destructive/10 border border-destructive/30 text-destructive rounded-lg p-3 flex items-start gap-2 text-sm">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
           <div>
@@ -498,7 +519,7 @@ export default function ConcentradoSurtidoPage() {
           </div>
         </div>
       )}
-      {!isLoading && rows.length > 0 && faltantes.length === 0 && (
+      {productoData && !isFetchingProductos && rows.length > 0 && faltantes.length === 0 && (
         <div className="bg-success/10 border border-success/30 text-success rounded-lg p-3 flex items-center gap-2 text-sm">
           <CheckCircle2 className="w-4 h-4" /> Hay stock suficiente para cubrir todos los pedidos del rango.
         </div>
@@ -522,7 +543,7 @@ export default function ConcentradoSurtidoPage() {
             viewMode === 'productos' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'
           }`}
         >
-          Por producto
+          {isFetchingProductos && viewMode === 'productos' && <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />}Por producto
         </button>
       </div>
 
@@ -531,7 +552,7 @@ export default function ConcentradoSurtidoPage() {
         <div className="overflow-x-auto">
           {viewMode === 'pedidos' ? (
             (() => {
-              const pedidos = data?.pedidos ?? [];
+              const pedidos = pedidoData?.pedidos ?? [];
               const surtidoLabel: Record<PedidoRow['surtido_status'], string> = {
                 surtido: 'Surtido completo',
                 parcial: 'Surtido parcial',
@@ -560,10 +581,14 @@ export default function ConcentradoSurtidoPage() {
                   pendiente: { label: 'Sin surtir',       cls: 'bg-destructive/15 text-destructive border-destructive/30' },
                   sin_lineas:{ label: 'Sin líneas',       cls: 'bg-muted text-muted-foreground border-border' },
                 }[p.surtido_status];
+                const isExpanded = expandedPedidoId === p.id;
                 return (
-                  <tr key={p.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => navigate(`/ventas/${p.id}`)}>
+                  <Fragment key={p.id}>
+                  <tr className="hover:bg-muted/20 cursor-pointer" onClick={() => setExpandedPedidoId(isExpanded ? null : p.id)}>
                     <td className="px-3 py-2 text-xs">{p.fecha_entrega ?? '—'}</td>
-                    <td className="px-3 py-2 font-mono text-xs">{p.folio ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs">
+                      <span className="inline-flex items-center gap-1">{isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}{p.folio ?? '—'}</span>
+                    </td>
                     <td className="px-3 py-2 font-medium">{p.cliente}</td>
                     <td className="px-3 py-2 text-xs">{p.vendedor}</td>
                     <td className="px-3 py-2 text-xs capitalize">{p.tipo === 'venta_directa' ? 'Venta directa' : (p.tipo ?? 'pedido')}</td>
@@ -575,6 +600,14 @@ export default function ConcentradoSurtidoPage() {
                       <span className={`text-[11px] px-2 py-0.5 rounded-full border ${badge.cls}`}>{badge.label}</span>
                     </td>
                   </tr>
+                  {isExpanded && (
+                    <tr className="bg-muted/25">
+                      <td colSpan={10} className="p-0">
+                        <ConcentradoPedidoProductos pedidoId={p.id} onOpen={() => navigate(`/ventas/${p.id}`)} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               };
               return (
@@ -594,14 +627,14 @@ export default function ConcentradoSurtidoPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {isLoading && (
+                    {isLoadingPedidos && (
                       <tr><td colSpan={colSpan} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
                     )}
-                    {!isLoading && pedidos.length === 0 && (
+                    {!isLoadingPedidos && pedidos.length === 0 && (
                       <tr><td colSpan={colSpan} className="text-center py-8 text-muted-foreground">Sin pedidos en este rango con los filtros seleccionados.</td></tr>
                     )}
-                    {!isLoading && groupBy === 'none' && pedidos.map(renderRow)}
-                    {!isLoading && groupBy !== 'none' && groups.map(([label, items]) => {
+                    {!isLoadingPedidos && groupBy === 'none' && pedidos.map(renderRow)}
+                    {!isLoadingPedidos && groupBy !== 'none' && groups.map(([label, items]) => {
                       const open = openGroups.has(label);
                       const totReq = items.reduce((s, p) => s + p.requerido, 0);
                       const totEnt = items.reduce((s, p) => s + p.entregado, 0);
@@ -643,10 +676,10 @@ export default function ConcentradoSurtidoPage() {
                 </tr>
               </thead>
               <tbody>
-                {isLoading && (
+                {isLoadingProductos && (
                   <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
                 )}
-                {!isLoading && rows.length === 0 && (
+                {!isLoadingProductos && rows.length === 0 && (
                   <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Sin productos pendientes a surtir en este rango.</td></tr>
                 )}
                 {rows.map(r => {
@@ -680,16 +713,116 @@ export default function ConcentradoSurtidoPage() {
       </div>
 
       {viewMode === 'pedidos' && pedidoTotalCount > 0 && (
-        <div className="flex items-center justify-between gap-3 border border-border bg-card rounded-lg px-3 py-2">
-          <span className="text-xs text-muted-foreground">
-            {pedidoPageStart}-{pedidoPageEnd} de {pedidoTotalCount} pedido{pedidoTotalCount === 1 ? '' : 's'}
-            {isFetching && !isLoading ? ' · Actualizando…' : ''}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={pedidoPage <= 0 || isFetching} onClick={() => goPedidoPage(pedidoPage - 1)}>Anterior</Button>
-            <span className="text-xs text-muted-foreground tabular-nums">Página {pedidoPage + 1} de {pedidoTotalPages}</span>
-            <Button variant="outline" size="sm" disabled={pedidoPage + 1 >= pedidoTotalPages || isFetching} onClick={() => goPedidoPage(pedidoPage + 1)}>Siguiente</Button>
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card rounded-lg px-3 py-2">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              {pedidoPageStart}-{pedidoPageEnd} de {pedidoTotalCount} pedido{pedidoTotalCount === 1 ? '' : 's'}
+              {isFetchingPedidos && !isLoadingPedidos ? ' · Actualizando…' : ''}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">Ver</span>
+              <Select value={String(pedidoPageSize)} onValueChange={(value) => { setPedidoPageSize(Number(value)); setPedidoPage(0); setOpenGroups(new Set()); setExpandedPedidoId(null); }}>
+                <SelectTrigger className="h-7 w-[92px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                  <SelectItem value="500">500</SelectItem>
+                  <SelectItem value="0">Todo</SelectItem>
+                </SelectContent>
+              </Select>
+              {pedidoShowAll && <span className="text-[10px] text-amber-600">Puede tardar más</span>}
+            </div>
           </div>
+          {!pedidoShowAll ? (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={pedidoPage <= 0 || isFetchingPedidos} onClick={() => goPedidoPage(pedidoPage - 1)}>Anterior</Button>
+              <span className="text-xs text-muted-foreground tabular-nums">Página {pedidoPage + 1} de {pedidoTotalPages}</span>
+              <Button variant="outline" size="sm" disabled={pedidoPage + 1 >= pedidoTotalPages || isFetchingPedidos} onClick={() => goPedidoPage(pedidoPage + 1)}>Siguiente</Button>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">Todos los pedidos</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function ConcentradoPedidoProductos({ pedidoId, onOpen }: { pedidoId: string; onOpen: () => void }) {
+  const { data: lineas = [], isLoading, isError } = useQuery({
+    queryKey: ['concentrado-pedido-productos', pedidoId],
+    enabled: !!pedidoId,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const [ventaRes, entregaRes] = await Promise.all([
+        supabase
+          .from('venta_lineas')
+          .select('producto_id, cantidad, productos(codigo, nombre)')
+          .eq('venta_id', pedidoId),
+        supabase
+          .from('entrega_lineas')
+          .select('producto_id, cantidad_entregada, entregas!inner(pedido_id, status)')
+          .eq('entregas.pedido_id', pedidoId)
+          .in('entregas.status', ['surtido', 'cargado', 'hecho'] as any),
+      ]);
+      if (ventaRes.error) throw ventaRes.error;
+      if (entregaRes.error) throw entregaRes.error;
+
+      const map = new Map<string, { producto_id: string; codigo: string; nombre: string; requerido: number; surtido: number }>();
+      for (const l of (ventaRes.data ?? []) as any[]) {
+        if (!l.producto_id) continue;
+        const current = map.get(l.producto_id) ?? {
+          producto_id: l.producto_id,
+          codigo: l.productos?.codigo ?? '—',
+          nombre: l.productos?.nombre ?? '—',
+          requerido: 0,
+          surtido: 0,
+        };
+        current.requerido += Number(l.cantidad ?? 0);
+        map.set(l.producto_id, current);
+      }
+      for (const l of (entregaRes.data ?? []) as any[]) {
+        if (!l.producto_id) continue;
+        const current = map.get(l.producto_id);
+        if (current) current.surtido += Number(l.cantidad_entregada ?? 0);
+      }
+      return Array.from(map.values()).map(l => ({ ...l, pendiente: Math.max(0, l.requerido - l.surtido) }));
+    },
+  });
+
+  return (
+    <div className="px-6 py-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold">Productos del pedido</span>
+        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onOpen(); }}>Abrir pedido</Button>
+      </div>
+      {isLoading ? (
+        <div className="flex items-center gap-2 py-4 text-xs text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Cargando productos…</div>
+      ) : isError ? (
+        <p className="py-3 text-xs text-destructive">No se pudieron cargar los productos.</p>
+      ) : lineas.length === 0 ? (
+        <p className="py-3 text-xs text-muted-foreground">Sin productos.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-md border border-border bg-card">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/40 text-muted-foreground">
+              <tr><th className="text-left px-3 py-2">Código</th><th className="text-left px-3 py-2">Producto</th><th className="text-right px-3 py-2">Requerido</th><th className="text-right px-3 py-2">Surtido</th><th className="text-right px-3 py-2">Pendiente</th></tr>
+            </thead>
+            <tbody>
+              {lineas.map((l: any) => (
+                <tr key={l.producto_id} className="border-t border-border/60">
+                  <td className="px-3 py-2 font-mono text-muted-foreground">{l.codigo}</td>
+                  <td className="px-3 py-2 font-medium">{l.nombre}</td>
+                  <td className="px-3 py-2 text-right">{l.requerido}</td>
+                  <td className="px-3 py-2 text-right text-muted-foreground">{l.surtido}</td>
+                  <td className={`px-3 py-2 text-right font-semibold ${l.pendiente > 0 ? 'text-destructive' : ''}`}>{l.pendiente}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
