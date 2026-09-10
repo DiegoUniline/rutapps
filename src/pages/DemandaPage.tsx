@@ -1,5 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
-import React, { useState, useMemo, Fragment, useDeferredValue } from 'react';
+import React, { useState, useMemo, Fragment, useDeferredValue, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -33,34 +33,47 @@ interface DemandaFilters {
   fechaTipo: 'fecha' | 'fecha_entrega';
   vendedorIds?: string[];
   search?: string;
+  tab: 'pendientes' | 'generadas' | 'surtidos' | 'en_ruta' | 'entregados' | 'cerrados' | 'todos';
+  page: number;
+  pageSize: number;
 }
+
+const EMPTY_COUNTS = {
+  pendientes: 0,
+  generadas: 0,
+  surtidos: 0,
+  en_ruta: 0,
+  entregados: 0,
+  cerrados: 0,
+  todos: 0,
+};
 
 function usePedidosPendientes(filters: DemandaFilters) {
   const { empresa } = useAuth();
 
   return useQuery({
-    queryKey: ['demanda', 'workspace-rpc', empresa?.id, filters],
+    queryKey: ['demanda', 'workspace-rpc-v2', empresa?.id, filters],
     enabled: !!empresa?.id,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,
-    placeholderData: previous => previous,
     queryFn: async () => {
-      const rows = await fetchAllPages<any>((from, to) =>
-        (supabase as any)
-          .rpc('fn_logistica_pedidos_workspace', {
-            p_empresa_id: empresa!.id,
-            p_fecha_desde: filters.desde || null,
-            p_fecha_hasta: filters.hasta || null,
-            p_fecha_tipo: filters.fechaTipo === 'fecha_entrega' ? 'programada' : 'levantamiento',
-            p_vendedor_ids: filters.vendedorIds?.length ? filters.vendedorIds : null,
-            p_search: filters.search?.trim() || null,
-          })
-          .order('sort_date', { ascending: false })
-          .range(from, to)
-      );
+      const { data, error } = await (supabase as any).rpc('fn_logistica_pedidos_workspace_v2', {
+        p_empresa_id: empresa!.id,
+        p_fecha_desde: filters.desde || null,
+        p_fecha_hasta: filters.hasta || null,
+        p_fecha_tipo: filters.fechaTipo === 'fecha_entrega' ? 'programada' : 'levantamiento',
+        p_vendedor_ids: filters.vendedorIds?.length ? filters.vendedorIds : null,
+        p_search: filters.search?.trim() || null,
+        p_tab: filters.tab,
+        p_page_size: filters.pageSize,
+        p_offset: filters.page * filters.pageSize,
+      });
+      if (error) throw error;
 
-      return rows.map((row: any) => ({
+      const payload = data ?? {};
+      const rawRows = Array.isArray(payload.rows) ? payload.rows : [];
+      const rows = rawRows.map((row: any) => ({
         id: row.id,
         folio: row.folio,
         cliente_id: row.cliente_id,
@@ -95,6 +108,23 @@ function usePedidosPendientes(filters: DemandaFilters) {
         vendedorRutaId: row.vendedor_ruta_id,
         fechaEntrega: row.fecha_entrega_real,
       }));
+
+      const rawCounts = payload.counts ?? {};
+      return {
+        rows,
+        totalCount: Number(payload.total_count ?? 0),
+        totalPendiente: Number(payload.total_pendiente ?? 0),
+        totalValorPendiente: Number(payload.total_valor_pendiente ?? 0),
+        counts: {
+          pendientes: Number(rawCounts.pendientes ?? 0),
+          generadas: Number(rawCounts.generadas ?? 0),
+          surtidos: Number(rawCounts.surtidos ?? 0),
+          en_ruta: Number(rawCounts.en_ruta ?? 0),
+          entregados: Number(rawCounts.entregados ?? 0),
+          cerrados: Number(rawCounts.cerrados ?? 0),
+          todos: Number(rawCounts.todos ?? 0),
+        },
+      };
     },
   });
 }
@@ -251,16 +281,28 @@ export default function DemandaPage() {
   const [vendedorFilter, setVendedorFilter] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
 
   const deferredSearch = useDeferredValue(search);
 
-  const { data: pedidos, isLoading, error: pedidosError } = usePedidosPendientes({
+  const { data: pedidosResult, isLoading, isFetching, error: pedidosError } = usePedidosPendientes({
     desde,
     hasta,
     fechaTipo,
     vendedorIds: vendedorFilter.length > 0 ? vendedorFilter : undefined,
     search: deferredSearch,
+    tab,
+    page,
+    pageSize,
   });
+
+  const pedidos = pedidosResult?.rows ?? [];
+  const counts = pedidosResult?.counts ?? EMPTY_COUNTS;
+  const totalCount = pedidosResult?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const pageStart = totalCount === 0 ? 0 : page * pageSize + 1;
+  const pageEnd = Math.min((page + 1) * pageSize, totalCount);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCrearDialog, setShowCrearDialog] = useState(false);
@@ -269,6 +311,19 @@ export default function DemandaPage() {
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
   const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[]; errors: any[] }>(null);
+
+  useEffect(() => {
+    setPage(0);
+    setSelectedIds(new Set());
+    setExpanded(new Set());
+  }, [desde, hasta, fechaTipo, vendedorFilter, deferredSearch, tab]);
+
+  const goToPage = (nextPage: number) => {
+    const bounded = Math.min(Math.max(nextPage, 0), Math.max(totalPages - 1, 0));
+    setSelectedIds(new Set());
+    setExpanded(new Set());
+    setPage(bounded);
+  };
 
   // Fetch almacenes + vendedores
   const { data: almacenesList } = useQuery({
@@ -292,41 +347,8 @@ export default function DemandaPage() {
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
   const vendedorOptions = (vendedoresList ?? []).map(v => ({ value: v.id, label: v.nombre }));
 
-  // Counts per tab (based on currently-loaded set)
-  // Los pedidos "cerrados" (cerrado_at != null) se excluyen de todas las pestañas
-  // porque ya no aceptan más entregas — se ven únicamente en la lista de ventas.
-  const counts = useMemo(() => {
-    const all = (pedidos ?? []);
-    const list = all.filter((p: any) => !p.cerrado_at);
-    return {
-      pendientes: list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
-      generadas: list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
-      surtidos: list.filter(p => p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
-      en_ruta: list.filter(p => p.enRuta && !p.fullyDelivered).length,
-      entregados: list.filter(p => p.fullyDelivered).length,
-      cerrados: all.filter((p: any) => !!p.cerrado_at).length,
-      todos: all.length,
-    };
-  }, [pedidos]);
-
-  const filtered = useMemo(() => {
-    const all = (pedidos ?? []);
-    let list = tab === 'cerrados' || tab === 'todos' ? all : all.filter((p: any) => !p.cerrado_at);
-    if (tab === 'pendientes') list = list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta);
-    else if (tab === 'generadas') list = list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta);
-    else if (tab === 'surtidos') list = list.filter(p => p.fullySurtido && !p.fullyDelivered && !p.enRuta);
-    else if (tab === 'en_ruta') list = list.filter(p => p.enRuta && !p.fullyDelivered);
-    else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered);
-    else if (tab === 'cerrados') list = list.filter((p: any) => !!p.cerrado_at);
-    if (search) {
-      const s = search.toLowerCase();
-      list = list.filter(p =>
-        (p.clientes?.nombre ?? '').toLowerCase().includes(s) ||
-        (p.folio ?? '').toLowerCase().includes(s)
-      );
-    }
-    return list;
-  }, [pedidos, search, tab]);
+  // La V2 ya filtra pestaña y búsqueda en servidor; sólo recibimos la página actual.
+  const filtered = pedidos;
 
 
   const toggleSelect = (id: string) => {
@@ -825,9 +847,9 @@ export default function DemandaPage() {
 
 
   // Totals
-  const totalPedidos = filtered.length;
-  const totalLineasPendientes = filtered.reduce((s, p) => s + p.totalPendiente, 0);
-  const totalValorPendiente = filtered.reduce((s, p) => s + Number(p.totalValorPendiente ?? 0), 0);
+  const totalPedidos = totalCount;
+  const totalLineasPendientes = Number(pedidosResult?.totalPendiente ?? 0);
+  const totalValorPendiente = Number(pedidosResult?.totalValorPendiente ?? 0);
 
   return (
     <ListPage scroll>
@@ -987,10 +1009,10 @@ export default function DemandaPage() {
             <Input placeholder="Folio o cliente..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        {(vendedorFilter.length > 0 || search || desde !== weekStart || hasta !== weekEnd || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
+        {(vendedorFilter.length > 0 || search || desde || hasta || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
           <Button variant="ghost" size="sm" className="h-9" onClick={() => {
             setVendedorFilter([]); setSearch(''); setTab('pendientes');
-            setDesde(weekStart); setHasta(weekEnd); setFechaTipo('fecha');
+            setDesde(''); setHasta(''); setFechaTipo('fecha');
           }}>
             <X className="h-3.5 w-3.5 mr-1" /> Limpiar
           </Button>
@@ -1030,7 +1052,7 @@ export default function DemandaPage() {
       )}
 
 
-      {isLoading && <p className="text-muted-foreground">Cargando...</p>}
+      {(isLoading || isFetching) && <p className="text-muted-foreground">Cargando pedidos...</p>}
       {pedidosError && (
         <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           No se pudieron cargar los pedidos: {(pedidosError as any)?.message ?? 'error de consulta'}
@@ -1127,7 +1149,11 @@ export default function DemandaPage() {
                   </TableCell>
                   <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
                   <TableCell className="text-center py-2" onClick={e => e.stopPropagation()}>
-                    {pedido.estadoOdoo === 'entregado' ? (
+                    {pedido.status === 'cancelado' ? (
+                      <Badge variant="outline" className="text-[10px] border-red-500 text-red-700">Cancelado</Badge>
+                    ) : pedido.status === 'facturado' ? (
+                      <Badge variant="outline" className="text-[10px] border-emerald-600 text-emerald-700">Facturado</Badge>
+                    ) : pedido.estadoOdoo === 'entregado' ? (
                       <Badge className="text-[10px] bg-green-600 text-white hover:bg-green-600">Entregado</Badge>
                     ) : pedido.estadoOdoo === 'en_ruta' ? (
                       <Badge className="text-[10px] bg-purple-600 text-white hover:bg-purple-600">En ruta</Badge>
@@ -1200,6 +1226,25 @@ export default function DemandaPage() {
           </TableBody>
         </Table>
       </div>
+
+      {totalCount > 0 && (
+        <div className="flex items-center justify-between gap-3 border border-border rounded-lg bg-card px-3 py-2">
+          <span className="text-xs text-muted-foreground">
+            Mostrando {pageStart.toLocaleString()}–{pageEnd.toLocaleString()} de {totalCount.toLocaleString()} pedidos
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => goToPage(page - 1)} disabled={page <= 0 || isFetching}>
+              Anterior
+            </Button>
+            <span className="text-xs text-muted-foreground min-w-[100px] text-center">
+              Página {(page + 1).toLocaleString()} de {totalPages.toLocaleString()}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => goToPage(page + 1)} disabled={page + 1 >= totalPages || isFetching}>
+              Siguiente
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Create entregas dialog */}
       <Dialog open={showCrearDialog} onOpenChange={setShowCrearDialog}>
