@@ -107,7 +107,7 @@ export default function EntregaListPage() {
 
   // borrador, surtido, asignado can be bulk-processed
   const selectableIds = useMemo(() =>
-    new Set(filtered.filter((e: any) => !['hecho', 'cancelado'].includes(e.status)).map((e: any) => e.id)),
+    new Set<string>(filtered.filter((e: any) => !['hecho', 'cancelado'].includes(e.status)).map((e: any) => String(e.id))),
     [filtered]
   );
 

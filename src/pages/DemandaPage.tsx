@@ -505,8 +505,8 @@ export default function DemandaPage() {
 
 
       // 2) Get current stock for all needed products in this almacen
-      const productoIds = Array.from(new Set(
-        pedidosConLineas.flatMap(p => p.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0).map((l: any) => l.producto_id))
+      const productoIds = Array.from(new Set<string>(
+        pedidosConLineas.flatMap(p => p.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0).map((l: any) => String(l.producto_id)))
       ));
       const stockMap: Record<string, number> = {};
       if (productoIds.length > 0) {

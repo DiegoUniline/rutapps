@@ -10877,6 +10877,20 @@ export type Database = {
           vendedor_ruta_id: string
         }[]
       }
+      fn_logistica_pedidos_workspace_v2: {
+        Args: {
+          p_empresa_id: string
+          p_fecha_desde?: string
+          p_fecha_hasta?: string
+          p_fecha_tipo?: string
+          p_offset?: number
+          p_page_size?: number
+          p_search?: string
+          p_tab?: string
+          p_vendedor_ids?: string[]
+        }
+        Returns: Json
+      }
       fn_my_team_access: { Args: never; Returns: Json }
       fn_netear_linea_promo: { Args: { _linea_id: string }; Returns: undefined }
       fn_recalc_venta_header: {
