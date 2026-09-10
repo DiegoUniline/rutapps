@@ -1,0 +1,17 @@
+name: Validate Estado Cuenta PDF
+
+on:
+  push:
+    branches:
+      - validate-estado-cuenta-pdf-20260910
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build application
+        run: bun run build
