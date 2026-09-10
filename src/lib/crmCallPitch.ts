@@ -125,7 +125,7 @@ export function normalizeCrmCallPitch(value: unknown): CrmCallPitchConfig {
 }
 
 export function personalizePitch(text: string, leadName?: string | null) {
-  return text.replaceAll('[Nombre]', leadName?.trim() || '');
+  return text.split('[Nombre]').join(leadName?.trim() || '');
 }
 
 export function newPitchId(prefix = 'item') {
