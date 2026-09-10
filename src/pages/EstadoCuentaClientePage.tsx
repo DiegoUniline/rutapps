@@ -1,4 +1,4 @@
-import { pagadoRealVenta } from '@/lib/ventaCerrada';
+import { pagadoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -133,7 +133,7 @@ function useClienteDetalle(clienteId: string | null) {
       const [ventasRes, cobrosRes] = await Promise.all([
         supabase
           .from('ventas')
-          .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, cobro_aplicaciones(monto_aplicado, cobros!inner(status))')
+          .select('id, folio, fecha, total, total_efectivo, cerrado_at, cerrado_snapshot, saldo_pendiente, condicion_pago, status, cobro_aplicaciones(monto_aplicado, cobros!inner(status))')
           .eq('empresa_id', empresa!.id)
           .eq('cliente_id', clienteId!)
           .neq('status', 'cancelado')
@@ -240,14 +240,17 @@ export default function EstadoCuentaClientePage() {
         limite_credito: selected.limite_credito,
         dias_credito: selected.dias_credito,
       },
-      ventas: detalle.ventas.map(v => ({
-        folio: v.folio ?? v.id.slice(0, 8),
-        fecha: v.fecha,
-        total: v.total ?? 0,
-        saldo_pendiente: v.saldo_pendiente ?? 0,
-        status: v.status,
-        condicion_pago: v.condicion_pago ?? '',
-      })),
+      ventas: detalle.ventas.map(v => {
+        const totalReal = totalEfectivoVenta(v);
+        return {
+          folio: v.folio ?? v.id.slice(0, 8),
+          fecha: v.fecha,
+          total: totalReal,
+          saldo_pendiente: Math.min(Math.max(0, Number(v.saldo_pendiente ?? 0)), totalReal),
+          status: v.status,
+          condicion_pago: v.condicion_pago ?? '',
+        };
+      }),
       cobros: detalle.cobros.map(c => ({
         fecha: c.fecha,
         monto: c.monto ?? 0,
@@ -265,9 +268,16 @@ export default function EstadoCuentaClientePage() {
 
   // ── Detail view ──
   if (selectedId && selected) {
-    const totalVentas = detalle?.ventas.reduce((s, v) => s + (v.total ?? 0), 0) ?? 0;
-    const totalSaldo = detalle?.ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0) ?? 0;
-    const totalCobrado = detalle?.cobros.reduce((s, c) => s + (c.monto ?? 0), 0) ?? 0;
+    // Los KPIs usan el mismo universo contable para que cuadren:
+    // vendido real = liquidado + saldo pendiente.
+    const totalVentas = detalle?.ventas.reduce((sum, v) => sum + totalEfectivoVenta(v), 0) ?? 0;
+    const totalSaldo = detalle?.ventas.reduce((sum, v) => {
+      const totalReal = totalEfectivoVenta(v);
+      const saldo = Math.max(0, Number(v.saldo_pendiente ?? 0));
+      return sum + Math.min(saldo, totalReal);
+    }, 0) ?? 0;
+    const totalLiquidado = Math.max(0, totalVentas - totalSaldo);
+    const totalCobrosRegistrados = detalle?.cobros.reduce((s, c) => s + (c.monto ?? 0), 0) ?? 0;
 
     return (
       <div className="p-4 space-y-4 min-h-full">
@@ -300,8 +310,9 @@ export default function EstadoCuentaClientePage() {
               <p className="text-lg font-bold text-foreground">{fmt(totalVentas)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase">Total cobrado</p>
-              <p className="text-lg font-bold text-success">{fmt(totalCobrado)}</p>
+              <p className="text-[10px] text-muted-foreground uppercase">Total liquidado</p>
+              <p className="text-lg font-bold text-success">{fmt(totalLiquidado)}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Cobros registrados: {fmt(totalCobrosRegistrados)}</p>
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase">Saldo pendiente</p>

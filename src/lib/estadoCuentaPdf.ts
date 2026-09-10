@@ -235,8 +235,10 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
   // ═════════════════ KPI CARDS ═════════════════
   const ventasValidas = ventas.filter(v => v.status !== 'cancelado');
   const totalVendido = ventasValidas.reduce((s, v) => s + v.total, 0);
-  const totalPendiente = ventasValidas.reduce((s, v) => s + v.saldo_pendiente, 0);
-  const totalCobrado = cobros.reduce((s, c) => s + c.monto, 0);
+  const totalPendiente = ventasValidas.reduce((s, v) => s + Math.min(Math.max(0, v.saldo_pendiente), v.total), 0);
+  // KPI conciliado: vendido = liquidado + pendiente. Los cobros se muestran aparte
+  // en el historial de pagos como movimientos efectivamente registrados.
+  const totalLiquidado = Math.max(0, totalVendido - totalPendiente);
   const ultimoCobro = cobros.length > 0
     ? cobros.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))[0]
     : null;
@@ -264,10 +266,10 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
       render: (cx, cy) => drawMoneyMixed(doc, totalVendido, cx + 3, cy + 15, sym, 16, 9),
     },
     {
-      label: 'TOTAL COBRADO',
+      label: 'TOTAL LIQUIDADO',
       render: (cx, cy) => {
         doc.setTextColor(...TEXT);
-        drawMoneyMixed(doc, totalCobrado, cx + 3, cy + 15, sym, 16, 9);
+        drawMoneyMixed(doc, totalLiquidado, cx + 3, cy + 15, sym, 16, 9);
       },
     },
     {
