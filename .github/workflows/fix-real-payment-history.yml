@@ -1,0 +1,37 @@
+name: Fix Real Payment History
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply accounting consistency patch
+        run: python scripts/fix_real_payment_history.py
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build application
+        run: bun run build
+      - name: Commit accounting consistency fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/EstadoCuentaClientePage.tsx src/pages/PuntoVentaPage.tsx supabase/migrations/20260910183000_reconcile_historical_direct_sale_payments.sql
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "fix: require real payments for liquidated sales"
+            git push origin HEAD:main
+          fi
