@@ -26,6 +26,7 @@ Deno.serve(async (req) => {
     let listaPrecioId: string | null = cfg.lista_precios_default_id;
     if (tokenStr) {
       const payload = await verifyToken(tokenStr, Deno.env.get("TIENDA_JWT_SECRET")!);
+      if (!payload) return json({ error: "Tu sesión venció. Inicia sesión nuevamente.", code: "session_expired" }, 401);
       if (payload && payload.empresa_id === cfg.empresa_id) {
         const { data: cli } = await supabase
           .from("clientes")
