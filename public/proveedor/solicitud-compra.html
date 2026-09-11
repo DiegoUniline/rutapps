@@ -125,6 +125,18 @@
       .item{grid-template-columns:1fr 1fr;padding:13px;border-radius:13px}.item>div:first-child{grid-column:1/-1}.availability{grid-column:1/-1;padding-top:0}.item .obs{grid-column:1/-1}.requested strong{font-size:17px}
       .sticky-inner{align-items:stretch;flex-direction:column}.helper{text-align:center}.actions{display:grid;grid-template-columns:1fr 1.25fr}.btn{width:100%;padding:11px 8px}.screen-card{margin:34px 10px;padding:30px 20px}
     }
+    .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:18px;z-index:80}
+    .modal-overlay.open{display:flex}
+    .modal{width:100%;max-width:470px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(15,23,42,.28);overflow:hidden;animation:pop .18s ease}
+    @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+    .modal-head{display:flex;gap:12px;align-items:center;padding:20px 22px 0}
+    .modal-ico{width:44px;height:44px;border-radius:13px;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-size:21px;font-weight:900;flex:none}
+    .modal-head h3{margin:0;font-size:18px;letter-spacing:-.3px}
+    .modal-body{padding:14px 22px 4px;color:var(--muted);font-size:14px;line-height:1.6}
+    .modal-body strong{color:var(--ink)}
+    .modal-warn{margin-top:12px;background:var(--danger-soft);border:1px solid #f4c2c2;color:#9f1239;border-radius:11px;padding:11px 13px;font-size:13px;font-weight:700;line-height:1.5}
+    .modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:18px 22px 22px}
+    @media(max-width:520px){.modal-foot{flex-direction:column-reverse}.modal-foot .btn{width:100%}}
   </style>
 </head>
 <body>
