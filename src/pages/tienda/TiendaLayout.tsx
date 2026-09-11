@@ -5,6 +5,7 @@ import { useTienda } from "@/tienda/TiendaContext";
 import PedidoAsistente from "@/components/tienda/PedidoAsistente";
 import PedidoSugeridoView from "@/components/tienda/PedidoSugeridoView";
 import "@/tienda/tienda.css";
+import "@/tienda/tienda-redesign.css";
 
 function useTiendaPWA(t: ReturnType<typeof useTienda>) {
   useEffect(() => {
@@ -89,11 +90,12 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
     <div className="tienda-root" data-plantilla={t.config.plantilla || "clasica"}>
       <header className="tienda-header">
         <div className="tienda-header-top">
-          <span>📦 Envíos a domicilio · Pedidos al mayoreo</span>
+          <span>Envíos a domicilio · Pedidos en línea</span>
           <span>
-            {t.isAuth ? <>Hola, <strong>{t.email}</strong></> : <Link to={`${base}/login`}>Iniciar sesión</Link>}
+            {t.isAuth ? <>Sesión activa · <strong>{t.email}</strong></> : <Link to={`${base}/login`}>Acceso para clientes</Link>}
           </span>
         </div>
+
         <div className="tienda-header-main">
           <Link to={base} className="tienda-logo">
             {t.config.logo_url ? (
@@ -103,47 +105,70 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
             ) : null}
             <span className="tienda-logo-text">{t.config.nombre_tienda}</span>
           </Link>
+
           <form className="tienda-search" onSubmit={onSearch}>
-            <Search size={16} className="tienda-search-icon" />
-            <input name="q" placeholder="¿Qué estás buscando hoy?" />
+            <Search size={17} className="tienda-search-icon" />
+            <input name="q" placeholder="Buscar por producto o código…" autoComplete="off" />
           </form>
+
           <div className="tienda-header-actions">
             {t.isAuth ? (
-              <>
-                <Link to={`${base}?vista=pedido-sugerido`} className="tienda-btn tienda-btn-ghost" title="Pedido sugerido">
-                  <Sparkles size={16} /> <span className="hidden xl:inline">Sugerido</span>
-                </Link>
-                <Link to={`${base}/mis-pedidos`} className="tienda-btn tienda-btn-ghost">
-                  <Package size={16} /> Mis pedidos
-                </Link>
-                <Link to={`${base}/cambiar-password`} className="tienda-btn tienda-btn-ghost" title="Cambiar contraseña">
-                  <KeyRound size={16} />
-                </Link>
-                <button onClick={() => { t.logout(); nav(base); }} className="tienda-btn tienda-btn-ghost" title="Cerrar sesión">
-                  <LogOut size={16} />
-                </button>
-              </>
+              <details className="tienda-account-menu">
+                <summary>
+                  <User size={16} /> Mi cuenta
+                </summary>
+                <div className="tienda-account-popover">
+                  <div className="tienda-account-email">{t.email}</div>
+                  <Link to={`${base}?vista=pedido-sugerido`}>
+                    <Sparkles size={15} /> Pedido sugerido
+                  </Link>
+                  <Link to={`${base}/mis-pedidos`}>
+                    <Package size={15} /> Mis pedidos
+                  </Link>
+                  <Link to={`${base}/cambiar-password`}>
+                    <KeyRound size={15} /> Cambiar contraseña
+                  </Link>
+                  <button onClick={() => { t.logout(); nav(base); }}>
+                    <LogOut size={15} /> Cerrar sesión
+                  </button>
+                </div>
+              </details>
             ) : (
-              <Link to={`${base}/login`} className="tienda-btn tienda-btn-outline">
+              <Link to={`${base}/login`} className="tienda-btn tienda-btn-ghost tienda-account-login">
                 <User size={16} /> Mi cuenta
               </Link>
             )}
+
             <Link to={`${base}/carrito`} className="tienda-btn tienda-btn-primary">
-              <ShoppingCart size={16} /> Carrito
+              <ShoppingCart size={16} /> <span>Carrito</span>
               {t.cartCount > 0 && <span className="tienda-cart-badge">{t.cartCount}</span>}
             </Link>
           </div>
         </div>
-        <nav className="tienda-nav">
+
+        <nav className="tienda-nav" aria-label="Navegación de la tienda">
           <Link to={base} className={`tienda-nav-chip ${isActive(base) && !suggested ? "active" : ""}`}>Inicio</Link>
           <Link to={`${base}/productos`} className={`tienda-nav-chip ${loc.pathname.includes("/productos") ? "active" : ""}`}>
-            Catálogo
+            Productos
           </Link>
-          {t.isAuth && <Link to={`${base}?vista=pedido-sugerido`} className={`tienda-nav-chip ${suggested ? "active" : ""}`}>✨ Mi pedido sugerido</Link>}
-          {t.isAuth && <Link to={`${base}/mis-pedidos`} className={`tienda-nav-chip ${isActive(`${base}/mis-pedidos`) ? "active" : ""}`}>Mis pedidos</Link>}
+          {t.isAuth && (
+            <Link to={`${base}?vista=pedido-sugerido`} className={`tienda-nav-chip ${suggested ? "active" : ""}`}>
+              Pedido sugerido
+            </Link>
+          )}
+          {t.isAuth && (
+            <Link to={`${base}/mis-pedidos`} className={`tienda-nav-chip ${isActive(`${base}/mis-pedidos`) ? "active" : ""}`}>
+              Mis pedidos
+            </Link>
+          )}
           {t.config.whatsapp_pedidos && (
-            <a className="tienda-nav-chip" href={`https://wa.me/${t.config.whatsapp_pedidos.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
-              💬 WhatsApp
+            <a
+              className="tienda-nav-chip"
+              href={`https://wa.me/${t.config.whatsapp_pedidos.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              WhatsApp
             </a>
           )}
         </nav>
