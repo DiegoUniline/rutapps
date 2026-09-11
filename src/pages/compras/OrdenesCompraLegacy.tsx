@@ -6,7 +6,7 @@ import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { Plus, List, Package, ChevronDown, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
-import { CompraExpandedRow } from './compras/CompraExpandedRow';
+import { CompraExpandedRow } from './CompraExpandedRow';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';

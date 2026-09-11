@@ -7433,6 +7433,126 @@ export type Database = {
           },
         ]
       }
+      solicitud_compra_eventos: {
+        Row: {
+          actor_id: string | null
+          actor_tipo: string
+          created_at: string
+          detalle: Json
+          empresa_id: string
+          id: string
+          solicitud_id: string
+          tipo: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_tipo?: string
+          created_at?: string
+          detalle?: Json
+          empresa_id: string
+          id?: string
+          solicitud_id: string
+          tipo: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_tipo?: string
+          created_at?: string
+          detalle?: Json
+          empresa_id?: string
+          id?: string
+          solicitud_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitud_compra_eventos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitud_compra_eventos_solicitud_id_fkey"
+            columns: ["solicitud_id"]
+            isOneToOne: false
+            referencedRelation: "solicitudes_compra"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitud_compra_lineas: {
+        Row: {
+          cantidad_aceptada: number | null
+          cantidad_solicitada: number
+          cantidad_surtida: number | null
+          costo_unitario: number | null
+          created_at: string
+          disponible: boolean | null
+          fecha_entrega: string | null
+          id: string
+          observaciones: string | null
+          orden: number
+          producto_codigo: string | null
+          producto_id: string | null
+          producto_nombre: string
+          solicitud_id: string
+          unidad: string | null
+          updated_at: string
+        }
+        Insert: {
+          cantidad_aceptada?: number | null
+          cantidad_solicitada?: number
+          cantidad_surtida?: number | null
+          costo_unitario?: number | null
+          created_at?: string
+          disponible?: boolean | null
+          fecha_entrega?: string | null
+          id?: string
+          observaciones?: string | null
+          orden?: number
+          producto_codigo?: string | null
+          producto_id?: string | null
+          producto_nombre: string
+          solicitud_id: string
+          unidad?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cantidad_aceptada?: number | null
+          cantidad_solicitada?: number
+          cantidad_surtida?: number | null
+          costo_unitario?: number | null
+          created_at?: string
+          disponible?: boolean | null
+          fecha_entrega?: string | null
+          id?: string
+          observaciones?: string | null
+          orden?: number
+          producto_codigo?: string | null
+          producto_id?: string | null
+          producto_nombre?: string
+          solicitud_id?: string
+          unidad?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitud_compra_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitud_compra_lineas_solicitud_id_fkey"
+            columns: ["solicitud_id"]
+            isOneToOne: false
+            referencedRelation: "solicitudes_compra"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       solicitud_traspaso_historial: {
         Row: {
           accion: string
@@ -7617,6 +7737,110 @@ export type Database = {
             columns: ["traspaso_id"]
             isOneToOne: false
             referencedRelation: "traspasos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitudes_compra: {
+        Row: {
+          almacen_id: string | null
+          borrador_proveedor_at: string | null
+          cc_emails: string[]
+          compra_id: string | null
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          enviado_at: string | null
+          fecha_requerida: string | null
+          folio: string | null
+          id: string
+          notas: string | null
+          proveedor_email: string | null
+          proveedor_id: string | null
+          proveedor_nombre: string
+          proveedor_observaciones: string | null
+          public_token: string
+          respondido_at: string | null
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+          visto_at: string | null
+        }
+        Insert: {
+          almacen_id?: string | null
+          borrador_proveedor_at?: string | null
+          cc_emails?: string[]
+          compra_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          enviado_at?: string | null
+          fecha_requerida?: string | null
+          folio?: string | null
+          id?: string
+          notas?: string | null
+          proveedor_email?: string | null
+          proveedor_id?: string | null
+          proveedor_nombre?: string
+          proveedor_observaciones?: string | null
+          public_token?: string
+          respondido_at?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          visto_at?: string | null
+        }
+        Update: {
+          almacen_id?: string | null
+          borrador_proveedor_at?: string | null
+          cc_emails?: string[]
+          compra_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          enviado_at?: string | null
+          fecha_requerida?: string | null
+          folio?: string | null
+          id?: string
+          notas?: string | null
+          proveedor_email?: string | null
+          proveedor_id?: string | null
+          proveedor_nombre?: string
+          proveedor_observaciones?: string | null
+          public_token?: string
+          respondido_at?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          visto_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitudes_compra_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_compra_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_compra_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
         ]
@@ -11588,6 +11812,7 @@ export type Database = {
         Args: { p_key: string; p_value: Json }
         Returns: undefined
       }
+      solicitud_compra_empresa_actual: { Args: never; Returns: string }
       stock_a_la_fecha: {
         Args: { p_empresa_id: string; p_fecha: string }
         Returns: {
