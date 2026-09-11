@@ -42,6 +42,7 @@ export default function MermasPage() {
   const { empresa } = useAuth();
   const { hasPermiso, loading: permisosLoading } = usePermisos();
   const { data: almacenes } = useAlmacenes();
+  const { data: almacenesConMermas } = useAlmacenes({ includeMermas: true });
   const { data: motivos } = useMermaMotivos();
   const { data: productos } = useProductosForSelect();
   const [desde, setDesde] = useState('');
@@ -65,6 +66,10 @@ export default function MermasPage() {
 
   const totalCosto = useMemo(() => lineas.reduce((s, l) => s + l.cantidad * l.costo_unitario, 0), [lineas]);
   const totalVenta = useMemo(() => lineas.reduce((s, l) => s + l.cantidad * l.precio_venta_unitario, 0), [lineas]);
+  const almacenDestinoMerma = useMemo(
+    () => (almacenesConMermas ?? []).find((a: any) => !!a.es_merma)?.nombre ?? 'Mermas',
+    [almacenesConMermas],
+  );
 
   const resetForm = () => {
     setAlmacenId('');
@@ -183,6 +188,7 @@ export default function MermasPage() {
               <TableHead>Folio</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Almacén origen</TableHead>
+              <TableHead>Almacén destino</TableHead>
               <TableHead>Motivo</TableHead>
               <TableHead>Usuario</TableHead>
               <TableHead className="text-right">Costo perdido</TableHead>
@@ -193,9 +199,9 @@ export default function MermasPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={9} className="text-center py-8">Cargando…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center py-8">Cargando…</TableCell></TableRow>
             ) : (mermas ?? []).length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Sin mermas registradas</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Sin mermas registradas</TableCell></TableRow>
             ) : (mermas ?? []).map((m: any) => (
               <TableRow
                 key={m.id}
@@ -205,6 +211,7 @@ export default function MermasPage() {
                 <TableCell className="font-mono font-semibold">{m.folio}</TableCell>
                 <TableCell>{fmtDate(m.fecha)}</TableCell>
                 <TableCell>{m.almacenes?.nombre ?? '—'}</TableCell>
+                <TableCell>{almacenDestinoMerma}</TableCell>
                 <TableCell>{m.merma_motivos?.nombre ?? '—'}</TableCell>
                 <TableCell>{m.profiles?.nombre ?? '—'}</TableCell>
                 <TableCell className="text-right">{fmtMoney(m.total_costo)}</TableCell>
@@ -234,7 +241,7 @@ export default function MermasPage() {
             return (
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-[11px] text-muted-foreground font-semibold">Totales activas ({activas.length})</TableCell>
+                  <TableCell colSpan={6} className="text-[11px] text-muted-foreground font-semibold">Totales activas ({activas.length})</TableCell>
                   <TableCell className="text-right font-bold tabular-nums text-destructive">{fmtMoney(tc)}</TableCell>
                   <TableCell className="text-right font-bold tabular-nums">{fmtMoney(tv)}</TableCell>
                   <TableCell colSpan={2} />
