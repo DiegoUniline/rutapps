@@ -19,7 +19,7 @@ const admin = () => createClient(
 )
 
 const publicUrlFor = (token: string) =>
-  `https://rutapp.mx/proveedor/solicitud-compra.html?token=${encodeURIComponent(token)}`
+  `https://rutapp.mx/proveedor/solicitud-compra?token=${encodeURIComponent(token)}`
 
 const dateLabel = (value?: string | null) => {
   if (!value) return undefined
