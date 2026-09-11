@@ -139,13 +139,16 @@ Deno.serve(async (req) => {
         return json({ error: 'Solicitud y correo del proveedor son requeridos' }, 400)
       }
 
-      const [{ data: profile }, { data: solicitud, error: solicitudError }] = await Promise.all([
+      const [{ data: profile }, { data: solicitud, error: solicitudError }, { data: superAdmin }] = await Promise.all([
         sb.from('profiles').select('empresa_id').eq('id', user.id).maybeSingle(),
         sb.from('solicitudes_compra').select('*').eq('id', solicitudId).maybeSingle(),
+        sb.from('super_admins').select('id').eq('user_id', user.id).maybeSingle(),
       ])
       if (solicitudError) throw solicitudError
-      if (!solicitud || !profile?.empresa_id || solicitud.empresa_id !== profile.empresa_id) {
+      const esSuperAdmin = !!superAdmin?.id
+      if (!solicitud || (!esSuperAdmin && (!profile?.empresa_id || solicitud.empresa_id !== profile.empresa_id))) {
         return json({ error: 'No tienes acceso a esta solicitud' }, 403)
+
       }
       if (['convertida', 'cancelada'].includes(solicitud.status)) {
         return json({ error: 'Esta solicitud ya no se puede enviar' }, 409)
