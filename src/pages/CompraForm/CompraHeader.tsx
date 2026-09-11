@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, Save, Trash2, Ban, CheckCircle2, PackageCheck, AlertTriangle, DollarSign, FileText, FileSpreadsheet, Loader2, Pencil, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
@@ -6,6 +6,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadOrdenCompraPdf, downloadOrdenCompraExcel } from '@/lib/ordenCompraPdf';
 import { toast } from 'sonner';
+import { setUnsavedChanges } from '@/lib/unsavedChanges';
 
 
 interface Props {
@@ -36,6 +37,26 @@ interface Props {
 
 export function CompraHeader(p: Props) {
   const { fmt } = useCurrency();
+
+  useEffect(() => {
+    const key = `compra:${p.form.id ?? (p.isNew ? 'nueva' : 'sin-id')}`;
+    const label = p.isNew ? 'Nueva compra' : `Compra ${p.form.folio ?? ''}`.trim();
+    setUnsavedChanges(key, label, p.dirty);
+
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!p.dirty) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    if (p.dirty) window.addEventListener('beforeunload', beforeUnload);
+
+    return () => {
+      setUnsavedChanges(key, label, false);
+      window.removeEventListener('beforeunload', beforeUnload);
+    };
+  }, [p.dirty, p.form.id, p.form.folio, p.isNew]);
+
   return (
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -130,7 +151,7 @@ function StatusBar(p: Props) {
 function ConfirmDialog({ confirmDialog, setConfirmDialog, handleStatusChange, handleCancel, recibirTodoPendiente, requestPin }: Props) {
   return (
     <AlertDialog open={confirmDialog?.open} onOpenChange={open => { if (!open) setConfirmDialog(null); }}>
-      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirmDialog?.title}</AlertDialogTitle><AlertDialogDescription>{confirmDialog?.description}</AlertDialogDescription></AlertDialogHeader>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirmDialog?.title}</AlertDialogTitle><AlertDialogDescription>{confirmDialog?.description}</AlertDialogHeader>
         <AlertDialogFooter><AlertDialogCancel>No, volver</AlertDialogCancel><AlertDialogAction className={cn(confirmDialog?.action === 'cancelar' && "bg-destructive text-destructive-foreground hover:bg-destructive/90")} onClick={() => {
           if (confirmDialog?.action === 'cancelar') {
             requestPin('Cancelar compra', 'Ingresa tu PIN', () => handleCancel());
