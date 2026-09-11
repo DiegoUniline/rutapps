@@ -7,6 +7,7 @@ import CrmPitchHeaderActions from "./components/admin/CrmPitchHeaderActions";
 import GlobalCrmCancellationInsight from "./components/admin/GlobalCrmCancellationInsight";
 import GlobalCrmCancellationsList from "./components/admin/GlobalCrmCancellationsList";
 import AdminCallPitchLibrary from "./components/admin/AdminCallPitchLibrary";
+import SolicitudCompraProveedorPublicaPage from "./pages/SolicitudCompraProveedorPublicaPage";
 import "./index.css";
 import { startAutoBackup, restoreFromStorageBackup } from "./lib/offlineBackup";
 import { initObservability } from "./lib/observability";
@@ -57,13 +58,27 @@ if (isPreviewHost || isInIframe) {
   })();
 }
 
-createRoot(document.getElementById("root")!).render(
-  <HelmetProvider>
-    <App />
-    <GlobalCrmPitchLauncher />
-    <CrmPitchHeaderActions />
-    <GlobalCrmCancellationInsight />
-    <GlobalCrmCancellationsList />
-    <AdminCallPitchLibrary />
-  </HelmetProvider>
-);
+const root = createRoot(document.getElementById("root")!);
+const isSupplierRequestPublic =
+  window.location.pathname === '/proveedor/solicitud-compra' ||
+  window.location.pathname === '/proveedor/solicitud-compra.html';
+
+if (isSupplierRequestPublic) {
+  // Supplier portal is deliberately outside AuthProvider/App routes: token-only, no RutApp account.
+  root.render(
+    <HelmetProvider>
+      <SolicitudCompraProveedorPublicaPage />
+    </HelmetProvider>
+  );
+} else {
+  root.render(
+    <HelmetProvider>
+      <App />
+      <GlobalCrmPitchLauncher />
+      <CrmPitchHeaderActions />
+      <GlobalCrmCancellationInsight />
+      <GlobalCrmCancellationsList />
+      <AdminCallPitchLibrary />
+    </HelmetProvider>
+  );
+}
