@@ -105,7 +105,7 @@ export default function SolicitudCompraProveedorPublicaPage() {
             id: line.id,
             disponible: line.disponible !== false,
             cantidad_surtida: line.disponible === false ? 0 : Number(line.cantidad_surtida || 0),
-            costo_unitario: line.disponible === false || line.costo_unitario === '' as any ? null : line.costo_unitario,
+            costo_unitario: line.disponible === false || line.costo_unitario == null ? null : Number(line.costo_unitario),
             fecha_entrega: line.disponible === false ? null : line.fecha_entrega || null,
             observaciones: line.observaciones || '',
           })),
