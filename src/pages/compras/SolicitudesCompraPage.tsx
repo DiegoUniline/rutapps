@@ -26,7 +26,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 
 const fmtMoney = (n: any) => Number(n || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 const fmtDate = (v?: string | null) => v ? new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${v}T12:00:00`)) : '—';
-const publicUrl = (token?: string | null) => token ? `https://rutapp.mx/proveedor/solicitud-compra.html?token=${encodeURIComponent(token)}` : '';
+const publicUrl = (token?: string | null) => token ? `https://rutapp.mx/proveedor/solicitud-compra?token=${encodeURIComponent(token)}` : '';
 
 interface DraftLine {
   id?: string;
