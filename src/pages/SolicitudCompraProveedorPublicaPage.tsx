@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, Loader2, LockKeyhole, Package2, Save } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, LockKeyhole, Package2, Save, X } from 'lucide-react';
 
 const ENDPOINT = 'https://pkdwemunxxpafpmiqxiq.supabase.co/functions/v1/solicitud-compra-proveedor';
 
@@ -49,6 +49,7 @@ export default function SolicitudCompraProveedorPublicaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [closed, setClosed] = useState(false);
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -87,10 +88,6 @@ export default function SolicitudCompraProveedorPublicaPage() {
 
   const submit = async (action: 'save' | 'close') => {
     if (!token || saving) return;
-    if (action === 'close') {
-      const ok = window.confirm('¿Cerrar esta solicitud? Después de cerrarla ya no podrás editarla y este enlace dejará de funcionar.');
-      if (!ok) return;
-    }
     setSaving(true);
     setError('');
     setNotice('');
@@ -125,6 +122,11 @@ export default function SolicitudCompraProveedorPublicaPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const confirmClose = () => {
+    setCloseConfirmOpen(false);
+    void submit('close');
   };
 
   if (loading) {
@@ -228,10 +230,50 @@ export default function SolicitudCompraProveedorPublicaPage() {
           <p className="hidden text-xs text-[#667085] sm:block">Guarda para continuar después. Cerrar es definitivo.</p>
           <div className="grid grid-cols-2 gap-2 sm:flex">
             <button disabled={saving} onClick={() => void submit('save')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d0d5dd] bg-white px-5 py-3 text-sm font-black text-[#344054] disabled:opacity-50"><Save className="h-4 w-4" /> Guardar</button>
-            <button disabled={saving} onClick={() => void submit('close')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0061e8] px-5 py-3 text-sm font-black text-white shadow-[0_8px_20px_rgba(0,97,232,.22)] hover:bg-[#004fc0] disabled:opacity-50">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />} Cerrar solicitud</button>
+            <button disabled={saving} onClick={() => setCloseConfirmOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0061e8] px-5 py-3 text-sm font-black text-white shadow-[0_8px_20px_rgba(0,97,232,.22)] hover:bg-[#004fc0] disabled:opacity-50">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />} Cerrar solicitud</button>
           </div>
         </div>
       </div>
+
+      {closeConfirmOpen && (
+        <div className="fixed inset-0 z-[10020] flex items-end justify-center bg-[#101828]/50 p-3 backdrop-blur-[2px] sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="close-request-title">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/70 bg-white shadow-[0_28px_80px_rgba(16,24,40,.28)]">
+            <div className="h-1.5 bg-gradient-to-r from-[#0061e8] via-[#3184ef] to-[#ff7a00]" />
+            <div className="p-5 sm:p-6">
+              <div className="flex items-start gap-4">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#eef5ff] text-[#0061e8]">
+                  <LockKeyhole className="h-6 w-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 id="close-request-title" className="text-xl font-black tracking-tight text-[#172033]">¿Cerrar esta solicitud?</h2>
+                  <p className="mt-2 text-sm leading-6 text-[#667085]">Tu respuesta se enviará a <strong className="text-[#344054]">{data.empresa.nombre}</strong> y quedará cerrada definitivamente.</p>
+                </div>
+                <button type="button" onClick={() => setCloseConfirmOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#98a2b3] transition hover:bg-[#f2f4f7] hover:text-[#344054]" aria-label="Cerrar confirmación">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <div className="flex gap-3">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                  <div>
+                    <p className="text-sm font-black text-amber-900">Esta acción no se puede deshacer</p>
+                    <p className="mt-1 text-xs leading-5 text-amber-800">Después de cerrar, ya no podrás modificar cantidades, costos ni fechas. El enlace también quedará desactivado.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setCloseConfirmOpen(false)} className="rounded-xl border border-[#d0d5dd] bg-white px-4 py-3 text-sm font-black text-[#344054] transition hover:bg-[#f8fafc]">Cancelar</button>
+                <button type="button" onClick={confirmClose} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0061e8] px-4 py-3 text-sm font-black text-white shadow-[0_8px_20px_rgba(0,97,232,.2)] transition hover:bg-[#004fc0]">
+                  <LockKeyhole className="h-4 w-4" /> Sí, cerrar solicitud
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`.public-input{width:100%;min-height:40px;border:1px solid #d0d5dd;border-radius:10px;background:#fff;padding:9px 10px;color:#172033;outline:none;font:inherit;font-size:13px}.public-input:focus{border-color:#0061e8;box-shadow:0 0 0 3px rgba(0,97,232,.1)}.public-input:disabled{background:#f2f4f7;color:#98a2b3}`}</style>
     </PublicShell>
   );
