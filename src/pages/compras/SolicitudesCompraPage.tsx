@@ -16,10 +16,10 @@ import { calcularTotalesCompra } from '@/lib/compraAjustes';
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   borrador: { label: 'Borrador', cls: 'bg-slate-100 text-slate-700' },
-  enviada: { label: 'Enviada', cls: 'bg-blue-50 text-blue-700' },
-  vista: { label: 'Vista por proveedor', cls: 'bg-cyan-50 text-cyan-700' },
-  borrador_proveedor: { label: 'Proveedor preparando', cls: 'bg-amber-50 text-amber-700' },
-  respondida: { label: 'Respondida', cls: 'bg-emerald-50 text-emerald-700' },
+  enviada: { label: 'Abierta', cls: 'bg-blue-50 text-blue-700' },
+  vista: { label: 'Abierta', cls: 'bg-blue-50 text-blue-700' },
+  borrador_proveedor: { label: 'Guardada', cls: 'bg-amber-50 text-amber-700' },
+  respondida: { label: 'Cerrada', cls: 'bg-emerald-50 text-emerald-700' },
   convertida: { label: 'Convertida a compra', cls: 'bg-violet-50 text-violet-700' },
   cancelada: { label: 'Cancelada', cls: 'bg-red-50 text-red-700' },
 };
@@ -124,6 +124,7 @@ export default function SolicitudesCompraPage() {
   const catalogs = catalogsQuery.data || { proveedores: [], almacenes: [], productos: [] };
   const editable = isNew || header.status === 'borrador';
   const supplierResponded = header.status === 'respondida';
+  const publicLinkActive = !!header.public_token && !['respondida', 'convertida', 'cancelada'].includes(header.status);
   const selectedProvider = catalogs.proveedores.find((p: any) => p.id === header.proveedor_id);
 
   const setSid = (value?: string) => {
@@ -225,6 +226,7 @@ export default function SolicitudesCompraPage() {
   };
 
   const copyPublicLink = async () => {
+    if (!publicLinkActive) { toast.error('La solicitud ya está cerrada y no tiene enlace público activo'); return; }
     const url = publicUrl(header.public_token);
     if (!url) return;
     await navigator.clipboard.writeText(url);
@@ -349,7 +351,7 @@ export default function SolicitudesCompraPage() {
     <div className="p-3 sm:p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0"><button onClick={() => setSid()} className="p-2 rounded-lg border hover:bg-muted"><ArrowLeft className="h-4 w-4" /></button><div className="min-w-0"><div className="flex items-center gap-2"><h1 className="text-xl font-semibold truncate">{isNew ? 'Nueva solicitud' : header.folio}</h1>{!isNew && <Status value={header.status} />}</div><p className="text-xs text-muted-foreground mt-0.5">{isNew ? 'Prepara lo que necesitas solicitar al proveedor.' : header.proveedor_nombre}</p></div></div>
-        <div className="flex items-center gap-2 shrink-0">{editable && <button onClick={saveRequest} disabled={saving} className="btn-odoo-secondary">{saving ? 'Guardando…' : 'Guardar'}</button>}{!isNew && !['convertida','cancelada'].includes(header.status) && <button onClick={openSend} className="btn-odoo-primary flex items-center gap-1.5"><Send className="h-4 w-4" /> {header.enviado_at ? 'Reenviar' : 'Enviar al proveedor'}</button>}</div>
+        <div className="flex items-center gap-2 shrink-0">{editable && <button onClick={saveRequest} disabled={saving} className="btn-odoo-secondary">{saving ? 'Guardando…' : 'Guardar'}</button>}{!isNew && !['respondida','convertida','cancelada'].includes(header.status) && <button onClick={openSend} className="btn-odoo-primary flex items-center gap-1.5"><Send className="h-4 w-4" /> {header.enviado_at ? 'Reenviar' : 'Enviar al proveedor'}</button>}</div>
       </div>
 
       <section className="bg-card border border-border rounded-xl p-4">
@@ -368,11 +370,11 @@ export default function SolicitudesCompraPage() {
       </section>
 
       {!editable && <section className="grid lg:grid-cols-[1.25fr_.75fr] gap-4">
-        <div className="bg-card border border-border rounded-xl p-4"><div className="flex items-center justify-between mb-3"><div><h2 className="font-semibold text-sm">Seguimiento</h2><p className="text-xs text-muted-foreground">Trazabilidad de la solicitud.</p></div>{header.public_token && <button onClick={copyPublicLink} className="btn-odoo-secondary text-xs flex items-center gap-1"><Copy className="h-3.5 w-3.5" /> Copiar enlace</button>}</div><Timeline header={header} events={detailQuery.data?.eventos || []} /></div>
-        <div className="bg-card border border-border rounded-xl p-4"><h2 className="font-semibold text-sm">Respuesta del proveedor</h2><p className="text-xs text-muted-foreground mt-1 mb-3">{header.proveedor_observaciones || 'Sin observaciones generales.'}</p>{header.public_token && <a href={publicUrl(header.public_token)} target="_blank" rel="noreferrer" className="text-xs text-primary font-medium inline-flex items-center gap-1">Abrir portal del proveedor <ExternalLink className="h-3 w-3" /></a>}</div>
+        <div className="bg-card border border-border rounded-xl p-4"><div className="flex items-center justify-between mb-3"><div><h2 className="font-semibold text-sm">Seguimiento</h2><p className="text-xs text-muted-foreground">Trazabilidad de la solicitud.</p></div>{publicLinkActive && <button onClick={copyPublicLink} className="btn-odoo-secondary text-xs flex items-center gap-1"><Copy className="h-3.5 w-3.5" /> Copiar enlace</button>}</div><Timeline header={header} events={detailQuery.data?.eventos || []} /></div>
+        <div className="bg-card border border-border rounded-xl p-4"><h2 className="font-semibold text-sm">Respuesta del proveedor</h2><p className="text-xs text-muted-foreground mt-1 mb-3">{header.proveedor_observaciones || 'Sin observaciones generales.'}</p>{publicLinkActive ? <a href={publicUrl(header.public_token)} target="_blank" rel="noreferrer" className="text-xs text-primary font-medium inline-flex items-center gap-1">Ver solicitud pública <ExternalLink className="h-3 w-3" /></a> : supplierResponded ? <span className="text-xs text-emerald-700 font-medium">Solicitud cerrada · enlace público desactivado</span> : null}</div>
       </section>}
 
-      {supplierResponded && <section className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4"><div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-emerald-800 font-semibold"><Check className="h-4 w-4" /> Respuesta lista para convertir en compra</div><p className="text-xs text-emerald-700/80 mt-1">Puedes reducir la cantidad final a comprar antes de crear la compra. Nunca se agregará más de lo ofrecido sin que tú lo captures.</p></div><button onClick={convertToPurchase} disabled={converting} className="btn-odoo-primary flex items-center gap-1.5 shrink-0"><ShoppingCart className="h-4 w-4" /> {converting ? 'Creando compra…' : 'Crear compra con aceptados'}</button></div><div className="mt-4 bg-white border border-emerald-100 rounded-lg overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="px-3 py-2">Producto</th><th className="px-3 py-2">Ofrecido</th><th className="px-3 py-2">A comprar</th><th className="px-3 py-2">Costo</th><th className="px-3 py-2">Importe</th></tr></thead><tbody>{lines.filter(l => l.disponible !== false).map(l => { const accepted = Number(l.cantidad_aceptada ?? l.cantidad_surtida ?? 0); return <tr key={l.id} className="border-b last:border-0"><td className="px-3 py-2 font-medium">{l.producto_nombre}</td><td className="px-3 py-2">{l.cantidad_surtida ?? 0}</td><td className="px-3 py-2"><input className="input-odoo w-24" type="number" min="0" max={Number(l.cantidad_surtida ?? 0)} step="0.01" value={accepted} onChange={e => updateAccepted(l.id!, Math.min(Number(l.cantidad_surtida ?? 0), Number(e.target.value)))} /></td><td className="px-3 py-2">{fmtMoney(l.costo_unitario)}</td><td className="px-3 py-2 font-semibold">{fmtMoney(accepted * Number(l.costo_unitario || 0))}</td></tr>; })}</tbody></table></div></section>}
+      {supplierResponded && <section className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4"><div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-emerald-800 font-semibold"><Check className="h-4 w-4" /> Solicitud cerrada y lista para convertir en compra</div><p className="text-xs text-emerald-700/80 mt-1">El proveedor ya cerró su respuesta. El enlace público fue revocado y no puede modificarla. Puedes reducir la cantidad final antes de crear la compra.</p></div><button onClick={convertToPurchase} disabled={converting} className="btn-odoo-primary flex items-center gap-1.5 shrink-0"><ShoppingCart className="h-4 w-4" /> {converting ? 'Creando compra…' : 'Crear compra con aceptados'}</button></div><div className="mt-4 bg-white border border-emerald-100 rounded-lg overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="px-3 py-2">Producto</th><th className="px-3 py-2">Ofrecido</th><th className="px-3 py-2">A comprar</th><th className="px-3 py-2">Costo</th><th className="px-3 py-2">Importe</th></tr></thead><tbody>{lines.filter(l => l.disponible !== false).map(l => { const accepted = Number(l.cantidad_aceptada ?? l.cantidad_surtida ?? 0); return <tr key={l.id} className="border-b last:border-0"><td className="px-3 py-2 font-medium">{l.producto_nombre}</td><td className="px-3 py-2">{l.cantidad_surtida ?? 0}</td><td className="px-3 py-2"><input className="input-odoo w-24" type="number" min="0" max={Number(l.cantidad_surtida ?? 0)} step="0.01" value={accepted} onChange={e => updateAccepted(l.id!, Math.min(Number(l.cantidad_surtida ?? 0), Number(e.target.value)))} /></td><td className="px-3 py-2">{fmtMoney(l.costo_unitario)}</td><td className="px-3 py-2 font-semibold">{fmtMoney(accepted * Number(l.costo_unitario || 0))}</td></tr>; })}</tbody></table></div></section>}
 
       {header.status === 'convertida' && header.compra_id && <section className="bg-violet-50 border border-violet-200 rounded-xl p-4 flex items-center justify-between gap-3"><div><p className="font-semibold text-violet-800">Esta solicitud ya generó una compra</p><p className="text-xs text-violet-700 mt-0.5">La solicitud queda como trazabilidad; la operación continúa en Compras.</p></div><button onClick={() => navigate(`/almacen/compras/${header.compra_id}`)} className="btn-odoo-primary">Abrir compra</button></section>}
 
@@ -395,7 +397,7 @@ function Timeline({ header, events }: { header: any; events: any[] }) {
     { label: 'Creada', date: header.created_at, ok: true },
     { label: 'Enviada al proveedor', date: header.enviado_at, ok: !!header.enviado_at },
     { label: 'Vista por proveedor', date: header.visto_at, ok: !!header.visto_at },
-    { label: 'Respuesta recibida', date: header.respondido_at, ok: !!header.respondido_at },
+    { label: 'Solicitud cerrada', date: header.respondido_at, ok: !!header.respondido_at },
   ];
   return <div className="space-y-2">{fixed.map((x,i) => <div key={x.label} className="flex items-center gap-3"><div className={`h-7 w-7 rounded-full grid place-items-center border ${x.ok ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted border-border text-muted-foreground'}`}>{x.ok ? <Check className="h-3.5 w-3.5" /> : i+1}</div><div><div className={`text-xs font-medium ${x.ok ? 'text-foreground' : 'text-muted-foreground'}`}>{x.label}</div><div className="text-[10px] text-muted-foreground">{x.date ? new Date(x.date).toLocaleString('es-MX') : 'Pendiente'}</div></div></div>)}{events.length > 4 && <div className="text-[10px] text-muted-foreground pt-1">{events.length} eventos registrados en el historial.</div>}</div>;
 }
