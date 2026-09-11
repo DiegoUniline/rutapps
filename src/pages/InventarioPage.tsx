@@ -45,12 +45,14 @@ function useInventarioData() {
           .range(from, to)
       );
 
-      // Almacenes
+      // Almacenes vendibles. Mermas se conserva físicamente en stock_almacen,
+      // pero no forma parte del stock disponible ni de los totales de inventario.
       const { data: almacenes } = await supabase
         .from('almacenes')
         .select('id, nombre, tipo')
         .eq('empresa_id', eid)
         .eq('activo', true)
+        .eq('es_merma', false)
         .order('nombre');
 
       // Per-warehouse stock
