@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Check, ClipboardList, Copy, ExternalLink, Mail, PackageCheck,
-  Plus, RefreshCw, Send, ShoppingCart, Trash2, XCircle,
+  Plus, RefreshCw, Send, ShoppingCart, Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -98,7 +98,6 @@ export default function SolicitudesCompraPage() {
       if (alm.error) console.error('Error almacenes:', alm.error);
       if (prod.error) console.error('Error productos:', prod.error);
       return { proveedores: prov.data ?? [], almacenes: alm.data ?? [], productos: prod.data ?? [] };
-
     },
   });
 
@@ -110,6 +109,8 @@ export default function SolicitudesCompraPage() {
   const [sendCc, setSendCc] = useState('');
   const [sending, setSending] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
+  const [reopening, setReopening] = useState(false);
 
   useEffect(() => {
     if (isNew) {
@@ -124,7 +125,7 @@ export default function SolicitudesCompraPage() {
   const catalogs = catalogsQuery.data || { proveedores: [], almacenes: [], productos: [] };
   const editable = isNew || header.status === 'borrador';
   const supplierResponded = header.status === 'respondida';
-  const publicLinkActive = !!header.public_token && !['respondida', 'convertida', 'cancelada'].includes(header.status);
+  const publicLinkVisible = !!header.public_token && header.status !== 'cancelada';
   const selectedProvider = catalogs.proveedores.find((p: any) => p.id === header.proveedor_id);
 
   const setSid = (value?: string) => {
@@ -226,11 +227,31 @@ export default function SolicitudesCompraPage() {
   };
 
   const copyPublicLink = async () => {
-    if (!publicLinkActive) { toast.error('La solicitud ya está cerrada y no tiene enlace público activo'); return; }
+    if (!publicLinkVisible) { toast.error('Esta solicitud no tiene un enlace público disponible'); return; }
     const url = publicUrl(header.public_token);
     if (!url) return;
     await navigator.clipboard.writeText(url);
-    toast.success('Enlace copiado');
+    toast.success(supplierResponded ? 'Enlace de consulta copiado' : 'Enlace copiado');
+  };
+
+  const reopenRequest = async () => {
+    if (!sid || sid === 'nueva' || header.status !== 'respondida') return;
+    setReopening(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('solicitud-compra-proveedor', {
+        body: { action: 'reopen', solicitud_id: sid },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setReopenOpen(false);
+      toast.success('Solicitud abierta para modificar');
+      await detailQuery.refetch();
+      qc.invalidateQueries({ queryKey: ['solicitudes-compra'] });
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo abrir la solicitud para modificar');
+    } finally {
+      setReopening(false);
+    }
   };
 
   const updateAccepted = (id: string, value: number) => setLines(prev => prev.map(l => l.id === id ? { ...l, cantidad_aceptada: Math.max(0, value || 0) } : l));
@@ -370,15 +391,17 @@ export default function SolicitudesCompraPage() {
       </section>
 
       {!editable && <section className="grid lg:grid-cols-[1.25fr_.75fr] gap-4">
-        <div className="bg-card border border-border rounded-xl p-4"><div className="flex items-center justify-between mb-3"><div><h2 className="font-semibold text-sm">Seguimiento</h2><p className="text-xs text-muted-foreground">Trazabilidad de la solicitud.</p></div>{publicLinkActive && <button onClick={copyPublicLink} className="btn-odoo-secondary text-xs flex items-center gap-1"><Copy className="h-3.5 w-3.5" /> Copiar enlace</button>}</div><Timeline header={header} events={detailQuery.data?.eventos || []} /></div>
-        <div className="bg-card border border-border rounded-xl p-4"><h2 className="font-semibold text-sm">Respuesta del proveedor</h2><p className="text-xs text-muted-foreground mt-1 mb-3">{header.proveedor_observaciones || 'Sin observaciones generales.'}</p>{publicLinkActive ? <a href={publicUrl(header.public_token)} target="_blank" rel="noreferrer" className="text-xs text-primary font-medium inline-flex items-center gap-1">Ver solicitud pública <ExternalLink className="h-3 w-3" /></a> : supplierResponded ? <span className="text-xs text-emerald-700 font-medium">Solicitud cerrada · enlace público desactivado</span> : null}</div>
+        <div className="bg-card border border-border rounded-xl p-4"><div className="flex items-center justify-between mb-3"><div><h2 className="font-semibold text-sm">Seguimiento</h2><p className="text-xs text-muted-foreground">Trazabilidad de la solicitud.</p></div>{publicLinkVisible && <button onClick={copyPublicLink} className="btn-odoo-secondary text-xs flex items-center gap-1"><Copy className="h-3.5 w-3.5" /> Copiar enlace</button>}</div><Timeline header={header} events={detailQuery.data?.eventos || []} /></div>
+        <div className="bg-card border border-border rounded-xl p-4"><h2 className="font-semibold text-sm">Respuesta del proveedor</h2><p className="text-xs text-muted-foreground mt-1 mb-3">{header.proveedor_observaciones || 'Sin observaciones generales.'}</p>{publicLinkVisible ? <div className="space-y-2"><a href={publicUrl(header.public_token)} target="_blank" rel="noreferrer" className="text-xs text-primary font-medium inline-flex items-center gap-1">{['respondida','convertida'].includes(header.status) ? 'Ver solicitud en modo consulta' : 'Ver solicitud pública'} <ExternalLink className="h-3 w-3" /></a>{supplierResponded && <p className="text-[11px] text-emerald-700 font-medium">Cerrada · el proveedor puede seguir consultando este enlace, pero no editarlo.</p>}</div> : null}</div>
       </section>}
 
-      {supplierResponded && <section className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4"><div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-emerald-800 font-semibold"><Check className="h-4 w-4" /> Solicitud cerrada y lista para convertir en compra</div><p className="text-xs text-emerald-700/80 mt-1">El proveedor ya cerró su respuesta. El enlace público fue revocado y no puede modificarla. Puedes reducir la cantidad final antes de crear la compra.</p></div><button onClick={convertToPurchase} disabled={converting} className="btn-odoo-primary flex items-center gap-1.5 shrink-0"><ShoppingCart className="h-4 w-4" /> {converting ? 'Creando compra…' : 'Crear compra con aceptados'}</button></div><div className="mt-4 bg-white border border-emerald-100 rounded-lg overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="px-3 py-2">Producto</th><th className="px-3 py-2">Ofrecido</th><th className="px-3 py-2">A comprar</th><th className="px-3 py-2">Costo</th><th className="px-3 py-2">Importe</th></tr></thead><tbody>{lines.filter(l => l.disponible !== false).map(l => { const accepted = Number(l.cantidad_aceptada ?? l.cantidad_surtida ?? 0); return <tr key={l.id} className="border-b last:border-0"><td className="px-3 py-2 font-medium">{l.producto_nombre}</td><td className="px-3 py-2">{l.cantidad_surtida ?? 0}</td><td className="px-3 py-2"><input className="input-odoo w-24" type="number" min="0" max={Number(l.cantidad_surtida ?? 0)} step="0.01" value={accepted} onChange={e => updateAccepted(l.id!, Math.min(Number(l.cantidad_surtida ?? 0), Number(e.target.value)))} /></td><td className="px-3 py-2">{fmtMoney(l.costo_unitario)}</td><td className="px-3 py-2 font-semibold">{fmtMoney(accepted * Number(l.costo_unitario || 0))}</td></tr>; })}</tbody></table></div></section>}
+      {supplierResponded && <section className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4"><div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-emerald-800 font-semibold"><Check className="h-4 w-4" /> Solicitud cerrada y lista para convertir en compra</div><p className="text-xs text-emerald-700/80 mt-1">El proveedor ya cerró su respuesta. El mismo enlace permanece visible en modo consulta. Si necesita corregir cantidades, costos o fechas, puedes abrirla nuevamente para modificar antes de crear la compra.</p></div><div className="flex flex-wrap gap-2 shrink-0"><button onClick={() => setReopenOpen(true)} className="btn-odoo-secondary flex items-center gap-1.5"><RefreshCw className="h-4 w-4" /> Abrir para modificar</button><button onClick={convertToPurchase} disabled={converting} className="btn-odoo-primary flex items-center gap-1.5"><ShoppingCart className="h-4 w-4" /> {converting ? 'Creando compra…' : 'Crear compra con aceptados'}</button></div></div><div className="mt-4 bg-white border border-emerald-100 rounded-lg overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="px-3 py-2">Producto</th><th className="px-3 py-2">Ofrecido</th><th className="px-3 py-2">A comprar</th><th className="px-3 py-2">Costo</th><th className="px-3 py-2">Importe</th></tr></thead><tbody>{lines.filter(l => l.disponible !== false).map(l => { const accepted = Number(l.cantidad_aceptada ?? l.cantidad_surtida ?? 0); return <tr key={l.id} className="border-b last:border-0"><td className="px-3 py-2 font-medium">{l.producto_nombre}</td><td className="px-3 py-2">{l.cantidad_surtida ?? 0}</td><td className="px-3 py-2"><input className="input-odoo w-24" type="number" min="0" max={Number(l.cantidad_surtida ?? 0)} step="0.01" value={accepted} onChange={e => updateAccepted(l.id!, Math.min(Number(l.cantidad_surtida ?? 0), Number(e.target.value)))} /></td><td className="px-3 py-2">{fmtMoney(l.costo_unitario)}</td><td className="px-3 py-2 font-semibold">{fmtMoney(accepted * Number(l.costo_unitario || 0))}</td></tr>; })}</tbody></table></div></section>}
 
-      {header.status === 'convertida' && header.compra_id && <section className="bg-violet-50 border border-violet-200 rounded-xl p-4 flex items-center justify-between gap-3"><div><p className="font-semibold text-violet-800">Esta solicitud ya generó una compra</p><p className="text-xs text-violet-700 mt-0.5">La solicitud queda como trazabilidad; la operación continúa en Compras.</p></div><button onClick={() => navigate(`/almacen/compras/${header.compra_id}`)} className="btn-odoo-primary">Abrir compra</button></section>}
+      {header.status === 'convertida' && header.compra_id && <section className="bg-violet-50 border border-violet-200 rounded-xl p-4 flex items-center justify-between gap-3"><div><p className="font-semibold text-violet-800">Esta solicitud ya generó una compra</p><p className="text-xs text-violet-700 mt-0.5">La solicitud queda como trazabilidad; el proveedor puede seguir consultando su respuesta en modo solo lectura.</p></div><button onClick={() => navigate(`/almacen/compras/${header.compra_id}`)} className="btn-odoo-primary">Abrir compra</button></section>}
 
       <Dialog open={sendOpen} onOpenChange={setSendOpen}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle className="flex items-center gap-2"><Mail className="h-5 w-5 text-primary" /> Enviar solicitud al proveedor</DialogTitle><DialogDescription>RutApp enviará un correo profesional con un enlace único para que el proveedor responda sin iniciar sesión.</DialogDescription></DialogHeader><div className="space-y-4 py-2"><div><label className="label-odoo label-required">Para</label><input className="input-odoo w-full" value={sendTo} onChange={e => setSendTo(e.target.value)} placeholder="proveedor@empresa.com" /></div><div><label className="label-odoo">CC interno</label><input className="input-odoo w-full" value={sendCc} onChange={e => setSendCc(e.target.value)} placeholder="compras@miempresa.com, gerente@miempresa.com" /><p className="text-[11px] text-muted-foreground mt-1">Separa varios correos con coma. Cada persona recibirá una copia para seguimiento.</p></div><div className="rounded-lg bg-muted/40 border p-3 text-xs"><div className="font-semibold">Asunto</div><div className="text-muted-foreground mt-1">{empresa?.nombre || 'Tu empresa'} · Solicitud de compra {header.folio || ''}</div></div></div><DialogFooter><button onClick={() => setSendOpen(false)} className="btn-odoo-secondary">Cancelar</button><button onClick={sendRequest} disabled={sending} className="btn-odoo-primary flex items-center gap-1.5"><Send className="h-4 w-4" /> {sending ? 'Enviando…' : 'Enviar solicitud'}</button></DialogFooter></DialogContent></Dialog>
+
+      <Dialog open={reopenOpen} onOpenChange={open => !reopening && setReopenOpen(open)}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5 text-primary" /> Abrir para modificar</DialogTitle><DialogDescription>El proveedor volverá a poder editar su respuesta usando el mismo enlace de esta solicitud.</DialogDescription></DialogHeader><div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground"><p className="font-semibold text-foreground">¿Qué pasará?</p><p className="mt-1">La solicitud cambiará de Cerrada a Guardada, se habilitarán nuevamente cantidades, costos, fechas y observaciones, y el proveedor podrá volver a cerrarla cuando termine.</p></div><DialogFooter><button onClick={() => setReopenOpen(false)} disabled={reopening} className="btn-odoo-secondary">Cancelar</button><button onClick={reopenRequest} disabled={reopening} className="btn-odoo-primary flex items-center gap-1.5"><RefreshCw className={`h-4 w-4 ${reopening ? 'animate-spin' : ''}`} /> {reopening ? 'Abriendo…' : 'Abrir para modificar'}</button></DialogFooter></DialogContent></Dialog>
     </div>
   );
 }
