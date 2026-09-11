@@ -6,13 +6,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   parseFile,
   downloadTemplate,
-  importProducts,
   importClients,
   PRODUCT_IMPORT_COLUMNS,
   CLIENT_IMPORT_COLUMNS,
   type ImportResult,
   type ImportColumn,
 } from '@/lib/importUtils';
+import { PRODUCT_PRICE_MODE_COLUMN, importProductsWithPriceMode } from '@/lib/productImportPriceMode';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -24,6 +24,13 @@ interface ImportDialogProps {
   type: ImportType;
 }
 
+const PRODUCT_IMPORT_COLUMNS_WITH_PRICE_MODE: ImportColumn[] = (() => {
+  const columns = [...PRODUCT_IMPORT_COLUMNS];
+  const priceIndex = columns.findIndex(c => c.key === 'precio_sugerido_publico');
+  columns.splice(priceIndex >= 0 ? priceIndex + 1 : columns.length, 0, PRODUCT_PRICE_MODE_COLUMN);
+  return columns;
+})();
+
 export function ImportDialog({ open, onOpenChange, type }: ImportDialogProps) {
   const { empresa } = useAuth();
   const qc = useQueryClient();
@@ -34,7 +41,7 @@ export function ImportDialog({ open, onOpenChange, type }: ImportDialogProps) {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [progress, setProgress] = useState(0);
 
-  const columns: ImportColumn[] = type === 'productos' ? PRODUCT_IMPORT_COLUMNS : CLIENT_IMPORT_COLUMNS;
+  const columns: ImportColumn[] = type === 'productos' ? PRODUCT_IMPORT_COLUMNS_WITH_PRICE_MODE : CLIENT_IMPORT_COLUMNS;
   const label = type === 'productos' ? 'Productos' : 'Clientes';
 
   const reset = useCallback(() => {
@@ -82,7 +89,7 @@ export function ImportDialog({ open, onOpenChange, type }: ImportDialogProps) {
 
     try {
       const res = type === 'productos'
-        ? await importProducts(rows, empresa.id)
+        ? await importProductsWithPriceMode(rows, empresa.id)
         : await importClients(rows, empresa.id);
 
       clearInterval(interval);
@@ -166,8 +173,13 @@ export function ImportDialog({ open, onOpenChange, type }: ImportDialogProps) {
               <ul className="list-disc list-inside space-y-0.5">
                 <li>Descarga la plantilla para ver el formato correcto</li>
                 <li>Si un catálogo (marca, zona, etc.) no existe, se creará automáticamente</li>
-                {type === 'productos' && <li>Si todo tu catálogo usa <strong>Listas de precio</strong>, los productos nuevos importados conservarán ese modo</li>}
-                <li>Si el código ya existe, se actualizarán los datos sin cambiar su modo de precio</li>
+                {type === 'productos' && (
+                  <>
+                    <li>En <strong>Modo de precio</strong> escribe <strong>Lista de precio</strong> o <strong>Precio general</strong></li>
+                    <li>Si dejas <strong>Modo de precio</strong> vacío, los existentes conservan su modo y los nuevos usan la configuración automática del catálogo</li>
+                  </>
+                )}
+                <li>Si el código ya existe, se actualizarán los datos; el modo de precio sólo cambia si lo indicas en la columna</li>
                 <li>Los campos <strong>Nombre</strong> {type === 'productos' && <> y <strong>Código</strong></>} son obligatorios</li>
               </ul>
             </div>
