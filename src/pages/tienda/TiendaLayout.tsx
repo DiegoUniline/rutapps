@@ -5,10 +5,12 @@ import { useTienda } from "@/tienda/TiendaContext";
 import PedidoAsistente from "@/components/tienda/PedidoAsistente";
 import PedidoSugeridoView from "@/components/tienda/PedidoSugeridoView";
 import TiendaFloatingCart from "./TiendaFloatingCart";
+import TiendaMobileNav from "./TiendaMobileNav";
 import "@/tienda/tienda.css";
 import "@/tienda/tienda-redesign.css";
 import "@/tienda/tienda-commerce-overlays.css";
 import "@/tienda/tienda-footer.css";
+import "@/tienda/tienda-mobile-nav.css";
 
 function useTiendaPWA(t: ReturnType<typeof useTienda>) {
   useEffect(() => {
@@ -180,6 +182,7 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
       {suggested ? <PedidoSugeridoView /> : children}
       {!hideAssistant && <PedidoAsistente />}
       <TiendaFloatingCart />
+      <TiendaMobileNav />
 
       <footer className="tienda-footer">
         <p>© {new Date().getFullYear()} {t.empresa?.nombre ?? t.config.nombre_tienda} · Tienda en línea</p>
