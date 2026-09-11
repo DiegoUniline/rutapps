@@ -17,8 +17,10 @@ import {
   Package,
   Phone,
   Check,
+  Eye,
 } from "lucide-react";
 import TiendaShell from "./TiendaShell";
+import TiendaQuickViewModal from "./TiendaQuickViewModal";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useThumb } from "@/hooks/useThumb";
 
@@ -253,6 +255,7 @@ export function ProductCard({ p, moneda, highlight, variant = "standard" }: Prod
   const t = useTienda();
   const [added, setAdded] = useState(false);
   const [flyBurst, setFlyBurst] = useState(0);
+  const [quickOpen, setQuickOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => () => {
@@ -285,45 +288,57 @@ export function ProductCard({ p, moneda, highlight, variant = "standard" }: Prod
   };
 
   return (
-    <article className={`tienda-card tienda-card--${variant} ${added ? "tx-card-added" : ""}`}>
-      {(highlight || tieneDescuento) && (
-        <div className={`tx-badge ${highlight === "nuevo" ? "tx-badge-new" : "tx-badge-sale"}`}>
-          {highlight === "nuevo" ? "Nuevo" : tieneDescuento ? `-${pct}%` : "Oferta"}
-        </div>
-      )}
-      <Link
-        to={detalleHref}
-        className="tienda-card-img"
-        style={p.imagen_url ? { backgroundImage: `url(${thumb(p.imagen_url, 400)})` } : {}}
-        aria-label={`Ver ${p.nombre}`}
-      >
-        {!p.imagen_url && <div className="tienda-card-img-placeholder">📦</div>}
-        {flyBurst > 0 && <span key={flyBurst} className="tx-fly-burst" aria-hidden>+1</span>}
-      </Link>
-      <div className="tienda-card-body">
-        {p.marca ? <div className="tienda-card-brand">{p.marca}</div> : <div className="tienda-card-brand" aria-hidden>&nbsp;</div>}
-        <Link to={detalleHref} className="tienda-card-name" style={{ color: "inherit", textDecoration: "none" }}>
-          {p.nombre}
+    <>
+      <article className={`tienda-card tienda-card--${variant} ${added ? "tx-card-added" : ""}`}>
+        {(highlight || tieneDescuento) && (
+          <div className={`tx-badge ${highlight === "nuevo" ? "tx-badge-new" : "tx-badge-sale"}`}>
+            {highlight === "nuevo" ? "Nuevo" : tieneDescuento ? `-${pct}%` : "Oferta"}
+          </div>
+        )}
+        <Link
+          to={detalleHref}
+          className="tienda-card-img"
+          style={p.imagen_url ? { backgroundImage: `url(${thumb(p.imagen_url, 400)})` } : {}}
+          aria-label={`Ver ${p.nombre}`}
+        >
+          {!p.imagen_url && <div className="tienda-card-img-placeholder">📦</div>}
+          {flyBurst > 0 && <span key={flyBurst} className="tx-fly-burst" aria-hidden>+1</span>}
         </Link>
-        <div className="tienda-card-price">
-          {formatMoney(p.precio, cur)}
-          {p.unidad_venta && <small> / {p.unidad_venta}</small>}
+        <button
+          type="button"
+          className="tx-quick-view-trigger"
+          onClick={() => setQuickOpen(true)}
+          aria-label={`Vista rápida de ${p.nombre}`}
+          title="Vista rápida"
+        >
+          <Eye size={16} />
+        </button>
+        <div className="tienda-card-body">
+          {p.marca ? <div className="tienda-card-brand">{p.marca}</div> : <div className="tienda-card-brand" aria-hidden>&nbsp;</div>}
+          <Link to={detalleHref} className="tienda-card-name" style={{ color: "inherit", textDecoration: "none" }}>
+            {p.nombre}
+          </Link>
+          <div className="tienda-card-price">
+            {formatMoney(p.precio, cur)}
+            {p.unidad_venta && <small> / {p.unidad_venta}</small>}
+          </div>
+          {tieneDescuento && <div className="tx-price-old">{formatMoney(p.precio_base, cur)}</div>}
+          <div className={`tienda-card-stock ${enStock ? "" : "out"}`}>
+            {enStock ? (p.stock > 0 ? `${p.stock} disponibles` : "Disponible bajo pedido") : "Agotado"}
+          </div>
+          <div className="tienda-card-actions">
+            <button
+              className={`tienda-btn ${added ? "tienda-btn-added" : "tienda-btn-primary"}`}
+              disabled={!enStock}
+              onClick={handleAdd}
+            >
+              {added ? (<><Check size={14} /> Agregado</>) : (<><ShoppingCart size={14} /> Agregar</>)}
+            </button>
+          </div>
         </div>
-        {tieneDescuento && <div className="tx-price-old">{formatMoney(p.precio_base, cur)}</div>}
-        <div className={`tienda-card-stock ${enStock ? "" : "out"}`}>
-          {enStock ? (p.stock > 0 ? `${p.stock} disponibles` : "Disponible bajo pedido") : "Agotado"}
-        </div>
-        <div className="tienda-card-actions">
-          <button
-            className={`tienda-btn ${added ? "tienda-btn-added" : "tienda-btn-primary"}`}
-            disabled={!enStock}
-            onClick={handleAdd}
-          >
-            {added ? (<><Check size={14} /> Agregado</>) : (<><ShoppingCart size={14} /> Agregar</>)}
-          </button>
-        </div>
-      </div>
-    </article>
+      </article>
+      {quickOpen && <TiendaQuickViewModal product={p} moneda={cur} onClose={() => setQuickOpen(false)} />}
+    </>
   );
 }
 
