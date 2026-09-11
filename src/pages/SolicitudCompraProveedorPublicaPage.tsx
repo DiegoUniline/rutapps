@@ -116,6 +116,7 @@ export default function SolicitudCompraProveedorPublicaPage() {
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body?.error || 'No se pudo guardar la solicitud.');
+
       if (action === 'close') {
         setData(prev => prev ? {
           ...prev,
@@ -135,10 +136,6 @@ export default function SolicitudCompraProveedorPublicaPage() {
     }
   };
 
-  const confirmClose = () => {
-    void submit('close');
-  };
-
   if (loading) {
     return (
       <div className="fixed inset-0 z-[9999] grid place-items-center bg-[#f5f7fb] text-[#667085]">
@@ -150,16 +147,19 @@ export default function SolicitudCompraProveedorPublicaPage() {
   if (error && !data) {
     return (
       <PublicShell>
-        <div className="mx-auto mt-16 max-w-xl rounded-3xl border border-red-100 bg-white p-8 text-center shadow-[0_16px_45px_rgba(18,43,80,.08)]">
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-red-50 text-red-600"><AlertCircle className="h-9 w-9" /></div>
-          <h1 className="mt-5 text-2xl font-black text-[#172033]">Solicitud no disponible</h1>
-          <p className="mt-2 leading-6 text-[#667085]">{error}</p>
+        <div className="mx-auto w-full max-w-xl px-4 py-16">
+          <div className="rounded-3xl border border-red-100 bg-white p-8 text-center shadow-[0_16px_45px_rgba(18,43,80,.08)]">
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-red-50 text-red-600"><AlertCircle className="h-9 w-9" /></div>
+            <h1 className="mt-5 text-2xl font-black text-[#172033]">Solicitud no disponible</h1>
+            <p className="mt-2 leading-6 text-[#667085]">{error}</p>
+          </div>
         </div>
       </PublicShell>
     );
   }
 
   if (!data) return null;
+
   const totalQuantity = lines.reduce((sum, line) => sum + Number(line.cantidad_solicitada || 0), 0);
   const status = stateLabel(data.solicitud.status);
   const statusClass = status === 'Cerrada'
@@ -170,8 +170,8 @@ export default function SolicitudCompraProveedorPublicaPage() {
   const dotClass = status === 'Cerrada' ? 'bg-emerald-500' : status === 'Guardada' ? 'bg-amber-500' : 'bg-[#0061e8]';
 
   return (
-    <PublicShell reserveBottom={!readOnly}>
-      <main className={`mx-auto w-full max-w-[1160px] px-3 pt-5 sm:px-5 sm:pt-8 ${readOnly ? 'pb-8' : 'pb-32'}`}>
+    <PublicShell>
+      <main className="mx-auto w-full max-w-[1160px] px-3 py-5 sm:px-5 sm:py-8">
         <section className="overflow-hidden rounded-2xl border border-[#e5eaf1] bg-white shadow-[0_16px_45px_rgba(18,43,80,.08)] sm:rounded-3xl">
           <div className="h-1.5 bg-gradient-to-r from-[#0061e8] via-[#3184ef] to-[#ff7a00]" />
           <div className="p-5 sm:p-8">
@@ -185,12 +185,18 @@ export default function SolicitudCompraProveedorPublicaPage() {
                 <span className={`h-2 w-2 rounded-full ${dotClass}`} />{status}
               </span>
             </div>
+
             <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <Meta label="Proveedor" value={data.solicitud.proveedor_nombre || 'Proveedor'} />
               <Meta label="Productos" value={String(lines.length)} />
               <Meta label="Cantidad total" value={totalQuantity.toLocaleString('es-MX')} />
             </div>
-            {data.solicitud.notas && <div className="mt-4 rounded-xl border border-orange-100 bg-[#fff4e8] px-4 py-3 text-sm leading-5 text-[#9a4b00]"><strong>Instrucciones:</strong> {data.solicitud.notas}</div>}
+
+            {data.solicitud.notas && (
+              <div className="mt-4 rounded-xl border border-orange-100 bg-[#fff4e8] px-4 py-3 text-sm leading-5 text-[#9a4b00]">
+                <strong>Instrucciones:</strong> {data.solicitud.notas}
+              </div>
+            )}
           </div>
         </section>
 
@@ -208,7 +214,10 @@ export default function SolicitudCompraProveedorPublicaPage() {
         )}
 
         <div className="mb-3 mt-7 flex items-end justify-between gap-3 px-1">
-          <div><h2 className="text-lg font-black text-[#172033]">{readOnly ? 'Respuesta del proveedor' : 'Confirma cada producto'}</h2><p className="mt-0.5 text-xs text-[#667085]">{readOnly ? 'Datos registrados al momento de cerrar la solicitud.' : 'Indica cuánto puedes surtir, el costo o marca “No lo tengo”.'}</p></div>
+          <div>
+            <h2 className="text-lg font-black text-[#172033]">{readOnly ? 'Respuesta del proveedor' : 'Confirma cada producto'}</h2>
+            <p className="mt-0.5 text-xs text-[#667085]">{readOnly ? 'Datos registrados al momento de cerrar la solicitud.' : 'Indica cuánto puedes surtir, el costo o marca “No lo tengo”.'}</p>
+          </div>
           <div className="hidden items-center gap-1.5 text-xs font-bold text-[#667085] sm:flex"><LockKeyhole className="h-3.5 w-3.5 text-[#0061e8]" /> {readOnly ? 'Solo lectura' : 'Enlace privado'}</div>
         </div>
 
@@ -218,9 +227,18 @@ export default function SolicitudCompraProveedorPublicaPage() {
             return (
               <article key={line.id} className={`rounded-2xl border bg-white p-4 shadow-sm transition ${available ? 'border-[#e5eaf1]' : 'border-red-200 bg-red-50/30'}`}>
                 <div className="grid gap-4 lg:grid-cols-[minmax(210px,1.45fr)_100px_100px_125px_135px_130px_minmax(150px,1fr)]">
-                  <div><p className="text-[10px] font-black uppercase tracking-wider text-[#98a2b3]">{line.producto_codigo || 'Producto'}</p><h3 className="mt-1 font-black leading-5 text-[#172033]">{line.producto_nombre}</h3></div>
-                  <div><p className="text-[10px] font-black uppercase tracking-wider text-[#98a2b3]">Solicitado</p><p className="mt-1 text-lg font-black text-[#172033]">{Number(line.cantidad_solicitada || 0).toLocaleString('es-MX')}</p></div>
-                  <div><p className="text-[10px] font-black uppercase tracking-wider text-[#98a2b3]">Unidad</p><p className="mt-2 text-sm font-black text-[#172033]">{line.unidad || '—'}</p></div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#98a2b3]">{line.producto_codigo || 'Producto'}</p>
+                    <h3 className="mt-1 font-black leading-5 text-[#172033]">{line.producto_nombre}</h3>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#98a2b3]">Solicitado</p>
+                    <p className="mt-1 text-lg font-black text-[#172033]">{Number(line.cantidad_solicitada || 0).toLocaleString('es-MX')}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#98a2b3]">Unidad</p>
+                    <p className="mt-2 text-sm font-black text-[#172033]">{line.unidad || '—'}</p>
+                  </div>
                   <Field label="Puedo surtir"><input disabled={readOnly || !available} type="number" min="0" step="0.01" className="public-input" value={available ? (line.cantidad_surtida ?? '') : ''} onChange={e => updateLine(line.id, { cantidad_surtida: Number(e.target.value) })} /></Field>
                   <Field label="Costo unitario"><input disabled={readOnly || !available} type="number" min="0" step="0.01" className="public-input" placeholder="$ 0.00" value={available ? (line.costo_unitario ?? '') : ''} onChange={e => updateLine(line.id, { costo_unitario: e.target.value === '' ? null : Number(e.target.value) })} /></Field>
                   <Field label="No lo tengo">
@@ -243,19 +261,27 @@ export default function SolicitudCompraProveedorPublicaPage() {
 
         {notice && <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{notice}</div>}
         {error && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</div>}
-      </main>
 
-      {!readOnly && (
-        <div className="fixed inset-x-0 bottom-0 z-[10000] border-t border-[#e5eaf1] bg-white/95 px-3 py-3 shadow-[0_-8px_28px_rgba(18,43,80,.08)] backdrop-blur sm:px-5" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
-          <div className="mx-auto flex max-w-[1160px] flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="hidden text-xs text-[#667085] sm:block">Guarda para continuar después. Al cerrar quedará disponible solo para consulta.</p>
-            <div className="grid grid-cols-2 gap-2 sm:flex">
-              <button disabled={saving} onClick={() => void submit('save')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d0d5dd] bg-white px-5 py-3 text-sm font-black text-[#344054] disabled:opacity-50"><Save className="h-4 w-4" /> Guardar</button>
-              <button disabled={saving} onClick={() => setCloseConfirmOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0061e8] px-5 py-3 text-sm font-black text-white shadow-[0_8px_20px_rgba(0,97,232,.22)] hover:bg-[#004fc0] disabled:opacity-50">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />} Cerrar solicitud</button>
+        {!readOnly && (
+          <section className="mt-5 overflow-hidden rounded-2xl border border-[#dbe4ef] bg-white shadow-[0_10px_30px_rgba(18,43,80,.07)]">
+            <div className="h-1 bg-gradient-to-r from-[#0061e8] to-[#ff7a00]" />
+            <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+              <div className="max-w-xl">
+                <div className="flex items-center gap-2 text-sm font-black text-[#172033]"><LockKeyhole className="h-4 w-4 text-[#0061e8]" /> ¿Terminaste tu respuesta?</div>
+                <p className="mt-1 text-xs leading-5 text-[#667085]">Puedes guardar un borrador y continuar después. Cuando cierres la solicitud quedará enviada y disponible únicamente en modo consulta.</p>
+              </div>
+              <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2">
+                <button disabled={saving} onClick={() => void submit('save')} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#d0d5dd] bg-white px-5 py-3 text-sm font-black text-[#344054] transition hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-50">
+                  <Save className="h-4 w-4" /> Guardar borrador
+                </button>
+                <button disabled={saving} onClick={() => setCloseConfirmOpen(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0061e8] px-5 py-3 text-sm font-black text-white shadow-[0_8px_20px_rgba(0,97,232,.2)] transition hover:bg-[#004fc0] disabled:cursor-not-allowed disabled:opacity-50">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />} Cerrar solicitud
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </section>
+        )}
+      </main>
 
       {closeConfirmOpen && !readOnly && (
         <div className="fixed inset-0 z-[10020] flex items-end justify-center bg-[#101828]/50 p-3 backdrop-blur-[2px] sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="close-request-title">
@@ -283,7 +309,7 @@ export default function SolicitudCompraProveedorPublicaPage() {
 
               <div className="mt-6 grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => setCloseConfirmOpen(false)} className="rounded-xl border border-[#d0d5dd] bg-white px-4 py-3 text-sm font-black text-[#344054] transition hover:bg-[#f8fafc]">Cancelar</button>
-                <button type="button" disabled={saving} onClick={confirmClose} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0061e8] px-4 py-3 text-sm font-black text-white shadow-[0_8px_20px_rgba(0,97,232,.2)] transition hover:bg-[#004fc0] disabled:opacity-50">
+                <button type="button" disabled={saving} onClick={() => void submit('close')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0061e8] px-4 py-3 text-sm font-black text-white shadow-[0_8px_20px_rgba(0,97,232,.2)] transition hover:bg-[#004fc0] disabled:opacity-50">
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />} Sí, cerrar solicitud
                 </button>
               </div>
@@ -297,26 +323,33 @@ export default function SolicitudCompraProveedorPublicaPage() {
   );
 }
 
-function PublicShell({ children, reserveBottom = false }: { children: React.ReactNode; reserveBottom?: boolean }) {
+function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-[9998] overflow-y-auto bg-[#f5f7fb] text-[#172033]">
-      <header className="sticky top-0 z-40 border-b border-[#e5eaf1] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1160px] items-center justify-between gap-4 px-4 py-3 sm:px-5">
-          <div className="flex min-w-0 items-center gap-3"><img src="/pwa-192x192.png" alt="RutApp" className="h-10 w-10 rounded-xl object-contain" /><div className="min-w-0"><div className="truncate text-base font-black text-[#172033]">RutApp</div><div className="truncate text-[11px] font-bold text-[#667085]">Portal de proveedores</div></div></div>
-          <div className="hidden items-center gap-2 text-xs font-bold text-[#667085] sm:flex"><Package2 className="h-4 w-4 text-[#ff7a00]" /> Solicitud de compra</div>
-        </div>
-      </header>
-      {children}
-      <footer className={`border-t border-[#e5eaf1] bg-white ${reserveBottom ? 'pb-24 sm:pb-20' : ''}`}>
-        <div className="mx-auto max-w-[1160px] px-4 py-6 text-center text-xs text-[#667085] sm:px-5">
-          <p className="font-bold text-[#344054]">Sistema creado por <a href="https://rutapp.mx" target="_blank" rel="noreferrer" className="text-[#0061e8] hover:underline">RutApp.mx</a></p>
-          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-            <a href="https://wa.me/5213171035768" target="_blank" rel="noreferrer" className="font-semibold hover:text-[#0061e8]">+52 317 103 5768</a>
-            <span aria-hidden="true">·</span>
-            <a href="mailto:soporte@rutapp.com" className="font-semibold hover:text-[#0061e8]">soporte@rutapp.com</a>
+      <div className="flex min-h-full flex-col">
+        <header className="sticky top-0 z-40 border-b border-[#e5eaf1] bg-white/95 backdrop-blur">
+          <div className="mx-auto flex max-w-[1160px] items-center justify-between gap-4 px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <img src="/pwa-192x192.png" alt="RutApp" className="h-10 w-10 rounded-xl object-contain" />
+              <div className="min-w-0"><div className="truncate text-base font-black text-[#172033]">RutApp</div><div className="truncate text-[11px] font-bold text-[#667085]">Portal de proveedores</div></div>
+            </div>
+            <div className="hidden items-center gap-2 text-xs font-bold text-[#667085] sm:flex"><Package2 className="h-4 w-4 text-[#ff7a00]" /> Solicitud de compra</div>
           </div>
-        </div>
-      </footer>
+        </header>
+
+        <div className="flex flex-1 flex-col">{children}</div>
+
+        <footer className="mt-auto border-t border-[#e5eaf1] bg-white">
+          <div className="mx-auto flex max-w-[1160px] flex-col items-center justify-between gap-2 px-4 py-5 text-center text-xs text-[#667085] sm:flex-row sm:px-5 sm:text-left">
+            <p className="font-bold text-[#344054]">Sistema creado por <a href="https://rutapp.mx" target="_blank" rel="noreferrer" className="text-[#0061e8] hover:underline">RutApp.mx</a></p>
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:justify-end">
+              <a href="https://wa.me/5213171035768" target="_blank" rel="noreferrer" className="font-semibold hover:text-[#0061e8]">+52 317 103 5768</a>
+              <span aria-hidden="true">·</span>
+              <a href="mailto:soporte@rutapp.com" className="font-semibold hover:text-[#0061e8]">soporte@rutapp.com</a>
+            </div>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
