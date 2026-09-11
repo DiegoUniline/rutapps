@@ -1,0 +1,26 @@
+/* Footer marketplace-style: light neutral background and dark text. */
+.tienda-footer {
+  background: #f5f5f5 !important;
+  color: #222 !important;
+  border-top: 1px solid #e6e6e6;
+  box-shadow: none !important;
+}
+
+.tienda-footer p {
+  color: #333 !important;
+}
+
+.tienda-footer a {
+  color: #333 !important;
+  text-decoration: none;
+}
+
+.tienda-footer a:hover {
+  color: #111 !important;
+  text-decoration: underline;
+}
+
+.tienda-footer p:last-child {
+  color: #6b6b6b !important;
+  opacity: 1 !important;
+}
