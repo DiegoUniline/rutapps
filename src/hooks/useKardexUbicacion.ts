@@ -41,6 +41,13 @@ interface KardexMovementRecord {
   lote_id: string | null;
 }
 
+const REVERSO_VENTA_REFS = new Set([
+  'cancelacion_venta',
+  'reverso_borrador',
+  'cancelacion_venta_lote',
+  'reverso_borrador_lote',
+]);
+
 /**
  * Fetches inventory movements. All parameters are optional:
  *   - productoId + ubicacionId  → kardex con saldo corrido (vista clásica)
@@ -119,6 +126,17 @@ export function useKardexUbicacion(
           // La carga representa únicamente la entrada al almacén/camión destino;
           // volver a restar el origen duplicaría la salida solo en el Kardex.
           delta = m.almacen_destino_id === ubicacionId ? cantidad : 0;
+        } else if (
+          m.tipo === 'entrada'
+          && REVERSO_VENTA_REFS.has(m.referencia_tipo ?? '')
+          && m.almacen_origen_id === ubicacionId
+          && m.almacen_destino_id === ubicacionId
+        ) {
+          // Compatibilidad histórica: algunas cancelaciones/reversos viejos quedaron
+          // guardados con el mismo almacén como origen y destino. La operación real
+          // fue una devolución de stock (entrada), por lo que no debe anularse como
+          // +cantidad -cantidad. Se cuenta únicamente la entrada al almacén.
+          delta = cantidad;
         } else {
           delta = (m.almacen_destino_id === ubicacionId ? cantidad : 0)
             - (m.almacen_origen_id === ubicacionId ? cantidad : 0);
