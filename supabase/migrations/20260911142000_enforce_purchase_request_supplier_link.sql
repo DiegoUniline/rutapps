@@ -6,6 +6,8 @@ create index if not exists solicitudes_compra_proveedor_idx
 
 -- If solicitudes_compra existed before the original migration, CREATE TABLE IF NOT EXISTS
 -- would not retrofit a missing foreign key. Ensure the relationship exists.
+-- NOT VALID keeps the migration deployable even if a legacy row contains an orphan id;
+-- PostgreSQL still enforces the FK for all new/changed values.
 do $$
 begin
   if not exists (
@@ -22,7 +24,8 @@ begin
       add constraint solicitudes_compra_proveedor_id_fkey
       foreign key (proveedor_id)
       references public.proveedores(id)
-      on delete set null;
+      on delete set null
+      not valid;
   end if;
 end
 $$;
@@ -39,9 +42,14 @@ declare
   v_email text;
   v_empresa_id uuid;
 begin
+  -- New requests must always point to a real supplier. Legacy rows that were already
+  -- created without proveedor_id remain editable so they can be repaired manually.
   if new.proveedor_id is null then
-    raise exception 'Selecciona un proveedor registrado en el catálogo de proveedores.'
-      using errcode = '23502';
+    if tg_op = 'INSERT' or old.proveedor_id is distinct from new.proveedor_id then
+      raise exception 'Selecciona un proveedor registrado en el catálogo de proveedores.'
+        using errcode = '23502';
+    end if;
+    return new;
   end if;
 
   select p.nombre, p.email, p.empresa_id
