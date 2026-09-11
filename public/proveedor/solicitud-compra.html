@@ -3,93 +3,317 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#111827" />
+  <meta name="theme-color" content="#0061e8" />
+  <meta name="robots" content="noindex,nofollow" />
   <title>Solicitud de compra · RutApp</title>
   <style>
-    :root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--soft:#f8fafc;--brand:#f97316;--brand2:#ea580c;--ok:#059669;--danger:#dc2626;--shadow:0 18px 50px rgba(15,23,42,.09)}
-    *{box-sizing:border-box} body{margin:0;background:#f1f5f9;color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-    button,input,textarea{font:inherit} .top{background:#111827;color:white;padding:18px 20px}.topin{max-width:1120px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{font-weight:900;letter-spacing:-.3px}.brand b{color:#fb923c}.secure{font-size:12px;color:#cbd5e1;display:flex;align-items:center;gap:7px}.secure:before{content:"";width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 0 4px rgba(52,211,153,.12)}
-    .wrap{max-width:1120px;margin:28px auto 120px;padding:0 18px}.hero{background:white;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}.heroAccent{height:5px;background:linear-gradient(90deg,var(--brand),#fb923c,#fdba74)}.heroBody{padding:28px}.eyebrow{font-size:11px;font-weight:900;letter-spacing:1.2px;color:var(--brand2);text-transform:uppercase}.title{font-size:30px;line-height:1.05;margin:8px 0 9px;letter-spacing:-.8px}.sub{color:var(--muted);font-size:15px;line-height:1.55;max-width:760px}.meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:22px}.metaBox{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:13px 14px}.metaLabel{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:800}.metaValue{font-size:14px;font-weight:800;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .note{margin-top:16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:13px 15px;color:#9a3412;font-size:13px;line-height:1.5}.sectionTitle{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:27px 2px 12px}.sectionTitle h2{font-size:18px;margin:0}.sectionTitle span{font-size:12px;color:var(--muted)}
-    .products{display:flex;flex-direction:column;gap:10px}.item{background:white;border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;grid-template-columns:minmax(210px,1.6fr) 110px 130px 135px 155px minmax(180px,1fr);gap:12px;align-items:start;transition:.18s}.item:hover{border-color:#cbd5e1;box-shadow:0 8px 26px rgba(15,23,42,.05)}.prodCode{font-size:10px;color:#94a3b8;font-weight:800;letter-spacing:.4px}.prodName{font-size:14px;font-weight:800;margin-top:3px;line-height:1.3}.requested{display:flex;flex-direction:column;gap:3px}.requested strong{font-size:18px}.requested small,.field label{font-size:10px;text-transform:uppercase;letter-spacing:.45px;color:#94a3b8;font-weight:800}.field{display:flex;flex-direction:column;gap:5px}.control{width:100%;border:1px solid #cbd5e1;border-radius:9px;background:white;padding:9px 10px;color:var(--ink);outline:none;min-height:39px}.control:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(249,115,22,.12)}textarea.control{resize:vertical;min-height:58px}.availability{display:flex;align-items:center;gap:7px;padding-top:23px;font-size:12px;font-weight:700;color:#475569}.availability input{width:18px;height:18px;accent-color:var(--brand)}.item.unavailable{background:#f8fafc}.item.unavailable .field:not(.obs){opacity:.45;pointer-events:none}
-    .globalNote{background:white;border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:18px}.globalNote label{display:block;font-size:12px;font-weight:800;margin-bottom:8px}.globalNote textarea{min-height:88px}
-    .statusBox{display:none;margin-top:18px;border-radius:12px;padding:13px 15px;font-size:13px;font-weight:700}.statusBox.ok{display:block;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}.statusBox.err{display:block;background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
-    .sticky{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:12px max(18px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));z-index:20}.stickyIn{max-width:1120px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}.helper{font-size:12px;color:var(--muted)}.actions{display:flex;gap:9px}.btn{border:0;border-radius:10px;padding:11px 17px;font-weight:850;cursor:pointer;transition:.15s}.btn:disabled{opacity:.5;cursor:not-allowed}.secondary{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}.primary{background:var(--brand);color:white;box-shadow:0 8px 20px rgba(249,115,22,.22)}.primary:hover{background:var(--brand2)}.done{max-width:720px;margin:70px auto;background:white;border:1px solid var(--line);border-radius:20px;padding:38px;text-align:center;box-shadow:var(--shadow)}.doneIcon{width:58px;height:58px;margin:auto;border-radius:50%;background:#ecfdf5;color:var(--ok);display:grid;place-items:center;font-size:30px;font-weight:900}.done h1{margin:16px 0 8px;font-size:25px}.done p{color:var(--muted);line-height:1.6}.loader{min-height:60vh;display:grid;place-items:center;color:var(--muted)}.spinner{width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite;margin:auto auto 12px}@keyframes spin{to{transform:rotate(360deg)}}
-    @media(max-width:980px){.item{grid-template-columns:1.4fr 100px 120px 130px}.item .obs{grid-column:1/-1}.availability{padding-top:20px}.meta{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:680px){.top{padding:14px 16px}.secure{display:none}.wrap{margin-top:14px;padding:0 12px}.hero{border-radius:15px}.heroBody{padding:20px}.title{font-size:24px}.meta{grid-template-columns:1fr 1fr}.metaBox{padding:10px}.item{grid-template-columns:1fr 1fr;padding:14px;border-radius:13px}.item>div:first-child{grid-column:1/-1}.availability{grid-column:1/-1;padding-top:0}.item .obs{grid-column:1/-1}.requested strong{font-size:16px}.stickyIn{align-items:stretch;flex-direction:column}.helper{display:none}.actions{display:grid;grid-template-columns:1fr 1.35fr}.btn{width:100%;padding:12px 10px}.wrap{margin-bottom:150px}}
+    :root {
+      --blue:#0061e8;
+      --blue-dark:#004fc0;
+      --blue-soft:#eef5ff;
+      --orange:#ff7a00;
+      --orange-soft:#fff4e8;
+      --ink:#172033;
+      --muted:#667085;
+      --line:#e5eaf1;
+      --surface:#ffffff;
+      --page:#f5f7fb;
+      --success:#15803d;
+      --success-soft:#ecfdf3;
+      --danger:#c62828;
+      --danger-soft:#fff1f1;
+      --shadow:0 16px 45px rgba(18,43,80,.08);
+    }
+    *{box-sizing:border-box}
+    html{background:var(--page)}
+    body{margin:0;background:var(--page);color:var(--ink);font-family:Lato,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+    button,input,textarea{font:inherit}
+    button{touch-action:manipulation}
+
+    .topbar{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+    .topbar-inner{max-width:1160px;margin:auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{display:flex;align-items:center;gap:11px;min-width:0}
+    .brand-logo{width:42px;height:42px;border-radius:11px;object-fit:contain;box-shadow:0 4px 12px rgba(0,97,232,.14)}
+    .brand-title{font-weight:900;font-size:18px;letter-spacing:-.3px;color:var(--blue);line-height:1}
+    .brand-sub{font-size:11px;color:var(--muted);margin-top:4px;font-weight:700}
+    .secure{display:flex;align-items:center;gap:7px;color:#475467;font-size:12px;font-weight:700;background:#f8fafc;border:1px solid var(--line);padding:7px 10px;border-radius:999px}
+    .secure-dot{width:7px;height:7px;background:#22c55e;border-radius:50%;box-shadow:0 0 0 4px rgba(34,197,94,.12)}
+
+    .wrap{max-width:1160px;margin:24px auto 120px;padding:0 18px}
+    .hero{overflow:hidden;background:linear-gradient(135deg,#0061e8 0%,#0759cc 72%,#0046ad 100%);border-radius:22px;box-shadow:0 18px 55px rgba(0,97,232,.18);color:#fff;position:relative}
+    .hero:after{content:"";position:absolute;width:260px;height:260px;border-radius:50%;background:rgba(255,122,0,.14);right:-65px;top:-105px}
+    .hero-body{padding:27px 30px;position:relative;z-index:1}
+    .hero-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+    .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:1.1px;font-weight:900;color:#d9e8ff}
+    .title{font-size:31px;line-height:1.05;margin:7px 0 6px;letter-spacing:-.75px}
+    .folio{font-size:13px;color:#d9e8ff;font-weight:800}
+    .status{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900;white-space:nowrap;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(8px)}
+    .status:before{content:"";width:7px;height:7px;border-radius:50%;background:#fff}
+    .status.saved:before{background:#ffd08a}
+    .lead{margin-top:20px;max-width:780px;color:#eaf2ff;font-size:15px;line-height:1.55}
+    .lead strong{color:#fff}
+    .hero-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:23px}
+    .meta{background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.16);border-radius:13px;padding:12px 14px;min-width:0}
+    .meta-label{font-size:10px;text-transform:uppercase;letter-spacing:.55px;font-weight:900;color:#cfe1ff}
+    .meta-value{font-size:14px;font-weight:900;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    .note{margin-top:16px;background:var(--orange-soft);border:1px solid #ffd7ad;border-left:4px solid var(--orange);border-radius:12px;padding:13px 15px;color:#9a4a00;font-size:13px;line-height:1.5}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:26px 2px 11px}
+    .section-head h2{margin:0;font-size:18px;letter-spacing:-.25px}
+    .section-head p{margin:3px 0 0;color:var(--muted);font-size:12px}
+    .section-hint{font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 9px;white-space:nowrap}
+
+    .products{display:flex;flex-direction:column;gap:9px}
+    .item{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px;display:grid;grid-template-columns:minmax(210px,1.65fr) 105px 125px 130px 150px minmax(170px,1fr);gap:11px;align-items:start;box-shadow:0 2px 5px rgba(16,24,40,.025)}
+    .item:focus-within{border-color:#b8d5ff;box-shadow:0 0 0 3px rgba(0,97,232,.07)}
+    .item.unavailable{background:#fafbfc}
+    .item.unavailable .field:not(.obs){opacity:.45;pointer-events:none}
+    .prod-code{font-size:10px;color:#98a2b3;font-weight:900;letter-spacing:.45px}
+    .prod-name{font-size:14px;font-weight:900;margin-top:4px;line-height:1.3}
+    .requested{display:flex;flex-direction:column;gap:2px}
+    .requested small,.field label{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#98a2b3;font-weight:900}
+    .requested strong{font-size:18px;color:var(--blue)}
+    .field{display:flex;flex-direction:column;gap:5px}
+    .control{width:100%;border:1px solid #d6dde7;border-radius:9px;background:#fff;padding:9px 10px;color:var(--ink);outline:none;min-height:39px;transition:.15s}
+    .control:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,97,232,.1)}
+    textarea.control{resize:vertical;min-height:58px}
+    .availability{display:flex;align-items:center;gap:7px;padding-top:23px;font-size:12px;font-weight:800;color:#475467}
+    .availability input{width:18px;height:18px;accent-color:var(--blue)}
+
+    .global-note{background:#fff;border:1px solid var(--line);border-radius:15px;padding:17px;margin-top:17px}
+    .global-note label{display:block;font-size:12px;font-weight:900;margin-bottom:8px}
+    .global-note textarea{min-height:85px}
+    .status-box{display:none;margin-top:16px;border-radius:11px;padding:12px 14px;font-size:13px;font-weight:800}
+    .status-box.ok{display:block;background:var(--success-soft);border:1px solid #b7ebca;color:#166534}
+    .status-box.err{display:block;background:var(--danger-soft);border:1px solid #f4c2c2;color:var(--danger)}
+
+    .sticky{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:11px max(18px,env(safe-area-inset-right)) calc(11px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));z-index:25;box-shadow:0 -8px 28px rgba(16,24,40,.06)}
+    .sticky-inner{max-width:1160px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:14px}
+    .helper{font-size:12px;color:var(--muted);line-height:1.4}
+    .helper strong{color:var(--ink)}
+    .actions{display:flex;gap:9px}
+    .btn{border:0;border-radius:10px;padding:11px 17px;font-weight:900;cursor:pointer;transition:.15s;min-height:42px}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .btn-save{background:#fff;color:var(--blue);border:1px solid #aecdff}
+    .btn-save:hover{background:var(--blue-soft)}
+    .btn-close{background:var(--blue);color:#fff;box-shadow:0 7px 18px rgba(0,97,232,.22)}
+    .btn-close:hover{background:var(--blue-dark)}
+
+    .screen-card{max-width:680px;margin:70px auto;background:#fff;border:1px solid var(--line);border-radius:22px;padding:38px;text-align:center;box-shadow:var(--shadow)}
+    .screen-logo{width:58px;height:58px;border-radius:15px;object-fit:contain;margin-bottom:12px}
+    .screen-icon{width:58px;height:58px;margin:0 auto 15px;border-radius:50%;background:var(--success-soft);color:var(--success);display:grid;place-items:center;font-size:28px;font-weight:900}
+    .screen-icon.error{background:var(--danger-soft);color:var(--danger)}
+    .screen-card h1{font-size:25px;margin:6px 0 8px;letter-spacing:-.4px}
+    .screen-card p{color:var(--muted);line-height:1.6;margin:6px 0}
+    .closed-tag{display:inline-flex;margin-top:12px;background:var(--blue-soft);color:var(--blue);font-size:11px;font-weight:900;padding:7px 10px;border-radius:999px}
+    .loader{min-height:58vh;display:grid;place-items:center;color:var(--muted);text-align:center}
+    .spinner{width:34px;height:34px;border:3px solid #e2e8f0;border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .footer{max-width:1160px;margin:26px auto 0;padding:0 18px 20px;text-align:center;color:#98a2b3;font-size:11px}
+    .footer strong{color:var(--blue)}
+
+    @media(max-width:980px){
+      .item{grid-template-columns:1.4fr 100px 120px 130px}
+      .item .obs{grid-column:1/-1}
+      .availability{padding-top:20px}
+      .hero-meta{grid-template-columns:repeat(2,1fr)}
+    }
+    @media(max-width:680px){
+      .topbar-inner{padding:10px 13px}.brand-logo{width:38px;height:38px}.brand-title{font-size:17px}.secure{display:none}
+      .wrap{margin:13px auto 150px;padding:0 11px}.hero{border-radius:16px}.hero-body{padding:20px}.hero-row{flex-direction:column;gap:10px}.title{font-size:25px}.status{padding:7px 10px}.lead{font-size:14px;margin-top:14px}.hero-meta{grid-template-columns:1fr 1fr;margin-top:17px}.meta{padding:10px}
+      .section-head{align-items:flex-start}.section-hint{display:none}
+      .item{grid-template-columns:1fr 1fr;padding:13px;border-radius:13px}.item>div:first-child{grid-column:1/-1}.availability{grid-column:1/-1;padding-top:0}.item .obs{grid-column:1/-1}.requested strong{font-size:17px}
+      .sticky-inner{align-items:stretch;flex-direction:column}.helper{text-align:center}.actions{display:grid;grid-template-columns:1fr 1.25fr}.btn{width:100%;padding:11px 8px}.screen-card{margin:34px 10px;padding:30px 20px}
+    }
   </style>
 </head>
 <body>
-  <header class="top"><div class="topin"><div class="brand"><b>RutApp</b> · Portal de proveedores</div><div class="secure">Enlace seguro de solicitud</div></div></header>
-  <main id="app" class="wrap"><div class="loader"><div><div class="spinner"></div>Cargando solicitud…</div></div></main>
-  <div id="sticky" class="sticky" style="display:none"><div class="stickyIn"><div class="helper">Puedes guardar un borrador y continuar más tarde desde este mismo enlace.</div><div class="actions"><button id="saveBtn" class="btn secondary">Guardar borrador</button><button id="sendBtn" class="btn primary">Enviar respuesta</button></div></div></div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="/pwa-192x192.png" alt="RutApp" class="brand-logo" />
+        <div><div class="brand-title">RutApp</div><div class="brand-sub">Portal de proveedores · Solicitud de compra</div></div>
+      </div>
+      <div class="secure"><span class="secure-dot"></span> Enlace privado de solicitud</div>
+    </div>
+  </header>
+
+  <main id="app" class="wrap">
+    <div class="loader"><div><div class="spinner"></div>Cargando solicitud…</div></div>
+  </main>
+
+  <div id="sticky" class="sticky" style="display:none">
+    <div class="sticky-inner">
+      <div class="helper"><strong>Guardada</strong> conserva tus cambios para continuar después. <strong>Cerrar solicitud</strong> es definitivo.</div>
+      <div class="actions">
+        <button id="saveBtn" class="btn btn-save">Guardar</button>
+        <button id="closeBtn" class="btn btn-close">Cerrar solicitud</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">Gestionado de forma segura con <strong>RutApp</strong> · rutapp.mx</footer>
+
 <script>
 (() => {
   const ENDPOINT = 'https://pkdwemunxxpafpmiqxiq.supabase.co/functions/v1/solicitud-compra-proveedor';
-  const params = new URLSearchParams(location.search); const token = params.get('token') || '';
-  const app = document.getElementById('app'), sticky = document.getElementById('sticky');
-  const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  const money = (v) => v==null||v==='' ? '' : Number(v).toLocaleString('es-MX',{style:'currency',currency:'MXN'});
-  const date = (v) => { if(!v)return 'Por confirmar'; try{return new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short',year:'numeric'}).format(new Date(v+'T12:00:00'));}catch{return v;} };
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token') || '';
+  const app = document.getElementById('app');
+  const sticky = document.getElementById('sticky');
+  const saveBtn = document.getElementById('saveBtn');
+  const closeBtn = document.getElementById('closeBtn');
   let state = null;
 
-  function errorScreen(message){ app.innerHTML=`<div class="done"><div class="doneIcon" style="background:#fef2f2;color:#dc2626">!</div><h1>No pudimos abrir la solicitud</h1><p>${esc(message)}</p></div>`; sticky.style.display='none'; }
-  function doneScreen(){ app.innerHTML=`<div class="done"><div class="doneIcon">✓</div><h1>Respuesta enviada</h1><p>Tu respuesta quedó registrada correctamente. <strong>${esc(state?.empresa?.nombre||'Tu cliente')}</strong> ya puede revisarla dentro de RutApp y convertirla en una compra.</p><p style="font-size:12px">Folio ${esc(state?.solicitud?.folio||'')}</p></div>`; sticky.style.display='none'; }
+  const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const date = (v) => {
+    if (!v) return 'Por confirmar';
+    try { return new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short',year:'numeric'}).format(new Date(v+'T12:00:00')); }
+    catch { return v; }
+  };
 
-  function render(){
-    const s=state.solicitud, lines=state.lineas||[], closed=['respondida','convertida'].includes(s.status);
-    if(closed){ doneScreen(); return; }
-    const total=lines.reduce((a,l)=>a+Number(l.cantidad_solicitada||0),0);
-    app.innerHTML=`
-      <section class="hero"><div class="heroAccent"></div><div class="heroBody">
-        <div class="eyebrow">Solicitud de compra</div><h1 class="title">${esc(s.folio)}</h1>
-        <div class="sub"><strong>${esc(state.empresa.nombre)}</strong> te solicita confirmar qué puedes surtir, el costo unitario y la fecha estimada de entrega.</div>
-        <div class="meta">
-          <div class="metaBox"><div class="metaLabel">Proveedor</div><div class="metaValue">${esc(s.proveedor_nombre||'Proveedor')}</div></div>
-          <div class="metaBox"><div class="metaLabel">Productos</div><div class="metaValue">${lines.length}</div></div>
-          <div class="metaBox"><div class="metaLabel">Unidades solicitadas</div><div class="metaValue">${total.toLocaleString('es-MX')}</div></div>
-          <div class="metaBox"><div class="metaLabel">Fecha requerida</div><div class="metaValue">${esc(date(s.fecha_requerida))}</div></div>
+  function publicState(status) {
+    return status === 'borrador_proveedor'
+      ? { label:'Guardada', cls:'saved' }
+      : { label:'Abierta', cls:'open' };
+  }
+
+  function errorScreen(message) {
+    app.innerHTML = `<div class="screen-card"><img src="/pwa-192x192.png" alt="RutApp" class="screen-logo"><div class="screen-icon error">!</div><h1>Solicitud no disponible</h1><p>${esc(message)}</p><p>Si necesitas realizar cambios, solicita un nuevo contacto a la empresa que te envió la solicitud.</p></div>`;
+    sticky.style.display='none';
+  }
+
+  function closedScreen() {
+    app.innerHTML = `<div class="screen-card"><img src="/pwa-192x192.png" alt="RutApp" class="screen-logo"><div class="screen-icon">✓</div><h1>Solicitud cerrada</h1><p>La información fue enviada correctamente a <strong>${esc(state?.empresa?.nombre || 'tu cliente')}</strong>.</p><p>Este enlace quedó cerrado y ya no podrá utilizarse para modificar la solicitud.</p><span class="closed-tag">Proceso finalizado</span></div>`;
+    sticky.style.display='none';
+    history.replaceState({}, document.title, location.pathname);
+  }
+
+  function row(l) {
+    const available = l.disponible !== false;
+    return `<article class="item ${available ? '' : 'unavailable'}" data-id="${esc(l.id)}">
+      <div><div class="prod-code">${esc(l.producto_codigo || 'PRODUCTO')}</div><div class="prod-name">${esc(l.producto_nombre)}</div></div>
+      <div class="requested"><small>Solicitado</small><strong>${Number(l.cantidad_solicitada || 0).toLocaleString('es-MX')}</strong><small>${esc(l.unidad || '')}</small></div>
+      <div class="field"><label>Puedo surtir</label><input class="control qty" type="number" min="0" step="0.01" value="${l.cantidad_surtida ?? l.cantidad_solicitada ?? ''}"></div>
+      <div class="field"><label>Costo unitario</label><input class="control cost" type="number" min="0" step="0.01" value="${l.costo_unitario ?? ''}" placeholder="$ 0.00"></div>
+      <div class="field"><label>Fecha de entrega</label><input class="control delivery" type="date" value="${esc(l.fecha_entrega || '')}"></div>
+      <div class="field obs"><label>Observación</label><textarea class="control observation" placeholder="Opcional">${esc(l.observaciones || '')}</textarea></div>
+      <label class="availability"><input class="availableCheck" type="checkbox" ${available ? 'checked' : ''}> Disponible</label>
+    </article>`;
+  }
+
+  function render() {
+    const s = state.solicitud;
+    const lines = state.lineas || [];
+    const ps = publicState(s.status);
+    const total = lines.reduce((a,l) => a + Number(l.cantidad_solicitada || 0), 0);
+
+    app.innerHTML = `
+      <section class="hero">
+        <div class="hero-body">
+          <div class="hero-row">
+            <div><div class="eyebrow">Solicitud de compra</div><h1 class="title">Confirma tu surtido</h1><div class="folio">${esc(s.folio)}</div></div>
+            <div class="status ${ps.cls}" id="publicStatus">${ps.label}</div>
+          </div>
+          <div class="lead"><strong>${esc(state.empresa.nombre)}</strong> te solicita confirmar disponibilidad, cantidad a surtir, costo y fecha estimada de entrega. No necesitas una cuenta de RutApp para responder.</div>
+          <div class="hero-meta">
+            <div class="meta"><div class="meta-label">Proveedor</div><div class="meta-value">${esc(s.proveedor_nombre || 'Proveedor')}</div></div>
+            <div class="meta"><div class="meta-label">Productos</div><div class="meta-value">${lines.length}</div></div>
+            <div class="meta"><div class="meta-label">Unidades solicitadas</div><div class="meta-value">${total.toLocaleString('es-MX')}</div></div>
+            <div class="meta"><div class="meta-label">Fecha requerida</div><div class="meta-value">${esc(date(s.fecha_requerida))}</div></div>
+          </div>
         </div>
-        ${s.notas?`<div class="note"><strong>Nota de ${esc(state.empresa.nombre)}:</strong><br>${esc(s.notas)}</div>`:''}
-      </div></section>
-      <div class="sectionTitle"><h2>Confirma cada producto</h2><span>Los campos se guardan sólo al presionar un botón</span></div>
-      <section class="products">${lines.map((l,i)=>row(l,i)).join('')}</section>
-      <section class="globalNote"><label>Observaciones generales para ${esc(state.empresa.nombre)}</label><textarea id="globalObs" class="control" placeholder="Ej. el resto del pedido llega el viernes…">${esc(s.proveedor_observaciones||'')}</textarea></section>
-      <div id="statusBox" class="statusBox"></div>`;
-    document.querySelectorAll('.availableCheck').forEach(ch=>ch.addEventListener('change',e=>{ const item=e.target.closest('.item'); item.classList.toggle('unavailable',!e.target.checked); }));
+      </section>
+      ${s.notas ? `<div class="note"><strong>Mensaje de ${esc(state.empresa.nombre)}:</strong><br>${esc(s.notas)}</div>` : ''}
+      <div class="section-head"><div><h2>Productos solicitados</h2><p>Completa la información que corresponda a cada producto.</p></div><span class="section-hint">Los cambios sólo se guardan al presionar Guardar</span></div>
+      <section class="products">${lines.map(row).join('')}</section>
+      <section class="global-note"><label>Observaciones generales</label><textarea id="globalObs" class="control" placeholder="Ej. el resto del pedido llega el viernes…">${esc(s.proveedor_observaciones || '')}</textarea></section>
+      <div id="statusBox" class="status-box"></div>`;
+
+    document.querySelectorAll('.availableCheck').forEach(ch => ch.addEventListener('change', e => {
+      const item = e.target.closest('.item');
+      item.classList.toggle('unavailable', !e.target.checked);
+    }));
     sticky.style.display='block';
   }
 
-  function row(l,i){ const available=l.disponible!==false; return `<article class="item ${available?'':'unavailable'}" data-id="${esc(l.id)}">
-    <div><div class="prodCode">${esc(l.producto_codigo||'PRODUCTO')}</div><div class="prodName">${esc(l.producto_nombre)}</div></div>
-    <div class="requested"><small>Solicitado</small><strong>${Number(l.cantidad_solicitada||0).toLocaleString('es-MX')}</strong><small>${esc(l.unidad||'')}</small></div>
-    <div class="field"><label>Puedo surtir</label><input class="control qty" type="number" min="0" step="0.01" value="${l.cantidad_surtida ?? l.cantidad_solicitada ?? ''}"></div>
-    <div class="field"><label>Costo unitario</label><input class="control cost" type="number" min="0" step="0.01" value="${l.costo_unitario ?? ''}" placeholder="$ 0.00"></div>
-    <div class="field"><label>Fecha entrega</label><input class="control delivery" type="date" value="${esc(l.fecha_entrega||'')}"></div>
-    <div class="field obs"><label>Observación</label><textarea class="control observation" placeholder="Opcional">${esc(l.observaciones||'')}</textarea></div>
-    <label class="availability"><input class="availableCheck" type="checkbox" ${available?'checked':''}> Disponible</label>
-  </article>`; }
-
-  function collect(){ return [...document.querySelectorAll('.item')].map(el=>({
-    id:el.dataset.id, disponible:el.querySelector('.availableCheck').checked,
-    cantidad_surtida:el.querySelector('.qty').value, costo_unitario:el.querySelector('.cost').value,
-    fecha_entrega:el.querySelector('.delivery').value||null, observaciones:el.querySelector('.observation').value.trim()
-  })); }
-  function showStatus(msg,ok){ const el=document.getElementById('statusBox'); if(!el)return; el.className='statusBox '+(ok?'ok':'err'); el.textContent=msg; el.scrollIntoView({behavior:'smooth',block:'center'}); }
-  async function post(action){
-    const save=document.getElementById('saveBtn'), send=document.getElementById('sendBtn'); save.disabled=send.disabled=true;
-    try{
-      const res=await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,token,lineas:collect(),proveedor_observaciones:document.getElementById('globalObs')?.value||''})});
-      const data=await res.json(); if(!res.ok) throw new Error(data.error||'No se pudo guardar');
-      if(action==='respond'){ state.solicitud.status='respondida'; doneScreen(); } else showStatus('Borrador guardado. Puedes cerrar esta página y continuar después.',true);
-    }catch(e){ showStatus(e.message||'Ocurrió un error',false); }
-    finally{ if(save)save.disabled=false;if(send)send.disabled=false; }
+  function collect() {
+    return [...document.querySelectorAll('.item')].map(el => ({
+      id:el.dataset.id,
+      disponible:el.querySelector('.availableCheck').checked,
+      cantidad_surtida:el.querySelector('.qty').value,
+      costo_unitario:el.querySelector('.cost').value,
+      fecha_entrega:el.querySelector('.delivery').value || null,
+      observaciones:el.querySelector('.observation').value.trim(),
+    }));
   }
 
-  document.getElementById('saveBtn').addEventListener('click',()=>post('save'));
-  document.getElementById('sendBtn').addEventListener('click',()=>{ if(confirm('¿Enviar tu respuesta a '+(state?.empresa?.nombre||'tu cliente')+'?')) post('respond'); });
+  function showStatus(msg, ok) {
+    const el = document.getElementById('statusBox');
+    if (!el) return;
+    el.className = 'status-box ' + (ok ? 'ok' : 'err');
+    el.textContent = msg;
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+  }
 
-  (async()=>{ if(!token){errorScreen('El enlace no contiene un token válido.');return;} try{const r=await fetch(ENDPOINT+'?token='+encodeURIComponent(token)); const d=await r.json(); if(!r.ok)throw new Error(d.error||'Solicitud no disponible'); state=d; render();}catch(e){errorScreen(e.message||'No se pudo cargar la solicitud');} })();
+  function setBusy(busy) {
+    saveBtn.disabled = busy;
+    closeBtn.disabled = busy;
+    saveBtn.textContent = busy ? 'Guardando…' : 'Guardar';
+  }
+
+  async function post(action) {
+    setBusy(true);
+    try {
+      const res = await fetch(ENDPOINT, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          action,
+          token,
+          lineas:collect(),
+          proveedor_observaciones:document.getElementById('globalObs')?.value || '',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo guardar');
+
+      if (action === 'close') {
+        closedScreen();
+        return;
+      }
+
+      state.solicitud.status = 'borrador_proveedor';
+      const chip = document.getElementById('publicStatus');
+      if (chip) { chip.textContent='Guardada'; chip.className='status saved'; }
+      showStatus('Solicitud guardada. Puedes cerrar esta página y continuar después con el mismo enlace.', true);
+    } catch (e) {
+      showStatus(e.message || 'Ocurrió un error', false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  saveBtn.addEventListener('click', () => post('save'));
+  closeBtn.addEventListener('click', () => {
+    const company = state?.empresa?.nombre || 'tu cliente';
+    if (confirm(`¿Cerrar esta solicitud y enviarla a ${company}?\n\nEsta acción es definitiva. Después de cerrarla, este enlace dejará de funcionar y ya no podrás editar la información.`)) {
+      post('close');
+    }
+  });
+
+  (async () => {
+    if (!token) { errorScreen('El enlace no contiene un token válido.'); return; }
+    try {
+      const r = await fetch(ENDPOINT + '?token=' + encodeURIComponent(token));
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Solicitud no disponible');
+      state = d;
+      render();
+    } catch (e) {
+      errorScreen(e.message || 'No se pudo cargar la solicitud');
+    }
+  })();
 })();
 </script>
 </body>
