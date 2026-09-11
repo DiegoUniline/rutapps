@@ -15,7 +15,6 @@ interface Props {
   empresaNombre?: string
   proveedorNombre?: string
   folio?: string
-  fechaRequerida?: string
   publicUrl?: string
   totalPartidas?: number
   totalUnidades?: number | string
@@ -32,7 +31,7 @@ const BORDER = '#e2e8f0'
 
 const Email = ({
   empresaNombre = 'Tu cliente', proveedorNombre = 'Proveedor', folio = 'Solicitud de compra',
-  fechaRequerida, publicUrl, totalPartidas = 0, totalUnidades = 0, productos = [], mensaje, isCopy,
+  publicUrl, totalPartidas = 0, totalUnidades = 0, productos = [], mensaje, isCopy,
 }: Props) => (
   <Html lang="es" dir="ltr">
     <Head />
@@ -50,14 +49,13 @@ const Email = ({
           <Text style={text}>
             {isCopy
               ? `Se envió esta solicitud a ${proveedorNombre}. Recibes esta copia para seguimiento interno.`
-              : `Hola ${proveedorNombre}. ${empresaNombre} te solicita confirmar disponibilidad, costo y fecha estimada de entrega.`}
+              : `Hola ${proveedorNombre}. ${empresaNombre} te solicita confirmar disponibilidad, cantidad y costo.`}
           </Text>
           {mensaje ? <Text style={message}>{mensaje}</Text> : null}
 
           <Section style={summaryGrid}>
             <Text style={summaryItem}><strong>{totalPartidas}</strong><br/><span style={muted}>productos</span></Text>
-            <Text style={summaryItem}><strong>{totalUnidades}</strong><br/><span style={muted}>unidades solicitadas</span></Text>
-            <Text style={summaryItem}><strong>{fechaRequerida || 'Por confirmar'}</strong><br/><span style={muted}>fecha requerida</span></Text>
+            <Text style={summaryItem}><strong>{totalUnidades}</strong><br/><span style={muted}>cantidad solicitada</span></Text>
           </Section>
 
           {productos.slice(0, 6).map((p, idx) => (
@@ -96,7 +94,6 @@ export const template = {
     empresaNombre: 'Distribuidora Demo',
     proveedorNombre: 'Proveedor ABC',
     folio: 'SC-2026-A1B2C3D4',
-    fechaRequerida: '15 sep 2026',
     publicUrl: 'https://rutapp.mx/proveedor/solicitud-compra.html?token=demo',
     totalPartidas: 3,
     totalUnidades: 190,
@@ -118,7 +115,7 @@ const h1 = { color: TEXT_DARK, fontSize: '28px', lineHeight: '34px', margin: '0 
 const text = { color: '#475569', fontSize: '15px', lineHeight: '23px', margin: '0 0 14px' }
 const message = { color: '#334155', backgroundColor: '#eef4ff', borderLeft: `4px solid ${PRIMARY}`, padding: '12px 14px', fontSize: '14px', lineHeight: '21px', borderRadius: '0 8px 8px 0' }
 const summaryGrid = { backgroundColor: '#f8fafc', border: `1px solid ${BORDER}`, borderRadius: '12px', padding: '14px 8px', margin: '22px 0' }
-const summaryItem = { width: '33.33%', display: 'inline-block', textAlign: 'center' as const, color: TEXT_DARK, fontSize: '15px', lineHeight: '19px', margin: 0 }
+const summaryItem = { width: '50%', display: 'inline-block', textAlign: 'center' as const, color: TEXT_DARK, fontSize: '15px', lineHeight: '19px', margin: 0 }
 const muted = { color: '#94a3b8', fontSize: '11px', fontWeight: 500 }
 const productRow = { borderBottom: '1px solid #eef2f7', padding: '10px 0' }
 const productName = { color: '#1e293b', fontSize: '14px', fontWeight: 600, margin: 0, display: 'inline-block', width: '72%' }
