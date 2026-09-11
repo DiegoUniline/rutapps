@@ -8,6 +8,7 @@ import TiendaFloatingCart from "./TiendaFloatingCart";
 import "@/tienda/tienda.css";
 import "@/tienda/tienda-redesign.css";
 import "@/tienda/tienda-commerce-overlays.css";
+import "@/tienda/tienda-footer.css";
 
 function useTiendaPWA(t: ReturnType<typeof useTienda>) {
   useEffect(() => {
