@@ -13,10 +13,12 @@ import { template as cobroRecibo } from './cobro-recibo.tsx'
 import { template as adminBillingAlert } from './admin-billing-alert.tsx'
 import { template as clientBillingStatus } from './client-billing-status.tsx'
 import { template as cfdiEnvio } from './cfdi-envio.tsx'
+import { template as solicitudCompraProveedor } from './solicitud-compra-proveedor.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'cobro-recibo': cobroRecibo,
   'admin-billing-alert': adminBillingAlert,
   'client-billing-status': clientBillingStatus,
   'cfdi-envio': cfdiEnvio,
+  'solicitud-compra-proveedor': solicitudCompraProveedor,
 }

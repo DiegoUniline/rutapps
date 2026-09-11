@@ -81,3 +81,6 @@ verify_jwt = false
 
 [functions.cotizacion-publica]
 verify_jwt = false
+
+[functions.solicitud-compra-proveedor]
+verify_jwt = false

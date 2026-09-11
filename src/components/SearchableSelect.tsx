@@ -16,6 +16,7 @@ interface SearchableSelectProps {
   onClose?: () => void;
   placeholder?: string;
   autoOpen?: boolean;
+  disabled?: boolean;
   /** When provided, shows a "Crear nuevo" option. Should return the new item's id. */
   onCreateNew?: (name: string) => Promise<string | undefined>;
 }
@@ -27,9 +28,10 @@ export default function SearchableSelect({
   onClose,
   placeholder = 'Buscar...',
   autoOpen = false,
+  disabled = false,
   onCreateNew,
 }: SearchableSelectProps) {
-  const [open, setOpen] = useState(autoOpen);
+  const [open, setOpen] = useState(autoOpen && !disabled);
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(0);
@@ -49,10 +51,14 @@ export default function SearchableSelect({
 
   const portalTarget = (triggerRef.current?.closest('[role="dialog"]') as HTMLElement | null) ?? document.body;
 
-  // Reset highlight on filter change
   useEffect(() => { setHighlightIdx(0); }, [filtered.length, search]);
+  useEffect(() => {
+    if (disabled && open) {
+      setOpen(false);
+      setSearch('');
+    }
+  }, [disabled, open]);
 
-  // Position dropdown
   const updatePos = useCallback(() => {
     const trigger = triggerRef.current;
     if (!trigger) return;
@@ -90,36 +96,35 @@ export default function SearchableSelect({
     };
   }, [open, updatePos]);
 
-  // Focus input when opened
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 20);
-    }
+    if (open) setTimeout(() => inputRef.current?.focus(), 20);
   }, [open]);
 
-  // Scroll highlighted into view
   useEffect(() => {
     if (!open || !dropdownRef.current) return;
-    const el = dropdownRef.current.children[highlightIdx + 1] as HTMLElement | undefined; // +1 because search is first child
+    const el = dropdownRef.current.children[highlightIdx + 1] as HTMLElement | undefined;
     el?.scrollIntoView({ block: 'nearest' });
   }, [highlightIdx, open]);
 
   const select = useCallback((val: string) => {
+    if (disabled) return;
     onChange(val);
     setOpen(false);
     setSearch('');
     onClose?.();
-  }, [onChange, onClose]);
+  }, [disabled, onChange, onClose]);
 
   const clear = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    if (disabled) return;
     onChange('');
     setOpen(false);
     setSearch('');
     onClose?.();
-  }, [onChange, onClose]);
+  }, [disabled, onChange, onClose]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setHighlightIdx(i => Math.min(i + 1, filtered.length - 1));
@@ -141,7 +146,6 @@ export default function SearchableSelect({
     }
   };
 
-  // Close on click outside
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -160,15 +164,17 @@ export default function SearchableSelect({
     <>
       <div
         ref={triggerRef}
-        onClick={() => setOpen(true)}
+        onClick={() => { if (!disabled) setOpen(true); }}
+        aria-disabled={disabled}
         className={cn(
-          "inline-edit-input flex items-center justify-between gap-1 cursor-pointer min-h-[28px] text-[13px]",
+          "inline-edit-input flex items-center justify-between gap-1 min-h-[28px] text-[13px]",
+          disabled ? "cursor-default opacity-75" : "cursor-pointer",
           !value && "text-muted-foreground"
         )}
       >
         <span className="truncate flex-1">{selectedLabel || placeholder || '—'}</span>
         <div className="flex items-center gap-0.5 shrink-0">
-          {value && (
+          {value && !disabled && (
             <button
               type="button"
               onMouseDown={clear}
@@ -177,23 +183,17 @@ export default function SearchableSelect({
               <X className="h-3 w-3" />
             </button>
           )}
-          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+          {!disabled && <ChevronDown className="h-3 w-3 text-muted-foreground" />}
         </div>
       </div>
 
-      {open && pos && createPortal(
+      {open && !disabled && pos && createPortal(
         <div
           ref={dropdownRef}
           onPointerDown={e => e.stopPropagation()}
           onMouseDown={e => e.stopPropagation()}
           onPointerUp={e => e.stopPropagation()}
-          style={{
-            position: pos.strategy,
-            top: pos.top,
-            left: pos.left,
-            width: pos.width,
-            zIndex: 99999,
-          }}
+          style={{ position: pos.strategy, top: pos.top, left: pos.left, width: pos.width, zIndex: 99999 }}
           className="bg-popover border border-border rounded-md shadow-xl flex flex-col max-h-[280px]"
         >
           <div className="flex items-center gap-2 px-2.5 py-2 border-b border-border">
@@ -240,20 +240,12 @@ export default function SearchableSelect({
                       setCreating(true);
                       try {
                         const newId = await onCreateNew(search.trim());
-                        if (newId) {
-                          select(newId);
-                        }
-                      } finally {
-                        setCreating(false);
-                      }
+                        if (newId) select(newId);
+                      } finally { setCreating(false); }
                     }}
                     className="px-3 py-2 text-[13px] cursor-pointer transition-colors flex items-center gap-1.5 text-primary font-medium hover:bg-accent/50 border-t border-border"
                   >
-                    {creating ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Plus className="h-3.5 w-3.5" />
-                    )}
+                    {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                     Crear "{search.trim()}"
                   </div>
                 )}
