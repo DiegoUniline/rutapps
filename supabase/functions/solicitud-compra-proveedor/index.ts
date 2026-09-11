@@ -161,7 +161,7 @@ async function loadByToken(sb: ReturnType<typeof admin>, token: string) {
 
   const [{ data: rawLines, error: lineError }, { data: empresa, error: empresaError }] = await Promise.all([
     sb.from('solicitud_compra_lineas').select('*').eq('solicitud_id', solicitud.id).order('orden'),
-    sb.from('empresas').select('id,nombre').eq('id', solicitud.empresa_id).maybeSingle(),
+    sb.from('empresas').select('id,nombre,email,telefono,logo_url').eq('id', solicitud.empresa_id).maybeSingle(),
   ])
   if (lineError) throw lineError
   if (empresaError) throw empresaError
@@ -229,7 +229,12 @@ Deno.serve(async (req) => {
           visto_at: solicitud.visto_at,
           respondido_at: solicitud.respondido_at,
         },
-        empresa: { nombre: empresa?.nombre || 'Cliente RutApp' },
+        empresa: {
+          nombre: empresa?.nombre || 'Cliente RutApp',
+          email: empresa?.email || null,
+          telefono: empresa?.telefono || null,
+          logo_url: empresa?.logo_url || null,
+        },
         lineas: lineas.map((l: any) => ({
           id: l.id,
           producto_codigo: l.producto_codigo,
@@ -267,7 +272,7 @@ Deno.serve(async (req) => {
 
       const [{ data: rawLines, error: lineError }, { data: empresa, error: empresaError }] = await Promise.all([
         sb.from('solicitud_compra_lineas').select('*').eq('solicitud_id', solicitud.id).order('orden'),
-        sb.from('empresas').select('nombre').eq('id', solicitud.empresa_id).maybeSingle(),
+        sb.from('empresas').select('nombre,email,telefono,logo_url').eq('id', solicitud.empresa_id).maybeSingle(),
       ])
       if (lineError) throw lineError
       if (empresaError) throw empresaError
@@ -277,8 +282,13 @@ Deno.serve(async (req) => {
       const sentAt = new Date().toISOString()
       const publicUrl = publicUrlFor(String(solicitud.public_token))
       const totalUnidades = lineas.reduce((s: number, l: any) => s + Number(l.cantidad_solicitada || 0), 0)
+      const empresaNombre = empresa?.nombre || 'Cliente RutApp'
+      const empresaEmail = empresa?.email || user.email || undefined
       const templateData = {
-        empresaNombre: empresa?.nombre || 'Cliente RutApp',
+        empresaNombre,
+        empresaEmail,
+        empresaTelefono: empresa?.telefono || undefined,
+        empresaLogoUrl: empresa?.logo_url || undefined,
         proveedorNombre: solicitud.proveedor_nombre || 'Proveedor',
         folio: solicitud.folio,
         publicUrl,
@@ -291,7 +301,8 @@ Deno.serve(async (req) => {
       const providerResult = await sendAppEmail('solicitud-compra-proveedor', to, {
         templateData,
         idempotencyKey: `sc:${solicitud.id}:proveedor:${sentAt}`,
-        replyTo: user.email || undefined,
+        replyTo: empresaEmail,
+        fromName: empresaNombre,
       })
       if (!providerResult.sent) {
         const message = providerResult.reason === 'recipient_suppressed'
@@ -309,7 +320,8 @@ Deno.serve(async (req) => {
         const result = await sendAppEmail('solicitud-compra-proveedor', email, {
           templateData: { ...templateData, isCopy: true },
           idempotencyKey: `sc:${solicitud.id}:cc:${email}:${sentAt}`,
-          replyTo: user.email || undefined,
+          replyTo: empresaEmail,
+          fromName: empresaNombre,
         })
         if (!result.sent) ccWarnings.push(`${email}: no se pudo entregar la copia`)
       }
