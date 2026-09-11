@@ -21,6 +21,15 @@ const admin = () => createClient(
 const publicUrlFor = (token: string) =>
   `https://rutapp.mx/proveedor/solicitud-compra?token=${encodeURIComponent(token)}`
 
+const legacyPublicUrlFor = (token: string) =>
+  `https://rutapp.mx/proveedor/solicitud-compra.html?token=${encodeURIComponent(token)}`
+
+const tokenFromPublicUrl = (value?: string | null) => {
+  if (!value) return null
+  try { return new URL(value).searchParams.get('token')?.trim() || null }
+  catch { return null }
+}
+
 const dateLabel = (value?: string | null) => {
   if (!value) return undefined
   try {
@@ -41,21 +50,67 @@ async function addEvent(sb: ReturnType<typeof admin>, solicitud: any, tipo: stri
   if (error) console.error('solicitud_compra_eventos', error.message)
 }
 
+async function requestIdFromIssuedToken(sb: ReturnType<typeof admin>, token: string) {
+  // Compatibilidad: antes de este cambio, al cerrar se rotaba public_token.
+  // Recuperamos el enlace realmente enviado al proveedor desde el historial.
+  for (const candidate of [publicUrlFor(token), legacyPublicUrlFor(token)]) {
+    const { data, error } = await sb
+      .from('solicitud_compra_eventos')
+      .select('solicitud_id,detalle,created_at')
+      .eq('tipo', 'enviada_proveedor')
+      .contains('detalle', { public_url: candidate })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (error) {
+      console.error('lookup issued supplier token', error.message)
+      continue
+    }
+    if (data?.solicitud_id) return String(data.solicitud_id)
+  }
+  return null
+}
+
+async function latestIssuedToken(sb: ReturnType<typeof admin>, solicitudId: string) {
+  const { data, error } = await sb
+    .from('solicitud_compra_eventos')
+    .select('detalle,created_at')
+    .eq('solicitud_id', solicitudId)
+    .eq('tipo', 'enviada_proveedor')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) {
+    console.error('latest issued supplier token', error.message)
+    return null
+  }
+  return tokenFromPublicUrl(data?.detalle?.public_url)
+}
+
 async function loadByToken(sb: ReturnType<typeof admin>, token: string) {
-  const { data: solicitud, error } = await sb
+  let { data: solicitud, error } = await sb
     .from('solicitudes_compra')
     .select('*')
     .eq('public_token', token)
     .maybeSingle()
   if (error) throw error
-  if (!solicitud) return { error: json({ error: 'Este enlace ya no está disponible.' }, 404) }
 
-  // Once the supplier closes the request, public access is final and read/write access is revoked.
-  if (['respondida', 'convertida', 'cancelada'].includes(solicitud.status)) {
-    return { error: json({ error: 'Esta solicitud ya fue cerrada y el enlace dejó de estar disponible.' }, 410) }
+  if (!solicitud) {
+    const historicalRequestId = await requestIdFromIssuedToken(sb, token)
+    if (historicalRequestId) {
+      const result = await sb.from('solicitudes_compra').select('*').eq('id', historicalRequestId).maybeSingle()
+      if (result.error) throw result.error
+      solicitud = result.data
+    }
   }
 
-  if (solicitud.token_expires_at && new Date(solicitud.token_expires_at).getTime() < Date.now()) {
+  if (!solicitud) return { error: json({ error: 'Este enlace ya no está disponible.' }, 404) }
+  if (solicitud.status === 'cancelada') {
+    return { error: json({ error: 'Esta solicitud fue cancelada y ya no está disponible.' }, 410) }
+  }
+
+  const readonly = ['respondida', 'convertida'].includes(solicitud.status)
+  if (!readonly && solicitud.token_expires_at && new Date(solicitud.token_expires_at).getTime() < Date.now()) {
     return { error: json({ error: 'Este enlace ha vencido. Solicita un nuevo enlace a tu cliente.' }, 410) }
   }
 
@@ -65,7 +120,29 @@ async function loadByToken(sb: ReturnType<typeof admin>, token: string) {
   ])
   if (lineError) throw lineError
   if (empresaError) throw empresaError
-  return { solicitud, lineas: lineas || [], empresa: empresa || { nombre: 'Cliente RutApp' } }
+  return { solicitud, lineas: lineas || [], empresa: empresa || { nombre: 'Cliente RutApp' }, readonly }
+}
+
+async function authorizeInternalRequest(sb: ReturnType<typeof admin>, req: Request, solicitudId: string) {
+  const authHeader = req.headers.get('Authorization') || ''
+  const jwt = authHeader.replace(/^Bearer\s+/i, '')
+  if (!jwt) return { error: json({ error: 'No autorizado' }, 401) }
+
+  const { data: userData, error: userError } = await sb.auth.getUser(jwt)
+  const user = userData?.user
+  if (userError || !user) return { error: json({ error: 'Sesión inválida' }, 401) }
+
+  const [{ data: profile }, { data: solicitud, error: solicitudError }, { data: superAdmin }] = await Promise.all([
+    sb.from('profiles').select('empresa_id').eq('id', user.id).maybeSingle(),
+    sb.from('solicitudes_compra').select('*').eq('id', solicitudId).maybeSingle(),
+    sb.from('super_admins').select('id').eq('user_id', user.id).maybeSingle(),
+  ])
+  if (solicitudError) throw solicitudError
+  const esSuperAdmin = !!superAdmin?.id
+  if (!solicitud || (!esSuperAdmin && (!profile?.empresa_id || solicitud.empresa_id !== profile.empresa_id))) {
+    return { error: json({ error: 'No tienes acceso a esta solicitud' }, 403) }
+  }
+  return { user, solicitud }
 }
 
 Deno.serve(async (req) => {
@@ -80,7 +157,7 @@ Deno.serve(async (req) => {
 
       const loaded: any = await loadByToken(sb, token)
       if (loaded.error) return loaded.error
-      const { solicitud, lineas, empresa } = loaded
+      const { solicitud, lineas, empresa, readonly } = loaded
 
       if (!solicitud.visto_at && ['enviada', 'vista'].includes(solicitud.status)) {
         const now = new Date().toISOString()
@@ -94,6 +171,7 @@ Deno.serve(async (req) => {
       }
 
       return json({
+        readonly,
         solicitud: {
           id: solicitud.id,
           folio: solicitud.folio,
@@ -104,6 +182,7 @@ Deno.serve(async (req) => {
           status: solicitud.status,
           enviado_at: solicitud.enviado_at,
           visto_at: solicitud.visto_at,
+          respondido_at: solicitud.respondido_at,
         },
         empresa: { nombre: empresa?.nombre || 'Cliente RutApp' },
         lineas: lineas.map((l: any) => ({
@@ -126,13 +205,6 @@ Deno.serve(async (req) => {
     const action = String(body?.action || '').trim()
 
     if (action === 'send') {
-      const authHeader = req.headers.get('Authorization') || ''
-      const jwt = authHeader.replace(/^Bearer\s+/i, '')
-      if (!jwt) return json({ error: 'No autorizado' }, 401)
-      const { data: userData, error: userError } = await sb.auth.getUser(jwt)
-      const user = userData?.user
-      if (userError || !user) return json({ error: 'Sesión inválida' }, 401)
-
       const solicitudId = String(body?.solicitud_id || '')
       const to = String(body?.to || '').trim().toLowerCase()
       const cc = Array.isArray(body?.cc)
@@ -142,19 +214,11 @@ Deno.serve(async (req) => {
         return json({ error: 'Solicitud y correo del proveedor son requeridos' }, 400)
       }
 
-      // Keep Lovable's super-admin allowance: external superadmins may send requests too.
-      const [{ data: profile }, { data: solicitud, error: solicitudError }, { data: superAdmin }] = await Promise.all([
-        sb.from('profiles').select('empresa_id').eq('id', user.id).maybeSingle(),
-        sb.from('solicitudes_compra').select('*').eq('id', solicitudId).maybeSingle(),
-        sb.from('super_admins').select('id').eq('user_id', user.id).maybeSingle(),
-      ])
-      if (solicitudError) throw solicitudError
-      const esSuperAdmin = !!superAdmin?.id
-      if (!solicitud || (!esSuperAdmin && (!profile?.empresa_id || solicitud.empresa_id !== profile.empresa_id))) {
-        return json({ error: 'No tienes acceso a esta solicitud' }, 403)
-      }
+      const auth: any = await authorizeInternalRequest(sb, req, solicitudId)
+      if (auth.error) return auth.error
+      const { user, solicitud } = auth
       if (['respondida', 'convertida', 'cancelada'].includes(solicitud.status)) {
-        return json({ error: 'Esta solicitud ya fue cerrada y no se puede volver a publicar' }, 409)
+        return json({ error: 'Esta solicitud está cerrada. Ábrela para modificar antes de volver a enviarla.' }, 409)
       }
 
       const [{ data: lineas, error: lineError }, { data: empresa, error: empresaError }] = await Promise.all([
@@ -220,6 +284,42 @@ Deno.serve(async (req) => {
       return json({ success: true, public_url: publicUrl, warnings: ccWarnings })
     }
 
+    if (action === 'reopen') {
+      const solicitudId = String(body?.solicitud_id || '')
+      if (!solicitudId) return json({ error: 'Solicitud requerida' }, 400)
+
+      const auth: any = await authorizeInternalRequest(sb, req, solicitudId)
+      if (auth.error) return auth.error
+      const { user, solicitud } = auth
+
+      if (solicitud.status === 'convertida') {
+        return json({ error: 'Esta solicitud ya fue convertida en compra y no puede reabrirse.' }, 409)
+      }
+      if (solicitud.status === 'cancelada') {
+        return json({ error: 'Esta solicitud está cancelada y no puede reabrirse.' }, 409)
+      }
+      if (solicitud.status !== 'respondida') {
+        return json({ error: 'La solicitud no está cerrada.' }, 409)
+      }
+
+      const issuedToken = await latestIssuedToken(sb, solicitud.id)
+      const publicToken = issuedToken || String(solicitud.public_token)
+      const reopenedAt = new Date().toISOString()
+      const { error: reopenError } = await sb.from('solicitudes_compra').update({
+        status: 'borrador_proveedor',
+        public_token: publicToken,
+        token_expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+        respondido_at: null,
+        borrador_proveedor_at: reopenedAt,
+      }).eq('id', solicitud.id)
+      if (reopenError) throw reopenError
+
+      await sb.from('solicitud_compra_lineas').update({ cantidad_aceptada: null }).eq('solicitud_id', solicitud.id)
+      await addEvent(sb, solicitud, 'reabierta_proveedor', 'interno', user.id, { public_url: publicUrlFor(publicToken) })
+
+      return json({ success: true, status: 'borrador_proveedor', public_url: publicUrlFor(publicToken) })
+    }
+
     // `respond` remains accepted for backwards compatibility with already cached public pages.
     if (action === 'save' || action === 'close' || action === 'respond') {
       const token = String(body?.token || '').trim()
@@ -228,6 +328,10 @@ Deno.serve(async (req) => {
       if (loaded.error) return loaded.error
       const { solicitud, lineas } = loaded
       const isClose = action === 'close' || action === 'respond'
+
+      if (['respondida', 'convertida'].includes(solicitud.status)) {
+        return json({ error: 'Esta solicitud está cerrada en modo consulta. Tu cliente debe abrirla para modificar desde RutApp.' }, 409)
+      }
 
       const incoming = Array.isArray(body?.lineas) ? body.lineas : []
       const byId = new Map(lineas.map((l: any) => [l.id, l]))
@@ -266,9 +370,8 @@ Deno.serve(async (req) => {
 
       if (isClose) {
         update.respondido_at = now
-        // Revoke the URL immediately: the token that arrived by email becomes invalid forever.
-        update.public_token = crypto.randomUUID()
-        update.token_expires_at = now
+        // Cerrada = solo lectura. Conservamos el mismo token para consulta permanente.
+        update.token_expires_at = null
       } else {
         update.borrador_proveedor_at = now
       }
@@ -277,7 +380,7 @@ Deno.serve(async (req) => {
       if (updateError) throw updateError
       await addEvent(sb, solicitud, isClose ? 'solicitud_cerrada' : 'borrador_guardado', 'proveedor', null, {})
 
-      return json({ success: true, status: nextStatus, closed: isClose })
+      return json({ success: true, status: nextStatus, closed: isClose, readonly: isClose })
     }
 
     return json({ error: 'Acción no válida' }, 400)
