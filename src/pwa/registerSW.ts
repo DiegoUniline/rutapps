@@ -65,54 +65,16 @@ export async function registerAppSW() {
     const { registerSW } = await import("virtual:pwa-register");
     const { notifyAppUpdateAvailable } = await import('@/lib/appUpdate');
 
-    // updateSW(true) = método LIMPIO y rápido: le dice al worker nuevo que active
-    // (skipWaiting) y recarga la página cuando toma control. Cambia el shell
-    // COMPLETO (index.html + chunks) de golpe a la versión nueva. No borra el
-    // offline (a diferencia del refresh pesado anterior).
+    // updateSW(true) activa el worker nuevo y recarga la página. IMPORTANTE:
+    // nunca lo ejecutamos automáticamente porque una recarga puede destruir
+    // capturas no guardadas. El usuario aplica la actualización desde el banner.
     let updateSWFn: ((reloadPage?: boolean) => Promise<void>) | null = null;
-
-    // Solo evitamos auto-recargar si el usuario está CAPTURANDO (input enfocado o
-    // un diálogo abierto), para no interrumpir una venta a medias. En ese caso se
-    // reintenta cada pocos segundos: en cuanto suelta el teclado, se actualiza.
-    // Ya NO se bloquea /ruta: el vendedor también debe tener siempre la última
-    // versión (la cola offline sobrevive a la recarga, no se pierde nada).
-    const isSafeToReload = (): boolean => {
-      try {
-        const ae = document.activeElement as HTMLElement | null;
-        if (ae) {
-          const tag = ae.tagName;
-          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return false;
-          if (ae.isContentEditable) return false;
-        }
-        if (document.querySelector('[role="dialog"][data-state="open"], [data-state="open"][role="alertdialog"]')) {
-          return false;
-        }
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
-    let autoApplyTimer: number | null = null;
-    const scheduleAutoApply = () => {
-      if (autoApplyTimer != null) return;
-      const tick = () => {
-        autoApplyTimer = null;
-        if (isSafeToReload() && updateSWFn) {
-          updateSWFn(true).catch(() => {});
-        } else {
-          // Reintentar pronto: en cuanto el vendedor deje de escribir, se aplica.
-          autoApplyTimer = window.setTimeout(tick, 5_000);
-        }
-      };
-      autoApplyTimer = window.setTimeout(tick, 1_500);
-    };
 
     updateSWFn = registerSW({
       immediate: false,
       onNeedRefresh() {
-        notifyAppUpdateAvailable(); // banner de respaldo por si acaso
-        scheduleAutoApply();        // pero se auto-aplica solo, casi al instante
+        // Solo notificamos. PWAUpdatePrompt decide si es seguro actualizar.
+        notifyAppUpdateAvailable();
       },
       onRegisteredSW(_swUrl, registration) {
         if (!registration) return;
@@ -131,9 +93,8 @@ export async function registerAppSW() {
       },
     });
 
-    // Camino RÁPIDO de actualización: activa el worker nuevo (skipWaiting) y
-    // recarga. Solo baja los chunks con hash nuevo (unos KB), sin borrar el
-    // precache ni forzar re-descarga del bundle completo.
+    // Camino manual de actualización. PWAUpdatePrompt valida primero que no
+    // existan cambios sin guardar antes de invocarlo.
     (window as any).__applySWUpdate = () => updateSWFn?.(true);
   } catch (err) {
     console.warn("[pwa] SW registration skipped:", err);
