@@ -40,7 +40,6 @@ type ChatMessage = {
 };
 
 const MAX_AUDIO_MS = 45_000;
-const INTRO_VISIT_LIMIT = 5;
 const ASSISTANT_NAME = "Juan López";
 const ASSISTANT_ROLE = "Asesor de pedidos con IA";
 const JUAN_AVATAR_SRC = juanLopezAvatar;
@@ -93,6 +92,7 @@ export default function PedidoAsistente() {
   const moneda = t.empresa?.moneda ?? "MXN";
   const base = `/tienda/${t.slug}`;
   const identityKey = `${t.slug}:${t.email ?? "guest"}`;
+  const introSeenKey = `tienda:juan-lopez:intro-seen:${t.slug}`;
 
   const cartPayload = useMemo(() => t.cart.map((item) => ({
     line_key: cartKeyOf(item.producto_id, item.presentacion_id),
@@ -109,40 +109,54 @@ export default function PedidoAsistente() {
     welcomeKeyRef.current = null;
   }, [identityKey]);
 
-  // Las primeras 5 sesiones de cada cliente/visitante presentan a Juan
-  // proactivamente. Se cuenta una sola vez por sesión del navegador.
+  // Presenta a Juan automáticamente una sola vez por tienda en este navegador.
+  // Al recargar o volver después, queda únicamente el botón flotante del asesor.
   useEffect(() => {
-    const visitsKey = `tienda:juan-lopez:intro-visits:${identityKey}`;
-    const sessionKey = `tienda:juan-lopez:intro-session:${identityKey}`;
-    let visits = Number.parseInt(localStorage.getItem(visitsKey) ?? "0", 10);
-    if (!Number.isFinite(visits) || visits < 0) visits = 0;
-
-    if (!sessionStorage.getItem(sessionKey)) {
-      visits += 1;
-      localStorage.setItem(visitsKey, String(visits));
-      sessionStorage.setItem(sessionKey, "1");
-    }
-
     setShowHow(false);
     setIntroOpen(false);
-    if (visits <= INTRO_VISIT_LIMIT) {
-      const timer = window.setTimeout(() => setIntroOpen(true), 350);
-      return () => window.clearTimeout(timer);
+
+    try {
+      if (localStorage.getItem(introSeenKey)) return;
+    } catch {
+      // Si el navegador bloquea storage, evitamos insistir con el modal en cada carga.
+      return;
     }
-  }, [identityKey]);
+
+    const timer = window.setTimeout(() => {
+      try {
+        localStorage.setItem(introSeenKey, "1");
+      } catch {
+        // El modal puede mostrarse esta vez; no bloqueamos la tienda por storage.
+      }
+      setIntroOpen(true);
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [introSeenKey]);
 
   useEffect(() => {
     if (open || introOpen) {
       setNudgeVisible(false);
       return;
     }
+
+    try {
+      if (localStorage.getItem(introSeenKey)) {
+        setNudgeVisible(false);
+        return;
+      }
+    } catch {
+      setNudgeVisible(false);
+      return;
+    }
+
     const showTimer = window.setTimeout(() => setNudgeVisible(true), 1200);
     const hideTimer = window.setTimeout(() => setNudgeVisible(false), 10000);
     return () => {
       window.clearTimeout(showTimer);
       window.clearTimeout(hideTimer);
     };
-  }, [open, introOpen, identityKey]);
+  }, [open, introOpen, introSeenKey]);
 
   useEffect(() => () => {
     if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
