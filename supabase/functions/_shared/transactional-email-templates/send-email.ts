@@ -24,6 +24,8 @@ export interface SendTemplateEmailOptions {
   /** Dedupes retries of the same logical send; defaults to a random UUID (no dedupe). */
   idempotencyKey?: string
   replyTo?: string
+  /** Optional customer-facing display name while preserving the verified RutApp sender domain. */
+  fromName?: string
 }
 
 /**
@@ -65,12 +67,16 @@ export async function sendTemplateEmail(
     typeof template.subject === 'function'
       ? template.subject(templateData)
       : template.subject
+  const safeFromName = String(options.fromName || SITE_NAME)
+    .replace(/[\r\n"]/g, ' ')
+    .trim()
+    .slice(0, 100) || SITE_NAME
 
   try {
     await sendLovableEmail(
       {
         to: recipient,
-        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+        from: `"${safeFromName}" <noreply@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
         subject,
         html,
