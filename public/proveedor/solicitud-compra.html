@@ -164,6 +164,24 @@
     </div>
   </div>
 
+  <div id="confirmOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-ico">✓</div>
+        <h3 id="confirmTitle">Cerrar y enviar solicitud</h3>
+      </div>
+      <div class="modal-body">
+        <p>Vas a enviar tu respuesta a <strong id="confirmCompany">tu cliente</strong> con las cantidades, costos y fechas que capturaste.</p>
+        <div class="modal-warn">Esta acción es definitiva: después de cerrarla este enlace dejará de funcionar y ya no podrás editar la información.</div>
+      </div>
+      <div class="modal-foot">
+        <button id="confirmCancel" class="btn btn-save" type="button">Revisar de nuevo</button>
+        <button id="confirmAccept" class="btn btn-close" type="button">Sí, cerrar y enviar</button>
+      </div>
+    </div>
+  </div>
+
+
   <footer class="footer">Gestionado de forma segura con <strong>RutApp</strong> · rutapp.mx</footer>
 
 <script>
