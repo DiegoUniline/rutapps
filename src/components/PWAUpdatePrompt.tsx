@@ -1,19 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sparkles, X } from 'lucide-react';
+import { AlertTriangle, Sparkles, X } from 'lucide-react';
 import { refreshAppVersion } from '@/lib/appUpdate';
+import { getUnsavedChanges, hasUnsavedChanges, subscribeUnsavedChanges } from '@/lib/unsavedChanges';
 
 /**
  * Banner global de "Hay una versión nueva disponible".
  *
- * Escucha el evento `uniline:sw-update-available` que dispara el wrapper de
- * registro del SW (src/pwa/registerSW.ts) cuando vite-plugin-pwa detecta una
- * nueva versión publicada. No recarga automáticamente: el usuario decide
- * cuándo aplicar la actualización para no cortar capturas en curso.
+ * La actualización nunca debe recargar por sí sola. Además, si alguna pantalla
+ * registra cambios sin guardar, se bloquea la recarga hasta que el usuario
+ * guarde o descarte esos cambios.
  */
 export default function PWAUpdatePrompt() {
   const [needRefresh, setNeedRefresh] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [blockedMessage, setBlockedMessage] = useState('');
 
   useEffect(() => {
     const handler = () => setNeedRefresh(true);
@@ -21,9 +22,23 @@ export default function PWAUpdatePrompt() {
     return () => window.removeEventListener('uniline:sw-update-available', handler);
   }, []);
 
+  useEffect(() => subscribeUnsavedChanges(() => {
+    if (!hasUnsavedChanges()) setBlockedMessage('');
+  }), []);
+
   if (!needRefresh) return null;
 
   const apply = () => {
+    if (hasUnsavedChanges()) {
+      const pending = getUnsavedChanges();
+      const label = pending[0]?.label;
+      setBlockedMessage(label
+        ? `Tienes cambios sin guardar en ${label}. Guárdalos o descártalos antes de actualizar.`
+        : 'Tienes cambios sin guardar. Guárdalos o descártalos antes de actualizar.');
+      return;
+    }
+
+    setBlockedMessage('');
     setApplying(true);
 
     // Respaldo SIEMPRE armado ANTES de esperar: updateSW(true) devuelve una
@@ -53,7 +68,6 @@ export default function PWAUpdatePrompt() {
     });
   };
 
-
   return (
     <div
       role="status"
@@ -61,17 +75,16 @@ export default function PWAUpdatePrompt() {
       className="fixed left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-2rem)] max-w-md"
       style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
     >
-
       <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-background shadow-2xl shadow-primary/10 px-4 py-3 animate-in slide-in-from-bottom-4 fade-in">
-        <div className="shrink-0 h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-          <Sparkles className="h-5 w-5" />
+        <div className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center ${blockedMessage ? 'bg-amber-500/10 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+          {blockedMessage ? <AlertTriangle className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground leading-tight">
-            Hay una versión nueva disponible
+            {blockedMessage ? 'Primero guarda tu trabajo' : 'Hay una versión nueva disponible'}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Actualiza para obtener las mejoras más recientes.
+            {blockedMessage || 'Actualiza cuando termines tu captura actual.'}
           </p>
         </div>
         <Button
