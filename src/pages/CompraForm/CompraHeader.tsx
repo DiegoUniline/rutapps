@@ -151,7 +151,7 @@ function StatusBar(p: Props) {
 function ConfirmDialog({ confirmDialog, setConfirmDialog, handleStatusChange, handleCancel, recibirTodoPendiente, requestPin }: Props) {
   return (
     <AlertDialog open={confirmDialog?.open} onOpenChange={open => { if (!open) setConfirmDialog(null); }}>
-      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirmDialog?.title}</AlertDialogTitle><AlertDialogDescription>{confirmDialog?.description}</AlertDialogHeader>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirmDialog?.title}</AlertDialogTitle><AlertDialogDescription>{confirmDialog?.description}</AlertDialogDescription></AlertDialogHeader>
         <AlertDialogFooter><AlertDialogCancel>No, volver</AlertDialogCancel><AlertDialogAction className={cn(confirmDialog?.action === 'cancelar' && "bg-destructive text-destructive-foreground hover:bg-destructive/90")} onClick={() => {
           if (confirmDialog?.action === 'cancelar') {
             requestPin('Cancelar compra', 'Ingresa tu PIN', () => handleCancel());

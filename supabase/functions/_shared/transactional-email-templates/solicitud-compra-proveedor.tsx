@@ -1,7 +1,7 @@
 /// <reference types="npm:@types/react@18.3.1" />
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Button, Container, Head, Heading, Html, Preview, Section, Text,
+  Body, Button, Container, Head, Heading, Html, Img, Preview, Section, Text,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
@@ -24,6 +24,12 @@ interface Props {
   isCopy?: boolean
 }
 
+const LOGO = 'https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png'
+const PRIMARY = '#1554F0'
+const TEXT_DARK = '#0f172a'
+const TEXT_MUTED = '#64748b'
+const BORDER = '#e2e8f0'
+
 const Email = ({
   empresaNombre = 'Tu cliente', proveedorNombre = 'Proveedor', folio = 'Solicitud de compra',
   fechaRequerida, publicUrl, totalPartidas = 0, totalUnidades = 0, productos = [], mensaje, isCopy,
@@ -33,9 +39,9 @@ const Email = ({
     <Preview>{empresaNombre} te envió la solicitud de compra {folio}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Section style={brandBar}>
-          <Text style={brand}>RutApp Compras</Text>
-          <Text style={brandSub}>{empresaNombre}</Text>
+        <Section style={header}>
+          <Img src={LOGO} width="132" alt="RutApp" style={{ margin: '0 auto' }} />
+          <Text style={headerSub}>Portal de proveedores · Solicitud de compra</Text>
         </Section>
 
         <Section style={content}>
@@ -102,25 +108,24 @@ export const template = {
   },
 } satisfies TemplateEntry
 
-const main = { backgroundColor: '#f1f5f9', fontFamily: "Inter,Arial,Helvetica,sans-serif", padding: '28px 12px' }
-const container = { maxWidth: '620px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 8px 28px rgba(15,23,42,.08)' }
-const brandBar = { backgroundColor: '#111827', padding: '22px 28px' }
-const brand = { color: '#fb923c', fontSize: '15px', fontWeight: 800, margin: 0, letterSpacing: '.3px' }
-const brandSub = { color: '#ffffff', fontSize: '20px', fontWeight: 700, margin: '5px 0 0' }
+const main = { backgroundColor: '#ffffff', fontFamily: "Inter,Arial,Helvetica,sans-serif", padding: '28px 12px' }
+const container = { maxWidth: '620px', margin: '0 auto', backgroundColor: '#ffffff', border: `1px solid ${BORDER}`, borderRadius: '18px', overflow: 'hidden' }
+const header = { backgroundColor: '#f8fafc', borderBottom: `1px solid ${BORDER}`, padding: '26px 28px 20px', textAlign: 'center' as const }
+const headerSub = { color: TEXT_MUTED, fontSize: '12px', fontWeight: 600, margin: '10px 0 0' }
 const content = { padding: '30px 28px 26px' }
-const eyebrow = { color: '#ea580c', fontSize: '11px', fontWeight: 800, letterSpacing: '1.2px', margin: '0 0 8px' }
-const h1 = { color: '#0f172a', fontSize: '28px', lineHeight: '34px', margin: '0 0 14px' }
+const eyebrow = { color: PRIMARY, fontSize: '11px', fontWeight: 800, letterSpacing: '1.2px', margin: '0 0 8px' }
+const h1 = { color: TEXT_DARK, fontSize: '28px', lineHeight: '34px', margin: '0 0 14px' }
 const text = { color: '#475569', fontSize: '15px', lineHeight: '23px', margin: '0 0 14px' }
-const message = { color: '#334155', backgroundColor: '#fff7ed', borderLeft: '4px solid #f97316', padding: '12px 14px', fontSize: '14px', lineHeight: '21px', borderRadius: '0 8px 8px 0' }
-const summaryGrid = { backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 8px', margin: '22px 0' }
-const summaryItem = { width: '33.33%', display: 'inline-block', textAlign: 'center' as const, color: '#0f172a', fontSize: '15px', lineHeight: '19px', margin: 0 }
+const message = { color: '#334155', backgroundColor: '#eef4ff', borderLeft: `4px solid ${PRIMARY}`, padding: '12px 14px', fontSize: '14px', lineHeight: '21px', borderRadius: '0 8px 8px 0' }
+const summaryGrid = { backgroundColor: '#f8fafc', border: `1px solid ${BORDER}`, borderRadius: '12px', padding: '14px 8px', margin: '22px 0' }
+const summaryItem = { width: '33.33%', display: 'inline-block', textAlign: 'center' as const, color: TEXT_DARK, fontSize: '15px', lineHeight: '19px', margin: 0 }
 const muted = { color: '#94a3b8', fontSize: '11px', fontWeight: 500 }
 const productRow = { borderBottom: '1px solid #eef2f7', padding: '10px 0' }
 const productName = { color: '#1e293b', fontSize: '14px', fontWeight: 600, margin: 0, display: 'inline-block', width: '72%' }
-const productQty = { color: '#0f172a', fontSize: '14px', fontWeight: 700, margin: 0, display: 'inline-block', width: '28%', textAlign: 'right' as const }
-const more = { color: '#64748b', fontSize: '12px', margin: '10px 0 0' }
-const button = { backgroundColor: '#f97316', color: '#ffffff', padding: '14px 24px', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 800 }
-const securityBox = { backgroundColor: '#f8fafc', borderRadius: '10px', padding: '13px 15px', marginTop: '8px' }
+const productQty = { color: TEXT_DARK, fontSize: '14px', fontWeight: 700, margin: 0, display: 'inline-block', width: '28%', textAlign: 'right' as const }
+const more = { color: TEXT_MUTED, fontSize: '12px', margin: '10px 0 0' }
+const button = { backgroundColor: PRIMARY, color: '#ffffff', padding: '14px 24px', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 800 }
+const securityBox = { backgroundColor: '#f8fafc', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '13px 15px', marginTop: '8px' }
 const securityTitle = { color: '#334155', fontSize: '12px', fontWeight: 800, margin: '0 0 3px' }
-const securityText = { color: '#64748b', fontSize: '11px', lineHeight: '17px', margin: 0 }
+const securityText = { color: TEXT_MUTED, fontSize: '11px', lineHeight: '17px', margin: 0 }
 const footer = { color: '#94a3b8', fontSize: '11px', textAlign: 'center' as const, margin: '24px 0 0' }
