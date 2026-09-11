@@ -30,14 +30,6 @@ const tokenFromPublicUrl = (value?: string | null) => {
   catch { return null }
 }
 
-const dateLabel = (value?: string | null) => {
-  if (!value) return undefined
-  try {
-    return new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Mexico_City' })
-      .format(new Date(`${value}T12:00:00-06:00`))
-  } catch { return value }
-}
-
 async function addEvent(sb: ReturnType<typeof admin>, solicitud: any, tipo: string, actorTipo: string, actorId?: string | null, detalle: any = {}) {
   const { error } = await sb.from('solicitud_compra_eventos').insert({
     solicitud_id: solicitud.id,
@@ -87,6 +79,59 @@ async function latestIssuedToken(sb: ReturnType<typeof admin>, solicitudId: stri
   return tokenFromPublicUrl(data?.detalle?.public_url)
 }
 
+async function hydrateLineUnits(sb: ReturnType<typeof admin>, lineas: any[]) {
+  const missingProductIds = [...new Set(
+    lineas
+      .filter((line: any) => !String(line?.unidad || '').trim() && line?.producto_id)
+      .map((line: any) => String(line.producto_id)),
+  )]
+
+  if (!missingProductIds.length) return lineas
+
+  const { data: products, error: productError } = await sb
+    .from('productos')
+    .select('id,unidad_compra_id,unidad_venta_id')
+    .in('id', missingProductIds)
+
+  if (productError) {
+    console.error('hydrate supplier request units: products', productError.message)
+    return lineas
+  }
+
+  const unitIds = [...new Set((products || []).flatMap((product: any) =>
+    [product.unidad_compra_id, product.unidad_venta_id].filter(Boolean).map(String),
+  ))]
+
+  if (!unitIds.length) {
+    return lineas.map((line: any) => ({ ...line, unidad: String(line?.unidad || '').trim() || 'pz' }))
+  }
+
+  const { data: units, error: unitError } = await sb
+    .from('unidades')
+    .select('id,abreviatura,nombre')
+    .in('id', unitIds)
+
+  if (unitError) {
+    console.error('hydrate supplier request units: unidades', unitError.message)
+    return lineas
+  }
+
+  const unitById = new Map((units || []).map((unit: any) => [
+    String(unit.id),
+    String(unit.abreviatura || unit.nombre || '').trim(),
+  ]))
+  const productById = new Map((products || []).map((product: any) => [String(product.id), product]))
+
+  return lineas.map((line: any) => {
+    if (String(line?.unidad || '').trim()) return line
+    const product: any = productById.get(String(line.producto_id))
+    const unidad = product
+      ? unitById.get(String(product.unidad_compra_id || '')) || unitById.get(String(product.unidad_venta_id || '')) || 'pz'
+      : 'pz'
+    return { ...line, unidad }
+  })
+}
+
 async function loadByToken(sb: ReturnType<typeof admin>, token: string) {
   let { data: solicitud, error } = await sb
     .from('solicitudes_compra')
@@ -114,13 +159,14 @@ async function loadByToken(sb: ReturnType<typeof admin>, token: string) {
     return { error: json({ error: 'Este enlace ha vencido. Solicita un nuevo enlace a tu cliente.' }, 410) }
   }
 
-  const [{ data: lineas, error: lineError }, { data: empresa, error: empresaError }] = await Promise.all([
+  const [{ data: rawLines, error: lineError }, { data: empresa, error: empresaError }] = await Promise.all([
     sb.from('solicitud_compra_lineas').select('*').eq('solicitud_id', solicitud.id).order('orden'),
     sb.from('empresas').select('id,nombre').eq('id', solicitud.empresa_id).maybeSingle(),
   ])
   if (lineError) throw lineError
   if (empresaError) throw empresaError
-  return { solicitud, lineas: lineas || [], empresa: empresa || { nombre: 'Cliente RutApp' }, readonly }
+  const lineas = await hydrateLineUnits(sb, rawLines || [])
+  return { solicitud, lineas, empresa: empresa || { nombre: 'Cliente RutApp' }, readonly }
 }
 
 async function authorizeInternalRequest(sb: ReturnType<typeof admin>, req: Request, solicitudId: string) {
@@ -176,7 +222,6 @@ Deno.serve(async (req) => {
           id: solicitud.id,
           folio: solicitud.folio,
           proveedor_nombre: solicitud.proveedor_nombre,
-          fecha_requerida: solicitud.fecha_requerida,
           notas: solicitud.notas,
           proveedor_observaciones: solicitud.proveedor_observaciones,
           status: solicitud.status,
@@ -193,7 +238,6 @@ Deno.serve(async (req) => {
           cantidad_solicitada: l.cantidad_solicitada,
           cantidad_surtida: l.cantidad_surtida,
           costo_unitario: l.costo_unitario,
-          fecha_entrega: l.fecha_entrega,
           disponible: l.disponible,
           observaciones: l.observaciones,
         })),
@@ -221,13 +265,14 @@ Deno.serve(async (req) => {
         return json({ error: 'Esta solicitud está cerrada. Ábrela para modificar antes de volver a enviarla.' }, 409)
       }
 
-      const [{ data: lineas, error: lineError }, { data: empresa, error: empresaError }] = await Promise.all([
+      const [{ data: rawLines, error: lineError }, { data: empresa, error: empresaError }] = await Promise.all([
         sb.from('solicitud_compra_lineas').select('*').eq('solicitud_id', solicitud.id).order('orden'),
         sb.from('empresas').select('nombre').eq('id', solicitud.empresa_id).maybeSingle(),
       ])
       if (lineError) throw lineError
       if (empresaError) throw empresaError
-      if (!lineas?.length) return json({ error: 'La solicitud no tiene productos' }, 400)
+      if (!rawLines?.length) return json({ error: 'La solicitud no tiene productos' }, 400)
+      const lineas = await hydrateLineUnits(sb, rawLines)
 
       const sentAt = new Date().toISOString()
       const publicUrl = publicUrlFor(String(solicitud.public_token))
@@ -236,11 +281,10 @@ Deno.serve(async (req) => {
         empresaNombre: empresa?.nombre || 'Cliente RutApp',
         proveedorNombre: solicitud.proveedor_nombre || 'Proveedor',
         folio: solicitud.folio,
-        fechaRequerida: dateLabel(solicitud.fecha_requerida),
         publicUrl,
         totalPartidas: lineas.length,
         totalUnidades,
-        productos: lineas.map((l: any) => ({ nombre: l.producto_nombre, cantidad: l.cantidad_solicitada, unidad: l.unidad || '' })),
+        productos: lineas.map((l: any) => ({ nombre: l.producto_nombre, cantidad: l.cantidad_solicitada, unidad: l.unidad || 'pz' })),
         mensaje: solicitud.notas || undefined,
       }
 
@@ -355,7 +399,6 @@ Deno.serve(async (req) => {
           cantidad_surtida: cantidad,
           cantidad_aceptada: null,
           costo_unitario: costo,
-          fecha_entrega: item?.fecha_entrega || null,
           observaciones: String(item?.observaciones || '').trim() || null,
         }).eq('id', original.id).eq('solicitud_id', solicitud.id)
         if (error) throw error
