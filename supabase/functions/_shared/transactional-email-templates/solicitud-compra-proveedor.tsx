@@ -13,6 +13,9 @@ interface ProductoResumen {
 
 interface Props {
   empresaNombre?: string
+  empresaEmail?: string
+  empresaTelefono?: string
+  empresaLogoUrl?: string
   proveedorNombre?: string
   folio?: string
   publicUrl?: string
@@ -23,68 +26,88 @@ interface Props {
   isCopy?: boolean
 }
 
-const LOGO = 'https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png'
 const PRIMARY = '#1554F0'
 const TEXT_DARK = '#0f172a'
 const TEXT_MUTED = '#64748b'
 const BORDER = '#e2e8f0'
 
 const Email = ({
-  empresaNombre = 'Tu cliente', proveedorNombre = 'Proveedor', folio = 'Solicitud de compra',
-  publicUrl, totalPartidas = 0, totalUnidades = 0, productos = [], mensaje, isCopy,
-}: Props) => (
-  <Html lang="es" dir="ltr">
-    <Head />
-    <Preview>{empresaNombre} te envió la solicitud de compra {folio}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Section style={header}>
-          <Img src={LOGO} width="132" alt="RutApp" style={{ margin: '0 auto' }} />
-          <Text style={headerSub}>Portal de proveedores · Solicitud de compra</Text>
-        </Section>
+  empresaNombre = 'Tu cliente', empresaEmail, empresaTelefono, empresaLogoUrl,
+  proveedorNombre = 'Proveedor', folio = 'Solicitud de compra', publicUrl,
+  totalPartidas = 0, totalUnidades = 0, productos = [], mensaje, isCopy,
+}: Props) => {
+  const contactLine = [empresaEmail, empresaTelefono].filter(Boolean).join(' · ')
 
-        <Section style={content}>
-          <Text style={eyebrow}>{isCopy ? 'COPIA INTERNA' : 'NUEVA SOLICITUD DE COMPRA'}</Text>
-          <Heading style={h1}>{folio}</Heading>
-          <Text style={text}>
-            {isCopy
-              ? `Se envió esta solicitud a ${proveedorNombre}. Recibes esta copia para seguimiento interno.`
-              : `Hola ${proveedorNombre}. ${empresaNombre} te solicita confirmar disponibilidad, cantidad y costo.`}
-          </Text>
-          {mensaje ? <Text style={message}>{mensaje}</Text> : null}
-
-          <Section style={summaryGrid}>
-            <Text style={summaryItem}><strong>{totalPartidas}</strong><br/><span style={muted}>productos</span></Text>
-            <Text style={summaryItem}><strong>{totalUnidades}</strong><br/><span style={muted}>cantidad solicitada</span></Text>
+  return (
+    <Html lang="es" dir="ltr">
+      <Head />
+      <Preview>{empresaNombre} · Solicitud de compra {folio}{contactLine ? ` · ${contactLine}` : ''}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <Section style={header}>
+            {empresaLogoUrl ? <Img src={empresaLogoUrl} width="92" alt={empresaNombre} style={{ margin: '0 auto 12px', maxHeight: '64px', objectFit: 'contain' as const }} /> : null}
+            <Text style={companyName}>{empresaNombre}</Text>
+            {contactLine ? <Text style={companyContact}>{contactLine}</Text> : null}
+            <Text style={headerSub}>Solicitud de compra · Portal de proveedores</Text>
           </Section>
 
-          {productos.slice(0, 6).map((p, idx) => (
-            <Section key={`${p.nombre}-${idx}`} style={productRow}>
-              <Text style={productName}>{p.nombre}</Text>
-              <Text style={productQty}>{p.cantidad} {p.unidad || ''}</Text>
+          <Section style={content}>
+            <Text style={eyebrow}>{isCopy ? `${empresaNombre.toUpperCase()} · COPIA INTERNA` : `${empresaNombre.toUpperCase()} · SOLICITUD DE COMPRA`}</Text>
+            <Heading style={h1}>{folio}</Heading>
+            <Text style={text}>
+              {isCopy
+                ? `${empresaNombre} envió esta solicitud a ${proveedorNombre}. Recibes esta copia para seguimiento interno.`
+                : `Hola ${proveedorNombre}. ${empresaNombre} te solicita confirmar disponibilidad, cantidad y costo de los siguientes productos.`}
+            </Text>
+
+            {(empresaEmail || empresaTelefono) ? (
+              <Section style={contactBox}>
+                <Text style={contactTitle}>Datos de contacto de {empresaNombre}</Text>
+                {empresaEmail ? <Text style={contactText}>Correo: {empresaEmail}</Text> : null}
+                {empresaTelefono ? <Text style={contactText}>Teléfono: {empresaTelefono}</Text> : null}
+              </Section>
+            ) : null}
+
+            {mensaje ? <Text style={message}><strong>Mensaje de {empresaNombre}:</strong><br/>{mensaje}</Text> : null}
+
+            <Section style={summaryGrid}>
+              <Text style={summaryItem}><strong>{totalPartidas}</strong><br/><span style={muted}>productos</span></Text>
+              <Text style={summaryItem}><strong>{totalUnidades}</strong><br/><span style={muted}>cantidad solicitada</span></Text>
             </Section>
-          ))}
-          {productos.length > 6 ? (
-            <Text style={more}>+ {productos.length - 6} productos más</Text>
-          ) : null}
 
-          <Section style={{ textAlign: 'center', margin: '28px 0 18px' }}>
-            <Button href={publicUrl || 'https://rutapp.mx'} style={button}>
-              {isCopy ? 'Ver solicitud' : 'Revisar y responder solicitud'}
-            </Button>
+            {productos.slice(0, 6).map((p, idx) => (
+              <Section key={`${p.nombre}-${idx}`} style={productRow}>
+                <Text style={productName}>{p.nombre}</Text>
+                <Text style={productQty}>{p.cantidad} {p.unidad || ''}</Text>
+              </Section>
+            ))}
+            {productos.length > 6 ? (
+              <Text style={more}>+ {productos.length - 6} productos más solicitados por {empresaNombre}</Text>
+            ) : null}
+
+            <Section style={{ textAlign: 'center', margin: '28px 0 18px' }}>
+              <Button href={publicUrl || 'https://rutapp.mx'} style={button}>
+                {isCopy ? `Ver solicitud de ${empresaNombre}` : `Revisar y responder a ${empresaNombre}`}
+              </Button>
+            </Section>
+
+            <Section style={securityBox}>
+              <Text style={securityTitle}>Enlace privado de {empresaNombre}</Text>
+              <Text style={securityText}>No necesitas usuario ni contraseña. Este enlace da acceso únicamente a esta solicitud de {empresaNombre}.</Text>
+            </Section>
+
+            <Section style={footerBox}>
+              <Text style={footerCompany}>{empresaNombre}</Text>
+              {empresaEmail ? <Text style={footerLine}>{empresaEmail}</Text> : null}
+              {empresaTelefono ? <Text style={footerLine}>{empresaTelefono}</Text> : null}
+              <Text style={footerPowered}>Gestión segura mediante RutApp · rutapp.mx</Text>
+            </Section>
           </Section>
-
-          <Section style={securityBox}>
-            <Text style={securityTitle}>Enlace seguro y exclusivo</Text>
-            <Text style={securityText}>No necesitas usuario ni contraseña. El enlace da acceso únicamente a esta solicitud.</Text>
-          </Section>
-
-          <Text style={footer}>Enviado mediante RutApp · rutapp.mx</Text>
-        </Section>
-      </Container>
-    </Body>
-  </Html>
-)
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export const template = {
   component: Email,
@@ -92,6 +115,8 @@ export const template = {
   displayName: 'Solicitud de compra a proveedor',
   previewData: {
     empresaNombre: 'Distribuidora Demo',
+    empresaEmail: 'compras@distribuidora.mx',
+    empresaTelefono: '+52 317 000 0000',
     proveedorNombre: 'Proveedor ABC',
     folio: 'SC-2026-A1B2C3D4',
     publicUrl: 'https://rutapp.mx/proveedor/solicitud-compra.html?token=demo',
@@ -108,11 +133,16 @@ export const template = {
 const main = { backgroundColor: '#ffffff', fontFamily: "Inter,Arial,Helvetica,sans-serif", padding: '28px 12px' }
 const container = { maxWidth: '620px', margin: '0 auto', backgroundColor: '#ffffff', border: `1px solid ${BORDER}`, borderRadius: '18px', overflow: 'hidden' }
 const header = { backgroundColor: '#f8fafc', borderBottom: `1px solid ${BORDER}`, padding: '26px 28px 20px', textAlign: 'center' as const }
-const headerSub = { color: TEXT_MUTED, fontSize: '12px', fontWeight: 600, margin: '10px 0 0' }
+const companyName = { color: TEXT_DARK, fontSize: '22px', lineHeight: '28px', fontWeight: 800, margin: '0' }
+const companyContact = { color: '#475569', fontSize: '12px', lineHeight: '18px', fontWeight: 600, margin: '7px 0 0' }
+const headerSub = { color: TEXT_MUTED, fontSize: '11px', fontWeight: 600, margin: '9px 0 0' }
 const content = { padding: '30px 28px 26px' }
-const eyebrow = { color: PRIMARY, fontSize: '11px', fontWeight: 800, letterSpacing: '1.2px', margin: '0 0 8px' }
+const eyebrow = { color: PRIMARY, fontSize: '11px', fontWeight: 800, letterSpacing: '1.1px', margin: '0 0 8px' }
 const h1 = { color: TEXT_DARK, fontSize: '28px', lineHeight: '34px', margin: '0 0 14px' }
 const text = { color: '#475569', fontSize: '15px', lineHeight: '23px', margin: '0 0 14px' }
+const contactBox = { backgroundColor: '#f8fafc', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '13px 15px', margin: '16px 0' }
+const contactTitle = { color: TEXT_DARK, fontSize: '12px', fontWeight: 800, margin: '0 0 5px' }
+const contactText = { color: '#475569', fontSize: '12px', lineHeight: '18px', margin: '2px 0' }
 const message = { color: '#334155', backgroundColor: '#eef4ff', borderLeft: `4px solid ${PRIMARY}`, padding: '12px 14px', fontSize: '14px', lineHeight: '21px', borderRadius: '0 8px 8px 0' }
 const summaryGrid = { backgroundColor: '#f8fafc', border: `1px solid ${BORDER}`, borderRadius: '12px', padding: '14px 8px', margin: '22px 0' }
 const summaryItem = { width: '50%', display: 'inline-block', textAlign: 'center' as const, color: TEXT_DARK, fontSize: '15px', lineHeight: '19px', margin: 0 }
@@ -125,4 +155,7 @@ const button = { backgroundColor: PRIMARY, color: '#ffffff', padding: '14px 24px
 const securityBox = { backgroundColor: '#f8fafc', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '13px 15px', marginTop: '8px' }
 const securityTitle = { color: '#334155', fontSize: '12px', fontWeight: 800, margin: '0 0 3px' }
 const securityText = { color: TEXT_MUTED, fontSize: '11px', lineHeight: '17px', margin: 0 }
-const footer = { color: '#94a3b8', fontSize: '11px', textAlign: 'center' as const, margin: '24px 0 0' }
+const footerBox = { borderTop: `1px solid ${BORDER}`, marginTop: '24px', paddingTop: '18px', textAlign: 'center' as const }
+const footerCompany = { color: TEXT_DARK, fontSize: '13px', fontWeight: 800, margin: '0 0 4px' }
+const footerLine = { color: '#475569', fontSize: '11px', lineHeight: '16px', margin: '1px 0' }
+const footerPowered = { color: '#94a3b8', fontSize: '10px', margin: '9px 0 0' }
