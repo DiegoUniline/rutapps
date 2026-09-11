@@ -48,10 +48,14 @@ async function loadByToken(sb: ReturnType<typeof admin>, token: string) {
     .eq('public_token', token)
     .maybeSingle()
   if (error) throw error
-  if (!solicitud) return { error: json({ error: 'Solicitud no encontrada' }, 404) }
+  if (!solicitud) return { error: json({ error: 'Este enlace ya no está disponible.' }, 404) }
 
-  if (solicitud.token_expires_at && new Date(solicitud.token_expires_at).getTime() < Date.now()
-      && !['respondida', 'convertida'].includes(solicitud.status)) {
+  // Once the supplier closes the request, public access is final and read/write access is revoked.
+  if (['respondida', 'convertida', 'cancelada'].includes(solicitud.status)) {
+    return { error: json({ error: 'Esta solicitud ya fue cerrada y el enlace dejó de estar disponible.' }, 410) }
+  }
+
+  if (solicitud.token_expires_at && new Date(solicitud.token_expires_at).getTime() < Date.now()) {
     return { error: json({ error: 'Este enlace ha vencido. Solicita un nuevo enlace a tu cliente.' }, 410) }
   }
 
@@ -100,7 +104,6 @@ Deno.serve(async (req) => {
           status: solicitud.status,
           enviado_at: solicitud.enviado_at,
           visto_at: solicitud.visto_at,
-          respondido_at: solicitud.respondido_at,
         },
         empresa: { nombre: empresa?.nombre || 'Cliente RutApp' },
         lineas: lineas.map((l: any) => ({
@@ -139,6 +142,7 @@ Deno.serve(async (req) => {
         return json({ error: 'Solicitud y correo del proveedor son requeridos' }, 400)
       }
 
+      // Keep Lovable's super-admin allowance: external superadmins may send requests too.
       const [{ data: profile }, { data: solicitud, error: solicitudError }, { data: superAdmin }] = await Promise.all([
         sb.from('profiles').select('empresa_id').eq('id', user.id).maybeSingle(),
         sb.from('solicitudes_compra').select('*').eq('id', solicitudId).maybeSingle(),
@@ -148,10 +152,9 @@ Deno.serve(async (req) => {
       const esSuperAdmin = !!superAdmin?.id
       if (!solicitud || (!esSuperAdmin && (!profile?.empresa_id || solicitud.empresa_id !== profile.empresa_id))) {
         return json({ error: 'No tienes acceso a esta solicitud' }, 403)
-
       }
-      if (['convertida', 'cancelada'].includes(solicitud.status)) {
-        return json({ error: 'Esta solicitud ya no se puede enviar' }, 409)
+      if (['respondida', 'convertida', 'cancelada'].includes(solicitud.status)) {
+        return json({ error: 'Esta solicitud ya fue cerrada y no se puede volver a publicar' }, 409)
       }
 
       const [{ data: lineas, error: lineError }, { data: empresa, error: empresaError }] = await Promise.all([
@@ -217,23 +220,19 @@ Deno.serve(async (req) => {
       return json({ success: true, public_url: publicUrl, warnings: ccWarnings })
     }
 
-    if (action === 'save' || action === 'respond') {
+    // `respond` remains accepted for backwards compatibility with already cached public pages.
+    if (action === 'save' || action === 'close' || action === 'respond') {
       const token = String(body?.token || '').trim()
       if (!token) return json({ error: 'Token requerido' }, 400)
       const loaded: any = await loadByToken(sb, token)
       if (loaded.error) return loaded.error
       const { solicitud, lineas } = loaded
-      if (['convertida', 'cancelada'].includes(solicitud.status)) {
-        return json({ error: 'Esta solicitud ya está cerrada' }, 409)
-      }
-      if (solicitud.status === 'respondida' && action === 'respond') {
-        return json({ error: 'La respuesta ya fue enviada. Solicita a tu cliente que reabra la solicitud si necesitas hacer cambios.' }, 409)
-      }
+      const isClose = action === 'close' || action === 'respond'
 
       const incoming = Array.isArray(body?.lineas) ? body.lineas : []
       const byId = new Map(lineas.map((l: any) => [l.id, l]))
-      if (action === 'respond' && incoming.length !== lineas.length) {
-        return json({ error: 'Debes responder todas las partidas antes de enviar' }, 400)
+      if (isClose && incoming.length !== lineas.length) {
+        return json({ error: 'Debes completar todas las partidas antes de cerrar la solicitud' }, 400)
       }
 
       for (const item of incoming) {
@@ -244,7 +243,7 @@ Deno.serve(async (req) => {
         const costo = disponible && item?.costo_unitario !== '' && item?.costo_unitario != null
           ? Math.max(0, Number(item.costo_unitario || 0))
           : null
-        if (action === 'respond' && disponible && cantidad <= 0) {
+        if (isClose && disponible && cantidad <= 0) {
           return json({ error: `Indica la cantidad disponible para ${original.producto_nombre}` }, 400)
         }
         const { error } = await sb.from('solicitud_compra_lineas').update({
@@ -259,18 +258,26 @@ Deno.serve(async (req) => {
       }
 
       const now = new Date().toISOString()
-      const nextStatus = action === 'respond' ? 'respondida' : 'borrador_proveedor'
+      const nextStatus = isClose ? 'respondida' : 'borrador_proveedor'
       const update: any = {
         status: nextStatus,
         proveedor_observaciones: String(body?.proveedor_observaciones || '').trim() || null,
       }
-      if (action === 'respond') update.respondido_at = now
-      else update.borrador_proveedor_at = now
+
+      if (isClose) {
+        update.respondido_at = now
+        // Revoke the URL immediately: the token that arrived by email becomes invalid forever.
+        update.public_token = crypto.randomUUID()
+        update.token_expires_at = now
+      } else {
+        update.borrador_proveedor_at = now
+      }
+
       const { error: updateError } = await sb.from('solicitudes_compra').update(update).eq('id', solicitud.id)
       if (updateError) throw updateError
-      await addEvent(sb, solicitud, action === 'respond' ? 'respuesta_enviada' : 'borrador_guardado', 'proveedor', null, {})
+      await addEvent(sb, solicitud, isClose ? 'solicitud_cerrada' : 'borrador_guardado', 'proveedor', null, {})
 
-      return json({ success: true, status: nextStatus })
+      return json({ success: true, status: nextStatus, closed: isClose })
     }
 
     return json({ error: 'Acción no válida' }, 400)
