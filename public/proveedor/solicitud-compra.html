@@ -324,13 +324,19 @@
     }
   }
 
+  const overlay = document.getElementById('confirmOverlay');
+  const openConfirm = () => {
+    document.getElementById('confirmCompany').textContent = state?.empresa?.nombre || 'tu cliente';
+    overlay.classList.add('open');
+  };
+  const closeConfirm = () => overlay.classList.remove('open');
+
   saveBtn.addEventListener('click', () => post('save'));
-  closeBtn.addEventListener('click', () => {
-    const company = state?.empresa?.nombre || 'tu cliente';
-    if (confirm(`¿Cerrar esta solicitud y enviarla a ${company}?\n\nEsta acción es definitiva. Después de cerrarla, este enlace dejará de funcionar y ya no podrás editar la información.`)) {
-      post('close');
-    }
-  });
+  closeBtn.addEventListener('click', openConfirm);
+  document.getElementById('confirmCancel').addEventListener('click', closeConfirm);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeConfirm(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeConfirm(); });
+  document.getElementById('confirmAccept').addEventListener('click', () => { closeConfirm(); post('close'); });
 
   (async () => {
     if (!token) { errorScreen('El enlace no contiene un token válido.'); return; }
