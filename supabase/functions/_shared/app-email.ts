@@ -10,6 +10,7 @@ export interface SendAppEmailOptions {
   templateData?: Record<string, unknown>
   idempotencyKey?: string
   replyTo?: string
+  fromName?: string
 }
 
 export type SendAppEmailResult =
@@ -59,6 +60,7 @@ export async function sendAppEmail(
       templateData: options.templateData as Record<string, any> | undefined,
       idempotencyKey: options.idempotencyKey,
       replyTo: options.replyTo,
+      fromName: options.fromName,
     })
 
     if (result.sent) {
