@@ -92,12 +92,13 @@ export default function SolicitudesCompraPage() {
       const [prov, alm, prod] = await Promise.all([
         db.from('proveedores').select('id,nombre,email,condicion_pago,dias_credito').eq('empresa_id', empresa!.id).neq('status', 'baja').order('nombre'),
         db.from('almacenes').select('id,nombre').eq('empresa_id', empresa!.id).order('nombre'),
-        db.from('productos').select('id,codigo,nombre,nombre_compra,costo,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,factor_conversion, unidades_compra(abreviatura), unidades_venta(abreviatura)').eq('empresa_id', empresa!.id).neq('status', 'inactivo').order('nombre').limit(2000),
+        db.from('productos').select('id,codigo,nombre,nombre_compra,costo,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,factor_conversion, unidades_compra:unidades!productos_unidad_compra_id_fkey(abreviatura), unidades_venta:unidades!productos_unidad_venta_id_fkey(abreviatura)').eq('empresa_id', empresa!.id).neq('status', 'inactivo').order('nombre').limit(2000),
       ]);
-      if (prov.error) throw prov.error;
-      if (alm.error) throw alm.error;
-      if (prod.error) throw prod.error;
+      if (prov.error) console.error('Error proveedores:', prov.error);
+      if (alm.error) console.error('Error almacenes:', alm.error);
+      if (prod.error) console.error('Error productos:', prod.error);
       return { proveedores: prov.data ?? [], almacenes: alm.data ?? [], productos: prod.data ?? [] };
+
     },
   });
 
