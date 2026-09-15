@@ -35,16 +35,13 @@ export function useUsuarios() {
   const [profiles, setProfiles] = useState<ProfileUser[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
-  // vendedores state removed — profiles IS vendedores now
   const [authUsers, setAuthUsers] = useState<AuthUser[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Edit user state
   const [editingUser, setEditingUser] = useState<ProfileUser | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({ nombre: '', telefono: '', estado: 'activo', almacen_id: '', role_id: '', pin_code: '' });
   const [savingUser, setSavingUser] = useState(false);
 
-  // New user state
   const [showNewUser, setShowNewUser] = useState(false);
   const [newUser, setNewUser] = useState<NewUserForm>({ email: '', password: '', nombre: '', role_id: '', almacen_id: '' });
   const [creatingUser, setCreatingUser] = useState(false);
@@ -53,7 +50,6 @@ export function useUsuarios() {
   const [quickCreateAlmacen, setQuickCreateAlmacen] = useState(false);
   const [quickAlmacenName, setQuickAlmacenName] = useState('');
 
-  // Password modal state
   const [passwordModal, setPasswordModal] = useState<{ userId: string; nombre: string } | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [settingPassword, setSettingPassword] = useState(false);
@@ -112,7 +108,6 @@ export function useUsuarios() {
         .update({
           nombre: editForm.nombre || null,
           telefono: editForm.telefono || null,
-          estado: editForm.estado,
           almacen_id: editForm.almacen_id || null,
           pin_code: pinValue ? pinValue : null,
         })
@@ -122,12 +117,10 @@ export function useUsuarios() {
       if (!updated || updated.length === 0) {
         throw new Error('No se pudo guardar (permisos insuficientes). Verifica que sigues con sesión activa.');
       }
-      // Confirm PIN persistence
       if (pinValue && updated[0].pin_code !== pinValue) {
         throw new Error('El PIN no se guardó correctamente. Vuelve a intentarlo.');
       }
-      // Asignación de rol vía edge function (service role): evita el bloqueo de RLS
-      // en user_roles y valida empresa del usuario y del rol en el servidor.
+
       const { data: roleRes, error: roleFnErr } = await supabase.functions.invoke('admin-users', {
         body: {
           action: 'set-user-role',
@@ -138,8 +131,6 @@ export function useUsuarios() {
       if (roleFnErr) throw roleFnErr;
       if (roleRes?.error) throw new Error(roleRes.error);
 
-      await syncBillingSeats();
-
       toast.success('Usuario actualizado');
       setEditingUser(null);
       loadUsuarios();
@@ -149,8 +140,7 @@ export function useUsuarios() {
     } finally {
       setSavingUser(false);
     }
-  }, [editingUser, editForm, userRoles, loadUsuarios, syncBillingSeats]);
-
+  }, [editingUser, editForm, loadUsuarios]);
 
   const createUser = useCallback(async (availableSlots: number, maxUsuarios: number) => {
     if (!newUser.email || !newUser.password) { toast.error('Email y contraseña son obligatorios'); return; }
@@ -192,7 +182,6 @@ export function useUsuarios() {
       const { data, error } = await supabase.functions.invoke('admin-users', {
         body: { action: 'set-password', user_id: passwordModal.userId, password: newPassword },
       });
-      // Mostrar siempre el motivo real (HIBP, contraseña débil, igual a la actual, etc.)
       const realError = (data as any)?.error || error?.message;
       if (realError || (data as any)?.ok === false) {
         throw new Error(realError || 'No se pudo actualizar la contraseña');
@@ -203,18 +192,26 @@ export function useUsuarios() {
     } catch (e: any) { toast.error(e.message || 'Error al actualizar contraseña'); } finally { setSettingPassword(false); }
   }, [passwordModal, newPassword]);
 
+  // Compatibilidad con callers antiguos: cualquier cambio de estado pasa por
+  // el mismo backend de ciclo de vida; nunca se actualiza profiles.estado directo.
   const toggleEstado = useCallback(async (p: ProfileUser, email?: string) => {
-    const newEstado = p.estado === 'activo' ? 'baja' : 'activo';
-    if (newEstado === 'baja' && !await confirmDialog(`¿Dar de baja a ${p.nombre || email}? No podrá acceder al sistema y no generará costo.`)) return;
-    const { error } = await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
-    if (error) {
-      toast.error(error.message);
-      return;
+    const archive = p.estado === 'activo' && !p.archivado_en;
+    if (archive && !await confirmDialog(`¿Archivar a ${p.nombre || email}? Perderá el acceso, conservará su historial y dejará de contar como usuario activo/facturable.`)) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('user-lifecycle', {
+        body: { action: archive ? 'archive' : 'reactivate', profile_id: p.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.billing_synced === false) {
+        toast.warning('El cambio se guardó, pero Stripe quedó marcado para revisión/reconciliación en Auditoría de cobros.');
+      }
+      toast.success(archive ? 'Usuario archivado correctamente' : 'Usuario reactivado');
+      loadUsuarios();
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo cambiar el estado del usuario');
     }
-    await syncBillingSeats();
-    toast.success(newEstado === 'baja' ? 'Usuario dado de baja' : 'Usuario reactivado');
-    loadUsuarios();
-  }, [loadUsuarios, syncBillingSeats]);
+  }, [loadUsuarios]);
 
   const quickCreateRoleAction = useCallback(async () => {
     if (!quickRoleName.trim() || !empresa?.id) return;
