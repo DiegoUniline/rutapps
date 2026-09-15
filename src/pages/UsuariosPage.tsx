@@ -19,6 +19,13 @@ import PasswordModal from '@/components/usuarios/modals/PasswordModal';
 import ArchiveUserWizard from '@/components/usuarios/modals/ArchiveUserWizard';
 import { confirmDialog } from '@/lib/confirm';
 
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) => window.setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
 export default function UsuariosPage() {
   const { empresa } = useAuth();
   const subscription = useSubscription();
@@ -40,7 +47,6 @@ export default function UsuariosPage() {
 
   const activeUsers = usuarios.profiles.filter(p => p.estado === 'activo' && !p.archivado_en).length;
   const isTrial = subscription.status === 'trial';
-  // En prueba: usuarios ilimitados. En planes pagados: respeta el límite del plan.
   const effectiveMax = isTrial ? 9999 : subscription.maxUsuarios;
   const availableSlots = effectiveMax - activeUsers;
   const activeRoles = rolesHook.roles.filter(r => r.activo !== false);
@@ -59,21 +65,28 @@ export default function UsuariosPage() {
       toast.error(e.message || 'No se pudo cerrar la sesión');
     }
   };
+
   const handleReactivate = async (p: ProfileUser) => {
-    if (!await confirmDialog(`¿Reactivar a ${p.nombre || 'este usuario'}? Volverá a contar para el límite del plan.`)) return;
+    if (!await confirmDialog(`¿Reactivar a ${p.nombre || 'este usuario'}? Recuperará el acceso conforme a su rol y volverá a contar como usuario activo/facturable.`)) return;
     try {
-      const { error } = await supabase.rpc('reactivar_usuario', { p_profile_id: p.id });
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke('user-lifecycle', {
+          body: { action: 'reactivate', profile_id: p.id },
+        }),
+        25000,
+        'La reactivación tardó demasiado. Actualiza la lista antes de volver a intentarlo.',
+      );
       if (error) throw error;
-      const { data: syncData, error: syncError } = await supabase.functions.invoke('manage-subscription', {
-        body: { action: 'sync_active_users' },
-      });
-      if (syncError || syncData?.error) {
-        toast.warning('El usuario se reactivó, pero la cantidad de Stripe requiere revisión en Auditoría de cobros.');
+      if (data?.error) throw new Error(data.error);
+      if (!data?.reactivated) throw new Error('El servidor no confirmó la reactivación');
+      if (data?.billing_synced === false) {
+        toast.warning('Usuario reactivado. La sincronización con Stripe quedó marcada para revisión/reconciliación en Auditoría de cobros.');
       }
-      toast.success('Usuario reactivado');
-      reload();
+      toast.success(data?.already_active ? 'El usuario ya estaba activo.' : 'Usuario reactivado');
+      await reload();
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(e?.message || 'No se pudo reactivar el usuario');
+      await reload();
     }
   };
 
@@ -90,20 +103,11 @@ export default function UsuariosPage() {
 
       <div className="flex gap-1 border-b border-border">
         <button onClick={() => setTab('usuarios')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", tab === 'usuarios' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>Usuarios</button>
-        <button onClick={() => setTab('bajas')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5", tab === 'bajas' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
-          Dados de baja
-          {usuarios.profiles.filter(p => p.estado === 'baja' || p.estado === 'archivado').length > 0 && (
-            <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full font-semibold">
-              {usuarios.profiles.filter(p => p.estado === 'baja' || p.estado === 'archivado').length}
-            </span>
-          )}
-        </button>
+        <button onClick={() => setTab('bajas')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5", tab === 'bajas' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>Dados de baja{usuarios.profiles.filter(p => p.estado === 'baja' || p.estado === 'archivado').length > 0 && (<span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full font-semibold">{usuarios.profiles.filter(p => p.estado === 'baja' || p.estado === 'archivado').length}</span>)}</button>
         <button onClick={() => setTab('roles')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", tab === 'roles' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>Roles y Permisos</button>
       </div>
 
-      {tab === 'usuarios' && (
-        <PlanSimuladorCard activeUsers={activeUsers} isTrial={isTrial} />
-      )}
+      {tab === 'usuarios' && <PlanSimuladorCard activeUsers={activeUsers} isTrial={isTrial} />}
 
       {tab === 'usuarios' && (
         <UsuariosTab
