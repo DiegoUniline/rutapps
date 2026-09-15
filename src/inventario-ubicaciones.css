@@ -1,0 +1,23 @@
+/*
+ * Inventario > Ubicaciones
+ *
+ * La columna Producto es sticky y en InventarioPage usa estas utilidades de
+ * ancho únicamente para establecer un tamaño inicial responsive. Aquí se
+ * elimina ese ancho fijo para que la tabla calcule el ancho real a partir del
+ * nombre de producto más largo visible. De esta forma no queda espacio vacío
+ * innecesario y la columna conserva su comportamiento sticky.
+ */
+th.sticky[class~="w-[200px]"][class~="sm:w-[280px]"],
+td.sticky[class~="w-[200px]"][class~="sm:w-[280px]"] {
+  width: 1% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+}
+
+/* El nombre completo debe participar en el cálculo intrínseco del ancho. */
+td.sticky[class~="w-[200px]"][class~="sm:w-[280px]"] > .truncate {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
