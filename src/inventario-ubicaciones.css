@@ -1,21 +1,78 @@
 /*
  * Inventario > Ubicaciones
  *
- * La columna Producto es sticky y en InventarioPage usa estas utilidades de
- * ancho únicamente para establecer un tamaño inicial responsive. Aquí se
- * elimina ese ancho fijo para que la tabla calcule el ancho real a partir del
- * nombre de producto más largo visible. De esta forma no queda espacio vacío
- * innecesario y la columna conserva su comportamiento sticky.
+ * Esta vista usa un contenedor externo con scroll horizontal y el componente
+ * Table agrega internamente otro contenedor con overflow. Dos contenedores con
+ * overflow hacen que position: sticky tome como referencia el contenedor
+ * equivocado y Código/Producto terminen desplazándose. Para esta tabla dejamos
+ * el overflow interno visible y conservamos un único scroll horizontal: el
+ * contenedor externo de la vista.
+ */
+div.overflow-x-auto > div.relative.w-full.overflow-auto:has(
+  > table th.sticky[class~="w-[96px]"]
+) {
+  overflow: visible !important;
+}
+
+/* Código: siempre anclado al borde izquierdo. */
+th.sticky[class~="w-[96px]"],
+td.sticky[class~="w-[96px]"] {
+  position: sticky !important;
+  left: 0 !important;
+  background: hsl(var(--card)) !important;
+}
+
+th.sticky[class~="w-[96px]"] {
+  z-index: 40 !important;
+}
+
+td.sticky[class~="w-[96px]"] {
+  z-index: 30 !important;
+}
+
+/*
+ * Producto: ancho intrínseco según el nombre más largo visible, sin reservar
+ * espacio vacío fijo. Sigue siendo sticky inmediatamente después de Código.
  */
 th.sticky[class~="w-[200px]"][class~="sm:w-[280px]"],
 td.sticky[class~="w-[200px]"][class~="sm:w-[280px]"] {
+  position: sticky !important;
   width: 1% !important;
   min-width: 0 !important;
   max-width: none !important;
   white-space: nowrap !important;
+  background: hsl(var(--card)) !important;
+  border-right: 1px solid hsl(var(--border)) !important;
 }
 
-/* El nombre completo debe participar en el cálculo intrínseco del ancho. */
+/* Producto con Código visible. */
+th.sticky[class~="w-[200px]"][class~="left-[96px]"],
+td.sticky[class~="w-[200px]"][class~="left-[96px]"] {
+  left: 96px !important;
+}
+
+/* Producto cuando Código está oculto desde el menú de columnas. */
+th.sticky[class~="w-[200px]"][class~="left-0"],
+td.sticky[class~="w-[200px]"][class~="left-0"] {
+  left: 0 !important;
+}
+
+@media (min-width: 640px) {
+  th.sticky[class~="w-[200px]"][class~="sm:left-[120px]"],
+  td.sticky[class~="w-[200px]"][class~="sm:left-[120px]"] {
+    left: 120px !important;
+  }
+}
+
+th.sticky[class~="w-[200px]"][class~="sm:w-[280px]"] {
+  z-index: 40 !important;
+}
+
+td.sticky[class~="w-[200px]"][class~="sm:w-[280px]"] {
+  z-index: 30 !important;
+}
+
+/* El nombre completo participa en el cálculo del ancho de Producto. */
 td.sticky[class~="w-[200px]"][class~="sm:w-[280px]"] > .truncate {
   overflow: visible !important;
   text-overflow: clip !important;
