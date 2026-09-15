@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { X, Edit2, Shield, ShieldCheck, Truck } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import AvatarUploader from '@/components/AvatarUploader';
 import type { ProfileUser, AuthUser, Almacen, EditForm } from '@/hooks/useUsuarios';
 import type { Role } from '@/hooks/useRoles';
@@ -36,7 +35,6 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
         .select('id, alias, placa, vendedor_default_id, empresa_id')
         .eq('empresa_id', (editingUser as any).empresa_id ?? undefined as any);
       if (cancel) return;
-      // Fallback: if empresa_id no está en editingUser, traemos por asignación al user
       let list: VehiculoLite[] = (data as any) || [];
       if (!list.length) {
         const { data: all } = await supabase.from('vehiculos').select('id, alias, placa, vendedor_default_id');
@@ -56,14 +54,11 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
   };
 
   const handleSaveAll = async () => {
-    // Actualizar asignación de vehículo si cambió
     if (vehiculoId !== initialVehiculoId) {
       try {
-        // Liberar el anterior
         if (initialVehiculoId) {
           await supabase.from('vehiculos').update({ vendedor_default_id: null }).eq('id', initialVehiculoId);
         }
-        // Asignar el nuevo (y desasignar a otros que lo tuvieran)
         if (vehiculoId) {
           await supabase.from('vehiculos').update({ vendedor_default_id: null }).eq('vendedor_default_id', editingUser.id);
           await supabase.from('vehiculos').update({ vendedor_default_id: editingUser.id }).eq('id', vehiculoId);
@@ -76,6 +71,8 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
     }
     onSave();
   };
+
+  const archived = editingUser.estado === 'archivado' || editingUser.estado === 'baja' || !!editingUser.archivado_en;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -158,20 +155,14 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
           </div>
           <div>
             <label className="label-odoo">Estado</label>
-            {isOwner ? (
-              <div className="input-odoo w-full bg-accent/30 text-muted-foreground cursor-not-allowed">
-                ✅ Activo <span className="text-[10px] text-primary ml-2">Dueño — siempre activo</span>
-              </div>
-            ) : (
-              <>
-                <select className="input-odoo w-full" value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
-                  <option value="activo">✅ Activo</option>
-                  <option value="baja">🚫 Baja (no puede acceder)</option>
-                </select>
-                {editForm.estado === 'baja' && (
-                  <p className="text-[11px] text-destructive mt-1">Este usuario no podrá iniciar sesión y no generará costo en tu plan.</p>
-                )}
-              </>
+            <div className="input-odoo w-full bg-accent/30 text-muted-foreground cursor-not-allowed">
+              {isOwner ? '✅ Activo — dueño' : archived ? '🚫 Archivado / dado de baja' : '✅ Activo'}
+            </div>
+            {!isOwner && !archived && (
+              <p className="text-[11px] text-muted-foreground mt-1">Para dar de baja a este usuario utiliza la acción “Archivar usuario”. Así se bloquea también su acceso, sesiones y facturación de forma consistente.</p>
+            )}
+            {!isOwner && archived && (
+              <p className="text-[11px] text-muted-foreground mt-1">La reactivación se realiza desde la lista de usuarios dados de baja.</p>
             )}
           </div>
           <div>
