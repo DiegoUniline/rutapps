@@ -236,7 +236,15 @@ export function useUsuarios() {
   }, [quickAlmacenName, empresa?.id, loadUsuarios]);
 
   return {
-    profiles, userRoles, almacenes, vendedores: profiles.map(p => ({ id: p.id, nombre: p.nombre ?? '' })), authUsers, loading, setLoading,
+    profiles,
+    userRoles,
+    almacenes,
+    vendedores: profiles
+      .filter(p => p.estado === 'activo' && !p.archivado_en)
+      .map(p => ({ id: p.id, nombre: p.nombre ?? '' })),
+    authUsers,
+    loading,
+    setLoading,
     editingUser, setEditingUser, editForm, setEditForm, savingUser,
     showNewUser, setShowNewUser, newUser, setNewUser, creatingUser,
     quickCreateRole, setQuickCreateRole, quickRoleName, setQuickRoleName,
