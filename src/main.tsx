@@ -9,6 +9,7 @@ import GlobalCrmCancellationsList from "./components/admin/GlobalCrmCancellation
 import AdminCallPitchLibrary from "./components/admin/AdminCallPitchLibrary";
 import SolicitudCompraProveedorPublicaPage from "./pages/SolicitudCompraProveedorPublicaPage";
 import "./index.css";
+import "./inventario-ubicaciones.css";
 import { startAutoBackup, restoreFromStorageBackup } from "./lib/offlineBackup";
 import { initObservability } from "./lib/observability";
 import { installDataUsageMeter } from "./lib/dataUsage";
