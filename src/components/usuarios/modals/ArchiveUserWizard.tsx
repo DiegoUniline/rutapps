@@ -22,10 +22,19 @@ interface Summary {
 interface Props {
   user: ProfileUser;
   emailLabel?: string;
-  activeUsers: ProfileUser[]; // candidatos para reasignar (excluye al actual)
+  activeUsers: ProfileUser[];
   almacenes: Almacen[];
   onClose: () => void;
   onArchived: () => void;
+}
+
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
 }
 
 export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almacenes, onClose, onArchived }: Props) {
@@ -39,14 +48,19 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
 
   const loadSummary = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.rpc('get_user_archive_summary', { p_profile_id: user.id });
-    if (error) {
-      toast.error(error.message);
+    try {
+      const { data, error } = await withTimeout(
+        supabase.rpc('get_user_archive_summary', { p_profile_id: user.id }),
+        12000,
+        'La verificación de pendientes tardó demasiado. Intenta nuevamente.',
+      );
+      if (error) throw error;
+      setSummary(data as any);
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudieron verificar los pendientes del usuario');
+    } finally {
       setLoading(false);
-      return;
     }
-    setSummary(data as any);
-    setLoading(false);
   }, [user.id]);
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
@@ -55,45 +69,92 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
     if (!targetUser) { toast.error('Selecciona un usuario destino'); return; }
     setReassigning(true);
     try {
-      const { data, error } = await supabase.rpc('reasignar_pendientes_usuario', {
-        p_profile_id: user.id,
-        p_target_profile_id: targetUser,
-      });
+      const { data, error } = await withTimeout(
+        supabase.rpc('reasignar_pendientes_usuario', {
+          p_profile_id: user.id,
+          p_target_profile_id: targetUser,
+        }),
+        15000,
+        'La reasignación tardó demasiado. Revisa el estado antes de volver a intentarlo.',
+      );
       if (error) throw error;
       const r = data as any;
       toast.success(`Reasignadas: ${r.entregas_reasignadas} entregas, ${r.ventas_reasignadas} ventas`);
       await loadSummary();
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(e?.message || 'No se pudieron reasignar los pendientes');
     } finally {
       setReassigning(false);
     }
   };
 
+  const verifyArchivedAfterUncertainResult = async () => {
+    try {
+      const { data } = await withTimeout(
+        supabase
+          .from('profiles')
+          .select('estado, archivado_en')
+          .eq('id', user.id)
+          .maybeSingle(),
+        5000,
+        'No fue posible confirmar el estado final.',
+      );
+      return data?.estado === 'archivado' || !!data?.archivado_en;
+    } catch {
+      return false;
+    }
+  };
+
   const handleArchive = async (force = false) => {
-    if (!force && !summary?.puede_archivar) { toast.error('Aún hay pendientes que resolver'); return; }
+    if (!force && !summary?.puede_archivar) {
+      toast.error('Aún hay pendientes que resolver');
+      return;
+    }
+
+    const name = user.nombre || emailLabel || 'este usuario';
     const msg = force
-      ? `⚠ FORZAR archivado de ${user.nombre || emailLabel}.\n\nQuedan pendientes sin resolver (entregas, stock o ventas). El usuario quedará archivado de todos modos, pero los pendientes seguirán en la base de datos atribuidos a él. ¿Continuar?`
-      : `¿Archivar a ${user.nombre || emailLabel}? El usuario no podrá iniciar sesión, vender ni entregar. Sí seguirá disponible para traspasos, ajustes y carga de camión sobre su almacén.`;
+      ? `⚠ FORZAR archivado de ${name}.\n\nQuedan pendientes sin resolver. El usuario perderá el acceso y dejará de considerarse activo/facturable, pero los movimientos históricos y pendientes permanecerán registrados. ¿Continuar?`
+      : `¿Archivar a ${name}?\n\nPerderá el acceso al sistema y dejará de estar disponible para nuevas asignaciones. Su historial se conservará y dejará de contarse como usuario activo para el siguiente ciclo de facturación. No se genera un reembolso automático.`;
+
     if (!await confirmDialog(msg)) return;
+
     setArchiving(true);
     try {
-      const { error } = await supabase.rpc('archivar_usuario', {
-        p_profile_id: user.id,
-        p_motivo: motivo || null,
-        p_force: force,
-      });
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke('user-lifecycle', {
+          body: {
+            action: 'archive',
+            profile_id: user.id,
+            motivo: motivo || null,
+            force,
+          },
+        }),
+        25000,
+        'El archivado tardó demasiado. Se verificará el estado del usuario.',
+      );
+
       if (error) throw error;
-      const { data: syncData, error: syncError } = await supabase.functions.invoke('manage-subscription', {
-        body: { action: 'sync_active_users' },
-      });
-      if (syncError || syncData?.error) {
-        toast.warning('El usuario se archivó, pero la cantidad de Stripe requiere revisión en Auditoría de cobros.');
+      if (data?.error) throw new Error(data.error);
+      if (!data?.archived) throw new Error('El servidor no confirmó el archivado del usuario');
+
+      if (data?.session_warning) {
+        toast.warning('Usuario archivado. No fue posible confirmar el cierre de todas sus sesiones; el acceso operativo queda bloqueado por estado y será reintentable.');
       }
-      toast.success(force ? 'Usuario archivado (forzado). Cupo del plan liberado.' : 'Usuario archivado. Cupo del plan liberado.');
+      if (data?.billing_synced === false) {
+        toast.warning('Usuario archivado. La sincronización con Stripe quedó marcada para revisión/reconciliación en Auditoría de cobros.');
+      }
+
+      toast.success(data?.already_archived ? 'El usuario ya estaba archivado.' : 'Usuario archivado correctamente');
       onArchived();
     } catch (e: any) {
-      toast.error(e.message);
+      const message = e?.message || 'No se pudo archivar el usuario';
+      const uncertain = message.includes('tardó demasiado');
+      if (uncertain && await verifyArchivedAfterUncertainResult()) {
+        toast.warning('La respuesta tardó demasiado, pero el usuario sí quedó archivado. Se actualizó la lista.');
+        onArchived();
+      } else {
+        toast.error(message);
+      }
     } finally {
       setArchiving(false);
     }
@@ -105,17 +166,15 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
   return (
     <div className="fixed inset-0 z-[60] bg-foreground/40 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-card border border-border rounded-lg w-full max-w-2xl max-h-[90dvh] overflow-y-auto shadow-xl">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-primary/5">
           <div className="flex items-center gap-2">
             <Archive className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold text-foreground">Archivar usuario</h2>
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-accent"><X className="h-4 w-4" /></button>
+          <button onClick={onClose} disabled={archiving} className="p-1 rounded hover:bg-accent disabled:opacity-50"><X className="h-4 w-4" /></button>
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Usuario */}
           <div className="bg-accent/30 border border-border rounded-lg p-3">
             <div className="text-xs text-muted-foreground">Vas a archivar a</div>
             <div className="font-semibold text-foreground">{user.nombre || 'Sin nombre'}</div>
@@ -123,14 +182,14 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
             <div className="text-xs text-muted-foreground mt-1">Almacén asignado: <span className="text-foreground">{almacenNombre}</span></div>
           </div>
 
-          {/* Aviso */}
           <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-xs text-amber-900 dark:text-amber-200">
             <p className="font-semibold mb-1">Qué pasa al archivar:</p>
             <ul className="space-y-0.5 list-disc pl-4">
-              <li>No podrá iniciar sesión, vender, levantar pedidos ni hacer entregas.</li>
-              <li>Pierde sus permisos y deja de contar para el límite del plan.</li>
-              <li>Su almacén e historial se conservan: aparece en traspasos, ajustes y carga de camión.</li>
-              <li>Reversible: lo puedes reactivar después si tu plan tiene cupo.</li>
+              <li>Pierde el acceso al sistema y se cierran sus sesiones.</li>
+              <li>Deja de aparecer como opción para nuevas asignaciones.</li>
+              <li>Su almacén, ventas, movimientos y demás historial se conservan con su nombre.</li>
+              <li>Deja de contar como usuario activo/facturable para el siguiente ciclo; no se genera reembolso automático.</li>
+              <li>La reactivación existente conserva su configuración de rol cuando corresponde.</li>
             </ul>
           </div>
 
@@ -138,11 +197,10 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
 
           {summary && !loading && (
             <>
-              {/* Checklist */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold text-foreground uppercase tracking-wide">Pendientes a resolver</h3>
-                  <button onClick={loadSummary} className="text-[11px] text-primary flex items-center gap-1 hover:underline">
+                  <button onClick={loadSummary} disabled={archiving} className="text-[11px] text-primary flex items-center gap-1 hover:underline disabled:opacity-50">
                     <RefreshCw className="h-3 w-3" /> Actualizar
                   </button>
                 </div>
@@ -153,7 +211,6 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
                 <Item icon={<Package className="h-4 w-4" />} label={`Stock en almacén "${almacenNombre}"`} count={summary.stock_items} extra={summary.stock_total !== 0 ? `(${summary.stock_total} unidades)` : undefined} />
               </div>
 
-              {/* Reasignar */}
               {(summary.entregas_pendientes > 0 || summary.ventas_borrador_con_saldo > 0) && (
                 <div className="border border-border rounded-lg p-3 space-y-2">
                   <div className="text-xs font-semibold text-foreground">Reasignar entregas y ventas pendientes</div>
@@ -161,7 +218,8 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
                     <select
                       value={targetUser}
                       onChange={e => setTargetUser(e.target.value)}
-                      className="flex-1 text-sm px-2 py-1.5 rounded border border-border bg-background"
+                      disabled={archiving || reassigning}
+                      className="flex-1 text-sm px-2 py-1.5 rounded border border-border bg-background disabled:opacity-50"
                     >
                       <option value="">Selecciona usuario destino…</option>
                       {candidatos.map(u => (
@@ -170,7 +228,7 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
                     </select>
                     <button
                       onClick={handleReassign}
-                      disabled={!targetUser || reassigning}
+                      disabled={!targetUser || reassigning || archiving}
                       className="btn-odoo-primary text-xs disabled:opacity-50"
                     >
                       {reassigning ? 'Reasignando…' : 'Reasignar'}
@@ -184,7 +242,6 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
                 </div>
               )}
 
-              {/* Stock */}
               {summary.stock_items > 0 && summary.almacen_id && (
                 <div className="border border-border rounded-lg p-3 space-y-2">
                   <div className="text-xs font-semibold text-foreground">Vaciar almacén "{almacenNombre}"</div>
@@ -212,19 +269,18 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
                 </div>
               )}
 
-              {/* Motivo */}
               <div>
                 <label className="text-xs font-semibold text-foreground block mb-1">Motivo (opcional)</label>
                 <input
                   type="text"
                   value={motivo}
                   onChange={e => setMotivo(e.target.value)}
+                  disabled={archiving}
                   placeholder="Ej. Cambio de personal, ya no labora..."
-                  className="w-full text-sm px-2 py-1.5 rounded border border-border bg-background"
+                  className="w-full text-sm px-2 py-1.5 rounded border border-border bg-background disabled:opacity-50"
                 />
               </div>
 
-              {/* Final action */}
               <div className="flex items-center justify-between pt-3 border-t border-border">
                 {summary.puede_archivar ? (
                   <span className="text-xs text-success flex items-center gap-1">
@@ -236,7 +292,7 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
                   </span>
                 )}
                 <div className="flex gap-2 flex-wrap justify-end">
-                  <button onClick={onClose} className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent">Cancelar</button>
+                  <button onClick={onClose} disabled={archiving} className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent disabled:opacity-50">Cancelar</button>
                   {isSuperAdmin && !summary.puede_archivar && (
                     <button
                       onClick={() => handleArchive(true)}
