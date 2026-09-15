@@ -578,8 +578,19 @@ export default function InventarioPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                {isCol('codigo') && <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>}
-                <TableHead className="text-[11px] sticky left-[70px] bg-card z-10">Producto</TableHead>
+                {isCol('codigo') && (
+                  <TableHead className="text-[11px] sticky left-0 bg-card z-30 w-[96px] min-w-[96px] max-w-[96px] sm:w-[120px] sm:min-w-[120px] sm:max-w-[120px] whitespace-nowrap overflow-hidden text-ellipsis">
+                    Código
+                  </TableHead>
+                )}
+                <TableHead
+                  className={cn(
+                    "text-[11px] sticky bg-card z-30 w-[200px] min-w-[200px] max-w-[200px] sm:w-[280px] sm:min-w-[280px] sm:max-w-[280px] border-r border-border",
+                    isCol('codigo') ? "left-[96px] sm:left-[120px]" : "left-0"
+                  )}
+                >
+                  Producto
+                </TableHead>
                 {ubicaciones.map(u => (
                   <TableHead key={u.id} className="text-[11px] text-center whitespace-nowrap">
                     <u.icon className={cn("h-3 w-3 inline mr-0.5", u.tipo === 'ruta' ? "text-warning" : "text-primary")} />
@@ -604,8 +615,24 @@ export default function InventarioPage() {
                 const totalUbic = ubicaciones.reduce((s, u) => s + u.getStock(p.id), 0);
                 return (
                   <TableRow key={p.id}>
-                    {isCol('codigo') && <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>}
-                    <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
+                    {isCol('codigo') && (
+                      <TableCell
+                        className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card z-20 w-[96px] min-w-[96px] max-w-[96px] sm:w-[120px] sm:min-w-[120px] sm:max-w-[120px] whitespace-nowrap overflow-hidden text-ellipsis"
+                        title={p.codigo}
+                      >
+                        {p.codigo}
+                      </TableCell>
+                    )}
+                    <TableCell
+                      className={cn(
+                        "text-[12px] font-medium sticky bg-card z-20 w-[200px] min-w-[200px] max-w-[200px] sm:w-[280px] sm:min-w-[280px] sm:max-w-[280px] border-r border-border",
+                        isCol('codigo') ? "left-[96px] sm:left-[120px]" : "left-0"
+                      )}
+                    >
+                      <div className="truncate" title={p.nombre}>
+                        <ProductoLink id={p.id}>{p.nombre}</ProductoLink>
+                      </div>
+                    </TableCell>
                     {ubicaciones.map(u => {
                       const qty = u.getStock(p.id);
                       const apart = u.apartadoOn ? u.getApartado(p.id) : 0;
@@ -654,7 +681,7 @@ export default function InventarioPage() {
               })}
               {filteredProducts && filteredProducts.length > 0 && (
                 <TableRow className="bg-card font-bold">
-                  <TableCell colSpan={isCol('codigo') ? 2 : 1} className="sticky left-0 bg-card">Totales</TableCell>
+                  <TableCell colSpan={isCol('codigo') ? 2 : 1} className="sticky left-0 bg-card z-20 border-r border-border">Totales</TableCell>
                   {ubicaciones.map(u => {
                     const total = filteredProducts.reduce((s, p) => s + u.getStock(p.id), 0);
                     return <TableCell key={u.id} className={cn("text-center", u.tipo === 'ruta' ? "text-warning" : "")}>{fmtNum(total)}</TableCell>;
