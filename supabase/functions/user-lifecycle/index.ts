@@ -94,6 +94,30 @@ async function syncBillableUsers(
   return { ok: false, error: lastError || "No fue posible sincronizar usuarios facturables" };
 }
 
+async function recordBillingSyncResult(
+  adminClient: any,
+  empresaId: string,
+  prefix: string,
+  result: { ok: boolean; error?: string },
+) {
+  const now = new Date().toISOString();
+  if (result.ok) {
+    await adminClient
+      .from("subscriptions")
+      .update({ stripe_sync_error: null, stripe_sync_error_at: null })
+      .eq("empresa_id", empresaId);
+    return;
+  }
+
+  await adminClient
+    .from("subscriptions")
+    .update({
+      stripe_sync_error: `${prefix}:${result.error || "sync_failed"}`,
+      stripe_sync_error_at: now,
+    })
+    .eq("empresa_id", empresaId);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Método no permitido" }, 405);
@@ -115,7 +139,7 @@ Deno.serve(async (req) => {
   });
 
   try {
-    const { data: claimsData, error: claimsError } = await adminClient.auth.getClaims(token);
+    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
     const callerId = claimsData?.claims?.sub as string | undefined;
     if (claimsError || !callerId) return json({ error: "Sesión inválida" }, 401);
 
@@ -166,7 +190,6 @@ Deno.serve(async (req) => {
     }
 
     if (action === "archive") {
-      // El RPC hace las validaciones transaccionales (owner, pendientes e idempotencia).
       const { data: archiveResult, error: archiveError } = await callerClient.rpc("archivar_usuario", {
         p_profile_id: profileId,
         p_motivo: motivo,
@@ -174,14 +197,11 @@ Deno.serve(async (req) => {
       });
       if (archiveError) return json({ error: archiveError.message }, 400);
 
-      // La baja no se considera completa si Auth todavía permite iniciar sesión.
       const { error: banError } = await adminClient.auth.admin.updateUserById(target.user_id, {
         ban_duration: "876000h",
       });
 
       if (banError) {
-        // Compensación: si esta ejecución fue la que archivó, regresamos el perfil
-        // al estado anterior. No tocamos historial operativo ni user_roles.
         if (!(archiveResult as any)?.already_archived) {
           await adminClient
             .from("profiles")
@@ -196,24 +216,9 @@ Deno.serve(async (req) => {
         return json({ error: `No se pudo inhabilitar el acceso del usuario: ${banError.message}` }, 502);
       }
 
-      // Revoca refresh tokens/sesiones en todos los dispositivos. El guard RLS
-      // de perfiles activos cubre el intervalo de vida de un access-token ya emitido.
       const sessionResult = await revokeAllSessions(supabaseUrl, serviceRoleKey, target.user_id);
-
       const billingResult = await syncBillableUsers(supabaseUrl, anonKey, authorization);
-      if (billingResult.ok) {
-        await adminClient
-          .from("subscriptions")
-          .update({ stripe_sync_error: null })
-          .eq("empresa_id", target.empresa_id);
-      } else {
-        await adminClient
-          .from("subscriptions")
-          .update({
-            stripe_sync_error: `user-archive:${new Date().toISOString()}:${billingResult.error || "sync_failed"}`,
-          })
-          .eq("empresa_id", target.empresa_id);
-      }
+      await recordBillingSyncResult(adminClient, target.empresa_id, "user-archive", billingResult);
 
       return json({
         ok: true,
@@ -227,8 +232,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Reactivación ya existía en el producto: se conserva y se vuelve consistente
-    // con el ban de Auth agregado al archivado.
     const previousArchive = {
       estado: target.estado,
       archivado_en: target.archivado_en,
@@ -255,19 +258,7 @@ Deno.serve(async (req) => {
     }
 
     const billingResult = await syncBillableUsers(supabaseUrl, anonKey, authorization);
-    if (billingResult.ok) {
-      await adminClient
-        .from("subscriptions")
-        .update({ stripe_sync_error: null })
-        .eq("empresa_id", target.empresa_id);
-    } else {
-      await adminClient
-        .from("subscriptions")
-        .update({
-          stripe_sync_error: `user-reactivate:${new Date().toISOString()}:${billingResult.error || "sync_failed"}`,
-        })
-        .eq("empresa_id", target.empresa_id);
-    }
+    await recordBillingSyncResult(adminClient, target.empresa_id, "user-reactivate", billingResult);
 
     return json({
       ok: true,
