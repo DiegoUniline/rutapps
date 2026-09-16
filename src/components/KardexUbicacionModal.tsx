@@ -22,6 +22,7 @@ const REFERENCIA_LABELS: Record<string, string> = {
   reverso_borrador: 'Vuelta a borrador',
   conteo: 'Conteo físico',
   manual: 'Manual',
+  carga_inicial: 'Carga inicial',
 };
 
 const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string }> = {

@@ -16,6 +16,7 @@ const REFERENCIA_LABELS: Record<string, string> = {
   devolucion: 'Devolución',
   descarga: 'Descarga ruta',
   manual: 'Manual',
+  carga_inicial: 'Carga inicial',
 };
 
 const TIPO_CONFIG = {
