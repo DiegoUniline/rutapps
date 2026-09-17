@@ -542,7 +542,7 @@ export function useVentaForm() {
 
   const set = (field: string, val: any) => { if (readOnly) return; setForm(prev => ({ ...prev, [field]: val })); setDirty(true); };
 
-  const handleProductSelect = (idx: number, productoId: string, presentacion?: ProductoPresentacion) => {
+  const handleProductSelect = (idx: number, productoId: string, presentacion?: Partial<ProductoPresentacion> & { id: string; producto_id: string; nombre: string; factor_base: number }) => {
     if (readOnly) return;
     if (!productoId) { updateLine(idx, 'producto_id', ''); return; }
     const producto = productosList?.find((p: any) => p.id === productoId);
@@ -577,7 +577,7 @@ export function useVentaForm() {
     let presentacionPatch: Record<string, unknown> = {};
     if (presentacion && presentacion.producto_id === productoId) {
       try {
-        presentacionPatch = buildPresentationPatch(presentacion, 1, snap, { iva_pct: ivaPct, ieps_pct: iepsPct });
+        presentacionPatch = buildPresentationPatch(presentacion as ProductoPresentacion, 1, snap, { iva_pct: ivaPct, ieps_pct: iepsPct });
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'No se pudo aplicar la presentación');
       }
