@@ -240,6 +240,10 @@ export interface Venta {
 }
 
 export interface VentaLinea {
+  presentacion_id?: string | null;
+  presentacion_nombre?: string | null;
+  presentacion_factor?: number | null;
+  paquetes?: number | null;
   id: string;
   venta_id: string;
   producto_id?: string;

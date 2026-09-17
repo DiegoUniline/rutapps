@@ -1,3 +1,4 @@
+import { VentaPresentacion, VentaPresentacionEditor, type ChangePresentation } from '@/components/venta/VentaPresentacion';
 import { Trash2 } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { formatCurrency } from '@/lib/currency';
@@ -17,6 +18,7 @@ interface Props {
   productosList: any[];
   readOnly: boolean;
   pricingReady?: boolean;
+  onChangePresentation?: ChangePresentation;
   onProductSelect: (idx: number, pid: string) => void;
   onUpdateLine: (idx: number, field: string, val: any) => void;
   onRemoveLine: (idx: number) => void;
@@ -39,7 +41,7 @@ interface Props {
   lotesAsignados?: { lote_id: string; codigo: string; caducidad: string | null; cantidad: number }[];
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols, onPickLote, lotesAsignados }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onChangePresentation, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols, onPickLote, lotesAsignados }: Props) {
   const { fmt } = useCurrency();
   const manejaLotesEmpresa = useManejaLotes();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
@@ -185,6 +187,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             registerRef={el => setCellRef(idx, 0, el)}
           />
         )}
+        {!isEmpty && ((readOnly || !onChangePresentation)
+          ? <VentaPresentacion line={l} unit={unidadLabel || 'unidades'} />
+          : <VentaPresentacionEditor line={l} idx={idx} unit={unidadLabel || 'unidades'} disabled={!pricingReady} onChange={onChangePresentation} onUpdateLine={onUpdateLine} />)}
         {linePromoDesc > 0 && (
           <div className="text-[10px] text-primary font-medium mt-0.5">
             🎁 {linePromos[0].descripcion || linePromos[0].nombre} · −{money(linePromoDesc)}

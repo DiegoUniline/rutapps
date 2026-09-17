@@ -1,3 +1,5 @@
+import { buildPresentationPatch } from '@/lib/ventaPresentacion';
+import type { ProductoPresentacion } from '@/hooks/usePresentaciones';
 import { todayLocal } from '@/lib/utils';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -570,7 +572,7 @@ export function useVentaForm() {
     const snap = buildSalePricingSnapshot(prodForPricing, pricing);
     const finalUnitPrice = snap.unitPrice;
     const finalDisplayPrice = snap.displayPrice;
-    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, precio_unitario_sin_redondeo: snap?.rawUnitPrice ?? finalUnitPrice, precio_display_sin_redondeo: snap?.rawDisplayPrice ?? finalDisplayPrice, base_precio: snap?.basePrecio ?? 'con_impuestos', redondeo: snap?.redondeo ?? 'ninguno', unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false, lote_id: null, lote_codigo: null } as any; return next; });
+    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, precio_unitario_sin_redondeo: snap?.rawUnitPrice ?? finalUnitPrice, precio_display_sin_redondeo: snap?.rawDisplayPrice ?? finalDisplayPrice, base_precio: snap?.basePrecio ?? 'con_impuestos', redondeo: snap?.redondeo ?? 'ninguno', unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false, presentacion_id: null, presentacion_nombre: null, presentacion_factor: null, paquetes: null, lote_id: null, lote_codigo: null } as any; return next; });
     setDirty(true);
     // Producto por lote: se aparta el lote desde que se captura la línea.
     // Venta directa → se pide el lote (sale stock de inmediato).
@@ -599,6 +601,45 @@ export function useVentaForm() {
       }
     }
 
+  };
+
+  const changePresentation = async (idx: number, presentation: ProductoPresentacion | null) => {
+    if (readOnly || !pricingReady) return;
+    const line = lineas[idx];
+    const product = productosList?.find(p => p.id === line?.producto_id);
+    if (!line || !product || (presentation && presentation.producto_id !== product.id)) return;
+    try {
+      const listId = (line as any).lista_precio_id ?? (form as any).lista_precio_id ?? null;
+      let rules = tarifaRules ?? [];
+      // A line can have a different list from the customer. Resolve that list
+      // before replacing a special presentation price with the base-unit price.
+      if (listId && listId !== ((form as any).lista_precio_id ?? null)) {
+        const { data: list, error } = await supabase.from('lista_precios').select('tarifa_id').eq('id', listId).eq('empresa_id', empresa!.id).single();
+        if (error) throw error;
+        rules = list.tarifa_id ? await fetchAllPages<TarifaLineaRule>((from, to) => supabase.from('tarifa_lineas').select('*').eq('tarifa_id', list.tarifa_id!).order('id').range(from, to)) : [];
+      }
+      const pricingProduct: ProductForPricing = {
+        ...product, precio_principal: Number(product.precio_principal) || 0, costo: Number(product.costo) || 0,
+        iva_pct: Number(product.iva_pct ?? 16), ieps_pct: Number(product.ieps_pct ?? 0),
+      };
+      const base = buildSalePricingSnapshot(pricingProduct, resolveProductPricing(rules, pricingProduct, listId));
+      const packages = presentation ? (Number(line.paquetes) > 0 ? Number(line.paquetes) : 1) : Number(line.cantidad) || 1;
+      const patch = buildPresentationPatch(presentation, packages, base, line);
+      if (form.tipo === 'venta_directa' && form.entrega_inmediata && !product.vender_sin_stock && Number(patch.cantidad) > (product._stock ?? Infinity)) {
+        toast.error(`Stock máximo para "${product.nombre}": ${product._stock}`);
+        return;
+      }
+      setLineas(prev => {
+        // Do not apply an asynchronous selection to a removed/replaced line.
+        if (prev[idx] !== line) return prev;
+        const next = [...prev];
+        next[idx] = { ...line, ...patch };
+        return next;
+      });
+      setDirty(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo cambiar la presentación');
+    }
   };
 
   // Cambio de lista de precios a nivel de línea: usamos el snapshot ya calculado
@@ -665,6 +706,12 @@ export function useVentaForm() {
   const addLine = () => { if (readOnly) return; setLineas(prev => [...prev, emptyLine()]); setDirty(true); setTimeout(() => focusCell(lineas.length, 0), 50); };
   const updateLine = (idx: number, field: string, val: any) => {
     if (readOnly) return;
+    const editingPackages = field === 'paquetes';
+    const factor = Number(lineas[idx]?.presentacion_factor) || 1;
+    if (editingPackages) {
+      field = 'cantidad';
+      val = Math.round(Math.max(0, Number(val) || 0) * factor * 1e6) / 1e6;
+    }
     // Validate max stock for entrega inmediata
     if (field === 'cantidad' && form.tipo === 'venta_directa' && form.entrega_inmediata) {
       const line = lineas[idx];
@@ -709,7 +756,10 @@ export function useVentaForm() {
       return;
     }
 
-    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], [field]: val }; return next; });
+    setLineas(prev => { const next = [...prev]; const line = next[idx]; next[idx] = { ...line, [field]: val,
+      ...(field === 'cantidad' && line.presentacion_nombre && (editingPackages || !productosList?.find(p => p.id === line.producto_id)?.es_granel)
+        ? { paquetes: Number(val) / factor } : {}),
+    }; return next; });
     setDirty(true);
   };
   const removeLine = async (idx: number) => { if (readOnly) return; const line = lineas[idx]; if (line.id) await deleteLinea.mutateAsync(line.id); const newLineas = lineas.filter((_, i) => i !== idx); setLineas(newLineas.length === 0 ? [emptyLine()] : newLineas); setDirty(true); };
@@ -1100,7 +1150,7 @@ export function useVentaForm() {
     saveVenta, crearEntrega, PinDialog, requestPin,
     set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
     handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,
-    addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell, changeLineListaPrecio,
+    addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell, changeLineListaPrecio, changePresentation,
     loteParaLinea, setLoteParaLinea, setLineaLote,
   };
 }
