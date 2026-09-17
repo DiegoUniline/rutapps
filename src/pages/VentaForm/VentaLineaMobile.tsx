@@ -16,7 +16,8 @@ interface Props {
   readOnly: boolean;
   pricingReady?: boolean;
   onChangePresentation?: ChangePresentation;
-  onProductSelect: (idx: number, pid: string) => void;
+  onProductSelect: (idx: number, pid: string, presentacion?: import('@/components/ProductSearchInput').PresentacionOption) => void;
+  presentaciones?: import('@/components/ProductSearchInput').PresentacionOption[];
   onUpdateLine: (idx: number, field: string, val: any) => void;
   onRemoveLine: (idx: number) => void;
   setLineas?: React.Dispatch<React.SetStateAction<Partial<VentaLinea>[]>>;
@@ -29,7 +30,7 @@ interface Props {
   promoResults?: PromoResult[];
 }
 
-export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, pricingReady = true, onChangePresentation, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults }: Props) {
+export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, pricingReady = true, onChangePresentation, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, presentaciones }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -74,8 +75,9 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
           ) : (
             <ProductSearchInput
               products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, formula: p.formula, precio_principal: p.precio_principal, _stock: p._stock }))}
+              presentaciones={presentaciones}
               value={l.producto_id ?? ''} displayText={prod ? `${prod.codigo} · ${prod.nombre}` : (snapshotProd ? `${snapshotProd.codigo ?? ''}${snapshotProd.codigo && snapshotProd.nombre ? ' · ' : ''}${snapshotProd.nombre ?? ''}` : undefined)}
-              onSelect={pid => onProductSelect(idx, pid)} autoFocus={idx === lineas.length - 1 && isEmpty} readOnly={readOnly || !pricingReady}
+              onSelect={(pid, pres) => onProductSelect(idx, pid, pres)} autoFocus={idx === lineas.length - 1 && isEmpty} readOnly={readOnly || !pricingReady}
             />
           )}
           {!isEmpty && ((readOnly || !onChangePresentation)

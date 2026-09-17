@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { useVentaLineaLotes } from '@/hooks/useVentaLineaLotes';
+import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 
 
 interface Props {
@@ -30,7 +31,7 @@ interface Props {
   totals: { subtotal: number; descuento_total: number; iva_total: number; ieps_total: number; total: number; descuento_promo?: number; descuento_extra_amt?: number };
   promoResults?: PromoResult[];
   onChangePresentation?: import('@/components/venta/VentaPresentacion').ChangePresentation;
-  onProductSelect: (idx: number, pid: string) => void;
+  onProductSelect: (idx: number, pid: string, presentacion?: import('@/components/ProductSearchInput').PresentacionOption) => void;
   onUpdateLine: (idx: number, field: string, val: any) => void;
   onRemoveLine: (idx: number) => void;
   onAddLine: () => void;
@@ -73,6 +74,8 @@ export function VentaLineasTab(props: Props) {
   // La columna Lote se muestra si algún producto maneja lote o si la línea ya
   // trae lote guardado (evita depender del catálogo en caché tras activar lotes).
   const manejaLotes = useManejaLotes();
+  // Presentaciones activas: se listan directo en el buscador de productos.
+  const { data: presentacionesActivas } = useAllPresentaciones();
   const ventaIdActual = (props.lineas ?? []).map(l => (l as any).venta_id).find(Boolean) as string | undefined;
   const lotesPorLinea = useVentaLineaLotes(ventaIdActual, manejaLotes);
 
@@ -132,7 +135,7 @@ export function VentaLineasTab(props: Props) {
           {isMobile ? (
             <div className="space-y-2">
               {lineas.map((l, idx) => (
-                <VentaLineaMobile key={idx} idx={idx} line={l} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} />
+                <VentaLineaMobile key={idx} idx={idx} line={l} {...props} presentaciones={presentacionesActivas} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} />
               ))}
             </div>
           ) : (
@@ -173,7 +176,7 @@ export function VentaLineasTab(props: Props) {
                   </thead>
                   <tbody>
                     {lineas.map((l, idx) => (
-                      <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} cols={effectiveCols} lotesAsignados={lotesPorLinea[(l as any).id] ?? undefined} />
+                      <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} presentaciones={presentacionesActivas} currencySymbol={symbol} currencyCode={currencyCode} cols={effectiveCols} lotesAsignados={lotesPorLinea[(l as any).id] ?? undefined} />
                     ))}
 
                   </tbody>

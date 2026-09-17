@@ -542,7 +542,7 @@ export function useVentaForm() {
 
   const set = (field: string, val: any) => { if (readOnly) return; setForm(prev => ({ ...prev, [field]: val })); setDirty(true); };
 
-  const handleProductSelect = (idx: number, productoId: string) => {
+  const handleProductSelect = (idx: number, productoId: string, presentacion?: Partial<ProductoPresentacion> & { id: string; producto_id: string; nombre: string; factor_base: number }) => {
     if (readOnly) return;
     if (!productoId) { updateLine(idx, 'producto_id', ''); return; }
     const producto = productosList?.find((p: any) => p.id === productoId);
@@ -572,7 +572,17 @@ export function useVentaForm() {
     const snap = buildSalePricingSnapshot(prodForPricing, pricing);
     const finalUnitPrice = snap.unitPrice;
     const finalDisplayPrice = snap.displayPrice;
-    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, precio_unitario_sin_redondeo: snap?.rawUnitPrice ?? finalUnitPrice, precio_display_sin_redondeo: snap?.rawDisplayPrice ?? finalDisplayPrice, base_precio: snap?.basePrecio ?? 'con_impuestos', redondeo: snap?.redondeo ?? 'ninguno', unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false, presentacion_id: null, presentacion_nombre: null, presentacion_factor: null, paquetes: null, lote_id: null, lote_codigo: null } as any; return next; });
+    // Si el usuario eligió directo una presentación (caja/paquete) en el
+    // buscador, la línea se arma ya con 1 paquete, como en el punto de venta.
+    let presentacionPatch: Record<string, unknown> = {};
+    if (presentacion && presentacion.producto_id === productoId) {
+      try {
+        presentacionPatch = buildPresentationPatch(presentacion as ProductoPresentacion, 1, snap, { iva_pct: ivaPct, ieps_pct: iepsPct });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'No se pudo aplicar la presentación');
+      }
+    }
+    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, precio_unitario_sin_redondeo: snap?.rawUnitPrice ?? finalUnitPrice, precio_display_sin_redondeo: snap?.rawDisplayPrice ?? finalDisplayPrice, base_precio: snap?.basePrecio ?? 'con_impuestos', redondeo: snap?.redondeo ?? 'ninguno', unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false, presentacion_id: null, presentacion_nombre: null, presentacion_factor: null, paquetes: null, lote_id: null, lote_codigo: null, ...presentacionPatch } as any; return next; });
     setDirty(true);
     // Producto por lote: se aparta el lote desde que se captura la línea.
     // Venta directa → se pide el lote (sale stock de inmediato).

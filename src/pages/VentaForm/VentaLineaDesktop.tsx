@@ -19,7 +19,8 @@ interface Props {
   readOnly: boolean;
   pricingReady?: boolean;
   onChangePresentation?: ChangePresentation;
-  onProductSelect: (idx: number, pid: string) => void;
+  onProductSelect: (idx: number, pid: string, presentacion?: import('@/components/ProductSearchInput').PresentacionOption) => void;
+  presentaciones?: import('@/components/ProductSearchInput').PresentacionOption[];
   onUpdateLine: (idx: number, field: string, val: any) => void;
   onRemoveLine: (idx: number) => void;
   setCellRef: (row: number, col: number, el: HTMLElement | null) => void;
@@ -41,7 +42,7 @@ interface Props {
   lotesAsignados?: { lote_id: string; codigo: string; caducidad: string | null; cantidad: number }[];
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onChangePresentation, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols, onPickLote, lotesAsignados }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, pricingReady = true, onChangePresentation, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, cols, onPickLote, lotesAsignados, presentaciones }: Props) {
   const { fmt } = useCurrency();
   const manejaLotesEmpresa = useManejaLotes();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
@@ -182,8 +183,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         {readOnly ? <span className="text-[12px]">{prodDisplay ? `${prodDisplay.codigo ?? ''} · ${prodDisplay.nombre}`.replace(/^ · /, '') : (l.descripcion || '—')}{prod?._stock != null && <span className="ml-1.5 text-[10px] text-muted-foreground font-medium">(Stock: {prod._stock})</span>}</span> : (
           <ProductSearchInput
             products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, formula: p.formula, precio_principal: p.precio_principal, _stock: p._stock }))}
+            presentaciones={presentaciones}
             value={l.producto_id ?? ''} displayText={prodDisplay ? `${prodDisplay.codigo ?? ''} · ${prodDisplay.nombre}${prod?._stock != null ? ` (Stock: ${prod._stock})` : ''}`.replace(/^ · /, '') : (l.descripcion || undefined)}
-            onSelect={pid => onProductSelect(idx, pid)} onNavigate={dir => navigateCell(idx, 0, dir)} readOnly={readOnly || !pricingReady}
+            onSelect={(pid, pres) => onProductSelect(idx, pid, pres)} onNavigate={dir => navigateCell(idx, 0, dir)} readOnly={readOnly || !pricingReady}
             registerRef={el => setCellRef(idx, 0, el)}
           />
         )}
