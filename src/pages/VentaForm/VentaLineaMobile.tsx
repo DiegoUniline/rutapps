@@ -1,3 +1,4 @@
+import { VentaPresentacion, VentaPresentacionEditor, type ChangePresentation } from '@/components/venta/VentaPresentacion';
 import { Trash2 } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { formatCurrency } from '@/lib/currency';
@@ -14,6 +15,7 @@ interface Props {
   productosList: any[];
   readOnly: boolean;
   pricingReady?: boolean;
+  onChangePresentation?: ChangePresentation;
   onProductSelect: (idx: number, pid: string) => void;
   onUpdateLine: (idx: number, field: string, val: any) => void;
   onRemoveLine: (idx: number) => void;
@@ -27,7 +29,7 @@ interface Props {
   promoResults?: PromoResult[];
 }
 
-export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, pricingReady = true, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults }: Props) {
+export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, pricingReady = true, onChangePresentation, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -38,7 +40,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
   const isEmpty = !l.producto_id;
   const lineData = l as any;
-  const unidadLabel = lineData.unidad_label || 'PZA';
+  const unidadLabel = lineData.unidad_label || lineData.unidades?.abreviatura || lineData.productos?.unidades_venta?.abreviatura || (prod?.es_granel ? prod.unidad_granel : '') || 'PZA';
   // Fallback to embedded snapshot from venta_lineas.productos when product is not in productosList
   // (e.g. inactive/deleted products, or products outside the loaded catalog page)
   const snapshotProd = lineData.productos;
@@ -76,6 +78,9 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
               onSelect={pid => onProductSelect(idx, pid)} autoFocus={idx === lineas.length - 1 && isEmpty} readOnly={readOnly || !pricingReady}
             />
           )}
+          {!isEmpty && ((readOnly || !onChangePresentation)
+          ? <VentaPresentacion line={l} unit={unidadLabel || 'unidades'} />
+          : <VentaPresentacionEditor line={l} idx={idx} unit={unidadLabel || 'unidades'} disabled={!pricingReady} onChange={onChangePresentation} onUpdateLine={onUpdateLine} />)}
           {linePromoDesc > 0 && (
             <div className="text-[11px] text-primary font-medium mt-0.5">
               🎁 {linePromos[0].descripcion || linePromos[0].nombre} · −{money(linePromoDesc)}

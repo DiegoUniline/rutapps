@@ -29,6 +29,7 @@ interface Props {
   pricingReady?: boolean;
   totals: { subtotal: number; descuento_total: number; iva_total: number; ieps_total: number; total: number; descuento_promo?: number; descuento_extra_amt?: number };
   promoResults?: PromoResult[];
+  onChangePresentation?: import('@/components/venta/VentaPresentacion').ChangePresentation;
   onProductSelect: (idx: number, pid: string) => void;
   onUpdateLine: (idx: number, field: string, val: any) => void;
   onRemoveLine: (idx: number) => void;
@@ -105,6 +106,7 @@ export function VentaLineasTab(props: Props) {
       return {
         ...l,
         cantidad: entregado,
+        paquetes: l.paquetes != null ? Number(l.paquetes) * ratio : null,
         pedido_cantidad: pedido,
         subtotal: (Number((l as any).subtotal) || 0) * ratio,
         total: (Number((l as any).total) || 0) * ratio,

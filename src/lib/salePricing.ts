@@ -18,6 +18,7 @@ export interface DisplayPricingLike extends TaxPricingInput {
 }
 
 export interface SaleLinePricingLike extends DisplayPricingLike {
+  presentacion_factor?: number | null;
   cantidad?: number | string | null;
   descuento_pct?: number | string | null;
   precio_manual?: boolean | null;
@@ -159,6 +160,17 @@ export function calculateSaleLineEffectivePrices(line: SaleLinePricingLike, sinI
   }
 
   const rawNet = rawNetSource;
+  // A presentation's fixed price is divided into base units for inventory.
+  // Rounding $100 / 12 to $8.33 here would charge $99.96 per package.
+  // Preserve the base-unit precision; amounts are rounded at line level.
+  if (Number(line.presentacion_factor) > 0 && line.precio_manual && !hasConfiguredRounding) {
+    return {
+      unitPrice: rawNet,
+      displayPrice: rawNet * taxMultiplier,
+      finalUnitGross: rawNet * descFactor * taxMultiplier,
+      appliedRounding: false,
+    };
+  }
   const grossBeforeRound = round2(rawNet * descFactor * taxMultiplier);
   const finalUnitGross = hasConfiguredRounding
     ? round2(applyDisplayRedondeo(grossBeforeRound, redondeo))

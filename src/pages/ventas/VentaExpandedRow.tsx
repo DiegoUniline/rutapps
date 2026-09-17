@@ -1,3 +1,4 @@
+import { VentaPresentacion } from '@/components/venta/VentaPresentacion';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -69,7 +70,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
       const [lRes, pRes, tRes, cRes, plRes] = await Promise.all([
         supabase
           .from('venta_lineas')
-          .select('id, cantidad, precio_unitario, precio_lista_unitario, descuento_pct, descuento_promocion_monto, descuento_manual_monto, subtotal, iva_pct, iva_monto, ieps_pct, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, productos(nombre, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
+          .select('id, presentacion_id, presentacion_nombre, presentacion_factor, paquetes, cantidad, precio_unitario, precio_lista_unitario, descuento_pct, descuento_promocion_monto, descuento_manual_monto, subtotal, iva_pct, iva_monto, ieps_pct, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, productos(nombre, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
           .eq('venta_id', venta.id)
           .order('created_at'),
         supabase
@@ -429,7 +430,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                             const promoLabel = promoPorProducto[l.producto_id];
                             return (
                               <tr key={l.id} className="border-b border-border/40">
-                                <td className="py-1.5"><ProductoLink id={l.producto_id}>{(l.productos as any)?.nombre ?? '—'}</ProductoLink></td>
+                                <td className="py-1.5"><ProductoLink id={l.producto_id}>{(l.productos as any)?.nombre ?? '—'}</ProductoLink><VentaPresentacion line={l} unit={l.unidades?.abreviatura || l.productos?.unidades_venta?.abreviatura || l.productos?.unidad_granel || 'unidades'} /></td>
                                 <td className="py-1.5 text-muted-foreground text-[11px]">{listaLabel}</td>
                                 <td className="text-right py-1.5 tabular-nums">{fmt(l.precio_unitario)}</td>
                                 <td className="text-right py-1.5 tabular-nums">{l.cantidad}</td>
