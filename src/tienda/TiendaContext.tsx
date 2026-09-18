@@ -1,5 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { fnGet, fnPost, isSessionExpiredError } from "./tiendaApi";
+import { isTiendaTokenUsable, shouldRenewTiendaToken } from "./tiendaReliability";
+
+export { fnGet, fnPost } from "./tiendaApi";
 
 export interface TiendaConfig {
   id: string;
@@ -132,6 +135,7 @@ interface TiendaCtx {
   token: string | null;
   email: string | null;
   isAuth: boolean;
+  sessionExpired: boolean;
   login: (token: string, email: string) => void;
   logout: () => void;
   cart: CartItem[];
@@ -145,30 +149,6 @@ interface TiendaCtx {
 
 const Ctx = createContext<TiendaCtx | null>(null);
 
-const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-export async function fnGet(path: string, params: Record<string, string> = {}) {
-  const qs = new URLSearchParams(params).toString();
-  const r = await fetch(`${FN_URL}/${path}?${qs}`, {
-    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data?.error ?? "Error de red");
-  return data;
-}
-
-export async function fnPost(path: string, body: unknown) {
-  const r = await fetch(`${FN_URL}/${path}`, {
-    method: "POST",
-    headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data?.error ?? "Error de red");
-  return data;
-}
-
 export function TiendaProvider({ slug, children }: { slug: string; children: ReactNode }) {
   const [config, setConfig] = useState<TiendaConfig | null>(null);
   const [empresa, setEmpresa] = useState<TiendaEmpresa | null>(null);
@@ -177,9 +157,20 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
 
   const tokenKey = `tienda_token_${slug}`;
   const cartKey = `tienda_cart_${slug}`;
+  const expiredKey = `tienda_session_expired_${slug}`;
 
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(tokenKey));
-  const [email, setEmail] = useState<string | null>(() => localStorage.getItem(`${tokenKey}_email`));
+  const [token, setToken] = useState<string | null>(() => {
+    const saved = localStorage.getItem(tokenKey);
+    if (isTiendaTokenUsable(saved)) return saved;
+    if (saved) localStorage.setItem(expiredKey, "1");
+    localStorage.removeItem(tokenKey);
+    localStorage.removeItem(`${tokenKey}_email`);
+    return null;
+  });
+  const [email, setEmail] = useState<string | null>(() =>
+    isTiendaTokenUsable(localStorage.getItem(tokenKey)) ? localStorage.getItem(`${tokenKey}_email`) : null,
+  );
+  const [sessionExpired, setSessionExpired] = useState(() => localStorage.getItem(expiredKey) === "1");
   const [cart, setCart] = useState<CartItem[]>(() => {
     try { return JSON.parse(localStorage.getItem(cartKey) ?? "[]"); } catch { return []; }
   });
@@ -200,6 +191,40 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
   }, [slug]);
 
   useEffect(() => {
+    const expireSession = () => {
+      localStorage.removeItem(tokenKey);
+      localStorage.removeItem(`${tokenKey}_email`);
+      localStorage.setItem(expiredKey, "1");
+      setToken(null);
+      setEmail(null);
+      setSessionExpired(true);
+    };
+    window.addEventListener("tienda-session-expired", expireSession);
+    return () => window.removeEventListener("tienda-session-expired", expireSession);
+  }, [expiredKey, tokenKey]);
+
+  useEffect(() => {
+    if (!token || !shouldRenewTiendaToken(token)) return;
+    let cancelled = false;
+    fnPost("tienda-session", { slug, token })
+      .then((response) => {
+        if (cancelled || typeof response.token !== "string") return;
+        localStorage.setItem(tokenKey, response.token);
+        setToken(response.token);
+      })
+      .catch((error) => {
+        if (cancelled || !isSessionExpiredError(error)) return;
+        localStorage.removeItem(tokenKey);
+        localStorage.removeItem(`${tokenKey}_email`);
+        localStorage.setItem(expiredKey, "1");
+        setToken(null);
+        setEmail(null);
+        setSessionExpired(true);
+      });
+    return () => { cancelled = true; };
+  }, [expiredKey, slug, token, tokenKey]);
+
+  useEffect(() => {
     localStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, cartKey]);
 
@@ -218,16 +243,20 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
   const login = useCallback((t: string, e: string) => {
     localStorage.setItem(tokenKey, t);
     localStorage.setItem(`${tokenKey}_email`, e);
+    localStorage.removeItem(expiredKey);
     setToken(t);
     setEmail(e);
-  }, [tokenKey]);
+    setSessionExpired(false);
+  }, [expiredKey, tokenKey]);
 
   const logout = useCallback(() => {
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(`${tokenKey}_email`);
+    localStorage.removeItem(expiredKey);
     setToken(null);
     setEmail(null);
-  }, [tokenKey]);
+    setSessionExpired(false);
+  }, [expiredKey, tokenKey]);
 
   const addToCart = useCallback((item: CartItem) => {
     setCart((prev) => {
@@ -257,7 +286,7 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
 
   const value: TiendaCtx = {
     slug, config, empresa, loadingConfig, configError,
-    token, email, isAuth: !!token, login, logout,
+    token, email, isAuth: !!token, sessionExpired, login, logout,
     cart, addToCart, updateQty, removeFromCart, clearCart, cartCount, cartTotal,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
