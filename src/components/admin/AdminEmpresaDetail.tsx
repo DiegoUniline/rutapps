@@ -499,7 +499,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
             metodo_pago: markPaidForm.metodo_pago,
             referencia_pago: markPaidForm.referencia_pago,
             fecha_pago: markPaidForm.fecha_pago,
-            reflect_in_stripe: markPaidForm.reflect_in_stripe,
+            reflect_in_stripe: !!markPaidFactura.stripe_invoice_id || markPaidForm.reflect_in_stripe,
             extender_periodo: markPaidForm.extender_periodo,
           }),
         }
@@ -538,6 +538,10 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
 
   async function handleSaveFactura() {
     if (!editFactura) return;
+    if (editFactura.stripe_invoice_id && editFacturaForm.estado !== editFactura.estado) {
+      toast.error('El estado de una factura Stripe no puede cambiarse solo localmente. Usa "Aplicar pago" o "Eliminar" para sincronizar Stripe de forma segura.');
+      return;
+    }
     setSavingFactura(true);
     try {
       const subtotal = editFacturaForm.num_usuarios * editFacturaForm.precio_unitario;
@@ -586,13 +590,26 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
   async function handleDeleteFactura(f: any) {
     setDeletingFacturaId(f.id);
     try {
-      const { error } = await supabase.from('facturas').delete().eq('id', f.id);
+      const { data, error } = await supabase.functions.invoke('admin-billing', {
+        body: {
+          action: 'delete_invoice_safely',
+          factura_id: f.id,
+          empresa_id: empresaId,
+        },
+      });
       if (error) throw error;
-      toast.success('Factura eliminada');
+      if (data?.error) throw new Error(data.error);
+      const stripeAction = data?.stripe_action && data.stripe_action !== 'none'
+        ? ` · Stripe: ${data.stripe_action}`
+        : '';
+      toast.success(`Factura eliminada de forma segura${stripeAction}`);
       setConfirmDeleteFactura(null);
       load();
-    } catch (e: any) { toast.error(e.message || 'Error al eliminar'); }
-    finally { setDeletingFacturaId(null); }
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo eliminar la factura de forma segura');
+    } finally {
+      setDeletingFacturaId(null);
+    }
   }
 
   async function handleDeleteEmpresa() {
@@ -1592,12 +1609,13 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                 onChange={(e) => setMarkPaidForm((f) => ({ ...f, referencia_pago: e.target.value }))} />
             </div>
             {markPaidFactura?.stripe_invoice_id && (
-              <div className="flex items-start gap-2 rounded-lg border p-3 bg-muted/30">
-                <Checkbox id="reflect-stripe" checked={markPaidForm.reflect_in_stripe}
-                  onCheckedChange={(v) => setMarkPaidForm((f) => ({ ...f, reflect_in_stripe: !!v }))} />
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 p-3 bg-amber-50">
+                <ShieldAlert className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
                 <div className="flex-1">
-                  <Label htmlFor="reflect-stripe" className="text-sm cursor-pointer font-medium">Reflejar también en Stripe</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Marca la factura como "paid out of band".</p>
+                  <p className="text-sm font-medium text-amber-900">Sincronización con Stripe obligatoria</p>
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    Primero se cerrará la factura en Stripe como pagada fuera de banda. Si Stripe falla, Rutapp NO la marcará pagada.
+                  </p>
                 </div>
               </div>
             )}
@@ -1627,7 +1645,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
           <DialogHeader>
             <DialogTitle>Editar factura</DialogTitle>
             <DialogDescription>
-              Los cambios solo aplican localmente. No se reflejan en Stripe.
+              {editFactura?.stripe_invoice_id
+                ? 'Los datos administrativos pueden editarse, pero el estado está protegido. Para pagar o eliminar usa las acciones seguras de la factura.'
+                : 'Factura manual: los cambios aplican localmente.'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
@@ -1640,6 +1660,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
               <div>
                 <Label className="text-xs">Estado</Label>
                 <Select value={editFacturaForm.estado}
+                  disabled={!!editFactura?.stripe_invoice_id}
                   onValueChange={v => setEditFacturaForm((f: any) => ({ ...f, estado: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -1650,6 +1671,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                     <SelectItem value="cancelada">Cancelada</SelectItem>
                   </SelectContent>
                 </Select>
+                {editFactura?.stripe_invoice_id && (
+                  <p className="text-[11px] text-muted-foreground mt-1">Estado bloqueado porque esta factura está vinculada a Stripe.</p>
+                )}
               </div>
             </div>
             <div>
@@ -1730,8 +1754,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
             <AlertDialogTitle>¿Eliminar factura?</AlertDialogTitle>
             <AlertDialogDescription>
               Se eliminará la factura <strong>{confirmDeleteFactura?.numero_factura || 'sin folio'}</strong> por{' '}
-              <strong>{fmtMXN(Number(confirmDeleteFactura?.total || 0))}</strong>. Esta acción no se puede deshacer
-              y no afecta a Stripe.
+              <strong>{fmtMXN(Number(confirmDeleteFactura?.total || 0))}</strong>. Si está ligada a Stripe, primero se
+              detendrá el cobro: borrador → eliminar; abierta → anular. Si ya está pagada en Stripe, la eliminación se bloqueará.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

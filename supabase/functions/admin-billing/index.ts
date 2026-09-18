@@ -1655,6 +1655,9 @@ Deno.serve(async (req) => {
     }
 
     // ─── Mark an internal invoice as paid (out of band: transferencia, efectivo, etc.) ───
+    // SAFETY: if the invoice exists in Stripe, Stripe MUST reach a terminal paid
+    // state before the local row is marked as paid. This prevents an invoice from
+    // looking paid in Rutapp while Stripe can still auto-charge/retry it later.
     if (action === "mark_invoice_paid_out_of_band") {
       const {
         factura_id,
@@ -1662,7 +1665,6 @@ Deno.serve(async (req) => {
         metodo_pago,
         referencia_pago,
         fecha_pago,
-        reflect_in_stripe,
         extender_periodo,
       } = body;
 
@@ -1677,30 +1679,68 @@ Deno.serve(async (req) => {
       if (facErr || !fac) throw new Error("Factura no encontrada");
 
       const paidAt = fecha_pago ? new Date(fecha_pago) : new Date();
-
-      // Reflect in Stripe (paid out of band) if requested and possible
       let stripePaid = false;
-      if (reflect_in_stripe && fac.stripe_invoice_id) {
+
+      if (fac.stripe_invoice_id) {
         try {
-          // Stripe API needs invoice in 'open' status to mark as paid out of band
-          const inv = await stripe.invoices.retrieve(fac.stripe_invoice_id);
-          if (inv.status === "open" || inv.status === "draft") {
-            if (inv.status === "draft") {
-              await stripe.invoices.finalizeInvoice(fac.stripe_invoice_id);
-            }
-            await stripe.invoices.pay(fac.stripe_invoice_id, { paid_out_of_band: true });
-            stripePaid = true;
-          } else if (inv.status === "paid") {
-            stripePaid = true;
+          let inv = await stripe.invoices.retrieve(fac.stripe_invoice_id);
+
+          if (inv.status === "draft") {
+            await stripe.invoices.update(fac.stripe_invoice_id, { auto_advance: false });
+            inv = await stripe.invoices.finalizeInvoice(fac.stripe_invoice_id);
           }
-        } catch (e) {
-          console.error("[mark_invoice_paid_out_of_band] stripe pay error:", e);
-          // don't fail the whole request; we still mark local as paid
+
+          if (inv.status === "open") {
+            // Disable Stripe automatic advancement/retries first, then close the
+            // invoice as paid out of band. No card charge is created.
+            await stripe.invoices.update(fac.stripe_invoice_id, { auto_advance: false });
+            inv = await stripe.invoices.pay(fac.stripe_invoice_id, { paid_out_of_band: true });
+          }
+
+          if (inv.status === "void" || inv.status === "uncollectible") {
+            throw new Error(`La factura Stripe está en estado ${inv.status}; no puede registrarse como pagada desde este flujo.`);
+          }
+
+          const confirmed = await stripe.invoices.retrieve(fac.stripe_invoice_id);
+          if (confirmed.status !== "paid") {
+            throw new Error(`Stripe no confirmó el estado pagado (estado actual: ${confirmed.status || "desconocido"}).`);
+          }
+          stripePaid = true;
+        } catch (e: any) {
+          console.error("[mark_invoice_paid_out_of_band] stripe synchronization failed:", e);
+          throw new Error(
+            `NO se registró el pago local porque Stripe no pudo cerrarse de forma segura: ${e?.message || e}`,
+          );
         }
       }
 
-      // Update factura local
-      await supabase
+      // Stop any Rutapp retry records for this invoice. Stripe is the only
+      // payment engine allowed to control Stripe invoices.
+      const retryStopPayload = {
+        estado: "procesado",
+        ultimo_error: "Detenido: factura marcada como pagada manualmente",
+        procesado_at: new Date().toISOString(),
+      };
+      const { error: retryByFacturaErr } = await supabase
+        .from("cobro_reintentos")
+        .update(retryStopPayload)
+        .eq("factura_id", factura_id)
+        .eq("estado", "pendiente");
+      if (retryByFacturaErr) {
+        console.error("[mark_invoice_paid_out_of_band] retry cleanup by factura failed:", retryByFacturaErr);
+      }
+      if (fac.stripe_invoice_id) {
+        const { error: retryByStripeErr } = await supabase
+          .from("cobro_reintentos")
+          .update(retryStopPayload)
+          .eq("stripe_invoice_id", fac.stripe_invoice_id)
+          .eq("estado", "pendiente");
+        if (retryByStripeErr) {
+          console.error("[mark_invoice_paid_out_of_band] retry cleanup by stripe invoice failed:", retryByStripeErr);
+        }
+      }
+
+      const { error: localPaidErr } = await supabase
         .from("facturas")
         .update({
           estado: "pagada",
@@ -1709,6 +1749,7 @@ Deno.serve(async (req) => {
           referencia_pago: referencia_pago || null,
         })
         .eq("id", factura_id);
+      if (localPaidErr) throw localPaidErr;
 
       // Extend subscription period if requested and not a prorrateo
       let nuevoFinPeriodo: string | null = null;
@@ -1719,12 +1760,10 @@ Deno.serve(async (req) => {
           .eq("empresa_id", empresa_id)
           .maybeSingle();
         if (subRow) {
-          // Use the invoice's periodo_fin directly as the new subscription end date
           let nuevoFin: Date;
           if (fac.periodo_fin) {
             nuevoFin = parseCalendarDate(fac.periodo_fin);
           } else {
-            // Fallback: extend 1 month from current end or today
             const base = subRow.current_period_end && new Date(subRow.current_period_end) > new Date()
               ? new Date(subRow.current_period_end)
               : new Date();
@@ -1739,7 +1778,6 @@ Deno.serve(async (req) => {
             acceso_bloqueado: false,
             updated_at: new Date().toISOString(),
           };
-          // Set period_start from the invoice if available, or today if missing
           if (fac.periodo_inicio) {
             updatePayload.current_period_start = datePart(fac.periodo_inicio);
           } else if (!subRow.current_period_start) {
@@ -1753,6 +1791,96 @@ Deno.serve(async (req) => {
         success: true,
         stripe_paid: stripePaid,
         nuevo_fin_periodo: nuevoFinPeriodo,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ─── Delete invoice safely ───
+    // A Stripe-linked invoice is first made non-collectable in Stripe.
+    // - draft -> deleted in Stripe
+    // - open  -> auto_advance off + void
+    // - paid  -> deletion refused (money already moved)
+    // Only after Stripe is safe do we remove the local row.
+    if (action === "delete_invoice_safely") {
+      const { factura_id } = body;
+      if (!factura_id) throw new Error("factura_id requerido");
+
+      const { data: fac, error: facErr } = await supabase
+        .from("facturas")
+        .select("*")
+        .eq("id", factura_id)
+        .maybeSingle();
+      if (facErr || !fac) throw new Error("Factura no encontrada");
+
+      let stripeAction = "none";
+
+      if (fac.stripe_invoice_id) {
+        try {
+          let inv = await stripe.invoices.retrieve(fac.stripe_invoice_id);
+
+          if (inv.status === "paid") {
+            throw new Error("La factura ya está pagada en Stripe. No puede eliminarse sin revisar primero el pago/reembolso.");
+          }
+
+          if (inv.status === "draft") {
+            await stripe.invoices.update(fac.stripe_invoice_id, { auto_advance: false });
+            await stripe.invoices.del(fac.stripe_invoice_id);
+            stripeAction = "deleted";
+          } else if (inv.status === "open") {
+            await stripe.invoices.update(fac.stripe_invoice_id, { auto_advance: false });
+            inv = await stripe.invoices.voidInvoice(fac.stripe_invoice_id);
+            if (inv.status !== "void") {
+              throw new Error(`Stripe no confirmó la anulación (estado: ${inv.status || "desconocido"}).`);
+            }
+            stripeAction = "voided";
+          } else if (inv.status === "void" || inv.status === "uncollectible") {
+            stripeAction = `already_${inv.status}`;
+          } else {
+            throw new Error(`Estado Stripe no seguro para eliminar: ${inv.status || "desconocido"}`);
+          }
+        } catch (e: any) {
+          if (e?.code === "resource_missing") {
+            stripeAction = "already_missing";
+          } else {
+            console.error("[delete_invoice_safely] stripe close failed:", e);
+            throw new Error(`No se eliminó la factura porque Stripe no pudo cerrarse de forma segura: ${e?.message || e}`);
+          }
+        }
+      }
+
+      const retryStopPayload = {
+        estado: "procesado",
+        ultimo_error: "Detenido: factura eliminada/cancelada por administrador",
+        procesado_at: new Date().toISOString(),
+      };
+      const { error: retryByFacturaErr } = await supabase
+        .from("cobro_reintentos")
+        .update(retryStopPayload)
+        .eq("factura_id", factura_id)
+        .eq("estado", "pendiente");
+      if (retryByFacturaErr) {
+        console.error("[delete_invoice_safely] retry cleanup by factura failed:", retryByFacturaErr);
+      }
+      if (fac.stripe_invoice_id) {
+        const { error: retryByStripeErr } = await supabase
+          .from("cobro_reintentos")
+          .update(retryStopPayload)
+          .eq("stripe_invoice_id", fac.stripe_invoice_id)
+          .eq("estado", "pendiente");
+        if (retryByStripeErr) {
+          console.error("[delete_invoice_safely] retry cleanup by stripe invoice failed:", retryByStripeErr);
+        }
+      }
+
+      const { error: deleteErr } = await supabase
+        .from("facturas")
+        .delete()
+        .eq("id", factura_id);
+      if (deleteErr) throw deleteErr;
+
+      return new Response(JSON.stringify({
+        success: true,
+        deleted: true,
+        stripe_action: stripeAction,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
