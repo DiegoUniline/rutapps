@@ -69,21 +69,83 @@ export function VentaLineaLotesDialog({
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: asg }, disp] = await Promise.all([
-      (supabase.from as any)('venta_linea_lotes')
-        .select('id, cantidad, created_at, lote_id, lotes(codigo, fecha_caducidad)')
-        .eq('venta_linea_id', lineaId)
-        .order('created_at', { ascending: true }),
-      almacenId
-        ? getLotesDisponibles({ empresaId, almacenId, productoId: producto.id, excluirVentaId: ventaId })
-        : Promise.resolve([] as LoteDisponible[]),
-    ]);
-    const rows = (asg ?? []) as Asignacion[];
-    setAsignaciones(rows);
-    setCantidadesEdit(Object.fromEntries(rows.map(a => [a.id, String(Number(a.cantidad) || 0)])));
-    setDisponibles(disp as LoteDisponible[]);
-    setLoading(false);
-  }, [empresaId, almacenId, producto.id, lineaId, ventaId]);
+    try {
+      const [{ data: asg, error: asgError }, { data: linea, error: lineaError }, disp] = await Promise.all([
+        (supabase.from as any)('venta_linea_lotes')
+          .select('id, cantidad, created_at, lote_id, lotes(codigo, fecha_caducidad)')
+          .eq('venta_linea_id', lineaId)
+          .order('created_at', { ascending: true }),
+        (supabase.from as any)('venta_lineas')
+          .select('id, cantidad, lote_id, almacen_id, lotes:lotes!lote_id(codigo, fecha_caducidad)')
+          .eq('id', lineaId)
+          .maybeSingle(),
+        almacenId
+          ? getLotesDisponibles({ empresaId, almacenId, productoId: producto.id, excluirVentaId: ventaId })
+          : Promise.resolve([] as LoteDisponible[]),
+      ]);
+      if (asgError) throw asgError;
+      if (lineaError) throw lineaError;
+
+      let rows = (asg ?? []) as Asignacion[];
+
+      // Compatibilidad con líneas antiguas / venta directa:
+      // algunas líneas guardaron el lote únicamente en venta_lineas.lote_id,
+      // antes de que existiera (o se llenara) venta_linea_lotes.
+      // En lectura mostramos ese lote; en borrador lo migramos automáticamente
+      // al esquema multi-lote para que pueda editarse sin perder trazabilidad.
+      if (rows.length === 0 && linea?.lote_id) {
+        const legacyCantidad = Number(linea.cantidad) || cantidadTotal || 0;
+        const legacyLote = {
+          codigo: linea.lotes?.codigo ?? 'Lote',
+          fecha_caducidad: linea.lotes?.fecha_caducidad ?? null,
+        };
+
+        if (!readOnly) {
+          const { error: migrateError } = await (supabase.from as any)('venta_linea_lotes').insert({
+            empresa_id: empresaId,
+            venta_id: ventaId,
+            venta_linea_id: lineaId,
+            producto_id: producto.id,
+            lote_id: linea.lote_id,
+            almacen_id: linea.almacen_id ?? almacenId,
+            cantidad: legacyCantidad,
+            user_id: userId ?? null,
+          });
+
+          // Si hubo una carrera y otro proceso ya creó la fila, simplemente
+          // recargamos. Cualquier otro error sí debe mostrarse.
+          if (migrateError && migrateError.code !== '23505') throw migrateError;
+
+          const { data: migrated, error: migratedError } = await (supabase.from as any)('venta_linea_lotes')
+            .select('id, cantidad, created_at, lote_id, lotes(codigo, fecha_caducidad)')
+            .eq('venta_linea_id', lineaId)
+            .order('created_at', { ascending: true });
+          if (migratedError) throw migratedError;
+          rows = (migrated ?? []) as Asignacion[];
+          invalidarLotes();
+        } else {
+          rows = [{
+            id: `legacy-${lineaId}`,
+            cantidad: legacyCantidad,
+            created_at: '',
+            lote_id: linea.lote_id,
+            lotes: legacyLote,
+          }];
+        }
+      }
+
+      setAsignaciones(rows);
+      setCantidadesEdit(Object.fromEntries(rows.map(a => [a.id, String(Number(a.cantidad) || 0)])));
+      setDisponibles(disp as LoteDisponible[]);
+    } catch (err: any) {
+      console.error('[VentaLineaLotesDialog] load error:', err);
+      toast.error(err?.message || 'No se pudieron cargar los lotes de la línea');
+      setAsignaciones([]);
+      setCantidadesEdit({});
+    } finally {
+      setLoading(false);
+    }
+  }, [empresaId, almacenId, producto.id, lineaId, ventaId, cantidadTotal, readOnly, userId, invalidarLotes]);
 
   useEffect(() => { if (open) { load(); setLoteId(''); } }, [open, load]);
   useEffect(() => { setCantidad(pendiente); }, [pendiente]);
@@ -185,7 +247,7 @@ export function VentaLineaLotesDialog({
   };
 
   const quitar = async (a: Asignacion) => {
-    if (readOnly) return;
+    if (readOnly || a.id.startsWith('legacy-')) return;
     setSaving(true);
     try {
       const { error } = await (supabase.from as any)('venta_linea_lotes').delete().eq('id', a.id);
@@ -199,7 +261,7 @@ export function VentaLineaLotesDialog({
   };
 
   const guardarCantidad = async (a: Asignacion) => {
-    if (readOnly) return;
+    if (readOnly || a.id.startsWith('legacy-')) return;
     const qty = Number(cantidadesEdit[a.id]);
     if (!Number.isFinite(qty) || qty <= 0) {
       toast.error('La cantidad del lote debe ser mayor a 0');
