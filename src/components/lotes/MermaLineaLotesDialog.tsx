@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { getLotesDisponibles, pickFefo, type LoteDisponible } from '@/lib/lotesFefo';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export interface MermaLoteAsignacion {
   lote_id: string;
