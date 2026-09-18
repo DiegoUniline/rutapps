@@ -171,6 +171,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
   const [editFacturaForm, setEditFacturaForm] = useState<any>({});
   const [savingFactura, setSavingFactura] = useState(false);
   const [deletingFacturaId, setDeletingFacturaId] = useState<string | null>(null);
+  const [cancellingFacturaId, setCancellingFacturaId] = useState<string | null>(null);
   const [confirmDeleteFactura, setConfirmDeleteFactura] = useState<any | null>(null);
   const [markPaidForm, setMarkPaidForm] = useState({
     metodo_pago: 'transferencia',
@@ -585,6 +586,31 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
       load();
     } catch (e: any) { toast.error(e.message || 'Error al guardar'); }
     finally { setSavingFactura(false); }
+  }
+
+  async function handleCancelFactura(f: any) {
+    if (!await confirmDialog(`¿Cancelar la factura ${f.numero_factura || 'sin folio'}? Si está en Stripe, primero se detendrá el cobro.`)) return;
+    setCancellingFacturaId(f.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-billing', {
+        body: {
+          action: 'cancel_invoice_safely',
+          factura_id: f.id,
+          empresa_id: empresaId,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const stripeAction = data?.stripe_action && data.stripe_action !== 'none'
+        ? ` · Stripe: ${data.stripe_action}`
+        : '';
+      toast.success(`Factura cancelada de forma segura${stripeAction}`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo cancelar la factura de forma segura');
+    } finally {
+      setCancellingFacturaId(null);
+    }
   }
 
   async function handleDeleteFactura(f: any) {
@@ -1176,6 +1202,21 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                                 </>
                               )}
                               {f.estado === 'pagada' && <span className="text-xs text-emerald-700 font-medium px-2">✓ Pagada</span>}
+                              {isPending && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                                  title="Cancelar factura y detener cobro"
+                                  disabled={cancellingFacturaId === f.id}
+                                  onClick={() => handleCancelFactura(f)}
+                                >
+                                  {cancellingFacturaId === f.id
+                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    : <AlertCircle className="h-3.5 w-3.5" />}
+                                  Cancelar
+                                </Button>
+                              )}
                               <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Editar factura"
                                 onClick={() => openEditFactura(f)}>
                                 <Edit2 className="h-3.5 w-3.5" />

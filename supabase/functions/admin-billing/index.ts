@@ -1794,6 +1794,90 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ─── Cancel invoice safely ───
+    // Keeps the local audit trail as "cancelada" while guaranteeing that the
+    // Stripe invoice cannot be collected later.
+    if (action === "cancel_invoice_safely") {
+      const { factura_id } = body;
+      if (!factura_id) throw new Error("factura_id requerido");
+
+      const { data: fac, error: facErr } = await supabase
+        .from("facturas")
+        .select("*")
+        .eq("id", factura_id)
+        .maybeSingle();
+      if (facErr || !fac) throw new Error("Factura no encontrada");
+
+      let stripeAction = "none";
+
+      if (fac.stripe_invoice_id) {
+        try {
+          let inv = await stripe.invoices.retrieve(fac.stripe_invoice_id);
+
+          if (inv.status === "paid") {
+            throw new Error("La factura ya está pagada en Stripe. No puede cancelarse sin revisar primero el pago/reembolso.");
+          }
+
+          if (inv.status === "draft") {
+            await stripe.invoices.update(fac.stripe_invoice_id, { auto_advance: false });
+            await stripe.invoices.del(fac.stripe_invoice_id);
+            stripeAction = "deleted_draft";
+          } else if (inv.status === "open") {
+            await stripe.invoices.update(fac.stripe_invoice_id, { auto_advance: false });
+            inv = await stripe.invoices.voidInvoice(fac.stripe_invoice_id);
+            if (inv.status !== "void") {
+              throw new Error(`Stripe no confirmó la anulación (estado: ${inv.status || "desconocido"}).`);
+            }
+            stripeAction = "voided";
+          } else if (inv.status === "void" || inv.status === "uncollectible") {
+            stripeAction = `already_${inv.status}`;
+          } else {
+            throw new Error(`Estado Stripe no seguro para cancelar: ${inv.status || "desconocido"}`);
+          }
+        } catch (e: any) {
+          if (e?.code === "resource_missing") {
+            stripeAction = "already_missing";
+          } else {
+            console.error("[cancel_invoice_safely] stripe close failed:", e);
+            throw new Error(`No se canceló la factura porque Stripe no pudo cerrarse de forma segura: ${e?.message || e}`);
+          }
+        }
+      }
+
+      const retryStopPayload = {
+        estado: "procesado",
+        ultimo_error: "Detenido: factura cancelada por administrador",
+        procesado_at: new Date().toISOString(),
+      };
+      await supabase
+        .from("cobro_reintentos")
+        .update(retryStopPayload)
+        .eq("factura_id", factura_id)
+        .eq("estado", "pendiente");
+      if (fac.stripe_invoice_id) {
+        await supabase
+          .from("cobro_reintentos")
+          .update(retryStopPayload)
+          .eq("stripe_invoice_id", fac.stripe_invoice_id)
+          .eq("estado", "pendiente");
+      }
+
+      const { error: cancelErr } = await supabase
+        .from("facturas")
+        .update({
+          estado: "cancelada",
+          fecha_pago: null,
+        })
+        .eq("id", factura_id);
+      if (cancelErr) throw cancelErr;
+
+      return new Response(JSON.stringify({
+        success: true,
+        cancelled: true,
+        stripe_action: stripeAction,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ─── Delete invoice safely ───
     // A Stripe-linked invoice is first made non-collectable in Stripe.
     // - draft -> deleted in Stripe
