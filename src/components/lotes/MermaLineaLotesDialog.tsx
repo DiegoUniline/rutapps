@@ -121,10 +121,18 @@ export function MermaLineaLotesDialog({
               </tr>)}</tbody></table>
             </div>}
             {pendiente > 0 && <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-3 items-end border-t border-border pt-3">
-              <div><Label>Lote</Label><select className="input-odoo w-full" value={loteId} onChange={event => setLoteId(event.target.value)}>
-                <option value="">Selecciona un lote…</option>
-                {disponibles.map(lote => <option key={lote.lote_id} value={lote.lote_id}>{lote.codigo} · {lote.fecha_caducidad ? fmtDate(lote.fecha_caducidad) : 'sin caducidad'} · exist. {fmtNum(lote.cantidad)}</option>)}
-              </select></div>
+              <div><Label>Lote</Label>
+                <SearchableSelect
+                  options={disponibles.map(lote => ({
+                    value: lote.lote_id,
+                    label: `${lote.codigo} · ${lote.fecha_caducidad ? fmtDate(lote.fecha_caducidad) : 'sin caducidad'} · exist. ${fmtNum(lote.cantidad)}`,
+                    searchText: lote.codigo,
+                  }))}
+                  value={loteId}
+                  onChange={setLoteId}
+                  placeholder="Busca el lote por código…"
+                />
+              </div>
               <div><Label>Cantidad</Label><Input type="number" min={0} step="0.001" value={cantidad} onChange={event => setCantidad(Number(event.target.value))} /></div>
               <Button onClick={asignar}>Asignar</Button>
             </div>}
