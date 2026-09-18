@@ -79,7 +79,7 @@ export function VentaLineaLotesDialog({
           .select('id, cantidad, lote_id, almacen_id, lotes:lotes!lote_id(codigo, fecha_caducidad)')
           .eq('id', lineaId)
           .maybeSingle(),
-        almacenId
+        !readOnly && almacenId
           ? getLotesDisponibles({ empresaId, almacenId, productoId: producto.id, excluirVentaId: ventaId })
           : Promise.resolve([] as LoteDisponible[]),
       ]);

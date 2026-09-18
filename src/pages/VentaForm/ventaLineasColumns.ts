@@ -7,6 +7,7 @@ export const VENTA_LINEAS_COLUMNS: ColumnDef[] = [
   { key: 'producto',    label: 'Producto',     required: true, group: 'Básicas' },
   { key: 'unidad',      label: 'Unidad',                       group: 'Básicas' },
   { key: 'lote',        label: 'Lote',                         group: 'Logística' },
+  { key: 'loteado',     label: 'Loteado',      sub: 'asignado / cantidad', group: 'Logística' },
   { key: 'precioBruto', label: 'Precio c/imp', sub: 'bruto unitario',  group: 'Precio' },
   { key: 'precioNeto',  label: 'Precio s/imp', sub: 'neto unitario',   group: 'Precio' },
   { key: 'descPromo',   label: 'Desc promo',   sub: 'promoción $',     group: 'Descuentos' },
@@ -24,6 +25,7 @@ export const VENTA_LINEAS_DEFAULT_VISIBILITY: Record<string, boolean> = {
   cantidad: true,
   unidad: true,
   lote: false,
+  loteado: false,
   precioNeto: true,
   precioBruto: true, 
   descMan: true,
@@ -35,8 +37,8 @@ export const VENTA_LINEAS_DEFAULT_VISIBILITY: Record<string, boolean> = {
 export const VENTA_LINEAS_PRESETS: ColumnPreset[] = [
   { key: 'comercial', label: 'Vista Comercial', columns: ['cantidad', 'unidad', 'precioBruto', 'descMan', 'descPromo'] },
   { key: 'fiscal',    label: 'Vista Fiscal',    columns: ['cantidad', 'unidad', 'precioNeto', 'iva', 'ieps'] },
-  { key: 'operativa', label: 'Vista Logística', columns: ['cantidad', 'unidad', 'lote'] },
-  { key: 'todas',     label: 'Todas',           columns: ['cantidad', 'unidad', 'lote', 'precioNeto', 'precioBruto', 'descMan', 'descPromo', 'iva', 'ieps'] },
+  { key: 'operativa', label: 'Vista Logística', columns: ['cantidad', 'unidad', 'lote', 'loteado'] },
+  { key: 'todas',     label: 'Todas',           columns: ['cantidad', 'unidad', 'lote', 'loteado', 'precioNeto', 'precioBruto', 'descMan', 'descPromo', 'iva', 'ieps'] },
 ];
 
 // ── Desglose completo por línea ──

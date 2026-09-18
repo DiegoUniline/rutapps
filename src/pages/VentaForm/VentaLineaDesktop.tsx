@@ -1,5 +1,5 @@
 import { VentaPresentacion, VentaPresentacionEditor, type ChangePresentation } from '@/components/venta/VentaPresentacion';
-import { Trash2 } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { formatCurrency } from '@/lib/currency';
 import ProductSearchInput from '@/components/ProductSearchInput';
@@ -68,6 +68,19 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   // Fallback to embedded product data from the DB join (venta_lineas → productos)
   const embeddedProd = (l as any).productos;
   const prodDisplay = prod || embeddedProd;
+  const lotesAsignadosActivos = (lotesAsignados ?? []).filter(x => Number(x.cantidad) > 0);
+  const cantidadLineaLote = Number(l.cantidad) || 0;
+  const cantidadLoteada = lotesAsignadosActivos.length > 0
+    ? lotesAsignadosActivos.reduce((sum, a) => sum + (Number(a.cantidad) || 0), 0)
+    : ((l as any).lote_id ? cantidadLineaLote : 0);
+  const manejaLoteLinea = manejaLotesEmpresa && (
+    !!(prodDisplay as any)?.maneja_lote
+    || !!(l as any).lote_id
+    || !!(l as any).lote_codigo
+    || lotesAsignadosActivos.length > 0
+  );
+  const loteadoCompleto = manejaLoteLinea && cantidadLineaLote > 0
+    && cantidadLoteada + 0.0001 >= cantidadLineaLote;
   const isEmpty = !l.producto_id;
   // Descuento de promoción que cae en ESTA línea (por producto), para mostrarlo
   // a nivel de línea y no solo en el resumen "Promociones".
@@ -361,49 +374,67 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       {showCol('lote') && (
       <td className="py-1 px-2">
         {isEmpty ? '' : (() => {
-          const manejaLote = manejaLotesEmpresa && !!(prod as any)?.maneja_lote;
-          const asignados = (lotesAsignados ?? []).filter(x => x.cantidad > 0);
+          const asignados = lotesAsignadosActivos;
           const codigo = (l as any).lote_codigo;
-          if (!manejaLote && !codigo && !asignados.length) return <span className="text-muted-foreground text-[11px]">—</span>;
+          if (!manejaLoteLinea && !codigo && !asignados.length) return <span className="text-muted-foreground text-[11px]">—</span>;
 
-          // Multi-lote: una fila por lote con su cantidad.
-          if (asignados.length > 1) {
-            const contenido = (
-              <div className="flex flex-col gap-0.5 text-[11px] leading-tight">
-                {asignados.map(a => (
-                  <span key={a.lote_id} className="whitespace-nowrap">
-                    <span className="font-medium">{a.codigo}</span>
-                    <span className="text-muted-foreground"> · {a.cantidad}</span>
-                  </span>
-                ))}
-              </div>
-            );
-            if (!onPickLote) return contenido;
-            return (
-              <button type="button" onClick={() => onPickLote(idx)} className="text-left text-primary hover:underline"
-                title="Ver, editar o corregir los lotes de esta línea">
+          const contenido = asignados.length > 1 ? (
+            <div className="flex flex-col gap-0.5 text-[11px] leading-tight">
+              {asignados.map(a => (
+                <span key={a.lote_id} className="whitespace-nowrap">
+                  <span className="font-medium">{a.codigo}</span>
+                  <span className="text-muted-foreground"> · {a.cantidad}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className={cn('text-[11px] font-medium', (asignados[0]?.codigo ?? codigo) ? '' : 'text-amber-600')}>
+              {asignados[0]?.codigo ?? codigo ?? 'Lotear'}
+            </span>
+          );
+
+          if (!onPickLote) return contenido;
+
+          return (
+            <div className="inline-flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onPickLote(idx)}
+                className="text-left text-primary hover:underline"
+                title={readOnly ? 'Ver lotes asignados' : 'Ver o editar lotes asignados'}
+              >
                 {contenido}
               </button>
-            );
-          }
-
-          const unico = asignados[0]?.codigo ?? codigo;
-          if (!onPickLote) {
-            return unico
-              ? <span className="text-[11px] font-medium">{unico}</span>
-              : <span className="text-muted-foreground text-[11px]">—</span>;
-          }
-          // El lote se puede asignar/ver siempre (incluso en pedidos cerrados o
-          // no editables): se guarda al instante y la entrega lo hereda.
-          return (
-            <button type="button" onClick={() => onPickLote(idx)}
-              className={cn('text-[11px] font-medium hover:underline', unico ? 'text-primary' : 'text-amber-600')}
-              title={unico ? 'Ver o cambiar el lote de esta línea' : 'Asignar lote a esta línea'}>
-              {unico || 'Lotear'}
-            </button>
+              {(asignados.length > 0 || codigo || (l as any).lote_id) && (
+                <button
+                  type="button"
+                  onClick={() => onPickLote(idx)}
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-primary hover:bg-accent"
+                  title={readOnly ? 'Ver lotes asignados' : 'Ver o editar lotes asignados'}
+                  aria-label={readOnly ? 'Ver lotes asignados' : 'Ver o editar lotes asignados'}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           );
         })()}
-
+      </td>
+      )}
+      {showCol('loteado') && (
+      <td className="py-1 px-2 text-right tabular-nums">
+        {isEmpty || !manejaLoteLinea ? (
+          <span className="text-muted-foreground text-[11px]">—</span>
+        ) : (
+          <span
+            className={cn('text-[11px] font-semibold', loteadoCompleto ? 'text-emerald-600' : 'text-amber-600')}
+            title={loteadoCompleto
+              ? 'Cantidad loteada completa'
+              : `Faltan ${Math.max(0, cantidadLineaLote - cantidadLoteada).toLocaleString('es-MX', { maximumFractionDigits: 3 })} por lotear`}
+          >
+            {cantidadLoteada.toLocaleString('es-MX', { maximumFractionDigits: 3 })} / {cantidadLineaLote.toLocaleString('es-MX', { maximumFractionDigits: 3 })}
+          </span>
+        )}
       </td>
       )}
       {/* ── Desglose por línea (columnas informativas, valores GUARDADOS) ── */}

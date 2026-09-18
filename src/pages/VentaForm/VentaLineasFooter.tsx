@@ -77,6 +77,7 @@ export function VentaLineasFooter({ lineas, cols, currencyCode, label = 'Totales
         {showCol('descMan') && <td className="py-2 px-2 bg-card" />}
         {showCol('subtotal') && <td className={cellCls}>{val(totTotal)}</td>}
         {showCol('lote') && <td className="py-2 px-2 bg-card" />}
+        {showCol('loteado') && <td className="py-2 px-2 bg-card" />}
         {VENTA_LINEAS_DESGLOSE_COLUMNS.filter(c => showCol(c.key)).map(c => (
           <td key={c.key} className={cellCls}>
             {desgloseTotals[c.key] ?? ''}
