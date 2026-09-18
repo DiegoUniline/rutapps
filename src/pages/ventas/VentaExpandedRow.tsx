@@ -2,7 +2,7 @@ import { VentaPresentacion } from '@/components/venta/VentaPresentacion';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Pencil, Trash2, ChevronUp, FileText, Printer, MessageCircle, Loader2, Banknote, Ban, Check, Gift } from 'lucide-react';
+import { Pencil, Trash2, ChevronUp, FileText, Printer, MessageCircle, Loader2, Banknote, Ban, Check, Gift, Eye, Boxes } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate, fmtDateTime } from '@/lib/utils';
@@ -22,6 +22,7 @@ import { usePermisos } from '@/hooks/usePermisos';
 
 import { saldoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
+import { VentaLineaLotesDialog } from '@/components/lotes/VentaLineaLotesDialog';
 
 interface Props {
   venta: any;
@@ -61,16 +62,18 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   const [printingTicket, setPrintingTicket] = useState(false);
   const [cobroOpen, setCobroOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [lotesPorLinea, setLotesPorLinea] = useState<Record<string, { lote_id: string; codigo: string; caducidad: string | null; cantidad: number }[]>>({});
+  const [loteDialogLinea, setLoteDialogLinea] = useState<any | null>(null);
   const { data: promocionesActivas } = usePromocionesActivas();
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const eidLoad = empresaId || venta.empresa_id;
-      const [lRes, pRes, tRes, cRes, plRes] = await Promise.all([
+      const [lRes, pRes, tRes, cRes, plRes, vlRes] = await Promise.all([
         supabase
           .from('venta_lineas')
-          .select('id, presentacion_id, presentacion_nombre, presentacion_factor, paquetes, cantidad, precio_unitario, precio_lista_unitario, descuento_pct, descuento_promocion_monto, descuento_manual_monto, subtotal, iva_pct, iva_monto, ieps_pct, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, productos(nombre, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
+          .select('id, presentacion_id, presentacion_nombre, presentacion_factor, paquetes, cantidad, precio_unitario, precio_lista_unitario, descuento_pct, descuento_promocion_monto, descuento_manual_monto, subtotal, iva_pct, iva_monto, ieps_pct, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, almacen_id, lote_id, lotes:lotes!lote_id(codigo, fecha_caducidad), productos(nombre, es_granel, unidad_granel, maneja_lote, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
           .eq('venta_id', venta.id)
           .order('created_at'),
         supabase
@@ -90,9 +93,27 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
         eidLoad
           ? supabase.from('lista_precios').select('nombre').eq('empresa_id', eidLoad).eq('es_principal', true).eq('activa', true).order('created_at').limit(1)
           : Promise.resolve({ data: null } as any),
+        (supabase.from as any)('venta_linea_lotes')
+          .select('venta_linea_id, lote_id, cantidad, lotes:lotes!lote_id(codigo, fecha_caducidad)')
+          .eq('venta_id', venta.id),
       ]);
       if (!cancelled) {
         setLineas(lRes.data ?? []);
+        const loteMap: Record<string, { lote_id: string; codigo: string; caducidad: string | null; cantidad: number }[]> = {};
+        for (const row of ((vlRes as any)?.data ?? []) as any[]) {
+          if (!row.venta_linea_id) continue;
+          const arr = loteMap[row.venta_linea_id] ?? (loteMap[row.venta_linea_id] = []);
+          const existente = arr.find(x => x.lote_id === row.lote_id);
+          if (existente) existente.cantidad += Number(row.cantidad) || 0;
+          else arr.push({
+            lote_id: row.lote_id,
+            codigo: row.lotes?.codigo ?? '—',
+            caducidad: row.lotes?.fecha_caducidad ?? null,
+            cantidad: Number(row.cantidad) || 0,
+          });
+        }
+        Object.values(loteMap).forEach(rows => rows.sort((a, b) => a.codigo.localeCompare(b.codigo)));
+        setLotesPorLinea(loteMap);
         const pagosData = pRes.data ?? [];
         setPagos(pagosData);
         // Resolver el nombre de quien registró cada pago (cobros.user_id → profiles.nombre).
@@ -143,6 +164,10 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
 
   const clienteNombre = venta.clientes?.nombre || (venta.cliente_id ? '—' : 'Público en general');
   const eId = empresaId || venta.empresa_id;
+  const puedeEditarLotes = venta.status === 'borrador';
+  const hayLotesEnVenta = lineas.some((l: any) =>
+    !!l.productos?.maneja_lote || !!l.lote_id || (lotesPorLinea[l.id]?.length ?? 0) > 0
+  );
 
   // Resumen VISUAL reconstruido desde las líneas (misma lógica que usa la lista):
   // Subtotal sin impuestos → Descuentos → Subtotal gravable → IVA/IEPS por
@@ -410,6 +435,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                             <th className="text-left py-1 font-medium">Lista</th>
                             <th className="text-right py-1 font-medium w-16">Precio base</th>
                             <th className="text-right py-1 font-medium w-12">Cant</th>
+                            {hayLotesEnVenta && <th className="text-left py-1 font-medium w-28">Lotes</th>}
                             {venta.tipo === 'pedido' && <th className="text-right py-1 font-medium w-14">Entreg.</th>}
                             <th className="text-center py-1 font-medium w-10">Ud</th>
                             <th className="text-right py-1 font-medium w-12">Desc</th>
@@ -434,6 +460,64 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                                 <td className="py-1.5 text-muted-foreground text-[11px]">{listaLabel}</td>
                                 <td className="text-right py-1.5 tabular-nums">{fmt(l.precio_unitario)}</td>
                                 <td className="text-right py-1.5 tabular-nums">{l.cantidad}</td>
+                                {hayLotesEnVenta && (
+                                  <td className="py-1.5">
+                                    {(() => {
+                                      const asignados = lotesPorLinea[l.id] ?? [];
+                                      const fallback = asignados.length === 0 && l.lote_id
+                                        ? [{
+                                            lote_id: l.lote_id,
+                                            codigo: l.lotes?.codigo ?? 'Lote',
+                                            caducidad: l.lotes?.fecha_caducidad ?? null,
+                                            cantidad: Number(l.cantidad) || 0,
+                                          }]
+                                        : asignados;
+                                      const manejaLote = !!l.productos?.maneja_lote || fallback.length > 0;
+                                      if (!manejaLote) return <span className="text-muted-foreground text-[11px]">—</span>;
+
+                                      if (fallback.length > 1) {
+                                        return (
+                                          <div className="inline-flex items-center gap-1.5">
+                                            <span className="text-[11px] font-medium">{fallback.length} lotes</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => setLoteDialogLinea(l)}
+                                              className="inline-flex h-6 w-6 items-center justify-center rounded hover:bg-accent text-primary"
+                                              title={puedeEditarLotes ? 'Ver y editar lotes' : 'Ver lotes'}
+                                              aria-label={puedeEditarLotes ? 'Ver y editar lotes' : 'Ver lotes'}
+                                            >
+                                              <Eye className="h-3.5 w-3.5" />
+                                            </button>
+                                          </div>
+                                        );
+                                      }
+
+                                      if (fallback.length === 1) {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => setLoteDialogLinea(l)}
+                                            className="text-[11px] font-medium text-primary hover:underline"
+                                            title={puedeEditarLotes ? 'Ver o editar lote' : 'Ver lote'}
+                                          >
+                                            {fallback[0].codigo}
+                                          </button>
+                                        );
+                                      }
+
+                                      return puedeEditarLotes ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => setLoteDialogLinea(l)}
+                                          className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 hover:underline"
+                                          title="Asignar lotes"
+                                        >
+                                          <Boxes className="h-3 w-3" /> Lotear
+                                        </button>
+                                      ) : <span className="text-muted-foreground text-[11px]">—</span>;
+                                    })()}
+                                  </td>
+                                )}
                                 {venta.tipo === 'pedido' && (() => {
                                   const ent = entregadoPorProd[l.producto_id] ?? 0;
                                   const ped = Number(l.cantidad ?? 0);
@@ -465,7 +549,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                             );
                           })}
                           {lineas.length === 0 && (
-                            <tr><td colSpan={venta.tipo === 'pedido' ? 10 : 9} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
+                            <tr><td colSpan={(venta.tipo === 'pedido' ? 10 : 9) + (hayLotesEnVenta ? 1 : 0)} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
                           )}
                         </tbody>
                       </table>
@@ -621,6 +705,35 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
               tipo="venta"
               pdfBlob={waPdfBlob}
               pdfFileName={waPdfName}
+            />
+          </td>
+        </tr>
+      )}
+
+      {loteDialogLinea && eId && (
+        <tr className="hidden">
+          <td>
+            <VentaLineaLotesDialog
+              open
+              empresaId={eId}
+              ventaId={venta.id}
+              lineaId={loteDialogLinea.id}
+              almacenId={loteDialogLinea.almacen_id ?? venta.almacen_id ?? null}
+              producto={{
+                id: loteDialogLinea.producto_id,
+                nombre: loteDialogLinea.productos?.nombre ?? 'Producto',
+              }}
+              cantidadTotal={Number(loteDialogLinea.cantidad) || 0}
+              readOnly={!puedeEditarLotes}
+              onClose={() => setLoteDialogLinea(null)}
+              onChanged={({ loteId, label }) => {
+                setLineas(prev => prev.map((linea: any) =>
+                  linea.id === loteDialogLinea.id
+                    ? { ...linea, lote_id: loteId, lote_codigo: label, lotes: label && loteId ? { codigo: label } : null }
+                    : linea
+                ));
+                setReloadKey(k => k + 1);
+              }}
             />
           </td>
         </tr>

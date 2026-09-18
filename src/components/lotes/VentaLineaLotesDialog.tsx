@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Boxes, Loader2, Trash2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Boxes, Check, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -40,12 +41,19 @@ interface Props {
 export function VentaLineaLotesDialog({
   open, empresaId, ventaId, lineaId, almacenId, producto, cantidadTotal, userId, readOnly = false, onClose, onChanged,
 }: Props) {
+  const queryClient = useQueryClient();
   const [disponibles, setDisponibles] = useState<LoteDisponible[]>([]);
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loteId, setLoteId] = useState('');
   const [cantidad, setCantidad] = useState(0);
+  const [cantidadesEdit, setCantidadesEdit] = useState<Record<string, string>>({});
+
+  const invalidarLotes = useCallback(() => {
+    ['venta_linea_lotes', 'apartado-disponible', 'stock-apartado', 'stock-lotes', 'inventario']
+      .forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
+  }, [queryClient]);
 
   const asignado = asignaciones.reduce((s, a) => s + (Number(a.cantidad) || 0), 0);
   const pendiente = Math.max(0, cantidadTotal - asignado);
@@ -70,7 +78,9 @@ export function VentaLineaLotesDialog({
         ? getLotesDisponibles({ empresaId, almacenId, productoId: producto.id, excluirVentaId: ventaId })
         : Promise.resolve([] as LoteDisponible[]),
     ]);
-    setAsignaciones((asg ?? []) as Asignacion[]);
+    const rows = (asg ?? []) as Asignacion[];
+    setAsignaciones(rows);
+    setCantidadesEdit(Object.fromEntries(rows.map(a => [a.id, String(Number(a.cantidad) || 0)])));
     setDisponibles(disp as LoteDisponible[]);
     setLoading(false);
   }, [empresaId, almacenId, producto.id, lineaId, ventaId]);
@@ -83,6 +93,7 @@ export function VentaLineaLotesDialog({
    * Un producto puede necesitar 2 o más lotes cuando el primero no alcanza.
    */
   const asignarFefo = async () => {
+    if (readOnly) return;
     if (pendiente <= 0) return;
     const yaAsignado = new Map(asignaciones.map(a => [a.lote_id, Number(a.cantidad) || 0]));
     let resta = pendiente;
@@ -124,6 +135,7 @@ export function VentaLineaLotesDialog({
       const rows = (asg ?? []) as Asignacion[];
       setAsignaciones(rows);
       onChanged(resumen(rows));
+      invalidarLotes();
       await load();
       toast.success(resta > 0.0001
         ? `Se asignaron ${nuevos.length} lote(s); faltan ${resta.toLocaleString('es-MX')} por existencia`
@@ -135,6 +147,7 @@ export function VentaLineaLotesDialog({
 
 
   const asignar = async () => {
+    if (readOnly) return;
     const qty = Number(cantidad) || 0;
     if (!loteId) { toast.error('Elige un lote'); return; }
     if (qty <= 0) { toast.error('Indica la cantidad'); return; }
@@ -163,6 +176,7 @@ export function VentaLineaLotesDialog({
       const rows = (asg ?? []) as Asignacion[];
       setAsignaciones(rows);
       onChanged(resumen(rows));
+      invalidarLotes();
       await load();
       toast.success('Lote asignado');
     } catch (err: any) {
@@ -171,6 +185,7 @@ export function VentaLineaLotesDialog({
   };
 
   const quitar = async (a: Asignacion) => {
+    if (readOnly) return;
     setSaving(true);
     try {
       const { error } = await (supabase.from as any)('venta_linea_lotes').delete().eq('id', a.id);
@@ -178,8 +193,59 @@ export function VentaLineaLotesDialog({
       const rows = asignaciones.filter(x => x.id !== a.id);
       setAsignaciones(rows);
       onChanged(resumen(rows));
+      invalidarLotes();
       await load();
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
+  };
+
+  const guardarCantidad = async (a: Asignacion) => {
+    if (readOnly) return;
+    const qty = Number(cantidadesEdit[a.id]);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      toast.error('La cantidad del lote debe ser mayor a 0');
+      return;
+    }
+
+    const otros = asignaciones
+      .filter(x => x.id !== a.id)
+      .reduce((s, x) => s + (Number(x.cantidad) || 0), 0);
+    if (otros + qty > cantidadTotal + 0.0001) {
+      toast.error(`La suma de lotes no puede superar la cantidad de la línea (${cantidadTotal.toLocaleString('es-MX')})`);
+      return;
+    }
+
+    const disp = disponibles.find(x => x.lote_id === a.lote_id);
+    if (disp && qty > Number(disp.disponible) + 0.0001) {
+      toast.error(`El lote ${a.lotes?.codigo ?? ''} solo tiene ${Number(disp.disponible).toLocaleString('es-MX')} disponibles para esta venta`);
+      return;
+    }
+
+    if (Math.abs(qty - Number(a.cantidad)) < 0.0001) return;
+
+    setSaving(true);
+    try {
+      const { error } = await (supabase.from as any)('venta_linea_lotes')
+        .update({ cantidad: qty, updated_at: new Date().toISOString() })
+        .eq('id', a.id);
+      if (error) throw error;
+
+      const { data: asg, error: reloadError } = await (supabase.from as any)('venta_linea_lotes')
+        .select('id, cantidad, created_at, lote_id, lotes(codigo, fecha_caducidad)')
+        .eq('venta_linea_id', lineaId)
+        .order('created_at', { ascending: true });
+      if (reloadError) throw reloadError;
+      const rows = (asg ?? []) as Asignacion[];
+      setAsignaciones(rows);
+      setCantidadesEdit(Object.fromEntries(rows.map(row => [row.id, String(Number(row.cantidad) || 0)])));
+      onChanged(resumen(rows));
+      invalidarLotes();
+      await load();
+      toast.success('Cantidad del lote actualizada');
+    } catch (err: any) {
+      toast.error(err.message || 'No se pudo actualizar la cantidad del lote');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -187,7 +253,11 @@ export function VentaLineaLotesDialog({
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto z-[70]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Boxes className="h-4 w-4" /> Lotes de {producto.nombre}</DialogTitle>
-          <DialogDescription>Puedes surtir esta línea desde uno o varios lotes. Lo asignado se aparta del stock de cada lote.</DialogDescription>
+          <DialogDescription>
+            {readOnly
+              ? 'Consulta los lotes utilizados en esta línea. La venta ya fue publicada y los lotes quedan bloqueados.'
+              : 'Puedes usar uno o varios lotes y editar sus cantidades mientras la venta siga en borrador. Cada cambio sincroniza el apartado por lote.'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
@@ -214,7 +284,32 @@ export function VentaLineaLotesDialog({
                       <tr key={a.id} className="border-b border-border last:border-0">
                         <td className="px-2 py-1 font-medium">{a.lotes?.codigo ?? '—'}</td>
                         <td className="px-2 py-1 text-muted-foreground">{a.lotes?.fecha_caducidad ? fmtDate(a.lotes.fecha_caducidad) : '—'}</td>
-                        <td className="px-2 py-1 text-right tabular-nums">{Number(a.cantidad).toLocaleString('es-MX')}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">
+                          {readOnly ? (
+                            Number(a.cantidad).toLocaleString('es-MX')
+                          ) : (
+                            <div className="flex items-center justify-end gap-1">
+                              <Input
+                                type="number"
+                                min={0.001}
+                                step="0.001"
+                                className="h-7 w-24 text-right text-xs"
+                                value={cantidadesEdit[a.id] ?? String(Number(a.cantidad) || 0)}
+                                onChange={e => setCantidadesEdit(prev => ({ ...prev, [a.id]: e.target.value }))}
+                                disabled={saving}
+                              />
+                              <button
+                                type="button"
+                                disabled={saving || Math.abs(Number(cantidadesEdit[a.id] ?? a.cantidad) - Number(a.cantidad)) < 0.0001}
+                                onClick={() => guardarCantidad(a)}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded text-emerald-600 hover:bg-emerald-50 disabled:opacity-30"
+                                title="Guardar cantidad"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
                         <td className="px-2 py-1 text-center">
                           {!readOnly && (
                             <button type="button" disabled={saving} onClick={() => quitar(a)} className="text-destructive hover:text-destructive/80" title="Quitar este lote">
