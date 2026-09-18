@@ -436,6 +436,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                             <th className="text-right py-1 font-medium w-16">Precio base</th>
                             <th className="text-right py-1 font-medium w-12">Cant</th>
                             {hayLotesEnVenta && <th className="text-left py-1 font-medium w-28">Lotes</th>}
+                            {hayLotesEnVenta && <th className="text-right py-1 font-medium w-20">Loteado</th>}
                             {venta.tipo === 'pedido' && <th className="text-right py-1 font-medium w-14">Entreg.</th>}
                             <th className="text-center py-1 font-medium w-10">Ud</th>
                             <th className="text-right py-1 font-medium w-12">Desc</th>
@@ -518,6 +519,26 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                                     })()}
                                   </td>
                                 )}
+                                {hayLotesEnVenta && (
+                                  <td className="text-right py-1.5 tabular-nums">
+                                    {(() => {
+                                      const asignados = lotesPorLinea[l.id] ?? [];
+                                      const cantidadLinea = Number(l.cantidad) || 0;
+                                      const cantidadLoteada = asignados.length > 0
+                                        ? asignados.reduce((sum, a) => sum + (Number(a.cantidad) || 0), 0)
+                                        : (l.lote_id ? cantidadLinea : 0);
+                                      const manejaLote = !!l.productos?.maneja_lote || !!l.lote_id || asignados.length > 0;
+                                      if (!manejaLote) return <span className="text-muted-foreground text-[11px]">—</span>;
+                                      const completo = cantidadLinea > 0 && cantidadLoteada + 0.0001 >= cantidadLinea;
+                                      return (
+                                        <span className={`text-[11px] font-semibold ${completo ? 'text-emerald-600' : 'text-amber-600'}`}
+                                          title={completo ? 'Cantidad loteada completa' : `Faltan ${Math.max(0, cantidadLinea - cantidadLoteada).toLocaleString('es-MX')} por lotear`}>
+                                          {cantidadLoteada.toLocaleString('es-MX', { maximumFractionDigits: 3 })} / {cantidadLinea.toLocaleString('es-MX', { maximumFractionDigits: 3 })}
+                                        </span>
+                                      );
+                                    })()}
+                                  </td>
+                                )}
                                 {venta.tipo === 'pedido' && (() => {
                                   const ent = entregadoPorProd[l.producto_id] ?? 0;
                                   const ped = Number(l.cantidad ?? 0);
@@ -549,7 +570,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                             );
                           })}
                           {lineas.length === 0 && (
-                            <tr><td colSpan={(venta.tipo === 'pedido' ? 10 : 9) + (hayLotesEnVenta ? 1 : 0)} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
+                            <tr><td colSpan={(venta.tipo === 'pedido' ? 10 : 9) + (hayLotesEnVenta ? 2 : 0)} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
                           )}
                         </tbody>
                       </table>
