@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Boxes } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export interface LoteDef {
   codigo: string;
@@ -108,13 +109,16 @@ export function LoteDefModal({ empresaId, initial, onClose, onConfirm }: Props) 
           {mode === 'existente' ? (
             <div>
               <label className="label-odoo">Lote</label>
-              <select className="input-odoo w-full" value={codigoSel} onChange={e => setCodigoSel(e.target.value)}>
-                {existentes.map(e => (
-                  <option key={`${e.codigo}|${e.caducidad}`} value={`${e.codigo}|${e.caducidad}`}>
-                    {e.codigo}{e.caducidad ? ` · caduca ${e.caducidad}` : ' · sin caducidad'}
-                  </option>
-                ))}
-              </select>
+              <SearchableSelect
+                options={existentes.map(e => ({
+                  value: `${e.codigo}|${e.caducidad}`,
+                  label: `${e.codigo}${e.caducidad ? ` · caduca ${e.caducidad}` : ' · sin caducidad'}`,
+                  searchText: e.codigo,
+                }))}
+                value={codigoSel}
+                onChange={setCodigoSel}
+                placeholder="Escribe el código del lote…"
+              />
               <p className="text-[11px] text-muted-foreground mt-1">Se usará su caducidad, fabricación y costo.</p>
             </div>
           ) : (
