@@ -214,6 +214,12 @@ export function VentaLineaLotesDialog({
     if (!loteId) { toast.error('Elige un lote'); return; }
     if (qty <= 0) { toast.error('Indica la cantidad'); return; }
     if (qty > pendiente + 0.0001) { toast.error(`Solo quedan ${pendiente} por asignar`); return; }
+    const dispSel = disponibles.find(x => x.lote_id === loteId);
+    const yaEnEsteLote = Number(asignaciones.find(a => a.lote_id === loteId)?.cantidad) || 0;
+    if (dispSel && qty + yaEnEsteLote > Number(dispSel.disponible) + 0.0001) {
+      toast.error(`El lote ${dispSel.codigo} solo tiene ${Number(dispSel.disponible).toLocaleString('es-MX')} disponibles. Reparte el resto en otro lote.`);
+      return;
+    }
     setSaving(true);
     try {
       const existente = asignaciones.find(a => a.lote_id === loteId);

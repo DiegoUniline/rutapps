@@ -164,7 +164,9 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
 
   const clienteNombre = venta.clientes?.nombre || (venta.cliente_id ? '—' : 'Público en general');
   const eId = empresaId || venta.empresa_id;
-  const puedeEditarLotes = venta.status === 'borrador';
+  // Mientras la mercancía no haya salido (entregada / facturada / cancelada)
+  // el reparto por lote todavía se puede corregir.
+  const puedeEditarLotes = venta.status === 'borrador' || venta.status === 'confirmado';
   const hayLotesEnVenta = lineas.some((l: any) =>
     !!l.productos?.maneja_lote || !!l.lote_id || (lotesPorLinea[l.id]?.length ?? 0) > 0
   );

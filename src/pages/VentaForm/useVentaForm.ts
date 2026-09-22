@@ -601,6 +601,9 @@ export function useVentaForm() {
           const cantLinea = Number((lineas[idx] as any)?.cantidad) || 1;
           const fefo = pickFefo(lotes, cantLinea);
           if (!fefo) return;
+          if (Number(fefo.disponible) < cantLinea - 0.0001) {
+            toast.warning(`El lote ${fefo.codigo} solo tiene ${Number(fefo.disponible).toLocaleString('es-MX')} pz. Guarda y reparte el resto en otro lote con el ícono de lotes.`);
+          }
           setLineas(prev => {
             const arr = [...prev];
             if (!arr[idx] || arr[idx].producto_id !== productoId || (arr[idx] as any).lote_id) return prev;
