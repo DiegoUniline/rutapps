@@ -509,7 +509,7 @@ export default function VentaFormPage() {
           producto={h.loteParaLinea.producto}
           cantidadTotal={Number((lineas[h.loteParaLinea.idx] as any)?.cantidad) || 0}
           userId={user?.id}
-          readOnly={form.status !== 'borrador'}
+          readOnly={form.status !== 'borrador' && form.status !== 'confirmado'}
           onClose={() => h.setLoteParaLinea(null)}
           onChanged={({ loteId, label }) => {
             const idx = h.loteParaLinea!.idx;
