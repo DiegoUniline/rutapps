@@ -9,18 +9,19 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
 
-  const { data: promociones, isLoading } = useQuery({
+  const { data: promociones, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['reporte-promo-summary', empresaId, desde, hasta],
     enabled: hasEmpresa(empresaId),
     queryFn: async ({ signal }) => {
       const eid = requireEmpresa(empresaId, 'ReportePromociones.summary');
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('promocion_aplicada')
         .select('promocion_id, descuento_aplicado, promociones!inner(nombre, tipo), ventas!inner(empresa_id)')
         .eq('ventas.empresa_id', eid)
         .gte('created_at', desde)
         .lte('created_at', hasta + 'T23:59:59')
         .abortSignal(signal);
+      if (error) throw error;
       
       const summary: Record<string, { nombre: string; tipo: string; veces: number; totalDescuento: number }> = {};
       (data ?? []).forEach((r: any) => {
@@ -42,6 +43,14 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
 
 
   if (isLoading) return <p className="text-center py-8 text-muted-foreground">Cargando...</p>;
+  if (isError) {
+    return (
+      <div className="py-8 text-center text-sm space-y-2">
+        <p className="text-destructive">Error al cargar promociones: {error instanceof Error ? error.message : 'Error desconocido'}</p>
+        <button type="button" onClick={() => refetch()} className="text-xs font-semibold underline">Reintentar</button>
+      </div>
+    );
+  }
 
   const totalDescuentos = (promociones ?? []).reduce((s, p) => s + p.totalDescuento, 0);
 
