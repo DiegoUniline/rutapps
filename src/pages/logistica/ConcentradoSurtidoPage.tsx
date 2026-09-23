@@ -11,6 +11,7 @@ import { fmtMoney } from '@/lib/currency';
 import { todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import PedidosTabs from '@/components/PedidosTabs';
+import ConcentradoReportDialog from '@/components/logistica/ConcentradoReportDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,7 @@ export default function ConcentradoSurtidoPage() {
   const [desde, setDesde] = useState(weekStartLocal());
   const [hasta, setHasta] = useState(weekEndLocal());
   const [generando, setGenerando] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [fechaField, setFechaField] = useState<'fecha' | 'fecha_entrega'>('fecha');
 
   const STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -353,7 +355,19 @@ export default function ConcentradoSurtidoPage() {
             Pedidos levantados/a entregar en el rango, con lo ya surtido y lo pendiente.
           </p>
         </div>
+        <Button variant="outline" onClick={() => setShowReport(true)} disabled={!empresa?.id}>
+          <FileDown className="w-4 h-4" /> Reporte de surtido
+        </Button>
       </div>
+
+      {showReport && empresa?.id && (
+        <ConcentradoReportDialog
+          filters={{ empresaId: empresa.id, desde, hasta, fechaField, statuses, tipo: tipoFilter }}
+          empresa={{ nombre: empresa.nombre ?? '', logo_url: empresa.logo_url }}
+          initialSellerIds={vendedorFilter}
+          onClose={() => setShowReport(false)}
+        />
+      )}
 
       {/* Filtros */}
       <div className="bg-card border border-border rounded-lg p-3 flex flex-wrap items-end gap-3">
