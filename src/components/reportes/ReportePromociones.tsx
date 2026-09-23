@@ -12,14 +12,15 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
   const { data: promociones, isLoading } = useQuery({
     queryKey: ['reporte-promo-summary', empresaId, desde, hasta],
     enabled: hasEmpresa(empresaId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const eid = requireEmpresa(empresaId, 'ReportePromociones.summary');
       const { data } = await supabase
         .from('promocion_aplicada')
         .select('promocion_id, descuento_aplicado, promociones!inner(nombre, tipo), ventas!inner(empresa_id)')
         .eq('ventas.empresa_id', eid)
         .gte('created_at', desde)
-        .lte('created_at', hasta + 'T23:59:59');
+        .lte('created_at', hasta + 'T23:59:59')
+        .abortSignal(signal);
       
       const summary: Record<string, { nombre: string; tipo: string; veces: number; totalDescuento: number }> = {};
       (data ?? []).forEach((r: any) => {
