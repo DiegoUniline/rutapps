@@ -232,7 +232,7 @@ export default function ReportesPage() {
   const [tipoFilter, setTipoFilter] = useState<'' | 'pedido' | 'venta_directa'>('');
   const { data: vendedoresList } = useVendedores();
   const [tab, setTab] = useState<ReportTab>('resumen');
-  const { data, isLoading, error } = useReportesData(
+  const { data, isLoading, error, refetch } = useReportesData(
     desde,
     hasta,
     selectedVendedores.length > 0 ? selectedVendedores : undefined,
@@ -505,7 +505,18 @@ export default function ReportesPage() {
       </div>
 
       {isLoading && !dataIndependent && <div className="py-12 text-center text-muted-foreground">Cargando reportes...</div>}
-      {error && !dataIndependent && <div className="py-12 text-center text-destructive text-sm">Error al cargar reportes: {(error as any)?.message ?? 'Error desconocido'}</div>}
+      {error && !dataIndependent && (
+        <div className="py-12 text-center text-sm space-y-3">
+          <div className="text-destructive">Error al cargar reportes: {(error as any)?.message ?? 'Error desconocido'}</div>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="btn-odoo-secondary h-8 px-3"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
 
       {(data || dataIndependent) && (() => {
         const tabTitles: Record<ReportTab, string> = {
