@@ -12,6 +12,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 function useReporteEntregas(vendedorId: string, fechaDesde: Date, fechaHasta: Date) {
   const { empresa } = useAuth();
@@ -21,19 +22,19 @@ function useReporteEntregas(vendedorId: string, fechaDesde: Date, fechaHasta: Da
     queryFn: async () => {
       const dStr = fechaDesde.toISOString().slice(0, 10);
       const hStr = fechaHasta.toISOString().slice(0, 10);
-      let q = supabase
-        .from('ventas')
-        .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(cantidad, precio_unitario, subtotal, total, productos(id, codigo, nombre), unidades(abreviatura))')
-        .eq('empresa_id', empresa!.id)
-        .in('status', ['confirmado', 'entregado', 'facturado'])
-        .or(`and(fecha_entrega.gte.${dStr},fecha_entrega.lte.${hStr}),and(fecha_entrega.is.null,entrega_inmediata.eq.true,fecha.gte.${dStr},fecha.lte.${hStr})`)
-        .order('fecha_entrega', { ascending: true });
+      return await fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('ventas')
+          .select('id, folio, fecha, fecha_entrega, total, status, vendedor_id, cliente_id, entrega_inmediata, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(producto_id, cantidad, precio_unitario, subtotal, total, productos(id, codigo, nombre), unidades(abreviatura))')
+          .eq('empresa_id', empresa!.id)
+          .in('status', ['confirmado', 'entregado', 'facturado'])
+          .or(`and(fecha_entrega.gte.${dStr},fecha_entrega.lte.${hStr}),and(fecha_entrega.is.null,entrega_inmediata.eq.true,fecha.gte.${dStr},fecha.lte.${hStr})`)
+          .order('fecha_entrega', { ascending: true })
+          .range(from, to);
 
-      if (vendedorId && vendedorId !== 'todos') q = q.eq('vendedor_id', vendedorId);
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+        if (vendedorId && vendedorId !== 'todos') q = q.eq('vendedor_id', vendedorId);
+        return q;
+      });
     },
   });
 }
