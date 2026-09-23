@@ -28,7 +28,7 @@ interface ClienteReporte {
 export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props) {
   const { empresa } = useAuth();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['reporte-no-visitados', empresa?.id, desde, hasta, vendedorIds],
     enabled: !!empresa?.id,
     staleTime: 2 * 60 * 1000,
@@ -153,6 +153,14 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
   });
 
   if (isLoading) return <div className="py-8 text-center text-muted-foreground text-[13px]">Cargando...</div>;
+  if (isError) {
+    return (
+      <div className="py-8 text-center text-sm space-y-2">
+        <p className="text-destructive">Error al cargar clientes no visitados: {error instanceof Error ? error.message : 'Error desconocido'}</p>
+        <button type="button" onClick={() => refetch()} className="text-xs font-semibold underline">Reintentar</button>
+      </div>
+    );
+  }
   if (!data) return null;
 
   const diasLabel: Record<string, string> = {
