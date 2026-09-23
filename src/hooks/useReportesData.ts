@@ -7,7 +7,7 @@ import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { buildPromoReporting } from '@/lib/promoReporting';
 
 
-export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa') {
+export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa', reportKey?: string) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter, tipoFilter],
@@ -16,6 +16,16 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
     queryFn: async () => {
       const eid = empresa!.id;
       const hasVendorFilter = vendedorIds && vendedorIds.length > 0;
+
+      // Cargar únicamente los conjuntos requeridos por la pestaña activa.
+      // Si reportKey no se envía, se conserva el comportamiento anterior para
+      // cualquier consumidor externo del hook.
+      const lineReportTabs = new Set(['resumen', 'ventas_producto', 'ventas_cliente', 'producto_cliente', 'vendedores', 'utilidad']);
+      const needsVentaLineas = !reportKey || lineReportTabs.has(reportKey);
+      const needsGastos = !reportKey || reportKey === 'resumen' || reportKey === 'utilidad';
+      const needsCargas = !reportKey || reportKey === 'cargas';
+      const needsDevoluciones = !reportKey || reportKey === 'devoluciones';
+      const needsEntregas = !reportKey || reportKey === 'entregas';
 
       const activeStatuses = (statusFilter && statusFilter.length > 0 ? statusFilter : ['borrador', 'confirmado', 'entregado', 'facturado']) as any;
 
@@ -29,33 +39,43 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         return q;
       });
 
-      const ventaLineasPromise = fetchAllPages<any>((from, to) => {
-        let q = supabase.from('venta_lineas').select('id, producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre, costo), venta_id, ventas!inner(empresa_id, fecha, status, tipo, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
-        if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
-        if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
-        return q;
-      });
+      const ventaLineasPromise = needsVentaLineas
+        ? fetchAllPages<any>((from, to) => {
+            let q = supabase.from('venta_lineas').select('id, producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id, ventas!inner(empresa_id, fecha, status, tipo, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
+            if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
+            if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
+            return q;
+          })
+        : Promise.resolve([]);
 
       // Promociones aplicadas por línea (para descontar productos gratis en reportes)
-      const promoAplicadasPromise = fetchAllPages<any>((from, to) => {
-        let q = supabase.from('promocion_aplicada').select('venta_linea_id, descuento_aplicado, ventas!inner(empresa_id, fecha, status, tipo, vendedor_id)').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
-        if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
-        if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
-        return q;
-      });
+      const promoAplicadasPromise = needsVentaLineas
+        ? fetchAllPages<any>((from, to) => {
+            let q = supabase.from('promocion_aplicada').select('venta_linea_id, descuento_aplicado, ventas!inner(empresa_id, fecha, status, tipo, vendedor_id)').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
+            if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
+            if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
+            return q;
+          })
+        : Promise.resolve([]);
 
       const cobrosAllPromise = fetchAllPages<any>((from, to) => {
-        const q = supabase.from('cobros').select('id, monto, fecha, metodo_pago, cliente_id, clientes(nombre), cobro_aplicaciones(monto_aplicado, ventas(vendedor_id, es_saldo_inicial))').eq('empresa_id', eid).neq('status', 'cancelado').gte('fecha', desde).lte('fecha', hasta).range(from, to);
-        return q;
+        // Las aplicaciones y su venta solo son necesarias para atribuir cobros
+        // cuando existe filtro de vendedor. Sin filtro evitamos ese join 1:N.
+        const selectCobros = hasVendorFilter
+          ? 'id, monto, fecha, metodo_pago, cliente_id, cobro_aplicaciones(monto_aplicado, ventas(vendedor_id, es_saldo_inicial))'
+          : 'id, monto, fecha, metodo_pago, cliente_id';
+        return supabase.from('cobros').select(selectCobros).eq('empresa_id', eid).neq('status', 'cancelado').gte('fecha', desde).lte('fecha', hasta).range(from, to);
       });
 
-      const gastosBasePromise = fetchAllPages<any>((from, to) => {
-        let q = supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).range(from, to);
-        if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-        return q;
-      });
+      const gastosBasePromise = needsGastos
+        ? fetchAllPages<any>((from, to) => {
+            let q = supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).range(from, to);
+            if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
+            return q;
+          })
+        : Promise.resolve([]);
 
-      const cajaGastosRawPromise = hasVendorFilter ? Promise.resolve([]) : fetchAllPages<any>((from, to) =>
+      const cajaGastosRawPromise = !needsGastos || hasVendorFilter ? Promise.resolve([]) : fetchAllPages<any>((from, to) =>
         supabase.from('caja_movimientos')
           .select('id, monto, motivo, created_at, user_id, tipo')
           .eq('empresa_id', eid)
@@ -65,23 +85,29 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
           .range(from, to)
       );
 
-      const cargasPromise = fetchAllPages<any>((from, to) => {
-        let q = supabase.from('cargas').select('id, fecha, status, vendedor_id, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
-        if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-        return q;
-      });
+      const cargasPromise = needsCargas
+        ? fetchAllPages<any>((from, to) => {
+            let q = supabase.from('cargas').select('id, fecha, status, vendedor_id, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
+            if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
+            return q;
+          })
+        : Promise.resolve([]);
 
-      const devolucionesPromise = fetchAllPages<any>((from, to) => {
-        let q = supabase.from('devoluciones').select('id, fecha, tipo, notas, vendedor_id, cliente_id, vendedores:profiles!vendedor_id(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
-        if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-        return q;
-      });
+      const devolucionesPromise = needsDevoluciones
+        ? fetchAllPages<any>((from, to) => {
+            let q = supabase.from('devoluciones').select('id, fecha, tipo, notas, vendedor_id, cliente_id, vendedores:profiles!vendedor_id(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
+            if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
+            return q;
+          })
+        : Promise.resolve([]);
 
-      const entregasPromise = fetchAllPages<any>((from, to) => {
-        let q = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, status, tipo, entrega_inmediata, origen, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))').eq('empresa_id', eid).eq('es_saldo_inicial', false).neq('origen', 'pos').in('status', ['confirmado', 'entregado']).or(`and(fecha_entrega.gte.${desde},fecha_entrega.lte.${hasta}),and(fecha_entrega.is.null,entrega_inmediata.eq.true,fecha.gte.${desde},fecha.lte.${hasta})`).range(from, to);
-        if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-        return q;
-      });
+      const entregasPromise = needsEntregas
+        ? fetchAllPages<any>((from, to) => {
+            let q = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, status, tipo, entrega_inmediata, origen, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))').eq('empresa_id', eid).eq('es_saldo_inicial', false).neq('origen', 'pos').in('status', ['confirmado', 'entregado']).or(`and(fecha_entrega.gte.${desde},fecha_entrega.lte.${hasta}),and(fecha_entrega.is.null,entrega_inmediata.eq.true,fecha.gte.${desde},fecha.lte.${hasta})`).range(from, to);
+            if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
+            return q;
+          })
+        : Promise.resolve([]);
 
       const [ventas, ventaLineas, promoAplicadas, cobrosAll, gastosBase, cajaGastosRaw, cargas, devoluciones, entregas] = await Promise.all([
         ventasPromise,
@@ -148,9 +174,12 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       }));
       const gastos = [...gastosBase, ...cajaGastos];
 
-      const productos = await fetchAllPages<any>((from, to) =>
-        supabase.from('productos').select('id, codigo, nombre, cantidad, costo, precio_principal').eq('empresa_id', eid).eq('status', 'activo').range(from, to)
-      );
+      const productos = needsVentaLineas
+        ? await fetchAllPages<any>((from, to) =>
+            supabase.from('productos').select('id, codigo, nombre, cantidad, costo, precio_principal').eq('empresa_id', eid).eq('status', 'activo').range(from, to)
+          )
+        : [];
+      const productosById = new Map<string, any>(productos.map((p: any) => [p.id, p]));
 
       // === RESUMEN ===
       // Pedidos "cerrados parciales" cobran únicamente lo entregado (total_efectivo).
@@ -190,7 +219,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       const prodMap: Record<string, { nombre: string; codigo: string; cantidad: number; total: number; costo: number }> = {};
       for (const l of ventaLineas) {
         const pid = l.producto_id ?? '';
-        const prod = productos.find(p => p.id === pid);
+        const prod = productosById.get(pid);
         if (!prodMap[pid]) prodMap[pid] = { nombre: (l.productos as any)?.nombre ?? '', codigo: (l.productos as any)?.codigo ?? '', cantidad: 0, total: 0, costo: (prod?.costo ?? 0) };
         prodMap[pid].cantidad += l.cantidad ?? 0;
         prodMap[pid].total += lineTotalEfectivo(l);
@@ -211,7 +240,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       const clientCostoMap: Record<string, number> = {};
       for (const l of ventaLineas) {
         const cid = l.ventas?.cliente_id ?? '';
-        const prod = productos.find((p: any) => p.id === l.producto_id);
+        const prod = productosById.get(l.producto_id);
         const costo = (prod?.costo ?? 0) * (l.cantidad ?? 0);
         clientCostoMap[cid] = (clientCostoMap[cid] ?? 0) + costo;
         clientUtilMap[cid] = (clientUtilMap[cid] ?? 0) + (lineTotalEfectivo(l) - costo);
@@ -231,7 +260,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       const vendCostoMap: Record<string, number> = {};
       for (const l of ventaLineas) {
         const vid = l.ventas?.vendedor_id ?? '';
-        const prod = productos.find((p: any) => p.id === l.producto_id);
+        const prod = productosById.get(l.producto_id);
         const costo = (prod?.costo ?? 0) * (l.cantidad ?? 0);
         vendCostoMap[vid] = (vendCostoMap[vid] ?? 0) + costo;
         vendUtilMap[vid] = (vendUtilMap[vid] ?? 0) + (lineTotalEfectivo(l) - costo);
@@ -240,7 +269,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
 
       // === UTILIDAD ===
       const costoTotal = ventaLineas.reduce((s, l) => {
-        const prod = productos.find(p => p.id === l.producto_id);
+        const prod = productosById.get(l.producto_id);
         return s + ((prod?.costo ?? 0) * (l.cantidad ?? 0));
       }, 0);
 
