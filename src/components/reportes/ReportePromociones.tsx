@@ -9,23 +9,7 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
 
-  const { data: promoAplicadas, isLoading } = useQuery({
-    queryKey: ['reporte-promociones', empresaId, desde, hasta],
-    enabled: hasEmpresa(empresaId),
-    queryFn: async () => {
-      const eid = requireEmpresa(empresaId, 'ReportePromociones');
-      const { data } = await supabase
-        .from('promocion_aplicada')
-        .select('id, promocion_id, descuento_aplicado, created_at, promociones!inner(nombre, tipo, valor, empresa_id), ventas!inner(folio, fecha, total, empresa_id, clientes(nombre))')
-        .eq('ventas.empresa_id', eid)
-        .gte('created_at', desde)
-        .lte('created_at', hasta + 'T23:59:59')
-        .order('created_at', { ascending: false });
-      return data ?? [];
-    },
-  });
-
-  const { data: promociones } = useQuery({
+  const { data: promociones, isLoading } = useQuery({
     queryKey: ['reporte-promo-summary', empresaId, desde, hasta],
     enabled: hasEmpresa(empresaId),
     queryFn: async () => {
