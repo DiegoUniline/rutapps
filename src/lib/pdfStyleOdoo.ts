@@ -7,6 +7,7 @@
  * that import from this module render in the new style without code changes.
  */
 import type jsPDF from 'jspdf';
+import type { UserOptions } from 'jspdf-autotable';
 
 export const ML = 14;
 export const MR = 14;
@@ -93,6 +94,7 @@ export function drawDocHeader(
   logoBase64?: string | null,
   statusLabel?: string,
   _statusColor?: 'green' | 'red' | 'neutral',
+  layout?: { companyMaxWidth: number },
 ): number {
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
@@ -103,7 +105,13 @@ export function drawDocHeader(
   // Logo (única imagen rasterizada permitida)
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', ML, 9, logoMaxH, logoMaxH);
+      if (layout) {
+        const image = doc.getImageProperties(logoBase64);
+        const scale = Math.min(logoMaxH / image.width, logoMaxH / image.height);
+        doc.addImage(logoBase64, image.fileType, ML, 9, image.width * scale, image.height * scale);
+      } else {
+        doc.addImage(logoBase64, 'PNG', ML, 9, logoMaxH, logoMaxH);
+      }
       emisorX = ML + logoMaxH + 4;
     } catch { /* ignore */ }
   }
@@ -113,8 +121,9 @@ export function drawDocHeader(
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...BLACK);
   const companyName = (empresa.nombre || empresa.razon_social || '').toUpperCase();
-  doc.text(companyName, emisorX, y);
-  y += 5;
+  const companyLines = layout ? doc.splitTextToSize(companyName, layout.companyMaxWidth - (emisorX - ML)) as string[] : [companyName];
+  doc.text(companyLines, emisorX, y);
+  y += companyLines.length * 5;
 
   // RFC · email — 8.5pt gris
   doc.setFontSize(8.5);
@@ -292,11 +301,13 @@ export async function drawCleanTable(
   body: any[][],
   columnStyles?: Record<number, any>,
   didParseCell?: (data: any) => void,
+  pagination?: Pick<UserOptions, 'margin' | 'willDrawPage' | 'rowPageBreak'>,
 ): Promise<number> {
   const { default: autoTable } = await import('jspdf-autotable');
   autoTable(doc, {
     startY: y,
     margin: { left: ML, right: MR },
+    ...pagination,
     theme: 'plain',
     head: [head],
     body,

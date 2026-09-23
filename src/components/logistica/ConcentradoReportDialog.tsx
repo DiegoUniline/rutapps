@@ -60,11 +60,6 @@ export default function ConcentradoReportDialog({ filters, empresa, initialSelle
   const fechaLabel = filters.fechaField === 'fecha_entrega' ? 'Fecha de entrega' : 'Fecha de levantamiento';
   const formatDate = (value: string) => value ? value.split('-').reverse().join('/') : 'Sin límite';
   const statusLabel = filters.statuses.map(s => STATUS_LABELS[s] || s).join(', ');
-  const filterSummary = (ids: string[], choices: { id: string; label: string }[], all: string) => {
-    if (!ids.length) return all;
-    if (ids.length > 2) return `${ids.length} seleccionados`;
-    return ids.map(id => choices.find(o => o.id === id)?.label || 'Sin nombre').join(', ');
-  };
 
   const exportReport = async (format: 'pdf' | 'excel') => {
     if (exportLock.current || busy || failure || !productCount) return;
@@ -75,7 +70,6 @@ export default function ConcentradoReportDialog({ filters, empresa, initialSelle
       await exportConcentradoReport(format, {
         empresa: empresa.nombre, logoUrl: empresa.logo_url, desde: filters.desde, hasta: filters.hasta,
         fechaLabel, groups, quantity,
-        filterLabel: `${statusLabel} · ${filters.tipo === 'todos' ? 'Pedidos y ventas directas' : filters.tipo === 'pedido' ? 'Pedidos' : 'Ventas directas'} · Rutas: ${filterSummary(routeIds, options.routes, 'Todas')} · Vendedores: ${filterSummary(sellerIds, options.sellers, 'Todos')}`,
       });
       toast.success(`Reporte ${format === 'pdf' ? 'PDF' : 'Excel'} generado`);
     } catch (cause) {
@@ -123,7 +117,7 @@ export default function ConcentradoReportDialog({ filters, empresa, initialSelle
           </div>
         </fieldset>
         <p className="text-xs text-muted-foreground">
-          PDF: dos columnas de productos, folios y espacio para anotar lo entregado; cada grupo inicia en una página nueva.
+          PDF: tablas con el formato y logo de tu empresa y espacio para anotar lo entregado; cada grupo inicia en una página nueva.
           Excel: requerido, ya surtido y pendiente, con encabezado y fila en blanco entre grupos.
         </p>
         {isFetching ? (
