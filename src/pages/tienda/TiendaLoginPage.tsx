@@ -9,6 +9,7 @@ function Inner() {
   const nav = useNavigate();
   const [sp] = useSearchParams();
   const next = sp.get("next");
+  const expired = sp.get("reason") === "session-expired" || t.sessionExpired;
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,6 +63,12 @@ function Inner() {
       <div className="tienda-auth-card">
         <h2>{mode === "login" ? "Iniciar sesión" : "Solicitar cuenta"}</h2>
         <p className="sub">{mode === "login" ? "Accede para ver tus precios personalizados." : "Envíanos tus datos. La empresa revisará tu solicitud antes de activar la cuenta."}</p>
+
+        {expired && mode === "login" && (
+          <div className="tienda-error" role="alert">
+            Tu sesión venció. Vuelve a entrar para enviar el pedido; tu carrito sigue guardado.
+          </div>
+        )}
 
         <form onSubmit={submit}>
           {mode === "signup" && (
