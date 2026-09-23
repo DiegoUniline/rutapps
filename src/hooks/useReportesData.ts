@@ -10,7 +10,7 @@ import { buildPromoReporting } from '@/lib/promoReporting';
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa', reportKey?: string) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter, tipoFilter],
+    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter, tipoFilter, reportKey],
     enabled: !!empresa?.id,
     staleTime: 2 * 60 * 1000, // 2 min stale for reports
     queryFn: async () => {
