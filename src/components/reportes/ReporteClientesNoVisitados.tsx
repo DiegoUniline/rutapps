@@ -32,7 +32,7 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
     queryKey: ['reporte-no-visitados', empresa?.id, desde, hasta, vendedorIds],
     enabled: !!empresa?.id,
     staleTime: 2 * 60 * 1000,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const eid = empresa!.id;
 
       // 1) Get all active clients
@@ -46,7 +46,7 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
         if (vendedorIds && vendedorIds.length > 0) {
           q = q.in('vendedor_id', vendedorIds);
         }
-        return q;
+        return q.abortSignal(signal);
       });
 
       // 2) Get all sales in the period with date for last visit.
@@ -61,6 +61,7 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
           .lte('fecha', hasta)
           .not('status', 'eq', 'cancelado')
           .range(from, to)
+          .abortSignal(signal)
       );
 
       // Build map: cliente_id -> last visit date in period
@@ -90,6 +91,7 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
               .not('status', 'eq', 'cancelado')
               .order('fecha', { ascending: false })
               .range(from, to)
+              .abortSignal(signal)
           );
           for (const s of lastSales) {
             if (!s.cliente_id) continue;
