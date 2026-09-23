@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import { buildConcentradoReport, UNASSIGNED, type ReportSource } from '@/lib/concentradoReport';
 import { createConcentradoPdf, createConcentradoWorkbook, type ConcentradoExportOptions } from '@/lib/concentradoReportExport';
 import * as XLSX from 'xlsx';
@@ -72,11 +72,28 @@ describe('hoja de surtido: cantidades y agrupación', () => {
 
 const options: ConcentradoExportOptions = {
   empresa: 'Distribuidora de prueba', desde: '2026-09-09', hasta: '2026-09-09',
-  fechaLabel: 'Fecha de entrega', filterLabel: 'Confirmado · Pedidos · Todas las rutas', quantity: 'requerido',
+  fechaLabel: 'Fecha de entrega', quantity: 'requerido',
   groups: buildConcentradoReport(source, { ...all, grouping: 'ruta' }),
 };
 describe('exportación de hoja de surtido', () => {
-  it('Excel conserva números, todos los folios y una fila vacía entre bloques', async () => {
+  afterEach(() => vi.restoreAllMocks());
+  it('usa el logo de cada empresa y no agrega uno fijo cuando no tiene logo', async () => {
+    const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAF0lEQVR4nGOUC1jFQC5gIlvnqOYRoxkAssgBLHNv5hQAAAAASUVORK5CYII='), c => c.charCodeAt(0));
+    const fetchLogo = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => ({
+      ok: true, blob: async () => new Blob([png], { type: 'image/png' }),
+    } as Response));
+    for (const empresa of ['Empresa A', 'Empresa B']) {
+      const logoUrl = `https://example.test/${empresa.replace(' ', '-')}.png`;
+      const pdf = await createConcentradoPdf({ ...options, empresa, logoUrl });
+      expect(fetchLogo).toHaveBeenLastCalledWith(logoUrl, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+      expect(pdf.output()).toContain(empresa.toUpperCase());
+      expect(pdf.output()).toContain('/Subtype /Image');
+    }
+    const pdf = await createConcentradoPdf({ ...options, logoUrl: null });
+    expect(fetchLogo).toHaveBeenCalledTimes(2);
+    expect(pdf.output()).not.toContain('/Subtype /Image');
+  });
+  it('Excel conserva números y separa tablas sin el bloque de pedidos', async () => {
     const book = await createConcentradoWorkbook(options);
     const roundtrip = XLSX.read(XLSX.write(book, { type: 'array', bookType: 'xlsx' }), { type: 'array' });
     const rows = XLSX.utils.sheet_to_json<(string | number)[]>(roundtrip.Sheets['Hoja de surtido'], { header: 1, defval: '' });
@@ -84,24 +101,28 @@ describe('exportación de hoja de surtido', () => {
     expect(rows[routeRow - 1].every(cell => cell === '')).toBe(true);
     const product = rows.find(r => r[2] === 'Producto' && typeof r[0] === 'number');
     expect(product?.slice(3, 7)).toEqual([15, 8, 7, '']);
-    expect(JSON.stringify(rows)).toContain('P-3');
+    expect(JSON.stringify(rows)).not.toMatch(/P-3|Folios pedidos|pedido\(s\)|Recibe:/);
     expect(JSON.stringify(rows)).toContain('09/09/2026');
   });
   it('PDF inicia cada grupo en una hoja independiente', async () => {
     const pdf = await createConcentradoPdf(options);
     expect(pdf.getNumberOfPages()).toBe(3);
-    expect(pdf.output()).toContain('REQ.');
-    expect(pdf.output()).toContain('P-1');
+    expect(pdf.output()).toContain('Requerido');
+    expect(pdf.output()).not.toMatch(/P-1|Folios pedidos|pedido\(s\)|Recibe:/);
+    expect(pdf.output()).toContain('CONCENTRADO');
   });
-  it('PDF continúa nombres largos y cantidades decimales sin omitir productos ni folios extensos', async () => {
+  it('PDF repite encabezados al continuar tablas largas, conserva decimales y omite folios', async () => {
     const group = options.groups[0];
     const pdf = await createConcentradoPdf({ ...options, quantity: 'pendiente', groups: [{ ...group,
       folios: Array.from({ length: 400 }, (_, i) => `PED-${String(i).padStart(5, '0')}`),
       products: Array.from({ length: 140 }, (_, i) => ({ ...group.products[0], id: String(i), nombre: `Producto de nombre largo presentación especial número ${i}`, pendiente: 1234.5678 })),
     }] });
     expect(pdf.getNumberOfPages()).toBeGreaterThan(3);
-    expect(pdf.output()).toContain('PED-00399');
-    expect(pdf.output()).toContain('PEND.');
+    expect(pdf.output()).not.toContain('PED-00399');
+    expect(pdf.output()).toContain('Pendiente');
+    expect(pdf.output().match(/CONCENTRADO/g)).toHaveLength(pdf.getNumberOfPages());
+    expect(pdf.output().match(/\(Producto\)/g)).toHaveLength(pdf.getNumberOfPages());
+    for (let i = 0; i < 140; i++) expect(pdf.output()).toContain(`especial número ${i}`);
     expect(pdf.output()).toContain('1,234.5678');
   });
 });

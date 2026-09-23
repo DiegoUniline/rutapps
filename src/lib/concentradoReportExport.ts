@@ -1,4 +1,5 @@
-import type { ReportGroup, ReportProduct } from './concentradoReport';
+import type { ReportGroup } from './concentradoReport';
+import { createDoc, drawDocHeader, drawCleanTable, drawFooter, ML, MR, C } from './pdfStyleOdoo';
 
 export interface ConcentradoExportOptions {
   empresa: string;
@@ -6,7 +7,6 @@ export interface ConcentradoExportOptions {
   desde: string;
   hasta: string;
   fechaLabel: string;
-  filterLabel: string;
   groups: ReportGroup[];
   quantity: 'requerido' | 'pendiente';
 }
@@ -26,20 +26,9 @@ export async function createConcentradoWorkbook(options: ConcentradoExportOption
   merged(options.empresa);
   merged('CONCENTRADO · HOJA DE SURTIDO');
   merged(`${options.fechaLabel}: ${date(options.desde)} al ${date(options.hasta)}`);
-  merged(options.filterLabel);
-  merged('ENT.: espacio para anotar la cantidad entregada al preparar la carga.');
   for (const group of options.groups) {
     rows.push([]);
     merged(group.label);
-    merged(`${group.orderCount} pedido(s) · ${group.products.length} producto(s)`);
-    // Varias filas permiten leer todos los folios incluso al imprimir Excel.
-    let folios = 'Folios pedidos: ';
-    for (const folio of group.folios) {
-      if (folios.length + folio.length > 120) { merged(folios); folios = ''; }
-      folios += `${folios && !folios.endsWith(': ') ? ', ' : ''}${folio}`;
-    }
-    if (folios) merged(folios);
-    merged('Recibe: ____________________________________    Fecha: __________________');
     rows.push(['No.', 'Código', 'Producto', 'Requerido', 'Ya surtido', 'Pendiente', 'ENT.']);
     group.products.forEach((p, i) => rows.push([i + 1, p.codigo, p.nombre, p.requerido, p.surtido, p.pendiente, '']));
   }
@@ -73,131 +62,49 @@ async function logoData(url?: string | null): Promise<string | null> {
 }
 
 export async function createConcentradoPdf(options: ConcentradoExportOptions) {
-  const [{ jsPDF }, logo] = await Promise.all([import('jspdf'), logoData(options.logoUrl)]);
-  const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
-  const width = doc.internal.pageSize.getWidth();
-  const height = doc.internal.pageSize.getHeight();
-  const margin = 10;
-  const gap = 6;
-  const columnWidth = (width - margin * 2 - gap) / 2;
-  const bottom = height - 17;
-  let firstPage = true;
-  const newPage = () => { if (!firstPage) doc.addPage(); firstPage = false; };
-  const wrappedText = (text: string, x: number, y: number, maxWidth: number, fontSize = 8, lineHeight = 3.8) => {
-    doc.setFontSize(fontSize);
-    const lines = doc.splitTextToSize(text, maxWidth) as string[];
-    doc.text(lines, x, y);
-    return y + lines.length * lineHeight;
-  };
+  const [doc, logo] = await Promise.all([createDoc(), logoData(options.logoUrl)]);
+  const empresa = { nombre: options.empresa, logo_url: options.logoUrl };
+  const width = doc.internal.pageSize.getWidth() - ML - MR;
 
-  for (const group of options.groups) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    const folioLines = doc.splitTextToSize(`Folios pedidos: ${group.folios.join(', ')}`, width - margin * 2) as string[];
-    const hasFolioAppendix = folioLines.length > 7;
-    const header = (continuation: boolean) => {
-      let companyX = margin;
-      if (logo) {
-        try {
-          const image = doc.getImageProperties(logo);
-          const factor = Math.min(22 / image.width, 14 / image.height);
-          doc.addImage(logo, image.fileType, margin, 9, image.width * factor, image.height * factor);
-          companyX += 26;
-        } catch { /* Un logo no compatible no bloquea el reporte. */ }
-      }
-      doc.setTextColor(25);
-      doc.setFont('helvetica', 'bold');
-      const companyEnd = wrappedText(options.empresa || 'Hoja de surtido', companyX, 13, width - companyX - margin, 10, 4.6);
-      let y = Math.max(27, companyEnd + 5);
-      y = wrappedText(`${group.label}${continuation ? ' (continuación)' : ''}`, margin, y, width - margin * 2, 12, 5);
+  for (const [index, group] of options.groups.entries()) {
+    if (index > 0) doc.addPage();
+    const header = () => {
+      let y = drawDocHeader(doc, empresa, 'CONCENTRADO', '', logo, undefined, undefined, { companyMaxWidth: 88 });
       doc.setFont('helvetica', 'normal');
-      y = wrappedText(`${options.fechaLabel}: ${date(options.desde)} al ${date(options.hasta)}`, margin, y + 1, width - margin * 2);
-      y = wrappedText(options.filterLabel, margin, y, width - margin * 2, 7.5);
-      y = wrappedText(`${group.orderCount} pedido(s) · ${group.products.length} producto(s) · Cantidad: ${options.quantity === 'requerido' ? 'requerido total' : 'pendiente de surtir'}`, margin, y, width - margin * 2);
-      if (hasFolioAppendix) {
-        y = wrappedText('Folios pedidos: ver listado completo al final de este grupo.', margin, y + 1, width - margin * 2);
-      } else {
-        doc.setFontSize(8);
-        doc.text(folioLines, margin, y + 1);
-        y += folioLines.length * 3.8 + 1;
-      }
-      y = wrappedText('Recibe: ____________________________________    Fecha: __________________', margin, y + 3, width - margin * 2);
-      return y + 4;
+      doc.setFontSize(8.5);
+      doc.setTextColor(...C.muted);
+      doc.text(`${options.fechaLabel}: ${date(options.desde)} al ${date(options.hasta)}`, ML, y);
+      y += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...C.text);
+      const lines = doc.splitTextToSize(group.label, width) as string[];
+      doc.text(lines, ML, y);
+      return y + lines.length * 4.5 + 3;
     };
-    let index = 0;
-    let groupPage = 0;
-    do {
-      newPage();
-      const top = header(groupPage > 0);
-      if (top > bottom - 25) throw new Error('El encabezado es demasiado largo para imprimir. Reduce los filtros seleccionados.');
-      for (let col = 0; col < 2; col++) {
-        if (col > 0 && index >= group.products.length) break;
-        const x = margin + col * (columnWidth + gap);
-        const qtyX = x + columnWidth - 21;
-        const entX = x + columnWidth - 7;
-        doc.setFillColor(236, 236, 236);
-        doc.rect(x, top, columnWidth, 6, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7.5);
-        doc.text('No.', x + 1, top + 4);
-        doc.text('PRODUCTO', x + 9, top + 4);
-        doc.text(options.quantity === 'requerido' ? 'REQ.' : 'PEND.', qtyX, top + 4, { align: 'center' });
-        doc.text('ENT.', entX, top + 4, { align: 'center' });
-        let y = top + 6;
-        while (index < group.products.length) {
-          const product: ReportProduct = group.products[index];
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
-          const lines = doc.splitTextToSize(product.nombre, columnWidth - 40) as string[];
-          const rowHeight = Math.max(5.4, lines.length * 3.5 + 1.8);
-          if (rowHeight > bottom - top - 6) throw new Error('Un nombre de producto es demasiado largo para esta hoja.');
-          if (y + rowHeight > bottom) break;
-          doc.setTextColor(80);
-          doc.setFontSize(7);
-          doc.text(String(index + 1), x + 1, y + 3.7);
-          doc.setTextColor(25);
-          doc.setFontSize(8);
-          doc.text(lines, x + 9, y + 3.7);
-          const amount = number(product[options.quantity]);
-          const qtyFontSize = Math.min(8, 8 * 15 / Math.max(15, doc.getTextWidth(amount)));
-          doc.setFontSize(qtyFontSize);
-          doc.text(amount, qtyX + 6, y + 3.7, { align: 'right' });
-          doc.setDrawColor(210);
-          doc.setLineWidth(0.15);
-          doc.line(x, y + rowHeight, x + columnWidth, y + rowHeight);
-          doc.line(x + columnWidth - 14, y, x + columnWidth - 14, y + rowHeight);
-          y += rowHeight;
-          index++;
-        }
-      }
-      if (!group.products.length) {
-        doc.setFontSize(9);
-        doc.text('Estos pedidos no tienen líneas de productos.', margin, top + 14);
-      }
-      groupPage++;
-    } while (index < group.products.length);
-
-    if (hasFolioAppendix) {
-      for (let i = 0; i < folioLines.length; i += 50) {
-        newPage();
-        doc.setFont('helvetica', 'bold');
-        const end = wrappedText(group.label, margin, 17, width - margin * 2, 12, 5);
-        doc.setFont('helvetica', 'normal');
-        wrappedText('LISTADO COMPLETO DE FOLIOS', margin, end + 5, width - margin * 2, 9);
-        doc.setFontSize(8);
-        doc.text(folioLines.slice(i, i + 50), margin, end + 13);
-      }
+    const top = header();
+    if (top > doc.internal.pageSize.getHeight() - 55) {
+      throw new Error('El nombre del grupo es demasiado largo para imprimir.');
     }
+    await drawCleanTable(doc, top,
+      ['No.', 'Código', 'Producto', options.quantity === 'requerido' ? 'Requerido' : 'Pendiente', 'ENT.'],
+      group.products.map((product, i) => [i + 1, product.codigo, product.nombre, number(product[options.quantity]), '']),
+      {
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 25 },
+        2: { cellWidth: width - 89 },
+        3: { cellWidth: 30, halign: 'right' },
+        4: { cellWidth: 22, halign: 'center' },
+      },
+      undefined,
+      {
+        margin: { top, bottom: 20, left: ML, right: MR },
+        rowPageBreak: 'avoid',
+        willDrawPage: data => { if (data.pageNumber > 1) header(); },
+      },
+    );
   }
-  const pages = doc.getNumberOfPages();
-  for (let page = 1; page <= pages; page++) {
-    doc.setPage(page);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(100);
-    doc.text('ENT.: anotar cantidad entregada al preparar la carga.', margin, height - 9);
-    doc.text(`${page} / ${pages}`, width - margin, height - 9, { align: 'right' });
-  }
+  drawFooter(doc, empresa);
   return doc;
 }
 
