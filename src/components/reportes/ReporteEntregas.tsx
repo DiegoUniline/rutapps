@@ -19,7 +19,7 @@ function useReporteEntregas(vendedorId: string, fechaDesde: Date, fechaHasta: Da
   return useQuery({
     queryKey: ['reporte-entregas', empresa?.id, vendedorId, fechaDesde.toISOString(), fechaHasta.toISOString()],
     enabled: !!empresa?.id,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const dStr = fechaDesde.toISOString().slice(0, 10);
       const hStr = fechaHasta.toISOString().slice(0, 10);
       return await fetchAllPages<any>((from, to) => {
@@ -33,7 +33,7 @@ function useReporteEntregas(vendedorId: string, fechaDesde: Date, fechaHasta: Da
           .range(from, to);
 
         if (vendedorId && vendedorId !== 'todos') q = q.eq('vendedor_id', vendedorId);
-        return q;
+        return q.abortSignal(signal);
       });
     },
   });
