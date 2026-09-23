@@ -7,11 +7,11 @@ import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { buildPromoReporting } from '@/lib/promoReporting';
 
 
-export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa', reportKey?: string) {
+export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa', reportKey?: string, queryEnabled = true) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter, tipoFilter, reportKey],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && queryEnabled,
     staleTime: 2 * 60 * 1000, // 2 min stale for reports
     queryFn: async ({ signal }) => {
       const eid = empresa!.id;
