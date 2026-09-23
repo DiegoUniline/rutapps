@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { UserCheck, UserX } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 interface Props {
   desde: string;
@@ -35,37 +36,43 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
       const eid = empresa!.id;
 
       // 1) Get all active clients
-      let clientesQ = supabase
-        .from('clientes')
-        .select('id, codigo, nombre, vendedor_id, dia_visita, telefono, direccion, vendedores:profiles!vendedor_id(nombre)')
-        .eq('empresa_id', eid)
-        .eq('status', 'activo');
-      if (vendedorIds && vendedorIds.length > 0) {
-        clientesQ = clientesQ.in('vendedor_id', vendedorIds);
-      }
-      const { data: clientes, error: cErr } = await clientesQ;
-      if (cErr) throw cErr;
+      const clientes = await fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('clientes')
+          .select('id, codigo, nombre, vendedor_id, dia_visita, telefono, direccion, vendedores:profiles!vendedor_id(nombre)')
+          .eq('empresa_id', eid)
+          .eq('status', 'activo')
+          .range(from, to);
+        if (vendedorIds && vendedorIds.length > 0) {
+          q = q.in('vendedor_id', vendedorIds);
+        }
+        return q;
+      });
 
-      // 2) Get sales in the period with date for last visit
-      const { data: ventasClientes, error: vErr } = await supabase
-        .from('ventas')
-        .select('cliente_id, fecha')
-        .eq('empresa_id', eid)
-        .gte('fecha', desde)
-        .lte('fecha', hasta)
-        .not('status', 'eq', 'cancelado');
-      if (vErr) throw vErr;
+      // 2) Get all sales in the period with date for last visit.
+      // Must paginate: on active companies this easily exceeds PostgREST's
+      // default 1000-row response limit.
+      const ventasClientes = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('ventas')
+          .select('cliente_id, fecha')
+          .eq('empresa_id', eid)
+          .gte('fecha', desde)
+          .lte('fecha', hasta)
+          .not('status', 'eq', 'cancelado')
+          .range(from, to)
+      );
 
       // Build map: cliente_id -> last visit date in period
       const visitMap = new Map<string, string>();
-      for (const v of ventasClientes ?? []) {
+      for (const v of ventasClientes) {
         if (!v.cliente_id) continue;
         const existing = visitMap.get(v.cliente_id);
         if (!existing || v.fecha > existing) visitMap.set(v.cliente_id, v.fecha);
       }
 
       // 3) For non-visited clients, get their last visit ever
-      const clienteIds = (clientes ?? []).map(c => c.id);
+      const clienteIds = clientes.map(c => c.id);
       const noVisitadoIds = clienteIds.filter(id => !visitMap.has(id));
       
       const lastVisitMap = new Map<string, string>();
@@ -74,14 +81,17 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
         const batchSize = 200;
         for (let i = 0; i < noVisitadoIds.length; i += batchSize) {
           const batch = noVisitadoIds.slice(i, i + batchSize);
-          const { data: lastSales } = await supabase
-            .from('ventas')
-            .select('cliente_id, fecha')
-            .eq('empresa_id', eid)
-            .in('cliente_id', batch)
-            .not('status', 'eq', 'cancelado')
-            .order('fecha', { ascending: false });
-          for (const s of lastSales ?? []) {
+          const lastSales = await fetchAllPages<any>((from, to) =>
+            supabase
+              .from('ventas')
+              .select('cliente_id, fecha')
+              .eq('empresa_id', eid)
+              .in('cliente_id', batch)
+              .not('status', 'eq', 'cancelado')
+              .order('fecha', { ascending: false })
+              .range(from, to)
+          );
+          for (const s of lastSales) {
             if (!s.cliente_id) continue;
             if (!lastVisitMap.has(s.cliente_id)) lastVisitMap.set(s.cliente_id, s.fecha);
           }
@@ -89,7 +99,7 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
       }
 
       // 4) Build full list
-      const todos: ClienteReporte[] = (clientes ?? []).map(c => {
+      const todos: ClienteReporte[] = clientes.map(c => {
         const visitado = visitMap.has(c.id);
         const ultimaVisita = visitado
           ? (visitMap.get(c.id) ?? null)
