@@ -24,7 +24,10 @@ export function ReporteStockFecha({ hasta }: { desde: string; hasta: string }) {
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
   // "A la fecha" usa UNA sola fecha de corte (no un rango). Default: hoy.
-  const [fecha, setFecha] = useState(hasta || todayLocal());
+  const [fecha, setFecha] = useState(() => {
+    const hoy = todayLocal();
+    return hasta && hasta <= hoy ? hasta : hoy;
+  });
 
   const { data: rows = [], isLoading, isError, error, refetch } = useQuery<StockRow[]>({
     queryKey: ['reporte-stock-fecha', empresaId, fecha],
