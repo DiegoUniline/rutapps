@@ -58,7 +58,7 @@ export function ReporteEntregas() {
   const [fechaDesde, setFechaDesde] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 7); return d; });
   const [fechaHasta, setFechaHasta] = useState(() => new Date());
 
-  const { data: entregas, isLoading } = useReporteEntregas(vendedorId, fechaDesde, fechaHasta);
+  const { data: entregas, isLoading, isError, error, refetch } = useReporteEntregas(vendedorId, fechaDesde, fechaHasta);
   const { data: vendedores } = useVendedoresList();
 
   // Product summary across all deliveries
@@ -161,6 +161,12 @@ export function ReporteEntregas() {
       </div>
 
       {isLoading && <p className="text-muted-foreground">Cargando...</p>}
+      {isError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <p>Error al cargar entregas: {error instanceof Error ? error.message : 'Error desconocido'}</p>
+          <button type="button" onClick={() => refetch()} className="mt-2 text-xs font-semibold underline">Reintentar</button>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-4 gap-3">
