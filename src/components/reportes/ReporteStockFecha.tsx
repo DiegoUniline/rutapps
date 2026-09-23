@@ -29,9 +29,9 @@ export function ReporteStockFecha({ hasta }: { desde: string; hasta: string }) {
   const { data: rows = [], isLoading, isError, error, refetch } = useQuery<StockRow[]>({
     queryKey: ['reporte-stock-fecha', empresaId, fecha],
     enabled: hasEmpresa(empresaId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const eid = requireEmpresa(empresaId, 'ReporteStockFecha');
-      const { data, error } = await supabase.rpc('stock_a_la_fecha', { p_empresa_id: eid, p_fecha: fecha });
+      const { data, error } = await supabase.rpc('stock_a_la_fecha', { p_empresa_id: eid, p_fecha: fecha }).abortSignal(signal);
       if (error) throw error;
       return (data ?? []) as StockRow[];
     },
