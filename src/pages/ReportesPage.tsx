@@ -231,12 +231,27 @@ export default function ReportesPage() {
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [tipoFilter, setTipoFilter] = useState<'' | 'pedido' | 'venta_directa'>('');
   const { data: vendedoresList } = useVendedores();
-  const { data, isLoading, error } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined, selectedStatuses.length > 0 ? selectedStatuses : undefined, tipoFilter || undefined);
-  if (error) console.error('[ReportesPage] query error:', error);
   const [tab, setTab] = useState<ReportTab>('resumen');
-  // Pestañas que NO dependen del rango de fechas ni de la consulta principal
-  // (traen sus propios datos): se renderizan aunque el rango esté vacío / falle.
-  const dataIndependent = tab === 'cuentas_cobrar' || tab === 'saldo_fecha' || tab === 'stock_fecha' || tab === 'comisiones_ventas';
+  const { data, isLoading, error } = useReportesData(
+    desde,
+    hasta,
+    selectedVendedores.length > 0 ? selectedVendedores : undefined,
+    selectedStatuses.length > 0 ? selectedStatuses : undefined,
+    tipoFilter || undefined,
+    tab,
+  );
+  if (error) console.error('[ReportesPage] query error:', error);
+
+  // Estas pestañas administran su propia consulta. Un error del resumen global
+  // no debe impedir que el reporte específico pueda abrir.
+  const dataIndependent =
+    tab === 'entregas'
+    || tab === 'promociones'
+    || tab === 'cuentas_cobrar'
+    || tab === 'saldo_fecha'
+    || tab === 'stock_fecha'
+    || tab === 'no_visitados'
+    || tab === 'comisiones_ventas';
 
   const statusOptions = [
     { value: 'borrador', label: 'Borrador' },
@@ -535,7 +550,7 @@ export default function ReportesPage() {
             desde={desde}
             hasta={hasta}
             filters={activeFilters.length > 0 ? activeFilters : undefined}
-            footer={dataIndependent ? undefined : resumenFooter}
+            footer={data ? resumenFooter : undefined}
           >
             {tab === 'resumen' && <ReporteResumen data={data} />}
             {tab === 'ventas_producto' && <ReporteVentasProducto data={data} />}
