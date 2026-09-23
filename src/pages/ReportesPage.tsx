@@ -232,6 +232,14 @@ export default function ReportesPage() {
   const [tipoFilter, setTipoFilter] = useState<'' | 'pedido' | 'venta_directa'>('');
   const { data: vendedoresList } = useVendedores();
   const [tab, setTab] = useState<ReportTab>('resumen');
+  const globalDataRequired = ![
+    'promociones',
+    'cuentas_cobrar',
+    'saldo_fecha',
+    'stock_fecha',
+    'no_visitados',
+    'comisiones_ventas',
+  ].includes(tab);
   const { data, isLoading, error, refetch } = useReportesData(
     desde,
     hasta,
@@ -239,6 +247,7 @@ export default function ReportesPage() {
     selectedStatuses.length > 0 ? selectedStatuses : undefined,
     tipoFilter || undefined,
     tab,
+    globalDataRequired,
   );
   if (error) console.error('[ReportesPage] query error:', error);
 
