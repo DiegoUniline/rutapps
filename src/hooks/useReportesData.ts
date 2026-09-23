@@ -13,7 +13,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
     queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter, tipoFilter, reportKey],
     enabled: !!empresa?.id,
     staleTime: 2 * 60 * 1000, // 2 min stale for reports
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const eid = empresa!.id;
       const hasVendorFilter = vendedorIds && vendedorIds.length > 0;
 
@@ -36,7 +36,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         let q = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, politica_cobro, cerrado_at, total_efectivo, cerrado_snapshot, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).eq('es_saldo_inicial', false).gte('fecha', desde).lte('fecha', hasta).in('status', activeStatuses).range(from, to);
         if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
         if (tipoFilter) q = q.eq('tipo', tipoFilter);
-        return q;
+        return q.abortSignal(signal);
       });
 
       const ventaLineasPromise = needsVentaLineas
@@ -44,7 +44,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
             let q = supabase.from('venta_lineas').select('id, producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id, ventas!inner(empresa_id, fecha, status, tipo, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
             if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
             if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
-            return q;
+            return q.abortSignal(signal);
           })
         : Promise.resolve([]);
 
@@ -54,7 +54,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
             let q = supabase.from('promocion_aplicada').select('venta_linea_id, descuento_aplicado, ventas!inner(empresa_id, fecha, status, tipo, vendedor_id)').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
             if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
             if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
-            return q;
+            return q.abortSignal(signal);
           })
         : Promise.resolve([]);
 
@@ -64,14 +64,14 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         const selectCobros = hasVendorFilter
           ? 'id, monto, fecha, metodo_pago, cliente_id, cobro_aplicaciones(monto_aplicado, ventas(vendedor_id, es_saldo_inicial))'
           : 'id, monto, fecha, metodo_pago, cliente_id';
-        return supabase.from('cobros').select(selectCobros).eq('empresa_id', eid).neq('status', 'cancelado').gte('fecha', desde).lte('fecha', hasta).range(from, to);
+        return supabase.from('cobros').select(selectCobros).eq('empresa_id', eid).neq('status', 'cancelado').gte('fecha', desde).lte('fecha', hasta).range(from, to).abortSignal(signal);
       });
 
       const gastosBasePromise = needsGastos
         ? fetchAllPages<any>((from, to) => {
             let q = supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).range(from, to);
             if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-            return q;
+            return q.abortSignal(signal);
           })
         : Promise.resolve([]);
 
@@ -83,13 +83,14 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
           .gte('created_at', `${desde}T00:00:00`)
           .lte('created_at', `${hasta}T23:59:59`)
           .range(from, to)
+          .abortSignal(signal)
       );
 
       const cargasPromise = needsCargas
         ? fetchAllPages<any>((from, to) => {
             let q = supabase.from('cargas').select('id, fecha, status, vendedor_id, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
             if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-            return q;
+            return q.abortSignal(signal);
           })
         : Promise.resolve([]);
 
@@ -97,7 +98,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         ? fetchAllPages<any>((from, to) => {
             let q = supabase.from('devoluciones').select('id, fecha, tipo, notas, vendedor_id, cliente_id, vendedores:profiles!vendedor_id(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
             if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-            return q;
+            return q.abortSignal(signal);
           })
         : Promise.resolve([]);
 
@@ -105,7 +106,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         ? fetchAllPages<any>((from, to) => {
             let q = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, status, tipo, entrega_inmediata, origen, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))').eq('empresa_id', eid).eq('es_saldo_inicial', false).neq('origen', 'pos').in('status', ['confirmado', 'entregado']).or(`and(fecha_entrega.gte.${desde},fecha_entrega.lte.${hasta}),and(fecha_entrega.is.null,entrega_inmediata.eq.true,fecha.gte.${desde},fecha.lte.${hasta})`).range(from, to);
             if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-            return q;
+            return q.abortSignal(signal);
           })
         : Promise.resolve([]);
 
@@ -140,7 +141,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         let clienteVendedorMap: Record<string, string | null> = {};
         if (clienteIdsUnapplied.length > 0) {
           const uniqueIds = Array.from(new Set(clienteIdsUnapplied));
-          const { data: clientesData } = await supabase.from('clientes').select('id, vendedor_id').in('id', uniqueIds);
+          const { data: clientesData } = await supabase.from('clientes').select('id, vendedor_id').in('id', uniqueIds).abortSignal(signal);
           for (const c of (clientesData ?? [])) clienteVendedorMap[c.id] = c.vendedor_id;
         }
         cobros = cobrosAll.map(c => {
@@ -176,7 +177,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
 
       const productos = needsVentaLineas
         ? await fetchAllPages<any>((from, to) =>
-            supabase.from('productos').select('id, codigo, nombre, cantidad, costo, precio_principal').eq('empresa_id', eid).eq('status', 'activo').range(from, to)
+            supabase.from('productos').select('id, codigo, nombre, cantidad, costo, precio_principal').eq('empresa_id', eid).eq('status', 'activo').range(from, to).abortSignal(signal)
           )
         : [];
       const productosById = new Map<string, any>(productos.map((p: any) => [p.id, p]));
