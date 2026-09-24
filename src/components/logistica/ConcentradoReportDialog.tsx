@@ -69,7 +69,9 @@ export default function ConcentradoReportDialog({ filters, empresa, initialSelle
       const { exportConcentradoReport } = await import('@/lib/concentradoReportExport');
       await exportConcentradoReport(format, {
         empresa: empresa.nombre, logoUrl: empresa.logo_url, desde: filters.desde, hasta: filters.hasta,
-        fechaLabel, groups, quantity,
+        fechaLabel,
+        filterLabel: `Estado: ${statusLabel} · Documentos: ${filters.tipo === 'todos' ? 'Pedidos y ventas directas' : filters.tipo === 'pedido' ? 'Solo pedidos' : 'Solo ventas directas'}`,
+        groups, quantity,
       });
       toast.success(`Reporte ${format === 'pdf' ? 'PDF' : 'Excel'} generado`);
     } catch (cause) {

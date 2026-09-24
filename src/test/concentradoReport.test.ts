@@ -72,7 +72,7 @@ describe('hoja de surtido: cantidades y agrupación', () => {
 
 const options: ConcentradoExportOptions = {
   empresa: 'Distribuidora de prueba', desde: '2026-09-09', hasta: '2026-09-09',
-  fechaLabel: 'Fecha de entrega', quantity: 'requerido',
+  fechaLabel: 'Fecha de entrega', filterLabel: 'Estado: Confirmado · Documentos: Solo pedidos', quantity: 'requerido',
   groups: buildConcentradoReport(source, { ...all, grouping: 'ruta' }),
 };
 describe('exportación de hoja de surtido', () => {
@@ -93,7 +93,7 @@ describe('exportación de hoja de surtido', () => {
     expect(fetchLogo).toHaveBeenCalledTimes(2);
     expect(pdf.output()).not.toContain('/Subtype /Image');
   });
-  it('Excel conserva números y separa tablas sin el bloque de pedidos', async () => {
+  it('Excel conserva números y recupera el encabezado de pedidos', async () => {
     const book = await createConcentradoWorkbook(options);
     const roundtrip = XLSX.read(XLSX.write(book, { type: 'array', bookType: 'xlsx' }), { type: 'array' });
     const rows = XLSX.utils.sheet_to_json<(string | number)[]>(roundtrip.Sheets['Hoja de surtido'], { header: 1, defval: '' });
@@ -101,27 +101,29 @@ describe('exportación de hoja de surtido', () => {
     expect(rows[routeRow - 1].every(cell => cell === '')).toBe(true);
     const product = rows.find(r => r[2] === 'Producto' && typeof r[0] === 'number');
     expect(product?.slice(3, 7)).toEqual([15, 8, 7, '']);
-    expect(JSON.stringify(rows)).not.toMatch(/P-3|Folios pedidos|pedido\(s\)|Recibe:/);
+    expect(JSON.stringify(rows)).toMatch(/P-3|Folios pedidos|pedido\(s\)|Recibe:/);
+    expect(JSON.stringify(rows)).toContain(options.filterLabel);
     expect(JSON.stringify(rows)).toContain('09/09/2026');
   });
   it('PDF inicia cada grupo en una hoja independiente', async () => {
     const pdf = await createConcentradoPdf(options);
     expect(pdf.getNumberOfPages()).toBe(3);
     expect(pdf.output()).toContain('Requerido');
-    expect(pdf.output()).not.toMatch(/P-1|Folios pedidos|pedido\(s\)|Recibe:/);
+    expect(pdf.output()).toMatch(/P-1|Folios pedidos|pedido\(s\)|Recibe:/);
+    expect(pdf.output()).toContain('Estado: Confirmado');
     expect(pdf.output()).toContain('CONCENTRADO');
   });
-  it('PDF repite encabezados al continuar tablas largas, conserva decimales y omite folios', async () => {
+  it('PDF repite encabezados al continuar columnas, conserva decimales y manda folios largos al final', async () => {
     const group = options.groups[0];
     const pdf = await createConcentradoPdf({ ...options, quantity: 'pendiente', groups: [{ ...group,
       folios: Array.from({ length: 400 }, (_, i) => `PED-${String(i).padStart(5, '0')}`),
       products: Array.from({ length: 140 }, (_, i) => ({ ...group.products[0], id: String(i), nombre: `Producto de nombre largo presentación especial número ${i}`, pendiente: 1234.5678 })),
     }] });
     expect(pdf.getNumberOfPages()).toBeGreaterThan(3);
-    expect(pdf.output()).not.toContain('PED-00399');
+    expect(pdf.output()).toContain('PED-00399');
     expect(pdf.output()).toContain('Pendiente');
     expect(pdf.output().match(/CONCENTRADO/g)).toHaveLength(pdf.getNumberOfPages());
-    expect(pdf.output().match(/\(Producto\)/g)).toHaveLength(pdf.getNumberOfPages());
+    expect(pdf.output().match(/\(PRODUCTO\)/g)?.length).toBeGreaterThanOrEqual(2);
     for (let i = 0; i < 140; i++) expect(pdf.output()).toContain(`especial número ${i}`);
     expect(pdf.output()).toContain('1,234.5678');
   });
