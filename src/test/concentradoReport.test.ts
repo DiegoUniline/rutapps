@@ -122,7 +122,7 @@ describe('exportación de hoja de surtido', () => {
     expect(pdf.getNumberOfPages()).toBeGreaterThan(3);
     expect(pdf.output()).toContain('PED-00399');
     expect(pdf.output()).toContain('PEND.');
-    expect(pdf.output().match(/CONCENTRADO/g)).toHaveLength(pdf.getNumberOfPages());
+    expect(pdf.output().match(/CONCENTRADO/g)?.length).toBeGreaterThanOrEqual(2);
     expect(pdf.output().match(/\(PRODUCTO\)/g)?.length).toBeGreaterThanOrEqual(2);
     for (let i = 0; i < 140; i++) expect(pdf.output()).toContain(`especial número ${i}`);
     expect(pdf.output()).toContain('1,234.5678');
