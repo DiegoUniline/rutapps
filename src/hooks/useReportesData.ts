@@ -39,22 +39,46 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         return q.abortSignal(signal);
       });
 
+      // Líneas y promociones: se consultan por lotes de IDs de las ventas ya
+      // encontradas (índice venta_id) en vez de un join con filtros sobre
+      // `ventas`, que provocaba statement timeout en cuentas grandes.
+      const chunkIds = (ids: string[], size = 150) => {
+        const out: string[][] = [];
+        for (let i = 0; i < ids.length; i += size) out.push(ids.slice(i, i + size));
+        return out;
+      };
       const ventaLineasPromise = needsVentaLineas
-        ? fetchAllPages<any>((from, to) => {
-            let q = supabase.from('venta_lineas').select('id, producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id, ventas!inner(empresa_id, fecha, status, tipo, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
-            if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
-            if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
-            return q.abortSignal(signal);
+        ? ventasPromise.then(async (ventasRows) => {
+            const byId = new Map<string, any>(ventasRows.map((v: any) => [v.id, v]));
+            const res: any[] = [];
+            for (const ids of chunkIds([...byId.keys()])) {
+              const rows = await fetchAllPages<any>((from, to) => supabase.from('venta_lineas')
+                .select('id, producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id')
+                .eq('empresa_id', eid).in('venta_id', ids).order('id').range(from, to).abortSignal(signal));
+              for (const l of rows) {
+                const v = byId.get(l.venta_id);
+                res.push({ ...l, ventas: v ? { empresa_id: eid, fecha: v.fecha, status: v.status, tipo: v.tipo, cliente_id: v.cliente_id, vendedor_id: v.vendedor_id, clientes: v.clientes, vendedores: v.vendedores } : null });
+              }
+            }
+            return res;
           })
         : Promise.resolve([]);
 
       // Promociones aplicadas por línea (para descontar productos gratis en reportes)
       const promoAplicadasPromise = needsVentaLineas
-        ? fetchAllPages<any>((from, to) => {
-            let q = supabase.from('promocion_aplicada').select('venta_linea_id, descuento_aplicado, ventas!inner(empresa_id, fecha, status, tipo, vendedor_id)').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
-            if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
-            if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
-            return q.abortSignal(signal);
+        ? ventasPromise.then(async (ventasRows) => {
+            const byId = new Map<string, any>(ventasRows.map((v: any) => [v.id, v]));
+            const res: any[] = [];
+            for (const ids of chunkIds([...byId.keys()])) {
+              const rows = await fetchAllPages<any>((from, to) => supabase.from('promocion_aplicada')
+                .select('venta_linea_id, descuento_aplicado, venta_id')
+                .in('venta_id', ids).order('id').range(from, to).abortSignal(signal));
+              for (const p of rows) {
+                const v = byId.get(p.venta_id);
+                res.push({ ...p, ventas: v ? { empresa_id: eid, fecha: v.fecha, status: v.status, tipo: v.tipo, vendedor_id: v.vendedor_id } : null });
+              }
+            }
+            return res;
           })
         : Promise.resolve([]);
 
