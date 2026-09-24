@@ -599,15 +599,16 @@ export function useVentaForm() {
           // Toma como referencia la cantidad de la línea: así elige un lote que
           // alcance; si ninguno alcanza se completa con varios desde el modal.
           const cantLinea = Number((lineas[idx] as any)?.cantidad) || 1;
-          const fefo = pickFefo(lotes, cantLinea);
-          if (!fefo) return;
-          if (Number(fefo.disponible) < cantLinea - 0.0001) {
-            toast.warning(`El lote ${fefo.codigo} solo tiene ${Number(fefo.disponible).toLocaleString('es-MX')} pz. Guarda y reparte el resto en otro lote con el ícono de lotes.`);
+          const reparto = repartirFefo(lotes, cantLinea);
+          if (reparto.length === 0) return;
+          const loteado = reparto.reduce((s, r) => s + r.cantidad, 0);
+          if (loteado < cantLinea - 0.0001) {
+            toast.warning(`Solo hay ${loteado.toLocaleString('es-MX')} pz disponibles entre todos los lotes.`);
           }
           setLineas(prev => {
             const arr = [...prev];
             if (!arr[idx] || arr[idx].producto_id !== productoId || (arr[idx] as any).lote_id) return prev;
-            arr[idx] = { ...arr[idx], lote_id: fefo.lote_id, lote_codigo: fefo.codigo } as any;
+            arr[idx] = { ...arr[idx], lote_id: reparto[0].lote_id, lote_codigo: lotesLabel(reparto), lotes: reparto } as any;
             return arr;
           });
         })();
