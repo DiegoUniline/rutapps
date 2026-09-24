@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { atribuirCobrosAVendedor, type DashboardCobroAplicacion } from '@/lib/dashboardCobros';
 
 export type DateRange = { from: Date; to: Date };
 
@@ -120,7 +121,61 @@ export function useDashboardCobros(range: DateRange, vendedorId?: string) {
           .range(from, to);
         return q;
       });
-      return filtrarCobrosDeVentasCanceladas(rows as any[]);
+
+      // Sin filtro de vendedor se conserva exactamente la definición histórica
+      // de COBRADO: cobros reales del período, excluyendo los que solo aplican
+      // a ventas canceladas.
+      if (!vendedorId) {
+        return filtrarCobrosDeVentasCanceladas(rows as any[]);
+      }
+
+      if (rows.length === 0) return [];
+
+      const cobroIds = rows.map((c: any) => c.id);
+      const aplicaciones: DashboardCobroAplicacion[] = [];
+      const batchSize = 200;
+
+      // Un cobro puede liquidar varias ventas, incluso de vendedores distintos.
+      // Se consulta el monto aplicado por venta para atribuir solo la fracción
+      // correspondiente al vendedor seleccionado y evitar duplicados.
+      for (let i = 0; i < cobroIds.length; i += batchSize) {
+        const batch = cobroIds.slice(i, i + batchSize);
+        const { data, error } = await supabase
+          .from('cobro_aplicaciones')
+          .select('cobro_id, monto_aplicado, ventas!inner(vendedor_id, status)')
+          .in('cobro_id', batch);
+        if (error) throw error;
+        aplicaciones.push(...((data ?? []) as unknown as DashboardCobroAplicacion[]));
+      }
+
+      const cobrosConAplicacion = new Set(aplicaciones.map((a) => a.cobro_id));
+      const clienteIdsSinAplicacion = Array.from(new Set(
+        rows
+          .filter((c: any) => !cobrosConAplicacion.has(c.id))
+          .map((c: any) => c.cliente_id)
+          .filter(Boolean),
+      )) as string[];
+
+      const clienteVendedorMap = new Map<string, string | null>();
+      for (let i = 0; i < clienteIdsSinAplicacion.length; i += 500) {
+        const batch = clienteIdsSinAplicacion.slice(i, i + 500);
+        const { data, error } = await supabase
+          .from('clientes')
+          .select('id, vendedor_id')
+          .eq('empresa_id', empresa!.id)
+          .in('id', batch);
+        if (error) throw error;
+        for (const cliente of data ?? []) {
+          clienteVendedorMap.set(cliente.id, cliente.vendedor_id);
+        }
+      }
+
+      return atribuirCobrosAVendedor(
+        rows as any[],
+        vendedorId,
+        aplicaciones,
+        clienteVendedorMap,
+      );
     },
   });
 }
