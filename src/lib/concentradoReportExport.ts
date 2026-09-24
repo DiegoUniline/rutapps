@@ -106,7 +106,9 @@ export async function createConcentradoPdf(options: ConcentradoExportOptions) {
       }
       doc.setTextColor(26);
       doc.setFont('helvetica', 'bold');
-      const companyEnd = wrappedText(options.empresa || 'Hoja de surtido', companyX, 13, width - companyX - margin, 10, 4.6);
+      const companyEnd = wrappedText((options.empresa || 'Hoja de surtido').toUpperCase(), companyX, 13, width * 0.62 - companyX, 10, 4.6);
+      doc.setFontSize(14);
+      doc.text('CONCENTRADO', width - margin, 13, { align: 'right' });
       let y = Math.max(27, companyEnd + 5);
       y = wrappedText(`${group.label}${continuation ? ' (continuación)' : ''}`, margin, y, width - margin * 2, 12, 5);
       doc.setFont('helvetica', 'normal');

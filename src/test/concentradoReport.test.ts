@@ -108,7 +108,7 @@ describe('exportación de hoja de surtido', () => {
   it('PDF inicia cada grupo en una hoja independiente', async () => {
     const pdf = await createConcentradoPdf(options);
     expect(pdf.getNumberOfPages()).toBe(3);
-    expect(pdf.output()).toContain('Requerido');
+    expect(pdf.output()).toContain('REQ.');
     expect(pdf.output()).toMatch(/P-1|Folios pedidos|pedido\(s\)|Recibe:/);
     expect(pdf.output()).toContain('Estado: Confirmado');
     expect(pdf.output()).toContain('CONCENTRADO');
@@ -121,7 +121,7 @@ describe('exportación de hoja de surtido', () => {
     }] });
     expect(pdf.getNumberOfPages()).toBeGreaterThan(3);
     expect(pdf.output()).toContain('PED-00399');
-    expect(pdf.output()).toContain('Pendiente');
+    expect(pdf.output()).toContain('PEND.');
     expect(pdf.output().match(/CONCENTRADO/g)).toHaveLength(pdf.getNumberOfPages());
     expect(pdf.output().match(/\(PRODUCTO\)/g)?.length).toBeGreaterThanOrEqual(2);
     for (let i = 0; i < 140; i++) expect(pdf.output()).toContain(`especial número ${i}`);
