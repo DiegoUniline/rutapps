@@ -43,44 +43,50 @@ export function useDashboardVentas(range: DateRange, vendedorId?: string) {
  */
 export function useDashboardVentaLineasIS(range: DateRange, vendedorId?: string) {
   const { empresa } = useAuth();
+
   return useQuery({
     queryKey: ['dashboard-venta-lineas-is', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
-    queryFn: async () => {
-      const lineas = await fetchAllPages((from, to) => {
+    queryFn: async ({ signal }) => {
+      const eid = empresa!.id;
+
+      // Para UTILIDAD solo necesitamos producto + cantidad. Evitamos descargar
+      // subtotales, impuestos y demás campos que no participan en la fórmula
+      // vigente de Reportes, reduciendo el costo de PostgREST/RLS.
+      const lineasPromise = fetchAllPages<any>((from, to) => {
         let q = supabase
           .from('venta_lineas')
-          .select('venta_id, producto_id, cantidad, precio_unitario, descuento_pct, subtotal, total, presentacion_factor, ventas!inner(id, subtotal, descuento_total, iva_total, ieps_total, total, fecha, status, empresa_id, vendedor_id, es_saldo_inicial)')
-          .eq('ventas.empresa_id', empresa!.id)
+          .select('producto_id, cantidad, ventas!inner(empresa_id, fecha, status, vendedor_id, es_saldo_inicial)')
+          .eq('ventas.empresa_id', eid)
           .eq('ventas.es_saldo_inicial', false)
           .gte('ventas.fecha', fmt(range.from))
           .lte('ventas.fecha', fmt(range.to))
           .neq('ventas.status', 'cancelado')
           .range(from, to);
+
         if (vendedorId) q = q.eq('ventas.vendedor_id', vendedorId);
-        return q;
+        return q.abortSignal(signal);
       });
-      // Fetch costos for involved productos. Los batches se piden EN PARALELO
-      // (antes iban en serie, uno esperando al anterior) → el estado de
-      // resultados carga más rápido. Mismo resultado (mismo costMap).
-      const ids = Array.from(new Set(lineas.map((l: any) => l.producto_id).filter(Boolean)));
-      const costMap = new Map<string, number>();
-      const batches: string[][] = [];
-      for (let i = 0; i < ids.length; i += 500) batches.push(ids.slice(i, i + 500));
-      const results = await Promise.all(
-        batches.map(async (batch) => {
-          const { data, error } = await supabase
-            .from('productos')
-            .select('id, costo')
-            .eq('empresa_id', empresa!.id)
-            .in('id', batch);
-          if (error) throw error;
-          return data ?? [];
-        }),
+
+      // Reportes obtiene costos por empresa, no mediante un IN masivo de UUIDs.
+      // Reutilizamos el mismo patrón para evitar URLs muy largas y resultados
+      // parciales. Si Supabase devuelve error, fetchAllPages lo propaga.
+      const productosPromise = fetchAllPages<any>((from, to) =>
+        supabase
+          .from('productos')
+          .select('id, costo')
+          .eq('empresa_id', eid)
+          .eq('status', 'activo')
+          .range(from, to)
+          .abortSignal(signal)
       );
-      results.forEach((prods) =>
-        prods.forEach((p: any) => costMap.set(p.id, Number(p.costo) || 0))
+
+      const [lineas, productos] = await Promise.all([lineasPromise, productosPromise]);
+
+      const costMap = new Map<string, number>(
+        productos.map((p: any) => [p.id, Number(p.costo ?? 0) || 0]),
       );
+
       return { lineas, costMap };
     },
   });
