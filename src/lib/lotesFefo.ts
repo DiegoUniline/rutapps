@@ -118,3 +118,25 @@ export function pickFefo(lotes: LoteDisponible[], cantidad = 0): LoteDisponible 
 
 export const fmtCaducidad = (d: string | null) =>
   d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'sin caducidad';
+
+export interface LoteReparto { lote_id: string; codigo: string; cantidad: number; }
+
+/** Reparte la cantidad entre lotes FEFO usando solo lo disponible de cada uno. */
+export function repartirFefo(lotes: LoteDisponible[], cantidad: number): LoteReparto[] {
+  const out: LoteReparto[] = [];
+  let resta = cantidad;
+  for (const l of lotes) {
+    if (resta <= 0.0005) break;
+    const usar = Math.min(Math.max(l.disponible, 0), resta);
+    if (usar > 0) {
+      const q = Math.round(usar * 1000) / 1000;
+      out.push({ lote_id: l.lote_id, codigo: l.codigo, cantidad: q });
+      resta = Math.round((resta - q) * 1000) / 1000;
+    }
+  }
+  return out;
+}
+
+/** Etiqueta corta: "L1" o "L1 (1) + L2 (9)". */
+export const lotesLabel = (r: LoteReparto[]) =>
+  r.length === 1 ? r[0].codigo : r.map(x => `${x.codigo} (${x.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })})`).join(' + ');
