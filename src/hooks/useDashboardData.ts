@@ -68,10 +68,18 @@ export function useDashboardVentaLineasIS(range: DateRange, vendedorId?: string)
       const batches: string[][] = [];
       for (let i = 0; i < ids.length; i += 500) batches.push(ids.slice(i, i + 500));
       const results = await Promise.all(
-        batches.map((batch) => supabase.from('productos').select('id, costo').in('id', batch))
+        batches.map(async (batch) => {
+          const { data, error } = await supabase
+            .from('productos')
+            .select('id, costo')
+            .eq('empresa_id', empresa!.id)
+            .in('id', batch);
+          if (error) throw error;
+          return data ?? [];
+        }),
       );
-      results.forEach(({ data: prods }) =>
-        (prods ?? []).forEach((p: any) => costMap.set(p.id, Number(p.costo) || 0))
+      results.forEach((prods) =>
+        prods.forEach((p: any) => costMap.set(p.id, Number(p.costo) || 0))
       );
       return { lineas, costMap };
     },
