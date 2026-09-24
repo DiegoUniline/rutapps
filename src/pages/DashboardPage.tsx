@@ -45,6 +45,7 @@ import { useMonthlyGoal } from './dashboard/hooks/useMonthlyGoal';
 import { useDashboardVisitas, useClientesActivos, useUltimaCompraPorCliente } from './dashboard/hooks/useDashboardExtra';
 import { Target, Route, Wrench, Sparkles } from 'lucide-react';
 import { startOfMonth as startOfMonthFn, endOfMonth as endOfMonthFn } from 'date-fns';
+import { calcularUtilidadBruta } from '@/lib/utilidadFinanciera';
 
 const PRESETS = [
   { label: 'Hoy', range: () => ({ from: new Date(), to: new Date() }) },
@@ -752,7 +753,7 @@ export default function DashboardPage() {
   const { data: vendedores } = useVendedores();
 
   // Data hooks
-  const { data: ventas, isLoading: loadingVentas } = useDashboardVentas(dateRange, vendedorId || undefined);
+  const { data: ventas, isLoading: loadingVentas, isError: errorVentas } = useDashboardVentas(dateRange, vendedorId || undefined);
   const { data: cobros } = useDashboardCobros(dateRange, vendedorId || undefined);
   const { data: compras } = useDashboardCompras(dateRange);
   const { data: gastos } = useDashboardGastos(dateRange, vendedorId || undefined);
@@ -763,7 +764,7 @@ export default function DashboardPage() {
   const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
   const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
   const { data: hoy } = useDashboardHoy(vendedorId || undefined);
-  const { data: ventaLineasIS } = useDashboardVentaLineasIS(dateRange, vendedorId || undefined);
+  const { data: ventaLineasIS, isLoading: loadingUtilidadDetalle, isError: errorUtilidadDetalle } = useDashboardVentaLineasIS(dateRange, vendedorId || undefined);
 
   // === Período anterior (comparativo) ===
   const prevRange = useMemo<DateRange>(() => {
@@ -925,44 +926,17 @@ export default function DashboardPage() {
 
   const devolucionesPct = kpis.totalVentas > 0 ? (devStats.totalCredito / kpis.totalVentas) * 100 : 0;
 
-  // === Estado de resultados (rango seleccionado) ===
-  const estadoResultados = useMemo(() => {
-    const lineas = (ventaLineasIS?.lineas ?? []) as any[];
-    const costMap = ventaLineasIS?.costMap ?? new Map<string, number>();
-    const ventasMap = new Map<string, any>();
-    let ventasNetas = 0;     // subtotal después de descuento, antes de impuestos
-    let ventasBrutas = 0;    // subtotal de la venta antes de descuentos
-    let descuentos = 0;
-    let impuestos = 0;
-    let totalConImpuestos = 0;
-    let costo = 0;
-    for (const l of lineas) {
-      const cant = Number(l.cantidad) || 0;
-      const venta = l.ventas;
-      if (venta?.id && !ventasMap.has(venta.id)) ventasMap.set(venta.id, venta);
-      const cu = costMap.get(l.producto_id) || 0;
-      const factor = Number(l.presentacion_factor) || 1;
-      costo += cu * factor * cant;
-    }
-    ventasMap.forEach((v: any) => {
-      const bruto = Number(v.subtotal) || 0;
-      const iva = Number(v.iva_total) || 0;
-      const ieps = Number(v.ieps_total) || 0;
-      const total = Number(v.total) || 0;
-      const descuento = Number(v.descuento_total) || Math.max(0, bruto - total + iva + ieps);
-      ventasBrutas += bruto;
-      descuentos += descuento;
-      ventasNetas += Math.max(0, bruto - descuento);
-      impuestos += iva + ieps;
-      totalConImpuestos += total;
-    });
-    const devoluciones = devStats.totalCredito || 0;
-    const ventasNetasFinal = ventasNetas - devoluciones;
-    const utilidadBruta = ventasNetasFinal - costo;
-    const margenPct = ventasNetasFinal > 0 ? (utilidadBruta / ventasNetasFinal) * 100 : 0;
-    return { ventasNetas, ventasBrutas, descuentos, devoluciones, impuestos, totalConImpuestos, costo, utilidadBruta, margenPct, ventasNetasFinal };
-  }, [ventaLineasIS, devStats.totalCredito]);
+  // === UTILIDAD (misma fuente de verdad que Reportes → Generales → Utilidad) ===
+  const utilidadResumen = useMemo(() => {
+    return calcularUtilidadBruta(
+      (ventas ?? []) as any[],
+      ((ventaLineasIS?.lineas ?? []) as any[]),
+      ventaLineasIS?.costMap ?? new Map<string, number>(),
+    );
+  }, [ventas, ventaLineasIS]);
 
+  const utilidadLoading = loadingVentas || loadingUtilidadDetalle;
+  const utilidadError = errorVentas || errorUtilidadDetalle;
 
   const { data: evolucion } = useDashboardEvolucionMensual(12);
   const { data: ventasPorMes } = useDashboardVentasPorMes(12);
@@ -1046,7 +1020,13 @@ export default function DashboardPage() {
             <KpiCard title="Cartera" value={money(kpis.totalCartera)} subtitle={`${kpis.clientesMorosos} clientes`} icon={CreditCard} color="bg-[hsl(var(--warning))]" />
             <KpiCard title="Compras" value={money(kpis.totalCompras)} subtitle={`Pendiente: ${money(kpis.saldoProveedores)}`} icon={Package} color="bg-[hsl(var(--chart-3))]" trend={calcTrend(kpis.totalCompras, prevKpis.compras)} />
             <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={`Utilidad: ${money(kpis.utilidadBruta)}`} icon={DollarSign} color={kpis.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} trend={calcTrend(kpis.totalGastos, prevKpis.gastos)} />
-            <KpiCard title="Utilidad" value={money(estadoResultados.utilidadBruta)} subtitle={`Costo: ${money(estadoResultados.costo)} · Margen ${estadoResultados.margenPct.toFixed(1)}%`} icon={TrendingUp} color={estadoResultados.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} />
+            <KpiCard
+              title="Utilidad"
+              value={utilidadError ? 'Error' : utilidadLoading ? 'Calculando…' : money(utilidadResumen.utilidadBruta)}
+              subtitle={utilidadError ? 'No se pudo calcular la utilidad' : `Costo: ${money(utilidadResumen.costoTotal)} · Margen ${utilidadResumen.margenPct.toFixed(1)}%`}
+              icon={TrendingUp}
+              color={!utilidadError && utilidadResumen.utilidadBruta < 0 ? "bg-[hsl(var(--destructive))]" : "bg-[hsl(var(--success))]"}
+            />
             <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito · ${devolucionesPct.toFixed(1)}% s/venta`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
             <KpiExtras
               efectividadPct={kpisExtra.efectividadPct}
