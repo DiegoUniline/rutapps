@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplicadas } from '@/lib/promoPersist';
 import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
-import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
+import { getLotesDisponibles, repartirFefo, lotesLabel } from '@/lib/lotesFefo';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
@@ -599,15 +599,16 @@ export function useVentaForm() {
           // Toma como referencia la cantidad de la línea: así elige un lote que
           // alcance; si ninguno alcanza se completa con varios desde el modal.
           const cantLinea = Number((lineas[idx] as any)?.cantidad) || 1;
-          const fefo = pickFefo(lotes, cantLinea);
-          if (!fefo) return;
-          if (Number(fefo.disponible) < cantLinea - 0.0001) {
-            toast.warning(`El lote ${fefo.codigo} solo tiene ${Number(fefo.disponible).toLocaleString('es-MX')} pz. Guarda y reparte el resto en otro lote con el ícono de lotes.`);
+          const reparto = repartirFefo(lotes, cantLinea);
+          if (reparto.length === 0) return;
+          const loteado = reparto.reduce((s, r) => s + r.cantidad, 0);
+          if (loteado < cantLinea - 0.0001) {
+            toast.warning(`Solo hay ${loteado.toLocaleString('es-MX')} pz disponibles entre todos los lotes.`);
           }
           setLineas(prev => {
             const arr = [...prev];
             if (!arr[idx] || arr[idx].producto_id !== productoId || (arr[idx] as any).lote_id) return prev;
-            arr[idx] = { ...arr[idx], lote_id: fefo.lote_id, lote_codigo: fefo.codigo } as any;
+            arr[idx] = { ...arr[idx], lote_id: reparto[0].lote_id, lote_codigo: lotesLabel(reparto), lotes: reparto } as any;
             return arr;
           });
         })();
@@ -965,6 +966,28 @@ export function useVentaForm() {
         nuevosIdsPorIndice.forEach((newId, li) => { if (lineas[li] && !lineas[li].id) (lineas[li] as any).id = newId; });
         setLineas(prev => prev.map((l, i) => (l.id ? l : (nuevosIdsPorIndice.has(i) ? { ...l, id: nuevosIdsPorIndice.get(i) } : l))));
       }
+
+      // Reparto multi-lote capturado antes de guardar la línea → venta_linea_lotes.
+      for (let i = 0; i < savedLines.length; i++) {
+        const row: any = savedLines[i];
+        const li = lineIndexes[i];
+        const rep = li !== undefined ? ((lineas[li] as any)?.lotes as { lote_id: string; cantidad: number }[] | undefined) : undefined;
+        if (!row?.id || !rep?.length) continue;
+        await (supabase.from as any)('venta_linea_lotes').delete().eq('venta_linea_id', row.id);
+        const rows = rep.filter(r => Number(r.cantidad) > 0).map(r => ({
+          empresa_id: empresa?.id, venta_id: ventaId, venta_linea_id: row.id, producto_id: row.producto_id,
+          lote_id: r.lote_id, almacen_id: row.almacen_id ?? form.almacen_id ?? null, cantidad: Number(r.cantidad), user_id: user?.id ?? null,
+        }));
+        if (rows.length) {
+          const { error: lErr } = await (supabase.from as any)('venta_linea_lotes').insert(rows);
+          if (lErr) toast.error('No se pudieron guardar los lotes: ' + lErr.message);
+        }
+        (lineas[li] as any).lotes = undefined;
+      }
+      setLineas(prev => prev.map(l => ((l as any).lotes && l.id ? { ...l, lotes: undefined } as any : l)));
+      queryClient.invalidateQueries({ queryKey: ['venta_linea_lotes'] });
+
+
 
 
       // Registrar el desglose de promociones aplicadas (solo informativo para reportes).
