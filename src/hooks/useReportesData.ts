@@ -5,6 +5,7 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 import { totalEfectivoVenta } from '@/lib/ventaCerrada';
 import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { buildPromoReporting } from '@/lib/promoReporting';
+import { calcularUtilidadBruta } from '@/lib/utilidadFinanciera';
 
 
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa', reportKey?: string, queryEnabled = true) {
@@ -293,10 +294,16 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       const topVendedores = Object.entries(vendMap).map(([id, v]) => ({ id, ...v, costo: vendCostoMap[id] ?? 0, utilidad: vendUtilMap[id] ?? 0 })).sort((a, b) => b.total - a.total);
 
       // === UTILIDAD ===
-      const costoTotal = ventaLineas.reduce((s, l) => {
-        const prod = productosById.get(l.producto_id);
-        return s + ((prod?.costo ?? 0) * (l.cantidad ?? 0));
-      }, 0);
+      // Fuente compartida con Dashboard: misma definición de utilidad bruta.
+      const costosPorProducto = new Map<string, number>(
+        productos.map((p: any) => [p.id, Number(p.costo ?? 0) || 0]),
+      );
+      const utilidadCalc = calcularUtilidadBruta(
+        ventas as any[],
+        ventaLineas as any[],
+        costosPorProducto,
+      );
+      const costoTotal = utilidadCalc.costoTotal;
 
       const gastosPorConcepto: Record<string, number> = {};
       for (const g of gastos) {
@@ -380,8 +387,8 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         ventasPorCliente,
         topVendedores,
         costoTotal, gastosDesglose,
-        utilidadBruta: totalVentas - costoTotal,
-        utilidadNeta: totalVentas - costoTotal - totalGastos,
+        utilidadBruta: utilidadCalc.utilidadBruta,
+        utilidadNeta: utilidadCalc.utilidadBruta - totalGastos,
         entregas, entregasPorRuta: Object.values(entregasPorRuta),
         totalEntregas: entregas.length,
         cargasData,
