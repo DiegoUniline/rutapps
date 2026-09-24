@@ -20,7 +20,8 @@ import { CfdiHistory } from '@/components/facturacion/CfdiHistory';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { VentaCheckoutModal } from '@/components/venta/VentaCheckoutModal';
-import { LoteVentaModal } from '@/components/lotes/LoteVentaModal';
+import { LotesLineaMovilModal, type LoteAsignacion } from '@/components/lotes/LotesLineaMovilModal';
+import { lotesLabel } from '@/lib/lotesFefo';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { VentaLineaLotesDialog } from '@/components/lotes/VentaLineaLotesDialog';
 import { toast } from 'sonner';
@@ -524,18 +525,23 @@ export default function VentaFormPage() {
         />
       )}
 
-      {/* Línea sin guardar (venta directa) → selector simple FEFO */}
+      {/* Línea sin guardar → reparto en uno o varios lotes (FEFO) */}
       {manejaLotesEmpresa && h.loteParaLinea && empresa?.id && form.almacen_id && !(lineas[h.loteParaLinea.idx] as any)?.id && (
-        <LoteVentaModal
+        <LotesLineaMovilModal
           empresaId={empresa.id}
           almacenId={form.almacen_id as string}
           producto={h.loteParaLinea.producto}
           cantidad={Number((lineas[h.loteParaLinea.idx] as any)?.cantidad) || 1}
-          loteSeleccionadoId={(lineas[h.loteParaLinea.idx] as any)?.lote_id ?? null}
+          asignadas={((lineas[h.loteParaLinea.idx] as any)?.lotes ?? []) as LoteAsignacion[]}
           excluirVentaId={form.id ?? null}
           onClose={() => h.setLoteParaLinea(null)}
-          onConfirm={(loteId, codigo) => {
-            h.setLineaLote(h.loteParaLinea!.idx, loteId, codigo);
+          onConfirm={(rep) => {
+            const idx = h.loteParaLinea!.idx;
+            setLineas((prev: any[]) => {
+              const next = [...prev];
+              if (next[idx]) next[idx] = { ...next[idx], lote_id: rep[0]?.lote_id ?? null, lote_codigo: rep.length ? lotesLabel(rep) : null, lotes: rep };
+              return next;
+            });
             h.setLoteParaLinea(null);
           }}
         />

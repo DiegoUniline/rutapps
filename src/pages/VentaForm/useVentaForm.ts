@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplicadas } from '@/lib/promoPersist';
 import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
-import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
+import { getLotesDisponibles, repartirFefo, lotesLabel } from '@/lib/lotesFefo';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
@@ -966,6 +966,28 @@ export function useVentaForm() {
         nuevosIdsPorIndice.forEach((newId, li) => { if (lineas[li] && !lineas[li].id) (lineas[li] as any).id = newId; });
         setLineas(prev => prev.map((l, i) => (l.id ? l : (nuevosIdsPorIndice.has(i) ? { ...l, id: nuevosIdsPorIndice.get(i) } : l))));
       }
+
+      // Reparto multi-lote capturado antes de guardar la línea → venta_linea_lotes.
+      for (let i = 0; i < savedLines.length; i++) {
+        const row: any = savedLines[i];
+        const li = lineIndexes[i];
+        const rep = li !== undefined ? ((lineas[li] as any)?.lotes as { lote_id: string; cantidad: number }[] | undefined) : undefined;
+        if (!row?.id || !rep?.length) continue;
+        await (supabase.from as any)('venta_linea_lotes').delete().eq('venta_linea_id', row.id);
+        const rows = rep.filter(r => Number(r.cantidad) > 0).map(r => ({
+          empresa_id: empresa?.id, venta_id: ventaId, venta_linea_id: row.id, producto_id: row.producto_id,
+          lote_id: r.lote_id, almacen_id: row.almacen_id ?? form.almacen_id ?? null, cantidad: Number(r.cantidad), user_id: user?.id ?? null,
+        }));
+        if (rows.length) {
+          const { error: lErr } = await (supabase.from as any)('venta_linea_lotes').insert(rows);
+          if (lErr) toast.error('No se pudieron guardar los lotes: ' + lErr.message);
+        }
+        (lineas[li] as any).lotes = undefined;
+      }
+      setLineas(prev => prev.map(l => ((l as any).lotes && l.id ? { ...l, lotes: undefined } as any : l)));
+      queryClient.invalidateQueries({ queryKey: ['venta_linea_lotes'] });
+
+
 
 
       // Registrar el desglose de promociones aplicadas (solo informativo para reportes).
