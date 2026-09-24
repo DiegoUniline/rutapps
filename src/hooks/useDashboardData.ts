@@ -22,7 +22,7 @@ export function useDashboardVentas(range: DateRange, vendedorId?: string) {
       return fetchAllPages((from, to) => {
         let q = supabase
           .from('ventas')
-          .select('id, fecha, total, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre)')
+          .select('id, fecha, total, total_efectivo, cerrado_at, cerrado_snapshot, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre)')
           .eq('empresa_id', empresa!.id)
           .eq('es_saldo_inicial', false)
           .gte('fecha', fmt(range.from))
