@@ -27,6 +27,7 @@
 
   .tx-mobile-nav-item {
     position: relative;
+    z-index: 1;
     border: 0;
     background: transparent;
     color: #747a82;
@@ -46,7 +47,7 @@
   .tx-mobile-account-backdrop {
     position: fixed;
     inset: 0;
-    z-index: -1;
+    z-index: 0;
     background: transparent;
   }
 
@@ -56,7 +57,7 @@
     bottom: calc(100% + 8px);
     right: 8px;
     width: min(280px, calc(100vw - 16px));
-    z-index: 1;
+    z-index: 2;
     max-height: calc(100dvh - 90px - env(safe-area-inset-bottom));
     overflow-y: auto;
   }
