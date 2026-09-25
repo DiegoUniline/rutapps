@@ -3,6 +3,12 @@
   display: none;
 }
 
+@media (min-width: 761px) and (max-width: 900px) {
+  .tienda-header-actions .tienda-account-menu {
+    display: block;
+  }
+}
+
 @media (max-width: 760px) {
   .tienda-root {
     padding-bottom: calc(72px + env(safe-area-inset-bottom));
