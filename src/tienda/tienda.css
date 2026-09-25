@@ -634,7 +634,7 @@
   .tienda-cart-summary.is-open { max-height: 88vh; }
 
   .tienda-cart-summary-cta {
-    padding: 12px 16px;
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom));
     background: #fff;
     border-top: 1px solid #eef0f3;
     margin-top: 0;

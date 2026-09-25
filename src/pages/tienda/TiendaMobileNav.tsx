@@ -8,7 +8,7 @@ export default function TiendaMobileNav() {
   const nav = useNavigate();
   const base = `/tienda/${t.slug}`;
 
-  const hidden = loc.pathname.endsWith("/login") || loc.pathname.endsWith("/cambiar-password");
+  const hidden = loc.pathname.endsWith("/login") || loc.pathname.endsWith("/cambiar-password") || loc.pathname.endsWith("/carrito");
   if (hidden) return null;
 
   const openCart = () => {
