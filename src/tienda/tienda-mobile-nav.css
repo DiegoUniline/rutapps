@@ -68,6 +68,11 @@
     overflow-y: auto;
   }
 
+  .tx-mobile-account-menu button {
+    justify-content: flex-start;
+    min-height: 0;
+  }
+
   .tx-mobile-nav-item > span:last-child {
     max-width: 100%;
     overflow: hidden;
@@ -123,6 +128,9 @@
   .tx-mobile-nav-seller > span:last-child {
     color: #30343a;
     font-weight: 850;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.1;
   }
 
   /* Bottom navigation replaces both floating commerce controls on phones. */
