@@ -113,19 +113,54 @@ Deno.serve(async (req) => {
         const planSlug = session.metadata?.plan_slug || "";
         const planIdMeta = session.metadata?.plan_id;
         const qty = parseInt(session.metadata?.num_usuarios || "1", 10);
+        const billingPeriod = session.metadata?.billing_period || "mensual";
+        const PERIOD_CONFIG: Record<string, { months: number; discountPct: number }> = {
+          mensual: { months: 1, discountPct: 0 },
+          semestral: { months: 6, discountPct: 10 },
+          anual: { months: 12, discountPct: 15 },
+        };
+        const periodCfg = PERIOD_CONFIG[billingPeriod] || PERIOD_CONFIG.mensual;
         const { data: planRow } = await supabase
           .from("subscription_plans")
           .select("usuarios_incluidos, stripe_price_id, stripe_price_id_extra")
           .eq("id", planIdMeta).maybeSingle();
         if (!planRow?.stripe_price_id) throw new Error("Plan sin stripe_price_id");
 
+        const getOrCreatePeriodPrice = async (basePriceId: string): Promise<string> => {
+          if (periodCfg.months === 1 && periodCfg.discountPct === 0) return basePriceId;
+          const lookupKey = `${basePriceId}_${billingPeriod}_v1`;
+          const existing = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+          if (existing.data.length > 0) return existing.data[0].id;
+
+          const base = await stripe.prices.retrieve(basePriceId);
+          const baseAmount = base.unit_amount || 0;
+          if (baseAmount <= 0) throw new Error("Precio base inválido para periodo");
+
+          const totalAmount = Math.round(
+            baseAmount * periodCfg.months * (1 - periodCfg.discountPct / 100),
+          );
+          const newPrice = await stripe.prices.create({
+            currency: base.currency,
+            product: base.product as string,
+            unit_amount: totalAmount,
+            recurring: { interval: "month", interval_count: periodCfg.months },
+            lookup_key: lookupKey,
+            nickname: `${billingPeriod} (${periodCfg.discountPct}% off)`,
+          });
+          return newPrice.id;
+        };
+
         const items: Stripe.SubscriptionCreateParams.Item[] = [];
+        const mainPriceId = await getOrCreatePeriodPrice(planRow.stripe_price_id);
         if (planSlug && planRow.stripe_price_id_extra) {
-          items.push({ price: planRow.stripe_price_id, quantity: 1 });
+          items.push({ price: mainPriceId, quantity: 1 });
           const extras = Math.max(0, qty - (planRow.usuarios_incluidos || 0));
-          if (extras > 0) items.push({ price: planRow.stripe_price_id_extra, quantity: extras });
+          if (extras > 0) {
+            const extraPriceId = await getOrCreatePeriodPrice(planRow.stripe_price_id_extra);
+            items.push({ price: extraPriceId, quantity: extras });
+          }
         } else {
-          items.push({ price: planRow.stripe_price_id, quantity: qty });
+          items.push({ price: mainPriceId, quantity: qty });
         }
 
         // trial_end = ahora + 7 días
@@ -157,7 +192,7 @@ Deno.serve(async (req) => {
             plan_id: planIdMeta || "",
             plan_slug: planSlug,
             num_usuarios: String(qty),
-            billing_period: "mensual",
+            billing_period: billingPeriod,
             flow: "trial_signup_setup",
             alignment: "first_of_month_cdmx",
           },
@@ -179,7 +214,7 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("empresa_id", empresa_id);
-        log("Trial signup (setup→sub) created", { empresa_id, subId: newSub.id, trialEndUnix, anchorUnix });
+        log("Trial signup (setup→sub) created", { empresa_id, subId: newSub.id, trialEndUnix, anchorUnix, billingPeriod });
       }
       // ── Flujo viejo: semestral/anual con mode=subscription ──
       else if (empresa_id && flow === "trial_signup" && stripeSubId) {
