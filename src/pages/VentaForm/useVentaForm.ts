@@ -973,10 +973,19 @@ export function useVentaForm() {
         const li = lineIndexes[i];
         const rep = li !== undefined ? ((lineas[li] as any)?.lotes as { lote_id: string; cantidad: number }[] | undefined) : undefined;
         if (!row?.id || !rep?.length) continue;
+        // `savedLines` solo trae { id } desde la base; el producto y el almacén
+        // deben tomarse del payload local, o el insert viola el NOT NULL.
+        const payload: any = linesToSave[i] ?? {};
+        const productoIdLote = payload.producto_id ?? lineProductoIds[i] ?? (li !== undefined ? (lineas[li] as any)?.producto_id : null) ?? null;
+        const almacenIdLote = payload.almacen_id ?? form.almacen_id ?? null;
+        if (!productoIdLote) {
+          toast.error('No se pudieron guardar los lotes: falta el producto de la línea');
+          continue;
+        }
         await (supabase.from as any)('venta_linea_lotes').delete().eq('venta_linea_id', row.id);
-        const rows = rep.filter(r => Number(r.cantidad) > 0).map(r => ({
-          empresa_id: empresa?.id, venta_id: ventaId, venta_linea_id: row.id, producto_id: row.producto_id,
-          lote_id: r.lote_id, almacen_id: row.almacen_id ?? form.almacen_id ?? null, cantidad: Number(r.cantidad), user_id: user?.id ?? null,
+        const rows = rep.filter(r => Number(r.cantidad) > 0 && r.lote_id).map(r => ({
+          empresa_id: empresa?.id, venta_id: ventaId, venta_linea_id: row.id, producto_id: productoIdLote,
+          lote_id: r.lote_id, almacen_id: almacenIdLote, cantidad: Number(r.cantidad), user_id: user?.id ?? null,
         }));
         if (rows.length) {
           const { error: lErr } = await (supabase.from as any)('venta_linea_lotes').insert(rows);
