@@ -1,17 +1,16 @@
 // Crea sesión de Stripe Checkout para alta con prueba gratis de 7 días.
 //
-// ALINEACIÓN AL DÍA 1 DE CADA MES (fix 30-jun-2026):
-// Para evitar ciclos desalineados (alta el 21 → renueva 21 → 21 cada mes),
-// las altas MENSUALES usan ahora `mode: 'setup'`. Solo se captura la tarjeta;
-// la suscripción la crea el webhook `stripe-webhook` con:
-//   - trial_end = ahora + 7 días        (mantiene la prueba real)
-//   - billing_cycle_anchor = 1° del mes siguiente al fin de trial (CDMX)
+// REGLA ÚNICA DE CALENDARIO PARA TODOS LOS PERIODOS:
+// mensual, semestral y anual capturan primero la tarjeta con mode='setup'.
+// El webhook crea después la suscripción con:
+//   - trial_end = ahora + 7 días
+//   - billing_cycle_anchor = día 1 del mes siguiente al fin del trial (CDMX)
 //   - proration_behavior = 'create_prorations'
-// Resultado: 7 días de trial → cobro proporcional del día 8 al 1° del mes
-// siguiente → mes completo cada día 1.
 //
-// Para SEMESTRAL/ANUAL no aplica alineación a día 1 (un solo cargo grande
-// por adelantado), así que se mantiene el flujo viejo de `mode: 'subscription'`.
+// Resultado:
+// alta → 7 días gratis → prorrateo desde fin de trial hasta fin de mes →
+// periodo completo (1/6/12 meses) a partir del día 1.
+// Nunca se debe anclar un semestre/año al día en que terminó la prueba.
 
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
@@ -53,13 +52,10 @@ Deno.serve(async (req) => {
     if (!plan_id) throw new Error("plan_id es requerido");
     if (!accepted_terms) throw new Error("Debes aceptar los términos del cobro automático");
 
-    const PERIOD_CONFIG: Record<string, { months: number; discountPct: number }> = {
-      mensual: { months: 1, discountPct: 0 },
-      semestral: { months: 6, discountPct: 10 },
-      anual: { months: 12, discountPct: 15 },
-    };
-    const periodCfg = PERIOD_CONFIG[billing_period] || PERIOD_CONFIG.mensual;
-    const isMensual = billing_period === "mensual";
+    const validBillingPeriods = new Set(["mensual", "semestral", "anual"]);
+    if (!validBillingPeriods.has(billing_period)) {
+      throw new Error("Periodo de cobro inválido");
+    }
 
     const { data: profile } = await supabase
       .from("profiles").select("empresa_id").eq("user_id", userData.user.id).maybeSingle();
@@ -76,8 +72,6 @@ Deno.serve(async (req) => {
     const minQty = isNewPlan ? Math.max(1, plan.usuarios_incluidos || 1) : 3;
     const requested = parseInt(String(quantity ?? minQty)) || minQty;
     const qty = Math.max(minQty, requested);
-    const extraUsers = isNewPlan ? Math.max(0, qty - (plan.usuarios_incluidos || 0)) : 0;
-
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Customer
@@ -95,82 +89,30 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://rutapp.mx";
 
-    // ─── Helper precio por periodo (solo aplica a semestral/anual) ───
-    const getOrCreatePeriodPrice = async (basePriceId: string): Promise<string> => {
-      if (periodCfg.months === 1 && periodCfg.discountPct === 0) return basePriceId;
-      const lookupKey = `${basePriceId}_${billing_period}_v1`;
-      const existing = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
-      if (existing.data.length > 0) return existing.data[0].id;
-      const base = await stripe.prices.retrieve(basePriceId);
-      const baseAmount = base.unit_amount || 0;
-      const totalAmount = Math.round(baseAmount * periodCfg.months * (1 - periodCfg.discountPct / 100));
-      const newPrice = await stripe.prices.create({
-        currency: base.currency,
-        product: base.product as string,
-        unit_amount: totalAmount,
-        recurring: { interval: "month", interval_count: periodCfg.months },
-        lookup_key: lookupKey,
-        nickname: `${billing_period} (${periodCfg.discountPct}% off)`,
-      });
-      return newPrice.id;
-    };
-
     const commonMeta = {
       empresa_id: profile.empresa_id,
       plan_id: plan.id,
       plan_slug: plan.slug || "",
       num_usuarios: String(qty),
       billing_period,
-      flow: isMensual ? "trial_signup_setup" : "trial_signup",
+      flow: "trial_signup_setup",
       accepted_terms_at: new Date().toISOString(),
     };
 
-    let session: Stripe.Checkout.Session;
-
-    if (isMensual) {
-      // ─── MENSUAL: solo capturamos tarjeta. La suscripción se crea en el webhook
-      //     con trial_end + billing_cycle_anchor (alineación a día 1).
-      session = await stripe.checkout.sessions.create({
-        customer: customerId,
-        mode: "setup",
-        payment_method_types: ["card"],
-        success_url: `${origin}/dashboard?trial=started`,
-        cancel_url: `${origin}/completar-registro?canceled=1`,
-        setup_intent_data: {
-          metadata: commonMeta,
-        },
+    // Todos los periodos usan setup mode. Así evitamos que Stripe cobre
+    // un semestre/año completo al terminar el trial en una fecha intermedia.
+    // La suscripción recurrente se crea en stripe-webhook y se ancla al día 1.
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: "setup",
+      payment_method_types: ["card"],
+      success_url: `${origin}/dashboard?trial=started`,
+      cancel_url: `${origin}/completar-registro?canceled=1`,
+      setup_intent_data: {
         metadata: commonMeta,
-      });
-    } else {
-      // ─── SEMESTRAL / ANUAL: flujo viejo con mode=subscription ───
-      const lineItems: any[] = [];
-      if (isNewPlan) {
-        const mainPriceId = await getOrCreatePeriodPrice(plan.stripe_price_id);
-        lineItems.push({ price: mainPriceId, quantity: 1 });
-        if (extraUsers > 0 && plan.stripe_price_id_extra) {
-          const extraPriceId = await getOrCreatePeriodPrice(plan.stripe_price_id_extra);
-          lineItems.push({ price: extraPriceId, quantity: extraUsers });
-        }
-      } else {
-        const mainPriceId = await getOrCreatePeriodPrice(plan.stripe_price_id);
-        lineItems.push({ price: mainPriceId, quantity: qty });
-      }
-
-      session = await stripe.checkout.sessions.create({
-        customer: customerId,
-        mode: "subscription",
-        payment_method_collection: "always",
-        line_items: lineItems,
-        subscription_data: {
-          trial_period_days: 7,
-          trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
-          metadata: { ...commonMeta, flow: "trial_signup" },
-        },
-        success_url: `${origin}/dashboard?trial=started`,
-        cancel_url: `${origin}/completar-registro?canceled=1`,
-        metadata: commonMeta,
-      });
-    }
+      },
+      metadata: commonMeta,
+    });
 
     await supabase
       .from("subscriptions")
@@ -184,7 +126,7 @@ Deno.serve(async (req) => {
       })
       .eq("empresa_id", profile.empresa_id);
 
-    log("Trial checkout session created", { sessionId: session.id, mode: session.mode, isMensual });
+    log("Trial checkout session created", { sessionId: session.id, mode: session.mode, billing_period });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
