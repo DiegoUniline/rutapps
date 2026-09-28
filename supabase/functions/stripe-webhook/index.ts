@@ -95,8 +95,9 @@ Deno.serve(async (req) => {
         ? session.customer
         : session.customer?.id;
 
-      // ── Flujo nuevo MENSUAL: alta vía setup mode. Creamos sub aquí con
-      //    trial_end + billing_cycle_anchor para alinear al día 1 (CDMX).
+      // ── Flujo único MENSUAL / SEMESTRAL / ANUAL: alta vía setup mode.
+      //    Creamos la suscripción aquí con trial_end + billing_cycle_anchor
+      //    para que cualquier periodo comercial comience formalmente el día 1.
       if (empresa_id && flow === "trial_signup_setup" && session.mode === "setup") {
         const setupIntentId = typeof session.setup_intent === "string"
           ? session.setup_intent : session.setup_intent?.id;
