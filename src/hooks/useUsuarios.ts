@@ -199,7 +199,7 @@ export function useUsuarios() {
     if (archive && !await confirmDialog(`¿Archivar a ${p.nombre || email}? Perderá el acceso, conservará su historial y dejará de contar como usuario activo/facturable.`)) return;
     try {
       const { data, error } = await supabase.functions.invoke('user-lifecycle', {
-        body: { action: archive ? 'archive' : 'reactivate', profile_id: p.id },
+        body: { action: archive ? 'archive' : 'reactivate', profile_id: p.id, ...(archive ? { force: true } : {}) },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
