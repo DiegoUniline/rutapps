@@ -1,0 +1,107 @@
+name: Rutapp Impresora
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['print-agent/**', '.github/workflows/print-agent.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: ubuntu-latest
+    env:
+      ES_USERNAME: ${{ secrets.ES_USERNAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - name: Build
+        working-directory: print-agent
+        run: |
+          mkdir -p ../out
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -H windowsgui" -o ../out/RutappImpresora.exe .
+      - name: Firmar (SSL.com eSigner)
+        if: env.ES_USERNAME != ''
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${GITHUB_WORKSPACE}/out/RutappImpresora.exe
+          output_path: ${GITHUB_WORKSPACE}/signed
+          malware_block: false
+          environment_name: PROD
+      - name: Usar firmado
+        if: env.ES_USERNAME != ''
+        run: cp signed/RutappImpresora.exe out/RutappImpresora.exe
+      - uses: actions/upload-artifact@v4
+        with: { name: windows, path: out/RutappImpresora.exe }
+
+  mac:
+    runs-on: macos-latest
+    env:
+      MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - name: Build universal .app
+        working-directory: print-agent
+        run: |
+          APP="../out/Rutapp Impresora.app"
+          mkdir -p "$APP/Contents/MacOS"
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /tmp/arm64 .
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /tmp/amd64 .
+          lipo -create -output "$APP/Contents/MacOS/rutapp-impresora" /tmp/arm64 /tmp/amd64
+          cp macos/Info.plist "$APP/Contents/Info.plist"
+      - name: Firmar y notarizar
+        if: env.MACOS_CERT_P12 != ''
+        env:
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          KC=build.keychain; KP=$(uuidgen)
+          echo "$MACOS_CERT_P12" | base64 --decode > cert.p12
+          security create-keychain -p "$KP" $KC
+          security set-keychain-settings -lut 3600 $KC
+          security unlock-keychain -p "$KP" $KC
+          security import cert.p12 -k $KC -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security list-keychains -d user -s $KC $(security list-keychains -d user | tr -d '"')
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KP" $KC
+          ID=$(security find-identity -v -p codesigning $KC | grep "Developer ID Application" | head -1 | awk '{print $2}')
+          codesign --force --options runtime --timestamp --sign "$ID" "out/Rutapp Impresora.app"
+          ditto -c -k --keepParent "out/Rutapp Impresora.app" out/notarize.zip
+          xcrun notarytool submit out/notarize.zip --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait
+          xcrun stapler staple "out/Rutapp Impresora.app"
+          rm out/notarize.zip cert.p12
+      - name: Firma ad-hoc (sin certificado)
+        if: env.MACOS_CERT_P12 == ''
+        run: codesign --force --deep --sign - "out/Rutapp Impresora.app"
+      - name: Zip
+        run: ditto -c -k --keepParent "out/Rutapp Impresora.app" out/RutappImpresora-mac.zip
+      - uses: actions/upload-artifact@v4
+        with: { name: mac, path: out/RutappImpresora-mac.zip }
+
+  publish:
+    needs: [windows, mac]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: dl }
+      - name: Commit a public/descargas
+        run: |
+          mkdir -p public/descargas
+          cp dl/windows/RutappImpresora.exe dl/mac/RutappImpresora-mac.zip public/descargas/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/descargas
+          git diff --cached --quiet || git commit -m "Rutapp Impresora: builds firmados [skip ci]"
+          git push

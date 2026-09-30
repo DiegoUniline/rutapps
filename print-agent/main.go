@@ -271,11 +271,14 @@ func main() {
 		log.SetOutput(logf)
 	}
 
+	background := false
 	for _, a := range os.Args[1:] {
 		switch a {
 		case "--uninstall", "/uninstall":
 			uninstall()
 			return
+		case "--background":
+			background = true
 		}
 	}
 
@@ -287,7 +290,9 @@ func main() {
 	ln, err := net.Listen("tcp", Addr)
 	if err != nil {
 		// Ya hay una instancia corriendo: solo abre la configuración.
-		openBrowser(UIURL)
+		if !background {
+			openBrowser(UIURL)
+		}
 		return
 	}
 
@@ -303,7 +308,7 @@ func main() {
 	mux.HandleFunc("/test", cors(handleTest))
 	mux.HandleFunc("/uninstall", handleUninstall)
 
-	if len(os.Args) < 2 || os.Args[1] != "--background" {
+	if !background {
 		go func() {
 			time.Sleep(400 * time.Millisecond)
 			openBrowser(UIURL)

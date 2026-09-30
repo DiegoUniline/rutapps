@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
-	"runtime"
 	"strings"
 )
 
@@ -43,15 +42,4 @@ func printRaw(printer string, data []byte) error {
 		return fmt.Errorf("lp: %v %s", err, out)
 	}
 	return nil
-}
-
-func installIfNeeded() bool { return false }
-func uninstall()            {}
-
-func openBrowser(url string) {
-	if runtime.GOOS == "darwin" {
-		_ = exec.Command("open", url).Start()
-		return
-	}
-	_ = exec.Command("xdg-open", url).Start()
 }
