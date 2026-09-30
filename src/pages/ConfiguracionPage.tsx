@@ -9,6 +9,7 @@ import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Ey
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CURRENCIES } from '@/lib/currency';
 import SubscriptionCard from '@/components/SubscriptionCard';
+import DesktopPrinterCard from '@/components/DesktopPrinterCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -659,6 +660,8 @@ export default function ConfiguracionPage() {
                   ))}
                 </div>
               </div>
+
+              <DesktopPrinterCard />
 
               {/* Campos visibles */}
               <div className="bg-card border border-border rounded-lg p-5">

@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { buildTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { buildEscPosBytes } from '@/lib/escpos';
 import { isBluetoothAvailable, connectPrinter, sendBytes, getConnectedPrinterName } from '@/lib/bluetoothPrinter';
+import { getAgentStatus, printAgentBytes } from '@/lib/desktopPrintAgent';
 
 
 interface PrintOptions {
@@ -14,6 +15,22 @@ interface PrintOptions {
  */
 export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   const ticketAncho = opts.ticketAncho ?? '58';
+
+  // ── 0) Escritorio: agente local Rutapp Impresora (cable/USB) ──
+  const agent = await getAgentStatus();
+  if (agent?.printer) {
+    try {
+      toast.loading(`Imprimiendo en ${agent.printer}…`, { id: 'agent-print' });
+      const escposBytes = await buildEscPosBytes(td, { ticketAncho: agent.ancho });
+      await printAgentBytes(escposBytes);
+      toast.success(`Impreso en ${agent.printer}`, { id: 'agent-print' });
+      return;
+    } catch (err) {
+      const msg = (err as Error)?.message ?? 'error';
+      console.warn('[Print] Agent failed:', msg);
+      toast.error(`Rutapp Impresora: ${msg}`, { id: 'agent-print' });
+    }
+  }
 
   // ── 1) Try Bluetooth ESC/POS ──
   if (isBluetoothAvailable()) {
