@@ -12,6 +12,10 @@ import { roundMoney, todayInTimezone } from '@/lib/utils';
 import { useSaldoFavor } from '@/hooks/useSaldoFavor';
 import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { Banknote, Loader2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { printCobroTicket } from '@/lib/cobroTicket';
+
+const PRINT_KEY = 'cobro-quick-imprimir';
 
 interface Props {
   open: boolean;
@@ -40,6 +44,13 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
   // Guardia síncrona: evita que un doble-clic (antes de que el botón se
   // deshabilite por re-render) registre el cobro dos veces.
   const savingRef = useRef(false);
+  const [imprimir, setImprimir] = useState(() => {
+    try { return localStorage.getItem(PRINT_KEY) !== '0'; } catch { return true; }
+  });
+  const toggleImprimir = (v: boolean) => {
+    setImprimir(v);
+    try { localStorage.setItem(PRINT_KEY, v ? '1' : '0'); } catch { /* sin storage */ }
+  };
 
   // Saldo a favor del cliente (crédito por notas de crédito de devoluciones).
   const { disponible: saldoFavorDisp } = useSaldoFavor(venta.cliente_id);
@@ -65,7 +76,7 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
       // Cobro atómico en una sola ida al servidor (RPC): inserta el cobro,
       // su aplicación y recalcula el saldo con triggers. Antes eran 2-3 vueltas
       // secuenciales (cobro → aplicación → update status), lo que lo hacía lento.
-      const { error: rErr } = await (supabase as any).rpc('aplicar_cobro', {
+      const { data: cobroId, error: rErr } = await (supabase as any).rpc('aplicar_cobro', {
         p_empresa_id: empresa.id,
         p_cliente_id: venta.cliente_id,
         p_monto: aplicado,
@@ -84,6 +95,14 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
       }
 
       toast.success(`Cobro registrado a ${venta.folio ?? 'venta'} por ${fmt(aplicado)}`);
+      if (imprimir) {
+        const { data: cli } = await supabase.from('clientes').select('nombre').eq('id', venta.cliente_id).maybeSingle();
+        printCobroTicket(empresa, {
+          cobro: { id: String(cobroId ?? venta.id), fecha, monto: aplicado, metodo_pago: metodo, referencia: referencia || null },
+          clienteNombre: cli?.nombre ?? 'Sin cliente',
+          aplicaciones: [{ folio: venta.folio ?? null, monto: aplicado, saldoAnterior: saldo, saldoNuevo: roundMoney(Math.max(0, saldo - aplicado)) }],
+        });
+      }
       // Refresca las cachés offline (saldo a favor, saldos) sin recargar la
       // vista: useOfflineQuery escucha este evento y vuelve a leer.
       window.dispatchEvent(new Event('uniline:sync-complete'));
@@ -189,7 +208,11 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="sm:items-center">
+          <label className="flex items-center gap-2 text-sm mr-auto cursor-pointer">
+            <Checkbox checked={imprimir} onCheckedChange={(v) => toggleImprimir(v === true)} />
+            Imprimir ticket
+          </label>
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
           <Button onClick={submit} disabled={saving || montoNum <= 0}>
             {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando</> : <>Registrar cobro</>}

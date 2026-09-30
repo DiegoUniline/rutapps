@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Plus, Check, X, Trash2, Pencil, RotateCcw } from 'lucide-react';
+import { Plus, Check, X, Trash2, Pencil, RotateCcw, Printer } from 'lucide-react';
 import { cn, todayLocal, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-interface Pago {
+export interface Pago {
   id: string;
   monto_aplicado: number;
   created_at: string;
@@ -34,9 +34,10 @@ interface VentaPagosTabProps {
   onDeletePago?: (aplicacionId: string, cobroId: string) => Promise<void>;
   onUpdatePago?: (aplicacionId: string, cobroId: string, nuevoMonto: number) => Promise<void>;
   onRealizarPago?: () => void;
+  onPrintPago?: (p: Pago) => void;
 }
 
-export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, onAddPago, onCancelPago, onReactivarPago, onDeletePago, onUpdatePago, onRealizarPago }: VentaPagosTabProps) {
+export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, onAddPago, onCancelPago, onReactivarPago, onDeletePago, onUpdatePago, onRealizarPago, onPrintPago }: VentaPagosTabProps) {
   const { fmt } = useCurrency();
   const [showForm, setShowForm] = useState(false);
   const [monto, setMonto] = useState('');
@@ -99,6 +100,11 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
     const cancelado = p.cobros?.status === 'cancelado';
     return (
       <div className="flex items-center gap-1.5 justify-end">
+        {!cancelado && editingId !== p.id && onPrintPago && (
+          <button onClick={() => onPrintPago(p)} className="text-muted-foreground hover:text-primary p-1" title="Imprimir ticket">
+            <Printer className="h-3.5 w-3.5" />
+          </button>
+        )}
         {!cancelado && editingId !== p.id && onUpdatePago && (
           <button onClick={() => startEdit(p)} className="text-muted-foreground hover:text-primary p-1" title="Editar monto">
             <Pencil className="h-3.5 w-3.5" />

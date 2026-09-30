@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { VentaFormHeader } from '@/components/venta/VentaFormHeader';
-import { VentaPagosTab } from '@/components/venta/VentaPagosTab';
+import { VentaPagosTab, type Pago } from '@/components/venta/VentaPagosTab';
 import { VentaEntregasTab } from '@/components/venta/VentaEntregasTab';
 import { VentaDevolucionesTab } from '@/components/venta/VentaDevolucionesTab';
 import { DevolucionVentaModal } from '@/components/venta/DevolucionVentaModal';
@@ -34,6 +34,7 @@ import { phoneWithLada } from '@/lib/phoneWithLada';
 import { fmtMoney } from '@/lib/currency';
 
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
+import { printCobroTicket } from '@/lib/cobroTicket';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { nextVisitDate } from '@/lib/nextVisitDate';
@@ -370,6 +371,20 @@ export default function VentaFormPage() {
     printTicket(td, { ticketAncho });
   };
 
+  const handlePrintPago = (p: Pago) => {
+    printCobroTicket(empresa, {
+      cobro: {
+        id: p.cobro_id ?? p.id,
+        fecha: p.cobros?.fecha ?? p.created_at,
+        monto: Number(p.monto_aplicado ?? 0),
+        metodo_pago: p.cobros?.metodo_pago ?? 'efectivo',
+        referencia: p.cobros?.referencia ?? null,
+      },
+      clienteNombre: clientesList?.find(c => c.id === form.cliente_id)?.nombre ?? 'Sin cliente',
+      aplicaciones: [{ folio: (form as any).folio ?? null, monto: Number(p.monto_aplicado ?? 0) }],
+    });
+  };
+
   const onClienteChange = (cId: string) => {
     set('cliente_id', cId);
     const c = clientesList?.find(cl => cl.id === cId);
@@ -452,7 +467,7 @@ export default function VentaFormPage() {
         <div className="bg-card border border-border rounded-md">
           <OdooTabs tabs={[
             { key: 'lineas', label: 'Líneas de venta', content: <VentaLineasTab lineas={lineas} pricingReady={pricingReady} productosList={productosList ?? []} readOnly={readOnly} totals={totals} cerradoSnapshot={(form as any).cerrado_at ? ((form as any).cerrado_snapshot ?? null) : null} promoResults={promoResults} onChangePresentation={h.changePresentation} onProductSelect={handleProductSelect} onUpdateLine={updateLine} onRemoveLine={removeLine} onAddLine={addLine} setCellRef={setCellRef} onCellKeyDown={handleCellKeyDown} navigateCell={navigateCell} setLineas={setLineas} sinImpuestos={sinImpuestos} setSinImpuestos={setSinImpuestos} readOnlyForm={readOnly} saldoPendiente={saldoPendiente} canChangePrice={canChangePrice} canApplyDiscount={canApplyDiscount} descuentoExtraValor={Number((form as any).descuento_extra) || 0} descuentoExtraTipo={(form as any).descuento_extra_tipo || 'porcentaje'} onDescuentoExtraChange={(value) => set('descuento_extra', value)} onToggleDescuentoExtraTipo={() => set('descuento_extra_tipo', (form as any).descuento_extra_tipo === 'monto' ? 'porcentaje' : 'monto')} onChangeLineListaPrecio={changeLineListaPrecio} onPickLote={(idx) => { const l: any = lineas[idx]; if (!l?.producto_id) return; const prod: any = (productosList ?? []).find((p: any) => p.id === l.producto_id); h.setLoteParaLinea({ idx, producto: { id: l.producto_id, nombre: prod?.nombre ?? l.descripcion ?? 'Producto' } }); }} /> },
-            ...(!isNew ? [{ key: 'pagos', label: `Pagos (${(pagosData ?? []).length})`, content: <VentaPagosTab pagos={(pagosData ?? []) as any} totalPagado={totalPagado} saldoPendiente={saldoPendiente} isMobile={isMobile} onAddPago={handleAddPago} onCancelPago={handleCancelPago} onReactivarPago={handleReactivarPago} onDeletePago={handleDeletePago} onUpdatePago={handleUpdatePago} onRealizarPago={() => setShowPago(true)} /> }] : []),
+            ...(!isNew ? [{ key: 'pagos', label: `Pagos (${(pagosData ?? []).length})`, content: <VentaPagosTab pagos={(pagosData ?? []) as any} totalPagado={totalPagado} saldoPendiente={saldoPendiente} isMobile={isMobile} onAddPago={handleAddPago} onCancelPago={handleCancelPago} onReactivarPago={handleReactivarPago} onDeletePago={handleDeletePago} onUpdatePago={handleUpdatePago} onRealizarPago={() => setShowPago(true)} onPrintPago={handlePrintPago} /> }] : []),
             ...(!isNew ? [{ key: 'entregas', label: `Entregas (${entregasActivas.length})`, content: <VentaEntregasTab tipo={form.tipo} lineas={lineas} productosList={(productosList ?? []).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre }))} entregasExistentes={(entregasExistentes ?? []) as any} entregasActivas={entregasActivas as any} lineDeliverySummary={lineDeliverySummary} canCreateEntrega={canCreateEntrega} fullyDelivered={fullyDelivered} remaining={remaining} isCreatingEntrega={crearEntrega.isPending} isMobile={isMobile} onCreateEntrega={async (items) => { try { const entrega = await crearEntrega.mutateAsync({ pedidoId: form.id, vendedorId: form.vendedor_id ?? undefined, clienteId: form.cliente_id ?? undefined, almacenId: form.almacen_id ?? undefined, lineas: items }); toast.success(`Entrega ${entrega.folio} creada`); } catch (e: any) { toast.error(e.message); } }} /> }] : []),
             ...(billingEnabled && !isNew ? [{ key: 'facturacion', label: `Facturas (${cfdisCount ?? 0})`, content: <div className="p-4"><CfdiHistory ventaId={form.id!} lineas={lineas} productosList={productosList ?? []} />{lineas.every(l => !l.producto_id || l.facturado) && lineas.some(l => l.facturado) && <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground mt-4"><span className="inline-block w-2 h-2 rounded-full bg-primary" />Todas las líneas facturadas</div>}</div> }] : []),
             ...(!isNew ? [{ key: 'devoluciones', label: `Devoluciones (${(devolucionesVenta ?? []).length})`, content: <VentaDevolucionesTab ventaId={form.id!} clienteId={form.cliente_id} folio={form.folio} readOnly={readOnly} /> }] : []),
