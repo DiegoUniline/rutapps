@@ -45,7 +45,7 @@ import { useMonthlyGoal } from './dashboard/hooks/useMonthlyGoal';
 import { useDashboardVisitas, useClientesActivos, useUltimaCompraPorCliente } from './dashboard/hooks/useDashboardExtra';
 import { Target, Route, Wrench, Sparkles } from 'lucide-react';
 import { startOfMonth as startOfMonthFn, endOfMonth as endOfMonthFn } from 'date-fns';
-import { calcularUtilidadBruta } from '@/lib/utilidadFinanciera';
+import { calcularUtilidadConCosto } from '@/lib/utilidadFinanciera';
 
 const PRESETS = [
   { label: 'Hoy', range: () => ({ from: new Date(), to: new Date() }) },
@@ -928,10 +928,9 @@ export default function DashboardPage() {
 
   // === UTILIDAD (misma fuente de verdad que Reportes → Generales → Utilidad) ===
   const utilidadResumen = useMemo(() => {
-    return calcularUtilidadBruta(
+    return calcularUtilidadConCosto(
       (ventas ?? []) as any[],
-      ((ventaLineasIS?.lineas ?? []) as any[]),
-      ventaLineasIS?.costMap ?? new Map<string, number>(),
+      ventaLineasIS?.costoTotal ?? 0,
     );
   }, [ventas, ventaLineasIS]);
 

@@ -37,60 +37,30 @@ export function useDashboardVentas(range: DateRange, vendedorId?: string) {
 }
 
 /**
- * Lines of sales in range, including discount & cost info to build an
- * income-statement style breakdown (Ventas, Descuentos, Devoluciones,
- * Ventas Brutas, Costo, Utilidad Bruta).
+ * Costo de mercancía del periodo, calculado directamente en la base de datos
+ * (RPC dashboard_costo_ventas). Evita descargar cientos de miles de líneas al
+ * navegador y responde en milisegundos, con la misma definición que Reportes:
+ * cantidad × costo actual del producto activo.
  */
 export function useDashboardVentaLineasIS(range: DateRange, vendedorId?: string) {
   const { empresa } = useAuth();
 
   return useQuery({
-    queryKey: ['dashboard-venta-lineas-is', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
+    queryKey: ['dashboard-costo-ventas', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
-    queryFn: async ({ signal }) => {
-      const eid = empresa!.id;
-
-      // Para UTILIDAD solo necesitamos producto + cantidad. Evitamos descargar
-      // subtotales, impuestos y demás campos que no participan en la fórmula
-      // vigente de Reportes, reduciendo el costo de PostgREST/RLS.
-      const lineasPromise = fetchAllPages<any>((from, to) => {
-        let q = supabase
-          .from('venta_lineas')
-          .select('producto_id, cantidad, ventas!inner(empresa_id, fecha, status, vendedor_id, es_saldo_inicial)')
-          .eq('ventas.empresa_id', eid)
-          .eq('ventas.es_saldo_inicial', false)
-          .gte('ventas.fecha', fmt(range.from))
-          .lte('ventas.fecha', fmt(range.to))
-          .neq('ventas.status', 'cancelado')
-          .range(from, to);
-
-        if (vendedorId) q = q.eq('ventas.vendedor_id', vendedorId);
-        return q.abortSignal(signal);
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('dashboard_costo_ventas', {
+        p_empresa_id: empresa!.id,
+        p_from: fmt(range.from),
+        p_to: fmt(range.to),
+        p_vendedor_id: vendedorId ?? null,
       });
-
-      // Reportes obtiene costos por empresa, no mediante un IN masivo de UUIDs.
-      // Reutilizamos el mismo patrón para evitar URLs muy largas y resultados
-      // parciales. Si Supabase devuelve error, fetchAllPages lo propaga.
-      const productosPromise = fetchAllPages<any>((from, to) =>
-        supabase
-          .from('productos')
-          .select('id, costo')
-          .eq('empresa_id', eid)
-          .eq('status', 'activo')
-          .range(from, to)
-          .abortSignal(signal)
-      );
-
-      const [lineas, productos] = await Promise.all([lineasPromise, productosPromise]);
-
-      const costMap = new Map<string, number>(
-        productos.map((p: any) => [p.id, Number(p.costo ?? 0) || 0]),
-      );
-
-      return { lineas, costMap };
+      if (error) throw error;
+      return { costoTotal: Number(data ?? 0) || 0 };
     },
   });
 }
+
 
 /** Quita los cobros cuyas aplicaciones apuntan únicamente a ventas canceladas. */
 async function filtrarCobrosDeVentasCanceladas<T extends { id: string }>(cobros: T[]): Promise<T[]> {

@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790788507072,
+      "tag": "0000_dashboard_costo_ventas_rpc",
+      "breakpoints": true
+    }
+  ]
+}

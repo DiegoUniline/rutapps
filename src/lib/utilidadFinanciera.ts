@@ -50,3 +50,25 @@ export function calcularUtilidadBruta(
     margenPct,
   };
 }
+
+/**
+ * Igual que calcularUtilidadBruta, pero recibe el costo ya sumado en la base de
+ * datos (RPC dashboard_costo_ventas) en vez de recorrer todas las líneas.
+ */
+export function calcularUtilidadConCosto(
+  ventas: Array<VentaCerradaFields>,
+  costoTotal: number,
+): UtilidadResultado {
+  const totalVentas = ventas.reduce(
+    (total, venta) => total + totalEfectivoVenta(venta),
+    0,
+  );
+  const costo = Number(costoTotal ?? 0) || 0;
+  const utilidadBruta = totalVentas - costo;
+  return {
+    totalVentas,
+    costoTotal: costo,
+    utilidadBruta,
+    margenPct: totalVentas > 0 ? (utilidadBruta / totalVentas) * 100 : 0,
+  };
+}
