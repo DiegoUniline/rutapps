@@ -122,6 +122,9 @@ export default function DesktopPrinterCard() {
           {status.printer && (
             <p className="text-[11px] text-muted-foreground">Guardada: <b>{status.printer}</b> · {status.ancho} mm. Los tickets en esta computadora se imprimen aquí.</p>
           )}
+          <p className="text-[11px] text-muted-foreground">
+            Descargar agente: <a href={AGENT_DOWNLOAD_WIN} download className="underline">Windows</a> · <a href={AGENT_DOWNLOAD_MAC} download className="underline">Mac</a>
+          </p>
         </div>
       )}
     </div>

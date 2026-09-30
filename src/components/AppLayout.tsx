@@ -20,6 +20,7 @@ import NotificationRuntime from '@/components/notifications/NotificationRuntime'
 import InternalNotificationBell from '@/components/notifications/InternalNotificationBell';
 import TiendaOrdersBell from '@/components/notifications/TiendaOrdersBell';
 import BroadcastBell from '@/components/BroadcastBell';
+import DesktopPrinterButton from '@/components/DesktopPrinterButton';
 import BroadcastAnnouncementModal from '@/components/BroadcastAnnouncementModal';
 import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
@@ -988,6 +989,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <RefreshCw className="h-3.5 w-3.5" />
               Sincronizar
             </button>
+            <DesktopPrinterButton />
             <TiendaOrdersBell />
             <InternalNotificationBell />
             <BroadcastBell />
