@@ -3,11 +3,59 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- Recuperación de deploy viejo: si el HTML en caché apunta a /assets que ya
+         no existen (404 / MIME text/plain), limpia SW + cachés y recarga una vez. -->
+    <script>
+      (function () {
+        var KEY = 'rutapp:stale-assets-reload';
+        var done = false;
+        function recover() {
+          if (done) return; done = true;
+          try {
+            var last = Number(sessionStorage.getItem(KEY) || 0);
+            if (Date.now() - last < 60000) return; // evita bucle
+            sessionStorage.setItem(KEY, String(Date.now()));
+          } catch (e) {}
+          var jobs = [];
+          try {
+            if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+              return Promise.all(rs.map(function (r) { return r.unregister(); }));
+            }));
+            if (window.caches) jobs.push(caches.keys().then(function (ks) {
+              return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+            }));
+          } catch (e) {}
+          Promise.all(jobs).catch(function () {}).then(function () {
+            var u = new URL(location.href);
+            u.searchParams.set('_r', Date.now().toString(36));
+            location.replace(u.toString());
+          });
+        }
+        window.addEventListener('error', function (ev) {
+          var t = ev.target;
+          if (!t || t === window) return;
+          var src = (t.tagName === 'SCRIPT' && t.src) || (t.tagName === 'LINK' && t.rel === 'stylesheet' && t.href) || '';
+          if (src.indexOf('/assets/') !== -1) recover();
+        }, true);
+        window.addEventListener('vite:preloadError', function (ev) { ev.preventDefault(); recover(); });
+        // CSS servido como text/plain no dispara 'error': revisa al cargar.
+        window.addEventListener('DOMContentLoaded', function () {
+          setTimeout(function () {
+            var links = document.querySelectorAll('link[rel="stylesheet"][href*="/assets/"]');
+            for (var i = 0; i < links.length; i++) {
+              try { if (!links[i].sheet) { recover(); return; } } catch (e) {}
+            }
+          }, 3000);
+        });
+      })();
+    </script>
+
     <title>Rutapp – Venta en Ruta</title>
     <meta name="description" content="Sistema de venta en ruta para vendedores móviles. Funciona offline.">
 
     <!-- PWA meta tags -->
     <meta name="theme-color" content="#1a1a2e" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Rutapp" />
