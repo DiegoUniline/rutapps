@@ -3,7 +3,7 @@ import { Printer, Download, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
-  AGENT_DOWNLOAD_URL, getAgentStatus, getAgentPrinters, saveAgentConfig, printAgentTest, isDesktop,
+  AGENT_DOWNLOAD_WIN, AGENT_DOWNLOAD_MAC, isMac, getAgentStatus, getAgentPrinters, saveAgentConfig, printAgentTest, isDesktop,
   type AgentStatus,
 } from '@/lib/desktopPrintAgent';
 
@@ -70,12 +70,24 @@ export default function DesktopPrinterCard() {
       {!loading && !status && (
         <div className="mt-3 space-y-2">
           <p className="text-[11px] text-muted-foreground">
-            Descarga y abre <b>Rutapp Impresora</b> en esta computadora. Se instala solo y arranca con Windows.
+            Descarga y abre <b>Rutapp Impresora</b> en esta computadora. Se instala solo y arranca al encender.{isMac() && ' En Mac usa Chrome o Edge.'}
             Si el navegador pregunta por acceso a la red local, permite el acceso.
           </p>
-          <a href={AGENT_DOWNLOAD_URL} download className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-[13px] font-semibold">
-            <Download className="h-4 w-4" /> Descargar para Windows
-          </a>
+          <div className="flex flex-wrap gap-2">
+            {([[AGENT_DOWNLOAD_WIN, 'Windows', !isMac()], [AGENT_DOWNLOAD_MAC, 'Mac', isMac()]] as const).map(([href, label, main]) => (
+              <a
+                key={label}
+                href={href}
+                download
+                className={cn(
+                  'inline-flex items-center gap-2 px-3 py-2 rounded-md text-[13px] font-semibold border',
+                  main ? 'bg-primary text-primary-foreground border-primary' : 'border-input hover:bg-secondary',
+                )}
+              >
+                <Download className="h-4 w-4" /> Descargar para {label}
+              </a>
+            ))}
+          </div>
         </div>
       )}
 

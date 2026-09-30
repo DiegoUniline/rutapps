@@ -4,7 +4,8 @@
  */
 
 export const AGENT_URL = 'http://127.0.0.1:17777';
-export const AGENT_DOWNLOAD_URL = '/descargas/RutappImpresora.exe';
+export const AGENT_DOWNLOAD_WIN = '/descargas/RutappImpresora.exe';
+export const AGENT_DOWNLOAD_MAC = '/descargas/RutappImpresora-mac.zip';
 
 export interface AgentStatus {
   ok: boolean;
@@ -16,9 +17,15 @@ export interface AgentStatus {
 let cache: { at: number; status: AgentStatus | null } | null = null;
 const CACHE_MS = 15_000;
 
+export function isMac(): boolean {
+  return typeof navigator !== 'undefined' && /Macintosh|Mac OS X/i.test(navigator.userAgent || '');
+}
+
 export function isDesktop(): boolean {
   if (typeof navigator === 'undefined') return false;
-  return !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '')) return false;
+  // iPadOS se reporta como Macintosh
+  return !(isMac() && navigator.maxTouchPoints > 1);
 }
 
 async function call<T>(path: string, init?: RequestInit, timeoutMs = 4000): Promise<T> {
