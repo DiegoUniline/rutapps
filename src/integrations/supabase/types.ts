@@ -11087,6 +11087,15 @@ export type Database = {
         }
         Returns: Json
       }
+      dashboard_costo_ventas: {
+        Args: {
+          p_empresa_id: string
+          p_from: string
+          p_to: string
+          p_vendedor_id?: string
+        }
+        Returns: number
+      }
       deduct_timbre: {
         Args: { p_cfdi_id: string; p_empresa_id: string; p_user_id: string }
         Returns: boolean
