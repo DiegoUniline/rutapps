@@ -390,7 +390,7 @@ function ChangePasswordCard() {
 
 export default function ConfiguracionPage() {
   const { fmt } = useCurrency();
-  const { empresa, user } = useAuth();
+  const { empresa, user, syncEmpresa } = useAuth();
   const qc = useQueryClient();
   const { data: config, isLoading } = useEmpresaConfig();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -507,41 +507,64 @@ export default function ConfiguracionPage() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       let logo_url = (config as any)?.logo_url ?? null;
+
       if (logoFile && empresa) {
         const { compressLogo } = await import('@/lib/imageCompressor');
         const compressed = await compressLogo(logoFile);
         const ext = compressed.name.split('.').pop();
         const path = `${empresa.id}/logo.${ext}`;
-        const { error: upErr } = await supabase.storage.from('empresa-assets').upload(path, compressed, { upsert: true });
+
+        const { error: upErr } = await supabase.storage
+          .from('empresa-assets')
+          .upload(path, compressed, { upsert: true });
         if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from('empresa-assets').getPublicUrl(path);
-        logo_url = urlData.publicUrl;
+
+        const { data: urlData } = supabase.storage
+          .from('empresa-assets')
+          .getPublicUrl(path);
+
+        // La ruta física puede seguir siendo estable, pero la URL persistida
+        // cambia en cada reemplazo para invalidar caché de navegador/CDN.
+        logo_url = `${urlData.publicUrl}?v=${Date.now()}`;
       }
-      const { error } = await supabase.from('empresas').update({
-        nombre: form.nombre, razon_social: form.razon_social, rfc: form.rfc,
-        regimen_fiscal: form.regimen_fiscal, direccion: form.direccion, colonia: form.colonia,
-        ciudad: form.ciudad, estado: form.estado, cp: form.cp, telefono: form.telefono,
-        lada: (form.lada || '52').replace(/\D/g, '') || '52',
-        email: form.email, notas_ticket: form.notas_ticket, logo_url,
-        ticket_campos: campos, moneda, clientes_visibilidad: clientesVisibilidad, zona_horaria: zonaHoraria,
-        ticket_ancho: ticketAncho,
-        requiere_jornada_ruta: requiereJornadaRuta,
-        requiere_jornada_desde: requiereJornadaRuta ? (requiereJornadaDesde || null) : null,
-        jornada_permite_sin_vehiculo: permiteSinVehiculo,
-        apartar_stock_pedidos: apartarStockPedidos,
-        apartado_almacenes_ids: apartarStockPedidos ? apartadoAlmacenesIds : [],
-        apartado_solo_con_stock: apartarStockPedidos ? apartadoSoloConStock : false,
-        politica_cobro: politicaCobro,
-        maneja_lotes: manejaLotes,
-      } as any).eq('id', empresa!.id);
+
+      const { data, error } = await supabase
+        .from('empresas')
+        .update({
+          nombre: form.nombre, razon_social: form.razon_social, rfc: form.rfc,
+          regimen_fiscal: form.regimen_fiscal, direccion: form.direccion, colonia: form.colonia,
+          ciudad: form.ciudad, estado: form.estado, cp: form.cp, telefono: form.telefono,
+          lada: (form.lada || '52').replace(/\D/g, '') || '52',
+          email: form.email, notas_ticket: form.notas_ticket, logo_url,
+          ticket_campos: campos, moneda, clientes_visibilidad: clientesVisibilidad, zona_horaria: zonaHoraria,
+          ticket_ancho: ticketAncho,
+          requiere_jornada_ruta: requiereJornadaRuta,
+          requiere_jornada_desde: requiereJornadaRuta ? (requiereJornadaDesde || null) : null,
+          jornada_permite_sin_vehiculo: permiteSinVehiculo,
+          apartar_stock_pedidos: apartarStockPedidos,
+          apartado_almacenes_ids: apartarStockPedidos ? apartadoAlmacenesIds : [],
+          apartado_solo_con_stock: apartarStockPedidos ? apartadoSoloConStock : false,
+          politica_cobro: politicaCobro,
+          maneja_lotes: manejaLotes,
+        } as any)
+        .eq('id', empresa!.id)
+        .select('*')
+        .single();
+
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (savedConfig) => {
       toast.success('Configuración guardada');
-      qc.invalidateQueries({ queryKey: ['empresa-config'] });
-      qc.invalidateQueries({ queryKey: ['empresa'] });
-      qc.invalidateQueries({ queryKey: ['empresa-jornada'] });
+
+      // Mantener sincronizadas las tres fuentes que consumen el logo:
+      // React Query, AuthContext y la vista local de Configuración.
+      qc.setQueryData(['empresa-config', savedConfig.id], savedConfig);
+      syncEmpresa(savedConfig as any);
+      setLogoPreview((savedConfig as any).logo_url ?? null);
       setLogoFile(null);
+
+      qc.invalidateQueries({ queryKey: ['empresa-jornada'] });
     },
     onError: (e: any) => {
       const msg = e.message?.includes('empresas_email_unique')
