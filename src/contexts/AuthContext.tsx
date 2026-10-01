@@ -15,6 +15,8 @@ interface AuthContextType {
   realEmpresa: Empresa | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  /** Synchronize an empresa updated elsewhere without forcing a new session. */
+  syncEmpresa: (empresa: Empresa) => void;
   /** Super-admin only: override the active empresa to view another company's data */
   overrideEmpresaId: string | null;
   setOverrideEmpresaId: (id: string | null) => void;
@@ -25,6 +27,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null, profile: null, empresa: null, realEmpresa: null, loading: true, signOut: async () => {},
+  syncEmpresa: () => {},
   overrideEmpresaId: null, setOverrideEmpresaId: () => {},
   overrideVendedorId: null, setOverrideVendedorId: () => {},
 });
@@ -253,6 +256,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setDataUsageIdentity(empresa?.id, user?.id);
   }, [empresa?.id, user?.id]);
 
+  const syncEmpresa = useCallback((updatedEmpresa: Empresa) => {
+    setEmpresa((current) => {
+      if (!current || current.id !== updatedEmpresa.id) return current;
+      const merged = { ...current, ...updatedEmpresa };
+      setGlobalTimezone(merged.zona_horaria);
+      return merged;
+    });
+
+    setRealEmpresa((current) => {
+      if (!current || current.id !== updatedEmpresa.id) return current;
+      return { ...current, ...updatedEmpresa };
+    });
+  }, []);
+
   const signOut = async () => {
     // Al cerrar sesión no debe quedar en el dispositivo el snapshot de
     // permisos del usuario anterior: otro usuario en el mismo teléfono nunca
@@ -265,7 +282,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, empresa, realEmpresa, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, overrideVendedorId, setOverrideVendedorId }}>
+    <AuthContext.Provider value={{ user, profile, empresa, realEmpresa, loading, signOut, syncEmpresa, overrideEmpresaId, setOverrideEmpresaId, overrideVendedorId, setOverrideVendedorId }}>
       {children}
     </AuthContext.Provider>
   );
