@@ -564,6 +564,10 @@ export default function ConfiguracionPage() {
       setLogoPreview((savedConfig as any).logo_url ?? null);
       setLogoFile(null);
 
+      // Conservar las invalidaciones existentes para consumidores que no usan
+      // directamente AuthContext, además de la sincronización inmediata.
+      qc.invalidateQueries({ queryKey: ['empresa-config'] });
+      qc.invalidateQueries({ queryKey: ['empresa'] });
       qc.invalidateQueries({ queryKey: ['empresa-jornada'] });
     },
     onError: (e: any) => {
