@@ -775,6 +775,36 @@ export function useVentaForm() {
         ? { paquetes: Number(val) / factor } : {}),
     }; return next; });
     setDirty(true);
+    if (field === 'cantidad') relotearPorCantidad(idx, Number(val) || 0);
+  };
+
+  // Pedido de escritorio: al cambiar la cantidad se vuelve a repartir FEFO
+  // entre lotes (igual que en móvil), con debounce para no consultar por tecla.
+  const reloteoTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  const relotearPorCantidad = (idx: number, cant: number) => {
+    const line = lineas[idx] as any;
+    const productoId: string | undefined = line?.producto_id;
+    if (!productoId || cant <= 0 || !manejaLotes || form.tipo === 'venta_directa') return;
+    const prod = productosList?.find((p: any) => p.id === productoId) as any;
+    if (!prod?.maneja_lote || !form.almacen_id || !empresa?.id) return;
+    const almacenId = form.almacen_id;
+    const empresaId = empresa.id;
+    const ventaId = (form as any).id ?? null;
+    clearTimeout(reloteoTimers.current[idx]);
+    reloteoTimers.current[idx] = setTimeout(async () => {
+      const lotes = await getLotesDisponibles({ empresaId, almacenId, productoId, excluirVentaId: ventaId });
+      const reparto = repartirFefo(lotes, cant);
+      if (reparto.length === 0) return;
+      const loteado = reparto.reduce((s, r) => s + r.cantidad, 0);
+      if (loteado < cant - 0.0001) toast.warning(`Solo hay ${loteado.toLocaleString('es-MX')} pz disponibles entre todos los lotes.`);
+      setLineas(prev => {
+        const arr = [...prev];
+        const cur = arr[idx] as any;
+        if (!cur || cur.producto_id !== productoId || Math.abs((Number(cur.cantidad) || 0) - cant) > 0.0001) return prev;
+        arr[idx] = { ...cur, lote_id: reparto[0].lote_id, lote_codigo: lotesLabel(reparto), lotes: reparto } as any;
+        return arr;
+      });
+    }, 400);
   };
   const removeLine = async (idx: number) => { if (readOnly) return; const line = lineas[idx]; if (line.id) await deleteLinea.mutateAsync(line.id); const newLineas = lineas.filter((_, i) => i !== idx); setLineas(newLineas.length === 0 ? [emptyLine()] : newLineas); setDirty(true); };
 
