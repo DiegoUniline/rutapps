@@ -1,4 +1,4 @@
-import { pagadoRealVenta } from '@/lib/ventaCerrada';
+import { pagadoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HelpButton from '@/components/HelpButton';
@@ -58,7 +58,7 @@ function useCuentasCobrar() {
       try {
         const { data, error } = await supabase
           .from('ventas')
-          .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, cliente_id, vendedor_id, clientes(id, nombre, codigo), vendedores:profiles!vendedor_id(nombre), cobro_aplicaciones(monto_aplicado, cobros!inner(status))')
+          .select('id, folio, fecha, total, total_efectivo, cerrado_at, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, cliente_id, vendedor_id, clientes(id, nombre, codigo), vendedores:profiles!vendedor_id(nombre), cobro_aplicaciones(monto_aplicado, cobros!inner(status))')
           .eq('empresa_id', empresa!.id)
           .gt('saldo_pendiente', 0)
           .neq('status', 'cancelado')
@@ -198,7 +198,7 @@ export default function CuentasCobrarPage() {
   }, [cuentas, search, filters, desde, hasta]);
 
   const totalPendiente = filtered.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
-  const totalVentas = filtered.reduce((s, v) => s + (v.total ?? 0), 0);
+  const totalVentas = filtered.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
 
   const today = new Date();
   const aging = { corriente: 0, d30: 0, d60: 0, d90: 0, masD90: 0 };
@@ -323,7 +323,7 @@ export default function CuentasCobrarPage() {
                       {esSaldo ? (v.concepto || 'Saldo anterior') : v.condicion_pago}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right text-[12px]">{fmt(v.total ?? 0)}</TableCell>
+                  <TableCell className="text-right text-[12px]">{fmt(totalEfectivoVenta(v as any))}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">{fmt(pagado)}</TableCell>
                   <TableCell className="text-right font-bold text-destructive">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
                   <TableCell>
@@ -356,7 +356,7 @@ export default function CuentasCobrarPage() {
             )}
           </TableBody>
           {!!filtered.length && (() => {
-            const sumTotal = filtered.reduce((s, v) => s + (v.total ?? 0), 0);
+            const sumTotal = filtered.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
             const sumPagado = filtered.reduce((s, v) => s + pagadoRealVenta(v), 0);
             const sumPend = filtered.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
             return (
