@@ -253,17 +253,32 @@ export function useDashboardTopProductos(range: DateRange) {
     queryKey: ['dashboard-top-productos-all', empresa?.id, fmt(range.from), fmt(range.to)],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const data = await fetchAllPages((from, to) =>
+      // 1) Ventas del periodo (rápido, índice empresa+fecha).
+      const ventasPeriodo = await fetchAllPages<{ id: string }>((from, to) =>
         supabase
-          .from('venta_lineas')
-          .select('producto_id, cantidad, total, venta_id, ventas!inner(fecha, status, empresa_id)')
+          .from('ventas')
+          .select('id')
           .eq('empresa_id', empresa!.id)
-          .eq('ventas.empresa_id', empresa!.id)
-          .gte('ventas.fecha', fmt(range.from))
-          .lte('ventas.fecha', fmt(range.to))
-          .neq('ventas.status', 'cancelado')
+          .gte('fecha', fmt(range.from))
+          .lte('fecha', fmt(range.to))
+          .neq('status', 'cancelado')
           .range(from, to)
       );
+      // 2) Líneas por grupos de ventas: evita el join pesado que excedía el timeout.
+      const ventaIds = ventasPeriodo.map((v) => v.id);
+      const data: { producto_id: string | null; cantidad: number; total: number | null }[] = [];
+      for (let i = 0; i < ventaIds.length; i += 150) {
+        const chunk = ventaIds.slice(i, i + 150);
+        const rows = await fetchAllPages<{ producto_id: string | null; cantidad: number; total: number | null }>((from, to) =>
+          supabase
+            .from('venta_lineas')
+            .select('producto_id, cantidad, total')
+            .eq('empresa_id', empresa!.id)
+            .in('venta_id', chunk)
+            .range(from, to)
+        );
+        data.push(...rows);
+      }
 
       const map = new Map<string, { qty: number; total: number }>();
       data.forEach((l: any) => {
