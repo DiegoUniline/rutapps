@@ -257,6 +257,7 @@ export function useDashboardTopProductos(range: DateRange) {
         supabase
           .from('venta_lineas')
           .select('producto_id, cantidad, total, venta_id, ventas!inner(fecha, status, empresa_id)')
+          .eq('empresa_id', empresa!.id)
           .eq('ventas.empresa_id', empresa!.id)
           .gte('ventas.fecha', fmt(range.from))
           .lte('ventas.fecha', fmt(range.to))
@@ -325,6 +326,7 @@ export function useDashboardEvolucionMensual(months: number = 12) {
         supabase
           .from('venta_lineas')
           .select('producto_id, cantidad, total, ventas!inner(fecha, status, empresa_id, vendedor_id, cliente_id)')
+          .eq('empresa_id', empresa!.id)
           .eq('ventas.empresa_id', empresa!.id)
           .gte('ventas.fecha', fmt(from))
           .lte('ventas.fecha', fmt(to))
