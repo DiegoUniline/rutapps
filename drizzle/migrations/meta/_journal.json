@@ -15,6 +15,13 @@
       "when": 1791210050405,
       "tag": "0001_saldo_respeta_pedido_cerrado",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791210078644,
+      "tag": "0002_recalc_saldo_pedidos_cerrados",
+      "breakpoints": true
     }
   ]
 }
