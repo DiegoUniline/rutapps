@@ -43,7 +43,7 @@ export function useDashboardEquipo(range: DateRange, metaMes: number) {
           .gte('fecha', fromIso).lte('fecha', toIso).range(from, to)),
         fetchAllPages((from, to) => sb.from('venta_lineas')
           .select('venta_id, cantidad, total, productos(costo), ventas!inner(vendedor_id, empresa_id, fecha, status)')
-          .eq('ventas.empresa_id', eId).gte('ventas.fecha', fromIso).lte('ventas.fecha', toIso)
+          .eq('empresa_id', eId).eq('ventas.empresa_id', eId).gte('ventas.fecha', fromIso).lte('ventas.fecha', toIso)
           .neq('ventas.status', 'cancelado').range(from, to)),
         fetchAllPages((from, to) => sb.from('cobros')
           .select('monto, fecha, user_id')
