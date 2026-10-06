@@ -11117,6 +11117,10 @@ export type Database = {
         Args: { p_empresa_id: string }
         Returns: string
       }
+      ensure_empresa_admin_role: {
+        Args: { p_empresa_id: string }
+        Returns: string
+      }
       enviar_solicitud_traspaso: {
         Args: { p_solicitud_id: string }
         Returns: undefined

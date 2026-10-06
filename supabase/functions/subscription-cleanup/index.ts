@@ -97,7 +97,8 @@ Deno.serve(async (req) => {
         "auditorias", "promociones", "productos", "clientes",
         "tarifas", "clasificaciones", "marcas", "proveedores", "listas",
         "unidades", "zonas", "vendedores", "cobradores", "almacenes",
-        "role_permisos", "roles",
+        // roles/role_permisos NO se borran: si la empresa reactiva, el dueño
+        // quedaría sin rol de Administrador y no podría operar.
       ];
 
       // For child tables without empresa_id, we delete via parent relationships
