@@ -22,6 +22,13 @@
       "when": 1791210078644,
       "tag": "0002_recalc_saldo_pedidos_cerrados",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791248169609,
+      "tag": "0003_ensure_empresa_admin_role",
+      "breakpoints": true
     }
   ]
 }
