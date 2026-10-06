@@ -57,13 +57,13 @@ Deno.serve(async (req) => {
       console.log(`Subscription expired for empresa ${sub.empresa_id}`);
     }
 
-    // 3. Delete data for subscriptions past_due for 15+ days
-    const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString();
+    // 3. Delete data for subscriptions past_due for 90+ days
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
     const { data: toDelete } = await supabase
       .from("subscriptions")
       .select("id, empresa_id, updated_at")
       .eq("status", "past_due")
-      .lt("updated_at", fifteenDaysAgo);
+      .lt("updated_at", ninetyDaysAgo);
 
     for (const sub of toDelete || []) {
       const eid = sub.empresa_id;
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      console.log(`Deleting all data for empresa ${eid} (15+ days past due)`);
+      console.log(`Deleting all data for empresa ${eid} (90+ days past due)`);
 
       // Delete in dependency order
       // Líneas primero, luego padres
