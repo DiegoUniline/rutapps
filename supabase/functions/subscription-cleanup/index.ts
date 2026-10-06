@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       .from("subscriptions")
       .select("id, empresa_id, updated_at")
       .eq("status", "past_due")
-      .lt("updated_at", fifteenDaysAgo);
+      .lt("updated_at", ninetyDaysAgo);
 
     for (const sub of toDelete || []) {
       const eid = sub.empresa_id;
