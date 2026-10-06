@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      console.log(`Deleting all data for empresa ${eid} (15+ days past due)`);
+      console.log(`Deleting all data for empresa ${eid} (90+ days past due)`);
 
       // Delete in dependency order
       // Líneas primero, luego padres
