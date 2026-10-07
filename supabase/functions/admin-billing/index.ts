@@ -360,7 +360,6 @@ Deno.serve(async (req) => {
       if (!params.customerId) return;
       const stripeInvoices = await stripe.invoices.list({
         customer: params.customerId,
-        status: "all",
         limit: 100,
         expand: ["data.lines.data"],
       });
