@@ -192,7 +192,7 @@ async function logoToRasterBytes(url: string, maxWidth: number): Promise<number[
   }
 }
 
-export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string; showTax?: boolean }): Promise<Uint8Array> {
+export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string; showTax?: boolean; logoMaxWidth?: number }): Promise<Uint8Array> {
   const is58 = (opts?.ticketAncho ?? '80') === '58';
   const W = is58 ? COLS_58 : COLS_80;
   const maxPixelWidth = is58 ? 384 : 576;
@@ -238,7 +238,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   // ── LOGO (raster image) ──
   if (showLogo && data.empresa.logo_url) {
     add(ALIGN_CENTER);
-    const logoBytes = await logoToRasterBytes(data.empresa.logo_url, maxPixelWidth);
+    const logoBytes = await logoToRasterBytes(data.empresa.logo_url, Math.min(maxPixelWidth, opts?.logoMaxWidth ?? maxPixelWidth));
     if (logoBytes.length > 0) {
       add(logoBytes);
       add(LF);

@@ -21,7 +21,7 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   if (agent?.printer) {
     try {
       toast.loading(`Imprimiendo en ${agent.printer}…`, { id: 'agent-print' });
-      const escposBytes = await buildEscPosBytes(td, { ticketAncho: agent.ancho });
+      const escposBytes = await buildEscPosBytes(td, { ticketAncho: agent.ancho, logoMaxWidth: agent.ancho === '58' ? 160 : 192 });
       await printAgentBytes(escposBytes);
       toast.success(`Impreso en ${agent.printer}`, { id: 'agent-print' });
       return;
