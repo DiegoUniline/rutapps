@@ -849,13 +849,17 @@ export default function DemandaPage() {
       const { marcarEntregaHechaYSincronizarPedido } = await import('@/lib/entregaStatus');
       let ok = 0;
       const errores: string[] = [];
-      for (const e of ents ?? []) {
-        try {
-          await marcarEntregaHechaYSincronizarPedido(e.id, e.pedido_id);
-          ok++;
-        } catch (err: any) {
-          errores.push(`${e.folio ?? e.id.slice(0, 8)}: ${err?.message ?? 'error'}`);
-        }
+      // En paralelo por bloques de 8 para que no tarde (sin saturar la base).
+      const lista = ents ?? [];
+      for (let i = 0; i < lista.length; i += 8) {
+        await Promise.all(lista.slice(i, i + 8).map(async (e) => {
+          try {
+            await marcarEntregaHechaYSincronizarPedido(e.id, e.pedido_id);
+            ok++;
+          } catch (err: any) {
+            errores.push(`${e.folio ?? e.id.slice(0, 8)}: ${err?.message ?? 'error'}`);
+          }
+        }));
       }
       if (ok === 0 && errores.length) throw new Error(errores.slice(0, 3).join(' · '));
       return { ok, errores };
