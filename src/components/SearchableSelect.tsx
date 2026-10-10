@@ -17,6 +17,8 @@ interface SearchableSelectProps {
   placeholder?: string;
   autoOpen?: boolean;
   disabled?: boolean;
+  /** Show complete labels within the available width instead of truncating. */
+  wrapLabels?: boolean;
   /** When provided, shows a "Crear nuevo" option. Should return the new item's id. */
   onCreateNew?: (name: string) => Promise<string | undefined>;
 }
@@ -29,6 +31,7 @@ export default function SearchableSelect({
   placeholder = 'Buscar...',
   autoOpen = false,
   disabled = false,
+  wrapLabels = false,
   onCreateNew,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(autoOpen && !disabled);
@@ -172,7 +175,7 @@ export default function SearchableSelect({
           !value && "text-muted-foreground"
         )}
       >
-        <span className="truncate flex-1">{selectedLabel || placeholder || '—'}</span>
+        <span className={cn('flex-1 min-w-0', wrapLabels ? 'whitespace-normal break-words leading-5 [overflow-wrap:anywhere]' : 'truncate')}>{selectedLabel || placeholder || '—'}</span>
         <div className="flex items-center gap-0.5 shrink-0">
           {value && !disabled && (
             <button
@@ -224,7 +227,8 @@ export default function SearchableSelect({
                     onMouseUp={() => select(o.value)}
                     onMouseEnter={() => setHighlightIdx(i)}
                     className={cn(
-                      'px-3 py-2 text-[13px] cursor-pointer transition-colors truncate',
+                      'px-3 py-2 text-[13px] cursor-pointer transition-colors',
+                      wrapLabels ? 'whitespace-normal break-words leading-5 [overflow-wrap:anywhere]' : 'truncate',
                       i === highlightIdx ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-accent/50',
                       o.value === value && 'font-semibold'
                     )}

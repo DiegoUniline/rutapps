@@ -130,16 +130,17 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
               return (
                 <tr key={idx} className="border-b border-table-border" data-row={idx}>
                   <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
-                  <td className="py-1.5 px-2">
+                  <td className="py-1.5 px-2 w-[34%] min-w-[240px] max-w-0">
                     {isEditable ? (
                       <SearchableSelect
+                        wrapLabels
                         options={productoOptions(idx)}
                         value={line.producto_id ?? ''}
                         onChange={val => seleccionarProducto(idx, val)}
                         placeholder="Buscar producto..."
                         onCreateNew={async (name) => { triggerQuickCreate(idx, name); return undefined; }}
                       />
-                    ) : <span className="text-xs truncate block">{line.productos ? `[${line.productos.codigo}] ${getNombreCompra(line.productos)}` : '—'}</span>}
+                    ) : <span className="text-xs whitespace-normal break-words leading-5 [overflow-wrap:anywhere] block">{line.productos ? `[${line.productos.codigo}] ${getNombreCompra(line.productos)}` : '—'}</span>}
                   </td>
                   <td className="py-1.5 px-2 text-center text-xs text-muted-foreground uppercase">{line._unidad_compra || 'pz'}</td>
                   <td className="py-1.5 px-2">{isEditable ? <input type="number" data-compra-cantidad={idx} className="input-odoo w-24 text-right text-sm" value={line.cantidad ?? 1} onChange={e => updateLinea(idx, 'cantidad', Number(e.target.value))} min={0} /> : <span className="text-sm text-right block tabular-nums">{(line.cantidad ?? 1).toLocaleString('es-MX')}</span>}</td>
@@ -226,6 +227,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
               <div>
                 {isEditable ? (
                   <SearchableSelect
+                    wrapLabels
                     options={productoOptions(idx)}
                     value={line.producto_id ?? ''}
                     onChange={val => seleccionarProducto(idx, val)}
