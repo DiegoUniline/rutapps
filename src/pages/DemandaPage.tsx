@@ -835,6 +835,43 @@ export default function DemandaPage() {
     },
     onError: (err: any) => toast.error(err.message),
   });
+  // ── Marcar entregas en ruta como entregadas (masivo) ──
+  const entregarMasivoMut = useMutation({
+    mutationFn: async () => {
+      const ids = selectedPedidos.filter(p => p.enRuta && !p.fullyDelivered).map(p => p.id);
+      if (ids.length === 0) throw new Error('No hay entregas en ruta seleccionadas');
+      const { data: ents, error } = await supabase
+        .from('entregas')
+        .select('id, pedido_id, folio')
+        .in('pedido_id', ids)
+        .in('status', ['cargado', 'en_ruta'] as any);
+      if (error) throw error;
+      const { marcarEntregaHechaYSincronizarPedido } = await import('@/lib/entregaStatus');
+      let ok = 0;
+      const errores: string[] = [];
+      for (const e of ents ?? []) {
+        try {
+          await marcarEntregaHechaYSincronizarPedido(e.id, e.pedido_id);
+          ok++;
+        } catch (err: any) {
+          errores.push(`${e.folio ?? e.id.slice(0, 8)}: ${err?.message ?? 'error'}`);
+        }
+      }
+      if (ok === 0 && errores.length) throw new Error(errores.slice(0, 3).join(' · '));
+      return { ok, errores };
+    },
+    onSuccess: ({ ok, errores }) => {
+      toast.success(`${ok} entrega(s) marcadas como entregadas`);
+      if (errores.length) toast.error(`Errores: ${errores.slice(0, 3).join(' · ')}`);
+      setSelectedIds(new Set());
+      void invalidatePedidoOperacion(qc, selectedPedidos.map(p => p.id));
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
+      qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
 
 
   // Totals
@@ -887,6 +924,21 @@ export default function DemandaPage() {
               >
                 <UserPlus className="h-3.5 w-3.5" />
                 {selectionState.enRutaSel ? 'Cambiar repartidor' : 'Asignar repartidor'}
+              </Button>
+            )}
+            {selectionState.enRutaSel && (
+              <Button
+                onClick={() => {
+                  if (confirm('¿Marcar como entregadas las entregas en ruta de los pedidos seleccionados?')) {
+                    entregarMasivoMut.mutate();
+                  }
+                }}
+                size="sm"
+                disabled={entregarMasivoMut.isPending}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {entregarMasivoMut.isPending ? 'Marcando...' : 'Marcar entregado'}
               </Button>
             )}
             {selectionState.conEntregaActiva && (
