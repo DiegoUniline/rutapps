@@ -120,6 +120,8 @@ export default function PuntoVentaPage() {
   } = useCajaTurno();
   const [showAbrirTurnoPrompt, setShowAbrirTurnoPrompt] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [priceDraft, setPriceDraft] = useState('');
 
   const [cart, setCart] = useState<PosItem[]>([]);
   const [granelFor, setGranelFor] = useState<any | null>(null);
@@ -1648,7 +1650,47 @@ export default function PuntoVentaPage() {
                       </button>
                     </div>
                     <span className="text-[10px] text-muted-foreground">×</span>
-                    <span className="text-[12px] font-medium text-foreground tabular-nums">{fmtM(displayUnitPrice)}</span>
+                    {editingPriceId === item.producto_id ? (
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        autoFocus
+                        min="0"
+                        step="0.01"
+                        className="w-20 text-right text-[12px] font-bold bg-background border border-primary rounded-md px-1 py-0.5 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
+                        value={priceDraft}
+                        onChange={e => setPriceDraft(e.target.value)}
+                        onFocus={e => e.target.select()}
+                        onBlur={() => {
+                          const v = parseFloat(priceDraft);
+                          if (!isNaN(v) && v >= 0) updatePrice(item.producto_id, v);
+                          setEditingPriceId(null);
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                          if (e.key === 'Escape') setEditingPriceId(null);
+                        }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        title="Clic para editar el precio"
+                        onClick={() => { setEditingPriceId(item.producto_id); setPriceDraft(displayUnitPrice.toFixed(2)); }}
+                        className={`text-[12px] font-medium tabular-nums rounded px-1 -mx-1 transition-colors hover:bg-primary/10 hover:text-primary ${item.precio_manual ? 'text-amber-600 dark:text-amber-400 font-bold underline decoration-dotted underline-offset-2' : 'text-foreground'}`}
+                      >
+                        {fmtM(displayUnitPrice)}
+                      </button>
+                    )}
+                    {item.precio_manual && editingPriceId !== item.producto_id && (
+                      <button
+                        type="button"
+                        title="Restaurar precio de lista"
+                        onClick={() => resetPrice(item.producto_id)}
+                        className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </button>
+                    )}
                     <span className="flex-1 text-right text-[13px] font-bold text-foreground tabular-nums">{fmtM(lineTotal)}</span>
                   </div>
                   {itemPromos.length > 0 && (
