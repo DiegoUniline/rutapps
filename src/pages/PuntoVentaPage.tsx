@@ -429,6 +429,7 @@ export default function PuntoVentaPage() {
   useEffect(() => {
     if (cart.length === 0 || !productos) return;
     setCart(prev => prev.map(item => {
+      if (item.precio_manual) return item; // respeta precios capturados a mano
       const prod = productos.find(p => p.id === item.producto_id);
       if (!prod) return item;
       const pricing = getProductPricing(prod);
