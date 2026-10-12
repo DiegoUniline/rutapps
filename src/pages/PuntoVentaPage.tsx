@@ -68,6 +68,8 @@ interface PosItem {
   unidad: string;
   base_precio: BasePrecioMode;
   redondeo: string;
+  /** true cuando el cajero capturó el precio a mano (no se recalcula desde la lista) */
+  precio_manual?: boolean;
 }
 
 type PayMethod = 'efectivo' | 'transferencia' | 'tarjeta';
@@ -722,8 +724,26 @@ export default function PuntoVentaPage() {
         precio_unitario: r2(rawNetPrice),
         precio_unitario_sin_redondeo: rawNetPrice,
         precio_display_sin_redondeo: grossPrice,
+        redondeo: 'ninguno',
+        precio_manual: true,
       };
     }));
+  };
+
+  /** Restaura el precio de la lista/tarifa vigente para esa línea. */
+  const resetPrice = (id: string) => {
+    const prod = productos?.find(p => p.id === id);
+    if (!prod) return;
+    const pricing = getProductPricing(prod);
+    setCart(prev => prev.map(c => c.producto_id === id ? {
+      ...c,
+      precio_unitario: pricing.unitPrice,
+      precio_unitario_sin_redondeo: pricing.rawUnitPrice,
+      precio_display_sin_redondeo: pricing.rawDisplayPrice,
+      base_precio: pricing.basePrecio as BasePrecioMode,
+      redondeo: pricing.appliedRule?.redondeo ?? 'ninguno',
+      precio_manual: false,
+    } : c));
   };
 
   const removeItem = (id: string) => setCart(prev => prev.filter(c => c.producto_id !== id));
