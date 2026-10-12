@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
   Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag, Warehouse, Lock as LockIcon, LogOut,
-  LayoutGrid, List as ListIcon, MoreHorizontal, ArrowDown, ArrowUp, ListOrdered, LockOpen,
+  LayoutGrid, List as ListIcon, MoreHorizontal, ArrowDown, ArrowUp, ListOrdered, LockOpen, RotateCcw,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
