@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
   Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag, Warehouse, Lock as LockIcon, LogOut,
-  LayoutGrid, List as ListIcon, MoreHorizontal, ArrowDown, ArrowUp, ListOrdered, LockOpen,
+  LayoutGrid, List as ListIcon, MoreHorizontal, ArrowDown, ArrowUp, ListOrdered, LockOpen, RotateCcw,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,6 +68,8 @@ interface PosItem {
   unidad: string;
   base_precio: BasePrecioMode;
   redondeo: string;
+  /** true cuando el cajero capturó el precio a mano (no se recalcula desde la lista) */
+  precio_manual?: boolean;
 }
 
 type PayMethod = 'efectivo' | 'transferencia' | 'tarjeta';
@@ -118,6 +120,8 @@ export default function PuntoVentaPage() {
   } = useCajaTurno();
   const [showAbrirTurnoPrompt, setShowAbrirTurnoPrompt] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [priceDraft, setPriceDraft] = useState('');
 
   const [cart, setCart] = useState<PosItem[]>([]);
   const [granelFor, setGranelFor] = useState<any | null>(null);
@@ -427,6 +431,7 @@ export default function PuntoVentaPage() {
   useEffect(() => {
     if (cart.length === 0 || !productos) return;
     setCart(prev => prev.map(item => {
+      if (item.precio_manual) return item; // respeta precios capturados a mano
       const prod = productos.find(p => p.id === item.producto_id);
       if (!prod) return item;
       const pricing = getProductPricing(prod);
@@ -722,8 +727,26 @@ export default function PuntoVentaPage() {
         precio_unitario: r2(rawNetPrice),
         precio_unitario_sin_redondeo: rawNetPrice,
         precio_display_sin_redondeo: grossPrice,
+        redondeo: 'ninguno',
+        precio_manual: true,
       };
     }));
+  };
+
+  /** Restaura el precio de la lista/tarifa vigente para esa línea. */
+  const resetPrice = (id: string) => {
+    const prod = productos?.find(p => p.id === id);
+    if (!prod) return;
+    const pricing = getProductPricing(prod);
+    setCart(prev => prev.map(c => c.producto_id === id ? {
+      ...c,
+      precio_unitario: pricing.unitPrice,
+      precio_unitario_sin_redondeo: pricing.rawUnitPrice,
+      precio_display_sin_redondeo: pricing.rawDisplayPrice,
+      base_precio: pricing.basePrecio as BasePrecioMode,
+      redondeo: pricing.appliedRule?.redondeo ?? 'ninguno',
+      precio_manual: false,
+    } : c));
   };
 
   const removeItem = (id: string) => setCart(prev => prev.filter(c => c.producto_id !== id));
@@ -1627,7 +1650,47 @@ export default function PuntoVentaPage() {
                       </button>
                     </div>
                     <span className="text-[10px] text-muted-foreground">×</span>
-                    <span className="text-[12px] font-medium text-foreground tabular-nums">{fmtM(displayUnitPrice)}</span>
+                    {editingPriceId === item.producto_id ? (
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        autoFocus
+                        min="0"
+                        step="0.01"
+                        className="w-20 text-right text-[12px] font-bold bg-background border border-primary rounded-md px-1 py-0.5 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
+                        value={priceDraft}
+                        onChange={e => setPriceDraft(e.target.value)}
+                        onFocus={e => e.target.select()}
+                        onBlur={() => {
+                          const v = parseFloat(priceDraft);
+                          if (!isNaN(v) && v >= 0) updatePrice(item.producto_id, v);
+                          setEditingPriceId(null);
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                          if (e.key === 'Escape') setEditingPriceId(null);
+                        }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        title="Clic para editar el precio"
+                        onClick={() => { setEditingPriceId(item.producto_id); setPriceDraft(displayUnitPrice.toFixed(2)); }}
+                        className={`text-[12px] font-medium tabular-nums rounded px-1 -mx-1 transition-colors hover:bg-primary/10 hover:text-primary ${item.precio_manual ? 'text-amber-600 dark:text-amber-400 font-bold underline decoration-dotted underline-offset-2' : 'text-foreground'}`}
+                      >
+                        {fmtM(displayUnitPrice)}
+                      </button>
+                    )}
+                    {item.precio_manual && editingPriceId !== item.producto_id && (
+                      <button
+                        type="button"
+                        title="Restaurar precio de lista"
+                        onClick={() => resetPrice(item.producto_id)}
+                        className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </button>
+                    )}
                     <span className="flex-1 text-right text-[13px] font-bold text-foreground tabular-nums">{fmtM(lineTotal)}</span>
                   </div>
                   {itemPromos.length > 0 && (
