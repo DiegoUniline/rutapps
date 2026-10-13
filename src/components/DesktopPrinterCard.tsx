@@ -124,6 +124,16 @@ export default function DesktopPrinterCard() {
               {[0, 1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 0 ? 'Ninguno' : `${n} col (~${(n * 1.5).toFixed(1)} mm)`}</option>)}
             </select>
           </label>
+          <div className="rounded-md border border-border bg-background p-2">
+            <p className="text-[10px] text-muted-foreground mb-1">Vista previa del papel ({ancho} mm)</p>
+            <div className="mx-auto bg-card border border-input font-mono text-[9px] leading-tight text-foreground overflow-hidden" style={{ width: ancho === '58' ? 200 : 276 }}>
+              <div style={{ paddingLeft: `${(margen / (ancho === '58' ? 32 : 48)) * 100}%` }} className="py-1">
+                {['RUTAPP', 'Cliente: Publico en general', '-'.repeat((ancho === '58' ? 32 : 48) - margen), Array.from({ length: (ancho === '58' ? 32 : 48) - margen }, (_, i) => i % 10).join(''), 'TOTAL           $1,234.00'].map((l, i) => (
+                  <div key={i} className="whitespace-pre">{l}</div>
+                ))}
+              </div>
+            </div>
+          </div>
           <div className="flex gap-2">
             <button onClick={test} disabled={!printer || !!busy} className="flex-1 py-2 rounded-md border border-input text-[13px] font-semibold hover:bg-secondary disabled:opacity-50">
               {busy === 'test' ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Imprimir prueba'}
