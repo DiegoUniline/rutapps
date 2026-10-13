@@ -9,6 +9,7 @@ import { fmtDate, fmtDateTime } from '@/lib/utils';
 import { CONDICION_LABELS } from './ventasConstants';
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
+import { fetchVentaDesktopTicketSaldo } from '@/lib/ventaDesktopTicketSaldo';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo } from '@/hooks/usePromociones';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
@@ -271,6 +272,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   const handleTicket = async () => {
     setPrintingTicket(true);
     try {
+      const saldoCuenta = await fetchVentaDesktopTicketSaldo(eId, venta.cliente_id, venta.id, Number(venta.saldo_pendiente ?? 0));
       // Fetch devoluciones for this venta
       const { data: heads } = await supabase.from('devoluciones').select('id').eq('venta_id', venta.id);
       const devIds = (heads ?? []).map((h: any) => h.id);
@@ -312,6 +314,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
           status: venta.status,
         },
         clienteNombre,
+        ...saldoCuenta,
         clienteRfc: (venta.clientes as any)?.rfc ?? null,
         clienteTelefono: (venta.clientes as any)?.telefono ?? null,
         clienteDireccion: [(venta.clientes as any)?.direccion, (venta.clientes as any)?.colonia].filter(Boolean).join(', ') || null,
