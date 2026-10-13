@@ -80,3 +80,13 @@ export async function printAgentBytes(bytes: Uint8Array) {
   }
   return call<{ printer: string }>('/print', { method: 'POST', body: JSON.stringify({ data: btoa(bin) }) }, 20_000);
 }
+
+const MARGEN_KEY = 'rutapp_agent_margen_izq';
+/** Margen izquierdo (en columnas) guardado en esta computadora, para impresoras que cortan la orilla. */
+export function getAgentMargen(): number {
+  const n = Number(typeof localStorage !== 'undefined' ? localStorage.getItem(MARGEN_KEY) : 0);
+  return Number.isFinite(n) ? Math.max(0, Math.min(6, Math.floor(n))) : 0;
+}
+export function setAgentMargen(n: number) {
+  localStorage.setItem(MARGEN_KEY, String(Math.max(0, Math.min(6, Math.floor(n)))));
+}
