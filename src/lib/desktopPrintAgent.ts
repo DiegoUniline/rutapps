@@ -90,3 +90,20 @@ export function getAgentMargen(): number {
 export function setAgentMargen(n: number) {
   localStorage.setItem(MARGEN_KEY, String(Math.max(0, Math.min(6, Math.floor(n)))));
 }
+
+/** Ticket de prueba generado aquí (respeta el margen izquierdo guardado). */
+export async function printAgentTestConMargen(printer: string, ancho: '58' | '80', margenCols: number) {
+  const base = ancho === '58' ? 32 : 48;
+  const cols = base - margenCols;
+  const dots = margenCols * 12;
+  const width = (ancho === '58' ? 384 : 576) - dots;
+  const line = '-'.repeat(cols) + '\n';
+  const num = Array.from({ length: cols }, (_, i) => String(i % 10)).join('');
+  const txt = (s: string) => Array.from(new TextEncoder().encode(s));
+  const b: number[] = [0x1B, 0x40];
+  if (dots > 0) b.push(0x1D, 0x4C, dots & 0xFF, dots >> 8, 0x1D, 0x57, width & 0xFF, width >> 8);
+  b.push(0x1B, 0x61, 0x01, ...txt('RUTAPP\nPrueba de impresion\n' + line), 0x1B, 0x61, 0x00);
+  b.push(...txt(`Impresora: ${printer.replace(/[^\x20-\x7E]/g, '')}\nAncho: ${ancho} mm (${cols} col)\nMargen izq: ${margenCols} col\n` + line + num + '\n' + line));
+  b.push(0x1B, 0x61, 0x01, ...txt('Si ves esto, todo funciona\n\n\n\n'), 0x1D, 0x56, 0x42, 0x00);
+  return printAgentBytes(new Uint8Array(b));
+}

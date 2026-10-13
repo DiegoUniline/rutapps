@@ -3,7 +3,7 @@ import { Printer, Download, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
-  AGENT_DOWNLOAD_WIN, AGENT_DOWNLOAD_MAC, isMac, getAgentStatus, getAgentPrinters, saveAgentConfig, printAgentTest, isDesktop, getAgentMargen, setAgentMargen,
+  AGENT_DOWNLOAD_WIN, AGENT_DOWNLOAD_MAC, isMac, getAgentStatus, getAgentPrinters, saveAgentConfig, printAgentTest, isDesktop, getAgentMargen, setAgentMargen, printAgentTestConMargen,
   type AgentStatus,
 } from '@/lib/desktopPrintAgent';
 
@@ -50,7 +50,9 @@ export default function DesktopPrinterCard() {
   const test = async () => {
     setBusy('test');
     try {
-      const r = await printAgentTest(printer, ancho);
+      const r = margen > 0 && printer === status?.printer
+        ? await printAgentTestConMargen(printer, ancho, margen)
+        : await printAgentTest(printer, ancho);
       toast.success(`Prueba enviada a ${r.printer}`);
     } catch (e) { toast.error((e as Error).message); }
     setBusy(null);
