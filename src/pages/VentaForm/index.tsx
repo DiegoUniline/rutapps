@@ -34,6 +34,7 @@ import { phoneWithLada } from '@/lib/phoneWithLada';
 import { fmtMoney } from '@/lib/currency';
 
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
+import { fetchVentaDesktopTicketSaldo } from '@/lib/ventaDesktopTicketSaldo';
 import { printCobroTicket } from '@/lib/cobroTicket';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
@@ -319,7 +320,16 @@ export default function VentaFormPage() {
     setShowPdfModal(true);
   };
 
-  const handlePrintTicket = () => {
+  const handlePrintTicket = async () => {
+    let saldoCuenta: { saldoAnterior: number; saldoNuevo: number } | undefined;
+    if (!isMobile) {
+      try {
+        saldoCuenta = await fetchVentaDesktopTicketSaldo(empresa?.id, form.cliente_id, form.id, saldoPendiente);
+      } catch {
+        toast.error('No se pudo consultar el saldo anterior. Intenta imprimir nuevamente.');
+        return;
+      }
+    }
     const clienteData = clientesList?.find(c => c.id === form.cliente_id);
     const vendedorNombreTicket = (form as any).vendedores?.nombre ?? profile?.nombre ?? '';
     const td = buildTicketDataFromVenta({
@@ -358,6 +368,7 @@ export default function VentaFormPage() {
       })),
       promociones: (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id, tipo: r.tipo, cantidad_gratis: r.cantidad_gratis })),
       saldoNuevo: saldoPendiente > 0 ? saldoPendiente : undefined,
+      ...saldoCuenta,
       pagos: (pagosData ?? []).map((p: any) => ({ metodo: (p.cobros as any)?.metodo_pago ?? 'efectivo', monto: Number(p.monto_aplicado ?? 0), fecha: fmtDate((p.cobros as any)?.fecha ?? ''), referencia: (p.cobros as any)?.referencia })),
       devoluciones: (devolucionesVenta ?? []).map((d: any) => ({
         nombre: d.producto?.nombre ?? 'Producto',
