@@ -3,7 +3,7 @@ import { Printer, Download, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
-  AGENT_DOWNLOAD_WIN, AGENT_DOWNLOAD_MAC, isMac, getAgentStatus, getAgentPrinters, saveAgentConfig, printAgentTest, isDesktop,
+  AGENT_DOWNLOAD_WIN, AGENT_DOWNLOAD_MAC, isMac, getAgentStatus, getAgentPrinters, saveAgentConfig, printAgentTest, isDesktop, getAgentMargen, setAgentMargen,
   type AgentStatus,
 } from '@/lib/desktopPrintAgent';
 
@@ -13,6 +13,7 @@ export default function DesktopPrinterCard() {
   const [printers, setPrinters] = useState<string[]>([]);
   const [printer, setPrinter] = useState('');
   const [ancho, setAncho] = useState<'58' | '80'>('80');
+  const [margen, setMargen] = useState(getAgentMargen());
   const [busy, setBusy] = useState<'save' | 'test' | null>(null);
 
   const load = async () => {
@@ -111,6 +112,16 @@ export default function DesktopPrinterCard() {
               </button>
             ))}
           </div>
+          <label className="flex items-center justify-between gap-2 text-[12px] text-foreground">
+            <span>Margen izquierdo (si se corta la orilla)</span>
+            <select
+              value={margen}
+              onChange={e => { const n = Number(e.target.value); setMargen(n); setAgentMargen(n); }}
+              className="input-odoo text-[13px] w-28"
+            >
+              {[0, 1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 0 ? 'Ninguno' : `${n} col (~${(n * 1.5).toFixed(1)} mm)`}</option>)}
+            </select>
+          </label>
           <div className="flex gap-2">
             <button onClick={test} disabled={!printer || !!busy} className="flex-1 py-2 rounded-md border border-input text-[13px] font-semibold hover:bg-secondary disabled:opacity-50">
               {busy === 'test' ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Imprimir prueba'}

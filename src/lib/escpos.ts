@@ -192,10 +192,12 @@ async function logoToRasterBytes(url: string, maxWidth: number): Promise<number[
   }
 }
 
-export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string; showTax?: boolean; logoMaxWidth?: number }): Promise<Uint8Array> {
+export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string; showTax?: boolean; logoMaxWidth?: number; margenIzqCols?: number }): Promise<Uint8Array> {
   const is58 = (opts?.ticketAncho ?? '80') === '58';
-  const W = is58 ? COLS_58 : COLS_80;
-  const maxPixelWidth = is58 ? 384 : 576;
+  const margenCols = Math.max(0, Math.min(6, Math.floor(opts?.margenIzqCols ?? 0)));
+  const margenDots = margenCols * 12; // Fuente A = 12 puntos por columna
+  const W = (is58 ? COLS_58 : COLS_80) - margenCols;
+  const maxPixelWidth = (is58 ? 384 : 576) - margenDots;
 
   const sym = getCurrencyConfig(data.empresa.moneda).symbol;
   const fmt = (n: number) => `${sym}${fmtNum(n)}`;
@@ -205,6 +207,11 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   const ln = (s: string) => { const encoded = enc.encode(s + '\n'); for (const b of encoded) parts.push(b); };
 
   add(INIT);
+  if (margenDots > 0) {
+    // GS L: margen izquierdo · GS W: ancho del área de impresión
+    add([GS, 0x4C, margenDots & 0xFF, (margenDots >> 8) & 0xFF]);
+    add([GS, 0x57, maxPixelWidth & 0xFF, (maxPixelWidth >> 8) & 0xFF]);
+  }
 
   const tc = data.empresa.ticket_campos ?? {};
   const showLogo = tc.logo !== false;

@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { buildTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { buildEscPosBytes } from '@/lib/escpos';
 import { isBluetoothAvailable, connectPrinter, sendBytes, getConnectedPrinterName } from '@/lib/bluetoothPrinter';
-import { getAgentStatus, printAgentBytes } from '@/lib/desktopPrintAgent';
+import { getAgentStatus, printAgentBytes, getAgentMargen } from '@/lib/desktopPrintAgent';
 
 
 interface PrintOptions {
@@ -21,7 +21,7 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   if (agent?.printer) {
     try {
       toast.loading(`Imprimiendo en ${agent.printer}…`, { id: 'agent-print' });
-      const escposBytes = await buildEscPosBytes(td, { ticketAncho: agent.ancho, logoMaxWidth: agent.ancho === '58' ? 160 : 192 });
+      const escposBytes = await buildEscPosBytes(td, { ticketAncho: agent.ancho, logoMaxWidth: agent.ancho === '58' ? 160 : 192, margenIzqCols: getAgentMargen() });
       await printAgentBytes(escposBytes);
       toast.success(`Impreso en ${agent.printer}`, { id: 'agent-print' });
       return;
