@@ -905,9 +905,10 @@ export function useVentaDetalle() {
     return copy;
   };
 
-  const handleDownloadPDF = async () => {
-    let td = getTicketData(); if (!td) return;
-    td = await logoToBase64(td);
+  // Genera la imagen del comprobante (ticket) que se reutiliza al Descargar y al Compartir.
+  const generarTicketPng = async (): Promise<{ dataUrl: string; blob: Blob; fileName: string } | null> => {
+    const tdBase = getTicketData(); if (!tdBase) return null;
+    const td = await logoToBase64(tdBase);
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.left = '0';
@@ -929,8 +930,17 @@ export function useVentaDetalle() {
       const width = Math.ceil(Math.max(ticketEl.scrollWidth, ticketEl.offsetWidth, ticketEl.getBoundingClientRect().width));
       const height = Math.ceil(Math.max(ticketEl.scrollHeight, ticketEl.offsetHeight, ticketEl.getBoundingClientRect().height));
       const dataUrl = await toPng(ticketEl, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff', width, height, style: { width: `${width}px`, height: `${height}px`, maxWidth: 'none', overflow: 'visible' } });
-      const a = document.createElement('a'); a.href = dataUrl; a.download = `${venta?.folio ?? 'ticket'}.png`; a.click(); toast.success('Ticket descargado');
-    } catch { toast.error('Error generando imagen'); } finally { document.body.removeChild(container); }
+      const blob = await (await fetch(dataUrl)).blob();
+      return { dataUrl, blob, fileName: `${venta?.folio ?? 'ticket'}.png` };
+    } finally { document.body.removeChild(container); }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      const png = await generarTicketPng();
+      if (!png) return;
+      const a = document.createElement('a'); a.href = png.dataUrl; a.download = png.fileName; a.click(); toast.success('Ticket descargado');
+    } catch { toast.error('Error generando imagen'); }
   };
 
   const handlePrintTicket = async () => {
@@ -941,6 +951,17 @@ export function useVentaDetalle() {
 
   const handleShareTicket = async () => {
     const td = getTicketData(); if (!td) return;
+    // Comparte el mismo comprobante (imagen del ticket) que genera el botón Imprimir.
+    try {
+      const png = await generarTicketPng();
+      if (png) {
+        const file = new File([png.blob], png.fileName, { type: 'image/png' });
+        const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
+        if (nav.share && nav.canShare?.({ files: [file] })) {
+          try { await nav.share({ files: [file], title: `Ticket ${td.folio}` }); return; } catch { return; }
+        }
+      }
+    } catch { /* si falla la imagen, comparte el texto */ }
     const text = [
       td.empresa.nombre,
       td.empresa.rfc ? `RFC: ${td.empresa.rfc}` : '',
