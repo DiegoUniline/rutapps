@@ -14,6 +14,7 @@ import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from 
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 import { getLotesDisponibles, repartirFefo, lotesLabel } from '@/lib/lotesFefo';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { pickColumns, VENTA_LINEA_COLUMNS } from '@/lib/allowlist';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
@@ -975,12 +976,26 @@ export function useVentaForm() {
         linesToSave.push(clean);
       }
 
-      // Guardar secuencialmente. Cada escritura recalcula y bloquea la cabecera
-      // de la venta; enviarlas en paralelo puede formar un deadlock entre las
-      // transacciones de dos líneas de la misma venta.
-      const savedLines: any[] = [];
-      for (const lineToSave of linesToSave) {
-        savedLines.push(await saveLinea.mutateAsync(lineToSave));
+      // Líneas existentes: se actualizan una por una (normalmente pocas).
+      // Líneas nuevas: se insertan TODAS en una sola petición (todo o nada),
+      // así un pedido de 100+ renglones no se corta a la mitad por tiempo de red.
+      const savedLines: any[] = new Array(linesToSave.length);
+      const nuevasIdx: number[] = [];
+      for (let i = 0; i < linesToSave.length; i++) {
+        if (linesToSave[i].id) savedLines[i] = await saveLinea.mutateAsync(linesToSave[i]);
+        else nuevasIdx.push(i);
+      }
+      if (nuevasIdx.length > 0) {
+        const rowsNuevas = nuevasIdx.map(i => {
+          const c = pickColumns(linesToSave[i], VENTA_LINEA_COLUMNS) as Record<string, unknown>;
+          delete c.id;
+          return c;
+        });
+        const { data: insertadas, error: insErr } = await supabase
+          .from('venta_lineas').insert(rowsNuevas as any).select('id');
+        if (insErr) throw new Error('No se guardaron los productos: ' + insErr.message);
+        if ((insertadas?.length ?? 0) !== nuevasIdx.length) throw new Error('No se guardaron todos los productos. Intenta de nuevo.');
+        nuevasIdx.forEach((i, k) => { savedLines[i] = insertadas![k]; });
       }
 
       // Escribir de vuelta los ids generados en el estado local: sin esto, un
