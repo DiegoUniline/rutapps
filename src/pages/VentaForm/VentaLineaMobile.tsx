@@ -7,6 +7,7 @@ import { ListaPrecioPicker, type ListaPrecioSelection } from '@/components/venta
 import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
 import type { PromoResult } from '@/hooks/usePromociones';
+import { ventaLineaPromoKey } from '@/lib/promoLinea';
 
 interface Props {
   idx: number;
@@ -50,7 +51,8 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const displayLabel = displayCodigo || displayNombre
     ? `${displayCodigo}${displayCodigo && displayNombre ? ' · ' : ''}${displayNombre}`
     : '—';
-  const linePromos = (promoResults ?? []).filter((rp) => rp.producto_id === l.producto_id);
+  const lineKey = ventaLineaPromoKey(l, idx);
+  const linePromos = (promoResults ?? []).filter((rp) => (rp.linea_key ? rp.linea_key === lineKey : rp.producto_id === l.producto_id));
   const linePromoDesc = r2(linePromos.reduce((s, rp) => s + (Number(rp.descuento) || 0), 0));
   const lineGratisQty = linePromos
     .filter((rp) => rp.tipo === 'producto_gratis' || (Number(rp.cantidad_gratis) || 0) > 0)

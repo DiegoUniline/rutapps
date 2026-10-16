@@ -20,6 +20,7 @@ export default function RutaPromociones() {
   const { data: promos, isLoading } = usePromocionesActivas();
   const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const { data: clasificaciones } = useOfflineQuery('clasificaciones', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: listasPrecios } = useOfflineQuery('lista_precios', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
   const nameProducto = (id?: string | null) => {
     if (!id) return '';
@@ -72,6 +73,13 @@ export default function RutaPromociones() {
             else if (p.aplica_a === 'clasificacion') aplica = `Categorías: ${p.clasificacion_ids.slice(0, 3).map(nameClasif).join(', ')}`;
             else if (p.aplica_a === 'cliente') aplica = `Solo clientes seleccionados (${p.cliente_ids.length})`;
             else if (p.aplica_a === 'zona') aplica = `Solo zonas seleccionadas (${p.zona_ids.length})`;
+            if (p.modo_minimo === 'acumulado') {
+              const ids = p.participantes_ids ?? [];
+              aplica += ` · Suma entre: ${ids.slice(0, 3).map(nameProducto).join(', ')}${ids.length > 3 ? ` +${ids.length - 3}` : ''}`;
+            }
+            if (p.alcance_lista === 'especifica') {
+              aplica += ` · Solo lista ${((listasPrecios ?? []) as any[]).find(l => l.id === p.lista_precio_id)?.nombre ?? 'específica'}`;
+            }
 
             return (
               <div key={p.id} className="bg-card border border-border rounded-xl p-3 space-y-2">

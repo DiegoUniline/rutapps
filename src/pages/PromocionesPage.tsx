@@ -59,6 +59,7 @@ const emptyPromo: Partial<Promocion> = {
   producto_ids: [], clasificacion_ids: [], cliente_ids: [], zona_ids: [],
   dias_semana: [],
   prioridad: 0, acumulable: false, producto_gratis_id: null,
+  alcance_lista: 'todas', lista_precio_id: null, modo_minimo: 'por_sku', participantes_ids: [],
 };
 
 export default function PromocionesPage() {
@@ -114,6 +115,15 @@ export default function PromocionesPage() {
     },
   });
 
+  const { data: listasPrecios } = useQuery({
+    queryKey: ['promo-listas-precios', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await (supabase.from('lista_precios').select('id, nombre, activa') as any).eq('empresa_id', empresa!.id).order('nombre');
+      return (data ?? []) as { id: string; nombre: string; activa: boolean }[];
+    },
+  });
+
   const filtered = (promociones ?? []).filter(p =>
     !search || p.nombre.toLowerCase().includes(search.toLowerCase())
   );
@@ -122,8 +132,20 @@ export default function PromocionesPage() {
 
   const handleSave = async () => {
     if (!editing?.nombre) { toast.error('Nombre requerido'); return; }
+    const acumulado = editing.modo_minimo === 'acumulado';
+    const especifica = editing.alcance_lista === 'especifica';
+    if (especifica && !editing.lista_precio_id) { toast.error('Selecciona la lista de precios de la promoción'); return; }
+    if (acumulado && !(editing.participantes_ids ?? []).length) { toast.error('Selecciona los productos participantes'); return; }
+    if (acumulado && editing.tipo === 'producto_gratis' && !editing.producto_gratis_id) { toast.error('Selecciona el producto que se regala'); return; }
+    const payload: Partial<Promocion> = {
+      ...editing,
+      lista_precio_id: especifica ? editing.lista_precio_id ?? null : null,
+      participantes_ids: acumulado ? editing.participantes_ids ?? [] : [],
+      // En modo acumulado con alcance por productos, los participantes son el alcance.
+      ...(acumulado && editing.aplica_a === 'producto' ? { producto_ids: editing.participantes_ids ?? [] } : {}),
+    };
     try {
-      await savePromo.mutateAsync(editing as any);
+      await savePromo.mutateAsync(payload as any);
       toast.success(editing.id ? 'Promoción actualizada' : 'Promoción creada');
       setEditing(null);
     } catch (e: any) {
@@ -139,7 +161,7 @@ export default function PromocionesPage() {
   };
 
   // Helpers for multi-select chips
-  const toggleArrayItem = (field: 'producto_ids' | 'clasificacion_ids' | 'cliente_ids' | 'zona_ids' | 'dias_semana', id: string) => {
+  const toggleArrayItem = (field: 'producto_ids' | 'clasificacion_ids' | 'cliente_ids' | 'zona_ids' | 'dias_semana' | 'participantes_ids', id: string) => {
     if (!editing) return;
     const arr = (editing[field] as string[]) ?? [];
     const next = arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id];
@@ -151,6 +173,7 @@ export default function PromocionesPage() {
   const clasificacionMap = useMemo(() => new Map((clasificaciones ?? []).map(c => [c.id, c.nombre])), [clasificaciones]);
   const clienteMap = useMemo(() => new Map((clientes ?? []).map(c => [c.id, `${c.codigo ? c.codigo + ' — ' : ''}${c.nombre}`])), [clientes]);
   const zonaMap = useMemo(() => new Map((zonas ?? []).map(z => [z.id, z.nombre])), [zonas]);
+  const listaMap = useMemo(() => new Map((listasPrecios ?? []).map(l => [l.id, l.nombre])), [listasPrecios]);
 
   return (
     <div className="space-y-4">
@@ -204,7 +227,11 @@ export default function PromocionesPage() {
                         <span className="text-xs text-muted-foreground ml-1">(min {p.cantidad_minima})</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">{APLICA_LABELS[p.aplica_a]}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                      {APLICA_LABELS[p.aplica_a]}
+                      {p.modo_minimo === 'acumulado' && <div>Suma de {(p.participantes_ids ?? []).length} SKU</div>}
+                      {p.alcance_lista === 'especifica' && <div>Lista: {listaMap.get(p.lista_precio_id ?? '') ?? 'sin lista'}</div>}
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs hidden lg:table-cell">
                       {dias.length === 0 ? 'Todos' : dias.map(d => d.slice(0, 3)).join(', ')}
                     </td>
@@ -286,8 +313,49 @@ export default function PromocionesPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Lista de precios</Label>
+                  <Select
+                    value={editing.alcance_lista === 'especifica' ? (editing.lista_precio_id || '_elegir') : '_todas'}
+                    onValueChange={v => setEditing({ ...editing, alcance_lista: v === '_todas' ? 'todas' : 'especifica', lista_precio_id: v === '_todas' || v === '_elegir' ? null : v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_todas">Todas las listas</SelectItem>
+                      {editing.alcance_lista === 'especifica' && !editing.lista_precio_id && <SelectItem value="_elegir">Selecciona una lista…</SelectItem>}
+                      {(listasPrecios ?? []).map(l => (
+                        <SelectItem key={l.id} value={l.id}>{l.nombre}{l.activa ? '' : ' (inactiva)'}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Solo aplica a renglones cotizados con esa lista</p>
+                </div>
+                <div>
+                  <Label>Cantidad mínima por</Label>
+                  <Select value={editing.modo_minimo || 'por_sku'} onValueChange={v => setEditing({ ...editing, modo_minimo: v as any, participantes_ids: v === 'acumulado' ? (editing.participantes_ids?.length ? editing.participantes_ids : (editing.aplica_a === 'producto' ? editing.producto_ids ?? [] : [])) : [] })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="por_sku">Cada SKU por separado</SelectItem>
+                      <SelectItem value="acumulado">Suma de SKU participantes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Acumulado: ej. 2 fresa + 3 mango + 1 limón = 6</p>
+                </div>
+              </div>
+
+              {editing.modo_minimo === 'acumulado' && (
+                <MultiChipSelector
+                  label="Productos participantes"
+                  items={(productos ?? []).map(p => ({ id: p.id, label: `${p.codigo ? p.codigo + ' — ' : ''}${p.nombre}` }))}
+                  selected={editing.participantes_ids ?? []}
+                  onToggle={(id) => toggleArrayItem('participantes_ids', id)}
+                  nameMap={productoMap}
+                />
+              )}
+
               {/* Scope selectors */}
-              {editing.aplica_a === 'producto' && (
+              {editing.aplica_a === 'producto' && editing.modo_minimo !== 'acumulado' && (
                 <MultiChipSelector
                   label="Productos"
                   items={(productos ?? []).map(p => ({ id: p.id, label: `${p.codigo ? p.codigo + ' — ' : ''}${p.nombre}` }))}
@@ -361,7 +429,7 @@ export default function PromocionesPage() {
                     <Select value={editing.producto_gratis_id || '_mismo'} onValueChange={v => setEditing({ ...editing, producto_gratis_id: v === '_mismo' ? null : v })}>
                       <SelectTrigger><SelectValue placeholder="El mismo producto" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="_mismo">El mismo producto</SelectItem>
+                        <SelectItem value="_mismo">{editing.modo_minimo === 'acumulado' ? 'Selecciona el producto…' : 'El mismo producto'}</SelectItem>
                         {(productos ?? []).map(p => (
                           <SelectItem key={p.id} value={p.id}>{p.codigo ? `${p.codigo} — ` : ''}{p.nombre}</SelectItem>
                         ))}

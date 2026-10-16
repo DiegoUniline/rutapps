@@ -34,6 +34,14 @@ export function promoLineaHabilitado(licencia?: string | null): boolean {
 }
 
 
+/**
+ * Llave estable de un renglón de venta para el motor de promociones: el id
+ * guardado (coincide con `promocion_aplicada.venta_linea_id`) o la posición.
+ */
+export function ventaLineaPromoKey(l: { id?: string | null }, idx: number): string {
+  return l.id ? String(l.id) : `n${idx}`;
+}
+
 export interface LineaMontos {
   subtotal: number;
   iva: number;
@@ -44,6 +52,7 @@ export interface LineaMontos {
 type PromoProducto = {
   tipo?: string | null;
   producto_id?: string | null;
+  linea_key?: string | null;
   descuento?: number | null;
   cantidad_gratis?: number | null;
 };
@@ -57,12 +66,14 @@ export function separarDescuentoPromo(
   promociones: PromoProducto[],
   productoId: string,
   brutoUnitario: number,
+  /** Si el carrito envió `linea_key`, solo se toman los beneficios de ese renglón. */
+  lineaKey?: string,
 ): { descuentoRegular: number; descuentoGratisBruto: number } {
   let descuentoRegular = 0;
   let cantidadGratis = 0;
 
   for (const promo of promociones) {
-    if (promo.producto_id !== productoId) continue;
+    if (lineaKey !== undefined ? promo.linea_key !== lineaKey : promo.producto_id !== productoId) continue;
     if (promo.tipo === 'producto_gratis') {
       cantidadGratis += Math.max(0, Number(promo.cantidad_gratis) || 0);
     } else {

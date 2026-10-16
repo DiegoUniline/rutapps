@@ -39,6 +39,10 @@ export type PromoAplicadaRow = {
   promocion_id: string;
   descripcion: string | null;
   descuento_aplicado: number;
+  /** Snapshot del beneficio: cambios posteriores a la promoción no alteran la venta. */
+  promocion_nombre: string | null;
+  tipo: string | null;
+  cantidad_gratis: number;
 };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -46,11 +50,14 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 export type BuildPromoRowsArgs = {
   ventaId: string;
   promoResults: PromoResult[];
-  /** Descuento REAL aplicado por producto (ya con redondeo/impuestos resueltos). */
+  /**
+   * Descuento REAL aplicado por producto (ya con redondeo/impuestos resueltos).
+   * Cuando los resultados traen `linea_key`, los mapas se indexan por esa llave.
+   */
   effectiveByProduct: Map<string, number>;
-  /** id de la línea de venta guardada por producto. */
+  /** id de la línea de venta guardada por producto (o por `linea_key`). */
   lineIdByProduct: Map<string, string>;
-  /** Total de la línea por producto, usado como tope de seguridad. */
+  /** Total de la línea por producto (o por `linea_key`), usado como tope de seguridad. */
   lineTotalByProduct?: Map<string, number>;
 };
 
@@ -69,9 +76,10 @@ export function buildPromoAplicadaRows({
   for (const r of promoResults) {
     if (!r.producto_id || !r.promocion_id) continue;
     if (!(Number(r.descuento) > 0)) continue;
-    const arr = byProduct.get(r.producto_id) ?? [];
+    const key = r.linea_key ?? r.producto_id;
+    const arr = byProduct.get(key) ?? [];
     arr.push(r);
-    byProduct.set(r.producto_id, arr);
+    byProduct.set(key, arr);
   }
 
   const rows: PromoAplicadaRow[] = [];
@@ -103,8 +111,11 @@ export function buildPromoAplicadaRows({
         venta_id: ventaId,
         venta_linea_id: lineaId,
         promocion_id: r.promocion_id,
-        descripcion: (r as any).descripcion ?? (r as any).nombre ?? null,
+        descripcion: r.descripcion ?? r.nombre ?? null,
         descuento_aplicado: monto,
+        promocion_nombre: r.nombre ?? null,
+        tipo: r.tipo ?? null,
+        cantidad_gratis: r.tipo === 'producto_gratis' ? Math.max(0, Number(r.cantidad_gratis) || 0) : 0,
       });
     });
   });

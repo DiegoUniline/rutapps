@@ -104,8 +104,8 @@
 - [producto_proveedores](#productoproveedores) (8 campos)
 - [productos](#productos) (57 campos)
 - [profiles](#profiles) (17 campos)
-- [promocion_aplicada](#promocionaplicada) (7 campos)
-- [promociones](#promociones) (21 campos)
+- [promocion_aplicada](#promocionaplicada) (10 campos)
+- [promociones](#promociones) (25 campos)
 - [proveedores](#proveedores) (24 campos)
 - [publicidad_anuncios](#publicidadanuncios) (12 campos)
 - [publicidad_vistas](#publicidadvistas) (4 campos)
@@ -1513,7 +1513,7 @@
 | `share_token` | string | no |  |  |
 | `tarifa_id` | string | no | **sí** | → `tarifas.id` |
 
-**Referenciada por:** `clientes.lista_precio_id`, `lista_precios_lineas.lista_precio_id`, `tarifa_lineas.lista_precio_id`, `tienda_config.lista_precios_default_id`, `venta_lineas.lista_precio_id`
+**Referenciada por:** `clientes.lista_precio_id`, `lista_precios_lineas.lista_precio_id`, `promociones.lista_precio_id`, `tarifa_lineas.lista_precio_id`, `tienda_config.lista_precios_default_id`, `venta_lineas.lista_precio_id`
 
 ---
 
@@ -2121,8 +2121,11 @@
 | `created_at` | string | no |  |  |
 | `descripcion` | string | sí |  |  |
 | `descuento_aplicado` | number | no |  |  |
+| `cantidad_gratis` | number | no |  |  |
 | `id` | string | no |  |  |
 | `promocion_id` | string | no | **sí** | → `promociones.id` |
+| `promocion_nombre` | string | sí |  |  |
+| `tipo` | string | sí |  |  |
 | `venta_id` | string | no | **sí** | → `ventas.id` |
 | `venta_linea_id` | string | sí |  | → `venta_lineas.id` |
 
@@ -2134,6 +2137,7 @@
 |---|---|---|---|---|
 | `activa` | boolean | no |  |  |
 | `acumulable` | boolean | no |  |  |
+| `alcance_lista` | string (`todas` \| `especifica`) | no |  |  |
 | `aplica_a` | Database["public"]["Enums"]["aplica_promocion"] | no |  |  |
 | `cantidad_gratis` | number | sí |  |  |
 | `cantidad_minima` | number | sí |  |  |
@@ -2144,7 +2148,10 @@
 | `dias_semana` | string[] | sí |  |  |
 | `empresa_id` | string | no | **sí** | → `empresas.id` |
 | `id` | string | no |  |  |
+| `lista_precio_id` | string | sí |  | → `lista_precios.id` |
+| `modo_minimo` | string (`por_sku` \| `acumulado`) | no |  |  |
 | `nombre` | string | no | **sí** |  |
+| `participantes_ids` | string[] | no |  |  |
 | `prioridad` | number | no |  |  |
 | `producto_gratis_id` | string | sí |  | → `productos.id` |
 | `producto_ids` | string[] | sí |  |  |
@@ -3207,6 +3214,7 @@
 - `enqueue_email()`
 - `fn_disponible_almacen()`
 - `fn_disponible_lotes()`
+- `fn_promo_linea_elegible()`
 - `fn_recalc_venta_header()`
 - `fn_recalc_venta_saldo()`
 - `fn_reevaluar_promos_venta()`

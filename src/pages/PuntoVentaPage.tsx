@@ -38,6 +38,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
+import { promoLineaHabilitado } from '@/lib/promoLinea';
+import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplicadas } from '@/lib/promoPersist';
 import { buildPosTicketPayments } from '@/lib/posTicketPayments';
 import { resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
 import { PromotionReadinessNotice } from '@/components/PromotionReadinessNotice';
@@ -465,10 +467,13 @@ export default function PuntoVentaPage() {
         // es sobre lo que realmente paga el cliente.
         precio_unitario: getDisplayUnitPrice(item),
         cantidad: item.cantidad,
+        // El POS cotiza todo con la lista del cliente; un precio manual no
+        // proviene de ninguna lista.
+        lista_precio_id: item.precio_manual ? null : clienteListaPrecioId,
       };
     });
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId ?? undefined, undefined, (empresa as any)?.zona_horaria);
-  }, [promocionesActivas, cart, productos, clienteId, getDisplayUnitPrice]);
+  }, [promocionesActivas, cart, productos, clienteId, getDisplayUnitPrice, clienteListaPrecioId]);
 
   // Build per-product raw promo discount map
   const promoRawByProduct = useMemo(() => {
@@ -506,10 +511,11 @@ export default function PuntoVentaPage() {
         clasificacion_id: prod?.clasificacion_id ?? undefined,
         precio_unitario: item.precio_unitario_sin_redondeo,
         cantidad: item.cantidad,
+        lista_precio_id: item.precio_manual ? null : clienteListaPrecioId,
       };
     });
     return getPendingProductoGratis(promocionesActivas, cartForPromo, clienteId ?? undefined, undefined, (empresa as any)?.zona_horaria);
-  }, [promocionesActivas, cart, productos, clienteId, empresa]);
+  }, [promocionesActivas, cart, productos, clienteId, empresa, clienteListaPrecioId]);
 
 
   // Barcode scanner: listen for rapid key presses
@@ -972,21 +978,38 @@ export default function PuntoVentaPage() {
       // 2. Insert lines
       const r2 = (n: number) => Math.round(n * 100) / 100;
       const guardarDesglose = desgloseLineaHabilitado((empresa as any)?.licencia);
+      // Igual que Ruta y escritorio: con `promo_descuento_linea` la línea se
+      // guarda YA NETA de promoción. El trigger de encabezado recalcula
+      // `ventas.total` desde las líneas; guardarlas en bruto dejaba la venta
+      // persistida por encima de lo cobrado.
+      const netearLineas = promoLineaHabilitado((empresa as any)?.licencia);
+      const promoLineIdByProduct = new Map<string, string>();
+      const promoEffectiveByProduct = new Map<string, number>();
+      const promoLineTotalByProduct = new Map<string, number>();
       const lineas = cart.map(item => {
+        const lineaId = crypto.randomUUID();
         const grossBeforeDiscount = getGrossLineTotal(item);
-        const breakdown = splitFinalGross(item, grossBeforeDiscount);
+        const chargedLineTotal = getChargedLineTotal(item);
+        const grossBreakdown = splitFinalGross(item, grossBeforeDiscount);
+        const lineTotal = netearLineas ? chargedLineTotal : grossBeforeDiscount;
+        const breakdown = netearLineas ? splitFinalGross(item, chargedLineTotal) : grossBreakdown;
+        const promoLinea = r2(Math.max(0, grossBeforeDiscount - chargedLineTotal));
+        if (!promoLineIdByProduct.has(item.producto_id)) promoLineIdByProduct.set(item.producto_id, lineaId);
+        if (promoLinea > 0) promoEffectiveByProduct.set(item.producto_id, r2((promoEffectiveByProduct.get(item.producto_id) ?? 0) + promoLinea));
+        promoLineTotalByProduct.set(item.producto_id, r2((promoLineTotalByProduct.get(item.producto_id) ?? 0) + grossBeforeDiscount));
 
         let desglose: Record<string, any> = {};
         if (guardarDesglose) {
           const promosLinea = promoResults.filter(p => p.producto_id === item.producto_id && Number(p.descuento) > 0);
           const promoDominante = promosLinea.slice().sort((a, b) => Number(b.descuento || 0) - Number(a.descuento || 0))[0];
-          const montos = { subtotal: breakdown.subtotal, iva: breakdown.iva, ieps: breakdown.ieps, total: grossBeforeDiscount };
+          const montosBrutos = { subtotal: grossBreakdown.subtotal, iva: grossBreakdown.iva, ieps: grossBreakdown.ieps, total: grossBeforeDiscount };
+          const montos = { subtotal: breakdown.subtotal, iva: breakdown.iva, ieps: breakdown.ieps, total: lineTotal };
           desglose = buildDesgloseLinea({
             cantidad: item.cantidad,
             precioListaUnitario: Number(item.precio_unitario_sin_redondeo) || Number(item.precio_unitario) || 0,
-            breakdownBruto: montos,
+            breakdownBruto: montosBrutos,
             breakdownNeto: montos,
-            descuentoPromoMonto: r2(Math.max(0, grossBeforeDiscount - getChargedLineTotal(item))),
+            descuentoPromoMonto: promoLinea,
             descuentoManualMonto: 0,
             cantidadBonificada: promosLinea.reduce((s, p) => s + (Number(p.cantidad_gratis) || 0), 0),
             promocion: promoDominante ? { id: promoDominante.promocion_id, nombre: promoDominante.nombre } : null,
@@ -996,6 +1019,7 @@ export default function PuntoVentaPage() {
         }
 
         return {
+          id: lineaId,
           venta_id: ventaId,
           producto_id: item.producto_id,
           descripcion: item.nombre,
@@ -1012,7 +1036,9 @@ export default function PuntoVentaPage() {
           ieps_pct: item.ieps_pct,
           ieps_monto: breakdown.ieps,
           descuento_pct: 0,
-          total: grossBeforeDiscount,
+          total: lineTotal,
+          lista_precio_id: item.precio_manual ? null : clienteListaPrecioId,
+          precio_manual: !!item.precio_manual,
           presentacion_id: (item as any).presentacion_id ?? null,
           presentacion_nombre: (item as any).presentacion_nombre ?? null,
           presentacion_factor: (item as any).presentacion_factor ?? null,
@@ -1023,6 +1049,21 @@ export default function PuntoVentaPage() {
 
       const { error: linErr } = await supabase.from('venta_lineas').insert(lineas as any);
       if (linErr) throw linErr;
+
+      // Referencia y beneficio de cada promoción aplicada (snapshot histórico).
+      if (promoPersistHabilitado((empresa as any)?.licencia)) {
+        try {
+          await replacePromocionesAplicadas(ventaId, buildPromoAplicadaRows({
+            ventaId,
+            promoResults,
+            effectiveByProduct: promoEffectiveByProduct,
+            lineIdByProduct: promoLineIdByProduct,
+            lineTotalByProduct: promoLineTotalByProduct,
+          }));
+        } catch (e) {
+          console.error('No se pudo registrar promocion_aplicada', e);
+        }
+      }
 
       // 3. Stock deduction + movement logging handled by DB trigger (apply_immediate_sale_inventory)
 

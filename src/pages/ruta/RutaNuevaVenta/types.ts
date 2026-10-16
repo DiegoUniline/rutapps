@@ -40,6 +40,8 @@ export interface CartItem {
   lote_codigo?: string | null;
   /** Reparto de la cantidad entre varios lotes (empresas con manejo de lotes) */
   lotes?: LoteAsignacionCart[];
+  /** Unidades de regalo agregadas automáticamente por una promoción (no se guardan). */
+  regalo_auto?: number;
 }
 
 export interface LoteAsignacionCart {

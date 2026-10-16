@@ -819,6 +819,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   };
 
   const selectedCliente = clientes?.find(c => c.id === clienteId);
+  // Lista con la que se cotizó el renglón: la propia del renglón o la del
+  // cliente (misma regla con la que se guarda `venta_lineas.lista_precio_id`).
+  // Un precio manual no proviene de ninguna lista.
+  const listaEfectivaRenglon = (c: CartItem): string | null =>
+    c.precio_manual ? null : (c.lista_precio_id ?? clienteListaPrecioId ?? null);
   const promoResults = useMemo(() => {
     if (!promocionesActivas || cart.length === 0) return [] as PromoResult[];
     const cartForPromo: CartItemForPromo[] = cart.filter(c => !c.es_cambio).map(c => {
@@ -833,10 +838,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         clasificacion_id: prod?.clasificacion_id ?? undefined,
         precio_unitario: qty > 0 ? bruto.total / qty : 0,
         cantidad: c.cantidad,
+        lista_precio_id: listaEfectivaRenglon(c),
       };
     });
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId || undefined, (selectedCliente as any)?.zona_id || undefined, (empresa as any)?.zona_horaria);
-  }, [promocionesActivas, cart, clienteId, selectedCliente, productos, sinImpuestos]);
+  }, [promocionesActivas, cart, clienteId, selectedCliente, productos, sinImpuestos, clienteListaPrecioId]);
 
   // ── Promociones de PRODUCTO GRATIS pendientes ────────────────────────────
   // El motor solo rebaja el regalo si ya está en el carrito. Aquí detectamos
@@ -848,12 +854,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       clasificacion_id: productos?.find((p: any) => p.id === c.producto_id)?.clasificacion_id ?? undefined,
       precio_unitario: Number(c.precio_unitario) || 0,
       cantidad: Number(c.cantidad) || 0,
+      lista_precio_id: listaEfectivaRenglon(c),
     }));
     return getPendingProductoGratis(
       promocionesActivas, items, clienteId || undefined,
       (selectedCliente as any)?.zona_id || undefined, (empresa as any)?.zona_horaria,
     );
-  }, [promocionesActivas, cart, clienteId, selectedCliente, productos, empresa]);
+  }, [promocionesActivas, cart, clienteId, selectedCliente, productos, empresa, clienteListaPrecioId]);
 
   const autoPromosOn = promosAutoHabilitado((empresa as any)?.licencia);
 
@@ -870,16 +877,36 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       const maxQty = getMaxQty(pend.gratis_producto_id);
       const objetivo = Math.min(deseada, maxQty);
       if (objetivo <= enCarrito) continue; // sin stock a bordo para el regalo
-      if (enCarrito > 0) {
-        setItemQty(pend.gratis_producto_id, objetivo);
-      } else {
-        addToCart(prod);
-        if (objetivo > 1) setItemQty(pend.gratis_producto_id, objetivo);
-      }
+      if (enCarrito <= 0) addToCart(prod);
+      // Se recuerda cuántas unidades agregó el sistema (`regalo_auto`) para
+      // retirarlas solas si la compra deja de cumplir el mínimo.
+      setCart(prev => prev.map(c => c.producto_id === pend.gratis_producto_id && !c.es_cambio
+        ? { ...c, cantidad: objetivo, regalo_auto: (enCarrito > 0 ? (c.regalo_auto ?? 0) : 0) + (objetivo - enCarrito) }
+        : c));
       return; // un ajuste por render; el efecto vuelve a correr con el carrito nuevo
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoPromosOn, pendingGratis, productos]);
+
+  // Regalo auto-agregado que ya no corresponde (se redujo la compra, cambió la
+  // lista o el cliente): se retiran SOLO las unidades que agregó el sistema y
+  // que el motor ya no bonifica. Las capturadas por el vendedor no se tocan.
+  useEffect(() => {
+    if (!autoPromosOn) return;
+    const otorgado = new Map<string, number>();
+    promoResults.forEach(r => {
+      if (r.tipo === 'producto_gratis' && r.producto_id) otorgado.set(r.producto_id, (otorgado.get(r.producto_id) ?? 0) + (Number(r.cantidad_gratis) || 0));
+    });
+    const sobrante = cart.find(c => !c.es_cambio && (c.regalo_auto ?? 0) > (otorgado.get(c.producto_id) ?? 0));
+    if (!sobrante) return;
+    const auto = Math.min(sobrante.regalo_auto ?? 0, sobrante.cantidad);
+    const quitar = Math.max(0, auto - (otorgado.get(sobrante.producto_id) ?? 0));
+    setCart(prev => prev.flatMap(c => {
+      if (c.producto_id !== sobrante.producto_id || c.es_cambio) return [c];
+      const cantidad = c.cantidad - quitar;
+      return cantidad > 0 ? [{ ...c, cantidad, regalo_auto: auto - quitar }] : [];
+    }));
+  }, [autoPromosOn, promoResults, cart]);
 
 
 

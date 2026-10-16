@@ -10,7 +10,8 @@ import { useClientes } from '@/hooks/useClientes';
 import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
 import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplicadas } from '@/lib/promoPersist';
-import { aplicarPromoALinea, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
+import { promosPersistidasDeVenta } from '@/lib/promoHistorico';
+import { aplicarPromoALinea, ventaLineaPromoKey, promoLineaHabilitado, separarDescuentoPromo } from '@/lib/promoLinea';
 import { buildDesgloseLinea, desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 import { getLotesDisponibles, repartirFefo, lotesLabel } from '@/lib/lotesFefo';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -53,6 +54,12 @@ export const VENTA_STEPS_INMEDIATA: { key: StatusVenta; label: string }[] = [
   { key: 'borrador', label: 'Borrador' }, { key: 'confirmado', label: 'Confirmado' },
   { key: 'facturado', label: 'Facturado' },
 ];
+
+/** Lista con la que se cotizó el renglón; un precio manual no proviene de ninguna lista. */
+function listaEfectivaLinea(l: Partial<VentaLinea>, formListaPrecioId: string | null | undefined): string | null {
+  if ((l as any).precio_manual) return null;
+  return (l as any).lista_precio_id ?? formListaPrecioId ?? null;
+}
 
 export function useVentaForm() {
   const { id } = useParams();
@@ -316,11 +323,26 @@ export function useVentaForm() {
   // ---- Promotions engine ----
   const { data: promocionesActivas } = usePromocionesActivas();
 
+  // Venta ya cerrada: las promociones se leen de lo persistido, nunca de la
+  // configuración actual (un cambio posterior no altera el histórico).
+  const persistedVentaId = !isNew && readOnly ? ((form as any).id ?? null) : null;
+  const { data: promosAplicadasGuardadas } = useQuery({
+    queryKey: ['promocion_aplicada', persistedVentaId],
+    enabled: !!persistedVentaId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('promocion_aplicada').select('*').eq('venta_id', persistedVentaId!);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const promoResults = useMemo(() => {
+    if (persistedVentaId) return promosPersistidasDeVenta(lineas as any[], promosAplicadasGuardadas as any[]);
     if (!promocionesActivas?.length || lineas.length === 0) return [] as PromoResult[];
     const cartForPromo: CartItemForPromo[] = lineas
-      .filter(l => l.producto_id && Number(l.cantidad) > 0)
-      .map(l => {
+      .map((l, idx) => ({ l, idx }))
+      .filter(({ l }) => l.producto_id && Number(l.cantidad) > 0)
+      .map(({ l, idx }) => {
         const prod = productosList?.find((p: any) => p.id === l.producto_id);
         // Base BRUTA (con impuestos y redondeo) para que el descuento sea sobre
         // lo que realmente paga el cliente y el IVA quede proporcional.
@@ -331,40 +353,35 @@ export function useVentaForm() {
           clasificacion_id: prod?.clasificacion_id ?? undefined,
           precio_unitario: qty > 0 ? bruto.total / qty : 0,
           cantidad: qty,
+          // Cada renglón conserva su identidad: el mismo SKU puede venir en
+          // varias líneas con distinta lista de precios.
+          linea_key: ventaLineaPromoKey(l, idx),
+          lista_precio_id: listaEfectivaLinea(l, (form as any).lista_precio_id),
         };
       });
     return evaluatePromociones(promocionesActivas, cartForPromo, form.cliente_id ?? undefined, undefined, (empresa as any)?.zona_horaria);
-  }, [promocionesActivas, lineas, productosList, form.cliente_id, sinImpuestos]);
+  }, [persistedVentaId, promosAplicadasGuardadas, promocionesActivas, lineas, productosList, form.cliente_id, sinImpuestos, (form as any).lista_precio_id]);
 
-  // Build per-product promo discount map
-  const promoByProduct = useMemo(() => {
-    const m = new Map<string, number>();
-    promoResults.forEach(r => {
-      if (r.producto_id) m.set(r.producto_id, (m.get(r.producto_id) ?? 0) + r.descuento);
-    });
-    return m;
-  }, [promoResults]);
-
-  // Descuento EFECTIVO de promoción por producto (ya viene en bruto)
-  const promoEffectiveByProduct = useMemo(() => {
+  // Descuento EFECTIVO de promoción por renglón (ya viene en bruto)
+  const promoEffectiveByLine = useMemo(() => {
     const m = new Map<string, number>();
     const r2 = (n: number) => Math.round(n * 100) / 100;
-    lineas.forEach(l => {
+    lineas.forEach((l, idx) => {
       if (!l.producto_id) return;
+      const key = ventaLineaPromoKey(l, idx);
       const bruto = calculateSaleLineAmounts(l as any, sinImpuestos);
       const qty = Number(l.cantidad) || 0;
       const promoParts = separarDescuentoPromo(
         promoResults,
         l.producto_id,
         qty > 0 ? bruto.total / qty : 0,
+        key,
       );
       const efectivo = Math.min(
         bruto.total,
         r2(promoParts.descuentoRegular + promoParts.descuentoGratisBruto),
       );
-      if (efectivo > 0) {
-        m.set(l.producto_id, r2((m.get(l.producto_id) ?? 0) + efectivo));
-      }
+      if (efectivo > 0) m.set(key, efectivo);
     });
     return m;
   }, [promoResults, lineas, sinImpuestos]);
@@ -374,12 +391,10 @@ export function useVentaForm() {
   const finalTotals = useMemo(() => {
     const r2 = (n: number) => Math.round(n * 100) / 100;
     let iva = 0, ieps = 0, promoEffective = 0;
-    const pendiente = new Map<string, number>(promoEffectiveByProduct);
-    lineas.forEach(l => {
+    lineas.forEach((l, idx) => {
       const bruto = calculateSaleLineAmounts(l as any, sinImpuestos);
-      const rem = l.producto_id ? (pendiente.get(l.producto_id) ?? 0) : 0;
+      const rem = l.producto_id ? (promoEffectiveByLine.get(ventaLineaPromoKey(l, idx)) ?? 0) : 0;
       const aplicado = rem > 0 ? Math.min(rem, bruto.total) : 0;
-      if (aplicado > 0 && l.producto_id) pendiente.set(l.producto_id, rem - aplicado);
       const ajustado = aplicado > 0 ? aplicarPromoALinea(bruto, aplicado) : bruto;
       iva += ajustado.iva;
       ieps += ajustado.ieps;
@@ -393,7 +408,7 @@ export function useVentaForm() {
       descuento_promo: r2(promoEffective),
       total: r2(Math.max(0, totals.total - promoEffective)),
     };
-  }, [totals, promoEffectiveByProduct, lineas, sinImpuestos]);
+  }, [totals, promoEffectiveByLine, lineas, sinImpuestos]);
 
 
 
@@ -876,27 +891,31 @@ export function useVentaForm() {
 
       // Con la bandera activa, cada línea se guarda YA NETA de su promoción.
       const netearLineas = promoLineaHabilitado((empresa as any)?.licencia);
-      const promoPendientePorProducto = new Map<string, number>(promoEffectiveByProduct);
 
       // Pre-cálculo de líneas ANTES de guardar el encabezado: si la promoción
       // ya viene descontada en la línea, el encabezado NO debe volver a restarla
       // (eso provocaba un descuento doble en el total de la venta).
-      const preparadas: { producto_id: string; lineIndex: number; pricedLine: any; lineAmounts: ReturnType<typeof calculateSaleLineAmounts>; brutoAmounts: ReturnType<typeof calculateSaleLineAmounts> }[] = [];
+      const preparadas: { producto_id: string; promoKey: string; lineIndex: number; pricedLine: any; lineAmounts: ReturnType<typeof calculateSaleLineAmounts>; brutoAmounts: ReturnType<typeof calculateSaleLineAmounts> }[] = [];
       for (let li = 0; li < lineas.length; li++) {
         const l = lineas[li];
         if (!l.producto_id) continue;
-        const pricedLine = applyEffectiveLinePricing(l, sinImpuestos) as any;
+        const promoKey = ventaLineaPromoKey(l, li);
+        const pricedLine = { ...(applyEffectiveLinePricing(l, sinImpuestos) as any) };
+        // Se persiste la lista con la que se cotizó el renglón (la misma que
+        // evaluó el motor de promociones).
+        if (!pricedLine.precio_manual && !pricedLine.lista_precio_id && (form as any).lista_precio_id) {
+          pricedLine.lista_precio_id = (form as any).lista_precio_id;
+        }
         let lineAmounts = calculateSaleLineAmounts(pricedLine as any, sinImpuestos);
         const brutoAmounts = lineAmounts;
         if (netearLineas) {
-          const pend = promoPendientePorProducto.get(l.producto_id) ?? 0;
+          const pend = promoEffectiveByLine.get(promoKey) ?? 0;
           if (pend > 0) {
             const aplicar = Math.min(pend, lineAmounts.total);
             lineAmounts = { ...lineAmounts, ...aplicarPromoALinea({ subtotal: lineAmounts.subtotal, iva: lineAmounts.iva, ieps: lineAmounts.ieps, total: lineAmounts.total }, aplicar) };
-            promoPendientePorProducto.set(l.producto_id, pend - aplicar);
           }
         }
-        preparadas.push({ producto_id: l.producto_id, lineIndex: li, pricedLine, lineAmounts, brutoAmounts });
+        preparadas.push({ producto_id: l.producto_id, promoKey, lineIndex: li, pricedLine, lineAmounts, brutoAmounts });
       }
 
 
@@ -934,15 +953,16 @@ export function useVentaForm() {
       const ventaId = saved.id || form.id;
       const linesToSave: Record<string, any>[] = [];
       const lineProductoIds: string[] = [];
+      const linePromoKeys: string[] = [];
       const lineIndexes: number[] = [];
-      const lineTotalByProduct = new Map<string, number>();
+      const lineTotalByKey = new Map<string, number>();
       const guardarDesglose = desgloseLineaHabilitado((empresa as any)?.licencia);
-      for (const { producto_id, lineIndex, pricedLine, lineAmounts, brutoAmounts } of preparadas) {
+      for (const { producto_id, promoKey, lineIndex, pricedLine, lineAmounts, brutoAmounts } of preparadas) {
         const savedIvaPct = sinImpuestos ? 0 : (Number(pricedLine.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(pricedLine.ieps_pct) || 0);
         let desglose: Record<string, any> = {};
         if (guardarDesglose) {
-          const promosLinea = promoResults.filter(p => p.producto_id === producto_id && Number(p.descuento) > 0);
+          const promosLinea = promoResults.filter(p => p.linea_key === promoKey && Number(p.descuento) > 0);
           const promoDominante = promosLinea.slice().sort((a, b) => Number(b.descuento || 0) - Number(a.descuento || 0))[0];
           desglose = buildDesgloseLinea({
             cantidad: Number(pricedLine.cantidad) || 0,
@@ -971,8 +991,10 @@ export function useVentaForm() {
         delete clean.lotes;
 
         lineProductoIds.push(producto_id);
+        linePromoKeys.push(promoKey);
         lineIndexes.push(lineIndex);
-        lineTotalByProduct.set(producto_id, (lineTotalByProduct.get(producto_id) ?? 0) + lineAmounts.total);
+        // Tope de seguridad con el total BRUTO (pre-promoción) del renglón.
+        lineTotalByKey.set(promoKey, brutoAmounts.total);
         linesToSave.push(clean);
       }
 
@@ -1047,17 +1069,17 @@ export function useVentaForm() {
       // Registrar el desglose de promociones aplicadas (solo informativo para reportes).
       if (promoPersistHabilitado((empresa as any)?.licencia)) {
         try {
-          const lineIdByProduct = new Map<string, string>();
+          const lineIdByKey = new Map<string, string>();
           savedLines.forEach((row: any, i) => {
-            const pid = lineProductoIds[i];
-            if (pid && row?.id && !lineIdByProduct.has(pid)) lineIdByProduct.set(pid, row.id);
+            const key = linePromoKeys[i];
+            if (key && row?.id) lineIdByKey.set(key, row.id);
           });
           const rows = buildPromoAplicadaRows({
             ventaId,
             promoResults,
-            effectiveByProduct: promoEffectiveByProduct,
-            lineIdByProduct,
-            lineTotalByProduct,
+            effectiveByProduct: promoEffectiveByLine,
+            lineIdByProduct: lineIdByKey,
+            lineTotalByProduct: lineTotalByKey,
           });
           await replacePromocionesAplicadas(ventaId, rows);
         } catch (e) {

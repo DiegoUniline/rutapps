@@ -6876,8 +6876,11 @@ export type Database = {
           created_at: string
           descripcion: string | null
           descuento_aplicado: number
+          cantidad_gratis: number
           id: string
           promocion_id: string
+          promocion_nombre: string | null
+          tipo: string | null
           venta_id: string
           venta_linea_id: string | null
         }
@@ -6885,8 +6888,11 @@ export type Database = {
           created_at?: string
           descripcion?: string | null
           descuento_aplicado?: number
+          cantidad_gratis?: number
           id?: string
           promocion_id: string
+          promocion_nombre?: string | null
+          tipo?: string | null
           venta_id: string
           venta_linea_id?: string | null
         }
@@ -6894,8 +6900,11 @@ export type Database = {
           created_at?: string
           descripcion?: string | null
           descuento_aplicado?: number
+          cantidad_gratis?: number
           id?: string
           promocion_id?: string
+          promocion_nombre?: string | null
+          tipo?: string | null
           venta_id?: string
           venta_linea_id?: string | null
         }
@@ -6927,6 +6936,7 @@ export type Database = {
         Row: {
           activa: boolean
           acumulable: boolean
+          alcance_lista: string
           aplica_a: Database["public"]["Enums"]["aplica_promocion"]
           cantidad_gratis: number | null
           cantidad_minima: number | null
@@ -6937,7 +6947,10 @@ export type Database = {
           dias_semana: string[] | null
           empresa_id: string
           id: string
+          lista_precio_id: string | null
+          modo_minimo: string
           nombre: string
+          participantes_ids: string[]
           prioridad: number
           producto_gratis_id: string | null
           producto_ids: string[] | null
@@ -6950,6 +6963,7 @@ export type Database = {
         Insert: {
           activa?: boolean
           acumulable?: boolean
+          alcance_lista?: string
           aplica_a?: Database["public"]["Enums"]["aplica_promocion"]
           cantidad_gratis?: number | null
           cantidad_minima?: number | null
@@ -6960,7 +6974,10 @@ export type Database = {
           dias_semana?: string[] | null
           empresa_id: string
           id?: string
+          lista_precio_id?: string | null
+          modo_minimo?: string
           nombre: string
+          participantes_ids?: string[]
           prioridad?: number
           producto_gratis_id?: string | null
           producto_ids?: string[] | null
@@ -6973,6 +6990,7 @@ export type Database = {
         Update: {
           activa?: boolean
           acumulable?: boolean
+          alcance_lista?: string
           aplica_a?: Database["public"]["Enums"]["aplica_promocion"]
           cantidad_gratis?: number | null
           cantidad_minima?: number | null
@@ -6983,7 +7001,10 @@ export type Database = {
           dias_semana?: string[] | null
           empresa_id?: string
           id?: string
+          lista_precio_id?: string | null
+          modo_minimo?: string
           nombre?: string
+          participantes_ids?: string[]
           prioridad?: number
           producto_gratis_id?: string | null
           producto_ids?: string[] | null
@@ -6994,6 +7015,13 @@ export type Database = {
           zona_ids?: string[] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "promociones_lista_precio_id_fkey"
+            columns: ["lista_precio_id"]
+            isOneToOne: false
+            referencedRelation: "lista_precios"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "promociones_empresa_id_fkey"
             columns: ["empresa_id"]

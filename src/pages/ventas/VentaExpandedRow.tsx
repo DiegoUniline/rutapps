@@ -10,7 +10,7 @@ import { CONDICION_LABELS } from './ventasConstants';
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fetchVentaDesktopTicketSaldo } from '@/lib/ventaDesktopTicketSaldo';
-import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo } from '@/hooks/usePromociones';
+import { promosPersistidasDeVenta } from '@/lib/promoHistorico';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { phoneWithLada } from '@/lib/phoneWithLada';
@@ -65,16 +65,18 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   const [reloadKey, setReloadKey] = useState(0);
   const [lotesPorLinea, setLotesPorLinea] = useState<Record<string, { lote_id: string; codigo: string; caducidad: string | null; cantidad: number }[]>>({});
   const [loteDialogLinea, setLoteDialogLinea] = useState<any | null>(null);
-  const { data: promocionesActivas } = usePromocionesActivas();
+  // Promociones YA registradas en la venta (snapshot): nunca se reevalúan con
+  // la configuración actual, así la consulta y la reimpresión no cambian.
+  const [promosAplicadas, setPromosAplicadas] = useState<any[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const eidLoad = empresaId || venta.empresa_id;
-      const [lRes, pRes, tRes, cRes, plRes, vlRes] = await Promise.all([
+      const [lRes, pRes, tRes, cRes, plRes, vlRes, paRes] = await Promise.all([
         supabase
           .from('venta_lineas')
-          .select('id, presentacion_id, presentacion_nombre, presentacion_factor, paquetes, cantidad, precio_unitario, precio_lista_unitario, descuento_pct, descuento_promocion_monto, descuento_manual_monto, subtotal, iva_pct, iva_monto, ieps_pct, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, almacen_id, lote_id, lotes:lotes!lote_id(codigo, fecha_caducidad), productos(nombre, es_granel, unidad_granel, maneja_lote, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
+          .select('id, presentacion_id, presentacion_nombre, presentacion_factor, paquetes, cantidad, precio_unitario, precio_lista_unitario, descuento_pct, descuento_promocion_monto, descuento_manual_monto, subtotal, iva_pct, iva_monto, ieps_pct, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, almacen_id, lote_id, promocion_id, promocion_nombre, cantidad_bonificada, lotes:lotes!lote_id(codigo, fecha_caducidad), productos(nombre, es_granel, unidad_granel, maneja_lote, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
           .eq('venta_id', venta.id)
           .order('created_at'),
         supabase
@@ -97,9 +99,11 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
         (supabase.from as any)('venta_linea_lotes')
           .select('venta_linea_id, lote_id, cantidad, lotes:lotes!lote_id(codigo, fecha_caducidad)')
           .eq('venta_id', venta.id),
+        supabase.from('promocion_aplicada').select('*').eq('venta_id', venta.id),
       ]);
       if (!cancelled) {
         setLineas(lRes.data ?? []);
+        setPromosAplicadas(((paRes as any)?.data ?? []) as any[]);
         const loteMap: Record<string, { lote_id: string; codigo: string; caducidad: string | null; cantidad: number }[]> = {};
         for (const row of ((vlRes as any)?.data ?? []) as any[]) {
           if (!row.venta_linea_id) continue;
@@ -181,20 +185,10 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   const saldoPend = saldoRealVenta(venta);
 
   // Promociones aplicadas al carrito (para el badge por línea y la tarjeta).
-  const promoResults = useMemo(() => {
-    if (!promocionesActivas || lineas.length === 0) return [] as any[];
-    const cart: CartItemForPromo[] = lineas.filter((l: any) => l.producto_id).map((l: any) => {
-      const prod: any = productosList?.find((p: any) => p.id === l.producto_id);
-      return {
-        producto_id: l.producto_id,
-        clasificacion_id: prod?.clasificacion_id ?? undefined,
-        precio_unitario: Number(l.precio_unitario) || 0,
-        cantidad: Number(l.cantidad) || 0,
-      };
-    });
-    if (cart.length === 0) return [] as any[];
-    return evaluatePromociones(promocionesActivas as any, cart, venta.cliente_id ?? undefined, undefined, (empresa as any)?.zona_horaria);
-  }, [promocionesActivas, lineas, productosList, venta.cliente_id, empresa]);
+  const promoResults = useMemo(
+    () => promosPersistidasDeVenta(lineas, promosAplicadas) as any[],
+    [lineas, promosAplicadas],
+  );
 
   const promosConDescuento = promoResults.filter((r: any) => (Number(r.descuento) || 0) > 0 || r.tipo === 'producto_gratis');
 
@@ -284,19 +278,6 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
           .in('devolucion_id', devIds);
         devLineas = data ?? [];
       }
-      // Compute promotions applied to this cart
-      const cartForPromo: CartItemForPromo[] = lineas.filter((l: any) => l.producto_id).map((l: any) => {
-        const prod: any = productosList?.find((p: any) => p.id === l.producto_id);
-        return {
-          producto_id: l.producto_id,
-          clasificacion_id: prod?.clasificacion_id ?? undefined,
-          precio_unitario: Number(l.precio_unitario) || 0,
-          cantidad: Number(l.cantidad) || 0,
-        };
-      });
-      const promoResults = (promocionesActivas && cartForPromo.length > 0)
-        ? evaluatePromociones(promocionesActivas as any, cartForPromo, venta.cliente_id ?? undefined, undefined, (empresa as any)?.zona_horaria)
-        : [];
       const td = buildTicketDataFromVenta({
         empresa: empresa ?? {},
         venta: {

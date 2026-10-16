@@ -58,12 +58,36 @@ Tests: `src/test/priceResolver.test.ts`, `posPricing.test.ts`, `taxUtils.test.ts
 
 ## 3. Promociones
 
-Tablas: `promociones` (definición: n×m, %, monto, acumulable, vigencias) y
+Tablas: `promociones` (definición: n×m, %, monto, acumulable, vigencias, lista,
+modo de mínimo) y
 `promocion_aplicada` (registro por venta/línea, **idempotente**).
 
 Archivos: `src/hooks/usePromociones.ts`, `src/lib/promoLinea.ts` (neteo consciente de
 impuestos), `src/lib/promoPersist.ts` (persistencia idempotente),
 `src/lib/promoReporting.ts` (prorrateo para reportes).
+
+**Condición y beneficio** (`evaluatePromociones`, función pura y repetible):
+
+- *Lista de precios* (`alcance_lista` + `lista_precio_id`): `todas` (default) o
+  `especifica`. Se compara el **id** de la lista con la que se cotizó cada renglón
+  (lista propia del renglón → lista del cliente/venta); un precio manual no tiene
+  lista. Con `especifica` solo cuentan y se benefician los renglones de esa lista.
+- *Mínimo* (`modo_minimo`): `por_sku` (default, histórico: por renglón) o
+  `acumulado`: suma de cantidades de los SKU elegidos en `participantes_ids`
+  (selección explícita). Los ajenos no suman ni reciben descuento.
+- *Beneficio*: los descuentos (%/monto por unidad/precio especial/volumen) se
+  calculan sobre la base real de cada renglón elegible, un resultado por SKU.
+  El regalo exige `producto_gratis_id`, se repite por cada múltiplo del mínimo y
+  sus unidades **no** cuentan para el mínimo (si el regalo es del grupo, se
+  descuentan de las unidades pagadas).
+- Prioridad/`acumulable` sin cambios; el bloqueo de promociones no acumulables es
+  por renglón (`linea_key`, o `producto_id` cuando el carrito no la envía).
+- Carritos: Ruta y POS (un renglón por SKU) y escritorio (`linea_key` = id de la
+  línea o posición). En Ruta, con `ruta_promos_auto`, el regalo se agrega solo y se
+  retiran solas las unidades auto-agregadas que dejan de corresponder.
+- `promocion_aplicada` guarda el snapshot (`promocion_nombre`, `tipo`,
+  `cantidad_gratis`, monto y línea). Las consultas/reimpresiones de ventas guardadas
+  usan `src/lib/promoHistorico.ts`, nunca la configuración vigente.
 
 Servidor: al insertar/borrar en `promocion_aplicada`, `trg_promocion_aplicada_netear`
 recalcula la línea y el trigger de encabezado recalcula el total y el saldo.

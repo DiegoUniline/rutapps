@@ -9,6 +9,7 @@ import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
 import type { PromoResult } from '@/hooks/usePromociones';
+import { ventaLineaPromoKey } from '@/lib/promoLinea';
 
 interface Props {
   idx: number;
@@ -84,7 +85,8 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const isEmpty = !l.producto_id;
   // Descuento de promoción que cae en ESTA línea (por producto), para mostrarlo
   // a nivel de línea y no solo en el resumen "Promociones".
-  const linePromos = (promoResults ?? []).filter((r) => r.producto_id === l.producto_id);
+  const lineKey = ventaLineaPromoKey(l, idx);
+  const linePromos = (promoResults ?? []).filter((r) => (r.linea_key ? r.linea_key === lineKey : r.producto_id === l.producto_id));
   const linePromoDesc = r2(linePromos.reduce((s, r) => s + (Number(r.descuento) || 0), 0));
   // ¿La promo regala la linea completa? -> el subtotal se muestra GRATIS (solo
   // en vista de detalle). Se prefiere la cantidad gratis; si no, el monto.
