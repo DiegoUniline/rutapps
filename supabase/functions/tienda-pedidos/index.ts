@@ -6,9 +6,9 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
-    if (!token) return json({ error: "token requerido" }, 401);
+    if (!token) return json({ error: "Inicia sesión nuevamente.", code: "session_expired" }, 401);
     const payload = await verifyToken(token, Deno.env.get("TIENDA_JWT_SECRET")!);
-    if (!payload) return json({ error: "Sesión expirada" }, 401);
+    if (!payload) return json({ error: "Tu sesión venció. Inicia sesión nuevamente.", code: "session_expired" }, 401);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,

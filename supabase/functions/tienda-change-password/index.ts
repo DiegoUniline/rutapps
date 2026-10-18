@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
     if (String(password_nuevo).length < 6) return json({ error: "La nueva contraseña debe tener al menos 6 caracteres" }, 400);
 
     const payload = await verifyToken(token, Deno.env.get("TIENDA_JWT_SECRET")!);
-    if (!payload) return json({ error: "Sesión expirada" }, 401);
+    if (!payload) return json({ error: "Tu sesión venció. Inicia sesión nuevamente.", code: "session_expired" }, 401);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,

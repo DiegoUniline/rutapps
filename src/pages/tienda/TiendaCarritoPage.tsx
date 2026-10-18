@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { fnPost, formatMoney, useTienda, cartLineKey } from "@/tienda/TiendaContext";
+import { isSessionExpiredError, TiendaApiError } from "@/tienda/tiendaApi";
+import {
+  checkoutFingerprint,
+  clearPendingCheckout,
+  getOrCreateCheckoutRequestId,
+} from "@/tienda/tiendaReliability";
 import { Trash2, ChevronDown, ChevronUp, ShoppingBag, Package } from "lucide-react";
 import TiendaShell from "./TiendaShell";
 
@@ -20,19 +26,40 @@ function Inner() {
       nav(`${base}/login?next=carrito`);
       return;
     }
+    if (!navigator.onLine) {
+      setErr("No tienes conexión a internet. Tu carrito está guardado; vuelve a intentar cuando tengas señal.");
+      return;
+    }
     setLoading(true); setErr(null);
     try {
+      const items = t.cart.map((c) => ({
+        producto_id: c.producto_id,
+        cantidad: c.cantidad,
+        presentacion_id: c.presentacion_id ?? null,
+      }));
+      const fingerprint = checkoutFingerprint(items, notas, fechaEntrega || null);
+      const requestId = getOrCreateCheckoutRequestId(localStorage, t.slug, fingerprint);
       const res = await fnPost("tienda-checkout", {
         slug: t.slug,
         token: t.token,
-        items: t.cart.map((c) => ({ producto_id: c.producto_id, cantidad: c.cantidad, precio_unitario: c.precio_unitario, presentacion_id: c.presentacion_id ?? null })),
+        request_id: requestId,
+        items,
         notas,
         fecha_entrega: fechaEntrega || null,
-      });
+      }, { retries: 2, timeoutMs: 30_000 });
+      if (typeof res.folio !== "string" || !res.folio) {
+        throw new TiendaApiError("El pedido fue recibido, pero no pudimos confirmar su folio. Intenta de nuevo.", 500, "missing_folio", true);
+      }
       setOkFolio(res.folio);
+      clearPendingCheckout(localStorage, t.slug);
       t.clearCart();
     } catch (e) {
-      setErr((e as Error).message);
+      if (isSessionExpiredError(e)) {
+        t.logout();
+        nav(`${base}/login?next=carrito&reason=session-expired`, { replace: true });
+        return;
+      }
+      setErr(e instanceof Error ? e.message : "No pudimos enviar el pedido. Tu carrito sigue guardado.");
     } finally {
       setLoading(false);
     }
@@ -152,14 +179,14 @@ function Inner() {
 
             <div className="tienda-field" style={{ marginTop: 14 }}>
               <label>Fecha de entrega deseada (opcional)</label>
-              <input type="date" value={fechaEntrega} onChange={(e) => setFechaEntrega(e.target.value)} />
+              <input type="date" min={new Date().toISOString().slice(0, 10)} value={fechaEntrega} onChange={(e) => setFechaEntrega(e.target.value)} />
             </div>
             <div className="tienda-field">
               <label>Notas para el vendedor</label>
-              <textarea rows={3} value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Instrucciones, dirección, horarios…" />
+              <textarea rows={3} maxLength={2000} value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Instrucciones, dirección, horarios…" />
             </div>
 
-            {err && <div className="tienda-error">{err}</div>}
+            {err && <div className="tienda-error" role="alert">{err}</div>}
             {!t.isAuth && <div className="tienda-error">Inicia sesión para enviar tu pedido.</div>}
           </div>
 
