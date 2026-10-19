@@ -26,3 +26,4 @@ Formato: `R-XXX · severidad · estado` — evidencia — impacto. Estado ⚠️
 - R-003: **45 ventas vencidas con saldo (45 clientes)** que el POS / VentaForm muestran como 0 vencidas. Severidad efectiva: ALTA.
 - R-004: **85 ventas con descuento > 15 % en 90 días** que el control no muestra. MEDIA.
 - Hueco `20260909040000`: **465 entregas hechas sin `fecha_entrega`** (jul 2 · ago 171 · sep 265 · oct 27). Afecta reportes por fecha real de entrega. MEDIA.
+- **R-012 · ALTA · ✅ CONFIRMADO (efecto de corregir R-003)** — Producción 2026-10-19: al calcular el saldo real, **62 clientes** quedan sobre su límite de crédito (el POS/VentaForm dejarían de venderles a crédito) y 48 al ≥ 80 %. Si las ventas sin `fecha_vencimiento` se tratan como vencidas el mismo día, **3 206 clientes** mostrarían aviso de vencidas (vs 45 con vencimiento real) — la regla para ventas sin vencimiento es decisión de negocio pendiente (PR #148 en borrador).

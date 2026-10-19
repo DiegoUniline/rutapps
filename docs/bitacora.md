@@ -12,3 +12,4 @@
 2026-10-19 · dueño+auditor · efectos-migraciones.sql: 86/96 completas; huecos reales 20260909030000, 20260909040000, 20260909134500; 2 políticas por re-verificar
 2026-10-19 · dueño+auditor · políticas: 'Tenant devol motivo config' existe; 'Active app users only' en 31 tablas núcleo, falta en profiles (hueco 20260915222000)
 2026-10-19 · dueño+auditor · impacto-actual.sql: R-003 45 ventas vencidas ocultas, R-004 85 descuentos >15% ocultos, 465 entregas sin fecha_entrega, R-001 sin exposición, R-002 sin meses faltantes (facturas vía stripe-webhook/admin-billing)
+2026-10-19 · dueño+desarrollador · credito.sql: 62 clientes bloqueados a crédito, 48 al 80 %, 3 206 con aviso de vencidas si sin vencimiento = mismo día; PR #148 detenido hasta decidir la regla
