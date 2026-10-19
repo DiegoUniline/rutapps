@@ -6873,10 +6873,10 @@ export type Database = {
       }
       promocion_aplicada: {
         Row: {
+          cantidad_gratis: number
           created_at: string
           descripcion: string | null
           descuento_aplicado: number
-          cantidad_gratis: number
           id: string
           promocion_id: string
           promocion_nombre: string | null
@@ -6885,10 +6885,10 @@ export type Database = {
           venta_linea_id: string | null
         }
         Insert: {
+          cantidad_gratis?: number
           created_at?: string
           descripcion?: string | null
           descuento_aplicado?: number
-          cantidad_gratis?: number
           id?: string
           promocion_id: string
           promocion_nombre?: string | null
@@ -6897,10 +6897,10 @@ export type Database = {
           venta_linea_id?: string | null
         }
         Update: {
+          cantidad_gratis?: number
           created_at?: string
           descripcion?: string | null
           descuento_aplicado?: number
-          cantidad_gratis?: number
           id?: string
           promocion_id?: string
           promocion_nombre?: string | null
@@ -7016,17 +7016,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "promociones_lista_precio_id_fkey"
-            columns: ["lista_precio_id"]
-            isOneToOne: false
-            referencedRelation: "lista_precios"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "promociones_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promociones_lista_precio_id_fkey"
+            columns: ["lista_precio_id"]
+            isOneToOne: false
+            referencedRelation: "lista_precios"
             referencedColumns: ["id"]
           },
           {
@@ -10945,6 +10945,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_set_team_permissions: {
+        Args: { p_permissions: Json; p_person_id: string; p_reason?: string }
+        Returns: Json
+      }
       admin_sync_duplicados: {
         Args: never
         Returns: {
@@ -11222,6 +11226,10 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_customer_intelligence_product_dimensions: {
+        Args: { p_cliente_id: string; p_empresa_id: string }
+        Returns: Json
+      }
       fn_customer_intelligence_snapshot: {
         Args: {
           p_empresa_id: string
@@ -11411,6 +11419,16 @@ export type Database = {
       }
       fn_my_team_access: { Args: never; Returns: Json }
       fn_netear_linea_promo: { Args: { _linea_id: string }; Returns: undefined }
+      fn_promo_linea_elegible: {
+        Args: {
+          _clasificacion_id: string
+          _cliente_id: string
+          _zona_id: string
+          p: Database["public"]["Tables"]["promociones"]["Row"]
+          vl: Database["public"]["Tables"]["venta_lineas"]["Row"]
+        }
+        Returns: boolean
+      }
       fn_recalc_venta_header: {
         Args: { p_venta_id: string }
         Returns: undefined
@@ -11928,6 +11946,10 @@ export type Database = {
       surtir_solicitud_traspaso: {
         Args: { p_lineas: Json; p_solicitud_id: string }
         Returns: string
+      }
+      team_has_master_permission: {
+        Args: { p_action?: string; p_module: string; p_user_id?: string }
+        Returns: boolean
       }
       tiene_cobertura_vigente: {
         Args: { p_empresa_id: string }
