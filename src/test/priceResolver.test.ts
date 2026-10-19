@@ -14,7 +14,8 @@ describe('resolveProductPrice', () => {
   });
 
   it('ignores product rule when product id does not match', () => {
-    expect(resolveProductPrice([reglaPrecioFijo], productoConIeps)).toBe(15);
+    // Sin regla aplicable, precio_principal ($15) es el FINAL. Neto = 15 / 1.08 (IEPS) / 1.16 (IVA) = 11.97.
+    expect(resolveProductPrice([reglaPrecioFijo], productoConIeps)).toBe(11.97);
   });
 
   it('applies descuento rule by category', () => {
