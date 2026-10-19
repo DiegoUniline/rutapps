@@ -32,9 +32,9 @@ Deno.serve(async (req) => {
     supabase.from('empresas').select('nombre, logo_url, telefono, moneda').eq('id', cliente.empresa_id).single(),
     supabase
       .from('ventas')
-      .select('id, folio, fecha, total, saldo_pendiente, estado, tipo')
+      .select('id, folio, fecha, total, saldo_pendiente, estado:status, tipo')
       .eq('cliente_id', cliente.id)
-      .neq('estado', 'cancelado')
+      .neq('status', 'cancelado')
       .order('fecha', { ascending: false })
       .limit(100),
     supabase

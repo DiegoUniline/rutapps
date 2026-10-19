@@ -657,12 +657,22 @@ export function useDeleteVenta() {
       if (checkErr) throw checkErr;
       if (count && count > 0) throw new Error('No puedes eliminar una venta con pagos aplicados. Cancélala primero.');
 
-      // Block deletion if a CFDI was already issued for this venta
-      const { count: cfdiCount } = await (supabase as any)
-        .from('cfdi_lineas')
-        .select('id', { count: 'exact', head: true })
-        .eq('venta_id', id);
-      if (cfdiCount && cfdiCount > 0) {
+      // Block deletion if a non-cancelled CFDI exists for this venta (header link or line link)
+      const [{ count: cfdiCount, error: cfdiErr }, { count: cfdiLineaCount, error: cfdiLineaErr }] = await Promise.all([
+        supabase
+          .from('cfdis')
+          .select('id', { count: 'exact', head: true })
+          .eq('venta_id', id)
+          .neq('status', 'cancelado'),
+        supabase
+          .from('cfdi_lineas')
+          .select('id, cfdis!inner(status), venta_lineas!inner(venta_id)', { count: 'exact', head: true })
+          .eq('venta_lineas.venta_id', id)
+          .neq('cfdis.status', 'cancelado'),
+      ]);
+      if (cfdiErr) throw cfdiErr;
+      if (cfdiLineaErr) throw cfdiLineaErr;
+      if ((cfdiCount ?? 0) + (cfdiLineaCount ?? 0) > 0) {
         throw new Error('No puedes eliminar una venta facturada. Cancela primero el CFDI.');
       }
 

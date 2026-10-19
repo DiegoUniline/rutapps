@@ -435,7 +435,7 @@ async function runVentasFolio(filtros: ReporteFiltros, empresaId: string) {
   const ventas = await fetchAllPages<any>((from, to) => {
     let q = supabase
       .from('ventas')
-      .select('id, folio, fecha, tipo, status, condicion_pago, dias_credito, cliente_id, vendedor_id, total, saldo_pendiente')
+      .select('id, folio, fecha, tipo, status, condicion_pago, fecha_vencimiento, cliente_id, vendedor_id, total, saldo_pendiente')
       .eq('empresa_id', empresaId)
       .order('fecha', { ascending: true })
       .range(from, to);
@@ -480,13 +480,8 @@ async function runVentasFolio(filtros: ReporteFiltros, empresaId: string) {
   return ventas.map(v => {
     const c = clientesMap.get(v.cliente_id);
     const vd = vendedoresMap.get(v.vendedor_id);
-    const dias = Number(v.dias_credito) || 0;
-    let venc: string | null = null;
-    if (v.condicion_pago === 'credito' && dias > 0 && v.fecha) {
-      const d = new Date(v.fecha + 'T00:00:00');
-      d.setDate(d.getDate() + dias);
-      venc = d.toISOString().slice(0, 10);
-    }
+    // Vencimiento real de la venta (snapshot de su política de cobro); `ventas` no tiene `dias_credito`.
+    const venc: string | null = v.condicion_pago === 'credito' && v.fecha_vencimiento ? String(v.fecha_vencimiento).slice(0, 10) : null;
     return {
       fecha: v.fecha, folio: v.folio, tipo: v.tipo, status: v.status,
       cliente_codigo: c?.codigo ?? '', cliente: c?.nombre ?? '', vendedor: vd?.nombre ?? '',

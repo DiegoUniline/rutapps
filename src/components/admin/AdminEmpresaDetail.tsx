@@ -190,13 +190,30 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
       supabase.from('empresas').select('*').eq('id', empresaId).single(),
       supabase.from('subscriptions').select('*, subscription_plans(nombre, precio_por_usuario, periodo, descuento_pct, meses)').eq('empresa_id', empresaId).maybeSingle(),
       supabase.from('subscription_plans').select('*').eq('activo', true),
-      supabase.from('profiles').select('id, nombre, telefono, rol, user_id, estado, archivado_en, archivado_motivo').eq('empresa_id', empresaId),
+      supabase.from('profiles').select('id, nombre, telefono, user_id, estado, archivado_en, archivado_motivo').eq('empresa_id', empresaId),
     ]);
+    if (profilesRes.error) toast.error('No se pudieron cargar los usuarios de la empresa');
+
+    // `profiles` no tiene rol: el rol vive en user_roles → roles.
+    const profileRows = (profilesRes.data || []) as any[];
+    const userIds = profileRows.map(p => p.user_id).filter(Boolean);
+    const rolesByUser = new Map<string, string>();
+    if (userIds.length) {
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, roles(nombre)')
+        .in('user_id', userIds);
+      if (rolesError) toast.error('No se pudieron cargar los roles de los usuarios');
+      for (const ur of userRoles ?? []) {
+        const nombre = ur.roles?.nombre;
+        if (nombre) rolesByUser.set(ur.user_id, rolesByUser.has(ur.user_id) ? `${rolesByUser.get(ur.user_id)}, ${nombre}` : nombre);
+      }
+    }
 
     setEmpresa(empRes.data);
     setSubscription(subRes.data);
     setPlans((plansRes.data || []) as any[]);
-    setProfiles((profilesRes.data || []) as any[]);
+    setProfiles(profileRows.map(p => ({ ...p, rol: rolesByUser.get(p.user_id) ?? null })));
 
     if (empRes.data) {
       setEmpresaForm({

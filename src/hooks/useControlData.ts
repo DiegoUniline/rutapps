@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { descuentoPctVenta } from '@/lib/creditoVenta';
 
 export function useControlData(dateRange: { from: Date; to: Date }) {
   const { empresa } = useAuth();
@@ -34,18 +35,22 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryKey: ['control-descuentos', empresaId, from, to],
     enabled: !!empresaId,
     queryFn: async () => {
-      return await fetchAllPages<any>((f, t) =>
+      // `ventas` guarda el monto (`descuento_total`); el % se deriva sobre el subtotal.
+      const ventas = await fetchAllPages<any>((f, t) =>
         supabase
           .from('ventas')
-          .select('id, folio, fecha, total, descuento_porcentaje, descuento_monto, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
+          .select('id, folio, fecha, total, subtotal, descuento_total, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
           .eq('empresa_id', empresaId!)
           .gte('fecha', from)
           .lte('fecha', to)
-          .gt('descuento_porcentaje', 15)
+          .gt('descuento_total', 0)
           .neq('status', 'cancelado')
-          .order('descuento_porcentaje', { ascending: false })
           .range(f, t)
       );
+      return ventas
+        .map(v => ({ ...v, descuento_monto: v.descuento_total, descuento_porcentaje: descuentoPctVenta(v.subtotal, v.descuento_total) }))
+        .filter(v => v.descuento_porcentaje > 15)
+        .sort((a, b) => b.descuento_porcentaje - a.descuento_porcentaje);
     },
   });
 
