@@ -1,0 +1,14 @@
+# Bitácora
+- 2026-11-10 · arquitecto · investigación del giro guardada
+- 2026-11-10 · arquitecto · P-001 respondida: A (solo mío) · D-001
+- 2026-11-10 · arquitecto · P-006 respondida: Supabase + web · D-006
+- 2026-11-10 · arquitecto · catálogo de funciones: 6 v1, 2 después, 1 descartada
+- 2026-11-11 · arquitecto · mapa de 4 tablas aprobado · diagrama ER creado
+- 2026-11-11 · arquitecto · P-008 respondida: quita notas, agrega recibio · D-008
+- 2026-11-11 · arquitecto · P-015 respondida: A (foto desde $200) · D-015
+- 2026-11-12 · arquitecto · sistema de diseño aprobado · D-020
+- 2026-11-12 · arquitecto · cierre de módulo: 0 ⚠️, 95% · APROBADO caja-chica · D-024
+- 2026-11-12 · arquitecto · plan de construcción aprobado (7 OT) · D-025
+- 2026-11-14 · desarrollador · OT-001 ✅ base de datos
+- 2026-11-20 · desarrollador · OT-006 ✅ aviso de saldo bajo · D-029, D-030
+- 2026-11-20 · qa · 22 pruebas: 21 ✅ 1 ❌ (R-001 doble clic)
