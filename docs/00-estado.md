@@ -16,7 +16,6 @@
 - (ninguna)
 
 ## Pendientes / bloqueos
-- Reporte de comisiones (PR #141 filtros en una fila, PR #144 multiselección + agrupación multinivel): IMPLEMENTADO y probado (unitarias + render de la barra); NO DESPLEGADO — publicar en Lovable y confirmar en `/reportes` con datos reales.
 - Inventario Uniline (`/inventario`) de RutApp no ejecutado: los módulos no tienen ficha en `docs/modulos/`. El conocimiento vive en las fuentes de abajo.
 - Validar el AutoPrompter con una solicitud real (comportamiento del modelo no probado; solo integración documental y hooks).
 
