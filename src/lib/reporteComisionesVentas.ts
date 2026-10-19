@@ -124,3 +124,101 @@ export const ESTADO_COMISION_LABEL: Record<EstadoPagoComision, string> = {
   pagada: 'Pagada',
   cancelada: 'Cancelada',
 };
+
+export type FiltroFiscalComision = 'fiscal' | 'no_fiscal' | 'rfc_pendiente';
+
+export interface FiltrosReporteComisiones {
+  ruta?: string[];
+  estadoCuenta?: string[];
+  estadoComision?: string[];
+  fiscal?: string[];
+}
+
+export type AgrupacionComision = 'vendedor' | 'ruta' | 'estadoCuenta' | 'estadoComision' | 'fiscal' | 'mes';
+
+export const AGRUPACION_COMISION_LABEL: Record<AgrupacionComision, string> = {
+  vendedor: 'Vendedor',
+  ruta: 'Ruta/Zona',
+  estadoCuenta: 'Estado de cuenta',
+  estadoComision: 'Estado de comisión',
+  fiscal: 'Tipo fiscal',
+  mes: 'Mes',
+};
+
+const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+const cumpleFiscal = (row: ReporteComisionVenta, filtro: string) => {
+  if (filtro === 'fiscal') return row.requiereFactura;
+  if (filtro === 'no_fiscal') return !row.requiereFactura;
+  if (filtro === 'rfc_pendiente') return row.requiereFactura && !row.rfc;
+  return false;
+};
+
+/** Dentro de un filtro los valores se combinan con OR; entre filtros, AND. Lista vacía = sin filtro. */
+export function filtrarReporteComisiones(
+  rows: ReporteComisionVenta[],
+  filtros: FiltrosReporteComisiones,
+  search = '',
+): ReporteComisionVenta[] {
+  const term = search.trim().toLocaleLowerCase('es');
+  const { ruta = [], estadoCuenta = [], estadoComision = [], fiscal = [] } = filtros;
+  return rows.filter(row => {
+    if (term && ![row.folio, row.cliente, row.vendedor, row.ruta, row.rfc].some(value => value.toLocaleLowerCase('es').includes(term))) return false;
+    if (ruta.length && !ruta.includes(row.ruta)) return false;
+    if (estadoCuenta.length && !estadoCuenta.includes(row.estadoCuenta)) return false;
+    if (estadoComision.length && !estadoComision.includes(row.estadoComision)) return false;
+    if (fiscal.length && !fiscal.some(filtro => cumpleFiscal(row, filtro))) return false;
+    return true;
+  });
+}
+
+export function etiquetaAgrupacionComision(row: ReporteComisionVenta, key: string): string {
+  switch (key as AgrupacionComision) {
+    case 'vendedor': return row.vendedor;
+    case 'ruta': return row.ruta;
+    case 'estadoCuenta': return ESTADO_CUENTA_LABEL[row.estadoCuenta];
+    case 'estadoComision': return ESTADO_COMISION_LABEL[row.estadoComision];
+    case 'fiscal': return !row.requiereFactura ? 'No fiscal' : row.rfc ? 'Fiscal' : 'Fiscal · RFC pendiente';
+    case 'mes': {
+      const [year, month] = row.fecha.slice(0, 7).split('-');
+      const index = Number(month) - 1;
+      return year && MESES[index] ? `${year} - ${MESES[index]}` : 'Sin fecha';
+    }
+    default: return '';
+  }
+}
+
+/** Orden de grupos: mes cronológico; el resto alfabético por etiqueta. */
+export function ordenAgrupacionComision(row: ReporteComisionVenta, key: string): string {
+  if (key === 'mes') return row.fecha.slice(0, 7) || '￿';
+  return etiquetaAgrupacionComision(row, key).toLocaleLowerCase('es');
+}
+
+export interface TotalesComisiones {
+  ventas: number;
+  vendido: number;
+  comision: number;
+  comisionPendiente: number;
+  comisionPagada: number;
+  saldo: number;
+}
+
+export function totalizarComisiones(rows: ReporteComisionVenta[]): TotalesComisiones {
+  const acc = rows.reduce((sum, row) => {
+    sum.ventas += 1;
+    sum.vendido += row.total;
+    sum.comision += row.comision;
+    sum.comisionPendiente += row.comisionPendiente + row.comisionEnRecibo;
+    sum.comisionPagada += row.comisionPagada;
+    sum.saldo += row.saldo;
+    return sum;
+  }, { ventas: 0, vendido: 0, comision: 0, comisionPendiente: 0, comisionPagada: 0, saldo: 0 });
+  return {
+    ventas: acc.ventas,
+    vendido: roundMoney(acc.vendido),
+    comision: roundMoney(acc.comision),
+    comisionPendiente: roundMoney(acc.comisionPendiente),
+    comisionPagada: roundMoney(acc.comisionPagada),
+    saldo: roundMoney(acc.saldo),
+  };
+}
