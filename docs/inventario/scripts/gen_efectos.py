@@ -15,7 +15,7 @@ r as (
       when 'c' then exists (select 1 from information_schema.columns x where x.table_schema = 'public' and x.table_name = split_part(o.objeto, '.', 1) and x.column_name = split_part(o.objeto, '.', 2))
       when 'i' then exists (select 1 from pg_indexes x where x.schemaname = 'public' and x.indexname = o.objeto)
       when 'g' then exists (select 1 from pg_trigger x join pg_class c on c.oid = x.tgrelid where x.tgname = o.objeto and c.relname = o.tabla and not x.tgisinternal)
-      when 'p' then exists (select 1 from pg_policies x where x.schemaname = 'public' and x.policyname = o.objeto and x.tablename = o.tabla)
+      when 'p' then exists (select 1 from pg_policies x where x.schemaname = 'public' and lower(x.policyname) = o.objeto and x.tablename = o.tabla)
     end as existe
   from o
 )
