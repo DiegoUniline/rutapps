@@ -21,6 +21,12 @@ Corre esto **después de cada migración** de base de datos (los tipos de
 `src/integrations/supabase/types.ts` se regeneran solos al aplicar la migración) y
 después de agregar rutas nuevas en `src/App.tsx`.
 
+## Memoria Uniline (AutoPrompter v2)
+
+- `docs/00-estado.md` (estado e índice de fuentes vigentes), `docs/00-mapa.md`, `docs/decisiones.md` (D-XXX), `docs/preguntas.md` (P-XXX), `docs/bitacora.md` (solo agregar).
+- Reglas del agente: `CLAUDE.md` (reglas RutApp + constitución Uniline) y `.claude/` (agentes, skills, hooks). Se cargan solas al abrir el repo en Claude Code; `/autoprompt <solicitud>` lo fuerza.
+- Actualizar desde `DiegoUniline/unilineagents`: copiar `dist/proyecto/.claude/` sobre `.claude/` y revisar que las adaptaciones de `CLAUDE.md` (sección «RutApp — Reglas de este proyecto» y notas en línea) sigan vigentes. No sobrescribir `AGENTS.md`.
+
 ## Documentos vivos adicionales
 
 - `.lovable/memory/` — memoria del proyecto: decisiones de arquitectura, reglas de
