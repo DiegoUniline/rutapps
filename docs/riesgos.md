@@ -19,3 +19,10 @@ Formato: `R-XXX · severidad · estado` — evidencia — impacto. Estado ⚠️
 - **Superadas a propósito (no son hueco):** `20260910111500` (triggers reemplazados por `20260910112000`), `20260709140000`/`20260709190000` (triggers retirados por `20260805222351`, inventario por delta), `20260709170000` (lotes en mermas reimplementado por Lovable el 2026-08-05), `20260909153500` (índices sustituidos por `20260909234000`).
 - **Huecos reales (4):** `20260915222000` (política RESTRICTIVE en `profiles`), `20260909030000` y `20260909134500` (R-009), `20260909040000` (trigger `ensure_entrega_completion_timestamp` + 2 índices: `fecha_entrega` no se llena sola al marcar entrega hecha).
 - **Re-verificado:** `Tenant devol motivo config` **existe** (falso negativo por mayúsculas). `Active app users only` existe en las 31 tablas núcleo pero **falta en `profiles`** (`20260915222000` no aplicada): un usuario archivado con token vigente aún puede leer su perfil y resolver su empresa; los datos operativos sí están bloqueados.
+
+### Impacto real en producción (`impacto-actual.sql`, 2026-10-19)
+- R-001: 0 ventas con CFDI vigente ligado por `cfdis.venta_id` → sin exposición hoy (el bloqueo sigue roto).
+- R-002: facturas de suscripción generadas cada mes (may 8 · jun 38 · jul 43 · ago 37 · sep 67 · oct 55) por `stripe-webhook`/`admin-billing`. La parte 1 de `billing-cycle` está muerta pero **no** deja meses sin factura. ⚠️ Corregirla podría **duplicar facturas**: requiere decisión antes de tocarla. Severidad efectiva: BAJA.
+- R-003: **45 ventas vencidas con saldo (45 clientes)** que el POS / VentaForm muestran como 0 vencidas. Severidad efectiva: ALTA.
+- R-004: **85 ventas con descuento > 15 % en 90 días** que el control no muestra. MEDIA.
+- Hueco `20260909040000`: **465 entregas hechas sin `fecha_entrega`** (jul 2 · ago 171 · sep 265 · oct 27). Afecta reportes por fecha real de entrega. MEDIA.
