@@ -16,3 +16,4 @@
 2026-10-19 · dueño · D-004 regla de vencimiento C; contado con saldo: ~98 % sin ningún abono (545 ventas en la última semana), pendiente aclarar si es deuda real
 2026-10-19 · desarrollador · PR #148 merged (fac8993); PR #149 crédito en borrador; PR #150 SQL de huecos listo para el dueño; R-013 política profiles excluida
 2026-10-19 · dueño · PR #150 aplicado en producción y verificado (7/7 OK, 0 entregas sin fecha); R-009 resuelto
+2026-10-19 · dueño · PR #148 publicado en Lovable; Control de descuentos muestra las ventas > 15 % (R-004 resuelto)

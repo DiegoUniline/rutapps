@@ -11,7 +11,7 @@ SaaS multiempresa (`empresa_id`) de venta en ruta. React + TS + Supabase + PWA o
 | `supabase/migrations` (701 archivos) | historia de creación/cambios | 🟡 no reproduce la BD: hay tablas sin migración y cambios por SQL dinámico (`EXECUTE format(...)`) |
 | `src/integrations/supabase/types.ts` | 179 tablas, 2 204 columnas, 185 funciones, 27 enums | 🟡 refleja la BD a la fecha en que se regeneró; puede estar atrasado |
 | código (`src/`, `supabase/functions/`) | 153 tablas y 91 RPC realmente usadas; 6 443 referencias a columnas | ✅ comportamiento actual |
-| BD de producción | verdad | ❓ **pendiente**: correr [`inventario/validar-bd.sql`](./inventario/validar-bd.sql) |
+| BD de producción | verdad | ✅ validada 2026-10-19 con los SQL de [`inventario/`](./inventario/) — resultados en [`riesgos.md`](./riesgos.md) |
 | `docs/02-ESQUEMA-BASE-DE-DATOS.md` | dice 153 tablas | ⚠️ desactualizado (types.ts tiene 179) |
 | `README.md` (spec original de productos) | campos de `productos` | ⚠️ obsoleto: `manejar_lotes`, `contador`, `contador_tarifas`, `proveedor_id`, `tasa_iva_id`, `tasa_ieps_id` fueron eliminados (migraciones 20260610041050 y 20260610042254) |
 
