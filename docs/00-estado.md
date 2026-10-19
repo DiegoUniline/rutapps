@@ -7,7 +7,7 @@
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
 - **Módulo en curso:** —
 - **Última pregunta:** —
-- **Siguiente paso exacto:** recibir el resultado de `docs/inventario/validar-bd.sql` y actualizar `docs/00-mapa.md` y `docs/riesgos.md` con lo confirmado
+- **Siguiente paso exacto:** el dueño corre `docs/inventario/migraciones-nombradas.sql`; luego proponer (contrato AutoPrompter) la corrección de R-010/R-009 y R-001…R-006
 
 ## Decisiones recientes (últimas 10)
 - [D-001](./decisiones.md#d-001) 2026-10-19 · Instalar Uniline Agents (kit completo adaptado) con AutoPrompter v2.
@@ -16,7 +16,7 @@
 - (ninguna)
 
 ## Pendientes / bloqueos
-- Inventario Fase 1 hecho (`docs/00-mapa.md`, 18 módulos, 179 tablas). **Siguiente:** el dueño corre `docs/inventario/validar-bd.sql` en producción y comparte el resultado para confirmar o descartar R-001…R-006 (`docs/riesgos.md`). Fase 2 (`docs/modulos/`) pendiente.
+- Inventario Fase 1 hecho (`docs/00-mapa.md`). Validación en producción 2026-10-19: R-001…R-006 y R-009 **confirmados**; R-010 (601 vs 701 migraciones) pendiente de `docs/inventario/migraciones-nombradas.sql`. Correcciones de código **no autorizadas aún**.
 - Validar el AutoPrompter con una solicitud real (comportamiento del modelo no probado; solo integración documental y hooks).
 
 ## Fuentes de conocimiento vigentes
