@@ -208,17 +208,17 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
           <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
           <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar folio, cliente, vendedor o RFC…" className="input-odoo h-8 w-full pl-8 text-xs" />
         </div>
-        <select value={ruta} onChange={event => setRuta(event.target.value)} className="input-odoo h-8 min-w-36 text-xs">
+        <select value={ruta} onChange={event => setRuta(event.target.value)} className="input-odoo h-8 w-auto min-w-36 py-1 text-xs">
           <option value="todos">Todas las rutas/zonas</option>
           {rutas.map(item => <option key={item} value={item}>{item}</option>)}
         </select>
-        <select value={estadoCuenta} onChange={event => setEstadoCuenta(event.target.value as AccountFilter)} className="input-odoo h-8 min-w-32 text-xs">
+        <select value={estadoCuenta} onChange={event => setEstadoCuenta(event.target.value as AccountFilter)} className="input-odoo h-8 w-auto min-w-32 py-1 text-xs">
           <option value="todos">Todas las cuentas</option>
           <option value="adeudo">Adeudo</option>
           <option value="liquidada">Liquidada</option>
           <option value="cancelada">Cancelada</option>
         </select>
-        <select value={estadoComision} onChange={event => setEstadoComision(event.target.value as CommissionFilter)} className="input-odoo h-8 min-w-36 text-xs">
+        <select value={estadoComision} onChange={event => setEstadoComision(event.target.value as CommissionFilter)} className="input-odoo h-8 w-auto min-w-36 py-1 text-xs">
           <option value="todos">Todas las comisiones</option>
           <option value="sin_comision">Sin comisión</option>
           <option value="pendiente">Pendiente</option>
@@ -227,7 +227,7 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
           <option value="pagada">Pagada</option>
           <option value="cancelada">Cancelada</option>
         </select>
-        <select value={fiscal} onChange={event => setFiscal(event.target.value as FiscalFilter)} className="input-odoo h-8 min-w-32 text-xs">
+        <select value={fiscal} onChange={event => setFiscal(event.target.value as FiscalFilter)} className="input-odoo h-8 w-auto min-w-32 py-1 text-xs">
           <option value="todos">Fiscal y no fiscal</option>
           <option value="fiscal">Requiere factura</option>
           <option value="no_fiscal">No requiere factura</option>
