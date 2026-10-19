@@ -305,7 +305,7 @@ export default function PuntoVentaPage() {
         toast.error('No se pudo cargar el saldo pendiente del cliente');
         throw error;
       }
-      return (data ?? []).map(v => ({ ...v, dias_credito: diasCreditoVenta(v.fecha, v.fecha_vencimiento) }));
+      return data ?? [];
     },
   });
   const saldoPendienteCliente = useMemo(
@@ -314,12 +314,12 @@ export default function PuntoVentaPage() {
   );
   const cuentasVencidasCliente = useMemo(() => {
     const today = Date.now();
-    return (clientePendingVentasPOS ?? []).filter((v: any) => {
-      const dc = v.dias_credito ?? 0;
+    return (clientePendingVentasPOS ?? []).filter(v => {
+      const dc = diasCreditoVenta(v.fecha, v.fecha_vencimiento, clienteDiasCredito);
       const diasTrans = Math.floor((today - new Date(v.fecha).getTime()) / 86400000);
       return diasTrans > dc;
     }).length;
-  }, [clientePendingVentasPOS]);
+  }, [clientePendingVentasPOS, clienteDiasCredito]);
   const creditoDisponiblePOS = Math.max(0, (clienteLimiteCredito ?? 0) - saldoPendienteCliente);
 
 

@@ -7,8 +7,14 @@ describe('diasCreditoVenta', () => {
     expect(diasCreditoVenta('2026-10-01T15:30:00', '2026-10-16')).toBe(15);
   });
 
-  it('sin vencimiento o con vencimiento anterior vence el mismo día', () => {
+  it('sin vencimiento usa los días de crédito del cliente (D-004)', () => {
+    expect(diasCreditoVenta('2026-10-01', null, 15)).toBe(15);
+    expect(diasCreditoVenta('2026-10-01', null, null)).toBe(0);
     expect(diasCreditoVenta('2026-10-01', null)).toBe(0);
+  });
+
+  it('con vencimiento real ignora los días del cliente; vencimiento anterior = 0', () => {
+    expect(diasCreditoVenta('2026-10-01', '2026-10-08', 30)).toBe(7);
     expect(diasCreditoVenta('2026-10-10', '2026-10-01')).toBe(0);
   });
 

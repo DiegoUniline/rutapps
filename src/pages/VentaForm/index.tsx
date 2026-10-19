@@ -105,7 +105,7 @@ export default function VentaFormPage() {
         toast.error('No se pudieron cargar las cuentas pendientes del cliente');
         throw error;
       }
-      return (data ?? []).map(v => ({ ...v, dias_credito: diasCreditoVenta(v.fecha, v.fecha_vencimiento) }));
+      return data ?? [];
     },
   });
 
@@ -148,17 +148,17 @@ export default function VentaFormPage() {
     },
   });
 
-  const checkoutCuentasPendientes = useMemo(() =>
-    (clientePendingVentas ?? []).map((v: any) => ({
+  const checkoutCuentasPendientes = useMemo(() => {
+    const diasCliente = (clientesList?.find(c => c.id === form.cliente_id) as { dias_credito?: number | null } | undefined)?.dias_credito;
+    return (clientePendingVentas ?? []).map(v => ({
       id: v.id,
       folio: v.folio,
       fecha: v.fecha,
       total: v.total ?? 0,
       saldo_pendiente: v.saldo_pendiente ?? 0,
-      dias_credito: v.dias_credito ?? 0,
-    })),
-    [clientePendingVentas]
-  );
+      dias_credito: diasCreditoVenta(v.fecha, v.fecha_vencimiento, diasCliente),
+    }));
+  }, [clientePendingVentas, clientesList, form.cliente_id]);
 
 
   const handleCheckoutConfirm = useCallback(async (

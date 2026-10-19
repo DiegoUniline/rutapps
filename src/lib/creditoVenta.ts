@@ -2,11 +2,11 @@ const DAY_MS = 86_400_000;
 
 /**
  * Días de crédito de una venta, derivados de su `fecha_vencimiento` (snapshot de la
- * política de cobro). `ventas` no tiene columna `dias_credito`; sin vencimiento la
- * venta vence el mismo día de su fecha (0 días).
+ * política de cobro). `ventas` no tiene columna `dias_credito`. Sin vencimiento se
+ * aplican los días de crédito actuales del cliente (D-004).
  */
-export function diasCreditoVenta(fecha: string, fechaVencimiento: string | null | undefined): number {
-  if (!fechaVencimiento) return 0;
+export function diasCreditoVenta(fecha: string, fechaVencimiento: string | null | undefined, diasCliente?: number | null): number {
+  if (!fechaVencimiento) return Math.max(0, Number(diasCliente) || 0);
   const inicio = Date.parse(fecha.slice(0, 10));
   const vence = Date.parse(fechaVencimiento.slice(0, 10));
   if (!Number.isFinite(inicio) || !Number.isFinite(vence)) return 0;
