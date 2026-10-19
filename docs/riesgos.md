@@ -27,3 +27,10 @@ Formato: `R-XXX · severidad · estado` — evidencia — impacto. Estado ⚠️
 - R-004: **85 ventas con descuento > 15 % en 90 días** que el control no muestra. MEDIA.
 - Hueco `20260909040000`: **465 entregas hechas sin `fecha_entrega`** (jul 2 · ago 171 · sep 265 · oct 27). Afecta reportes por fecha real de entrega. MEDIA.
 - **R-012 · ALTA · ✅ CONFIRMADO (efecto de corregir R-003)** — Producción 2026-10-19: al calcular el saldo real, **62 clientes** quedan sobre su límite de crédito (el POS/VentaForm dejarían de venderles a crédito) y 48 al ≥ 80 %. Si las ventas sin `fecha_vencimiento` se tratan como vencidas el mismo día, **3 206 clientes** mostrarían aviso de vencidas (vs 45 con vencimiento real) — la regla para ventas sin vencimiento es decisión de negocio pendiente (PR #148 en borrador).
+- **R-013 · MEDIA · observado** — La política RESTRICTIVE `Active app users only` en `profiles` (`20260915222000`) **no se aplica** por ahora: `src/contexts/AuthContext.tsx:117-123` lee el propio perfil para mostrar «Tu usuario fue archivado»; con la política el archivado no podría leerlo y la app lo trataría como sin perfil (riesgo de flujo de registro). Las 31 tablas operativas ya bloquean al archivado. Requiere rediseño (p. ej. permitir SELECT del propio perfil) antes de aplicarla.
+
+### Estado de corrección (2026-10-19)
+- PR #148 **merged** (R-001, R-004, R-005, R-006, vencimiento en reporte por folio) — pendiente publicar en Lovable y desplegar edge functions `cliente-portal`, `wa-scheduler-alertas-semanal`.
+- PR #149 **borrador** (R-003 control de crédito con D-004) — en espera de avisar a vendedores.
+- PR #150 SQL de huecos (R-009/R-010) — pendiente que el dueño lo ejecute.
+- R-002 sin corregir a propósito (evitar facturas duplicadas).
