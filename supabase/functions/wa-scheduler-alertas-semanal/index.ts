@@ -21,7 +21,7 @@ async function buildAlertas(empresaId: string): Promise<string | null> {
     .from("clientes")
     .select("id, nombre")
     .eq("empresa_id", empresaId)
-    .eq("activo", true);
+    .eq("status", "activo");
   const ids = (clientesAct || []).map((c: any) => c.id);
   if (ids.length) {
     const { data: ventasRec } = await admin

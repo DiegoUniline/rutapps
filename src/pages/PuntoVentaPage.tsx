@@ -43,6 +43,7 @@ import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplic
 import { buildPosTicketPayments } from '@/lib/posTicketPayments';
 import { resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
 import { PromotionReadinessNotice } from '@/components/PromotionReadinessNotice';
+import { diasCreditoVenta } from '@/lib/creditoVenta';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
@@ -294,13 +295,17 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id && !!clienteId,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data } = await supabase.from('ventas')
-        .select('id, fecha, saldo_pendiente, dias_credito')
+      const { data, error } = await supabase.from('ventas')
+        .select('id, fecha, saldo_pendiente, fecha_vencimiento')
         .eq('empresa_id', empresa!.id)
         .eq('cliente_id', clienteId!)
         .gt('saldo_pendiente', 0)
         .in('status', ['confirmado', 'entregado', 'facturado']);
-      return data ?? [];
+      if (error) {
+        toast.error('No se pudo cargar el saldo pendiente del cliente');
+        throw error;
+      }
+      return (data ?? []).map(v => ({ ...v, dias_credito: diasCreditoVenta(v.fecha, v.fecha_vencimiento) }));
     },
   });
   const saldoPendienteCliente = useMemo(
