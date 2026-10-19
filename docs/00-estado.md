@@ -1,7 +1,7 @@
 # Estado del proyecto — DOCUMENTO VIVO
 > Se lee al iniciar cada sesión. Se actualiza tras decisiones confirmadas o cambios verificados (no por consultas).
 
-**Última actualización:** 2026-10-19 · **Agente:** desarrollador (instalación Uniline Agents)
+**Última actualización:** 2026-10-19 · **Agente:** desarrollador
 
 ## Dónde vamos
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
@@ -16,6 +16,7 @@
 - (ninguna)
 
 ## Pendientes / bloqueos
+- Filtros del Reporte de comisiones (PR #141): IMPLEMENTADO y verificado con CSS de build; NO DESPLEGADO — rutapp.mx sigue mostrando la versión anterior. Confirmar en `/reportes` tras publicar.
 - Inventario Uniline (`/inventario`) de RutApp no ejecutado: los módulos no tienen ficha en `docs/modulos/`. El conocimiento vive en las fuentes de abajo.
 - Validar el AutoPrompter con una solicitud real (comportamiento del modelo no probado; solo integración documental y hooks).
 
