@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, FileText, RefreshCw, Search } from 'lucide-react';
+import { AlertCircle, FileText, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -11,20 +11,40 @@ import { useTablePagination } from '@/hooks/useTablePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
-import { exportToExcel, exportToPDF, type ExportOptions } from '@/lib/exportUtils';
+import { OdooFilterBar, type FilterOption } from '@/components/OdooFilterBar';
+import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
+import { groupData, useListPreferences, type GroupNode } from '@/hooks/useListPreferences';
+import { exportToExcel, exportToPDF, type ExportGroup, type ExportOptions } from '@/lib/exportUtils';
 import { cn, fmtDate } from '@/lib/utils';
 import {
+  AGRUPACION_COMISION_LABEL,
   buildReporteComisionVenta,
   ESTADO_COMISION_LABEL,
   ESTADO_CUENTA_LABEL,
+  etiquetaAgrupacionComision,
+  filtrarReporteComisiones,
+  ordenAgrupacionComision,
+  totalizarComisiones,
+  type AgrupacionComision,
   type ComisionVentaSource,
   type EstadoCuentaComision,
   type EstadoPagoComision,
+  type ReporteComisionVenta,
+  type TotalesComisiones,
 } from '@/lib/reporteComisionesVentas';
 
-type FiscalFilter = 'todos' | 'fiscal' | 'no_fiscal' | 'rfc_pendiente';
-type AccountFilter = 'todos' | EstadoCuentaComision;
-type CommissionFilter = 'todos' | EstadoPagoComision;
+const GROUP_BY_OPTIONS = (Object.keys(AGRUPACION_COMISION_LABEL) as AgrupacionComision[])
+  .map(value => ({ value, label: AGRUPACION_COMISION_LABEL[value] }));
+
+const STATIC_FILTERS: FilterOption[] = [
+  { key: 'estadoCuenta', label: 'Cuenta', options: (Object.keys(ESTADO_CUENTA_LABEL) as EstadoCuentaComision[]).map(value => ({ value, label: ESTADO_CUENTA_LABEL[value] })) },
+  { key: 'estadoComision', label: 'Comisión', options: (Object.keys(ESTADO_COMISION_LABEL) as EstadoPagoComision[]).map(value => ({ value, label: ESTADO_COMISION_LABEL[value] })) },
+  { key: 'fiscal', label: 'Fiscal', options: [
+    { value: 'fiscal', label: 'Requiere factura' },
+    { value: 'no_fiscal', label: 'No requiere factura' },
+    { value: 'rfc_pendiente', label: 'RFC pendiente' },
+  ] },
+];
 
 interface Props {
   desde: string;
@@ -52,10 +72,7 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
   const { fmt } = useCurrency();
   const enabled = !!empresa?.id;
   const [search, setSearch] = useState('');
-  const [ruta, setRuta] = useState('todos');
-  const [estadoCuenta, setEstadoCuenta] = useState<AccountFilter>('todos');
-  const [estadoComision, setEstadoComision] = useState<CommissionFilter>('todos');
-  const [fiscal, setFiscal] = useState<FiscalFilter>('todos');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('reporte-comisiones-ventas');
 
   const query = useQuery({
     queryKey: ['reporte-comisiones-ventas', empresa?.id, desde, hasta, vendedorIds],
@@ -96,33 +113,52 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
     [rows],
   );
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase('es');
-    return rows.filter(row => {
-      if (term && ![row.folio, row.cliente, row.vendedor, row.ruta, row.rfc].some(value => value.toLocaleLowerCase('es').includes(term))) return false;
-      if (ruta !== 'todos' && row.ruta !== ruta) return false;
-      if (estadoCuenta !== 'todos' && row.estadoCuenta !== estadoCuenta) return false;
-      if (estadoComision !== 'todos' && row.estadoComision !== estadoComision) return false;
-      if (fiscal === 'fiscal' && !row.requiereFactura) return false;
-      if (fiscal === 'no_fiscal' && row.requiereFactura) return false;
-      if (fiscal === 'rfc_pendiente' && (!row.requiereFactura || row.rfc)) return false;
-      return true;
-    });
-  }, [rows, search, ruta, estadoCuenta, estadoComision, fiscal]);
+  const filterOptions = useMemo<FilterOption[]>(() => [
+    { key: 'ruta', label: 'Ruta/Zona', options: rutas.map(item => ({ value: item, label: item })) },
+    ...STATIC_FILTERS,
+  ], [rutas]);
 
-  const totals = useMemo(() => filtered.reduce((acc, row) => {
-    acc.ventas += 1;
-    acc.vendido += row.total;
-    acc.comision += row.comision;
-    acc.comisionPendiente += row.comisionPendiente + row.comisionEnRecibo;
-    acc.comisionPagada += row.comisionPagada;
-    acc.saldo += row.saldo;
-    return acc;
-  }, { ventas: 0, vendido: 0, comision: 0, comisionPendiente: 0, comisionPagada: 0, saldo: 0 }), [filtered]);
+  const filtered = useMemo(() => filtrarReporteComisiones(rows, filters, search), [rows, filters, search]);
+
+  const totals = useMemo(() => totalizarComisiones(filtered), [filtered]);
+
+  const groups = useMemo(
+    () => groupData(filtered, groupBy, etiquetaAgrupacionComision, groupByLevels, ordenAgrupacionComision),
+    [filtered, groupBy, groupByLevels],
+  );
 
   const pagination = useTablePagination(filtered, 'reporte-comisiones-ventas');
   const { resetPage } = pagination;
-  useEffect(() => resetPage(), [resetPage, search, ruta, estadoCuenta, estadoComision, fiscal, desde, hasta, vendedorIds]);
+  useEffect(() => resetPage(), [resetPage, search, filters, desde, hasta, vendedorIds]);
+
+  const exportRow = (row: ReporteComisionVenta) => ({
+    ...row,
+    estadoCuentaLabel: ESTADO_CUENTA_LABEL[row.estadoCuenta],
+    estadoComisionLabel: ESTADO_COMISION_LABEL[row.estadoComision],
+    tipoFiscal: row.requiereFactura ? 'Fiscal' : 'No fiscal',
+    rfc: row.requiereFactura && !row.rfc ? 'RFC pendiente' : row.rfc,
+  });
+
+  // Excel solo agrupa en un nivel: cada combinación de niveles es un grupo ("Vendedor › Ruta").
+  const exportGroups = (): ExportGroup[] | undefined => {
+    if (!groupByLevels.length) return undefined;
+    const leaves: ExportGroup[] = [];
+    const walk = (nodes: GroupNode<ReporteComisionVenta>[], path: string[]) => {
+      for (const node of nodes) {
+        const labels = [...path, node.label];
+        if (node.subGroups?.length) { walk(node.subGroups, labels); continue; }
+        const subtotal = totalizarComisiones(node.items);
+        leaves.push({
+          key: labels.join('__'),
+          label: labels.join(' › '),
+          rows: node.items.map(exportRow),
+          subtotals: { comision: subtotal.comision, total: subtotal.vendido, saldo: subtotal.saldo },
+        });
+      }
+    };
+    walk(groups, []);
+    return leaves;
+  };
 
   const exportOptions = (): ExportOptions => ({
     fileName: `Reporte_Comisiones_${desde}_${hasta}`,
@@ -151,13 +187,9 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
       { key: 'total', header: 'Total venta', format: 'currency', width: 14 },
       { key: 'saldo', header: 'Saldo cliente', format: 'currency', width: 14 },
     ],
-    data: filtered.map(row => ({
-      ...row,
-      estadoCuentaLabel: ESTADO_CUENTA_LABEL[row.estadoCuenta],
-      estadoComisionLabel: ESTADO_COMISION_LABEL[row.estadoComision],
-      tipoFiscal: row.requiereFactura ? 'Fiscal' : 'No fiscal',
-      rfc: row.requiereFactura && !row.rfc ? 'RFC pendiente' : row.rfc,
-    })),
+    data: filtered.map(exportRow),
+    groups: exportGroups(),
+    groupByLabel: groupByLevels.length ? groupByLevels.map(level => AGRUPACION_COMISION_LABEL[level as AgrupacionComision] ?? level).join(' › ') : undefined,
     totals: { comision: totals.comision, total: totals.vendido, saldo: totals.saldo },
   });
 
@@ -203,101 +235,122 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
         <Summary label="Por cobrar clientes" value={fmt(totals.saldo)} tone={totals.saldo > 0 ? 'red' : 'default'} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 print:hidden">
-        <div className="relative min-w-[220px] flex-1 lg:max-w-sm">
-          <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
-          <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar folio, cliente, vendedor o RFC…" className="input-odoo h-8 w-full pl-8 text-xs" />
-        </div>
-        <select value={ruta} onChange={event => setRuta(event.target.value)} className="input-odoo h-8 w-auto min-w-36 py-1 text-xs">
-          <option value="todos">Todas las rutas/zonas</option>
-          {rutas.map(item => <option key={item} value={item}>{item}</option>)}
-        </select>
-        <select value={estadoCuenta} onChange={event => setEstadoCuenta(event.target.value as AccountFilter)} className="input-odoo h-8 w-auto min-w-32 py-1 text-xs">
-          <option value="todos">Todas las cuentas</option>
-          <option value="adeudo">Adeudo</option>
-          <option value="liquidada">Liquidada</option>
-          <option value="cancelada">Cancelada</option>
-        </select>
-        <select value={estadoComision} onChange={event => setEstadoComision(event.target.value as CommissionFilter)} className="input-odoo h-8 w-auto min-w-36 py-1 text-xs">
-          <option value="todos">Todas las comisiones</option>
-          <option value="sin_comision">Sin comisión</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="en_recibo">En recibo</option>
-          <option value="parcial">Pago parcial</option>
-          <option value="pagada">Pagada</option>
-          <option value="cancelada">Cancelada</option>
-        </select>
-        <select value={fiscal} onChange={event => setFiscal(event.target.value as FiscalFilter)} className="input-odoo h-8 w-auto min-w-32 py-1 text-xs">
-          <option value="todos">Fiscal y no fiscal</option>
-          <option value="fiscal">Requiere factura</option>
-          <option value="no_fiscal">No requiere factura</option>
-          <option value="rfc_pendiente">RFC pendiente</option>
-        </select>
-        <ExportButton compact onExcel={() => void exportReport('excel')} onPDF={() => void exportReport('pdf')} />
-        <button onClick={() => window.print()} className="btn-odoo-secondary h-7 gap-1 text-[11px]">
-          <FileText className="h-3 w-3" /> Imprimir
-        </button>
+      <div className="print:hidden">
+        <OdooFilterBar
+          compact
+          search={search}
+          onSearchChange={setSearch}
+          placeholder="Folio, cliente, vendedor…"
+          filterOptions={filterOptions}
+          activeFilters={filters}
+          onToggleFilter={toggleFilterValue}
+          onSetFilter={setFilter}
+          groupByOptions={GROUP_BY_OPTIONS}
+          activeGroupBy={groupBy}
+          onGroupByChange={setGroupBy}
+          activeGroupByLevels={groupByLevels}
+          onGroupByLevelChange={setGroupByLevel}
+          onClearFilters={clearFilters}
+        >
+          <ExportButton compact onExcel={() => void exportReport('excel')} onPDF={() => void exportReport('pdf')} />
+          <button onClick={() => window.print()} className="btn-odoo-secondary h-7 gap-1 text-[11px]">
+            <FileText className="h-3 w-3" /> Imprimir
+          </button>
+        </OdooFilterBar>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-card">
-        <table className="w-full min-w-[1320px] text-xs">
-          <thead className="border-b border-border bg-muted/40">
-            <tr>
-              <th className="th-odoo text-left">Folio</th>
-              <th className="th-odoo text-left">Cliente</th>
-              <th className="th-odoo text-left">Vendedor</th>
-              <th className="th-odoo text-left">Fecha</th>
-              <th className="th-odoo text-left">Ruta/Zona</th>
-              <th className="th-odoo text-center">Cuenta</th>
-              <th className="th-odoo text-left">Facturación</th>
-              <th className="th-odoo text-center">Comisión</th>
-              <th className="th-odoo text-right">Comisión $</th>
-              <th className="th-odoo text-right">Total</th>
-              <th className="th-odoo text-right">Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pagination.paginatedItems.map(row => (
-              <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/30">
-                <td className="px-3 py-2 font-mono">
-                  <Link to={`/ventas/${row.id}`} className="text-primary hover:underline">{row.folio}</Link>
-                </td>
-                <td className="max-w-[260px] truncate px-3 py-2 font-medium" title={row.cliente}>{row.cliente}</td>
-                <td className="max-w-[190px] truncate px-3 py-2" title={row.vendedor}>{row.vendedor}</td>
-                <td className="whitespace-nowrap px-3 py-2">{fmtDate(row.fecha)}</td>
-                <td className="max-w-[170px] truncate px-3 py-2" title={row.ruta}>{row.ruta}</td>
-                <td className="px-3 py-2 text-center"><Badge className={accountTone[row.estadoCuenta]}>{ESTADO_CUENTA_LABEL[row.estadoCuenta]}</Badge></td>
-                <td className="px-3 py-2">
-                  {row.requiereFactura ? (
-                    <div><Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">Fiscal</Badge><div className={cn('mt-0.5 font-mono text-[10px]', !row.rfc && 'font-semibold text-destructive')}>{row.rfc || 'RFC pendiente'}</div></div>
-                  ) : <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">No fiscal</Badge>}
-                </td>
-                <td className="px-3 py-2 text-center"><Badge className={commissionTone[row.estadoComision]}>{ESTADO_COMISION_LABEL[row.estadoComision]}</Badge></td>
-                <td className="px-3 py-2 text-right font-mono font-semibold text-odoo-teal">{fmt(row.comision)}</td>
-                <td className="px-3 py-2 text-right font-mono">{fmt(row.total)}</td>
-                <td className={cn('px-3 py-2 text-right font-mono font-semibold', row.saldo > 0 && 'text-destructive')}>{fmt(row.saldo)}</td>
-              </tr>
-            ))}
-            {!pagination.paginatedItems.length && <tr><td colSpan={11} className="px-3 py-10 text-center text-muted-foreground">No hay ventas que coincidan con los filtros seleccionados.</td></tr>}
-          </tbody>
-          {!!filtered.length && (
-            <tfoot className="border-t-2 border-border bg-muted/40 font-semibold">
-              <tr>
-                <td colSpan={8} className="px-3 py-2 text-right">Totales ({filtered.length})</td>
-                <td className="px-3 py-2 text-right font-mono text-odoo-teal">{fmt(totals.comision)}</td>
-                <td className="px-3 py-2 text-right font-mono">{fmt(totals.vendido)}</td>
-                <td className="px-3 py-2 text-right font-mono text-destructive">{fmt(totals.saldo)}</td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-        <TablePagination
-          from={pagination.from} to={pagination.to} total={pagination.total}
-          page={pagination.page} totalPages={pagination.totalPages} pageSize={pagination.pageSize}
-          onPageSizeChange={pagination.setPageSize} onFirst={pagination.goFirst}
-          onPrev={pagination.goPrev} onNext={pagination.goNext} onLast={pagination.goLast}
+      {groupByLevels.length > 0 ? (
+        <GroupedTableWrapper
+          groupBy={groupBy}
+          groups={groups}
+          renderTable={items => <ComisionesTable rows={items} fmt={fmt} />}
+          renderSummary={items => <GroupSummary totals={totalizarComisiones(items)} fmt={fmt} />}
         />
-      </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+          <ComisionesTable rows={pagination.paginatedItems} fmt={fmt} footer={filtered.length ? { count: filtered.length, totals } : undefined} />
+          <TablePagination
+            from={pagination.from} to={pagination.to} total={pagination.total}
+            page={pagination.page} totalPages={pagination.totalPages} pageSize={pagination.pageSize}
+            onPageSizeChange={pagination.setPageSize} onFirst={pagination.goFirst}
+            onPrev={pagination.goPrev} onNext={pagination.goNext} onLast={pagination.goLast}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ComisionesTableProps {
+  rows: ReporteComisionVenta[];
+  fmt: (value: number) => string;
+  footer?: { count: number; totals: TotalesComisiones };
+}
+
+function ComisionesTable({ rows, fmt, footer }: ComisionesTableProps) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1320px] text-xs">
+        <thead className="border-b border-border bg-muted/40">
+          <tr>
+            <th className="th-odoo text-left">Folio</th>
+            <th className="th-odoo text-left">Cliente</th>
+            <th className="th-odoo text-left">Vendedor</th>
+            <th className="th-odoo text-left">Fecha</th>
+            <th className="th-odoo text-left">Ruta/Zona</th>
+            <th className="th-odoo text-center">Cuenta</th>
+            <th className="th-odoo text-left">Facturación</th>
+            <th className="th-odoo text-center">Comisión</th>
+            <th className="th-odoo text-right">Comisión $</th>
+            <th className="th-odoo text-right">Total</th>
+            <th className="th-odoo text-right">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => (
+            <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+              <td className="px-3 py-2 font-mono">
+                <Link to={`/ventas/${row.id}`} className="text-primary hover:underline">{row.folio}</Link>
+              </td>
+              <td className="max-w-[260px] truncate px-3 py-2 font-medium" title={row.cliente}>{row.cliente}</td>
+              <td className="max-w-[190px] truncate px-3 py-2" title={row.vendedor}>{row.vendedor}</td>
+              <td className="whitespace-nowrap px-3 py-2">{fmtDate(row.fecha)}</td>
+              <td className="max-w-[170px] truncate px-3 py-2" title={row.ruta}>{row.ruta}</td>
+              <td className="px-3 py-2 text-center"><Badge className={accountTone[row.estadoCuenta]}>{ESTADO_CUENTA_LABEL[row.estadoCuenta]}</Badge></td>
+              <td className="px-3 py-2">
+                {row.requiereFactura ? (
+                  <div><Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">Fiscal</Badge><div className={cn('mt-0.5 font-mono text-[10px]', !row.rfc && 'font-semibold text-destructive')}>{row.rfc || 'RFC pendiente'}</div></div>
+                ) : <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">No fiscal</Badge>}
+              </td>
+              <td className="px-3 py-2 text-center"><Badge className={commissionTone[row.estadoComision]}>{ESTADO_COMISION_LABEL[row.estadoComision]}</Badge></td>
+              <td className="px-3 py-2 text-right font-mono font-semibold text-odoo-teal">{fmt(row.comision)}</td>
+              <td className="px-3 py-2 text-right font-mono">{fmt(row.total)}</td>
+              <td className={cn('px-3 py-2 text-right font-mono font-semibold', row.saldo > 0 && 'text-destructive')}>{fmt(row.saldo)}</td>
+            </tr>
+          ))}
+          {!rows.length && <tr><td colSpan={11} className="px-3 py-10 text-center text-muted-foreground">No hay ventas que coincidan con los filtros seleccionados.</td></tr>}
+        </tbody>
+        {footer && (
+          <tfoot className="border-t-2 border-border bg-muted/40 font-semibold">
+            <tr>
+              <td colSpan={8} className="px-3 py-2 text-right">Totales ({footer.count})</td>
+              <td className="px-3 py-2 text-right font-mono text-odoo-teal">{fmt(footer.totals.comision)}</td>
+              <td className="px-3 py-2 text-right font-mono">{fmt(footer.totals.vendido)}</td>
+              <td className="px-3 py-2 text-right font-mono text-destructive">{fmt(footer.totals.saldo)}</td>
+            </tr>
+          </tfoot>
+        )}
+      </table>
+    </div>
+  );
+}
+
+function GroupSummary({ totals, fmt }: { totals: TotalesComisiones; fmt: (value: number) => string }) {
+  return (
+    <div className="flex items-center gap-3 font-mono text-[11px]">
+      <span>Vendido <b>{fmt(totals.vendido)}</b></span>
+      <span className="text-odoo-teal">Comisión <b>{fmt(totals.comision)}</b></span>
+      <span className={cn(totals.saldo > 0 && 'text-destructive')}>Saldo <b>{fmt(totals.saldo)}</b></span>
     </div>
   );
 }
