@@ -8,3 +8,4 @@
 2026-10-19 · dueño · Reporte de comisiones (#141, #144) DESPLEGADO en rutapp.mx y validado por el dueño con datos reales
 2026-10-19 · auditor · Inventario Fase 1: 18 módulos / 179 tablas (types.ts) / 153 usadas en código; 7 columnas usadas que types.ts no tiene (R-001…R-006), 5 tablas sin migración (R-007); SQL de validación docs/inventario/validar-bd.sql probado en Postgres 16 local
 2026-10-19 · dueño+auditor · Validación en producción: 8 columnas usadas por el código NO existen (R-001…R-006 confirmados), 2 RPC NO existen (R-009), 179 tablas = types.ts, 601 migraciones aplicadas vs 701 en repo (R-010), sin tablas sin RLS ni dinero en float
+2026-10-19 · dueño+auditor · migraciones-nombradas.sql: 100 de 103 migraciones con nombre descriptivo NO registradas en producción (R-010); efecto real pendiente de efectos-migraciones.sql

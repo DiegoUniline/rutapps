@@ -7,7 +7,7 @@
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
 - **Módulo en curso:** —
 - **Última pregunta:** —
-- **Siguiente paso exacto:** el dueño corre `docs/inventario/migraciones-nombradas.sql`; luego proponer (contrato AutoPrompter) la corrección de R-010/R-009 y R-001…R-006
+- **Siguiente paso exacto:** el dueño corre `docs/inventario/efectos-migraciones.sql`; luego proponer (contrato AutoPrompter) plan de R-010/R-009 y R-001…R-006. Pendiente también: decisión sobre «No modificaré»/«Riesgo» en el contrato de respuesta (P-002)
 
 ## Decisiones recientes (últimas 10)
 - [D-001](./decisiones.md#d-001) 2026-10-19 · Instalar Uniline Agents (kit completo adaptado) con AutoPrompter v2.
@@ -16,7 +16,7 @@
 - (ninguna)
 
 ## Pendientes / bloqueos
-- Inventario Fase 1 hecho (`docs/00-mapa.md`). Validación en producción 2026-10-19: R-001…R-006 y R-009 **confirmados**; R-010 (601 vs 701 migraciones) pendiente de `docs/inventario/migraciones-nombradas.sql`. Correcciones de código **no autorizadas aún**.
+- Inventario Fase 1 hecho (`docs/00-mapa.md`). Producción 2026-10-19: R-001…R-006, R-009 confirmados; R-010: 100 migraciones del repo no registradas. Pendiente: `docs/inventario/efectos-migraciones.sql` para saber qué parte de cada una existe. Correcciones **no autorizadas aún**.
 - Validar el AutoPrompter con una solicitud real (comportamiento del modelo no probado; solo integración documental y hooks).
 
 ## Fuentes de conocimiento vigentes
