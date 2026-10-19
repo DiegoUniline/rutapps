@@ -6,3 +6,4 @@
 2026-10-19 · desarrollador · PR #140 (7faa193) · merge a main de Uniline Agents · D-001
 2026-10-19 · desarrollador · PR #144 (a917cc8) · Reporte comisiones: filtros multiselección (OR dentro, AND entre filtros) y agrupación hasta 3 niveles (Vendedor, Ruta/Zona, Estado cuenta, Estado comisión, Tipo fiscal, Mes; sin Cliente ni Fecha día por decisión del dueño); Excel con subtotales por combinación, PDF plano; 315/315 ✅; no desplegado
 2026-10-19 · dueño · Reporte de comisiones (#141, #144) DESPLEGADO en rutapp.mx y validado por el dueño con datos reales
+2026-10-19 · auditor · Inventario Fase 1: 18 módulos / 179 tablas (types.ts) / 153 usadas en código; 7 columnas usadas que types.ts no tiene (R-001…R-006), 5 tablas sin migración (R-007); SQL de validación docs/inventario/validar-bd.sql probado en Postgres 16 local

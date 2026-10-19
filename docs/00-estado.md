@@ -7,7 +7,7 @@
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
 - **Módulo en curso:** —
 - **Última pregunta:** —
-- **Siguiente paso exacto:** atender la siguiente solicitud del dueño con el AutoPrompter (`.claude/skills/autoprompter/SKILL.md`)
+- **Siguiente paso exacto:** recibir el resultado de `docs/inventario/validar-bd.sql` y actualizar `docs/00-mapa.md` y `docs/riesgos.md` con lo confirmado
 
 ## Decisiones recientes (últimas 10)
 - [D-001](./decisiones.md#d-001) 2026-10-19 · Instalar Uniline Agents (kit completo adaptado) con AutoPrompter v2.
@@ -16,7 +16,7 @@
 - (ninguna)
 
 ## Pendientes / bloqueos
-- Inventario Uniline (`/inventario`) de RutApp no ejecutado: los módulos no tienen ficha en `docs/modulos/`. El conocimiento vive en las fuentes de abajo.
+- Inventario Fase 1 hecho (`docs/00-mapa.md`, 18 módulos, 179 tablas). **Siguiente:** el dueño corre `docs/inventario/validar-bd.sql` en producción y comparte el resultado para confirmar o descartar R-001…R-006 (`docs/riesgos.md`). Fase 2 (`docs/modulos/`) pendiente.
 - Validar el AutoPrompter con una solicitud real (comportamiento del modelo no probado; solo integración documental y hooks).
 
 ## Fuentes de conocimiento vigentes
@@ -29,7 +29,8 @@
 | `.lovable/memory/architecture/code-quality.md` | Sin `any`, sin `console.log`, tests de dinero | APROBADO |
 | `.lovable/memory/design/pdf-bn-standard.md` | PDFs B/N corporativos (excepto CFDI) | APROBADO |
 | `.lovable/memory/features/*.md` | Cotizaciones, dashboard, comparación de periodo, solicitudes de traspaso | APROBADO |
-| `docs/01..05` | Arquitectura, esquema BD, rutas, flujos, seguridad | OBSERVADO (contrastar vigencia con código/migraciones) |
+| `docs/01..05` | Arquitectura, esquema BD, rutas, flujos, seguridad | OBSERVADO · `docs/02` OBSOLETO (153 vs 179 tablas) |
+| `docs/00-mapa.md` · `docs/riesgos.md` | Inventario Fase 1 y riesgos | OBSERVADO (pendiente validar con SQL) |
 | `.lovable/plan/*.md` | Planes de cambios | PROPUESTO salvo evidencia en código |
 
 ## Módulos
