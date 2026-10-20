@@ -6,6 +6,9 @@ import { atribuirCobrosAVendedor, type DashboardCobroAplicacion } from '@/lib/da
 
 export type DateRange = { from: Date; to: Date };
 
+type EvolucionFila = { tipo: 'producto' | 'cliente' | 'vendedor'; entidad_id: string | null; nombre: string | null; mes: string; total: number };
+type RpcSinTipos = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+
 function fmt(d: Date) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -337,20 +340,13 @@ export function useDashboardEvolucionMensual(months: number = 12) {
       const from = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
       const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-      const lineas = await fetchAllPages((f, t) =>
-        supabase
-          .from('venta_lineas')
-          .select('producto_id, cantidad, total, ventas!inner(fecha, status, empresa_id, vendedor_id, cliente_id)')
-          .eq('empresa_id', empresa!.id)
-          .eq('ventas.empresa_id', empresa!.id)
-          .gte('ventas.fecha', fmt(from))
-          .lte('ventas.fecha', fmt(to))
-          .neq('ventas.status', 'cancelado')
-          .range(f, t)
-      );
+      // Totales ya sumados en la BD (antes: 12 meses de renglones descargados de mil en mil).
+      const { data: filas, error } = await (supabase.rpc as unknown as RpcSinTipos)('dashboard_evolucion_mensual', {
+        p_empresa_id: empresa!.id, p_from: fmt(from), p_to: fmt(to),
+      });
+      if (error) throw new Error(error.message);
 
       const meses = monthsBack(months);
-      // Aggregate per (entityKind, entityId, monthKey)
       const agg = {
         producto: new Map<string, Map<string, number>>(),
         cliente: new Map<string, Map<string, number>>(),
@@ -361,52 +357,17 @@ export function useDashboardEvolucionMensual(months: number = 12) {
         cliente: new Map<string, number>(),
         vendedor: new Map<string, number>(),
       };
-
-      const bump = (
-        kind: 'producto' | 'cliente' | 'vendedor',
-        id: string | null | undefined,
-        monthKey: string,
-        value: number,
-      ) => {
-        if (!id) return;
-        let inner = agg[kind].get(id);
-        if (!inner) { inner = new Map(); agg[kind].set(id, inner); }
-        inner.set(monthKey, (inner.get(monthKey) ?? 0) + value);
-        totales[kind].set(id, (totales[kind].get(id) ?? 0) + value);
-      };
-
-      lineas.forEach((l: any) => {
-        const v = l.ventas;
-        if (!v?.fecha) return;
-        const monthKey = String(v.fecha).slice(0, 7);
-        const total = Number(l.total ?? 0);
-        bump('producto', l.producto_id, monthKey, total);
-        bump('cliente', v.cliente_id, monthKey, total);
-        bump('vendedor', v.vendedor_id, monthKey, total);
-      });
-
-      // Resolve names
-      const resolveNames = async (
-        ids: string[],
-        table: 'productos' | 'clientes' | 'profiles',
-      ) => {
-        const out = new Map<string, string>();
-        for (let i = 0; i < ids.length; i += 500) {
-          const batch = ids.slice(i, i + 500);
-          const { data } = await supabase
-            .from(table)
-            .select('id, nombre')
-            .in('id', batch);
-          (data ?? []).forEach((r: any) => out.set(r.id, r.nombre));
-        }
-        return out;
-      };
-
-      const [prodNames, cliNames, vendNames] = await Promise.all([
-        resolveNames([...agg.producto.keys()], 'productos'),
-        resolveNames([...agg.cliente.keys()], 'clientes'),
-        resolveNames([...agg.vendedor.keys()], 'profiles'),
-      ]);
+      const nombres = { producto: new Map<string, string>(), cliente: new Map<string, string>(), vendedor: new Map<string, string>() };
+      for (const f of (filas ?? []) as EvolucionFila[]) {
+        if (!f.entidad_id) continue;
+        let inner = agg[f.tipo].get(f.entidad_id);
+        if (!inner) { inner = new Map(); agg[f.tipo].set(f.entidad_id, inner); }
+        const total = Number(f.total ?? 0);
+        inner.set(f.mes, (inner.get(f.mes) ?? 0) + total);
+        totales[f.tipo].set(f.entidad_id, (totales[f.tipo].get(f.entidad_id) ?? 0) + total);
+        if (f.nombre) nombres[f.tipo].set(f.entidad_id, f.nombre);
+      }
+      const [prodNames, cliNames, vendNames] = [nombres.producto, nombres.cliente, nombres.vendedor];
 
       const build = (
         kind: 'producto' | 'cliente' | 'vendedor',
