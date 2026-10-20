@@ -1,4 +1,5 @@
 import { RutaOperacionGate } from '@/components/ruta/RutaOperacionGate';
+import { clienteCoincide } from '@/lib/buscarCliente';
 import { todayLocal } from '@/lib/utils';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -97,14 +98,8 @@ function RutaCobrarInner() {
   const clientesConSaldo = clientes?.filter((c: any) => c.saldoPendiente > 0) ?? [];
   const clientesSinSaldo = clientes?.filter((c: any) => c.saldoPendiente === 0) ?? [];
 
-  const filteredConSaldo = clientesConSaldo.filter((c: any) =>
-    !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||
-    c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
-  );
-  const filteredSinSaldo = clientesSinSaldo.filter((c: any) =>
-    !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||
-    c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
-  );
+  const filteredConSaldo = clientesConSaldo.filter((c: any) => clienteCoincide(c, searchCliente));
+  const filteredSinSaldo = clientesSinSaldo.filter((c: any) => clienteCoincide(c, searchCliente));
 
   const selectCliente = (c: any) => {
     setClienteId(c.id);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { clienteTextoBusqueda } from '@/lib/buscarCliente';
 import { AjustarEntregaDialog } from '@/components/entregas/AjustarEntregaDialog';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -472,7 +473,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   }
 
   const vendedorOptions = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
-  const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
+  const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}`, searchText: clienteTextoBusqueda(c) }));
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
 
   // Stock summary for surtir dialog

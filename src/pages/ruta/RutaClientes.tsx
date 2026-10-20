@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { clienteCoincide } from '@/lib/buscarCliente';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, Crosshair, Loader2, CheckCircle2, MoreVertical, Plus, Info } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -274,9 +275,7 @@ export default function RutaClientes() {
 
   const filtered = myClientes.filter((c: any) => {
     if (search) {
-      const s = search.toLowerCase();
-      if (!c.nombre.toLowerCase().includes(s) && !c.codigo?.toLowerCase().includes(s) && !c.direccion?.toLowerCase().includes(s))
-        return false;
+      if (!clienteCoincide(c, search, [c.direccion])) return false;
     }
     if (modo === 'visitas') {
       if (visited.has(c.id)) return false;

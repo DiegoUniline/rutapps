@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { clienteCoincide } from '@/lib/buscarCliente';
 import { todayInTimezone , todayLocal, roundMoney } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -541,7 +542,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   }, [clientes, seeAllClientes, clientesVisibilidad, profile?.id]);
 
   const filteredClientes = clientesVisibles?.filter(c => !isPublicGeneralClient(c))
-    .filter(c => !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) || c.codigo?.toLowerCase().includes(searchCliente.toLowerCase()));
+    .filter(c => clienteCoincide(c, searchCliente));
   const productosDisponibles = useMemo(() => {
     if (!productos) return [];
     if (tipoVenta === 'pedido') return productos;
