@@ -24,8 +24,10 @@ export function useRealtimeInvalidate(opts: {
   debounceMs?: number;
   /** Columna por la cual filtrar por tenant. Default 'empresa_id'. Si la tabla no tiene esa columna, pasa null para no filtrar. */
   tenantColumn?: string | null;
+  /** Filtro Realtime explícito (p. ej. `user_id=eq.<id>`); reemplaza al de tenant. */
+  filter?: string;
 }) {
-  const { table, empresaId, queryKeys, enabled = true, debounceMs = 400, tenantColumn = 'empresa_id' } = opts;
+  const { table, empresaId, queryKeys, enabled = true, debounceMs = 400, tenantColumn = 'empresa_id', filter } = opts;
   const qc = useQueryClient();
   const keysSig = JSON.stringify(queryKeys);
 
@@ -47,7 +49,8 @@ export function useRealtimeInvalidate(opts: {
     };
 
     const cfg: any = { event: '*', schema: 'public', table };
-    if (tenantColumn) cfg.filter = `${tenantColumn}=eq.${empresaId}`;
+    if (filter) cfg.filter = filter;
+    else if (tenantColumn) cfg.filter = `${tenantColumn}=eq.${empresaId}`;
 
     const channel = supabase
       .channel(`rti-${table}-${empresaId}-${Math.random().toString(36).slice(2, 7)}`)
@@ -59,5 +62,5 @@ export function useRealtimeInvalidate(opts: {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, empresaId, enabled, keysSig, debounceMs, tenantColumn]);
+  }, [table, empresaId, enabled, keysSig, debounceMs, tenantColumn, filter]);
 }
