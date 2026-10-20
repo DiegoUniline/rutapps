@@ -17,7 +17,7 @@ import { useVendedores } from '@/hooks/useClientes';
 import {
   useDashboardVentas, useDashboardCobros, useDashboardCompras,
   useDashboardGastos, useDashboardCartera, useDashboardStock,
-  useDashboardTopProductos, useDashboardVentasPorDia, useDashboardVentasPorVendedor,
+  useDashboardTopProductos, ventasPorDia, ventasPorVendedor, useDashboardVentasPorVendedor,
   useDashboardDevoluciones, useDashboardHoy,
   useDashboardEvolucionMensual, useDashboardVentasPorMes, useDashboardVentasUsuarioMes,
   useDashboardVentaLineasIS,
@@ -764,8 +764,13 @@ export default function DashboardPage() {
   const { data: cartera } = useDashboardCartera();
   const { data: stock } = useDashboardStock();
   const { data: topProductos } = useDashboardTopProductos(dateRange, activeTab === 'rankings' || enIA);
-  const { data: ventasPorDia } = useDashboardVentasPorDia(dateRange, vendedorId || undefined);
-  const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
+  // Se calculan con las mismas filas de `ventas` (antes eran 2 descargas más).
+  const ventasPorDiaData = useMemo(() => ventasPorDia((ventas ?? []) as any[], dateRange), [ventas, dateRange]);
+  const { data: ventasPorVendedorFiltrado } = useDashboardVentasPorVendedor(dateRange, !!vendedorId);
+  const ventasPorVendedorData = useMemo(
+    () => vendedorId ? ventasPorVendedorFiltrado : ventasPorVendedor((ventas ?? []) as any[]),
+    [vendedorId, ventasPorVendedorFiltrado, ventas],
+  );
   const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
   const { data: hoy } = useDashboardHoy(vendedorId || undefined, enIA);
   const { data: ventaLineasIS, isLoading: loadingUtilidadDetalle, isError: errorUtilidadDetalle } = useDashboardVentaLineasIS(dateRange, vendedorId || undefined);
@@ -1098,7 +1103,7 @@ export default function DashboardPage() {
             <div className="lg:col-span-2 bg-card border border-border rounded-xl p-4">
               <h3 className="text-sm font-semibold text-foreground mb-3">Tendencia de ventas</h3>
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={ventasPorDia ?? []}>
+                <BarChart data={ventasPorDiaData ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                     tickFormatter={v => { try { return format(new Date(v + 'T12:00:00'), 'd MMM', { locale: es }); } catch { return v; }}} />
@@ -1117,13 +1122,13 @@ export default function DashboardPage() {
             {/* Sales by vendedor */}
             <div className="bg-card border border-border rounded-xl p-4">
               <h3 className="text-sm font-semibold text-foreground mb-3">Ventas por vendedor</h3>
-              {(ventasPorVendedor ?? []).length > 0 ? (
+              {(ventasPorVendedorData ?? []).length > 0 ? (
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
-                    <Pie data={ventasPorVendedor ?? []} dataKey="total" nameKey="nombre" cx="50%" cy="50%" outerRadius={90}
+                    <Pie data={ventasPorVendedorData ?? []} dataKey="total" nameKey="nombre" cx="50%" cy="50%" outerRadius={90}
                       label={({ nombre, percent }) => `${(nombre as string).slice(0, 10)} ${(percent * 100).toFixed(0)}%`}
                       labelLine={false} fontSize={10}>
-                      {(ventasPorVendedor ?? []).map((_, i) => (
+                      {(ventasPorVendedorData ?? []).map((_, i) => (
                         <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                       ))}
                     </Pie>
@@ -1215,7 +1220,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Vendedor detail table */}
-          {!vendedorId && (ventasPorVendedor ?? []).length > 0 && (
+          {!vendedorId && (ventasPorVendedorData ?? []).length > 0 && (
             <div className="bg-card border border-border rounded-xl p-4">
               <SectionTitle icon={Users}>Detalle por vendedor</SectionTitle>
               <div className="overflow-x-auto">
@@ -1230,7 +1235,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(ventasPorVendedor ?? []).map(v => {
+                    {(ventasPorVendedorData ?? []).map(v => {
                       const pct = kpis.totalVentas > 0 ? (v.total / kpis.totalVentas) * 100 : 0;
                       return (
                         <tr key={v.id} className="border-b border-border/30 hover:bg-accent/30">
@@ -1324,7 +1329,7 @@ export default function DashboardPage() {
             },
             top5Productos: (topProductos ?? []).slice(0, 5).map((p: any) => ({ nombre: p.nombre, total: p.total, uds: p.qty })),
             top5Clientes: topClientsAll.slice(0, 5).map((c: any) => ({ nombre: c.nombre, total: c.total, ventas: c.count })),
-            ventasPorVendedor: (ventasPorVendedor ?? []).map((v: any) => ({ nombre: v.nombre, total: v.total, ops: v.count })),
+            ventasPorVendedor: (ventasPorVendedorData ?? []).map((v: any) => ({ nombre: v.nombre, total: v.total, ops: v.count })),
             ventasUltimos12Meses: (ventasPorMes ?? []).map((m: any) => ({ mes: m.label, total: m.total, growth: m.growth })),
             mesVsMesPorVendedor: (usuarioMes ?? []).slice(0, 10).map((u: any) => ({
               nombre: u.nombre, mesActual: u.cur, mesAnterior: u.prev, growthPct: u.growth,

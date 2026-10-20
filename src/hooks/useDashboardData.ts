@@ -35,7 +35,7 @@ export function useDashboardVentas(range: DateRange, vendedorId?: string) {
       return fetchAllPages((from, to) => {
         let q = supabase
           .from('ventas')
-          .select('id, fecha, total, total_efectivo, cerrado_at, cerrado_snapshot, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre)')
+          .select('id, fecha, total, total_efectivo, cerrado_at, cerrado_snapshot, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
           .eq('empresa_id', empresa!.id)
           .eq('es_saldo_inicial', false)
           .gte('fecha', fmt(range.from))
@@ -447,48 +447,41 @@ export function useDashboardVentasUsuarioMes(enabled = true) {
   });
 }
 
-export function useDashboardVentasPorDia(range: DateRange, vendedorId?: string) {
-  const { empresa } = useAuth();
-  return useQuery({
-    queryKey: ['dashboard-ventas-dia', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const data = await fetchAllPages((from, to) => {
-        let q = supabase
-          .from('ventas')
-           .select('fecha, total')
-           .eq('empresa_id', empresa!.id)
-           .eq('es_saldo_inicial', false)
-           .gte('fecha', fmt(range.from))
-           .lte('fecha', fmt(range.to))
-           .neq('status', 'cancelado')
-           .range(from, to);
-        if (vendedorId) q = q.eq('vendedor_id', vendedorId);
-        return q;
-      });
+type VentaDashboard = { fecha: string; total: number | null; vendedor_id: string | null; vendedores?: { nombre: string } | null };
 
-      const map = new Map<string, number>();
-      data.forEach((v: any) => {
-        map.set(v.fecha, (map.get(v.fecha) ?? 0) + Number(v.total ?? 0));
-      });
-
-      const result: { date: string; total: number }[] = [];
-      const d = new Date(range.from);
-      while (d <= range.to) {
-        const key = fmt(d);
-        result.push({ date: key, total: map.get(key) ?? 0 });
-        d.setDate(d.getDate() + 1);
-      }
-      return result;
-    },
-  });
+/** Ventas por día del rango, a partir de las filas de useDashboardVentas (mismos filtros; antes se volvían a bajar). */
+export function ventasPorDia(rows: VentaDashboard[], range: DateRange) {
+  const map = new Map<string, number>();
+  rows.forEach(v => map.set(v.fecha, (map.get(v.fecha) ?? 0) + Number(v.total ?? 0)));
+  const result: { date: string; total: number }[] = [];
+  const d = new Date(range.from);
+  while (d <= range.to) {
+    const key = fmt(d);
+    result.push({ date: key, total: map.get(key) ?? 0 });
+    d.setDate(d.getDate() + 1);
+  }
+  return result;
 }
 
-export function useDashboardVentasPorVendedor(range: DateRange) {
+/** Ventas por vendedor (sin filtro de vendedor), a partir de las filas de useDashboardVentas. */
+export function ventasPorVendedor(rows: VentaDashboard[]) {
+  const map = new Map<string, { nombre: string; total: number; count: number }>();
+  rows.forEach(v => {
+    if (!v.vendedor_id) return;
+    const existing = map.get(v.vendedor_id) ?? { nombre: v.vendedores?.nombre ?? 'N/A', total: 0, count: 0 };
+    existing.total += Number(v.total ?? 0);
+    existing.count += 1;
+    map.set(v.vendedor_id, existing);
+  });
+  return [...map.entries()].map(([id, val]) => ({ id, ...val })).sort((a, b) => b.total - a.total);
+}
+
+/** Solo hace falta con un vendedor elegido (las filas del periodo ya vienen filtradas a él). */
+export function useDashboardVentasPorVendedor(range: DateRange, enabled = true) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['dashboard-ventas-vendedor', empresa?.id, fmt(range.from), fmt(range.to)],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && enabled,
     queryFn: async () => {
       const data = await fetchAllPages((from, to) =>
         supabase
