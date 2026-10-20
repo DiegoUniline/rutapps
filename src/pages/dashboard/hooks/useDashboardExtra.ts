@@ -49,17 +49,14 @@ export function useUltimaCompraPorCliente() {
     enabled: !!empresa?.id,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
+      // max(fecha) por cliente en la BD (antes bajaba TODO el historial de ventas).
       const sb: any = supabase;
-      const data = await fetchAllPages((from, to) => sb.from('ventas')
-        .select('cliente_id, fecha')
-        .eq('empresa_id', empresa!.id)
-        .neq('status', 'cancelado')
-        .order('fecha', { ascending: false })
-        .range(from, to));
+      const data = await fetchAllPages<{ cliente_id: string; fecha: string }>((from, to) =>
+        sb.rpc('dashboard_ultima_compra_clientes', { p_empresa_id: empresa!.id })
+          .order('cliente_id')
+          .range(from, to));
       const map = new Map<string, string>();
-      (data ?? []).forEach((v: any) => {
-        if (v.cliente_id && !map.has(v.cliente_id)) map.set(v.cliente_id, v.fecha);
-      });
+      data.forEach(v => { if (v.cliente_id) map.set(v.cliente_id, v.fecha); });
       return map;
     },
   });

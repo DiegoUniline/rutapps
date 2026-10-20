@@ -7,7 +7,17 @@ import { atribuirCobrosAVendedor, type DashboardCobroAplicacion } from '@/lib/da
 export type DateRange = { from: Date; to: Date };
 
 type EvolucionFila = { tipo: 'producto' | 'cliente' | 'vendedor'; entidad_id: string | null; nombre: string | null; mes: string; total: number };
-type RpcSinTipos = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+/** RPC que regresa filas: se pide por páginas (el servidor corta en 1000) con orden fijo. */
+type RpcPaginable = (fn: string, args: Record<string, unknown>) => {
+  order: (col: string, opts?: { ascending?: boolean }) => ReturnType<RpcPaginable>;
+  range: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+};
+const rpcPaginado = <T,>(fn: string, args: Record<string, unknown>, orden: [string, boolean][]) =>
+  fetchAllPages<T>((from, to) => {
+    let q = (supabase.rpc as unknown as RpcPaginable)(fn, args);
+    for (const [col, asc] of orden) q = q.order(col, { ascending: asc });
+    return q.range(from, to);
+  });
 
 function fmt(d: Date) {
   const y = d.getFullYear();
@@ -250,68 +260,21 @@ export function useDashboardStock() {
   });
 }
 
-export function useDashboardTopProductos(range: DateRange) {
+export function useDashboardTopProductos(range: DateRange, enabled = true) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['dashboard-top-productos-all', empresa?.id, fmt(range.from), fmt(range.to)],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && enabled,
     queryFn: async () => {
-      // 1) Ventas del periodo (rápido, índice empresa+fecha).
-      const ventasPeriodo = await fetchAllPages<{ id: string }>((from, to) =>
-        supabase
-          .from('ventas')
-          .select('id')
-          .eq('empresa_id', empresa!.id)
-          .gte('fecha', fmt(range.from))
-          .lte('fecha', fmt(range.to))
-          .neq('status', 'cancelado')
-          .range(from, to)
+      // Sumado en la BD (antes: ventas del periodo + venta_lineas en tandas de 150 en serie).
+      const filas = await rpcPaginado<{ id: string; nombre: string | null; codigo: string | null; qty: number; total: number }>(
+        'dashboard_top_productos',
+        { p_empresa_id: empresa!.id, p_from: fmt(range.from), p_to: fmt(range.to) },
+        [['total', false], ['id', true]],
       );
-      // 2) Líneas por grupos de ventas: evita el join pesado que excedía el timeout.
-      const ventaIds = ventasPeriodo.map((v) => v.id);
-      const data: { producto_id: string | null; cantidad: number; total: number | null }[] = [];
-      for (let i = 0; i < ventaIds.length; i += 150) {
-        const chunk = ventaIds.slice(i, i + 150);
-        const rows = await fetchAllPages<{ producto_id: string | null; cantidad: number; total: number | null }>((from, to) =>
-          supabase
-            .from('venta_lineas')
-            .select('producto_id, cantidad, total')
-            .eq('empresa_id', empresa!.id)
-            .in('venta_id', chunk)
-            .range(from, to)
-        );
-        data.push(...rows);
-      }
-
-      const map = new Map<string, { qty: number; total: number }>();
-      data.forEach((l: any) => {
-        if (!l.producto_id) return;
-        const existing = map.get(l.producto_id) ?? { qty: 0, total: 0 };
-        existing.qty += Number(l.cantidad);
-        existing.total += Number(l.total ?? 0);
-        map.set(l.producto_id, existing);
-      });
-
-      const ids = [...map.keys()];
-      if (ids.length === 0) return [];
-      // Resolve names in batches of 500
-      const prodMap = new Map<string, { nombre: string; codigo: string }>();
-      for (let i = 0; i < ids.length; i += 500) {
-        const batch = ids.slice(i, i + 500);
-        const { data: prods } = await supabase
-          .from('productos')
-          .select('id, nombre, codigo')
-          .in('id', batch);
-        (prods ?? []).forEach((p: any) => prodMap.set(p.id, { nombre: p.nombre, codigo: p.codigo }));
-      }
-
-      return ids
-        .map(id => {
-          const prod = prodMap.get(id);
-          const agg = map.get(id)!;
-          return { id, nombre: prod?.nombre ?? 'N/A', codigo: prod?.codigo ?? '', qty: agg.qty, total: agg.total };
-        })
-        .sort((a, b) => b.total - a.total);
+      return filas.map(f => ({
+        id: f.id, nombre: f.nombre ?? 'N/A', codigo: f.codigo ?? '', qty: Number(f.qty), total: Number(f.total),
+      }));
     },
   });
 }
@@ -329,11 +292,11 @@ function monthsBack(n: number) {
   return arr;
 }
 
-export function useDashboardEvolucionMensual(months: number = 12) {
+export function useDashboardEvolucionMensual(months: number = 12, enabled = true) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['dashboard-evolucion-mensual', empresa?.id, months],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && enabled,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const now = new Date();
@@ -341,10 +304,9 @@ export function useDashboardEvolucionMensual(months: number = 12) {
       const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
       // Totales ya sumados en la BD (antes: 12 meses de renglones descargados de mil en mil).
-      const { data: filas, error } = await (supabase.rpc as unknown as RpcSinTipos)('dashboard_evolucion_mensual', {
+      const filas = await rpcPaginado<EvolucionFila>('dashboard_evolucion_mensual', {
         p_empresa_id: empresa!.id, p_from: fmt(from), p_to: fmt(to),
-      });
-      if (error) throw new Error(error.message);
+      }, [['tipo', true], ['entidad_id', true], ['mes', true]]);
 
       const meses = monthsBack(months);
       const agg = {
@@ -393,11 +355,11 @@ export function useDashboardEvolucionMensual(months: number = 12) {
 }
 
 // ============ Mensual: total ventas por mes con crecimiento ============
-export function useDashboardVentasPorMes(months: number = 12) {
+export function useDashboardVentasPorMes(months: number = 12, enabled = true) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['dashboard-ventas-por-mes', empresa?.id, months],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && enabled,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const now = new Date();
@@ -435,11 +397,11 @@ export function useDashboardVentasPorMes(months: number = 12) {
 }
 
 // ============ Por usuario: mes actual vs anterior ============
-export function useDashboardVentasUsuarioMes() {
+export function useDashboardVentasUsuarioMes(enabled = true) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['dashboard-ventas-usuario-mes', empresa?.id],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && enabled,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const now = new Date();
@@ -661,11 +623,11 @@ export function useDashboardClientesEnRiesgo(range: DateRange, vendedorId?: stri
   });
 }
 
-export function useDashboardHoy(vendedorId?: string) {
+export function useDashboardHoy(vendedorId?: string, enabled = true) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['dashboard-hoy', empresa?.id, vendedorId],
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && enabled,
     staleTime: 3 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {

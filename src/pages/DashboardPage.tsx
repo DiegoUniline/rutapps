@@ -752,6 +752,10 @@ export default function DashboardPage() {
 
   const { data: vendedores } = useVendedores();
 
+  // Pestaña activa: las consultas que solo usa una pestaña esperan a que se abra.
+  const [activeTab, setActiveTab] = useState('resumen');
+  const enIA = activeTab === 'asesor-ia';
+
   // Data hooks
   const { data: ventas, isLoading: loadingVentas, isError: errorVentas } = useDashboardVentas(dateRange, vendedorId || undefined);
   const { data: cobros } = useDashboardCobros(dateRange, vendedorId || undefined);
@@ -759,11 +763,11 @@ export default function DashboardPage() {
   const { data: gastos } = useDashboardGastos(dateRange, vendedorId || undefined);
   const { data: cartera } = useDashboardCartera();
   const { data: stock } = useDashboardStock();
-  const { data: topProductos } = useDashboardTopProductos(dateRange);
+  const { data: topProductos } = useDashboardTopProductos(dateRange, activeTab === 'rankings' || enIA);
   const { data: ventasPorDia } = useDashboardVentasPorDia(dateRange, vendedorId || undefined);
   const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
   const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
-  const { data: hoy } = useDashboardHoy(vendedorId || undefined);
+  const { data: hoy } = useDashboardHoy(vendedorId || undefined, enIA);
   const { data: ventaLineasIS, isLoading: loadingUtilidadDetalle, isError: errorUtilidadDetalle } = useDashboardVentaLineasIS(dateRange, vendedorId || undefined);
 
   // === Período anterior (comparativo) ===
@@ -803,7 +807,6 @@ export default function DashboardPage() {
   const { data: clientesActivos = [] } = useClientesActivos();
   const { data: ultimaCompraMap } = useUltimaCompraPorCliente();
   const [sinCompraOpen, setSinCompraOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('resumen');
 
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
@@ -937,9 +940,9 @@ export default function DashboardPage() {
   const utilidadLoading = loadingVentas || loadingUtilidadDetalle;
   const utilidadError = errorVentas || errorUtilidadDetalle;
 
-  const { data: evolucion } = useDashboardEvolucionMensual(12);
-  const { data: ventasPorMes } = useDashboardVentasPorMes(12);
-  const { data: usuarioMes } = useDashboardVentasUsuarioMes();
+  const { data: evolucion } = useDashboardEvolucionMensual(12, activeTab === 'evolucion');
+  const { data: ventasPorMes } = useDashboardVentasPorMes(12, activeTab === 'comparativo' || enIA);
+  const { data: usuarioMes } = useDashboardVentasUsuarioMes(activeTab === 'comparativo' || enIA);
 
   const handlePreset = (idx: number) => {
     setActivePreset(idx);
