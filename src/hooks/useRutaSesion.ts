@@ -42,6 +42,8 @@ export function useRutaSesionActiva() {
     table: 'ruta_sesiones',
     empresaId: empresa?.id,
     queryKeys: [['ruta-sesion-activa'], ['ruta-sesiones']],
+    // Solo la jornada de este vendedor, no las de toda la empresa.
+    filter: vendedorId ? `vendedor_id=eq.${vendedorId}` : undefined,
   });
 
   return useQuery({

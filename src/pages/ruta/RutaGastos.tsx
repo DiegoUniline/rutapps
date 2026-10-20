@@ -40,17 +40,18 @@ export default function RutaGastos() {
 
   // Realtime: actualizar al instante cuando se inserta/edita/elimina un gasto
   useEffect(() => {
-    if (!empresa?.id) return;
+    if (!empresa?.id || !user?.id) return;
+    // Solo los gastos de este usuario (la lista ya filtra por user_id).
     const channel = supabase
-      .channel(`gastos-ruta-${empresa.id}`)
+      .channel(`gastos-ruta-${user.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'gastos', filter: `empresa_id=eq.${empresa.id}` },
+        { event: '*', schema: 'public', table: 'gastos', filter: `user_id=eq.${user.id}` },
         () => { refetch(); }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [empresa?.id, refetch]);
+  }, [empresa?.id, user?.id, refetch]);
 
   const handleSaveGasto = async () => {
     if (!concepto || !monto || !empresa || !user) return;

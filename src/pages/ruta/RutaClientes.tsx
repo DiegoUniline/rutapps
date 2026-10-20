@@ -82,16 +82,19 @@ export default function RutaClientes() {
   const { data: visitasPrevias } = useQuery({
     queryKey: ['ruta-visitas-previas', empresa?.id, todayStr],
     enabled: !!empresa?.id,
-    staleTime: 10 * 60 * 1000,
+    // Son días anteriores a hoy: no cambian durante el día (la llave lleva la fecha).
+    staleTime: 6 * 60 * 60 * 1000,
     queryFn: async () => {
       const inicio = new Date(new Date(`${todayStr}T12:00:00`).getTime() - 40 * 86400000).toISOString();
-      const { data } = await supabase
+      // Paginado: con un solo select PostgREST cortaba en 1000 filas.
+      return fetchAllPages<{ cliente_id: string | null; fecha: string | null }>((from, to) => supabase
         .from('visitas')
         .select('cliente_id, fecha')
         .eq('empresa_id', empresa!.id)
         .gte('fecha', inicio)
-        .lt('fecha', `${todayStr}T00:00:00`);
-      return data ?? [];
+        .lt('fecha', `${todayStr}T00:00:00`)
+        .order('id')
+        .range(from, to));
     },
   });
 
@@ -107,7 +110,12 @@ export default function RutaClientes() {
 
 
   // Realtime: invalida visitas cuando hay cambios (reemplaza refetchInterval 60s).
-  useRealtimeInvalidate({ table: 'visitas', empresaId: empresa?.id, queryKeys: [['ruta-visitas-hoy', empresa?.id, todayStr]] });
+  // Solo las visitas de este usuario: antes cada visita de cualquier vendedor
+  // re-descargaba las de toda la empresa en todos los celulares.
+  useRealtimeInvalidate({
+    table: 'visitas', empresaId: empresa?.id, queryKeys: [['ruta-visitas-hoy', empresa?.id, todayStr]],
+    filter: !isSAOverride && user?.id ? `user_id=eq.${user.id}` : undefined,
+  });
 
   // Reconcile: drop local visits that have NO DB record (ghost visits from cancelled flows)
   useEffect(() => {

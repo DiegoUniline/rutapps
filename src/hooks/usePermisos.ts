@@ -407,8 +407,10 @@ export function usePermisos(): UsePermisosReturn {
     queryKey: ['user-permisos', empresa?.id, user?.id],
     queryFn: () => fetchPermisos(user!.id, empresa!.id),
     enabled: !!user?.id && !!empresa?.id,
-    staleTime: 15_000,
-    gcTime: 5 * 60_000,
+    // ~40 pantallas lo usan: con 15 s cada montaje volvía a pedirlo. Los cambios
+    // llegan por realtime de role_permisos y el evento de abajo.
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
     // 'always': sin conexión igual se ejecuta la queryFn para poder resolver
     // desde el snapshot local en lugar de quedarse en pausa (y sin permisos).
     networkMode: 'always',
