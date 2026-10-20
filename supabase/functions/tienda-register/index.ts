@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, json, hashPassword, signToken } from "../_shared/tiendaAuth.ts";
+import { corsHeaders, escapeLike, json, hashPassword, signToken } from "../_shared/tiendaAuth.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       .from("clientes")
       .select("id, telefono")
       .eq("empresa_id", cfg.empresa_id)
-      .ilike("email", normalEmail)
+      .ilike("email", escapeLike(normalEmail))
       .limit(1)
       .maybeSingle();
 
@@ -56,7 +56,8 @@ Deno.serve(async (req) => {
         .eq("cliente_id", clienteExist.id)
         .maybeSingle();
       if (blockedByCli?.verificado === false) return json({ error: "Tu acceso a esta tienda fue bloqueado." }, 403);
-      if (blockedByCli) await supabase.from("tienda_clientes").delete().eq("id", blockedByCli.id);
+      // S-04: nunca reemplazar un acceso existente desde un endpoint anónimo.
+      if (blockedByCli) return json({ error: "Este cliente ya tiene acceso a la tienda. Inicia sesión o pide a tu proveedor que restablezca tu contraseña." }, 409);
 
       const { data: tc, error: tcErr } = await supabase.from("tienda_clientes").insert({
         empresa_id: cfg.empresa_id,
@@ -80,11 +81,11 @@ Deno.serve(async (req) => {
 
     // Detecta posibles duplicados por teléfono/nombre, pero NO los enlaza automáticamente.
     let posible: any = null;
-    if (normalPhone) {
+    if (normalPhone.length === 10) {
       const { data } = await supabase.from("clientes")
         .select("id,nombre,telefono")
         .eq("empresa_id", cfg.empresa_id)
-        .ilike("telefono", `%${normalPhone}%`)
+        .ilike("telefono", `%${normalPhone}`)
         .limit(1).maybeSingle();
       posible = data ?? null;
     }
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
       const { data } = await supabase.from("clientes")
         .select("id,nombre,telefono")
         .eq("empresa_id", cfg.empresa_id)
-        .ilike("nombre", String(nombre).trim())
+        .ilike("nombre", escapeLike(String(nombre).trim()))
         .limit(1).maybeSingle();
       posible = data ?? null;
     }
@@ -119,7 +120,7 @@ Deno.serve(async (req) => {
       .select("id")
       .eq("empresa_id", cfg.empresa_id)
       .eq("status", "pendiente")
-      .ilike("email", normalEmail)
+      .ilike("email", escapeLike(normalEmail))
       .limit(1).maybeSingle();
 
     let requestId: string | null = null;
@@ -137,7 +138,6 @@ Deno.serve(async (req) => {
       pending: true,
       request_id: requestId,
       email: normalEmail,
-      possible_duplicate: posible ? { cliente_id: posible.id, nombre: posible.nombre } : null,
       message: "Solicitud enviada. La empresa revisará tus datos y habilitará tu cuenta.",
     }, 202);
   } catch (err) {

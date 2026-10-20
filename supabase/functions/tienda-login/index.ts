@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, json, verifyPassword, hashPassword, signToken } from "../_shared/tiendaAuth.ts";
+import { corsHeaders, escapeLike, json, verifyPassword, hashPassword, signToken } from "../_shared/tiendaAuth.ts";
 
 const DEFAULT_PASSWORD = "123456";
 const BLOCKED_HASH = "BLOCKED$NO_LOGIN";
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
         .from("clientes")
         .select("id, email, telefono")
         .eq("empresa_id", cfg.empresa_id)
-        .ilike("email", normalEmail)
+        .ilike("email", escapeLike(normalEmail))
         .limit(1)
         .maybeSingle();
       if (!cli) {
