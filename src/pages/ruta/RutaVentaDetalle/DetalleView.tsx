@@ -105,6 +105,7 @@ function Header({ venta, onBack, showCancelChip, onCancelClick }: Props & { show
 
 
 function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar, handleCancelar, handleVolverBorrador }: Props) {
+  const { hasPermiso } = usePermisos();
   const actions: { icon: any; label: string; color: string; onClick: () => void }[] = [
     { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
     { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
@@ -112,9 +113,13 @@ function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPD
     { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
     { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
   ];
-  if (venta.status === 'borrador') {
+  const editableConfirmada = ['confirmado', 'entregado'].includes(venta.status) && hasPermiso('ventas', 'editar')
+    && !venta.cerrado_at
+    && !((venta.venta_lineas ?? []) as { facturado?: boolean; factura_cfdi_id?: string | null }[]).some(l => l.facturado || l.factura_cfdi_id);
+  if (venta.status === 'borrador' || editableConfirmada) {
     actions.push({ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar });
-  } else if (venta.status === 'confirmado') {
+  }
+  if (venta.status === 'confirmado') {
     actions.push({ icon: RotateCcw, label: 'A borrador', color: 'text-warning', onClick: handleVolverBorrador });
   }
 

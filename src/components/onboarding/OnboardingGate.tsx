@@ -17,15 +17,21 @@ export default function OnboardingGate() {
     staleTime: 15 * 60_000, // el conteo de productos/clientes casi no cambia; 15 min basta
     queryFn: async () => {
       const eid = empresa!.id;
-      const [emp, prod, cli] = await Promise.all([
-        supabase.from('empresas').select('onboarding_completado').eq('id', eid).single(),
-        supabase.from('productos').select('id', { count: 'exact', head: true }).eq('empresa_id', eid),
-        supabase.from('clientes').select('id', { count: 'exact', head: true }).eq('empresa_id', eid),
+      const emp = await supabase.from('empresas').select('onboarding_completado').eq('id', eid).single();
+      if (emp.error) throw emp.error;
+      // Empresa ya configurada: no hace falta revisar catálogo (antes contaba todo en cada sesión).
+      if (emp.data?.onboarding_completado) return { done: true, productos: 1, clientes: 1 };
+      // Solo importa si existe al menos uno: limit(1) en vez de contar toda la tabla.
+      const [prod, cli] = await Promise.all([
+        supabase.from('productos').select('id').eq('empresa_id', eid).limit(1),
+        supabase.from('clientes').select('id').eq('empresa_id', eid).limit(1),
       ]);
+      if (prod.error) throw prod.error;
+      if (cli.error) throw cli.error;
       return {
-        done: !!emp.data?.onboarding_completado,
-        productos: prod.count ?? 0,
-        clientes: cli.count ?? 0,
+        done: false,
+        productos: prod.data?.length ?? 0,
+        clientes: cli.data?.length ?? 0,
       };
     },
   });

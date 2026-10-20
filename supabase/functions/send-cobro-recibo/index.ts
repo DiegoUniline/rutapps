@@ -33,6 +33,15 @@ Deno.serve(async (req) => {
   const { cobro_id, pdf_url } = body
   if (!cobro_id) return json({ error: 'cobro_id requerido' }, 400)
 
+  // S-10: solo quien puede ver el cobro por RLS (usuario de esa empresa o super admin).
+  const userClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+    auth: { persistSession: false },
+  })
+  const { data: visible, error: vErr } = await userClient.from('cobros').select('id').eq('id', cobro_id).maybeSingle()
+  if (vErr) console.error('[send-cobro-recibo] auth', vErr)
+  if (!visible) return json({ error: 'No autorizado' }, 403)
+
   // Load cobro + aplicaciones + cliente + empresa
   const { data: cobro, error: cErr } = await supabase
     .from('cobros')
@@ -40,6 +49,16 @@ Deno.serve(async (req) => {
     .eq('id', cobro_id)
     .single()
   if (cErr || !cobro) return json({ error: 'Cobro no encontrado' }, 404)
+
+  // El enlace del PDF lo firma el servidor; no se confía en el URL que manda el cliente.
+  let pdfUrl: string | null = null
+  if (pdf_url) {
+    const { data: signed, error: sErr } = await supabase.storage
+      .from('recibos-cobros')
+      .createSignedUrl(`${cobro.empresa_id}/${cobro.id}.pdf`, 60 * 60 * 24 * 30)
+    if (sErr) console.error('[send-cobro-recibo] pdf', sErr)
+    pdfUrl = signed?.signedUrl ?? null
+  }
 
   const [{ data: empresa }, { data: cliente }, { data: apps }] = await Promise.all([
     supabase.from('empresas').select('id, nombre, moneda, enviar_recibo_auto, logo_url, direccion, telefono, email').eq('id', cobro.empresa_id).single(),
@@ -92,7 +111,7 @@ Deno.serve(async (req) => {
     folios,
     saldoActual: saldoFmt,
     portalUrl,
-    pdfUrl: pdf_url || '',
+    pdfUrl: pdfUrl || '',
     folioRecibo: cobro_id.slice(0, 8).toUpperCase(),
   }
 
@@ -109,17 +128,17 @@ Deno.serve(async (req) => {
     (folios ? `\nAplicado a: ${folios}` : '') +
     `\nSaldo actual: ${saldoFmt}` +
     `\nEstado de cuenta: ${portalUrl}` +
-    (pdf_url ? `\nRecibo: ${pdf_url}` : '')
+    (pdfUrl ? `\nRecibo: ${pdfUrl}` : '')
 
   const waPromise = cliente.telefono
     ? supabase.functions.invoke('whatsapp-sender', {
         body: {
-          action: pdf_url ? 'send-file' : 'send-text',
+          action: pdfUrl ? 'send-file' : 'send-text',
           empresa_id: empresa.id,
           phone: cliente.telefono,
           message: waMessage,
-          url: pdf_url,
-          fileName: pdf_url ? `recibo-${cobro_id.slice(0, 8)}.pdf` : undefined,
+          url: pdfUrl,
+          fileName: pdfUrl ? `recibo-${cobro_id.slice(0, 8)}.pdf` : undefined,
           caption: waMessage,
           tipo: 'cobro_recibo',
           referencia_id: cobro_id,

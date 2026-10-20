@@ -12,8 +12,9 @@ const BASE_DELAY_MS = 1000;
 let activeProcessPromise: Promise<{ success: number; failed: number }> | null = null;
 
 type QueuedOperation = {
+  /** Para 'rpc', `table` es `rpc:<función>` y `data` sus argumentos. */
   table: string;
-  operation: 'insert' | 'update' | 'delete' | 'insert-many';
+  operation: 'insert' | 'update' | 'delete' | 'insert-many' | 'rpc';
   data: any;
   keyField?: string;
 };
@@ -30,7 +31,7 @@ function sleep(ms: number) {
 // Add an operation to the sync queue and update local DB
 export async function queueOperation(
   table: string,
-  operation: 'insert' | 'update' | 'delete' | 'insert-many',
+  operation: 'insert' | 'update' | 'delete' | 'insert-many' | 'rpc',
   data: any,
   keyField: string = 'id',
 ) {
@@ -155,6 +156,8 @@ const TABLE_PRIORITY: Record<string, number> = {
   venta_linea_lotes: 25, merma_linea_lotes: 25,
   // Inventory side-effects last
   stock_almacen: 30, movimientos_inventario: 30,
+  // Edición completa de una venta ya en el servidor: después de cobros, antes de aplicaciones.
+  'rpc:editar_venta': 22,
 };
 
 function priorityOf(table: string): number {
@@ -307,6 +310,14 @@ async function processItem(item: SyncQueueItem) {
     if (error) throw error;
     const localTable = getOfflineTable(table);
     if (localTable && returned && returned.length > 0) await localTable.bulkPut(returned);
+    return;
+  }
+
+  // Operación de servidor completa (una sola transacción en la BD).
+  if (operation === 'rpc') {
+    const fn = table.replace(/^rpc:/, '');
+    const { error } = await (supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ error: unknown }>)(fn, data);
+    if (error) throw error;
     return;
   }
 

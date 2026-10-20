@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch, Boxes } from 'lucide-react';
 import { toast } from 'sonner';
-import BarcodeScanner from '@/components/ruta/BarcodeScanner';
 import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
 import PedidoSugeridoBanner from '@/components/ruta/PedidoSugeridoBanner';
 import SaldoPendienteBanner from '@/components/ruta/SaldoPendienteBanner';
 import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
 import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
+
+// El lector de códigos (@zxing, ~1.4 MB) se descarga solo al abrir el escáner.
+// El service worker lo precachea igual, así que sigue disponible sin conexión.
+const BarcodeScanner = lazy(() => import('@/components/ruta/BarcodeScanner'));
 import type { CartItem, DevolucionItem } from './types';
 import { useApartadoAlmacenes } from '@/hooks/useApartadoStock';
 import { LotesLineaMovilModal } from '@/components/lotes/LotesLineaMovilModal';
@@ -406,7 +409,11 @@ export function StepProductos(props: Props) {
         </div>
       )}
 
-      <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onDetected={handleScan} />
+      {scannerOpen && (
+        <Suspense fallback={null}>
+          <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onDetected={handleScan} />
+        </Suspense>
+      )}
 
       <NumericKeypadModal
         open={!!keypadFor}

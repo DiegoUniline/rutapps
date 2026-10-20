@@ -353,6 +353,67 @@ export function useVentaDetalle() {
     }
     setSaving(true);
     try {
+      // Venta ya confirmada/entregada: se guarda en UNA operación (editar_venta);
+      // stock por diferencia y saldo los recalcula la BD.
+      if (venta && venta.status !== 'borrador') {
+        const ids = await Promise.all(editLineas.map(item =>
+          item.id ?? deterministicUuid('vlinea-edit', id!, item.producto_id)));
+        const pLineas = editLineas.map((item, idx) => {
+          const amounts = calculateSaleLineAmounts(item);
+          const lotes = (item.lotes ?? []).filter(l => Number(l.cantidad) > 0).map(l => ({ lote_id: l.lote_id, cantidad: Number(l.cantidad) }));
+          return {
+            id: ids[idx],
+            producto_id: item.producto_id,
+            descripcion: item.nombre,
+            cantidad: item.cantidad,
+            unidad_id: item.unidad_id ?? null,
+            precio_unitario: item.precio_unitario,
+            precio_unitario_sin_redondeo: item.precio_unitario_sin_redondeo ?? item.precio_unitario,
+            descuento_pct: item.descuento_pct ?? 0,
+            subtotal: amounts.subtotal,
+            iva_pct: item.tiene_iva ? item.iva_pct : 0,
+            iva_monto: amounts.iva,
+            ieps_pct: item.tiene_ieps ? (item.ieps_pct ?? 0) : 0,
+            ieps_monto: amounts.ieps,
+            total: amounts.total,
+            lista_precio_id: item.lista_precio_id ?? null,
+            precio_manual: item.precio_manual ?? false,
+            ...(lotes.length ? { lotes } : {}),
+          };
+        });
+        const args = {
+          p_venta_id: id!,
+          p_lineas: pLineas,
+          p_version: (venta as { updated_at?: string }).updated_at ?? null,
+          p_header: { notas: editNotas || null },
+        };
+        if (navigator.onLine) {
+          const { error: rpcErr } = await (supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ error: { message: string } | null }>)('editar_venta', args);
+          if (rpcErr) throw new Error(rpcErr.message);
+        } else {
+          await queueOperation('rpc:editar_venta', 'rpc', args, 'p_venta_id');
+          // Vista local mientras sincroniza: renglones nuevos y totales estimados.
+          const lineasLocal = getOfflineTable('venta_lineas');
+          const ventasLocal = getOfflineTable('ventas');
+          const antes = (venta as { venta_lineas?: { id: string }[] } | undefined)?.venta_lineas ?? [];
+          if (lineasLocal) {
+            for (const l of antes) if (!ids.includes(l.id)) await lineasLocal.delete(l.id);
+            await lineasLocal.bulkPut(pLineas.map(({ lotes: _l, ...r }) => ({ ...r, venta_id: id! })));
+          }
+          if (ventasLocal) {
+            const actual = await ventasLocal.get(id!);
+            if (actual) await ventasLocal.put({ ...actual, notas: editNotas || null, subtotal: editTotals.subtotal, iva_total: editTotals.iva, ieps_total: editTotals.ieps, total: editTotals.total });
+          }
+          toast.info('Sin señal: la edición se aplicará completa al reconectar.');
+        }
+        toast.success('Venta actualizada');
+        queryClient.invalidateQueries({ queryKey: ['venta', id] });
+        queryClient.invalidateQueries({ queryKey: ['ventas'] });
+        queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
+        setView('detalle');
+        return;
+      }
+
       if ((venta as any)?.cerrado_at && !navigator.onLine) {
         throw new Error('Conéctate a internet para reabrir este pedido cerrado antes de editarlo.');
       }

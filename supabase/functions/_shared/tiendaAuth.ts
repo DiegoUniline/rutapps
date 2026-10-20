@@ -111,6 +111,11 @@ export async function verifyToken(token: string, secret: string): Promise<Tienda
   }
 }
 
+/** Escapa comodines de LIKE/ILIKE (% _ \\) para comparar texto del usuario de forma exacta. */
+export function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",

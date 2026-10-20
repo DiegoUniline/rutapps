@@ -57,6 +57,8 @@ export function classifySyncError(params: {
   const isDeferrable = isFkMissing || isRlsViolation || isDevolucionEnumIssue || isRowNotYet;
 
   if (isTransient) return 'transient';
+  // Una RPC rechazada por regla de negocio (permiso, versión, validación) no cambia al reintentar.
+  if (table.startsWith('rpc:') && ['P0001', 'P0002', '22023', '40001', '42501'].includes(code)) return 'dead-letter';
   if (isDeferrable) return newRetries >= maxRetries ? 'dead-letter' : 'defer';
   if (isNotFound || newRetries >= maxRetries) return 'dead-letter';
   return 'retry';

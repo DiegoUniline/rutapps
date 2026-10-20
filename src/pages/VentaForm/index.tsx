@@ -444,8 +444,14 @@ export default function VentaFormPage() {
       />
       {!isNew && (
         <div className="px-5 pt-3 flex items-center gap-3 flex-wrap">
-          <div className="flex-1 min-w-[240px]"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>
-          {form.status !== 'cancelado' && (
+          <div className="flex-1 min-w-[240px]"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly || h.editandoConfirmada ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>
+          {h.puedeEditarConfirmada && (
+            <button className="btn-odoo-secondary text-xs" onClick={h.iniciarEdicionConfirmada}>Editar venta</button>
+          )}
+          {h.editandoConfirmada && (
+            <button className="btn-odoo-secondary text-xs" onClick={h.cancelarEdicionConfirmada}>Cancelar edición</button>
+          )}
+          {!h.editandoConfirmada && form.status !== 'cancelado' && form.status !== 'facturado' && canChangePrice && !lineas.some(l => l.facturado) && (
             <AdminEditVentaDialog
               venta={form}
               lineas={lineas.filter(l => l.producto_id)}
@@ -467,13 +473,14 @@ export default function VentaFormPage() {
           </div>
         )}
         <div className="bg-card border border-border rounded-md p-3">
+          {h.editandoConfirmada && <div className="mb-3 text-xs text-foreground bg-accent/40 border border-border px-3 py-2 rounded">Editando venta {form.status}: agrega, quita o cambia productos. Al guardar se mueve solo la diferencia de stock y se recalcula el saldo.</div>}
           {readOnly && <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />Esta venta está {form.status} y no se puede editar.</div>}
           {!isNew && String(form.tipo) !== 'saldo_inicial' && Number(form.total) > 0 && lineas.filter(l => l.producto_id).length === 0 && (
             <div className="mb-3 text-xs bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 rounded">
               Esta venta llegó sin sus productos: el equipo móvil registró el total pero las partidas todavía no se subieron. Pide al vendedor que abra la App Móvil con señal para completar el envío.
             </div>
           )}
-          <VentaFormFields form={form} readOnly={readOnly} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
+          <VentaFormFields form={form} readOnly={readOnly || h.editandoConfirmada} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
         </div>
         <div className="bg-card border border-border rounded-md">
           <OdooTabs tabs={[
@@ -481,7 +488,7 @@ export default function VentaFormPage() {
             ...(!isNew ? [{ key: 'pagos', label: `Pagos (${(pagosData ?? []).length})`, content: <VentaPagosTab pagos={(pagosData ?? []) as any} totalPagado={totalPagado} saldoPendiente={saldoPendiente} isMobile={isMobile} onAddPago={handleAddPago} onCancelPago={handleCancelPago} onReactivarPago={handleReactivarPago} onDeletePago={handleDeletePago} onUpdatePago={handleUpdatePago} onRealizarPago={() => setShowPago(true)} onPrintPago={handlePrintPago} /> }] : []),
             ...(!isNew ? [{ key: 'entregas', label: `Entregas (${entregasActivas.length})`, content: <VentaEntregasTab tipo={form.tipo} lineas={lineas} productosList={(productosList ?? []).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre }))} entregasExistentes={(entregasExistentes ?? []) as any} entregasActivas={entregasActivas as any} lineDeliverySummary={lineDeliverySummary} canCreateEntrega={canCreateEntrega} fullyDelivered={fullyDelivered} remaining={remaining} isCreatingEntrega={crearEntrega.isPending} isMobile={isMobile} onCreateEntrega={async (items) => { try { const entrega = await crearEntrega.mutateAsync({ pedidoId: form.id, vendedorId: form.vendedor_id ?? undefined, clienteId: form.cliente_id ?? undefined, almacenId: form.almacen_id ?? undefined, lineas: items }); toast.success(`Entrega ${entrega.folio} creada`); } catch (e: any) { toast.error(e.message); } }} /> }] : []),
             ...(billingEnabled && !isNew ? [{ key: 'facturacion', label: `Facturas (${cfdisCount ?? 0})`, content: <div className="p-4"><CfdiHistory ventaId={form.id!} lineas={lineas} productosList={productosList ?? []} />{lineas.every(l => !l.producto_id || l.facturado) && lineas.some(l => l.facturado) && <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground mt-4"><span className="inline-block w-2 h-2 rounded-full bg-primary" />Todas las líneas facturadas</div>}</div> }] : []),
-            ...(!isNew ? [{ key: 'devoluciones', label: `Devoluciones (${(devolucionesVenta ?? []).length})`, content: <VentaDevolucionesTab ventaId={form.id!} clienteId={form.cliente_id} folio={form.folio} readOnly={readOnly} /> }] : []),
+            ...(!isNew ? [{ key: 'devoluciones', label: `Devoluciones (${(devolucionesVenta ?? []).length})`, content: <VentaDevolucionesTab ventaId={form.id!} clienteId={form.cliente_id} folio={form.folio} readOnly={readOnly || h.editandoConfirmada} /> }] : []),
             ...(!isNew ? [{ key: 'gastos', label: `Gastos (${gastosCount ?? 0})`, content: <VentaGastosTab ventaId={form.id!} /> }] : []),
             { key: 'notas', label: 'Notas', content: <div className="p-4">{readOnly ? <p className="text-[13px] text-foreground whitespace-pre-wrap">{form.notas || 'Sin notas'}</p> : <textarea className="input-odoo w-full min-h-[100px]" value={form.notas ?? ''} onChange={e => set('notas', e.target.value)} placeholder="Notas internas de la venta..." />}</div> },
             ...(!isNew ? [{ key: 'historial', label: 'Historial', content: <VentaHistorialTab ventaId={form.id!} /> }] : []),

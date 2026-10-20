@@ -1,5 +1,6 @@
 // Scheduler: aviso de cobranza a la 1pm local. Lista facturas que vencen mañana.
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { isPrivilegedCaller } from "../_shared/privilegedCaller.ts";
 import { localParts, sleep, waSendText, buildIntroMessage } from "../_shared/wa-scheduler-utils.ts";
 
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -120,6 +121,10 @@ Deno.serve(async (req) => {
   try {
     let opts: { force?: boolean; phone?: string } = {};
     if (req.method === "POST") { try { opts = await req.json(); } catch { /**/ } }
+    // S-16: force/phone solo para cron, servidor o super admin; el resto corre normal.
+    if ((opts?.force || opts?.phone) && !(await isPrivilegedCaller(req))) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const r = await run(opts);
     return new Response(JSON.stringify(r), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {

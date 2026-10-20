@@ -1,13 +1,13 @@
 # Estado del proyecto — DOCUMENTO VIVO
 > Se lee al iniciar cada sesión. Se actualiza tras decisiones confirmadas o cambios verificados (no por consultas).
 
-**Última actualización:** 2026-10-19 · **Agente:** desarrollador
+**Última actualización:** 2026-10-20 · **Agente:** desarrollador
 
 ## Dónde vamos
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
 - **Módulo en curso:** —
 - **Última pregunta:** —
-- **Siguiente paso exacto:** confirmar portal del cliente y alertas semanales de WhatsApp (edge functions); decidir fecha para activar PR #149. Pendiente: P-002 (contrato de respuesta)
+- **Siguiente paso exacto:** publicar en Lovable (#162 #163 #164) y probar editar venta y ajustar entrega; re-medir huecos G1–G5 en 7 días (0 casos nuevos); fase 3b (editar entregas antes de cargar) y saldo a favor por pago de más (D-008) pendientes. Pendiente: P-002
 
 ## Decisiones recientes (últimas 10)
 - [D-004](./decisiones.md#d-004) 2026-10-19 · Ventas sin `fecha_vencimiento` vencen a los días de crédito del cliente.
