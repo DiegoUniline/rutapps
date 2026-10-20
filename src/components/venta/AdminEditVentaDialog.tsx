@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Wrench } from 'lucide-react';
+import { calcularLineaAdmin } from '@/lib/adminEditVenta';
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -70,14 +71,7 @@ export function AdminEditVentaDialog({ venta, lineas, onSaved }: Props) {
   const setRow = (id: string, patch: Partial<LineaEdit>) =>
     setRows(prev => prev.map(r => (r.id === id ? { ...r, ...patch } : r)));
 
-  const calcular = (r: LineaEdit) => {
-    const totalNeto = r2(r.brutoUnit * r.cantidad);
-    const base = totalNeto / ((1 + r.ieps_pct / 100) * (1 + r.iva_pct / 100));
-    const ieps = r2(base * (r.ieps_pct / 100));
-    const iva = r2((base + ieps) * (r.iva_pct / 100));
-    const subtotal = r2(totalNeto - ieps - iva);
-    return { subtotal, iva, ieps, total: totalNeto };
-  };
+  const calcular = (r: LineaEdit) => calcularLineaAdmin(r);
 
   const save = async () => {
     setSaving(true);

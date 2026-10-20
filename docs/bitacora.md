@@ -23,3 +23,4 @@
 2026-10-20 · desarrollador · PR #156 (OnboardingGate sin conteos) y PR #157 (realtime de ventas filtrado por empresa) merged; pendiente publicar en Lovable
 2026-10-20 · dueño · cliente_orden_ruta quitada de supabase_realtime en producción (CONFIRMO); verificado 0 / 32 publicadas
 2026-10-20 · dueño · Producción: 17 índices duplicados quitados (CONFIRMO, docs/inventario/indices-duplicados.sql) → 0 pares; seguridad add_timbres/wa_clientes_saldos aplicada (20261020120000) → timbres_protegido=true, wa_saldos_abierto=false; realtime 32 tablas
+2026-10-20 · desarrollador · D-006/D-007 · Fase 1 inventario: migración 20261020210000 (sobre export de producción, guarda md5) + índice referencia_id; 19 casos en Postgres local: antes reproducen G1/G2/G6, lotes 'traspaso' inválido, saldo −20, cierre parcial 10 vs 7; después todos OK; front revisa errores al borrar y Admin sin doble descuento

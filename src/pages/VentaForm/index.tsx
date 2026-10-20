@@ -445,7 +445,7 @@ export default function VentaFormPage() {
       {!isNew && (
         <div className="px-5 pt-3 flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[240px]"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>
-          {form.status !== 'cancelado' && (
+          {form.status !== 'cancelado' && form.status !== 'facturado' && canChangePrice && !lineas.some(l => l.facturado) && (
             <AdminEditVentaDialog
               venta={form}
               lineas={lineas.filter(l => l.producto_id)}
