@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, json, verifyPassword, hashPassword, signToken } from "../_shared/tiendaAuth.ts";
+import { corsHeaders, escapeLike, json, verifyPassword, hashPassword, signToken } from "../_shared/tiendaAuth.ts";
 
 const DEFAULT_PASSWORD = "123456";
 const BLOCKED_HASH = "BLOCKED$NO_LOGIN";
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
         .from("clientes")
         .select("id, email, telefono")
         .eq("empresa_id", cfg.empresa_id)
-        .ilike("email", normalEmail)
+        .ilike("email", escapeLike(normalEmail))
         .limit(1)
         .maybeSingle();
       if (!cli) {
@@ -69,7 +69,8 @@ Deno.serve(async (req) => {
 
       if (password !== DEFAULT_PASSWORD) {
         return json({
-          error: "Contraseña incorrecta. Es tu primer ingreso: usa la contraseña inicial 123456 y luego cámbiala.",
+          // D-005: no revelar la contraseña inicial en la respuesta pública.
+          error: "Contraseña incorrecta. Si es tu primer ingreso, usa la contraseña inicial que te dio tu proveedor y luego cámbiala.",
           code: "password_inicial",
         }, 401);
       }
