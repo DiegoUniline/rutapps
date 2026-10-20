@@ -27,6 +27,11 @@ import { usePinAuth } from '@/hooks/usePinAuth';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 import { usePermisos } from '@/hooks/usePermisos';
 
+/** Campos de ventas que el tipo Venta no declara y usa la edición de confirmadas. */
+type VentaEdicionCampos = { updated_at?: string; cerrado_at?: string | null; descuento_extra?: number; descuento_extra_tipo?: string };
+type LineaConLotes = { lotes?: { lote_id: string; cantidad: number }[] };
+type RpcSinTipos = (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+
 const COL_COUNT = 4;
 
 export function emptyVenta(): Partial<Venta> {
@@ -122,7 +127,12 @@ export function useVentaForm() {
   const { hasPermiso } = usePermisos();
   const canEditVenta = hasPermiso('ventas', 'editar');
   const canCreateVenta = hasPermiso('ventas', 'crear');
-  const readOnly = isNew ? !canCreateVenta : (form.status !== 'borrador' || !canEditVenta);
+  // Edición de una venta ya confirmada/entregada: se guarda en UNA operación (RPC editar_venta).
+  const [editandoConfirmada, setEditandoConfirmada] = useState(false);
+  const cantidadesOriginalesRef = useRef<Map<string, number>>(new Map());
+  const [recargaVenta, setRecargaVenta] = useState(0);
+  const formExt = form as typeof form & VentaEdicionCampos;
+  const readOnly = isNew ? !canCreateVenta : ((form.status !== 'borrador' && !editandoConfirmada) || !canEditVenta);
   const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   // Feature apartado: si la empresa lo activa y el almacén está en la lista,
@@ -285,7 +295,7 @@ export function useVentaForm() {
     const isReadOnly = existingVenta.status !== 'borrador';
     setLineas(isReadOnly ? existingLines : [...existingLines, emptyLine()]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [(existingVenta as any)?.id, isNew]);
+  }, [(existingVenta as any)?.id, (existingVenta as VentaEdicionCampos | undefined)?.updated_at, recargaVenta, isNew]);
 
   // Build raw pricing map from tarifa for promo-before-rounding logic
   const rawPricingMap = useMemo(() => {
@@ -822,7 +832,7 @@ export function useVentaForm() {
       });
     }, 400);
   };
-  const removeLine = async (idx: number) => { if (readOnly) return; const line = lineas[idx]; if (line.id) await deleteLinea.mutateAsync(line.id); const newLineas = lineas.filter((_, i) => i !== idx); setLineas(newLineas.length === 0 ? [emptyLine()] : newLineas); setDirty(true); };
+  const removeLine = async (idx: number) => { if (readOnly) return; const line = lineas[idx]; if (line.id && !editandoConfirmada) await deleteLinea.mutateAsync(line.id); const newLineas = lineas.filter((_, i) => i !== idx); setLineas(newLineas.length === 0 ? [emptyLine()] : newLineas); setDirty(true); };
 
   const handleSave = async (autoConfirm = false): Promise<string | undefined> => {
     if (readOnly) return;
@@ -879,7 +889,9 @@ export function useVentaForm() {
             if (!l.producto_id) continue;
             const prod = prodMap.get(l.producto_id);
             if (prod?.vender_sin_stock) continue;
-            const disponible = stockMap.get(l.producto_id) ?? 0;
+            // Al editar una venta ya aplicada, lo que ya tiene tomado cuenta como disponible.
+            const yaTomado = editandoConfirmada && (form.entrega_inmediata || form.status === 'entregado') ? (cantidadesOriginalesRef.current.get(l.producto_id) ?? 0) : 0;
+            const disponible = (stockMap.get(l.producto_id) ?? 0) + yaTomado;
             const qty = Number(l.cantidad) || 0;
             if (qty > disponible) {
               toast.error(`Stock insuficiente para "${prod?.nombre ?? 'Producto'}". Disponible: ${disponible}, solicitado: ${qty}`);
@@ -949,7 +961,7 @@ export function useVentaForm() {
         // "Registrado por": se fija al crear y nunca se sobrescribe después.
         ...(isNew ? { creado_por: profile?.id ?? null } : {}),
       };
-      const saved = await saveVenta.mutateAsync(payload as any);
+      const saved = editandoConfirmada ? { id: form.id } : await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
       const linesToSave: Record<string, any>[] = [];
       const lineProductoIds: string[] = [];
@@ -996,6 +1008,39 @@ export function useVentaForm() {
         // Tope de seguridad con el total BRUTO (pre-promoción) del renglón.
         lineTotalByKey.set(promoKey, brutoAmounts.total);
         linesToSave.push(clean);
+      }
+
+      if (editandoConfirmada) {
+        // Renglones nuevos con id propio para poder ligar sus promociones.
+        linesToSave.forEach(l => { if (!l.id) l.id = crypto.randomUUID(); });
+        const lineIdByKey = new Map<string, string>();
+        linesToSave.forEach((l, i) => { if (linePromoKeys[i]) lineIdByKey.set(linePromoKeys[i], l.id); });
+        const pLineas = linesToSave.map((l, i) => {
+          const c = pickColumns(l, VENTA_LINEA_COLUMNS) as Record<string, unknown>;
+          c.id = l.id;
+          const rep = (lineas[lineIndexes[i]] as LineaConLotes | undefined)?.lotes;
+          if (rep?.length) c.lotes = rep.filter(r => r.lote_id && Number(r.cantidad) > 0).map(r => ({ lote_id: r.lote_id, cantidad: Number(r.cantidad) }));
+          return c;
+        });
+        const pPromos = promoPersistHabilitado(empresa?.licencia)
+          ? buildPromoAplicadaRows({ ventaId, promoResults, effectiveByProduct: promoEffectiveByLine, lineIdByProduct: lineIdByKey, lineTotalByProduct: lineTotalByKey })
+          : null;
+        const { error: rpcErr } = await (supabase.rpc as unknown as RpcSinTipos)('editar_venta', {
+          p_venta_id: ventaId,
+          p_lineas: pLineas,
+          p_version: formExt.updated_at ?? null,
+          p_header: { notas: form.notas ?? null, descuento_extra: formExt.descuento_extra ?? 0, descuento_extra_tipo: formExt.descuento_extra_tipo ?? 'porcentaje' },
+          p_promos: pPromos,
+        });
+        if (rpcErr) throw new Error(rpcErr.message);
+        toast.success('Venta actualizada: stock y saldo recalculados');
+        setEditandoConfirmada(false);
+        setDirty(false);
+        loadedVentaIdRef.current = null;
+        queryClient.invalidateQueries({ queryKey: ['venta'] });
+        queryClient.invalidateQueries({ queryKey: ['ventas'] });
+        queryClient.invalidateQueries({ queryKey: ['venta_linea_lotes'] });
+        return ventaId;
       }
 
       // Líneas existentes: se actualizan una por una (normalmente pocas).
@@ -1243,8 +1288,31 @@ export function useVentaForm() {
     queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
   };
 
+  const puedeEditarConfirmada = !isNew && canEditVenta && !editandoConfirmada
+    && ['confirmado', 'entregado'].includes(String(form.status ?? ''))
+    && !formExt.cerrado_at
+    && !(form.tipo === 'pedido' && hayEntregas)
+    && !lineas.some(l => l.facturado || l.factura_cfdi_id);
+
+  const iniciarEdicionConfirmada = () => {
+    if (!puedeEditarConfirmada) return;
+    const orig = new Map<string, number>();
+    lineas.forEach(l => { if (l.producto_id) orig.set(l.producto_id, (orig.get(l.producto_id) ?? 0) + (Number(l.cantidad) || 0)); });
+    cantidadesOriginalesRef.current = orig;
+    setEditandoConfirmada(true);
+    setLineas(prev => [...prev, emptyLine()]);
+  };
+
+  const cancelarEdicionConfirmada = () => {
+    setEditandoConfirmada(false);
+    setDirty(false);
+    loadedVentaIdRef.current = null;
+    setRecargaVenta(n => n + 1);
+  };
+
   return {
     id, isNew, form, lineas, setLineas, dirty, readOnly, isLoading,
+    editandoConfirmada, puedeEditarConfirmada, iniciarEdicionConfirmada, cancelarEdicionConfirmada,
     ventaLoadError,
     catalogLoadError: clientesQuery.error ?? productosQuery.error ?? tarifasQuery.error ?? almacenesQuery.error,
     retryInitialLoad: async () => {

@@ -50,7 +50,8 @@ export function EditarView(p: Props) {
         </div>
       </header>
       <div className="flex-1 overflow-auto px-3 py-3 space-y-3 pb-24">
-        <CondicionSection {...p} s={s} />
+        {/* En una venta ya confirmada la condición de pago no se cambia desde aquí. */}
+        {p.venta.status === 'borrador' && <CondicionSection {...p} s={s} />}
         <ProductosSection {...p} s={s} />
         {p.showProductSearch && <ProductPicker {...p} s={s} />}
         <NotasSection editNotas={p.editNotas} setEditNotas={p.setEditNotas} />

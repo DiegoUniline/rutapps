@@ -73,4 +73,16 @@ describe('classifySyncError — cerebro de la cola offline', () => {
       expect(classifySyncError({ err: { code: '23502' }, table: 'ventas', newRetries: MAX })).toBe('dead-letter');
     });
   });
+
+  describe('RPC (editar_venta) — regla de negocio no se reintenta', () => {
+    it('versión vieja (40001) → dead-letter al primer intento', () => {
+      expect(classifySyncError({ err: { code: '40001', message: 'La venta cambió' }, table: 'rpc:editar_venta', newRetries: 1 })).toBe('dead-letter');
+    });
+    it('regla de negocio (P0001) → dead-letter', () => {
+      expect(classifySyncError({ err: { code: 'P0001', message: 'pagado' }, table: 'rpc:editar_venta', newRetries: 1 })).toBe('dead-letter');
+    });
+    it('sin señal sigue siendo transitorio', () => {
+      expect(classifySyncError({ err: { message: 'Failed to fetch' }, table: 'rpc:editar_venta', newRetries: 1 })).toBe('transient');
+    });
+  });
 });
