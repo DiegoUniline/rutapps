@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { todayLocal } from '@/lib/utils';
 
 export interface ListPreferences {
   filters: Record<string, string[]>;
@@ -26,7 +27,19 @@ function save(key: string, prefs: ListPreferences) {
   } catch {}
 }
 
-export function useListPreferences(baseKey: string) {
+/** Primer y último día del mes actual (yyyy-mm-dd, zona de la empresa). */
+export function mesActualLocal(): { from: string; to: string } {
+  const hoy = todayLocal();
+  const [y, m] = hoy.split('-').map(Number);
+  const ultimo = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { from: `${hoy.slice(0, 8)}01`, to: `${hoy.slice(0, 8)}${String(ultimo).padStart(2, '0')}` };
+}
+
+/**
+ * `defaultMesActual`: sin fechas elegidas se muestra el mes actual (D-011), en vez
+ * de todo el historial. Elegir otras fechas se recuerda como siempre.
+ */
+export function useListPreferences(baseKey: string, opts?: { defaultMesActual?: boolean }) {
   const { user } = useAuth();
   /** Preferences are persisted per user in this browser */
   const listKey = `${user?.id ?? 'anon'}_${baseKey}`;
@@ -104,12 +117,15 @@ export function useListPreferences(baseKey: string) {
     });
   }, [listKey]);
 
+  const sinFechas = !prefs.dateFrom && !prefs.dateTo;
+  const mes = opts?.defaultMesActual && sinFechas ? mesActualLocal() : null;
+
   return {
     filters: prefs.filters,
     groupBy: prefs.groupBy,
     groupByLevels: prefs.groupByLevels ?? (prefs.groupBy ? [prefs.groupBy] : []),
-    dateFrom: prefs.dateFrom ?? '',
-    dateTo: prefs.dateTo ?? '',
+    dateFrom: mes?.from ?? prefs.dateFrom ?? '',
+    dateTo: mes?.to ?? prefs.dateTo ?? '',
     setFilter,
     toggleFilterValue,
     setGroupBy,
