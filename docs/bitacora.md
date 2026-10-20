@@ -17,6 +17,8 @@
 2026-10-19 · desarrollador · PR #148 merged (fac8993); PR #149 crédito en borrador; PR #150 SQL de huecos listo para el dueño; R-013 política profiles excluida
 2026-10-19 · dueño · PR #150 aplicado en producción y verificado (7/7 OK, 0 entregas sin fecha); R-009 resuelto
 2026-10-19 · dueño · PR #148 publicado en Lovable; Control de descuentos muestra las ventas > 15 % (R-004 resuelto)
+2026-10-20 · auditor · Auditoría seguridad 63 edge functions service_role: 10 CRÍTICAS (S-01…S-10), 11 ALTAS; verificadas por el agente principal S-01, S-02, S-03, S-11; docs/auditoria/seguridad-edge-functions-2026-10-20.md
+2026-10-20 · desarrollador · PR #153: S-01, S-02, S-11 corregidos; S-03/S-04 parcial (correo exacto, sin reemplazo de accesos); D-005 conservar 123456 sin revelarlo
 2026-10-20 · auditor · Velocidad: RLS evalúa funciones por fila; medido en producción venta_lineas 90 días 5 833 ms (RLS actual) vs 74 ms (optimizada simulada), stock_almacen 145 vs 3 ms; PR con optimización generada desde pg_policies, equivalencia probada (0 diferencias) en local
 2026-10-20 · dueño · RLS optimizada APLICADA en producción (281 políticas, CONFIRMO del dueño): stock_almacen 145 → 2.9 ms, venta_lineas 90 días 5 833 → 171.6 ms; mismas filas visibles (3 431 / 51 887)
 2026-10-20 · desarrollador · Realtime: suscripción global (AppLayout) de venta_lineas/entrega_lineas/cobro_aplicaciones sin filtro por empresa → venta_lineas y entregas filtradas por empresa_id, cobro_aplicaciones quitada (recalc_venta_saldo actualiza ventas); verificado en producción venta_lineas 30 días 0/74 268 sin empresa_id; 33 tablas publicadas, cliente_orden_ruta publicada sin uso
