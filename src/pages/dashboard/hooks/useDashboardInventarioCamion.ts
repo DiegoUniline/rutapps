@@ -21,8 +21,10 @@ export function useDashboardInventarioCamion(range: DateRange) {
       const sb: any = supabase;
       const [almacenesRes, stockRes, productosRes, mermasRes] = await Promise.all([
         sb.from('almacenes').select('id, nombre, tipo').eq('empresa_id', eId).eq('activo', true),
-        fetchAllPages((from, to) => sb.from('stock_almacen').select('almacen_id, producto_id, cantidad').eq('empresa_id', eId).range(from, to)),
-        sb.from('productos').select('id, costo, precio_principal').eq('empresa_id', eId),
+        // Las existencias en 0 no suman ni valor ni unidades: no se bajan.
+        fetchAllPages((from, to) => sb.from('stock_almacen').select('almacen_id, producto_id, cantidad').eq('empresa_id', eId).neq('cantidad', 0).order('id').range(from, to)),
+        // Paginado: sin esto se cortaba en 1000 productos y el valor de inventario salía corto.
+        fetchAllPages((from, to) => sb.from('productos').select('id, costo, precio_principal').eq('empresa_id', eId).order('id').range(from, to)),
         fetchAllPages((from, to) => sb.from('mermas')
           .select('id, folio, fecha, total_costo, total_venta, cancelada, merma_motivos(nombre)')
           .eq('empresa_id', eId)
@@ -32,7 +34,7 @@ export function useDashboardInventarioCamion(range: DateRange) {
       ]);
 
       const productMap = new Map<string, { costo: number; precio: number }>();
-      (productosRes.data ?? []).forEach((p: any) => productMap.set(p.id, { costo: Number(p.costo || 0), precio: Number(p.precio_principal || 0) }));
+      (productosRes ?? []).forEach((p: any) => productMap.set(p.id, { costo: Number(p.costo || 0), precio: Number(p.precio_principal || 0) }));
 
       const almacenes = (almacenesRes.data ?? []) as any[];
       const camiones: CamionRow[] = almacenes.map((a) => {

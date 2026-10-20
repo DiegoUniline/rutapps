@@ -38,3 +38,4 @@
 2026-10-20 · desarrollador · Escritorio: realtime de productos/stock agrupado (1 re-consulta por ráfaga) y canales duplicados quitados en Ventas, Productos e Inventario
 2026-10-20 · desarrollador · Tablero: pestañas Rankings/Evolución/Mes vs Mes/Asesor IA consultan solo al abrirse; RPCs dashboard_ultima_compra_clientes y dashboard_top_productos (20261021150000, pendientes en producción); evolución mensual paginada (se cortaba en 1000 filas)
 2026-10-20 · desarrollador · Tablero: ventas por día y por vendedor calculadas de las mismas filas del periodo (2 descargas menos al abrir); bitácora: funciones del tablero creadas en producción (tablero_ok = true, PR #172)
+2026-10-20 · desarrollador · Tablero Equipo/Inventario: clientes y productos paginados (se cortaban en 1000: visitas planeadas y valor de inventario cortos); stock en 0 ya no se baja
