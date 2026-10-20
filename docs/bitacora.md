@@ -34,4 +34,5 @@
 2026-10-20 · desarrollador · D-010 · Móvil menos megas (PR #166): venta_lineas/entrega_lineas solo local, caché vieja falsa corregida, SW cada 5 min, miniaturas en caché, cargas/entregas/descargas del vendedor cada 15 min; dashboard_evolucion_mensual creada en producción (evolucion_ok = true, PR #167)
 2026-10-20 · desarrollador · Móvil menos megas 2: realtime de visitas/gastos/jornada solo del propio usuario, visitas previas paginadas (antes se cortaban en 1000) y en caché 6 h, permisos staleTime 5 min
 2026-10-20 · desarrollador · Build: versión de la app en <meta> de index.html (src/lib/appVersion.ts) en vez de horneada en el JS; dos builds iguales: 244 de 299 archivos cambiaban de nombre → 0 (el celular ya no re-baja ~3 MB en cada publicación)
+2026-10-20 · desarrollador · D-011 · Ventas y Cobranza abren en el mes actual; Cobranza pide al servidor solo el rango (antes todos los cobros con select *)
 2026-10-20 · desarrollador · Escritorio: realtime de productos/stock agrupado (1 re-consulta por ráfaga) y canales duplicados quitados en Ventas, Productos e Inventario

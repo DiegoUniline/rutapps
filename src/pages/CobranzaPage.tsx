@@ -37,10 +37,17 @@ import { hasRealConnection } from '@/lib/connectivity';
 
 
 
-function useCobros() {
+/** Día siguiente (yyyy-mm-dd) para filtrar `fecha < día+1` sea date o timestamp. */
+function diaSiguiente(d: string): string {
+  const [y, m, dd] = d.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10);
+}
+
+function useCobros(dateFrom?: string, dateTo?: string) {
   const { empresa } = useAuth();
+  const conRango = !!(dateFrom || dateTo);
   return useQuery({
-    queryKey: ['cobros-desktop', empresa?.id, 'server-v2'],
+    queryKey: ['cobros-desktop', empresa?.id, 'server-v2', dateFrom ?? '', dateTo ?? ''],
     enabled: !!empresa?.id,
     networkMode: 'always',
     staleTime: 0,
@@ -54,12 +61,18 @@ function useCobros() {
       const purgeLocalCobros = async (dropPendingQueue = false) => {
         try {
           const { offlineDb } = await import('@/lib/offlineDb');
-          const localCobros = await offlineDb.cobros
-            .where('empresa_id').equals(empresaId).toArray();
+          // Con rango de fechas solo se reemplaza ese rango en la copia local.
+          const enRango = (c: any) => {
+            const f = String(c?.fecha ?? '').slice(0, 10);
+            return (!dateFrom || f >= dateFrom) && (!dateTo || f <= dateTo);
+          };
+          const localCobros = (await offlineDb.cobros
+            .where('empresa_id').equals(empresaId).toArray()).filter(c => !conRango || enRango(c));
           const localCobroIds = new Set(localCobros.map((c: any) => c.id).filter(Boolean));
 
           await offlineDb.transaction('rw', offlineDb.cobros, offlineDb.cobro_aplicaciones, offlineDb.syncQueue, async () => {
-            await offlineDb.cobros.where('empresa_id').equals(empresaId).delete();
+            if (conRango) await offlineDb.cobros.bulkDelete([...localCobroIds] as string[]);
+            else await offlineDb.cobros.where('empresa_id').equals(empresaId).delete();
             if (localCobroIds.size > 0) {
               const apps = await offlineDb.cobro_aplicaciones.toArray();
               await Promise.all(
@@ -106,15 +119,17 @@ function useCobros() {
       }
 
       try {
-        const { data, error } = await supabase
+        let q = supabase
           .from('cobros')
           .select('*, clientes(id, nombre, telefono), cobro_aplicaciones(venta_id, monto_aplicado, ventas(id, folio, tipo))')
-          .eq('empresa_id', empresaId)
-          .order('fecha', { ascending: false });
+          .eq('empresa_id', empresaId);
+        if (dateFrom) q = q.gte('fecha', dateFrom);
+        if (dateTo) q = q.lt('fecha', diaSiguiente(dateTo));
+        const { data, error } = await q.order('fecha', { ascending: false });
         if (error) throw error;
         try {
           const { offlineDb } = await import('@/lib/offlineDb');
-          await purgeLocalCobros(empresa?.licencia === '12324489' && (data?.length ?? 0) === 0);
+          await purgeLocalCobros(!conRango && empresa?.licencia === '12324489' && (data?.length ?? 0) === 0);
           if (data && data.length > 0) await offlineDb.cobros.bulkPut(data as any[]);
         } catch { /* cache best-effort */ }
 
@@ -182,7 +197,8 @@ export default function CobranzaPage() {
   const isMobile = useIsMobile();
   const { fmt: fmtC } = useCurrency();
   const qc = useQueryClient();
-  const { data: cobros, isLoading } = useCobros();
+  const { filters, groupBy, groupByLevels, dateFrom, dateTo, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('cobranza', { defaultMesActual: true });
+  const { data: cobros, isLoading } = useCobros(dateFrom || undefined, dateTo || undefined);
   const { data: vendedores } = useVendedores();
   useEffect(() => {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
@@ -191,7 +207,9 @@ export default function CobranzaPage() {
   }, [empresa?.id, qc]);
   useEffect(() => {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
-    if (!empresa?.id || isLoading || (cobros?.length ?? 0) > 0) return;
+    // Con rango (mes actual por defecto) una lista vacía no significa que no
+    // haya cobros: no se borra la copia local.
+    if (!empresa?.id || isLoading || (cobros?.length ?? 0) > 0 || dateFrom || dateTo) return;
     import('@/lib/offlineDb')
       .then(async ({ offlineDb }) => {
         await offlineDb.cobros.where('empresa_id').equals(empresa.id).delete();
@@ -205,8 +223,7 @@ export default function CobranzaPage() {
         }
       })
       .catch(() => undefined);
-  }, [empresa?.id, empresa?.licencia, isLoading, cobros?.length]);
-  const { filters, groupBy, groupByLevels, dateFrom, dateTo, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('cobranza');
+  }, [empresa?.id, empresa?.licencia, isLoading, cobros?.length, dateFrom, dateTo]);
   const [search, setSearch] = useState('');
   const setDateFrom = (val: string) => setDates(val, dateTo);
   const setDateTo = (val: string) => setDates(dateFrom, val);

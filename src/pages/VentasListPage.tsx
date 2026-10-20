@@ -72,7 +72,7 @@ export default function VentasListPage() {
     const stored = readStoredPageSizeFor('ventas', false);
     return stored === 'all' ? 50 : stored;
   });
-  const { filters, groupBy, groupByLevels, dateFrom, dateTo, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('ventas');
+  const { filters, groupBy, groupByLevels, dateFrom, dateTo, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('ventas', { defaultMesActual: true });
   const setDateFrom = (val: string) => setDates(val, dateTo);
   const setDateTo = (val: string) => setDates(dateFrom, val);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);

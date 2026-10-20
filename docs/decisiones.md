@@ -58,3 +58,8 @@
 - **Fecha:** 2026-10-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión (megas en móvil, operación de ruta):** cargas, entregas y descargas se refrescan cada **15 min** (antes 5) y el celular baja **solo lo del vendedor/repartidor**: lo abierto o de los últimos 7 días. Con "Sincronizar" se ve al instante.
 - **Implementación:** `RUTA_OPERACION_SCOPE` en `src/lib/offlineSync.ts` (sin bandera); las líneas siguen a su padre local. Super admin viendo una empresa sin vendedor elegido: sin recorte.
+
+## D-011
+- **Fecha:** 2026-10-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** las listas de **Ventas** y **Cobranza** abren en el **mes actual** cuando no hay fechas elegidas (antes cargaban todo el historial). Las fechas que el usuario elija se recuerdan como siempre.
+- **Implementación:** `useListPreferences(key, { defaultMesActual: true })` (del día 1 al último día del mes, zona de la empresa). Cobranza filtra en el servidor y solo reemplaza ese rango en la copia local.
