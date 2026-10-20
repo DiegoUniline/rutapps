@@ -49,12 +49,8 @@ function getNumericPageSize(ps: PageSizeOption): number {
 
 export default function VentasListPage() {
   const { empresa } = useAuth();
-  // Realtime: refresca lista al haber cambios en ventas/entregas/cobros (otro dispositivo)
-  useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas']] });
-  // venta_lineas sí tiene empresa_id. Sin este filtro un Super Admin recibía
-  // eventos de TODAS las empresas y su tabla podía volver a consultarse aunque
-  // el movimiento perteneciera a otro cliente de RutApp.
-  useRealtimeInvalidate({ table: 'venta_lineas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas']] });
+  // Realtime: ventas y venta_lineas ya los escucha AppLayout (useProductosRealtime,
+  // agrupado); aquí solo lo que no cubre.
   useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['entregas']] });
   useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['cxc'], ['saldos']] });
   useRealtimeInvalidate({ table: 'clientes', empresaId: empresa?.id, queryKeys: [['ventas'], ['clientes'], ['clientes-filter']] });
