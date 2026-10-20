@@ -8,7 +8,7 @@ import { VitePWA } from "vite-plugin-pwa";
 // === Auto-bump de versión en cada build/dev ===
 // Contador secuencial de 6 dígitos (000001, 000002, ...). Se incrementa en 1
 // cada vez que arranca un build/dev (evita loops de HMR: corre una sola vez).
-function bumpAppVersion(): string {
+function bumpAppVersion(): { version: string; date: string } {
   const versionPath = path.resolve(__dirname, "src/version.ts");
   try {
     const content = fs.readFileSync(versionPath, "utf-8");
@@ -20,17 +20,29 @@ function bumpAppVersion(): string {
     const current = match ? Number(match[1]) : 0;
     const next = String(current + 1).padStart(6, "0");
     const newContent =
-      `// App version – auto-bumped on every build by vite.config.ts\n` +
+      `// Contador de versión – lo sube vite.config.ts en cada build. La app NO importa\n` +
+      `// este archivo: lee la versión del <meta> de index.html (ver src/lib/appVersion.ts).\n` +
       `export const APP_VERSION = '${next}';\n` +
       `export const APP_BUILD_DATE = '${today}';\n`;
     if (newContent !== content) fs.writeFileSync(versionPath, newContent, "utf-8");
-    return next;
+    return { version: next, date: today };
   } catch {
-    return "000000";
+    return { version: "000000", date: "" };
   }
 }
 
-const APP_VERSION = bumpAppVersion();
+const { version: APP_VERSION, date: APP_BUILD_DATE } = bumpAppVersion();
+
+// La versión va en index.html (que siempre se baja) y no dentro del JS: si el
+// chunk principal cambiara en cada build, en cascada cambiaban ~240 chunks y el
+// celular re-descargaba casi toda la app en cada publicación.
+const appVersionMeta = () => ({
+  name: "app-version-meta",
+  transformIndexHtml: () => [
+    { tag: "meta", attrs: { name: "app-version", content: APP_VERSION }, injectTo: "head" as const },
+    { tag: "meta", attrs: { name: "app-build-date", content: APP_BUILD_DATE }, injectTo: "head" as const },
+  ],
+});
 
 export default defineConfig(({ mode }) => ({
   define: {
@@ -75,6 +87,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    appVersionMeta(),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "prompt",

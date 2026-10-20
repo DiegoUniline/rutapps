@@ -8,7 +8,7 @@ import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { setSyncScope } from '@/lib/syncScope';
 import { getSyncConfig, isDataSaverEnabled, setDataSaverMode } from '@/lib/dataSaver';
 import { hasRealConnection } from '@/lib/connectivity';
-import { APP_VERSION } from '@/version';
+import { APP_VERSION } from '@/lib/appVersion';
 
 
 const SYNCED_APP_VERSION_KEY = 'uniline_synced_app_version';

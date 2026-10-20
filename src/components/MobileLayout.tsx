@@ -10,7 +10,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
-import { APP_VERSION, APP_BUILD_DATE } from '@/version';
+import { APP_VERSION, APP_BUILD_DATE } from '@/lib/appVersion';
 import { locationService } from '@/lib/locationService';
 import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
 import { useRutaSesionActiva } from '@/hooks/useRutaSesion';

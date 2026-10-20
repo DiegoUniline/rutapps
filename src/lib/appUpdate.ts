@@ -1,4 +1,4 @@
-import { APP_VERSION } from '@/version';
+import { APP_VERSION } from '@/lib/appVersion';
 
 // Caches we wipe on manual "Actualizar app". Includes the Workbox precache so
 // the old bundled HTML/JS no longer wins over the freshly-fetched assets.
