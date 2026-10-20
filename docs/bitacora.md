@@ -17,3 +17,4 @@
 2026-10-19 · desarrollador · PR #148 merged (fac8993); PR #149 crédito en borrador; PR #150 SQL de huecos listo para el dueño; R-013 política profiles excluida
 2026-10-19 · dueño · PR #150 aplicado en producción y verificado (7/7 OK, 0 entregas sin fecha); R-009 resuelto
 2026-10-19 · dueño · PR #148 publicado en Lovable; Control de descuentos muestra las ventas > 15 % (R-004 resuelto)
+2026-10-20 · auditor · Auditoría seguridad 63 edge functions service_role: 10 CRÍTICAS (S-01…S-10), 11 ALTAS; verificadas por el agente principal S-01, S-02, S-03, S-11; docs/auditoria/seguridad-edge-functions-2026-10-20.md
