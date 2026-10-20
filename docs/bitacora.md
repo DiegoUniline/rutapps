@@ -20,3 +20,5 @@
 2026-10-20 · auditor · Velocidad: RLS evalúa funciones por fila; medido en producción venta_lineas 90 días 5 833 ms (RLS actual) vs 74 ms (optimizada simulada), stock_almacen 145 vs 3 ms; PR con optimización generada desde pg_policies, equivalencia probada (0 diferencias) en local
 2026-10-20 · dueño · RLS optimizada APLICADA en producción (281 políticas, CONFIRMO del dueño): stock_almacen 145 → 2.9 ms, venta_lineas 90 días 5 833 → 171.6 ms; mismas filas visibles (3 431 / 51 887)
 2026-10-20 · desarrollador · Realtime: suscripción global (AppLayout) de venta_lineas/entrega_lineas/cobro_aplicaciones sin filtro por empresa → venta_lineas y entregas filtradas por empresa_id, cobro_aplicaciones quitada (recalc_venta_saldo actualiza ventas); verificado en producción venta_lineas 30 días 0/74 268 sin empresa_id; 33 tablas publicadas, cliente_orden_ruta publicada sin uso
+2026-10-20 · desarrollador · PR #156 (OnboardingGate sin conteos) y PR #157 (realtime de ventas filtrado por empresa) merged; pendiente publicar en Lovable
+2026-10-20 · dueño · cliente_orden_ruta quitada de supabase_realtime en producción (CONFIRMO); verificado 0 / 32 publicadas
