@@ -76,6 +76,9 @@ export function useOfflineQuery<T = any>(
     orderBy?: string;
     ascending?: boolean;
     enabled?: boolean;
+    /** Solo IndexedDB (lo llena el sync maestro). Para tablas hijas sin filtro
+     *  propio como venta_lineas, que sin esto bajaban todo el histórico. */
+    localOnly?: boolean;
   }
 ) {
   const enabled = options?.enabled !== false;
@@ -150,6 +153,12 @@ export function useOfflineQuery<T = any>(
       hasLocalData = true;
       setSource('cache');
       setIsLoading(false);
+    }
+
+    if (options?.localOnly) {
+      if (!hasLocalData) setData([]);
+      setIsLoading(false);
+      return;
     }
 
     // 2. Modo ahorro de datos: con datos locales no se toca la red
@@ -281,7 +290,7 @@ export function useOfflineQuery<T = any>(
     }
 
     setIsLoading(false);
-  }, [table, JSON.stringify(filters), enabled, options?.select, options?.orderBy, options?.ascending]);
+  }, [table, JSON.stringify(filters), enabled, options?.select, options?.orderBy, options?.ascending, options?.localOnly]);
 
   useEffect(() => {
     loadData();

@@ -156,11 +156,11 @@ export default defineConfig(({ mode }) => ({
             // Debe ir ANTES del catch-all de supabase.co (NetworkOnly).
             urlPattern: ({ url }) =>
               url.hostname.endsWith('supabase.co') &&
-              url.pathname.startsWith('/storage/v1/object/'),
+              (url.pathname.startsWith('/storage/v1/object/') || url.pathname.startsWith('/storage/v1/render/image/')),
             handler: 'CacheFirst',
             options: {
               cacheName: 'supabase-storage',
-              expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 30, purgeOnQuotaError: true },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

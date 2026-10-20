@@ -23,7 +23,7 @@ export function useClienteInsights(clienteId: string | null, clienteData?: any) 
   const enabled = !!empresa?.id && !!clienteId;
 
   const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
-  const { data: ventaLineas } = useOfflineQuery('venta_lineas', {}, { enabled });
+  const { data: ventaLineas } = useOfflineQuery('venta_lineas', {}, { enabled, localOnly: true });
   const { data: pedidoSugeridoRaw } = useOfflineQuery('cliente_pedido_sugerido', { cliente_id: clienteId }, { enabled });
   const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const { data: promosAll } = usePromocionesActivas();

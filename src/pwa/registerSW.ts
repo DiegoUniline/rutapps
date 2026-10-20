@@ -78,10 +78,14 @@ export async function registerAppSW() {
       },
       onRegisteredSW(_swUrl, registration) {
         if (!registration) return;
-        const check = () => registration.update().catch(() => {});
+        // Ahorro de datos: como mucho un chequeo cada 5 min (antes cada 30 s y en
+        // cada cambio de pantalla). El botón manual sigue forzándolo.
+        let lastCheck = 0;
+        const forceCheck = () => { lastCheck = Date.now(); return registration.update().catch(() => {}); };
+        const check = () => { if (Date.now() - lastCheck >= 5 * 60_000) forceCheck(); };
         // setInterval se frena en background móvil, por eso además hay triggers
         // por evento (foco, reconexión, reapertura de la PWA).
-        setInterval(check, 30_000);
+        setInterval(check, 60_000);
         window.addEventListener('focus', check);
         window.addEventListener('online', check);
         window.addEventListener('pageshow', check);
@@ -89,7 +93,7 @@ export async function registerAppSW() {
           if (document.visibilityState === 'visible') check();
         });
         window.addEventListener('uniline:check-sw-update', check);
-        (window as any).__checkSWUpdate = check;
+        (window as any).__checkSWUpdate = forceCheck;
       },
     });
 

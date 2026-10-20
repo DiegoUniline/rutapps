@@ -38,7 +38,7 @@ export function useNetworkStatus() {
     const saved = localStorage.getItem(AUTO_SYNC_KEY);
     return saved === null ? true : saved === 'true';
   });
-  const { empresa, profile, user } = useAuth();
+  const { empresa, profile, user, overrideEmpresaId, overrideVendedorId } = useAuth();
   const { seeAll: seeAllClientes, clientesVisibilidad } = useDataVisibility('clientes');
 
   // Ámbito de sincronización para el motor offline (no vive dentro de React).
@@ -50,8 +50,9 @@ export function useNetworkStatus() {
       // Solo se filtra por vendedor cuando la empresa trabaja con "solo propios"
       // y el usuario no tiene permiso de ver todos.
       seeAll: seeAllClientes || clientesVisibilidad !== 'propios',
+      vendedorRutaId: overrideEmpresaId ? (overrideVendedorId ?? null) : (profile?.id ?? null),
     });
-  }, [empresa, profile?.id, user?.id, seeAllClientes, clientesVisibilidad]);
+  }, [empresa, profile?.id, user?.id, seeAllClientes, clientesVisibilidad, overrideEmpresaId, overrideVendedorId]);
 
 
 

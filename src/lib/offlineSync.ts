@@ -160,6 +160,27 @@ const VENDOR_SCOPED_TABLES: Record<string, { column: string; source: 'vendedor' 
   solicitudes_traspaso: { column: 'solicitante_user_id', source: 'user', transaccional: true },
 };
 
+/**
+ * Operación de ruta (cargas, entregas, descargas): el dispositivo baja solo lo
+ * del vendedor/repartidor, abierto o de los últimos 7 días. Las líneas siguen a
+ * su padre (se piden por los IDs locales del padre). Sin bandera: siempre.
+ */
+const RUTA_OPERACION_DIAS = 7;
+const RUTA_OPERACION_SCOPE: Record<string, { vendedor: (id: string) => string; abierto: string }> = {
+  cargas: { vendedor: id => `vendedor_id.eq.${id},repartidor_id.eq.${id}`, abierto: 'status.in.(pendiente,en_ruta)' },
+  entregas: { vendedor: id => `vendedor_ruta_id.eq.${id},vendedor_id.eq.${id}`, abierto: 'status.not.in.(hecho,cancelado)' },
+  descarga_ruta: { vendedor: id => `vendedor_id.eq.${id}`, abierto: 'status.eq.pendiente' },
+};
+
+function applyRutaOperacionScope(table: string, q: any): any {
+  const cfg = RUTA_OPERACION_SCOPE[table];
+  const id = getSyncScope().vendedorRutaId;
+  if (!cfg || !id) return q;
+  const desde = new Date();
+  desde.setDate(desde.getDate() - RUTA_OPERACION_DIAS);
+  return q.or(cfg.vendedor(id)).or(`${cfg.abierto},fecha.gte.${desde.toISOString().slice(0, 10)}`);
+}
+
 /** ¿Aplica el filtro por vendedor a esta tabla? */
 const scopeAplica = (scope?: { transaccional?: boolean; soloFlagHijos?: boolean }): boolean => {
   if (!scope) return false;
@@ -324,7 +345,7 @@ const windowDays = () => (syncV2Habilitado() ? WINDOW_DAYS_V2 : WINDOW_DAYS);
 
 // Las tablas "full" (NO_DELTA sin updated_at) no se re-descargan en cada sync de
 // 30s: se refrescan como mucho cada esta ventana (un "Descargar todo" las fuerza).
-const FULL_TABLE_REFRESH_MS = 5 * 60 * 1000; // 5 min
+const FULL_TABLE_REFRESH_MS = 15 * 60 * 1000; // 15 min (con Sincronizar se baja al instante)
 const FULL_TABLE_REFRESH_MS_V2 = 15 * 60 * 1000; // 15 min con ruta_sync_v2
 const fullRefreshMs = () => (syncV2Habilitado() ? FULL_TABLE_REFRESH_MS_V2 : FULL_TABLE_REFRESH_MS);
 
@@ -739,6 +760,7 @@ async function downloadAllDataInternal(
                 q = orExpr ? q.or(orExpr) : q.eq(vendorScope.column, value);
               }
             }
+            q = applyRutaOperacionScope(table, q);
             // Ventana por created_at para tablas transaccionales hijas/append
             // (acota cuánta historia se cachea).
             if (RECENT_TABLES.has(table)) {
@@ -944,9 +966,13 @@ export async function getLastSyncTime(): Promise<number | null> {
   return Math.min(...timestamps.map(t => t.lastSync));
 }
 
+/** Solo cuenta las tablas que el sync rápido realmente baja; las demás nunca
+ *  se refrescaban ahí y hacían que la caché pareciera vieja SIEMPRE (un sync
+ *  completo en cada pantalla que monta useNetworkStatus). */
 export async function isCacheStale(maxAgeMinutes: number = 30): Promise<boolean> {
-  const lastSync = await getLastSyncTime();
-  if (!lastSync) return true;
+  const ts = await offlineDb.cacheTimestamps.bulkGet([...MOBILE_QUICK_SYNC_TABLES]);
+  if (ts.some(t => !t?.lastSync)) return true;
+  const lastSync = Math.min(...ts.map(t => t!.lastSync));
   return Date.now() - lastSync > maxAgeMinutes * 60 * 1000;
 }
 
