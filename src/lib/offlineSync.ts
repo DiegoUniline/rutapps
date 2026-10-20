@@ -368,6 +368,8 @@ const CHILD_SCOPES: Partial<Record<CacheTable, { parentTable: CacheTable; foreig
 };
 
 const activeDownloads = new Map<string, Promise<DownloadResult>>();
+/** Descarga en curso por empresa que ya incluye TODAS las tablas del sync rápido. */
+const activeSupersetDownloads = new Map<string, { task: Promise<DownloadResult>; tables: ReadonlySet<string> }>();
 /** Cadena global: con `ruta_sync_v2` solo corre UNA sincronización a la vez. */
 let globalSyncChain: Promise<unknown> = Promise.resolve();
 
@@ -520,6 +522,15 @@ export async function downloadAllData(
   const active = activeDownloads.get(lockKey);
   if (active) return active;
 
+  // Si ya corre una descarga que incluye todas estas tablas (p. ej. la de cambio
+  // de versión o el primer inicio de sesión), un sync delta de un subconjunto la
+  // espera en vez de volver a bajar lo mismo en paralelo (antes: todo dos veces).
+  const superset = activeSupersetDownloads.get(empresaId);
+  if (superset && !forceFullSync && tablesToCache.every(t => superset.tables.has(t))) {
+    return superset.task;
+  }
+  const esSuperset = MOBILE_QUICK_SYNC_TABLES.every(t => tablesToCache.includes(t));
+
   // CANDADO GLOBAL (`ruta_sync_v2`): además de no repetir la MISMA descarga,
   // se evita que dos sincronizaciones DISTINTAS corran a la vez (era ~1/3 del
   // tráfico desperdiciado). La segunda espera a que termine la primera y
@@ -532,8 +543,12 @@ export async function downloadAllData(
     return downloadAllDataInternal(empresaId, forceFullSync, onProgress, tablesToCache);
   };
 
-  const task = run().finally(() => activeDownloads.delete(lockKey));
+  const task = run().finally(() => {
+    activeDownloads.delete(lockKey);
+    if (activeSupersetDownloads.get(empresaId)?.task === task) activeSupersetDownloads.delete(empresaId);
+  });
   activeDownloads.set(lockKey, task);
+  if (esSuperset) activeSupersetDownloads.set(empresaId, { task, tables: new Set(tablesToCache) });
   globalSyncChain = task.catch(() => undefined);
   return task;
 }
