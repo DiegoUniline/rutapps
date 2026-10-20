@@ -22,6 +22,7 @@ export default function RutaProductosVendidos() {
 
   const { data: ventaLineas } = useOfflineQuery('venta_lineas', {}, {
     enabled: !!empresa?.id,
+    localOnly: true,
   });
 
   const { data: productos } = useOfflineQuery('productos', {

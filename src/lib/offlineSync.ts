@@ -944,9 +944,13 @@ export async function getLastSyncTime(): Promise<number | null> {
   return Math.min(...timestamps.map(t => t.lastSync));
 }
 
+/** Solo cuenta las tablas que el sync rápido realmente baja; las demás nunca
+ *  se refrescaban ahí y hacían que la caché pareciera vieja SIEMPRE (un sync
+ *  completo en cada pantalla que monta useNetworkStatus). */
 export async function isCacheStale(maxAgeMinutes: number = 30): Promise<boolean> {
-  const lastSync = await getLastSyncTime();
-  if (!lastSync) return true;
+  const ts = await offlineDb.cacheTimestamps.bulkGet([...MOBILE_QUICK_SYNC_TABLES]);
+  if (ts.some(t => !t?.lastSync)) return true;
+  const lastSync = Math.min(...ts.map(t => t!.lastSync));
   return Date.now() - lastSync > maxAgeMinutes * 60 * 1000;
 }
 
