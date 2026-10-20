@@ -602,7 +602,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   // no afecta stock; en aprobadas se avisa que ese movimiento no se revierte.
   const eliminarMutation = useMutation({
     mutationFn: async () => {
-      await supabase.from('descarga_ruta_lineas').delete().eq('descarga_id', descarga.id);
+      const { error: eLin } = await supabase.from('descarga_ruta_lineas').delete().eq('descarga_id', descarga.id);
+      if (eLin) throw eLin;
       const { error } = await supabase.from('descarga_ruta').delete().eq('id', descarga.id);
       if (error) throw error;
     },

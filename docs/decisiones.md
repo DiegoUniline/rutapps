@@ -20,3 +20,16 @@
 - **Fecha:** 2026-10-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** Para avisos de vencidas y control de crédito, una venta sin `fecha_vencimiento` vence a los **días de crédito actuales del cliente** contados desde su fecha; con `fecha_vencimiento` se usa esa fecha.
 - **Evidencia:** producción — 0 clientes con vencidas usando solo `fecha_vencimiento`, 2 914 con esta regla, 3 206 si vencieran el mismo día. 5 671 ventas pendientes sin vencimiento (3 265 contado, 1 506 crédito, 900 por definir).
+
+## D-006
+- **Fecha:** 2026-10-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** Un documento que ya movió stock (entrega, compra recibida, traspaso confirmado, descarga aprobada, y sus renglones) **no se borra: se cancela**. La BD lo bloquea; solo los procesos del servidor (service_role) quedan exentos. Lo que no movió stock (borradores) se sigue borrando.
+- **Evidencia:** producción 2026-10-20 — 466 entregas, 27 compras, 7 traspasos y 2 descargas borradas con su stock movido; casos en los últimos 7 días.
+
+## D-007
+- **Fecha:** 2026-10-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** Corrección de inventario y edición por fases. Regla base: el **pedido** es lo que el cliente pidió (y se cobra según su política); la **entrega** es lo que físicamente salió; cada corrección mueve solo la diferencia y el saldo lo calcula la BD en un solo lugar.
+  - **Fase 1 (BD):** D-006; reabrir entrega entregada sin stock fantasma (a borrador revierte todo; a surtido revierte entrega y carga; a cancelado/no entregado la mercancía queda en el camión); cancelar en surtido regresa a bodega; reversa de lotes de carga válida; saldo con una sola regla y nunca negativo; cierre parcial solo con entregas del pedido; devoluciones por renglón; corrección de Admin sin doble descuento y no disponible en facturadas.
+  - **Fase 2:** editar ventas confirmadas en una sola operación (web, móvil, offline).
+  - **Fase 3:** editar entregas y "Ajustar entrega" después de entregada.
+- **Pendiente:** decisiones de negocio de fases 2 y 3 (total menor a lo pagado; producto entregado que no estaba en el pedido); stock histórico descuadrado se corrige con conteo físico (no automático).

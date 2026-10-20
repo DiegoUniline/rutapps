@@ -235,7 +235,7 @@ export default function VentasListPage() {
       // 1) Cancelar entregas activas → triggers DB devuelven stock
       try {
         const restored = await cancelEntregasAndReturnStock(ids);
-        if (restored > 0) toast.info(`Stock devuelto de ${restored} entrega(s).`);
+        if (restored > 0) toast.info(`${restored} entrega(s) cancelada(s).`);
       } catch (e: any) {
         errors.push(`Reversión stock: ${e.message}`);
       }
@@ -246,8 +246,10 @@ export default function VentasListPage() {
           const { data: ents } = await (supabase as any).from('entregas').select('id').eq('pedido_id', id);
           const eIds = (ents ?? []).map((e: any) => e.id);
           if (eIds.length) {
-            await supabase.from('entrega_lineas').delete().in('entrega_id', eIds);
-            await supabase.from('entregas').delete().in('id', eIds);
+            const { error: eLin } = await supabase.from('entrega_lineas').delete().in('entrega_id', eIds);
+            if (eLin) throw eLin;
+            const { error: eEnt } = await supabase.from('entregas').delete().in('id', eIds);
+            if (eEnt) throw eEnt;
           }
           await supabase.from('cobro_aplicaciones').delete().eq('venta_id', id);
           await supabase.from('venta_comisiones').delete().eq('venta_id', id);
@@ -302,7 +304,7 @@ export default function VentasListPage() {
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' } as any).in('id', ids);
       if (error) throw error;
 
-      toast.success(`${ids.length} venta(s) cancelada(s)${stockRestored > 0 ? ` · stock devuelto de ${stockRestored} entrega(s)` : ''}.`);
+      toast.success(`${ids.length} venta(s) cancelada(s)${stockRestored > 0 ? ` · ${stockRestored} entrega(s) cancelada(s)` : ''}.`);
       qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['entregas'] });
       qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
@@ -344,7 +346,7 @@ export default function VentasListPage() {
           // 3) Marcar venta como cancelada
           const { error } = await supabase.from('ventas').update({ status: 'cancelado' } as any).eq('id', id);
           if (error) throw error;
-          toast.success(`Venta cancelada${stockRestored > 0 ? ` · stock devuelto de ${stockRestored} entrega(s)` : ''}.`);
+          toast.success(`Venta cancelada${stockRestored > 0 ? ` · ${stockRestored} entrega(s) cancelada(s)` : ''}.`);
           qc.invalidateQueries({ queryKey: ['ventas'] });
           qc.invalidateQueries({ queryKey: ['entregas'] });
           qc.invalidateQueries({ queryKey: ['cobros-desktop'] });

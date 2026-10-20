@@ -680,8 +680,10 @@ export function useDeleteVenta() {
       const { data: ents } = await (supabase as any).from('entregas').select('id').eq('pedido_id', id);
       const eIds = ((ents ?? []) as any[]).map((e: any) => e.id);
       if (eIds.length) {
-        await supabase.from('entrega_lineas').delete().in('entrega_id', eIds);
-        await supabase.from('entregas').delete().in('id', eIds);
+        const { error: eLin } = await supabase.from('entrega_lineas').delete().in('entrega_id', eIds);
+        if (eLin) throw eLin;
+        const { error: eEnt } = await supabase.from('entregas').delete().in('id', eIds);
+        if (eEnt) throw eEnt;
       }
       await supabase.from('cobro_aplicaciones').delete().eq('venta_id', id);
       await supabase.from('venta_comisiones').delete().eq('venta_id', id);

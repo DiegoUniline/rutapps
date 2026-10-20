@@ -544,8 +544,10 @@ export default function TraspasoFormPage() {
   const handleDelete = async () => {
 
     if (!id || !await confirmAsync('¿Eliminar este traspaso?')) return;
-    await supabase.from('traspaso_lineas').delete().eq('traspaso_id', id);
-    await supabase.from('traspasos').delete().eq('id', id);
+    const { error: eLin } = await supabase.from('traspaso_lineas').delete().eq('traspaso_id', id);
+    if (eLin) { toast.error(eLin.message); return; }
+    const { error } = await supabase.from('traspasos').delete().eq('id', id);
+    if (error) { toast.error(error.message); return; }
     toast.success('Traspaso eliminado');
     qc.invalidateQueries({ queryKey: ['traspasos'] });
     navigate('/almacen/traspasos');
