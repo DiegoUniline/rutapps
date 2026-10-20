@@ -7,7 +7,7 @@
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
 - **Módulo en curso:** —
 - **Última pregunta:** —
-- **Siguiente paso exacto:** merge #162 y publicar en Lovable; re-medir huecos G1–G5 en 7 días (deben quedar en 0 casos nuevos); Fase 2 (editar ventas confirmadas) — primera pregunta de negocio. Pendiente: P-002
+- **Siguiente paso exacto:** publicar en Lovable (#162 #163 #164) y probar editar venta y ajustar entrega; re-medir huecos G1–G5 en 7 días (0 casos nuevos); fase 3b (editar entregas antes de cargar) y saldo a favor por pago de más (D-008) pendientes. Pendiente: P-002
 
 ## Decisiones recientes (últimas 10)
 - [D-004](./decisiones.md#d-004) 2026-10-19 · Ventas sin `fecha_vencimiento` vencen a los días de crédito del cliente.
