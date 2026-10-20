@@ -69,7 +69,8 @@ Deno.serve(async (req) => {
 
       if (password !== DEFAULT_PASSWORD) {
         return json({
-          error: "Contraseña incorrecta. Es tu primer ingreso: usa la contraseña inicial 123456 y luego cámbiala.",
+          // D-005: no revelar la contraseña inicial en la respuesta pública.
+          error: "Contraseña incorrecta. Si es tu primer ingreso, usa la contraseña inicial que te dio tu proveedor y luego cámbiala.",
           code: "password_inicial",
         }, 401);
       }
