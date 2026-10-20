@@ -8,7 +8,7 @@
 // tracing ni session replay), y sin enviar datos personales por defecto.
 
 import * as Sentry from '@sentry/react';
-import { APP_VERSION } from '@/version';
+import { APP_VERSION } from '@/lib/appVersion';
 
 let initialized = false;
 

@@ -32,7 +32,7 @@ import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
 import { useFavorites } from '@/hooks/useFavorites';
 import { Search } from 'lucide-react';
-import { APP_VERSION, APP_BUILD_DATE } from '@/version';
+import { APP_VERSION, APP_BUILD_DATE } from '@/lib/appVersion';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { toast } from 'sonner';
 import { refreshAppVersion } from '@/lib/appUpdate';
