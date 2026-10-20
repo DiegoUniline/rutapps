@@ -184,6 +184,8 @@ const OrdenCargaPage = lazy(() => import("@/pages/logistica/OrdenCargaPage"));
 const LogisticaReportesPage = lazy(() => import("@/pages/logistica/LogisticaReportesPage"));
 
 // Mobile ruta pages — eagerly loaded so they work fully offline
+// (excepto navegación: depende de Google Maps en línea y arrastra su SDK)
+const RutaNavegacionPage = lazy(() => import("@/pages/ruta/RutaNavegacionPage"));
 import RutaDashboard from "@/pages/ruta/RutaDashboard";
 import RutaVentas from "@/pages/ruta/RutaVentas";
 import RutaVentasTab from "@/pages/ruta/RutaVentasTab";
@@ -203,7 +205,6 @@ import RutaEntregaDetalle from "@/pages/ruta/RutaEntregaDetalle";
 import RutaDescarga from "@/pages/ruta/RutaDescarga";
 import RutaSolicitudTraspaso from "@/pages/ruta/RutaSolicitudTraspaso";
 import RutaMapaPage from "@/pages/ruta/RutaMapaPage";
-import RutaNavegacionPage from "@/pages/ruta/RutaNavegacionPage";
 import RutaPerfil from "@/pages/ruta/RutaPerfil";
 import RutaSincronizarPage from "@/pages/ruta/RutaSincronizarPage";
 import PendientesSincronizarPage from "@/pages/ruta/PendientesSincronizarPage";
