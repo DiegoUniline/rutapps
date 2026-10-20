@@ -4,7 +4,7 @@ export interface SyncQueueItem {
   id?: number;
   // 'insert-many': data es un ARRAY de filas que se suben en UNA sola petición
   // (evita 50 round-trips para una venta de 50 líneas).
-  operation: 'insert' | 'update' | 'delete' | 'insert-many';
+  operation: 'insert' | 'update' | 'delete' | 'insert-many' | 'rpc';
   table: string;
   data: any;
   keyField: string;

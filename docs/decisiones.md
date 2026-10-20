@@ -33,3 +33,10 @@
   - **Fase 2:** editar ventas confirmadas en una sola operación (web, móvil, offline).
   - **Fase 3:** editar entregas y "Ajustar entrega" después de entregada.
 - **Pendiente:** decisiones de negocio de fases 2 y 3 (total menor a lo pagado; producto entregado que no estaba en el pedido); stock histórico descuadrado se corrige con conteo físico (no automático).
+
+## D-008
+- **Fecha:** 2026-10-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** Editar ventas confirmadas/entregadas en una sola operación (`editar_venta`). Puede editar quien tiene **ventas · editar** (misma regla que la app: dueño siempre; sin rol = acceso total). La fase 2 **solo agrega la función**: no cambia datos ni tablas existentes.
+- **Mientras no exista saldo a favor por cobros:** si el nuevo total queda abajo de lo pagado, se bloquea con aviso. El pago de más **sí debe quedar como saldo a favor** (decisión del dueño), en una fase posterior que sí cambie cómo se calcula el saldo a favor (hoy solo cuenta notas de crédito; los cobros desaplicados al cancelar tampoco se ven).
+- **Comisiones:** las ya pagadas no se tocan (`fn_sync_venta_comision` ya lo respeta); quitar un renglón con comisión pagada se bloquea para no borrarla (FK en cascada).
+- **Fuera de alcance:** pedido con entregas (fase 3), facturadas (nota de crédito), cerradas parcial, cambio de condición de pago/cliente/almacén al editar.
