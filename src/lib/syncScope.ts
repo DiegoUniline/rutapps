@@ -24,6 +24,9 @@ export interface SyncScope {
   vendedorId?: string | null;
   userId?: string | null;
   seeAll?: boolean;
+  /** Vendedor cuya operación de ruta (cargas, entregas, descargas) baja el
+   *  dispositivo. null = sin recorte (super admin viendo toda una empresa). */
+  vendedorRutaId?: string | null;
 }
 
 let memo: SyncScope = {};

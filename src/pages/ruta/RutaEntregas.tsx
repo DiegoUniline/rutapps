@@ -121,7 +121,7 @@ export default function RutaEntregas() {
   }, { enabled: !!empresa?.id, orderBy: 'fecha' });
 
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
-  const { data: entregaLineasOffline } = useOfflineQuery('entrega_lineas', {}, { enabled: !!empresa?.id });
+  const { data: entregaLineasOffline } = useOfflineQuery('entrega_lineas', {}, { enabled: !!empresa?.id, localOnly: true });
   const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
   // Online fetch of lines for this vendor's entregas — ensures fresh counts even if offline cache is stale

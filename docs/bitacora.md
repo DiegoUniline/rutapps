@@ -31,3 +31,4 @@
 2026-10-20 · desarrollador · D-009 · Fase 3a: ajustar_entrega (20261021130000) + diálogo Ajustar entrega (escritorio y móvil); casos locales OK: 10→8 camión, 8→10, producto equivocado con sobrante a bodega, lotes, reabrir después del ajuste sin doble, versión, permiso, facturado
 2026-10-20 · dueño · editar_venta creada en producción (editar_venta_ok = true); PR #163 merged
 2026-10-20 · dueño · ajustar_entrega creada en producción (ajustar_entrega_ok, regla_entregas_ok = true); PR #164 merged
+2026-10-20 · desarrollador · D-010 · Móvil menos megas (PR #166): venta_lineas/entrega_lineas solo local, caché vieja falsa corregida, SW cada 5 min, miniaturas en caché, cargas/entregas/descargas del vendedor cada 15 min; dashboard_evolucion_mensual creada en producción (evolucion_ok = true, PR #167)
