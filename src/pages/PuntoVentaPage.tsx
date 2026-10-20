@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { clienteCoincide } from '@/lib/buscarCliente';
 import { todayInTimezone, addDaysToDate, cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -281,7 +282,7 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('clientes')
-        .select('id, codigo, nombre, telefono, rfc, direccion, colonia, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id, lista_precios:lista_precio_id(nombre)')
+        .select('id, codigo, nombre, contacto, telefono, rfc, direccion, colonia, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id, lista_precios:lista_precio_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('nombre');
@@ -615,8 +616,7 @@ export default function PuntoVentaPage() {
   const filteredClientes = useMemo(() => {
     if (!clientes) return [];
     if (!clienteSearch) return clientes;
-    const s = clienteSearch.toLowerCase();
-    return clientes.filter(c => c.nombre.toLowerCase().includes(s) || c.codigo?.toLowerCase().includes(s));
+    return clientes.filter(c => clienteCoincide(c, clienteSearch));
   }, [clientes, clienteSearch]);
 
   const addToCart = (p: any) => {

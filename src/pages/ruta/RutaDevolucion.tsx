@@ -1,4 +1,5 @@
 import { RutaOperacionGate } from '@/components/ruta/RutaOperacionGate';
+import { clienteCoincide } from '@/lib/buscarCliente';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Plus, Minus, Trash2, RotateCcw, ChevronRight } from 'lucide-react';
@@ -92,9 +93,7 @@ function RutaDevolucionInner() {
     );
   }, [productosDisponibles, searchProducto]);
 
-  const filteredClientes = clientes?.filter(c =>
-    !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) || (c.codigo?.toLowerCase().includes(searchCliente.toLowerCase()))
-  );
+  const filteredClientes = clientes?.filter(c => clienteCoincide(c, searchCliente));
 
   const getItem = (pid: string) => items.find(i => i.producto_id === pid);
 

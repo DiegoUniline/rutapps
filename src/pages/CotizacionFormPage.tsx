@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { clienteTextoBusqueda } from '@/lib/buscarCliente';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -463,7 +464,7 @@ export default function CotizacionFormPage() {
   if (!isNew && isError) return <div className="p-6 text-destructive">Error al cargar la cotización: {(error as any)?.message || 'desconocido'}</div>;
   if (!isNew && !existing && (isLoading || isFetching)) return <div className="p-6 text-muted-foreground">Cargando…</div>;
 
-  const clienteOptions = (clientes ?? []).map((c: any) => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
+  const clienteOptions = (clientes ?? []).map((c: any) => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}`, searchText: clienteTextoBusqueda(c) }));
   const tarifaOptions = (tarifasList ?? []).map((t: any) => ({ value: t.id, label: t.nombre }));
   const almacenOptions = (almacenes ?? []).map((a: any) => ({ value: a.id, label: a.nombre }));
 

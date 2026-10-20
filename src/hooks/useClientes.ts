@@ -95,7 +95,7 @@ export function useClientes(search?: string, statusFilter?: string, enabled = tr
           .eq('empresa_id', empresa!.id)
           .order('nombre', { ascending: true })
           .range(from, to);
-        if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
+        if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%,contacto.ilike.%${search}%`);
         if (statusFilter && statusFilter !== 'todos') {
           const arr = statusFilter.split(',').filter(Boolean);
           if (arr.length > 1) q = q.in('status', arr as any);

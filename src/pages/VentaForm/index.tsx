@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { clienteTextoBusqueda } from '@/lib/buscarCliente';
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermisos } from '@/hooks/usePermisos';
@@ -261,7 +262,7 @@ export default function VentaFormPage() {
     );
   }
 
-  const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
+  const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}`, searchText: clienteTextoBusqueda(c) }));
   const savedClienteId = form.cliente_id as string | null | undefined;
   if (savedClienteId && !clienteOptions.some(option => option.value === savedClienteId)) {
     clienteOptions.unshift({ value: savedClienteId, label: (form as any).clientes?.nombre || 'Cliente de la venta' });

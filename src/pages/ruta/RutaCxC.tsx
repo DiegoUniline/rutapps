@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { clienteCoincide } from '@/lib/buscarCliente';
 import { useNavigate } from 'react-router-dom';
 import { Search, ChevronRight, ChevronDown, AlertCircle, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,7 +56,7 @@ export default function RutaCxC() {
       const c = (clientes ?? []).find((x: any) => x.id === v.cliente_id);
       const nombre = c?.nombre ?? 'Cliente';
       const vendedorId = c?.vendedor_id ?? v.vendedor_id;
-      const prev = map.get(v.cliente_id) ?? { id: v.cliente_id, nombre, saldo: 0, numCuentas: 0, oldest: v.fecha, vendedorId, docs: [] as DocCxC[] };
+      const prev = map.get(v.cliente_id) ?? { id: v.cliente_id, nombre, codigo: (c?.codigo ?? null) as string | null, contacto: (c?.contacto ?? null) as string | null, saldo: 0, numCuentas: 0, oldest: v.fecha, vendedorId, docs: [] as DocCxC[] };
       prev.saldo += saldo;
       prev.numCuentas += 1;
       prev.docs.push({ id: v.id, folio: v.folio ?? null, fecha: v.fecha, saldo });
@@ -76,7 +77,7 @@ export default function RutaCxC() {
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     if (!s) return clientesConSaldo;
-    return clientesConSaldo.filter(c => c.nombre.toLowerCase().includes(s));
+    return clientesConSaldo.filter(c => clienteCoincide(c, s));
   }, [clientesConSaldo, search]);
 
   const totalCxC = filtered.reduce((s, c) => s + c.saldo, 0);
