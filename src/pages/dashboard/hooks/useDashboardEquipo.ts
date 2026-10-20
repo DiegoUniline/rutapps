@@ -56,7 +56,8 @@ export function useDashboardEquipo(range: DateRange, metaMes: number) {
         fetchAllPages((from, to) => sb.from('visitas')
           .select('user_id, fecha, venta_id')
           .eq('empresa_id', eId).gte('fecha', fromIso).lte('fecha', toIso).range(from, to)),
-        sb.from('clientes').select('vendedor_id, status, dia_visita').eq('empresa_id', eId).eq('status', 'activo'),
+        // Paginado: sin esto PostgREST cortaba en 1000 clientes y las visitas planeadas salían cortas.
+        fetchAllPages((from, to) => sb.from('clientes').select('vendedor_id, status, dia_visita').eq('empresa_id', eId).eq('status', 'activo').order('id').range(from, to)),
       ]);
 
       const vendList = (vendedoresRes.data ?? []) as any[];
@@ -80,7 +81,7 @@ export function useDashboardEquipo(range: DateRange, metaMes: number) {
         for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) diasEnRango.add(d.getDay());
       }
       const planeadasPorVendedor = new Map<string, number>();
-      (clientesRes.data ?? []).forEach((c: any) => {
+      (clientesRes ?? []).forEach((c: any) => {
         if (!c.vendedor_id) return;
         const dias: string[] = Array.isArray(c.dia_visita) ? c.dia_visita : [];
         const ocurrencias = dias.reduce((n, d) => n + (diasEnRango.has(diasMap[(d || '').toLowerCase()] ?? -1) ? 1 : 0), 0);
