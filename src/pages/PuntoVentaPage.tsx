@@ -30,6 +30,7 @@ import { VentasTurnoModal } from '@/components/pos/VentasTurnoModal';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import { getStockBreakdown } from '@/lib/stockPresentacion';
+import { buildPresentationPatch } from '@/lib/ventaPresentacion';
 import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
@@ -668,7 +669,7 @@ export default function PuntoVentaPage() {
   };
 
   const addGranelLine = (p: any, opts: { cantidadBase: number; precioUnitario: number; paquetes: number | null; presentacion: { id: string; nombre: string; factor_base: number } | null }) => {
-    const { cantidadBase, precioUnitario, paquetes, presentacion } = opts;
+    const { cantidadBase, paquetes, presentacion } = opts;
     if (cantidadBase <= 0) return;
     const noLimit = !!p.vender_sin_stock;
     const stock = p.cantidad ?? 0;
@@ -677,23 +678,36 @@ export default function PuntoVentaPage() {
       return;
     }
     const pf = getProductPricing(p);
+    // Precio con la misma regla que la venta de escritorio (buildPresentationPatch):
+    // el precio especial de la presentación ya trae impuestos (se separa el neto) y
+    // queda fijo (precio_manual) para que el re-precio por lista no lo pise. Sin
+    // precio especial se usa la lista vigente (el `precioUnitario` del selector
+    // viene con impuestos y aquí se le volvía a sumar el IVA).
+    const presCatalogo = presentacion ? (allPresentaciones ?? []).find(x => x.id === presentacion.id) ?? null : null;
+    const precio = buildPresentationPatch(
+      presCatalogo,
+      1,
+      { unitPrice: pf.unitPrice, displayPrice: pf.displayPrice, rawUnitPrice: pf.rawUnitPrice, rawDisplayPrice: pf.rawDisplayPrice, basePrecio: pf.basePrecio as BasePrecioMode, redondeo: pf.appliedRule?.redondeo ?? 'ninguno' },
+      { iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0, ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0 },
+    );
     setCart(prev => {
       const idx = prev.findIndex(c => c.producto_id === p.id);
       const line: any = {
         producto_id: p.id,
         codigo: p.codigo,
         nombre: p.nombre,
-        precio_unitario: precioUnitario,
-        precio_unitario_sin_redondeo: precioUnitario,
-        precio_display_sin_redondeo: precioUnitario,
+        precio_unitario: Number(precio.precio_unitario),
+        precio_unitario_sin_redondeo: Number(precio.precio_unitario_sin_redondeo),
+        precio_display_sin_redondeo: Number(precio.precio_display_sin_redondeo),
+        precio_manual: !!precio.precio_manual,
         cantidad: cantidadBase,
         tiene_iva: p.tiene_iva ?? false,
         iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
         tiene_ieps: p.tiene_ieps ?? false,
         ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
         unidad: p.es_granel ? (p.unidad_granel || 'kg') : 'pz',
-        base_precio: pf.basePrecio as BasePrecioMode,
-        redondeo: pf.appliedRule?.redondeo ?? 'ninguno',
+        base_precio: precio.base_precio as BasePrecioMode,
+        redondeo: String(precio.redondeo ?? 'ninguno'),
         _max_stock: noLimit ? Infinity : stock,
         _es_granel: !!p.es_granel,
         presentacion_id: presentacion?.id ?? null,
