@@ -40,3 +40,4 @@
 2026-10-20 · desarrollador · Tablero: ventas por día y por vendedor calculadas de las mismas filas del periodo (2 descargas menos al abrir); bitácora: funciones del tablero creadas en producción (tablero_ok = true, PR #172)
 2026-10-20 · desarrollador · Tablero Equipo/Inventario: clientes y productos paginados (se cortaban en 1000: visitas planeadas y valor de inventario cortos); stock en 0 ya no se baja
 2026-10-20 · desarrollador · Móvil: un sync rápido espera a la descarga completa en curso (cambio de versión / primer inicio de sesión) en vez de bajar lo mismo en paralelo
+2026-10-20 · desarrollador · POS: precio de presentación corregido (el re-precio por lista pisaba el precio especial y al precio con IVA se le volvía a sumar IVA); misma regla que venta de escritorio (buildPresentationPatch)
