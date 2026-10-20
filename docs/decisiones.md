@@ -40,3 +40,12 @@
 - **Mientras no exista saldo a favor por cobros:** si el nuevo total queda abajo de lo pagado, se bloquea con aviso. El pago de más **sí debe quedar como saldo a favor** (decisión del dueño), en una fase posterior que sí cambie cómo se calcula el saldo a favor (hoy solo cuenta notas de crédito; los cobros desaplicados al cancelar tampoco se ven).
 - **Comisiones:** las ya pagadas no se tocan (`fn_sync_venta_comision` ya lo respeta); quitar un renglón con comisión pagada se bloquea para no borrarla (FK en cascada).
 - **Fuera de alcance:** pedido con entregas (fase 3), facturadas (nota de crédito), cerradas parcial, cambio de condición de pago/cliente/almacén al editar.
+
+## D-009
+- **Fecha:** 2026-10-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión ("Ajustar entrega" ya entregada):**
+  - **Producto equivocado:** se cobra el producto que el cliente se quedó (Y) a su precio de lista; X sale del pedido.
+  - **Sobrante:** quien ajusta elige si regresa al **camión** o a la **bodega**.
+  - **Permiso:** logística · entregas · editar (escritorio) o ruta · editar entrega (móvil).
+  - **Faltante al ajustar:** se quita del pedido (el pedido baja). Las entregas parciales normales siguen dejando pendiente lo no entregado.
+- **Implementación:** `ajustar_entrega` (no cambia el estado: no reenvía avisos ni cambia fecha). Sobrante a bodega reduce carga y surtido para que "Reabrir" no devuelva doble. Cobro de parciales sigue la política de la empresa (Configuración → política de cobro).

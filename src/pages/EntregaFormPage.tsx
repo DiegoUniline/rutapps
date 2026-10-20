@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { AjustarEntregaDialog } from '@/components/entregas/AjustarEntregaDialog';
+import { usePermisos } from '@/hooks/usePermisos';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText, Boxes, RotateCcw } from 'lucide-react';
@@ -60,6 +62,8 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const revertirSurtidoMut = useRevertirSurtido();
   const reabrirMut = useReabrirEntrega();
   const isSuperAdmin = useIsSuperAdmin();
+  const { hasPermiso } = usePermisos();
+  const puedeAjustarEntrega = hasPermiso('logistica.entregas', 'editar');
   const asignarMut = useAsignarEntrega();
   const cargarMut = useCargarEntrega();
   const asignarYCargarMut = useAsignarYCargar();
@@ -549,6 +553,10 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           {/* Cancel */}
           {!isNew && !readOnly && (
             <Button onClick={handleCancelar} size="sm" variant="ghost" className="text-destructive text-xs">Cancelar</Button>
+          )}
+          {/* Ajustar lo realmente entregado (cantidad / producto equivocado) */}
+          {!isNew && form.status === 'hecho' && puedeAjustarEntrega && id && (
+            <AjustarEntregaDialog entregaId={id} className="text-xs h-8 gap-1.5" />
           )}
           {/* Reabrir — solo super admin sobre entregas ya entregadas */}
           {!isNew && form.status === 'hecho' && isSuperAdmin && (

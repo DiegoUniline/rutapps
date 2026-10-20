@@ -26,3 +26,5 @@
 2026-10-20 · desarrollador · D-006/D-007 · Fase 1 inventario: migración 20261020210000 (sobre export de producción, guarda md5) + índice referencia_id; 19 casos en Postgres local: antes reproducen G1/G2/G6, lotes 'traspaso' inválido, saldo −20, cierre parcial 10 vs 7; después todos OK; front revisa errores al borrar y Admin sin doble descuento
 2026-10-20 · dueño · Fase 1 inventario APLICADA en producción (20261020210000): funciones_ok, bloqueo_ok, cancelar_surtido_ok = true
 2026-10-20 · desarrollador · D-008 · Fase 2: editar_venta (RPC, 20261021120000) + escritorio (botón Editar venta) + móvil (Editar en confirmadas, cola offline 'rpc:editar_venta'); 16 casos locales OK (stock por diferencia, lotes, permisos, versión, pagado, comisión pagada, facturada)
+2026-10-20 · desarrollador · D-009 · Fase 3a: ajustar_entrega (20261021130000) + diálogo Ajustar entrega (escritorio y móvil); casos locales OK: 10→8 camión, 8→10, producto equivocado con sobrante a bodega, lotes, reabrir después del ajuste sin doble, versión, permiso, facturado
+2026-10-20 · dueño · editar_venta creada en producción (editar_venta_ok = true); PR #163 merged
