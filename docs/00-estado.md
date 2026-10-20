@@ -7,7 +7,7 @@
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
 - **Módulo en curso:** —
 - **Última pregunta:** —
-- **Siguiente paso exacto:** publicar #156 y #157 en Lovable; resultado de índices duplicados; reset de pg_stat_statements y medir top-20 al día siguiente. Pendiente: P-002 (contrato de respuesta)
+- **Siguiente paso exacto:** publicar #156 y #157 en Lovable; probar compra/abono de timbres y alerta WA de saldos; `pg_stat_statements_reset()` y medir top-20 al día siguiente. Pendiente: P-002 (contrato de respuesta)
 
 ## Decisiones recientes (últimas 10)
 - [D-004](./decisiones.md#d-004) 2026-10-19 · Ventas sin `fecha_vencimiento` vencen a los días de crédito del cliente.
