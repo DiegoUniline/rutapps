@@ -72,15 +72,15 @@ export function useProductosRealtime() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas', filter }, invalidateVentas)
       .subscribe();
 
-    // venta_lineas / entrega_lineas / cobro_aplicaciones no tienen empresa_id;
-    // filtrar por empresa se hace del lado del cliente al refetch — igual el volumen
-    // de eventos es acotado y evita la latencia de "hasta 1 hora" cuando el móvil
-    // sincroniza el ticket después del header.
+    // Todo filtrado por empresa: sin filtro, Realtime evalúa RLS de cada usuario
+    // conectado (todas las empresas) por cada renglón. venta_lineas evita la
+    // latencia cuando el móvil sincroniza el ticket después del header.
+    // cobro_aplicaciones no se escucha: recalc_venta_saldo actualiza ventas.
+    // entrega_lineas no tiene empresa_id: se escucha entregas (auto_venta_entregado).
     const ventaLineasCh = supabase
       .channel(`data-venta-lineas-${empresaId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'venta_lineas' }, invalidateVentas)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'entrega_lineas' }, invalidateVentas)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cobro_aplicaciones' }, invalidateVentas)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'venta_lineas', filter }, invalidateVentas)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'entregas', filter }, invalidateVentas)
       .subscribe();
 
     const almacenesCh = supabase
