@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { AjustarEntregaDialog } from '@/components/entregas/AjustarEntregaDialog';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -568,6 +569,9 @@ export default function RutaEntregaDetalle() {
           <h1 className="text-[16px] font-bold text-foreground truncate">{entrega.folio ?? 'Entrega'}</h1>
           <p className="text-[11px] text-muted-foreground">Entrega de pedido</p>
         </div>
+        {entrega.status === 'hecho' && canEditEntrega && (
+          <AjustarEntregaDialog entregaId={entrega.id} className="h-8 text-[11px] gap-1 px-2" />
+        )}
         <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', esParcial ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' : statusColors[entrega.status] ?? '')}>
           {esParcial ? 'Entregado parcial' : entrega.status === 'hecho' ? 'Entregado' : entrega.status === 'no_entregado' ? 'No entregado' : entrega.status === 'en_ruta' ? 'En ruta' : entrega.status}
         </span>
