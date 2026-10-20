@@ -18,3 +18,4 @@
 2026-10-19 · dueño · PR #150 aplicado en producción y verificado (7/7 OK, 0 entregas sin fecha); R-009 resuelto
 2026-10-19 · dueño · PR #148 publicado en Lovable; Control de descuentos muestra las ventas > 15 % (R-004 resuelto)
 2026-10-20 · auditor · Auditoría seguridad 63 edge functions service_role: 10 CRÍTICAS (S-01…S-10), 11 ALTAS; verificadas por el agente principal S-01, S-02, S-03, S-11; docs/auditoria/seguridad-edge-functions-2026-10-20.md
+2026-10-20 · desarrollador · PR #153: S-01, S-02, S-11 corregidos; S-03/S-04 parcial (correo exacto, sin reemplazo de accesos); D-005 conservar 123456 sin revelarlo

@@ -20,3 +20,8 @@
 - **Fecha:** 2026-10-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** Para avisos de vencidas y control de crédito, una venta sin `fecha_vencimiento` vence a los **días de crédito actuales del cliente** contados desde su fecha; con `fecha_vencimiento` se usa esa fecha.
 - **Evidencia:** producción — 0 clientes con vencidas usando solo `fecha_vencimiento`, 2 914 con esta regla, 3 206 si vencieran el mismo día. 5 671 ventas pendientes sin vencimiento (3 265 contado, 1 506 crédito, 900 por definir).
+
+## D-005
+- **Fecha:** 2026-10-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** La tienda en línea conserva por ahora el acceso automático de clientes del CRM con contraseña inicial `123456`; solo se deja de revelar en el mensaje de error de `tienda-login`. El correo se compara exacto y el registro no reemplaza accesos existentes (PR #153).
+- **Riesgo aceptado:** quien conozca el correo de un cliente que nunca entró puede acceder a su cuenta (S-03 parcial abierto). Alternativas propuestas: código por correo/WhatsApp o contraseña asignada por la empresa.
