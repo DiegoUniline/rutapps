@@ -33,25 +33,31 @@ export function useProductosRealtime() {
 
     const filter = `empresa_id=eq.${empresaId}`;
 
+    // Una venta o un ajuste mueve el stock de muchos productos a la vez: los
+    // eventos se agrupan para re-consultar UNA vez y no una por renglón.
+    const pendientes = new Set<string>();
+    let catalogoTimer: ReturnType<typeof setTimeout> | undefined;
+    const invalidateCatalogo = (keys: string[]) => {
+      keys.forEach(k => pendientes.add(k));
+      if (catalogoTimer) return;
+      catalogoTimer = setTimeout(() => {
+        catalogoTimer = undefined;
+        pendientes.forEach(k => qc.invalidateQueries({ queryKey: [k] }));
+        pendientes.clear();
+      }, 1500);
+    };
+
     const productosCh = supabase
       .channel(`data-productos-${empresaId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'productos', filter }, () => {
-        qc.invalidateQueries({ queryKey: ['productos'] });
-        qc.invalidateQueries({ queryKey: ['productos-page'] });
-        qc.invalidateQueries({ queryKey: ['productos-select'] });
-        qc.invalidateQueries({ queryKey: ['pos-productos'] });
-        qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
+        invalidateCatalogo(['productos', 'productos-page', 'productos-select', 'pos-productos', 'inventario-dashboard']);
       })
       .subscribe();
 
     const stockCh = supabase
       .channel(`data-stock_almacen-${empresaId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_almacen', filter }, () => {
-        qc.invalidateQueries({ queryKey: ['stock-almacen'] });
-        qc.invalidateQueries({ queryKey: ['stock-almacen-origen'] });
-        qc.invalidateQueries({ queryKey: ['productos'] });
-        qc.invalidateQueries({ queryKey: ['productos-page'] });
-        qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
+        invalidateCatalogo(['stock-almacen', 'stock-almacen-origen', 'productos', 'productos-page', 'inventario-dashboard']);
       })
       .subscribe();
 
@@ -98,6 +104,7 @@ export function useProductosRealtime() {
       supabase.removeChannel(ventaLineasCh);
       supabase.removeChannel(almacenesCh);
       if (ventasTimer) clearTimeout(ventasTimer);
+      if (catalogoTimer) clearTimeout(catalogoTimer);
     };
   }, [qc, empresaId]);
 }

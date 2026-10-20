@@ -35,7 +35,6 @@ import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { getStockBreakdown } from '@/lib/stockPresentacion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 12 },
@@ -127,9 +126,7 @@ export default function ProductosListPage() {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const manejaLotes = !!(empresa as any)?.maneja_lotes;
-  // Realtime: refresca productos al cambiar desde otro dispositivo (precios, stock)
-  useRealtimeInvalidate({ table: 'productos', empresaId: empresa?.id, queryKeys: [['productos']] });
-  useRealtimeInvalidate({ table: 'stock_almacen', empresaId: empresa?.id, queryKeys: [['productos']] });
+  // Realtime de productos y stock: lo escucha AppLayout (useProductosRealtime).
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [bulkActivating, setBulkActivating] = useState(false);
