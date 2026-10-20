@@ -28,3 +28,4 @@
 2026-10-20 · desarrollador · D-008 · Fase 2: editar_venta (RPC, 20261021120000) + escritorio (botón Editar venta) + móvil (Editar en confirmadas, cola offline 'rpc:editar_venta'); 16 casos locales OK (stock por diferencia, lotes, permisos, versión, pagado, comisión pagada, facturada)
 2026-10-20 · desarrollador · D-009 · Fase 3a: ajustar_entrega (20261021130000) + diálogo Ajustar entrega (escritorio y móvil); casos locales OK: 10→8 camión, 8→10, producto equivocado con sobrante a bodega, lotes, reabrir después del ajuste sin doble, versión, permiso, facturado
 2026-10-20 · dueño · editar_venta creada en producción (editar_venta_ok = true); PR #163 merged
+2026-10-20 · dueño · ajustar_entrega creada en producción (ajustar_entrega_ok, regla_entregas_ok = true); PR #164 merged
