@@ -1,6 +1,7 @@
 // Scheduler: envía el Reporte Diario PDF a cada usuario suscrito,
 // en su zona horaria local, una sola vez al día.
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { isPrivilegedCaller } from "../_shared/privilegedCaller.ts";
 import { generarReporteBotPdf } from "./reportePdf.ts";
 import { generarReporteBotXlsx } from "./reporteXlsx.ts";
 import { localParts, sleep, waSendFile, waSendText, buildIntroMessage } from "../_shared/wa-scheduler-utils.ts";
@@ -372,6 +373,10 @@ Deno.serve(async (req) => {
   try {
     let opts: { force?: boolean; phone?: string } = {};
     if (req.method === "POST") { try { opts = await req.json(); } catch { /**/ } }
+    // S-16: force/phone solo para cron, servidor o super admin; el resto corre normal.
+    if ((opts?.force || opts?.phone) && !(await isPrivilegedCaller(req))) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const result = await run(opts);
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
