@@ -12,7 +12,7 @@ import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import SearchableSelect from '@/components/SearchableSelect';
-import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones, useListasPrecioByTarifa, useSaveListaPrecio, useDeleteListaPrecio } from '@/hooks/useData';
+import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones, useListasPrecioByTarifa, useSaveListaPrecio, useDeleteListaPrecio, useListas } from '@/hooks/useData';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
@@ -596,13 +596,15 @@ export default function TarifaFormPage() {
   const { data: productosDisp } = useProductosForSelect();
   const { data: clasificaciones } = useClasificaciones();
   const { data: listasPrecios } = useListasPrecioByTarifa(isNew ? undefined : id);
+  const { data: gruposDisp } = useListas();
   const saveListaPrecio = useSaveListaPrecio();
   const qc = useQueryClient();
 
   // Map for lista display
   const listaMap = new Map((listasPrecios ?? []).map(l => [l.id, l.nombre]));
   const listaOptions = (listasPrecios ?? []).map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` }));
-  const grupoItems = (listasPrecios ?? []).map(l => ({ id: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` }));
+  const grupoNameMap = new Map((gruposDisp ?? []).map(g => [g.id, g.nombre]));
+  const grupoItems = (gruposDisp ?? []).map(g => ({ id: g.id, label: g.nombre }));
 
   // Quick-create lista de precios
   const handleCreateLista = async (name: string): Promise<string | undefined> => {
