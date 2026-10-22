@@ -1117,8 +1117,9 @@ export default function TarifaFormPage() {
                               {ec('aplica_a') ? (
                                 <select autoFocus className="input-odoo text-xs w-full" value={editLinea.aplica_a}
                                   onBlur={blurSave}
-                                  onChange={e => { setEditLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [] })); }}>
+                                  onChange={e => { setEditLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [], grupos: [] })); }}>
                                   <option value="todos">Todos</option>
+                                  <option value="grupo">Grupo (Lista)</option>
                                   <option value="categoria">Categoría</option>
                                   <option value="producto">Producto</option>
                                 </select>
@@ -1131,6 +1132,10 @@ export default function TarifaFormPage() {
                                   {editLinea.aplica_a === 'producto' && (
                                     <ChipSelect items={getAvailableProds(editLinea.producto_ids)} selectedIds={editLinea.producto_ids}
                                       onChange={ids => setEditLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
+                                  )}
+                                  {editLinea.aplica_a === 'grupo' && (
+                                    <ChipSelect items={getAvailableGrupos(editLinea.grupos)} selectedIds={editLinea.grupos}
+                                      onChange={ids => setEditLinea(p => ({ ...p, grupos: ids }))} placeholder="+ Grupo (lista)..." />
                                   )}
                                   {editLinea.aplica_a === 'categoria' && (
                                     <ChipSelect items={getAvailableClas(editLinea.clasificacion_ids)} selectedIds={editLinea.clasificacion_ids}
@@ -1155,6 +1160,13 @@ export default function TarifaFormPage() {
                                     <div className="flex flex-wrap gap-1">
                                       {l.producto_ids.map(pid => (
                                         <span key={pid} className="odoo-badge text-[11px]">{prodNombreMap.get(pid) ?? pid}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {l.aplica_a === 'grupo' && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {((l as any).grupos ?? []).map((gid: string) => (
+                                        <span key={gid} className="odoo-badge text-[11px]">{listaMap.get(gid) ?? gid}</span>
                                       ))}
                                     </div>
                                   )}
