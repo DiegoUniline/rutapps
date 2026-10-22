@@ -807,7 +807,7 @@ export default function TarifaFormPage() {
       const diff = (order[a.aplica_a] ?? 3) - (order[b.aplica_a] ?? 3);
       if (diff !== 0) return diff;
       const labelOf = (l: TarifaLinea) => {
-        if (l.aplica_a === 'grupo') return ((l as any).grupos ?? []).map((gid: string) => listaMap.get(gid) ?? '').join(', ');
+        if (l.aplica_a === 'grupo') return ((l as any).grupos ?? []).map((gid: string) => grupoNameMap.get(gid) ?? '').join(', ');
         if (l.aplica_a === 'producto') {
           const m = reglaSort === 'clave' ? prodCodigoMap : prodNombreMap;
           return (l.producto_ids.map(pid => m.get(pid) ?? '').join(', '));
@@ -821,7 +821,7 @@ export default function TarifaFormPage() {
       if (!reglaSearch.trim()) return true;
       const q = reglaSearch.toLowerCase();
       if (l.aplica_a === 'producto') return l.producto_ids.some(pid => (prodMap.get(pid) ?? '').toLowerCase().includes(q));
-      if (l.aplica_a === 'grupo') return ((l as any).grupos ?? []).some((gid: string) => (listaMap.get(gid) ?? '').toLowerCase().includes(q));
+      if (l.aplica_a === 'grupo') return ((l as any).grupos ?? []).some((gid: string) => (grupoNameMap.get(gid) ?? '').toLowerCase().includes(q));
       if (l.aplica_a === 'categoria') return l.clasificacion_ids.some(cid => (clasMap.get(cid) ?? '').toLowerCase().includes(q));
       return 'todos'.includes(q);
     });
@@ -852,7 +852,7 @@ export default function TarifaFormPage() {
       otherLineas.forEach(l => { if (l.aplica_a === 'grupo') ((l as any).grupos ?? []).forEach((id: string) => otherGrupoIds.add(id)); });
       const dupes = grupoIds.filter(id => otherGrupoIds.has(id));
       if (dupes.length > 0) {
-        const names = dupes.map(id => listaMap.get(id) ?? id).join(', ');
+        const names = dupes.map(id => grupoNameMap.get(id) ?? id).join(', ');
         toast.error(`Grupo(s) ya en otra regla: ${names}`);
         return false;
       }
@@ -1168,7 +1168,7 @@ export default function TarifaFormPage() {
                                   {l.aplica_a === 'grupo' && (
                                     <div className="flex flex-wrap gap-1">
                                       {((l as any).grupos ?? []).map((gid: string) => (
-                                        <span key={gid} className="odoo-badge text-[11px]">{listaMap.get(gid) ?? gid}</span>
+                                        <span key={gid} className="odoo-badge text-[11px]">{grupoNameMap.get(gid) ?? gid}</span>
                                       ))}
                                     </div>
                                   )}
