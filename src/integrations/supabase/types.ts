@@ -10770,6 +10770,18 @@ export type Database = {
       }
     }
     Functions: {
+      _aj_regresar_a_bodega: {
+        Args: {
+          p_bodega: string
+          p_lote: string
+          p_producto: string
+          p_qty: number
+          p_truck: string
+          p_uid: string
+          v_ent: Database["public"]["Tables"]["entregas"]["Row"]
+        }
+        Returns: undefined
+      }
       _aplica_stock_lote: {
         Args: {
           p_almacen: string
@@ -10976,6 +10988,15 @@ export type Database = {
           monto: number
         }[]
       }
+      ajustar_entrega: {
+        Args: {
+          p_destino?: string
+          p_entrega_id: string
+          p_lineas: Json
+          p_version?: string
+        }
+        Returns: Json
+      }
       aplicar_cobro:
         | {
             Args: {
@@ -11128,6 +11149,33 @@ export type Database = {
         }
         Returns: number
       }
+      dashboard_evolucion_mensual: {
+        Args: { p_empresa_id: string; p_from: string; p_to: string }
+        Returns: {
+          entidad_id: string
+          mes: string
+          nombre: string
+          tipo: string
+          total: number
+        }[]
+      }
+      dashboard_top_productos: {
+        Args: { p_empresa_id: string; p_from: string; p_to: string }
+        Returns: {
+          codigo: string
+          id: string
+          nombre: string
+          qty: number
+          total: number
+        }[]
+      }
+      dashboard_ultima_compra_clientes: {
+        Args: { p_empresa_id: string }
+        Returns: {
+          cliente_id: string
+          fecha: string
+        }[]
+      }
       deduct_timbre: {
         Args: { p_cfdi_id: string; p_empresa_id: string; p_user_id: string }
         Returns: boolean
@@ -11143,6 +11191,16 @@ export type Database = {
       desactivar_cupones_partner_fuera_limite: {
         Args: { _partner_id: string }
         Returns: number
+      }
+      editar_venta: {
+        Args: {
+          p_header?: Json
+          p_lineas: Json
+          p_promos?: Json
+          p_venta_id: string
+          p_version?: string
+        }
+        Returns: Json
       }
       ensure_almacen_mermas: { Args: { _empresa_id: string }; Returns: string }
       ensure_cliente_publico_general: {
@@ -11256,6 +11314,10 @@ export type Database = {
           fecha_caducidad: string
           lote_id: string
         }[]
+      }
+      fn_doc_mueve_stock: {
+        Args: { p_doc: string; p_producto?: string }
+        Returns: boolean
       }
       fn_factor_neto_compra: { Args: { p_compra_id: string }; Returns: number }
       fn_inventory_intelligence_snapshot: {
@@ -11497,6 +11559,10 @@ export type Database = {
       }
       fn_team_crm_workspace: { Args: { p_days?: number }; Returns: Json }
       fn_team_portal_snapshot: { Args: never; Returns: Json }
+      fn_venta_cobrable: {
+        Args: { v_venta: Database["public"]["Tables"]["ventas"]["Row"] }
+        Returns: number
+      }
       fn_venta_lineas_resumen: {
         Args: {
           p_cliente_ids?: string[]
