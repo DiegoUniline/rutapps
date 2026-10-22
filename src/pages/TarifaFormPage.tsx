@@ -25,6 +25,7 @@ const APLICA_LABELS: Record<AplicaATarifa, string> = {
   todos: 'Todos los productos',
   categoria: 'Categoría',
   producto: 'Producto',
+  grupo: 'Grupo (Lista)',
 };
 
 const CALCULO_LABELS: Record<TipoCalculoTarifa, string> = {
@@ -43,6 +44,7 @@ const REDONDEO_LABELS: Record<string, string> = {
 const EMPTY_LINEA = {
   producto_ids: [] as string[],
   clasificacion_ids: [] as string[],
+  grupos: [] as string[],
   aplica_a: 'todos' as AplicaATarifa,
   tipo_calculo: 'margen_costo' as TipoCalculoTarifa,
   precio: 0,
@@ -600,6 +602,7 @@ export default function TarifaFormPage() {
   // Map for lista display
   const listaMap = new Map((listasPrecios ?? []).map(l => [l.id, l.nombre]));
   const listaOptions = (listasPrecios ?? []).map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` }));
+  const grupoItems = (listasPrecios ?? []).map(l => ({ id: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` }));
 
   // Quick-create lista de precios
   const handleCreateLista = async (name: string): Promise<string | undefined> => {
@@ -698,6 +701,9 @@ export default function TarifaFormPage() {
     }
     if (newLinea.aplica_a === 'categoria' && newLinea.clasificacion_ids.length === 0) {
       toast.error('Selecciona al menos una categoría'); return;
+    }
+    if (newLinea.aplica_a === 'grupo' && newLinea.grupos.length === 0) {
+      toast.error('Selecciona al menos un grupo (lista)'); return;
     }
     // Duplicate validation
     if (!validateNoDuplicates(newLinea.aplica_a, newLinea.producto_ids, newLinea.clasificacion_ids)) return;
