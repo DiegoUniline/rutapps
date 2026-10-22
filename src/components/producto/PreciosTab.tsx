@@ -156,9 +156,17 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
     if (!grouped.has(tid)) grouped.set(tid, { nombre: tl.tarifas.nombre, rules: [] });
     grouped.get(tid)!.rules.push(tl);
   });
+  // Si una tarifa tiene una regla más específica (producto/grupo/categoría) para este producto,
+  // la regla general «Todos» no aplica: se oculta para no mostrar la tarifa duplicada.
+  grouped.forEach(g => {
+    if (g.rules.some((r: any) => r.aplica_a !== 'todos')) {
+      g.rules = g.rules.filter((r: any) => r.aplica_a !== 'todos');
+    }
+  });
 
   const aplica_label = (l: any) => {
     if (l.aplica_a === 'producto') return 'Este producto';
+    if (l.aplica_a === 'grupo') return 'Grupo';
     if (l.aplica_a === 'categoria') {
       const names = (l.clasificacion_ids ?? []).map((cid: string) => {
         const c = (clasificaciones ?? []).find((cl: any) => cl.id === cid);
