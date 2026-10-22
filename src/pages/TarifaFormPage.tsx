@@ -801,10 +801,11 @@ export default function TarifaFormPage() {
   const [reglaSort, setReglaSort] = useState<'nombre' | 'clave'>('nombre');
   const sortedLineas = [...lineas]
     .sort((a, b) => {
-      const order: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
-      const diff = (order[a.aplica_a] ?? 2) - (order[b.aplica_a] ?? 2);
+      const order: Record<string, number> = { grupo: 0, producto: 1, categoria: 2, todos: 3 };
+      const diff = (order[a.aplica_a] ?? 3) - (order[b.aplica_a] ?? 3);
       if (diff !== 0) return diff;
       const labelOf = (l: TarifaLinea) => {
+        if (l.aplica_a === 'grupo') return ((l as any).grupos ?? []).map((gid: string) => listaMap.get(gid) ?? '').join(', ');
         if (l.aplica_a === 'producto') {
           const m = reglaSort === 'clave' ? prodCodigoMap : prodNombreMap;
           return (l.producto_ids.map(pid => m.get(pid) ?? '').join(', '));
@@ -818,19 +819,24 @@ export default function TarifaFormPage() {
       if (!reglaSearch.trim()) return true;
       const q = reglaSearch.toLowerCase();
       if (l.aplica_a === 'producto') return l.producto_ids.some(pid => (prodMap.get(pid) ?? '').toLowerCase().includes(q));
+      if (l.aplica_a === 'grupo') return ((l as any).grupos ?? []).some((gid: string) => (listaMap.get(gid) ?? '').toLowerCase().includes(q));
       if (l.aplica_a === 'categoria') return l.clasificacion_ids.some(cid => (clasMap.get(cid) ?? '').toLowerCase().includes(q));
       return 'todos'.includes(q);
     });
 
   // ── Used IDs tracking (for duplicate prevention) ──
+  const usedGrupoIds = new Set<string>();
   const usedCatIds = new Set<string>();
   const usedProdIds = new Set<string>();
   lineas.forEach(l => {
+    if (l.aplica_a === 'grupo') ((l as any).grupos ?? []).forEach((id: string) => usedGrupoIds.add(id));
     if (l.aplica_a === 'categoria') l.clasificacion_ids.forEach(id => usedCatIds.add(id));
     if (l.aplica_a === 'producto') l.producto_ids.forEach(id => usedProdIds.add(id));
   });
 
   // Available items (excluding already used, but include current editing line's items)
+  const getAvailableGrupos = (currentIds: string[]) =>
+    grupoItems.filter(g => !usedGrupoIds.has(g.id) || currentIds.includes(g.id));
   const getAvailableClas = (currentIds: string[]) =>
     clasItems.filter(c => !usedCatIds.has(c.id) || currentIds.includes(c.id));
   const getAvailableProds = (currentIds: string[]) =>
