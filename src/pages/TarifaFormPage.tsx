@@ -843,8 +843,18 @@ export default function TarifaFormPage() {
     prodItems.filter(p => !usedProdIds.has(p.id) || currentIds.includes(p.id));
 
   // Validation helper
-  const validateNoDuplicates = (aplica_a: string, prodIds: string[], clasIds: string[], excludeLineaId?: string) => {
+  const validateNoDuplicates = (aplica_a: string, prodIds: string[], clasIds: string[], grupoIds: string[] = [], excludeLineaId?: string) => {
     const otherLineas = lineas.filter(l => l.id !== excludeLineaId);
+    if (aplica_a === 'grupo') {
+      const otherGrupoIds = new Set<string>();
+      otherLineas.forEach(l => { if (l.aplica_a === 'grupo') ((l as any).grupos ?? []).forEach((id: string) => otherGrupoIds.add(id)); });
+      const dupes = grupoIds.filter(id => otherGrupoIds.has(id));
+      if (dupes.length > 0) {
+        const names = dupes.map(id => listaMap.get(id) ?? id).join(', ');
+        toast.error(`Grupo(s) ya en otra regla: ${names}`);
+        return false;
+      }
+    }
     if (aplica_a === 'categoria') {
       const otherCatIds = new Set<string>();
       otherLineas.forEach(l => { if (l.aplica_a === 'categoria') l.clasificacion_ids.forEach(id => otherCatIds.add(id)); });
@@ -946,6 +956,7 @@ export default function TarifaFormPage() {
 
   const getAplicaBadge = (aplica: AplicaATarifa) => {
     const styles: Record<string, string> = {
+      grupo: 'bg-primary/10 text-primary',
       producto: 'bg-primary/10 text-primary',
       categoria: 'bg-accent text-accent-foreground',
       todos: 'bg-primary/10 text-primary',
