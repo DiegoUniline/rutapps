@@ -706,7 +706,7 @@ export default function TarifaFormPage() {
       toast.error('Selecciona al menos un grupo (lista)'); return;
     }
     // Duplicate validation
-    if (!validateNoDuplicates(newLinea.aplica_a, newLinea.producto_ids, newLinea.clasificacion_ids)) return;
+    if (!validateNoDuplicates(newLinea.aplica_a, newLinea.producto_ids, newLinea.clasificacion_ids, newLinea.grupos)) return;
     try {
       await saveLinea.mutateAsync({
         tarifa_id: id,
@@ -724,6 +724,7 @@ export default function TarifaFormPage() {
         lista_precio_id: newLinea.lista_precio_id || null,
         producto_ids: newLinea.aplica_a === 'producto' ? newLinea.producto_ids : [],
         clasificacion_ids: newLinea.aplica_a === 'categoria' ? newLinea.clasificacion_ids : [],
+        grupos: newLinea.aplica_a === 'grupo' ? newLinea.grupos : [],
       } as any);
       setNewLinea({ ...EMPTY_LINEA });
       setShowAddRow(false);
@@ -746,6 +747,7 @@ export default function TarifaFormPage() {
       setEditLinea({
         producto_ids: l.producto_ids ?? [],
         clasificacion_ids: l.clasificacion_ids ?? [],
+        grupos: (l as any).grupos ?? [],
         aplica_a: l.aplica_a,
         tipo_calculo: l.tipo_calculo,
         precio: l.precio,
@@ -767,7 +769,7 @@ export default function TarifaFormPage() {
   const handleSaveEditLinea = async () => {
     if (!editingLineaId) return;
     // Duplicate validation (exclude current line)
-    if (!validateNoDuplicates(editLinea.aplica_a, editLinea.producto_ids, editLinea.clasificacion_ids, editingLineaId)) return;
+    if (!validateNoDuplicates(editLinea.aplica_a, editLinea.producto_ids, editLinea.clasificacion_ids, editLinea.grupos, editingLineaId)) return;
     try {
       await saveLinea.mutateAsync({
         id: editingLineaId,
@@ -786,6 +788,7 @@ export default function TarifaFormPage() {
         lista_precio_id: editLinea.lista_precio_id || null,
         producto_ids: editLinea.aplica_a === 'producto' ? editLinea.producto_ids : [],
         clasificacion_ids: editLinea.aplica_a === 'categoria' ? editLinea.clasificacion_ids : [],
+        grupos: editLinea.aplica_a === 'grupo' ? editLinea.grupos : [],
       } as any);
       setEditingLineaId(null);
       setEditingCol(null);
