@@ -265,7 +265,8 @@ export default function VentaFormPage() {
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}`, searchText: clienteTextoBusqueda(c) }));
   const savedClienteId = form.cliente_id as string | null | undefined;
   if (savedClienteId && !clienteOptions.some(option => option.value === savedClienteId)) {
-    clienteOptions.unshift({ value: savedClienteId, label: (form as any).clientes?.nombre || 'Cliente de la venta' });
+    const savedLabel = (form as any).clientes?.nombre || 'Cliente de la venta';
+    clienteOptions.unshift({ value: savedClienteId, label: savedLabel, searchText: savedLabel });
   }
   const tarifaOptions = (tarifasList ?? []).map(t => ({ value: t.id, label: t.nombre }));
   const almacenOptions = (() => {
