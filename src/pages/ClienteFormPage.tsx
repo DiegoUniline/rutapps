@@ -67,7 +67,7 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
         .range(from, to));
 
       const prods = await fetchAllPages<any>((from, to) => supabase.from('productos')
-        .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
+        .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, lista_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
         .eq('status', 'activo')
         .order('nombre')
         .range(from, to));
@@ -81,6 +81,8 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
       return prods.map(p => {
         const rule = filteredLineas.find((l: any) =>
           l.aplica_a === 'producto' && (l.producto_ids ?? []).includes(p.id)
+        ) ?? filteredLineas.find((l: any) =>
+          l.aplica_a === 'grupo' && p.lista_id && (l.grupos ?? []).includes(p.lista_id)
         ) ?? filteredLineas.find((l: any) =>
           l.aplica_a === 'categoria' && (l.clasificacion_ids ?? []).includes(p.clasificacion_id)
         ) ?? filteredLineas.find((l: any) =>

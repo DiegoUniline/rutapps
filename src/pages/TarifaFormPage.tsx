@@ -12,7 +12,7 @@ import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import SearchableSelect from '@/components/SearchableSelect';
-import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones, useListasPrecioByTarifa, useSaveListaPrecio, useDeleteListaPrecio } from '@/hooks/useData';
+import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones, useListasPrecioByTarifa, useSaveListaPrecio, useDeleteListaPrecio, useListas } from '@/hooks/useData';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
@@ -25,6 +25,7 @@ const APLICA_LABELS: Record<AplicaATarifa, string> = {
   todos: 'Todos los productos',
   categoria: 'Categoría',
   producto: 'Producto',
+  grupo: 'Grupo (Lista)',
 };
 
 const CALCULO_LABELS: Record<TipoCalculoTarifa, string> = {
@@ -43,6 +44,7 @@ const REDONDEO_LABELS: Record<string, string> = {
 const EMPTY_LINEA = {
   producto_ids: [] as string[],
   clasificacion_ids: [] as string[],
+  grupos: [] as string[],
   aplica_a: 'todos' as AplicaATarifa,
   tipo_calculo: 'margen_costo' as TipoCalculoTarifa,
   precio: 0,
@@ -594,12 +596,15 @@ export default function TarifaFormPage() {
   const { data: productosDisp } = useProductosForSelect();
   const { data: clasificaciones } = useClasificaciones();
   const { data: listasPrecios } = useListasPrecioByTarifa(isNew ? undefined : id);
+  const { data: gruposDisp } = useListas();
   const saveListaPrecio = useSaveListaPrecio();
   const qc = useQueryClient();
 
   // Map for lista display
   const listaMap = new Map((listasPrecios ?? []).map(l => [l.id, l.nombre]));
   const listaOptions = (listasPrecios ?? []).map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` }));
+  const grupoNameMap = new Map((gruposDisp ?? []).map(g => [g.id, g.nombre]));
+  const grupoItems = (gruposDisp ?? []).map(g => ({ id: g.id, label: g.nombre }));
 
   // Quick-create lista de precios
   const handleCreateLista = async (name: string): Promise<string | undefined> => {
@@ -699,8 +704,11 @@ export default function TarifaFormPage() {
     if (newLinea.aplica_a === 'categoria' && newLinea.clasificacion_ids.length === 0) {
       toast.error('Selecciona al menos una categoría'); return;
     }
+    if (newLinea.aplica_a === 'grupo' && newLinea.grupos.length === 0) {
+      toast.error('Selecciona al menos un grupo (lista)'); return;
+    }
     // Duplicate validation
-    if (!validateNoDuplicates(newLinea.aplica_a, newLinea.producto_ids, newLinea.clasificacion_ids)) return;
+    if (!validateNoDuplicates(newLinea.aplica_a, newLinea.producto_ids, newLinea.clasificacion_ids, newLinea.grupos)) return;
     try {
       await saveLinea.mutateAsync({
         tarifa_id: id,
@@ -718,6 +726,7 @@ export default function TarifaFormPage() {
         lista_precio_id: newLinea.lista_precio_id || null,
         producto_ids: newLinea.aplica_a === 'producto' ? newLinea.producto_ids : [],
         clasificacion_ids: newLinea.aplica_a === 'categoria' ? newLinea.clasificacion_ids : [],
+        grupos: newLinea.aplica_a === 'grupo' ? newLinea.grupos : [],
       } as any);
       setNewLinea({ ...EMPTY_LINEA });
       setShowAddRow(false);
@@ -740,6 +749,7 @@ export default function TarifaFormPage() {
       setEditLinea({
         producto_ids: l.producto_ids ?? [],
         clasificacion_ids: l.clasificacion_ids ?? [],
+        grupos: (l as any).grupos ?? [],
         aplica_a: l.aplica_a,
         tipo_calculo: l.tipo_calculo,
         precio: l.precio,
@@ -761,7 +771,7 @@ export default function TarifaFormPage() {
   const handleSaveEditLinea = async () => {
     if (!editingLineaId) return;
     // Duplicate validation (exclude current line)
-    if (!validateNoDuplicates(editLinea.aplica_a, editLinea.producto_ids, editLinea.clasificacion_ids, editingLineaId)) return;
+    if (!validateNoDuplicates(editLinea.aplica_a, editLinea.producto_ids, editLinea.clasificacion_ids, editLinea.grupos, editingLineaId)) return;
     try {
       await saveLinea.mutateAsync({
         id: editingLineaId,
@@ -780,6 +790,7 @@ export default function TarifaFormPage() {
         lista_precio_id: editLinea.lista_precio_id || null,
         producto_ids: editLinea.aplica_a === 'producto' ? editLinea.producto_ids : [],
         clasificacion_ids: editLinea.aplica_a === 'categoria' ? editLinea.clasificacion_ids : [],
+        grupos: editLinea.aplica_a === 'grupo' ? editLinea.grupos : [],
       } as any);
       setEditingLineaId(null);
       setEditingCol(null);
@@ -792,10 +803,11 @@ export default function TarifaFormPage() {
   const [reglaSort, setReglaSort] = useState<'nombre' | 'clave'>('nombre');
   const sortedLineas = [...lineas]
     .sort((a, b) => {
-      const order: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
-      const diff = (order[a.aplica_a] ?? 2) - (order[b.aplica_a] ?? 2);
+      const order: Record<string, number> = { grupo: 0, producto: 1, categoria: 2, todos: 3 };
+      const diff = (order[a.aplica_a] ?? 3) - (order[b.aplica_a] ?? 3);
       if (diff !== 0) return diff;
       const labelOf = (l: TarifaLinea) => {
+        if (l.aplica_a === 'grupo') return ((l as any).grupos ?? []).map((gid: string) => grupoNameMap.get(gid) ?? '').join(', ');
         if (l.aplica_a === 'producto') {
           const m = reglaSort === 'clave' ? prodCodigoMap : prodNombreMap;
           return (l.producto_ids.map(pid => m.get(pid) ?? '').join(', '));
@@ -809,27 +821,42 @@ export default function TarifaFormPage() {
       if (!reglaSearch.trim()) return true;
       const q = reglaSearch.toLowerCase();
       if (l.aplica_a === 'producto') return l.producto_ids.some(pid => (prodMap.get(pid) ?? '').toLowerCase().includes(q));
+      if (l.aplica_a === 'grupo') return ((l as any).grupos ?? []).some((gid: string) => (grupoNameMap.get(gid) ?? '').toLowerCase().includes(q));
       if (l.aplica_a === 'categoria') return l.clasificacion_ids.some(cid => (clasMap.get(cid) ?? '').toLowerCase().includes(q));
       return 'todos'.includes(q);
     });
 
   // ── Used IDs tracking (for duplicate prevention) ──
+  const usedGrupoIds = new Set<string>();
   const usedCatIds = new Set<string>();
   const usedProdIds = new Set<string>();
   lineas.forEach(l => {
+    if (l.aplica_a === 'grupo') ((l as any).grupos ?? []).forEach((id: string) => usedGrupoIds.add(id));
     if (l.aplica_a === 'categoria') l.clasificacion_ids.forEach(id => usedCatIds.add(id));
     if (l.aplica_a === 'producto') l.producto_ids.forEach(id => usedProdIds.add(id));
   });
 
   // Available items (excluding already used, but include current editing line's items)
+  const getAvailableGrupos = (currentIds: string[]) =>
+    grupoItems.filter(g => !usedGrupoIds.has(g.id) || currentIds.includes(g.id));
   const getAvailableClas = (currentIds: string[]) =>
     clasItems.filter(c => !usedCatIds.has(c.id) || currentIds.includes(c.id));
   const getAvailableProds = (currentIds: string[]) =>
     prodItems.filter(p => !usedProdIds.has(p.id) || currentIds.includes(p.id));
 
   // Validation helper
-  const validateNoDuplicates = (aplica_a: string, prodIds: string[], clasIds: string[], excludeLineaId?: string) => {
+  const validateNoDuplicates = (aplica_a: string, prodIds: string[], clasIds: string[], grupoIds: string[] = [], excludeLineaId?: string) => {
     const otherLineas = lineas.filter(l => l.id !== excludeLineaId);
+    if (aplica_a === 'grupo') {
+      const otherGrupoIds = new Set<string>();
+      otherLineas.forEach(l => { if (l.aplica_a === 'grupo') ((l as any).grupos ?? []).forEach((id: string) => otherGrupoIds.add(id)); });
+      const dupes = grupoIds.filter(id => otherGrupoIds.has(id));
+      if (dupes.length > 0) {
+        const names = dupes.map(id => grupoNameMap.get(id) ?? id).join(', ');
+        toast.error(`Grupo(s) ya en otra regla: ${names}`);
+        return false;
+      }
+    }
     if (aplica_a === 'categoria') {
       const otherCatIds = new Set<string>();
       otherLineas.forEach(l => { if (l.aplica_a === 'categoria') l.clasificacion_ids.forEach(id => otherCatIds.add(id)); });
@@ -931,6 +958,7 @@ export default function TarifaFormPage() {
 
   const getAplicaBadge = (aplica: AplicaATarifa) => {
     const styles: Record<string, string> = {
+      grupo: 'bg-primary/10 text-primary',
       producto: 'bg-primary/10 text-primary',
       categoria: 'bg-accent text-accent-foreground',
       todos: 'bg-primary/10 text-primary',
@@ -1091,8 +1119,9 @@ export default function TarifaFormPage() {
                               {ec('aplica_a') ? (
                                 <select autoFocus className="input-odoo text-xs w-full" value={editLinea.aplica_a}
                                   onBlur={blurSave}
-                                  onChange={e => { setEditLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [] })); }}>
+                                  onChange={e => { setEditLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [], grupos: [] })); }}>
                                   <option value="todos">Todos</option>
+                                  <option value="grupo">Grupo (Lista)</option>
                                   <option value="categoria">Categoría</option>
                                   <option value="producto">Producto</option>
                                 </select>
@@ -1105,6 +1134,10 @@ export default function TarifaFormPage() {
                                   {editLinea.aplica_a === 'producto' && (
                                     <ChipSelect items={getAvailableProds(editLinea.producto_ids)} selectedIds={editLinea.producto_ids}
                                       onChange={ids => setEditLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
+                                  )}
+                                  {editLinea.aplica_a === 'grupo' && (
+                                    <ChipSelect items={getAvailableGrupos(editLinea.grupos)} selectedIds={editLinea.grupos}
+                                      onChange={ids => setEditLinea(p => ({ ...p, grupos: ids }))} placeholder="+ Grupo (lista)..." />
                                   )}
                                   {editLinea.aplica_a === 'categoria' && (
                                     <ChipSelect items={getAvailableClas(editLinea.clasificacion_ids)} selectedIds={editLinea.clasificacion_ids}
@@ -1129,6 +1162,13 @@ export default function TarifaFormPage() {
                                     <div className="flex flex-wrap gap-1">
                                       {l.producto_ids.map(pid => (
                                         <span key={pid} className="odoo-badge text-[11px]">{prodNombreMap.get(pid) ?? pid}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {l.aplica_a === 'grupo' && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {((l as any).grupos ?? []).map((gid: string) => (
+                                        <span key={gid} className="odoo-badge text-[11px]">{grupoNameMap.get(gid) ?? gid}</span>
                                       ))}
                                     </div>
                                   )}
@@ -1222,8 +1262,9 @@ export default function TarifaFormPage() {
                             <tr className="bg-primary/5 border-b border-table-border">
                               <td className="py-2 px-3">
                                 <select className="input-odoo text-xs w-full" value={newLinea.aplica_a}
-                                  onChange={e => setNewLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [] }))}>
+                                  onChange={e => setNewLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [], grupos: [] }))}>
                                   <option value="todos">Todos</option>
+                                  <option value="grupo">Grupo (Lista)</option>
                                   <option value="categoria">Categoría</option>
                                   <option value="producto">Producto</option>
                                 </select>
@@ -1232,6 +1273,10 @@ export default function TarifaFormPage() {
                                 {newLinea.aplica_a === 'producto' && (
                                   <ChipSelect items={getAvailableProds(newLinea.producto_ids)} selectedIds={newLinea.producto_ids}
                                     onChange={ids => setNewLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
+                                )}
+                                {newLinea.aplica_a === 'grupo' && (
+                                  <ChipSelect items={getAvailableGrupos(newLinea.grupos)} selectedIds={newLinea.grupos}
+                                    onChange={ids => setNewLinea(p => ({ ...p, grupos: ids }))} placeholder="+ Grupo (lista)..." />
                                 )}
                                 {newLinea.aplica_a === 'categoria' && (
                                   <ChipSelect items={getAvailableClas(newLinea.clasificacion_ids)} selectedIds={newLinea.clasificacion_ids}
