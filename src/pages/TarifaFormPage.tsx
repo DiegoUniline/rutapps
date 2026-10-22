@@ -1260,8 +1260,9 @@ export default function TarifaFormPage() {
                             <tr className="bg-primary/5 border-b border-table-border">
                               <td className="py-2 px-3">
                                 <select className="input-odoo text-xs w-full" value={newLinea.aplica_a}
-                                  onChange={e => setNewLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [] }))}>
+                                  onChange={e => setNewLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [], grupos: [] }))}>
                                   <option value="todos">Todos</option>
+                                  <option value="grupo">Grupo (Lista)</option>
                                   <option value="categoria">Categoría</option>
                                   <option value="producto">Producto</option>
                                 </select>
@@ -1270,6 +1271,10 @@ export default function TarifaFormPage() {
                                 {newLinea.aplica_a === 'producto' && (
                                   <ChipSelect items={getAvailableProds(newLinea.producto_ids)} selectedIds={newLinea.producto_ids}
                                     onChange={ids => setNewLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
+                                )}
+                                {newLinea.aplica_a === 'grupo' && (
+                                  <ChipSelect items={getAvailableGrupos(newLinea.grupos)} selectedIds={newLinea.grupos}
+                                    onChange={ids => setNewLinea(p => ({ ...p, grupos: ids }))} placeholder="+ Grupo (lista)..." />
                                 )}
                                 {newLinea.aplica_a === 'categoria' && (
                                   <ChipSelect items={getAvailableClas(newLinea.clasificacion_ids)} selectedIds={newLinea.clasificacion_ids}
