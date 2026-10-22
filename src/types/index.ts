@@ -4,7 +4,7 @@ export type FrecuenciaVisita = 'diaria' | 'semanal' | 'quincenal' | 'mensual';
 export type TipoComision = 'porcentaje' | 'monto_fijo';
 export type CalculoCosto = 'promedio' | 'ultimo' | 'estandar' | 'manual' | 'ultimo_compra' | 'ultimo_proveedor';
 export type TipoTarifa = 'general' | 'por_cliente' | 'por_ruta';
-export type AplicaATarifa = 'todos' | 'categoria' | 'producto';
+export type AplicaATarifa = 'todos' | 'categoria' | 'producto' | 'grupo';
 export type TipoCalculoTarifa = 'margen_costo' | 'descuento_precio' | 'precio_fijo';
 export type TipoVenta = 'pedido' | 'venta_directa';
 export type CondicionPago = 'contado' | 'credito' | 'por_definir';
@@ -92,6 +92,7 @@ export interface TarifaLinea {
   tarifa_id: string;
   producto_ids: string[];
   clasificacion_ids: string[];
+  grupos?: string[];
   aplica_a: AplicaATarifa;
   tipo_calculo: TipoCalculoTarifa;
   precio: number;
