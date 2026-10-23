@@ -24,6 +24,7 @@ import OriginPicker, { type OriginValue } from '@/components/maps/OriginPicker';
 import MultiRoutePanel, { type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
 import { MultiRouteOverlayML } from '@/components/maps/MultiRouteOverlayML';
 import RouteOptimizationQuotaWidget from '@/components/RouteOptimizationQuotaWidget';
+import { mergeBloqueOrden } from '@/lib/ordenRuta';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -589,26 +590,48 @@ export default function MapaClientesPage() {
     }
   };
 
+  /**
+   * Con zona (u otro filtro que deja solo una parte de los clientes) la ruta se
+   * guarda "zona tras zona" (D-012): solo se reordena el bloque optimizado dentro
+   * de lo ya guardado para ese día y vendedor. Sin esos filtros, se reemplaza todo.
+   */
+  const optimizacionParcial = !!(zonaFilter || statusFilter || search || clienteIdsFilter.size > 0);
+
+  type OrdenRow = { cliente_id: string; orden: number; origin_lat: number | null; origin_lng: number | null; origin_label: string | null };
+
   /** Persist the optimized order(s) into cliente_orden_ruta */
-  const persistOrder = async (groups: { vendedor_id: string | null; ordered: string[]; origin?: OriginValue | null }[]) => {
+  const persistOrder = async (groups: { vendedor_id: string | null; ordered: string[]; origin?: OriginValue | null }[], parcial = optimizacionParcial) => {
+    const tabla = () => (supabase.from('cliente_orden_ruta' as any) as any);
+    const scope = (q: any, vendedorId: string | null) => {
+      q = q.eq('empresa_id', empresa!.id);
+      q = diaFilter ? q.eq('dia', diaFilter) : q.is('dia', null);
+      return vendedorId ? q.eq('vendedor_id', vendedorId) : q.is('vendedor_id', null);
+    };
+    const toRow = (vendedorId: string | null) => (r: Omit<OrdenRow, 'orden'>, idx: number) => ({
+      empresa_id: empresa!.id, cliente_id: r.cliente_id, dia: diaFilter || null, vendedor_id: vendedorId,
+      origin_lat: r.origin_lat, origin_lng: r.origin_lng, origin_label: r.origin_label, orden: idx + 1,
+    });
+
     for (const g of groups) {
-      let delQ = (supabase.from('cliente_orden_ruta' as any) as any)
-        .delete().eq('empresa_id', empresa!.id);
-      delQ = diaFilter ? delQ.eq('dia', diaFilter) : delQ.is('dia', null);
-      delQ = g.vendedor_id ? delQ.eq('vendedor_id', g.vendedor_id) : delQ.is('vendedor_id', null);
-      await delQ;
-      const rows = g.ordered.map((id, idx) => ({
-        empresa_id: empresa!.id,
-        cliente_id: id,
-        dia: diaFilter || null,
-        vendedor_id: g.vendedor_id,
-        origin_lat: g.origin?.lat ?? null,
-        origin_lng: g.origin?.lng ?? null,
-        origin_label: g.origin?.label ?? null,
-        orden: idx + 1,
-      }));
-      if (rows.length > 0) {
-        await (supabase.from('cliente_orden_ruta' as any) as any).insert(rows);
+      const { data: prevData, error: prevErr } = await scope(tabla().select('cliente_id, orden, origin_lat, origin_lng, origin_label'), g.vendedor_id).order('orden');
+      if (prevErr) throw new Error(`No se pudo leer la ruta guardada: ${prevErr.message}`);
+      const previas = (prevData ?? []) as OrdenRow[];
+      const prevById = new Map(previas.map(r => [r.cliente_id, r]));
+      const nuevoOrigen = { origin_lat: g.origin?.lat ?? null, origin_lng: g.origin?.lng ?? null, origin_label: g.origin?.label ?? null };
+      const nuevos = new Set(g.ordered);
+      const ids = parcial ? mergeBloqueOrden(previas.map(r => r.cliente_id), g.ordered) : g.ordered;
+      const rows = ids.map(id => (nuevos.has(id) || !prevById.has(id)
+        ? { cliente_id: id, ...nuevoOrigen }
+        : prevById.get(id)!)).map(toRow(g.vendedor_id));
+
+      const { error: delErr } = await scope(tabla().delete(), g.vendedor_id);
+      if (delErr) throw new Error(`No se pudo guardar la ruta: ${delErr.message}`);
+      if (rows.length === 0) continue;
+      const { error: insErr } = await tabla().insert(rows);
+      if (insErr) {
+        // Se intenta dejar la ruta como estaba antes de avisar.
+        if (previas.length > 0) await tabla().insert(previas.map(toRow(g.vendedor_id)));
+        throw new Error(`No se pudo guardar la ruta: ${insErr.message}`);
       }
     }
   };
@@ -617,12 +640,6 @@ export default function MapaClientesPage() {
     if (!multiResults) return;
     setApplying(true);
     try {
-      // Wipe full scope (empresa + dia) so old rows with vendedor_id=null or stale vendor groups don't survive
-      let wipeQ = (supabase.from('cliente_orden_ruta' as any) as any)
-        .delete().eq('empresa_id', empresa!.id);
-      wipeQ = diaFilter ? wipeQ.eq('dia', diaFilter) : wipeQ.is('dia', null);
-      await wipeQ;
-
       const groups = multiResults
         .filter(r => !r.error && r.optimized_order.length > 0)
         .map(r => ({
@@ -630,22 +647,16 @@ export default function MapaClientesPage() {
           origin: r.origin,
           ordered: r.optimized_order,
         }));
-      // Insert all rows in one go (persistOrder also deletes per-vendedor, but scope is already empty)
-      const allRows = groups.flatMap(g =>
-        g.ordered.map((id, idx) => ({
-          empresa_id: empresa!.id,
-          cliente_id: id,
-          dia: diaFilter || null,
-          vendedor_id: g.vendedor_id,
-          origin_lat: g.origin?.lat ?? null,
-          origin_lng: g.origin?.lng ?? null,
-          origin_label: g.origin?.label ?? null,
-          orden: idx + 1,
-        }))
-      );
-      if (allRows.length > 0) {
-        await (supabase.from('cliente_orden_ruta' as any) as any).insert(allRows);
+      if (!optimizacionParcial) {
+        // Wipe full scope (empresa + dia) so old rows with vendedor_id=null or stale vendor groups don't survive
+        let wipeQ = (supabase.from('cliente_orden_ruta' as any) as any)
+          .delete().eq('empresa_id', empresa!.id);
+        wipeQ = diaFilter ? wipeQ.eq('dia', diaFilter) : wipeQ.is('dia', null);
+        const { error: wipeErr } = await wipeQ;
+        if (wipeErr) throw new Error(`No se pudo guardar la ruta: ${wipeErr.message}`);
       }
+      // Con zona: cada vendedor conserva las otras zonas ya guardadas (zona tras zona).
+      await persistOrder(groups, optimizacionParcial);
       await refetchSavedOrder();
       setApplied(true);
       toast.success(`Orden guardado para ${groups.length} ${groups.length === 1 ? 'ruta' : 'rutas'}`);
