@@ -42,7 +42,7 @@ export async function fetchConcentradoReport(filters: ConcentradoReportFilters):
     const ids = orders.slice(start, start + 100).map(order => order.id);
     const [saleLines, deliveries] = await Promise.all([
       readAll<ReportSaleLine>((from, to) => supabase.from('venta_lineas')
-        .select('id, venta_id, producto_id, descripcion, cantidad, productos(codigo, nombre)')
+        .select('id, venta_id, producto_id, descripcion, cantidad, productos(codigo, nombre, clasificaciones(nombre))')
         .eq('empresa_id', empresaId).in('venta_id', ids).order('id').range(from, to)),
       readAll<ReportDelivery>((from, to) => supabase.from('entregas')
         .select('id, pedido_id, status, vendedor_ruta_id, ruta:profiles!entregas_vendedor_ruta_id_profiles_fkey(nombre)')

@@ -43,3 +43,4 @@
 2026-10-20 · desarrollador · POS: precio de presentación corregido (el re-precio por lista pisaba el precio especial y al precio con IVA se le volvía a sumar IVA); misma regla que venta de escritorio (buildPresentationPatch)
 2026-10-20 · desarrollador · Búsqueda de clientes también por persona de contacto (venta, cotización, entrega, POS, móvil: nueva venta, clientes, cobrar, CxC, devolución) — pedido de cliente Congelados
 2026-10-23 · desarrollador · D-012 · Mapa de clientes: optimizar otra zona del mismo día/vendedor ya no borra la anterior (zona tras zona); errores de guardado visibles
+2026-10-23 · desarrollador · Logística › Reporte de surtido: productos agrupados por categoría (clasificación) y alfabéticos dentro de cada una; 'Sin categoría' al final (PDF y Excel)
