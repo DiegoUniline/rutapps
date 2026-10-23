@@ -63,3 +63,8 @@
 - **Fecha:** 2026-10-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** las listas de **Ventas** y **Cobranza** abren en el **mes actual** cuando no hay fechas elegidas (antes cargaban todo el historial). Las fechas que el usuario elija se recuerdan como siempre.
 - **Implementación:** `useListPreferences(key, { defaultMesActual: true })` (del día 1 al último día del mes, zona de la empresa). Cobranza filtra en el servidor y solo reemplaza ese rango en la copia local.
+
+## D-012
+- **Fecha:** 2026-10-23 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión (Mapa de clientes, optimizar por zona):** la ruta del día de un vendedor se arma **zona tras zona**. Si se optimiza una zona que ya estaba, solo se reordena su bloque y conserva su lugar. Si la zona es nueva, se agrega al final. Las demás zonas del mismo día y vendedor ya no se borran.
+- **Implementación:** `mergeBloqueOrden` (`src/lib/ordenRuta.ts`). Aplica cuando hay filtro de zona, status, búsqueda o clientes elegidos. Sin esos filtros se reemplaza toda la ruta del día, como antes. El guardado ahora avisa si falla.
