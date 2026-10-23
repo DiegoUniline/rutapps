@@ -40,7 +40,10 @@ export async function createConcentradoWorkbook(options: ConcentradoExportOption
     if (folios) merged(folios);
     merged('Recibe: ____________________________________    Fecha: __________________');
     rows.push(['No.', 'Código', 'Producto', 'Requerido', 'Ya surtido', 'Pendiente', 'ENT.']);
-    group.products.forEach((p, i) => rows.push([i + 1, p.codigo, p.nombre, p.requerido, p.surtido, p.pendiente, '']));
+    group.products.forEach((p, i) => {
+      if (p.categoria !== group.products[i - 1]?.categoria) merged(`CATEGORÍA: ${p.categoria.toUpperCase()}`);
+      rows.push([i + 1, p.codigo, p.nombre, p.requerido, p.surtido, p.pendiente, '']);
+    });
   }
   const sheet = XLSX.utils.aoa_to_sheet(rows);
   sheet['!merges'] = merges;
@@ -146,6 +149,7 @@ export async function createConcentradoPdf(options: ConcentradoExportOptions) {
         doc.text(options.quantity === 'requerido' ? 'REQ.' : 'PEND.', qtyX, top + 4, { align: 'center' });
         doc.text('ENT.', entX, top + 4, { align: 'center' });
         let y = top + 6;
+        let categoriaColumna: string | null = null;
         while (productIndex < group.products.length) {
           const product: ReportProduct = group.products[productIndex];
           doc.setFont('helvetica', 'normal');
@@ -153,8 +157,24 @@ export async function createConcentradoPdf(options: ConcentradoExportOptions) {
           const productLabel = product.codigo ? `${product.codigo} · ${product.nombre}` : product.nombre;
           const lines = doc.splitTextToSize(productLabel, columnWidth - 40) as string[];
           const rowHeight = Math.max(5.4, lines.length * 3.5 + 1.8);
-          if (rowHeight > bottom - top - 6) throw new Error('Un nombre de producto es demasiado largo para esta hoja.');
-          if (y + rowHeight > bottom) break;
+          // Encabezado de categoría al cambiar y al inicio de cada columna (para no perder el contexto).
+          const conCategoria = product.categoria !== categoriaColumna;
+          const catHeight = conCategoria ? 5 : 0;
+          if (rowHeight + catHeight > bottom - top - 6) throw new Error('Un nombre de producto es demasiado largo para esta hoja.');
+          if (y + catHeight + rowHeight > bottom) break;
+          if (conCategoria) {
+            const continua = categoriaColumna === null && group.products[productIndex - 1]?.categoria === product.categoria;
+            doc.setFillColor(250, 246, 230);
+            doc.rect(x, y, columnWidth, catHeight, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(26);
+            const etiqueta = doc.splitTextToSize(`${product.categoria.toUpperCase()}${continua ? ' (cont.)' : ''}`, columnWidth - 4) as string[];
+            doc.text(etiqueta[0], x + 1, y + 3.6);
+            doc.setFont('helvetica', 'normal');
+            y += catHeight;
+            categoriaColumna = product.categoria;
+          }
           doc.setTextColor(80);
           doc.setFontSize(7);
           doc.text(String(productIndex + 1), x + 1, y + 3.7);

@@ -22,7 +22,7 @@ export interface ReportSaleLine {
   producto_id: string | null;
   descripcion: string | null;
   cantidad: number;
-  productos: { codigo: string | null; nombre: string } | null;
+  productos: { codigo: string | null; nombre: string; clasificaciones?: { nombre: string } | null } | null;
 }
 export interface ReportDeliveryLine {
   entrega_id: string;
@@ -39,6 +39,8 @@ export interface ReportProduct {
   id: string;
   codigo: string;
   nombre: string;
+  /** Categoría (clasificación) del producto; la hoja se agrupa por ella. */
+  categoria: string;
   requerido: number;
   surtido: number;
   pendiente: number;
@@ -57,6 +59,11 @@ export interface ReportSelection {
 }
 
 const compare = (a: string, b: string) => a.localeCompare(b, 'es', { numeric: true });
+export const SIN_CATEGORIA = 'Sin categoría';
+/** Por categoría (las que no tienen van al final) y dentro de cada una, alfabético. */
+const compareProducto = (a: ReportProduct, b: ReportProduct) =>
+  (a.categoria === SIN_CATEGORIA ? 1 : 0) - (b.categoria === SIN_CATEGORIA ? 1 : 0)
+  || compare(a.categoria, b.categoria) || compare(a.nombre, b.nombre) || compare(a.codigo, b.codigo);
 const round = (n: number) => Math.round((n + Number.EPSILON) * 1e6) / 1e6;
 function quantity(value: number): number {
   const n = Number(value ?? 0);
@@ -97,6 +104,7 @@ export function buildConcentradoReport(source: ReportSource, selection: ReportSe
     const product = products.get(id) ?? {
       id, codigo: line.productos?.codigo ?? '',
       nombre: line.productos?.nombre || line.descripcion || 'Producto sin nombre',
+      categoria: line.productos?.clasificaciones?.nombre?.trim() || SIN_CATEGORIA,
       requerido: 0, surtido: 0, pendiente: 0,
     };
     product.requerido += quantity(line.cantidad);
@@ -146,6 +154,6 @@ export function buildConcentradoReport(source: ReportSource, selection: ReportSe
     folios: [...group.folios].sort(compare),
     products: [...group.products.values()].map(p => ({
       ...p, requerido: round(p.requerido), surtido: round(p.surtido), pendiente: round(p.pendiente),
-    })).sort((a, b) => compare(a.nombre, b.nombre) || compare(a.codigo, b.codigo)),
+    })).sort(compareProducto),
   })).sort((a, b) => compare(a.label, b.label));
 }
