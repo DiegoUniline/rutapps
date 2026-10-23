@@ -45,6 +45,7 @@ import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplic
 import { buildPosTicketPayments } from '@/lib/posTicketPayments';
 import { resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
 import { PromotionReadinessNotice } from '@/components/PromotionReadinessNotice';
+import { diasCreditoVenta } from '@/lib/creditoVenta';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
@@ -296,12 +297,16 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id && !!clienteId,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data } = await supabase.from('ventas')
-        .select('id, fecha, saldo_pendiente, dias_credito')
+      const { data, error } = await supabase.from('ventas')
+        .select('id, fecha, saldo_pendiente, fecha_vencimiento')
         .eq('empresa_id', empresa!.id)
         .eq('cliente_id', clienteId!)
         .gt('saldo_pendiente', 0)
         .in('status', ['confirmado', 'entregado', 'facturado']);
+      if (error) {
+        toast.error('No se pudo cargar el saldo pendiente del cliente');
+        throw error;
+      }
       return data ?? [];
     },
   });
@@ -311,12 +316,12 @@ export default function PuntoVentaPage() {
   );
   const cuentasVencidasCliente = useMemo(() => {
     const today = Date.now();
-    return (clientePendingVentasPOS ?? []).filter((v: any) => {
-      const dc = v.dias_credito ?? 0;
+    return (clientePendingVentasPOS ?? []).filter(v => {
+      const dc = diasCreditoVenta(v.fecha, v.fecha_vencimiento, clienteDiasCredito);
       const diasTrans = Math.floor((today - new Date(v.fecha).getTime()) / 86400000);
       return diasTrans > dc;
     }).length;
-  }, [clientePendingVentasPOS]);
+  }, [clientePendingVentasPOS, clienteDiasCredito]);
   const creditoDisponiblePOS = Math.max(0, (clienteLimiteCredito ?? 0) - saldoPendienteCliente);
 
 
