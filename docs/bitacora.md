@@ -56,3 +56,4 @@
 2026-10-28 · desarrollador · D-015 · Migración Fase 2 aplicada en producción por el dueño (recalcular_ok, rep_ok, rep_cerrado_ok, candados_ok, columnas_ok = true)
 2026-10-28 · desarrollador · D-016 · Facturación Fase 3: sin notas de crédito; facturación abierta por permiso (puede_facturar ver/crear/eliminar en cada acción de la función facturama; Avanzado por permiso; correo con service role y permiso). Migración 20261031120000 probada en BD local (6 casos)
 2026-10-28 · desarrollador · D-016 · Migración Fase 3 aplicada en producción por el dueño (permiso_ok, cerrado_ok = true)
+2026-10-28 · desarrollador · Folios después del 9999: LPAD(n,4) cortaba a 4 caracteres (PED-10000 → PED-1000 repetido, caso Distribuidora Tampico). next_folio/auto_folio_venta usan folio_num() (mínimo 4 dígitos sin cortar). Reproducido y corregido en BD local; migración 20261101120000 con guardia de versión
