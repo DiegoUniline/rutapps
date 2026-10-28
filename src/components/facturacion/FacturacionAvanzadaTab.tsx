@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 /**
- * Secciones avanzadas de facturación (solo super admin).
+ * Secciones avanzadas de facturación (por permiso facturacion.cfdi, D-016).
  * Cada sección se exporta para usarse como vista independiente dentro del módulo.
  */
 export default function FacturacionAvanzadaTab() {
