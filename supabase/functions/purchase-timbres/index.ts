@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { acreditarTimbresCheckout } from "../_shared/timbres.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,30 +95,25 @@ Deno.serve(async (req) => {
         });
       }
 
-      const meta = session.metadata || {};
-      if (meta.type !== "timbres_purchase") throw new Error("Sesión inválida");
-      if (meta.credited === "true") {
+      // Sesiones abonadas antes de S-07 (sin referencia en timbres_movimientos).
+      if (session.metadata?.credited === "true") {
         return new Response(JSON.stringify({ success: true, already_credited: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const timbres = parseInt(meta.timbres || "0");
-      const empresaId = meta.empresa_id;
-      if (!timbres || !empresaId) throw new Error("Metadata incompleta");
-
-      // Credit timbres
-      const { data: newBalance } = await supabase.rpc("add_timbres", {
-        p_empresa_id: empresaId,
-        p_cantidad: timbres,
-        p_user_id: userData.user.id,
-        p_notas: `Compra self-service: ${timbres} timbres (Stripe session ${session_id})`,
-      });
-
-      // Mark session as credited to prevent double-credit
-      await stripe.checkout.sessions.update(session_id, {
-        metadata: { ...meta, credited: "true" },
-      });
+      // S-07: abono idempotente por sesión (también lo hace stripe-webhook).
+      const newBalance = await acreditarTimbresCheckout(supabase, session);
+      if (newBalance !== null) {
+        await stripe.checkout.sessions.update(session_id, {
+          metadata: { ...(session.metadata || {}), credited: "true" },
+        });
+      } else {
+        return new Response(JSON.stringify({ success: true, already_credited: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const timbres = parseInt(session.metadata?.timbres || "0");
 
       return new Response(JSON.stringify({ success: true, timbres_added: timbres, new_balance: newBalance }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

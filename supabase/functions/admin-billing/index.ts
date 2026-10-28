@@ -1,5 +1,6 @@
 import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { acreditarTimbresFacturaPagada } from "../_shared/timbres.ts";
 import {
   classifyBillingInvoiceOrigin,
   invoiceMetadataPeriod,
@@ -1679,6 +1680,7 @@ Deno.serve(async (req) => {
 
       const paidAt = fecha_pago ? new Date(fecha_pago) : new Date();
       let stripePaid = false;
+      let stripeConfirmed: any = null;
 
       if (fac.stripe_invoice_id) {
         try {
@@ -1705,6 +1707,7 @@ Deno.serve(async (req) => {
             throw new Error(`Stripe no confirmó el estado pagado (estado actual: ${confirmed.status || "desconocido"}).`);
           }
           stripePaid = true;
+          stripeConfirmed = confirmed;
         } catch (e: any) {
           console.error("[mark_invoice_paid_out_of_band] stripe synchronization failed:", e);
           throw new Error(
@@ -1749,6 +1752,9 @@ Deno.serve(async (req) => {
         })
         .eq("id", factura_id);
       if (localPaidErr) throw localPaidErr;
+
+      // Timbres incluidos en la factura (una vez por factura; el webhook también lo intenta).
+      if (stripeConfirmed) await acreditarTimbresFacturaPagada(supabase, stripeConfirmed);
 
       // Extend subscription period if requested and not a prorrateo
       let nuevoFinPeriodo: string | null = null;
@@ -2055,6 +2061,8 @@ Deno.serve(async (req) => {
           periodo_fin: periodoFin,
           request_id: requestId,
           source: "admin_invoices_tab",
+          // S-07: los timbres se abonan cuando la factura se paga (stripe-webhook / pago manual).
+          ...(Number(timbres) > 0 ? { timbres: String(Number(timbres)), timbres_user_id: userData.user.id } : {}),
         },
       }, { idempotencyKey: `${idempotencyBase}-invoice` });
 
@@ -2107,15 +2115,8 @@ Deno.serve(async (req) => {
       const { error: facturaError } = await facturaQuery;
       if (facturaError) throw facturaError;
 
-      // Auto-credit timbres if included in invoice
-      if (timbres && timbres > 0 && !existingFactura?.id) {
-        await supabase.rpc("add_timbres", {
-          p_empresa_id: empresa_id,
-          p_cantidad: timbres,
-          p_user_id: userData.user.id,
-          p_notas: `Factura ${finalizedInv.number || finalizedInv.id.slice(-8)} — ${timbres} timbres`,
-        });
-      }
+      // Timbres: solo si la factura ya quedó pagada (p. ej. total 0); si no, al pagarse.
+      await acreditarTimbresFacturaPagada(supabase, finalizedInv);
 
       // Build professional email HTML
       const primaryColor = "#6461E8";

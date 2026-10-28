@@ -7,6 +7,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isPrivilegedCaller } from "../_shared/privilegedCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,12 +15,15 @@ const corsHeaders = {
 };
 
 const FACTURAMA_API = "https://api.facturama.mx";
+const FACTURAMA_API_SANDBOX = "https://apisandbox.facturama.mx";
 
-function auth() {
-  const u = Deno.env.get("FACTURAMA_USERNAME");
-  const p = Deno.env.get("FACTURAMA_PASSWORD");
-  if (!u || !p) throw new Error("Facturama credentials not configured");
-  return "Basic " + btoa(`${u}:${p}`);
+// Cada CFDI se consulta en el ambiente donde se timbró (D-013).
+function fac(ambiente?: string | null) {
+  const sandbox = ambiente === "sandbox";
+  const u = Deno.env.get(sandbox ? "FACTURAMA_SANDBOX_USERNAME" : "FACTURAMA_USERNAME");
+  const p = Deno.env.get(sandbox ? "FACTURAMA_SANDBOX_PASSWORD" : "FACTURAMA_PASSWORD");
+  if (!u || !p) throw new Error(`Facturama credentials not configured (${sandbox ? "sandbox" : "produccion"})`);
+  return { api: sandbox ? FACTURAMA_API_SANDBOX : FACTURAMA_API, auth: "Basic " + btoa(`${u}:${p}`) };
 }
 
 function admin() {
@@ -39,7 +43,7 @@ const STATUS_MAP: Record<string, string> = {
 async function reconcileCancellations(db: any) {
   const { data: pendientes } = await db
     .from("cfdis")
-    .select("id, facturama_id, status")
+    .select("id, facturama_id, status, facturama_ambiente")
     .eq("status", "cancelacion_pendiente")
     .not("facturama_id", "is", null)
     .limit(200);
@@ -47,8 +51,9 @@ async function reconcileCancellations(db: any) {
   const updates: any[] = [];
   for (const row of pendientes ?? []) {
     try {
-      const res = await fetch(`${FACTURAMA_API}/api-lite/cfdis/${row.facturama_id}`, {
-        headers: { Authorization: auth() },
+      const f = fac(row.facturama_ambiente);
+      const res = await fetch(`${f.api}/api-lite/cfdis/${row.facturama_id}`, {
+        headers: { Authorization: f.auth },
       });
       const text = await res.text();
       if (!res.ok) {
@@ -78,8 +83,10 @@ async function reconcileCancellations(db: any) {
 
 async function reconcileLast24h(db: any) {
   // Pull the most recent issued CFDIs from Facturama and detect any UUID missing locally.
-  const res = await fetch(`${FACTURAMA_API}/api-lite/cfdis?page=1&size=100&type=issued`, {
-    headers: { Authorization: auth() },
+  // Solo producción (cuenta compartida de todas las empresas).
+  const f = fac("produccion");
+  const res = await fetch(`${f.api}/api-lite/cfdis?page=1&size=100&type=issued`, {
+    headers: { Authorization: f.auth },
   });
   const text = await res.text();
   if (!res.ok) {
@@ -107,6 +114,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
   try {
+    // S-14: solo cron (x-cron-secret), service_role o super admin. La anon key no basta.
+    if (!(await isPrivilegedCaller(req))) {
+      return new Response(JSON.stringify({ ok: false, error: "No autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const db = admin();
     const [cancel, audit] = await Promise.all([
       reconcileCancellations(db),
