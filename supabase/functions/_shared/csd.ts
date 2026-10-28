@@ -29,3 +29,42 @@ export function validarCsd(rfc: string, certificateB64: string, keyB64: string, 
   if (!pub?.n?.equals(llave.n) || !pub?.e?.equals(llave.e)) throw new Error("La llave privada (.key) no corresponde al certificado (.cer).");
   return { noCertificado, vence };
 }
+
+/** Lee un .cer (base64): número de certificado (20 dígitos), sujeto y vencimiento. */
+export function leerCertificado(certificateB64: string) {
+  const cert: any = forge.pki.certificateFromAsn1(forge.asn1.fromDer(forge.util.decode64(certificateB64)));
+  const noCertificado = (String(cert.serialNumber).match(/.{2}/g) ?? [])
+    .map((h: string) => String.fromCharCode(parseInt(h, 16))).join("");
+  const sujeto = cert.subject.attributes.map((a: any) => String(a.value ?? "")).join(" ").toUpperCase();
+  return { noCertificado, sujeto, vence: cert.validity.notAfter as Date };
+}
+
+/**
+ * Interpreta lo que devuelve Facturama al consultar el CSD de un RFC (formato no estable):
+ * si trae el certificado se lee de ahí; si no, se toma un número de 20 dígitos y una fecha
+ * de vencimiento de los campos que la contengan.
+ */
+export function interpretarCsdFacturama(body: unknown): { noCertificado: string | null; vence: Date | null; sujeto: string | null } {
+  const valores: { k: string; v: string }[] = [];
+  const recorrer = (n: unknown, k: string) => {
+    if (typeof n === "string" || typeof n === "number") valores.push({ k, v: String(n) });
+    else if (Array.isArray(n)) n.forEach((x) => recorrer(x, k));
+    else if (n && typeof n === "object") for (const [kk, vv] of Object.entries(n)) recorrer(vv, kk);
+  };
+  recorrer(body, "");
+  const cer = valores.find((x) => /^certificate$/i.test(x.k) && x.v.length > 500);
+  if (cer) {
+    try {
+      const c = leerCertificado(cer.v);
+      return { noCertificado: c.noCertificado, vence: c.vence, sujeto: c.sujeto };
+    } catch { /* no es un .cer legible: se intenta con los demás campos */ }
+  }
+  const numero = valores.find((x) => /^\d{20}$/.test(x.v.trim()));
+  const venc = valores.find((x) => /expir|validto|vigencia|vence/i.test(x.k));
+  const fecha = venc ? new Date(venc.v) : null;
+  return {
+    noCertificado: numero ? numero.v.trim() : null,
+    vence: fecha && !Number.isNaN(fecha.getTime()) ? fecha : null,
+    sujeto: null,
+  };
+}

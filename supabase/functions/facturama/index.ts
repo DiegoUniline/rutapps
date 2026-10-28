@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendAppEmail } from "../_shared/app-email.ts";
-import { validarCsd } from "../_shared/csd.ts";
+import { validarCsd, interpretarCsdFacturama } from "../_shared/csd.ts";
 import {
   itemFacturama, totalesCfdi, erroresLinea, agruparImpuestos, impuestosProporcionales, fechaLimiteRep, formaPagoSat,
   repartirAplicacion, type LineaCfdiInput, type FacturamaItem, type ImpuestoAgrupado,
@@ -168,6 +168,10 @@ serve(async (req) => {
       const empresaId = await empresaDelUsuario(admin, user.id, body.empresa_id);
       await assertPuedeConfigurar(admin, user.id, empresaId);
       return await uploadCsd(admin, empresaId, body);
+    } else if (action === "consultar_csd") {
+      const empresaId = await empresaDelUsuario(admin, user.id, body.empresa_id);
+      await assertPuedeConfigurar(admin, user.id, empresaId);
+      return await consultarCsd(admin, empresaId);
     } else if (action === "set_ambiente") {
       const empresaId = await empresaDelUsuario(admin, user.id, body.empresa_id);
       await assertPuedeConfigurar(admin, user.id, empresaId);
@@ -335,6 +339,42 @@ async function uploadCsd(admin: any, empresaId: string, body: any) {
 // ========================================
 // LIST CSDs — solo el de la propia empresa (S-13)
 // ========================================
+/** CSD que ya estaba cargado en Facturama para el RFC de la empresa (p. ej. subido antes de RutApp):
+ *  lo consulta en el ambiente de la empresa y guarda número de certificado y vencimiento. */
+async function consultarCsd(admin: any, empresaId: string) {
+  const emisor = await getEmisor(admin, empresaId);
+  const res = await fetch(`${emisor.fac.api}/api-lite/csds/${encodeURIComponent(emisor.rfc)}`, {
+    headers: { Authorization: emisor.fac.auth },
+  });
+  if (res.status === 404) {
+    return json({ encontrado: false, rfc: emisor.rfc, ambiente: emisor.fac.ambiente });
+  }
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Facturama no respondió la consulta del CSD (HTTP ${res.status}): ${mensajeFacturama(text)}`);
+  let body: unknown = null;
+  try { body = JSON.parse(text); } catch { /* respuesta vacía o no JSON */ }
+  if (!body) return json({ encontrado: false, rfc: emisor.rfc, ambiente: emisor.fac.ambiente });
+
+  const csd = interpretarCsdFacturama(body);
+  if (csd.sujeto && !csd.sujeto.includes(emisor.rfc)) {
+    throw new Error(`El CSD registrado en Facturama no pertenece al RFC ${emisor.rfc}.`);
+  }
+  if (csd.vence && csd.vence.getTime() < Date.now()) {
+    throw new Error(`Facturama tiene el CSD ${csd.noCertificado ?? ""} de ${emisor.rfc}, pero venció el ${csd.vence.toISOString().slice(0, 10)}. Sube uno vigente.`);
+  }
+  const cambios: Record<string, unknown> = {};
+  if (csd.noCertificado) cambios.csd_no_certificado = csd.noCertificado;
+  if (csd.vence) cambios.csd_vence = csd.vence.toISOString();
+  if (Object.keys(cambios).length) {
+    const { error } = await admin.from("empresas").update(cambios).eq("id", empresaId);
+    if (error) throw new Error(`No se pudo guardar el CSD consultado: ${error.message}`);
+  }
+  return json({
+    encontrado: true, rfc: emisor.rfc, ambiente: emisor.fac.ambiente,
+    no_certificado: csd.noCertificado, vence: csd.vence ? csd.vence.toISOString().slice(0, 10) : null,
+  });
+}
+
 async function listCsds(admin: any, empresaId: string) {
   const emisor = await getEmisor(admin, empresaId);
   const res = await fetch(`${emisor.fac.api}/api-lite/csds`, {

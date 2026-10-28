@@ -63,6 +63,35 @@ export function ConfigEmisorCard() {
     },
   });
 
+  // CSD que ya estaba cargado en Facturama (subido antes de RutApp): se consulta y se guarda sin pedir archivos.
+  const [consultandoCsd, setConsultandoCsd] = useState(false);
+  async function consultarCsd() {
+    if (!empresa?.id) return;
+    setConsultandoCsd(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('facturama', {
+        body: { action: 'consultar_csd', empresa_id: empresa.id },
+      });
+      if (error) {
+        let msg = error.message;
+        try { const b = await (error as any).context?.json?.(); if (b?.error) msg = b.error; } catch { /* sin cuerpo */ }
+        throw new Error(msg);
+      }
+      if (data?.error) throw new Error(data.error);
+      if (!data?.encontrado) {
+        toast.error(`Facturama no tiene CSD cargado para ${data?.rfc} en ${data?.ambiente === 'sandbox' ? 'prueba (sandbox)' : 'producción'}. Súbelo abajo.`);
+      } else {
+        toast.success(`CSD encontrado${data.no_certificado ? `: ${data.no_certificado}` : ''}${data.vence ? ` · vence ${data.vence}` : ''}`);
+      }
+      refetchFacConfig();
+      refetchCsd();
+    } catch (err: any) {
+      toast.error('No se pudo consultar el CSD: ' + (err.message || 'Error'));
+    } finally {
+      setConsultandoCsd(false);
+    }
+  }
+
   // Ambiente de facturación (producción / sandbox) y datos del CSD guardados (D-013).
   const { data: facConfig, refetch: refetchFacConfig } = useQuery({
     queryKey: ['empresa-facturama-config', empresa?.id],
@@ -493,7 +522,7 @@ export function ConfigEmisorCard() {
 
           {/* Status badge */}
           {csdStatus?.loaded && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {hasCsd ? (
                 <Badge variant="default" className="gap-1.5 bg-green-600 hover:bg-green-700">
                   <CheckCircle className="h-3 w-3" />
@@ -505,6 +534,10 @@ export function ConfigEmisorCard() {
                   Sin CSD cargado — requerido para timbrar
                 </Badge>
               )}
+              <Button size="sm" variant="outline" onClick={consultarCsd} disabled={consultandoCsd}>
+                {consultandoCsd ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+                Consultar en Facturama
+              </Button>
             </div>
           )}
 
