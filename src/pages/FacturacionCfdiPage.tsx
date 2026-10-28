@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { abrirArchivoCfdi } from '@/lib/cfdiArchivos';
 import { useAuth } from '@/contexts/AuthContext';
 import { FileText, Search, Plus, Download, X, Eye, CheckCircle, XCircle, Loader2, Settings2, RefreshCw, Stamp, Trash2, AlertTriangle, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -431,14 +432,14 @@ export default function FacturacionCfdiPage() {
                         <div className="flex gap-1">
                           {cfdi.pdf_url && (
                             <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                              <a href={cfdi.pdf_url} target="_blank" rel="noopener noreferrer" title="PDF">
+                              <a href="#" onClick={(e) => abrirArchivoCfdi(e, 'cfdis', cfdi.id, 'pdf', cfdi.pdf_url)} title="PDF">
                                 <Download className="h-3.5 w-3.5" />
                               </a>
                             </Button>
                           )}
                           {cfdi.xml_url && (
                             <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                              <a href={cfdi.xml_url} target="_blank" rel="noopener noreferrer" title="XML">
+                              <a href="#" onClick={(e) => abrirArchivoCfdi(e, 'cfdis', cfdi.id, 'xml', cfdi.xml_url)} title="XML">
                                 <FileText className="h-3.5 w-3.5" />
                               </a>
                             </Button>

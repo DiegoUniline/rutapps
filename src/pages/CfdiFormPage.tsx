@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { abrirArchivoCfdi } from '@/lib/cfdiArchivos';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, FileCheck, Loader2, Trash2, Save, AlertTriangle, Download, FileText, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -777,7 +778,7 @@ export default function CfdiFormPage() {
               </Button>
               {cfdi.xml_url && (
                 <Button variant="outline" size="sm" asChild>
-                  <a href={cfdi.xml_url} target="_blank" rel="noopener noreferrer">
+                  <a href="#" onClick={(e) => abrirArchivoCfdi(e, 'cfdis', cfdi.id, 'xml', cfdi.xml_url)}>
                     <FileText className="h-4 w-4 mr-1.5" />
                     Descargar XML
                   </a>
@@ -785,7 +786,7 @@ export default function CfdiFormPage() {
               )}
               {cfdi.pdf_url && (
                 <Button variant="ghost" size="sm" asChild>
-                  <a href={cfdi.pdf_url} target="_blank" rel="noopener noreferrer">
+                  <a href="#" onClick={(e) => abrirArchivoCfdi(e, 'cfdis', cfdi.id, 'pdf', cfdi.pdf_url)}>
                     PDF Facturama (original)
                   </a>
                 </Button>

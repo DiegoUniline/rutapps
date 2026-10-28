@@ -2,6 +2,7 @@ import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { abrirArchivoCfdi } from '@/lib/cfdiArchivos';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
@@ -89,8 +90,8 @@ export function ComplementosPagoSection() {
                   <TableCell className="text-[10px] font-mono">{p.folio_fiscal?.slice(0, 13)}…</TableCell>
                   <TableCell><Badge variant={p.status === 'timbrado' ? 'default' : 'destructive'}>{p.status}</Badge></TableCell>
                   <TableCell className="flex gap-1">
-                    {p.pdf_url && <Button size="sm" variant="ghost" asChild><a href={p.pdf_url} target="_blank" rel="noreferrer">PDF</a></Button>}
-                    {p.xml_url && <Button size="sm" variant="ghost" asChild><a href={p.xml_url} target="_blank" rel="noreferrer">XML</a></Button>}
+                    {p.pdf_url && <Button size="sm" variant="ghost" onClick={(e) => abrirArchivoCfdi(e, 'cfdi_pagos', p.id, 'pdf', p.pdf_url)}>PDF</Button>}
+                    {p.xml_url && <Button size="sm" variant="ghost" onClick={(e) => abrirArchivoCfdi(e, 'cfdi_pagos', p.id, 'xml', p.xml_url)}>XML</Button>}
                   </TableCell>
                 </TableRow>
               ))}

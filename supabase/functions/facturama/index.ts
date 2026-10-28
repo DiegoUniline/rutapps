@@ -66,6 +66,21 @@ async function assertPuedeConfigurar(admin: any, userId: string, empresaId: stri
   if (!data) throw new Error("No tienes permiso para configurar la facturación (Facturación CFDI · editar).");
 }
 
+// XML/PDF en bucket PRIVADO (S-12). En pdf_url/xml_url se guarda "storage:<bucket>/<ruta>";
+// la app pide un enlace firmado temporal con la acción url_archivo.
+const BUCKET_CFDI = "cfdi-archivos";
+function archivoRef(path: string) { return `storage:${BUCKET_CFDI}/${path}`; }
+async function urlFirmada(admin: any, ref: string | null, segundos: number): Promise<string | null> {
+  if (!ref) return null;
+  if (!ref.startsWith("storage:")) return ref; // archivos viejos (bucket público)
+  const sinPrefijo = ref.slice("storage:".length);
+  const bucket = sinPrefijo.split("/")[0];
+  const path = sinPrefijo.slice(bucket.length + 1);
+  const { data, error } = await admin.storage.from(bucket).createSignedUrl(path, segundos);
+  if (error) throw new Error(`No se pudo generar el enlace del archivo: ${error.message}`);
+  return data?.signedUrl ?? null;
+}
+
 /** Pone en el body el emisor de la BD (pisa lo que haya mandado el navegador). */
 function conEmisor(body: any, emisor: Emisor) {
   return {
@@ -155,6 +170,14 @@ serve(async (req) => {
       const doc = cfdi ?? pago;
       if (!doc || (!isSA && doc.empresa_id !== prof?.empresa_id)) throw new Error("No autorizado");
       return await descargar({ ...body, __fac: fac(doc.facturama_ambiente) });
+    } else if (action === "url_archivo") {
+      const tabla = body.tabla === "cfdi_pagos" ? "cfdi_pagos" : "cfdis";
+      const { data: doc } = await admin.from(tabla).select("empresa_id, pdf_url, xml_url").eq("id", body.id).maybeSingle();
+      if (!doc) throw new Error("Documento no encontrado");
+      await assertEmpresaAccess(admin, user.id, doc.empresa_id);
+      const url = await urlFirmada(admin, body.tipo === "xml" ? doc.xml_url : doc.pdf_url, 300);
+      if (!url) throw new Error("El documento no tiene archivo guardado");
+      return new Response(JSON.stringify({ url }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     } else if (action === "suscription_plan") {
       await assertSuperAdmin(user);
       return await getSuscriptionPlan(fac("produccion"));
@@ -532,11 +555,10 @@ async function timbrar(supabase: any, userId: string, body: any) {
     const pdfBytes = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
     const pdfPath = `cfdis/${empresa_id}/${facturamaId}_${timestamp}.pdf`;
     const { error: pdfErr } = await supabase.storage
-      .from("empresa-assets")
+      .from(BUCKET_CFDI)
       .upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: true });
     if (!pdfErr) {
-      const { data: urlData } = supabase.storage.from("empresa-assets").getPublicUrl(pdfPath);
-      pdfUrl = urlData?.publicUrl;
+      pdfUrl = archivoRef(pdfPath);
     }
   }
 
@@ -544,11 +566,10 @@ async function timbrar(supabase: any, userId: string, body: any) {
     const xmlBytes = new TextEncoder().encode(atob(xmlBase64));
     const xmlPath = `cfdis/${empresa_id}/${facturamaId}_${timestamp}.xml`;
     const { error: xmlErr } = await supabase.storage
-      .from("empresa-assets")
+      .from(BUCKET_CFDI)
       .upload(xmlPath, xmlBytes, { contentType: "application/xml", upsert: true });
     if (!xmlErr) {
-      const { data: urlData } = supabase.storage.from("empresa-assets").getPublicUrl(xmlPath);
-      xmlUrl = urlData?.publicUrl;
+      xmlUrl = archivoRef(xmlPath);
     }
   }
 
@@ -919,8 +940,8 @@ async function timbrarPago(supabase: any, userId: string, body: any) {
         if (pdfData.Content) {
           const pdfBytes = Uint8Array.from(atob(pdfData.Content), c => c.charCodeAt(0));
           const pdfPath = `cfdis/${empresa_id}/REP_${facturamaId}_${timestamp}.pdf`;
-          await supabase.storage.from("empresa-assets").upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: true });
-          pdfUrl = supabase.storage.from("empresa-assets").getPublicUrl(pdfPath).data?.publicUrl;
+          await supabase.storage.from(BUCKET_CFDI).upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: true });
+          pdfUrl = archivoRef(pdfPath);
         }
       }
     } catch (e) { console.error("PDF REP:", e); }
@@ -931,8 +952,8 @@ async function timbrarPago(supabase: any, userId: string, body: any) {
         if (xmlData.Content) {
           const xmlBytes = new TextEncoder().encode(atob(xmlData.Content));
           const xmlPath = `cfdis/${empresa_id}/REP_${facturamaId}_${timestamp}.xml`;
-          await supabase.storage.from("empresa-assets").upload(xmlPath, xmlBytes, { contentType: "application/xml", upsert: true });
-          xmlUrl = supabase.storage.from("empresa-assets").getPublicUrl(xmlPath).data?.publicUrl;
+          await supabase.storage.from(BUCKET_CFDI).upload(xmlPath, xmlBytes, { contentType: "application/xml", upsert: true });
+          xmlUrl = archivoRef(xmlPath);
         }
       }
     } catch (e) { console.error("XML REP:", e); }
@@ -1103,8 +1124,8 @@ async function timbrarGlobal(supabase: any, userId: string, body: any) {
         if (pdfData.Content) {
           const bytes = Uint8Array.from(atob(pdfData.Content), c => c.charCodeAt(0));
           const path = `cfdis/${empresa_id}/GLOBAL_${facturamaId}_${timestamp}.pdf`;
-          await supabase.storage.from("empresa-assets").upload(path, bytes, { contentType: "application/pdf", upsert: true });
-          pdfUrl = supabase.storage.from("empresa-assets").getPublicUrl(path).data?.publicUrl;
+          await supabase.storage.from(BUCKET_CFDI).upload(path, bytes, { contentType: "application/pdf", upsert: true });
+          pdfUrl = archivoRef(path);
         }
       }
     } catch (e) { console.error(e); }
@@ -1115,8 +1136,8 @@ async function timbrarGlobal(supabase: any, userId: string, body: any) {
         if (xmlData.Content) {
           const bytes = new TextEncoder().encode(atob(xmlData.Content));
           const path = `cfdis/${empresa_id}/GLOBAL_${facturamaId}_${timestamp}.xml`;
-          await supabase.storage.from("empresa-assets").upload(path, bytes, { contentType: "application/xml", upsert: true });
-          xmlUrl = supabase.storage.from("empresa-assets").getPublicUrl(path).data?.publicUrl;
+          await supabase.storage.from(BUCKET_CFDI).upload(path, bytes, { contentType: "application/xml", upsert: true });
+          xmlUrl = archivoRef(path);
         }
       }
     } catch (e) { console.error(e); }
@@ -1273,8 +1294,8 @@ async function enviarCorreo(supabase: any, body: any) {
       serie: cfdi.serie || "",
       uuid: cfdi.folio_fiscal || "",
       total: cfdi.total,
-      pdfUrl: cfdi.pdf_url || "",
-      xmlUrl: cfdi.xml_url || "",
+      pdfUrl: (await urlFirmada(getServiceSupabase(), cfdi.pdf_url, 7 * 24 * 3600)) || "",
+      xmlUrl: (await urlFirmada(getServiceSupabase(), cfdi.xml_url, 7 * 24 * 3600)) || "",
       mensaje: mensaje || "",
       emailCc: email_cc || "",
     },
