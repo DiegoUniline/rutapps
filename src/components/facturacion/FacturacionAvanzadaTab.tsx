@@ -31,12 +31,44 @@ export default function FacturacionAvanzadaTab() {
 
 
 // ============================================================
-// 1. COMPLEMENTOS DE PAGO (REP)
+// 1. COMPLEMENTOS DE PAGO (REP, D-015)
+// Lista de cobros pendientes de complemento (fecha límite día 5 del mes siguiente) y los REP emitidos.
+// El servidor calcula parcialidad, saldos e impuestos de cada factura pagada.
 // ============================================================
+async function invocarFacturama(body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke('facturama', { body });
+  if (error) {
+    let msg = error.message;
+    try { const b = await (error as any).context?.json?.(); if (b?.error) msg = b.error; } catch { /* sin cuerpo */ }
+    throw new Error(msg);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+const REP_STATUS: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  timbrado: { label: 'Timbrado', variant: 'default' },
+  timbrando: { label: 'Timbrando', variant: 'secondary' },
+  incierto: { label: 'Timbrado incierto', variant: 'destructive' },
+  error: { label: 'Error', variant: 'destructive' },
+  cancelado: { label: 'Cancelado', variant: 'outline' },
+  cancelacion_pendiente: { label: 'Cancel. pendiente', variant: 'secondary' },
+  cancelacion_rechazada: { label: 'Cancel. rechazada', variant: 'destructive' },
+};
+
 export function ComplementosPagoSection() {
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
-  const [showDialog, setShowDialog] = useState(false);
+  const qc = useQueryClient();
+  const [cobroId, setCobroId] = useState<string | null>(null);
+  const [accion, setAccion] = useState<string | null>(null);
+  const hoy = format(new Date(), 'yyyy-MM-dd');
+
+  const { data: pendientes, isLoading: cargandoPend } = useQuery({
+    queryKey: ['rep-pendientes', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => (await invocarFacturama({ action: 'rep_pendientes', empresa_id: empresa!.id })).pendientes as any[],
+  });
 
   const { data: pagos, isLoading } = useQuery({
     queryKey: ['cfdi_pagos', empresa?.id],
@@ -52,197 +84,224 @@ export function ComplementosPagoSection() {
     },
   });
 
+  const refrescar = () => {
+    qc.invalidateQueries({ queryKey: ['rep-pendientes'] });
+    qc.invalidateQueries({ queryKey: ['cfdi_pagos'] });
+  };
+
+  async function reconciliarRep(id: string) {
+    setAccion(id);
+    try {
+      const r = await invocarFacturama({ action: 'reconciliar', tabla: 'cfdi_pagos', id });
+      toast.success(r.resultado === 'ligado' ? 'Complemento encontrado en Facturama y ligado' : 'No se timbró: el cobro vuelve a pendientes');
+      refrescar();
+    } catch (e: any) { toast.error(e.message); } finally { setAccion(null); }
+  }
+
+  async function cancelarRep(id: string) {
+    if (!confirm('¿Cancelar este complemento de pago ante el SAT (motivo 02)? El cobro se podrá volver a editar.')) return;
+    setAccion(id);
+    try {
+      const r = await invocarFacturama({ action: 'cancelar', tabla: 'cfdi_pagos', id, motivo: '02' });
+      toast.success(r.message || 'Cancelación procesada');
+      refrescar();
+    } catch (e: any) { toast.error(e.message); } finally { setAccion(null); }
+  }
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Complementos de Pago (REP / Pago 2.0)</CardTitle>
-        <Button size="sm" onClick={() => setShowDialog(true)}>
-          <Receipt className="h-4 w-4 mr-1.5" />Nuevo complemento
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
-        ) : !pagos?.length ? (
-          <p className="text-center text-sm text-muted-foreground py-8">
-            No hay complementos de pago emitidos. Crea uno cuando recibas un cobro de una factura PPD.
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Folio</TableHead>
-                <TableHead>Fecha pago</TableHead>
-                <TableHead>Monto</TableHead>
-                <TableHead>Forma</TableHead>
-                <TableHead>UUID</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Archivos</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pagos.map((p: any) => (
-                <TableRow key={p.id}>
-                  <TableCell>{p.serie}-{p.folio}</TableCell>
-                  <TableCell>{format(new Date(p.fecha_pago), 'dd/MM/yyyy HH:mm')}</TableCell>
-                  <TableCell>{fmt(p.monto)}</TableCell>
-                  <TableCell>{p.forma_pago}</TableCell>
-                  <TableCell className="text-[10px] font-mono">{p.folio_fiscal?.slice(0, 13)}…</TableCell>
-                  <TableCell><Badge variant={p.status === 'timbrado' ? 'default' : 'destructive'}>{p.status}</Badge></TableCell>
-                  <TableCell className="flex gap-1">
-                    {p.pdf_url && <Button size="sm" variant="ghost" onClick={(e) => abrirArchivoCfdi(e, 'cfdi_pagos', p.id, 'pdf', p.pdf_url)}>PDF</Button>}
-                    {p.xml_url && <Button size="sm" variant="ghost" onClick={(e) => abrirArchivoCfdi(e, 'cfdi_pagos', p.id, 'xml', p.xml_url)}>XML</Button>}
-                  </TableCell>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader><CardTitle>Cobros pendientes de complemento</CardTitle></CardHeader>
+        <CardContent>
+          {cargandoPend ? (
+            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin" /></div>
+          ) : !pendientes?.length ? (
+            <p className="text-center text-sm text-muted-foreground py-6">No hay cobros de facturas PPD pendientes de complemento.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha cobro</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead className="text-right">Cobro</TableHead>
+                  <TableHead>Fecha límite</TableHead>
+                  <TableHead />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-      {showDialog && <ComplementoPagoDialog open={showDialog} onClose={() => setShowDialog(false)} />}
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {pendientes.map((p: any) => (
+                  <TableRow key={p.cobro_id}>
+                    <TableCell>{p.fecha}</TableCell>
+                    <TableCell className="truncate max-w-[200px]">{p.cliente || '—'}</TableCell>
+                    <TableCell className="text-right">{fmt(p.monto)}</TableCell>
+                    <TableCell className={p.fecha_limite < hoy ? 'text-destructive font-medium' : ''}>{p.fecha_limite}</TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" onClick={() => setCobroId(p.cobro_id)}><Receipt className="h-4 w-4 mr-1.5" />Timbrar</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Complementos emitidos</CardTitle></CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          ) : !pagos?.length ? (
+            <p className="text-center text-sm text-muted-foreground py-8">Aún no hay complementos de pago.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Folio</TableHead>
+                  <TableHead>Fecha pago</TableHead>
+                  <TableHead>Monto</TableHead>
+                  <TableHead>Forma</TableHead>
+                  <TableHead>UUID</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pagos.map((p: any) => {
+                  const st = REP_STATUS[p.status] ?? { label: p.status, variant: 'secondary' as const };
+                  return (
+                    <TableRow key={p.id}>
+                      <TableCell>{p.serie}-{p.folio}</TableCell>
+                      <TableCell>{p.fecha_pago ? String(p.fecha_pago).slice(0, 10) : '—'}</TableCell>
+                      <TableCell>{fmt(p.monto)}</TableCell>
+                      <TableCell>{p.forma_pago}</TableCell>
+                      <TableCell className="text-[10px] font-mono">{p.folio_fiscal ? `${p.folio_fiscal.slice(0, 13)}…` : '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant={st.variant}>{st.label}</Badge>
+                        {p.status === 'error' && p.error_detalle && <p className="text-[10px] text-destructive mt-0.5 max-w-[220px] truncate" title={p.error_detalle}>{p.error_detalle}</p>}
+                      </TableCell>
+                      <TableCell className="flex gap-1 flex-wrap">
+                        {p.pdf_url && <Button size="sm" variant="ghost" onClick={(e) => abrirArchivoCfdi(e, 'cfdi_pagos', p.id, 'pdf', p.pdf_url)}>PDF</Button>}
+                        {p.xml_url && <Button size="sm" variant="ghost" onClick={(e) => abrirArchivoCfdi(e, 'cfdi_pagos', p.id, 'xml', p.xml_url)}>XML</Button>}
+                        {(p.status === 'incierto' || p.status === 'timbrando') && (
+                          <Button size="sm" variant="outline" disabled={accion === p.id} onClick={() => reconciliarRep(p.id)}>Reconciliar</Button>
+                        )}
+                        {['timbrado', 'cancelacion_rechazada'].includes(p.status) && (
+                          <Button size="sm" variant="ghost" className="text-destructive" disabled={accion === p.id} onClick={() => cancelarRep(p.id)}>Cancelar</Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+      {cobroId && <TimbrarRepDialog cobroId={cobroId} onClose={() => setCobroId(null)} onDone={refrescar} />}
+    </div>
   );
 }
 
-function ComplementoPagoDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { empresa, user } = useAuth();
+function TimbrarRepDialog({ cobroId, onClose, onDone }: { cobroId: string; onClose: () => void; onDone: () => void }) {
+  const { empresa } = useAuth();
   const { fmt } = useCurrency();
-  const qc = useQueryClient();
-  const [cobroId, setCobroId] = useState<string>('');
-  const [fechaPago, setFechaPago] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
-  const [formaPago, setFormaPago] = useState('03');
-  const [numOperacion, setNumOperacion] = useState('');
+  const [formaPago, setFormaPago] = useState<string>('');
+  const [timbrando, setTimbrando] = useState(false);
 
-  // Lista de cobros PPD pendientes de timbrar REP
-  const { data: cobros } = useQuery({
-    queryKey: ['cobros-ppd', empresa?.id],
-    enabled: !!empresa?.id && open,
+  const { data: formas } = useQuery({
+    queryKey: ['cat_forma_pago_active'],
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cobros')
-        .select('id, fecha, monto, metodo_pago, ventas:venta_id(id, folio, total, factura_cfdi_id, cfdis:factura_cfdi_id(id, folio_fiscal, folio, serie, payment_method, currency, status, total, receiver_rfc, receiver_name, receiver_fiscal_regime, receiver_tax_zip_code))')
-        .eq('empresa_id', empresa!.id)
-        .order('fecha', { ascending: false })
-        .limit(200);
-      if (error) throw error;
-      return ((data as any[]) || []).filter((c: any) => c.ventas?.cfdis?.payment_method === 'PPD' && c.ventas?.cfdis?.status === 'timbrado');
+      const { data } = await supabase.from('cat_forma_pago').select('clave, descripcion').eq('activo', true).order('clave');
+      return (data || []).filter((f: any) => f.clave !== '99');
     },
   });
 
-  const selectedCobro = useMemo(() => cobros?.find((c: any) => c.id === cobroId), [cobros, cobroId]);
+  const { data: prep, isFetching } = useQuery({
+    queryKey: ['rep-preparar', cobroId, formaPago],
+    enabled: !!empresa?.id,
+    queryFn: async () => invocarFacturama({ action: 'rep_preparar', empresa_id: empresa!.id, cobro_id: cobroId, forma_pago: formaPago || undefined }),
+  });
 
-  const mutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedCobro) throw new Error('Selecciona un cobro');
-      const cfdi = selectedCobro.ventas.cfdis;
-      const body = {
-        action: 'timbrar_pago',
-        empresa_id: empresa!.id,
-        cobro_id: selectedCobro.id,
-        issuer: {
-          fiscal_regime: empresa!.regimen_fiscal,
-          rfc: empresa!.rfc,
-          name: empresa!.razon_social,
-        },
-        expedition_place: (empresa as any).cp,
-        fecha_pago: new Date(fechaPago).toISOString(),
-        forma_pago: formaPago,
-        moneda: cfdi.currency || 'MXN',
-        tipo_cambio: 1,
-        monto: selectedCobro.monto,
-        num_operacion: numOperacion || undefined,
-        receiver: {
-          rfc: cfdi.receiver_rfc,
-          name: cfdi.receiver_name,
-          fiscal_regime: cfdi.receiver_fiscal_regime,
-          tax_zip_code: cfdi.receiver_tax_zip_code,
-        },
-        related_docs: [{
-          cfdi_id: cfdi.id,
-          venta_id: selectedCobro.ventas.id,
-          cfdi_relacionado_uuid: cfdi.folio_fiscal,
-          serie_dr: cfdi.serie,
-          folio_dr: cfdi.folio,
-          moneda_dr: cfdi.currency || 'MXN',
-          tipo_cambio_dr: 1,
-          num_parcialidad: 1,
-          imp_saldo_ant: cfdi.total,
-          imp_pagado: selectedCobro.monto,
-          imp_saldo_insoluto: Math.max(0, Number(cfdi.total) - Number(selectedCobro.monto)),
-          metodo_pago_dr: 'PPD',
-          objeto_imp_dr: '02',
-        }],
-      };
-      const { data, error } = await supabase.functions.invoke('facturama', { body });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
-    onSuccess: () => {
-      toast.success('Complemento de pago timbrado ✓');
-      qc.invalidateQueries({ queryKey: ['cfdi_pagos'] });
+  async function timbrar() {
+    setTimbrando(true);
+    try {
+      const r = await invocarFacturama({ action: 'timbrar_rep', empresa_id: empresa!.id, cobro_id: cobroId, forma_pago: prep?.forma_pago });
+      toast.success(`Complemento timbrado · UUID ${String(r.folio_fiscal || '').slice(0, 8)}…`);
+      onDone();
       onClose();
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
+    } catch (e: any) {
+      toast.error(e.message);
+      onDone();
+    } finally {
+      setTimbrando(false);
+    }
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Nuevo Complemento de Pago</DialogTitle>
-          <DialogDescription>Selecciona un cobro asociado a una factura PPD para emitir el REP.</DialogDescription>
+          <DialogTitle>Complemento de pago</DialogTitle>
+          <DialogDescription>
+            {prep?.cobro ? `Cobro del ${prep.cobro.fecha} · ${prep.cobro.cliente || ''} · ${fmt(prep.cobro.monto)} (${prep.cobro.metodo_pago})` : 'Calculando…'}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div>
-            <Label>Cobro a complementar</Label>
-            <Select value={cobroId} onValueChange={setCobroId}>
-              <SelectTrigger><SelectValue placeholder="Selecciona un cobro PPD…" /></SelectTrigger>
-              <SelectContent>
-                {(cobros || []).map((c: any) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {format(new Date(c.fecha), 'dd/MM/yy')} · {fmt(c.monto)} · Folio {c.ventas?.folio} · UUID {c.ventas?.cfdis?.folio_fiscal?.slice(0,8)}…
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Fecha de pago</Label>
-              <Input type="datetime-local" value={fechaPago} onChange={e => setFechaPago(e.target.value)} />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label>Forma de pago</Label>
-              <Select value={formaPago} onValueChange={setFormaPago}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={formaPago || prep?.forma_pago || ''} onValueChange={setFormaPago}>
+                <SelectTrigger><SelectValue placeholder="Elige la forma de pago" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="01">01 - Efectivo</SelectItem>
-                  <SelectItem value="02">02 - Cheque nominativo</SelectItem>
-                  <SelectItem value="03">03 - Transferencia electrónica</SelectItem>
-                  <SelectItem value="04">04 - Tarjeta de crédito</SelectItem>
-                  <SelectItem value="28">28 - Tarjeta de débito</SelectItem>
+                  {(formas || []).map((f: any) => <SelectItem key={f.clave} value={f.clave}>{f.clave} - {f.descripcion}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div>
-            <Label>No. de operación (opcional)</Label>
-            <Input value={numOperacion} onChange={e => setNumOperacion(e.target.value)} placeholder="Referencia bancaria" />
-          </div>
-          {selectedCobro && (
-            <div className="rounded-md border p-3 text-sm bg-muted/30">
-              <div>Factura UUID: <span className="font-mono text-xs">{selectedCobro.ventas?.cfdis?.folio_fiscal}</span></div>
-              <div>Total factura: {fmt(selectedCobro.ventas?.cfdis?.total)}</div>
-              <div>Monto a aplicar: {fmt(selectedCobro.monto)}</div>
+            <div>
+              <Label>Monto del complemento</Label>
+              <Input value={prep ? fmt(prep.monto) : ''} readOnly className="bg-muted/40" />
             </div>
-          )}
+          </div>
+          {isFetching && !prep ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
+          ) : prep?.documentos?.length ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Factura</TableHead>
+                  <TableHead className="text-right">Parc.</TableHead>
+                  <TableHead className="text-right">Saldo ant.</TableHead>
+                  <TableHead className="text-right">Pagado</TableHead>
+                  <TableHead className="text-right">Saldo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {prep.documentos.map((d: any) => (
+                  <TableRow key={d.cfdi_id}>
+                    <TableCell className="font-mono text-xs">{d.serie ? `${d.serie}-` : ''}{d.folio || d.uuid?.slice(0, 8)}</TableCell>
+                    <TableCell className="text-right">{d.num_parcialidad}</TableCell>
+                    <TableCell className="text-right">{fmt(d.imp_saldo_ant)}</TableCell>
+                    <TableCell className="text-right font-medium">{fmt(d.imp_pagado)}</TableCell>
+                    <TableCell className="text-right">{fmt(d.imp_saldo_insoluto)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : null}
+          {prep?.errores?.length ? (
+            <ul className="text-xs text-destructive list-disc pl-5 space-y-0.5">
+              {prep.errores.map((e: string, i: number) => <li key={i}>{e}</li>)}
+            </ul>
+          ) : null}
+          <p className="text-[11px] text-muted-foreground">Fecha límite para emitirlo: {prep?.fecha_limite ?? '—'}. Mientras el complemento esté vigente, el cobro no se puede editar ni cancelar.</p>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => mutation.mutate()} disabled={!cobroId || mutation.isPending}>
-            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Receipt className="h-4 w-4 mr-1.5" />}
-            Timbrar REP
+          <Button variant="outline" onClick={onClose} disabled={timbrando}>Cerrar</Button>
+          <Button onClick={timbrar} disabled={timbrando || isFetching || !prep || prep.errores?.length > 0}>
+            {timbrando ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Receipt className="h-4 w-4 mr-1.5" />}
+            Timbrar complemento
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -251,7 +310,7 @@ function ComplementoPagoDialog({ open, onClose }: { open: boolean; onClose: () =
 }
 
 // ============================================================
-// 2. FACTURA GLOBAL
+// 2. FACTURA GLOBAL (público en general, D-015): ventas elegidas a mano, sin ninguna factura.
 // ============================================================
 export function FacturaGlobalSection() {
   const { empresa } = useAuth();
@@ -261,83 +320,74 @@ export function FacturaGlobalSection() {
   const [periodicidad, setPeriodicidad] = useState('04'); // mensual
   const [year, setYear] = useState(String(today.getFullYear()));
   const [mes, setMes] = useState(String(today.getMonth() + 1).padStart(2, '0'));
+  const [formaPago, setFormaPago] = useState('01');
   const [fechaInicio, setFechaInicio] = useState(format(new Date(today.getFullYear(), today.getMonth(), 1), 'yyyy-MM-dd'));
   const [fechaFin, setFechaFin] = useState(format(new Date(today.getFullYear(), today.getMonth() + 1, 0), 'yyyy-MM-dd'));
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
 
-  // Ventas POS sin cliente fiscal y no facturadas global
+  const meses = periodicidad === '05'
+    ? ['13', '14', '15', '16', '17', '18']
+    : Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+
+  const { data: formas } = useQuery({
+    queryKey: ['cat_forma_pago_active'],
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase.from('cat_forma_pago').select('clave, descripcion').eq('activo', true).order('clave');
+      return (data || []).filter((f: any) => f.clave !== '99');
+    },
+  });
+
+  // Ventas del periodo sin ninguna factura (ninguna línea en factura vigente, en proceso o global).
   const { data: ventas, isLoading } = useQuery({
     queryKey: ['ventas-global', empresa?.id, fechaInicio, fechaFin],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, subtotal, iva, ieps, cliente_id, venta_lineas(id, facturado_global)')
+        .select('id, folio, fecha, total, clientes(nombre), venta_lineas(id, facturado, facturado_global, factura_cfdi_id)')
         .eq('empresa_id', empresa!.id)
         .gte('fecha', fechaInicio)
         .lte('fecha', fechaFin + 'T23:59:59')
-        .in("status", ["entregado","facturado","confirmado"] as any)
-        .order('fecha', { ascending: true });
+        .in('status', ['entregado', 'facturado', 'confirmado'] as any)
+        .order('fecha', { ascending: true })
+        .limit(1000);
       if (error) throw error;
-      return (data || []).filter((v: any) => v.venta_lineas?.every((l: any) => !l.facturado_global));
+      return (data || []).filter((v: any) => (v.venta_lineas || []).length > 0
+        && v.venta_lineas.every((l: any) => !l.facturado && !l.facturado_global && !l.factura_cfdi_id));
     },
   });
 
-  const total = (ventas || []).reduce((s: number, v: any) => s + Number(v.total || 0), 0);
+  const elegidas = (ventas || []).filter((v: any) => seleccion.has(v.id));
+  const total = elegidas.reduce((s: number, v: any) => s + Number(v.total || 0), 0);
+  const toggle = (id: string) => setSeleccion(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleTodas = () => setSeleccion(prev => prev.size === (ventas || []).length ? new Set() : new Set((ventas || []).map((v: any) => v.id)));
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!ventas?.length) throw new Error('No hay ventas para facturar');
-      const body = {
-        action: 'timbrar_global',
-        empresa_id: empresa!.id,
-        issuer: {
-          fiscal_regime: empresa!.regimen_fiscal,
-          rfc: empresa!.rfc,
-          name: empresa!.razon_social,
-        },
-        expedition_place: (empresa as any).cp,
-        periodicidad,
-        meses: mes,
-        year,
-        fecha_inicio: fechaInicio,
-        fecha_fin: fechaFin,
-        payment_form: '01',
-        venta_lines: ventas.map((v: any) => ({
-          venta_id: v.id,
-          folio: v.folio,
-          subtotal: Number(v.subtotal || v.total),
-          iva: Number(v.iva || 0),
-          ieps: Number(v.ieps || 0),
-          total: Number(v.total),
-          descripcion: `Venta folio ${v.folio} del ${format(new Date(v.fecha), 'dd/MM/yyyy')}`,
-          product_code: '01010101',
-          unit: 'Actividad',
-          unit_code: 'ACT',
-          iva_rate: Number(v.iva || 0) > 0 ? 0.16 : 0,
-          ieps_rate: 0,
-        })),
-      };
-      const { data, error } = await supabase.functions.invoke('facturama', { body });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
+      if (!elegidas.length) throw new Error('Elige las ventas de la factura global');
+      return invocarFacturama({
+        action: 'timbrar_global', empresa_id: empresa!.id, venta_ids: elegidas.map((v: any) => v.id),
+        periodicidad, meses: mes, anio: Number(year), payment_form: formaPago,
+      });
     },
-    onSuccess: () => {
-      toast.success('Factura global timbrada ✓');
+    onSuccess: (r: any) => {
+      toast.success(`Factura global timbrada · UUID ${String(r.folio_fiscal || '').slice(0, 8)}…`);
+      setSeleccion(new Set());
       qc.invalidateQueries({ queryKey: ['ventas-global'] });
       qc.invalidateQueries({ queryKey: ['cfdis'] });
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => { toast.error(e.message); qc.invalidateQueries({ queryKey: ['cfdis'] }); },
   });
 
   return (
     <Card>
       <CardHeader><CardTitle>Factura Global de Público en General</CardTitle></CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
           <div>
             <Label>Periodicidad</Label>
-            <Select value={periodicidad} onValueChange={setPeriodicidad}>
+            <Select value={periodicidad} onValueChange={(v) => { setPeriodicidad(v); setMes(v === '05' ? '13' : String(today.getMonth() + 1).padStart(2, '0')); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="01">01 - Diario</SelectItem>
@@ -353,55 +403,72 @@ export function FacturaGlobalSection() {
             <Select value={mes} onValueChange={setMes}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
+                {meses.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label>Año</Label>
-            <Input value={year} onChange={e => setYear(e.target.value)} />
+            <Input value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} />
+          </div>
+          <div>
+            <Label>Forma de pago</Label>
+            <Select value={formaPago} onValueChange={setFormaPago}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(formas || []).map((f: any) => <SelectItem key={f.clave} value={f.clave}>{f.clave} - {f.descripcion}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div className="col-span-2">
             <Label>Rango de fechas</Label>
-            <DateRangePicker from={fechaInicio} to={fechaFin} onChange={(f, t) => { setFechaInicio(f); setFechaFin(t); }} />
+            <DateRangePicker from={fechaInicio} to={fechaFin} onChange={(f, t) => { setFechaInicio(f); setFechaFin(t); setSeleccion(new Set()); }} />
           </div>
         </div>
-        <div className="flex items-center justify-between p-3 rounded-md border bg-muted/30">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-md border bg-muted/30">
           <div>
-            <div className="text-sm font-medium">{ventas?.length || 0} ventas en el periodo</div>
+            <div className="text-sm font-medium">{elegidas.length} de {ventas?.length || 0} ventas sin factura elegidas</div>
             <div className="text-xs text-muted-foreground">Total: {fmt(total)}</div>
           </div>
-          <Button onClick={() => mutation.mutate()} disabled={!ventas?.length || mutation.isPending}>
+          <Button onClick={() => mutation.mutate()} disabled={!elegidas.length || mutation.isPending}>
             {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Users className="h-4 w-4 mr-1.5" />}
-            Generar Factura Global
+            Timbrar factura global
           </Button>
         </div>
         {isLoading ? (
           <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
         ) : ventas?.length ? (
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">
+                    <input type="checkbox" aria-label="Elegir todas" checked={seleccion.size > 0 && seleccion.size === ventas.length} onChange={toggleTodas} />
+                  </TableHead>
                   <TableHead>Folio</TableHead>
                   <TableHead>Fecha</TableHead>
+                  <TableHead>Cliente</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ventas.slice(0, 100).map((v: any) => (
-                  <TableRow key={v.id}>
+                {ventas.map((v: any) => (
+                  <TableRow key={v.id} className="cursor-pointer" onClick={() => toggle(v.id)}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <input type="checkbox" aria-label={`Elegir ${v.folio}`} checked={seleccion.has(v.id)} onChange={() => toggle(v.id)} />
+                    </TableCell>
                     <TableCell>{v.folio}</TableCell>
                     <TableCell>{format(new Date(v.fecha), 'dd/MM/yyyy')}</TableCell>
+                    <TableCell className="truncate max-w-[200px]">{v.clientes?.nombre || '—'}</TableCell>
                     <TableCell className="text-right">{fmt(v.total)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
-        ) : null}
+        ) : (
+          <p className="text-center text-sm text-muted-foreground py-4">No hay ventas sin factura en el periodo.</p>
+        )}
       </CardContent>
     </Card>
   );
@@ -649,7 +716,7 @@ export function ValidarRfcSection() {
 }
 
 // ============================================================
-// 6. SUSTITUIR CFDI (placeholder UI - requiere wizard completo)
+// 6. SUSTITUIR CFDI (D-015)
 // ============================================================
 export function SustituirCfdiSection() {
   return (
@@ -657,11 +724,12 @@ export function SustituirCfdiSection() {
       <CardHeader><CardTitle>Sustituir CFDI</CardTitle></CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          La sustitución guiada (cancelar y re-timbrar con relación 04) se invoca desde la fila del CFDI en la pestaña <strong>Facturas</strong>. Al cancelar con motivo <strong>01</strong> el sistema solicitará los datos del CFDI sustituto, lo timbrará y enviará la cancelación con el folio nuevo automáticamente.
+          Abre la factura timbrada y usa <strong>Sustituir</strong>. Se crea un borrador con las mismas cantidades; corrígelo y tímbralo.
+          Al timbrarse se relaciona con la original (tipo 04) y la original se cancela con motivo <strong>01</strong>.
         </p>
         <p className="text-xs text-muted-foreground mt-3">
           <FileSearch className="inline h-3.5 w-3.5 mr-1" />
-          Edge function: <code>action: "sustituir"</code> con <code>original_uuid</code>, <code>rfc_emisor</code> y <code>new_invoice</code>.
+          Mientras la cancelación de la original no se confirme, ambas aparecen en la venta.
         </p>
       </CardContent>
     </Card>
