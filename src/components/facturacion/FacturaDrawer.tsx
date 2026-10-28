@@ -28,7 +28,8 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
 
-  const pendientes = useMemo(() => lineas.filter(l => l.producto_id && !l.facturado), [lineas]);
+  // Una línea con factura_cfdi_id sin facturar está en un timbrado en curso (D-014).
+  const pendientes = useMemo(() => lineas.filter(l => l.producto_id && !l.facturado && !l.factura_cfdi_id), [lineas]);
   const facturadas = useMemo(() => lineas.filter(l => l.producto_id && l.facturado), [lineas]);
 
   // Initialize selection with all pending
@@ -90,25 +91,35 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
 
       if (cfdiErr) throw cfdiErr;
 
-      // Create CFDI lines
+      // Clave y unidad SAT reales del producto (la venta no las guarda).
+      const prodIds = Array.from(new Set(selectedLines.map(l => l.producto_id).filter(Boolean))) as string[];
+      const { data: prodSat, error: prodErr } = await supabase.from('productos')
+        .select('id, codigo_sat, unidades_sat(clave, nombre)').in('id', prodIds);
+      if (prodErr) throw prodErr;
+
+      // Create CFDI lines: precio sin impuestos antes del descuento + descuento en dinero (D-014)
       const cfdiLineas = selectedLines.map(l => {
         const prod = productosList?.find((p: any) => p.id === l.producto_id);
+        const sat: any = prodSat?.find((p: any) => p.id === l.producto_id);
+        const cant = Number(l.cantidad) || 0;
+        const sub = Number(l.subtotal) || 0;
         return {
           cfdi_id: cfdi.id,
           venta_linea_id: l.id,
           producto_id: l.producto_id,
           descripcion: prod?.nombre || l.descripcion || 'Producto',
           cantidad: l.cantidad,
-          precio_unitario: l.precio_unitario,
+          precio_unitario: cant > 0 && sub > 0 ? Math.round((sub / cant) * 1e6) / 1e6 : l.precio_unitario,
+          descuento: Math.round(sub * (Number(l.descuento_pct) || 0)) / 100,
           subtotal: l.subtotal ?? 0,
           iva_pct: l.iva_pct ?? 0,
           ieps_pct: l.ieps_pct ?? 0,
           iva_monto: l.iva_monto ?? 0,
           ieps_monto: l.ieps_monto ?? 0,
           total: l.total ?? 0,
-          product_code: prod?.codigo_sat || '01010101',
-          unit_code: 'H87',
-          unit_name: 'Pieza',
+          product_code: sat?.codigo_sat || prod?.codigo_sat || '',
+          unit_code: sat?.unidades_sat?.clave || '',
+          unit_name: sat?.unidades_sat?.nombre || '',
         };
       });
 

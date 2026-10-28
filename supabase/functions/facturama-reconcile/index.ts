@@ -70,6 +70,12 @@ async function reconcileCancellations(db: any) {
           cancel_status: upstream,
           updated_at: new Date().toISOString(),
         }).eq("id", row.id);
+        // Cancelado: la venta vuelve a quedar libre para facturarse (D-014).
+        if (mapped === "cancelado") {
+          const { error: vlErr } = await db.from("venta_lineas")
+            .update({ facturado: false, factura_cfdi_id: null }).eq("factura_cfdi_id", row.id);
+          if (vlErr) console.error("liberar venta del CFDI cancelado:", vlErr.message);
+        }
         updates.push({ id: row.id, ok: true, from: row.status, to: mapped });
       } else {
         updates.push({ id: row.id, ok: true, unchanged: true, upstream });

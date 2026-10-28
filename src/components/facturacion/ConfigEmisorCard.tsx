@@ -94,6 +94,40 @@ export function ConfigEmisorCard() {
     }
   }
 
+  // Serie y siguiente folio de las facturas (D-014). Si no hay fila, la primera factura usa A-1.
+  const { data: serieCfg, refetch: refetchSerie } = useQuery({
+    queryKey: ['cfdi-serie', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from('cfdi_series')
+        .select('serie, siguiente_folio').eq('empresa_id', empresa!.id).maybeSingle();
+      if (error) throw error;
+      return (data ?? { serie: 'A', siguiente_folio: 1 }) as { serie: string; siguiente_folio: number };
+    },
+  });
+  const [serieForm, setSerieForm] = useState<{ serie: string; siguiente_folio: string } | null>(null);
+  const [guardandoSerie, setGuardandoSerie] = useState(false);
+  async function guardarSerie() {
+    if (!empresa?.id || !serieForm) return;
+    setGuardandoSerie(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('facturama', {
+        body: { action: 'set_serie', empresa_id: empresa.id, serie: serieForm.serie, siguiente_folio: Number(serieForm.siguiente_folio) },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Serie ${data.serie}: la siguiente factura será ${data.serie}-${data.siguiente_folio}`);
+      setSerieForm(null);
+      refetchSerie();
+    } catch (err: any) {
+      let msg = err?.message || 'Error';
+      try { const b = await err?.context?.json?.(); if (b?.error) msg = b.error; } catch { /* sin cuerpo */ }
+      toast.error('No se pudo guardar la serie: ' + msg);
+    } finally {
+      setGuardandoSerie(false);
+    }
+  }
+
   useEffect(() => {
     if (empresa) {
       const initial = {
@@ -423,6 +457,30 @@ export function ConfigEmisorCard() {
               disabled={cambiandoAmbiente} onClick={() => cambiarAmbiente('sandbox')}>Prueba (sandbox)</Button>
             {facConfig?.facturama_ambiente === 'sandbox' && (
               <span className="text-xs text-amber-700">Las facturas de prueba no son válidas ante el SAT y no gastan timbres reales de Facturama.</span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Serie y folio:</span>
+            {serieForm ? (
+              <>
+                <Input value={serieForm.serie} onChange={e => setSerieForm({ ...serieForm, serie: e.target.value.toUpperCase() })}
+                  className="h-8 w-20 font-mono" maxLength={25} aria-label="Serie" />
+                <Input value={serieForm.siguiente_folio} onChange={e => setSerieForm({ ...serieForm, siguiente_folio: e.target.value.replace(/\D/g, '') })}
+                  className="h-8 w-28 font-mono" inputMode="numeric" aria-label="Siguiente folio" />
+                <Button size="sm" onClick={guardarSerie} disabled={guardandoSerie}>
+                  {guardandoSerie ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSerieForm(null)}>Cancelar</Button>
+              </>
+            ) : (
+              <>
+                <span className="font-mono">siguiente {serieCfg?.serie ?? 'A'}-{serieCfg?.siguiente_folio ?? 1}</span>
+                <Button size="sm" variant="outline"
+                  onClick={() => setSerieForm({ serie: serieCfg?.serie ?? 'A', siguiente_folio: String(serieCfg?.siguiente_folio ?? 1) })}>
+                  Cambiar
+                </Button>
+              </>
             )}
           </div>
 
