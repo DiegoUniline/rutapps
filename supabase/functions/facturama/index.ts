@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendAppEmail } from "../_shared/app-email.ts";
+import { validarCsd } from "../_shared/csd.ts";
 
 const SUPER_ADMIN_EMAILS = ["diego.leon@uniline.mx", "ventas@uniline.mx"];
 async function assertSuperAdmin(user: any) {
@@ -14,14 +15,82 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Use production API
-const FACTURAMA_API = "https://api.facturama.mx";
+// Ambiente Facturama POR EMPRESA (D-013): sandbox para pruebas sin gastar timbres
+// reales; cada CFDI guarda el ambiente con que se timbró.
+type Ambiente = "produccion" | "sandbox";
+type Fac = { api: string; auth: string; ambiente: Ambiente };
+function fac(ambiente?: string | null): Fac {
+  const amb: Ambiente = ambiente === "sandbox" ? "sandbox" : "produccion";
+  const user = Deno.env.get(amb === "sandbox" ? "FACTURAMA_SANDBOX_USERNAME" : "FACTURAMA_USERNAME");
+  const pass = Deno.env.get(amb === "sandbox" ? "FACTURAMA_SANDBOX_PASSWORD" : "FACTURAMA_PASSWORD");
+  if (!user || !pass) {
+    throw new Error(amb === "sandbox"
+      ? "Faltan las credenciales de Facturama sandbox (FACTURAMA_SANDBOX_USERNAME / FACTURAMA_SANDBOX_PASSWORD)"
+      : "Credenciales de Facturama no configuradas");
+  }
+  return {
+    api: amb === "sandbox" ? "https://apisandbox.facturama.mx" : "https://api.facturama.mx",
+    auth: "Basic " + btoa(`${user}:${pass}`),
+    ambiente: amb,
+  };
+}
 
-function getAuth() {
-  const user = Deno.env.get("FACTURAMA_USERNAME");
-  const pass = Deno.env.get("FACTURAMA_PASSWORD");
-  if (!user || !pass) throw new Error("Credenciales de Facturama no configuradas");
-  return "Basic " + btoa(`${user}:${pass}`);
+type Emisor = { empresa_id: string; rfc: string; name: string; fiscal_regime: string; cp: string; fac: Fac };
+/** Emisor SIEMPRE desde la BD (S-08): nunca se confía en el RFC/régimen que mande el navegador. */
+async function getEmisor(admin: any, empresaId: string, ambiente?: string | null): Promise<Emisor> {
+  const { data, error } = await admin.from("empresas")
+    .select("id, rfc, razon_social, regimen_fiscal, cp, facturama_ambiente")
+    .eq("id", empresaId).single();
+  if (error || !data) throw new Error("Empresa no encontrada");
+  const rfc = String(data.rfc || "").toUpperCase().trim();
+  if (!rfc || !data.razon_social || !data.regimen_fiscal || !data.cp) {
+    throw new Error("Completa los datos fiscales del emisor (RFC, razón social, régimen y CP) en Facturación › Configuración.");
+  }
+  return {
+    empresa_id: data.id, rfc, name: data.razon_social, fiscal_regime: data.regimen_fiscal, cp: data.cp,
+    fac: fac(ambiente ?? data.facturama_ambiente),
+  };
+}
+
+/** Empresa sobre la que opera el usuario: la del body (validada) o la de su perfil. */
+async function empresaDelUsuario(admin: any, userId: string, bodyEmpresaId?: string | null): Promise<string> {
+  if (bodyEmpresaId) { await assertEmpresaAccess(admin, userId, bodyEmpresaId); return bodyEmpresaId; }
+  const { data: prof } = await admin.from("profiles").select("empresa_id").eq("user_id", userId).single();
+  if (!prof?.empresa_id) throw new Error("Usuario sin empresa");
+  return prof.empresa_id;
+}
+
+async function assertPuedeConfigurar(admin: any, userId: string, empresaId: string) {
+  const { data, error } = await admin.rpc("puede_configurar_facturacion", { p_user_id: userId, p_empresa_id: empresaId });
+  if (error) throw new Error(`No se pudo validar el permiso: ${error.message}`);
+  if (!data) throw new Error("No tienes permiso para configurar la facturación (Facturación CFDI · editar).");
+}
+
+// XML/PDF en bucket PRIVADO (S-12). En pdf_url/xml_url se guarda "storage:<bucket>/<ruta>";
+// la app pide un enlace firmado temporal con la acción url_archivo.
+const BUCKET_CFDI = "cfdi-archivos";
+function archivoRef(path: string) { return `storage:${BUCKET_CFDI}/${path}`; }
+async function urlFirmada(admin: any, ref: string | null, segundos: number): Promise<string | null> {
+  if (!ref) return null;
+  if (!ref.startsWith("storage:")) return ref; // archivos viejos (bucket público)
+  const sinPrefijo = ref.slice("storage:".length);
+  const bucket = sinPrefijo.split("/")[0];
+  const path = sinPrefijo.slice(bucket.length + 1);
+  const { data, error } = await admin.storage.from(bucket).createSignedUrl(path, segundos);
+  if (error) throw new Error(`No se pudo generar el enlace del archivo: ${error.message}`);
+  return data?.signedUrl ?? null;
+}
+
+/** Pone en el body el emisor de la BD (pisa lo que haya mandado el navegador). */
+function conEmisor(body: any, emisor: Emisor) {
+  return {
+    ...body,
+    empresa_id: emisor.empresa_id,
+    issuer: { rfc: emisor.rfc, name: emisor.name, fiscal_regime: emisor.fiscal_regime },
+    expedition_place: emisor.cp,
+    rfc_emisor: emisor.rfc,
+    __fac: emisor.fac,
+  };
 }
 
 function getSupabase(authHeader: string) {
@@ -74,49 +143,69 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("No autenticado");
 
+    const admin = getServiceSupabase();
+
     if (action === "verificar_conexion") {
-      return await verificarConexion();
+      const empresaId = await empresaDelUsuario(admin, user.id, body.empresa_id);
+      const { data: emp } = await admin.from("empresas").select("facturama_ambiente").eq("id", empresaId).single();
+      return await verificarConexion(fac(emp?.facturama_ambiente));
     } else if (action === "list_csds") {
-      return await listCsds();
+      const empresaId = await empresaDelUsuario(admin, user.id, body.empresa_id);
+      return await listCsds(admin, empresaId);
     } else if (action === "upload_csd") {
-      return await uploadCsd(body);
+      const empresaId = await empresaDelUsuario(admin, user.id, body.empresa_id);
+      await assertPuedeConfigurar(admin, user.id, empresaId);
+      return await uploadCsd(admin, empresaId, body);
+    } else if (action === "set_ambiente") {
+      const empresaId = await empresaDelUsuario(admin, user.id, body.empresa_id);
+      await assertPuedeConfigurar(admin, user.id, empresaId);
+      return await setAmbiente(admin, empresaId, body.ambiente);
     } else if (action === "descargar") {
-      // Verify the cfdi belongs to caller's empresa
-      const admin = getServiceSupabase();
+      // El documento (factura o complemento) debe ser de la empresa del usuario;
+      // se descarga del mismo ambiente con que se timbró.
       const { data: prof } = await admin.from("profiles").select("empresa_id").eq("user_id", user.id).single();
       const { data: isSA } = await admin.rpc("is_super_admin", { p_user_id: user.id });
-      if (!isSA) {
-        const { data: cfdi } = await admin
-          .from("cfdis").select("empresa_id").eq("facturama_id", body.facturama_id).maybeSingle();
-        if (!cfdi || cfdi.empresa_id !== prof?.empresa_id) {
-          throw new Error("No autorizado");
-        }
-      }
-      return await descargar(body);
+      const { data: cfdi } = await admin.from("cfdis").select("empresa_id, facturama_ambiente").eq("facturama_id", body.facturama_id).maybeSingle();
+      const { data: pago } = cfdi ? { data: null } : await admin.from("cfdi_pagos").select("empresa_id, facturama_ambiente").eq("facturama_id", body.facturama_id).maybeSingle();
+      const doc = cfdi ?? pago;
+      if (!doc || (!isSA && doc.empresa_id !== prof?.empresa_id)) throw new Error("No autorizado");
+      return await descargar({ ...body, __fac: fac(doc.facturama_ambiente) });
+    } else if (action === "url_archivo") {
+      const tabla = body.tabla === "cfdi_pagos" ? "cfdi_pagos" : "cfdis";
+      const { data: doc } = await admin.from(tabla).select("empresa_id, pdf_url, xml_url").eq("id", body.id).maybeSingle();
+      if (!doc) throw new Error("Documento no encontrado");
+      await assertEmpresaAccess(admin, user.id, doc.empresa_id);
+      const url = await urlFirmada(admin, body.tipo === "xml" ? doc.xml_url : doc.pdf_url, 300);
+      if (!url) throw new Error("El documento no tiene archivo guardado");
+      return new Response(JSON.stringify({ url }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     } else if (action === "suscription_plan") {
-      return await getSuscriptionPlan();
+      await assertSuperAdmin(user);
+      return await getSuscriptionPlan(fac("produccion"));
     }
 
     if (action === "timbrar") {
-      await assertEmpresaAccess(getServiceSupabase(), user.id, body.empresa_id);
-      return await timbrar(supabase, user.id, body);
+      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      return await timbrar(admin, user.id, conEmisor(body, await getEmisor(admin, body.empresa_id)));
     } else if (action === "cancelar") {
-      return await cancelar(supabase, user.id, body);
+      return await cancelar(admin, user.id, body);
     } else if (action === "timbrar_pago") {
       await assertSuperAdmin(user);
-      await assertEmpresaAccess(getServiceSupabase(), user.id, body.empresa_id);
-      return await timbrarPago(supabase, user.id, body);
+      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      return await timbrarPago(admin, user.id, conEmisor(body, await getEmisor(admin, body.empresa_id)));
     } else if (action === "timbrar_global") {
       await assertSuperAdmin(user);
-      await assertEmpresaAccess(getServiceSupabase(), user.id, body.empresa_id);
-      return await timbrarGlobal(supabase, user.id, body);
+      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      return await timbrarGlobal(admin, user.id, conEmisor(body, await getEmisor(admin, body.empresa_id)));
     } else if (action === "validar_rfc") {
       await assertSuperAdmin(user);
-      return await validarRfc(body);
+      const empresaId = await empresaDelUsuario(admin, user.id, body.empresa_id);
+      const { data: emp } = await admin.from("empresas").select("facturama_ambiente").eq("id", empresaId).single();
+      return await validarRfc({ ...body, __fac: fac(emp?.facturama_ambiente) });
     } else if (action === "sustituir") {
       await assertSuperAdmin(user);
-      await assertEmpresaAccess(getServiceSupabase(), user.id, body.empresa_id);
-      return await sustituir(supabase, user.id, body);
+      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      const emisor = await getEmisor(admin, body.empresa_id);
+      return await sustituir(admin, user.id, { ...conEmisor(body, emisor), new_invoice: conEmisor(body.new_invoice ?? {}, emisor) });
     } else if (action === "enviar_correo") {
       await assertSuperAdmin(user);
       return await enviarCorreo(supabase, body);
@@ -137,14 +226,13 @@ serve(async (req) => {
 // ========================================
 // VERIFICAR CONEXIÓN
 // ========================================
-async function verificarConexion() {
-  const auth = getAuth();
-  const res = await fetch(`${FACTURAMA_API}/api-lite/cfdis?page=1&size=1`, {
-    headers: { Authorization: auth },
+async function verificarConexion(fx: Fac) {
+  const res = await fetch(`${fx.api}/api-lite/cfdis?page=1&size=1`, {
+    headers: { Authorization: fx.auth },
   });
   const ok = res.status === 200;
   return new Response(
-    JSON.stringify({ ok, status: res.status }),
+    JSON.stringify({ ok, status: res.status, ambiente: fx.ambiente }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 }
@@ -152,25 +240,30 @@ async function verificarConexion() {
 // ========================================
 // UPLOAD CSD (Certificado de Sello Digital)
 // ========================================
-async function uploadCsd(body: any) {
-  const auth = getAuth();
-  const { rfc, certificate_base64, private_key_base64, password } = body;
-
-  if (!rfc || !certificate_base64 || !private_key_base64 || !password) {
-    throw new Error("Faltan campos: rfc, certificate_base64, private_key_base64, password");
+async function uploadCsd(admin: any, empresaId: string, body: any) {
+  const { certificate_base64, private_key_base64, password } = body;
+  if (!certificate_base64 || !private_key_base64 || !password) {
+    throw new Error("Faltan campos: certificate_base64, private_key_base64, password");
   }
+  // S-13: solo el CSD del RFC de la propia empresa.
+  const emisor = await getEmisor(admin, empresaId);
+  if (body.rfc && String(body.rfc).toUpperCase().trim() !== emisor.rfc) {
+    throw new Error(`El RFC capturado no coincide con el RFC de la empresa (${emisor.rfc}).`);
+  }
+  const { noCertificado, vence } = validarCsd(emisor.rfc, certificate_base64, private_key_base64, password);
+  const { api, auth } = emisor.fac;
 
   const payload = {
-    Rfc: rfc.toUpperCase().trim(),
+    Rfc: emisor.rfc,
     Certificate: certificate_base64,
     PrivateKey: private_key_base64,
     PrivateKeyPassword: password,
   };
 
-  console.log(`📤 Subiendo CSD para RFC: ${payload.Rfc}`);
+  console.log(`📤 Subiendo CSD para RFC: ${payload.Rfc} (${emisor.fac.ambiente})`);
 
   // Try POST first (new), if 409/conflict try PUT (update)
-  let response = await fetch(`${FACTURAMA_API}/api-lite/csds`, {
+  let response = await fetch(`${api}/api-lite/csds`, {
     method: "POST",
     headers: { Authorization: auth, "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -179,7 +272,7 @@ async function uploadCsd(body: any) {
   if (response.status === 409 || response.status === 400) {
     // CSD already exists, try update
     console.log("CSD ya existe, intentando actualizar...");
-    response = await fetch(`${FACTURAMA_API}/api-lite/csds/${encodeURIComponent(payload.Rfc)}`, {
+    response = await fetch(`${api}/api-lite/csds/${encodeURIComponent(payload.Rfc)}`, {
       method: "PUT",
       headers: { Authorization: auth, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -187,25 +280,29 @@ async function uploadCsd(body: any) {
   }
 
   const content = await response.text();
-  console.log(`📥 CSD response [${response.status}]:`, content);
+  console.log(`📥 CSD response [${response.status}]`);
 
   if (response.status !== 200 && response.status !== 201 && response.status !== 204) {
     throw new Error(`Error al subir CSD: ${content}`);
   }
 
+  const { error: updErr } = await admin.from("empresas")
+    .update({ csd_no_certificado: noCertificado, csd_vence: vence.toISOString() }).eq("id", empresaId);
+  if (updErr) console.error("No se guardó el número/vigencia del CSD:", updErr.message);
+
   return new Response(
-    JSON.stringify({ success: true, message: "CSD subido correctamente a Facturama" }),
+    JSON.stringify({ success: true, message: "CSD subido correctamente a Facturama", no_certificado: noCertificado, vence: vence.toISOString() }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 }
 
 // ========================================
-// LIST CSDs
+// LIST CSDs — solo el de la propia empresa (S-13)
 // ========================================
-async function listCsds() {
-  const auth = getAuth();
-  const res = await fetch(`${FACTURAMA_API}/api-lite/csds`, {
-    headers: { Authorization: auth },
+async function listCsds(admin: any, empresaId: string) {
+  const emisor = await getEmisor(admin, empresaId);
+  const res = await fetch(`${emisor.fac.api}/api-lite/csds`, {
+    headers: { Authorization: emisor.fac.auth },
   });
 
   if (!res.ok) {
@@ -214,17 +311,29 @@ async function listCsds() {
   }
 
   const data = await res.json();
+  const propios = (Array.isArray(data) ? data : []).filter((c: any) => String(c?.Rfc ?? "").toUpperCase().trim() === emisor.rfc);
   return new Response(
-    JSON.stringify({ csds: data }),
+    JSON.stringify({ csds: propios, ambiente: emisor.fac.ambiente }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
+}
+
+// ========================================
+// AMBIENTE (producción / sandbox) de la empresa
+// ========================================
+async function setAmbiente(admin: any, empresaId: string, ambiente: string) {
+  if (ambiente !== "produccion" && ambiente !== "sandbox") throw new Error("Ambiente inválido");
+  fac(ambiente); // falla claro si faltan las credenciales de ese ambiente
+  const { error } = await admin.from("empresas").update({ facturama_ambiente: ambiente }).eq("id", empresaId);
+  if (error) throw new Error(`No se pudo cambiar el ambiente: ${error.message}`);
+  return new Response(JSON.stringify({ success: true, ambiente }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
 // ========================================
 // TIMBRAR CFDI
 // ========================================
 async function timbrar(supabase: any, userId: string, body: any) {
-  const auth = getAuth();
+  const { auth, api: FACTURAMA_API, ambiente } = body.__fac as Fac;
   const serviceDb = getServiceSupabase();
   const { cfdi_id, venta_id, empresa_id, issuer, receiver, items, cfdi_type, currency, payment_form, payment_method, expedition_place, serie, name_id } = body;
 
@@ -386,6 +495,7 @@ async function timbrar(supabase: any, userId: string, body: any) {
     await supabase.from("cfdis").insert({
       empresa_id,
       venta_id: venta_id || null,
+      facturama_ambiente: ambiente,
       status: "error",
       error_detalle: content,
       total: r2(totalFactura),
@@ -445,11 +555,10 @@ async function timbrar(supabase: any, userId: string, body: any) {
     const pdfBytes = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
     const pdfPath = `cfdis/${empresa_id}/${facturamaId}_${timestamp}.pdf`;
     const { error: pdfErr } = await supabase.storage
-      .from("empresa-assets")
+      .from(BUCKET_CFDI)
       .upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: true });
     if (!pdfErr) {
-      const { data: urlData } = supabase.storage.from("empresa-assets").getPublicUrl(pdfPath);
-      pdfUrl = urlData?.publicUrl;
+      pdfUrl = archivoRef(pdfPath);
     }
   }
 
@@ -457,11 +566,10 @@ async function timbrar(supabase: any, userId: string, body: any) {
     const xmlBytes = new TextEncoder().encode(atob(xmlBase64));
     const xmlPath = `cfdis/${empresa_id}/${facturamaId}_${timestamp}.xml`;
     const { error: xmlErr } = await supabase.storage
-      .from("empresa-assets")
+      .from(BUCKET_CFDI)
       .upload(xmlPath, xmlBytes, { contentType: "application/xml", upsert: true });
     if (!xmlErr) {
-      const { data: urlData } = supabase.storage.from("empresa-assets").getPublicUrl(xmlPath);
-      xmlUrl = urlData?.publicUrl;
+      xmlUrl = archivoRef(xmlPath);
     }
   }
 
@@ -483,6 +591,7 @@ async function timbrar(supabase: any, userId: string, body: any) {
     venta_id: venta_id || null,
     facturama_id: facturamaId,
     folio_fiscal: folioFiscal,
+    facturama_ambiente: ambiente,
     serie: serie || "",
     folio: folio || "",
     cfdi_type: cfdi_type || "I",
@@ -517,6 +626,7 @@ async function timbrar(supabase: any, userId: string, body: any) {
     const { data, error: updateErr } = await supabase.from("cfdis")
       .update(cfdiPayload)
       .eq("id", cfdi_id)
+      .eq("empresa_id", empresa_id)
       .select().single();
     if (updateErr) console.error("Error updating CFDI:", updateErr);
     cfdiRecord = data;
@@ -526,6 +636,31 @@ async function timbrar(supabase: any, userId: string, body: any) {
       .select().single();
     if (insertErr) console.error("Error inserting CFDI:", insertErr);
     cfdiRecord = data;
+  }
+
+  // Líneas del CFDI y marca de facturado en la venta: las escribe la función (S-09),
+  // el navegador ya no puede escribir sobre un CFDI timbrado.
+  const cfdiGuardado = cfdiRecord?.id || cfdi_id;
+  if (cfdiGuardado) {
+    try {
+      if (!cfdi_id && Array.isArray(body.cfdi_lineas) && body.cfdi_lineas.length > 0) {
+        const { error: linErr } = await supabase.from("cfdi_lineas")
+          .insert(body.cfdi_lineas.map((l: any) => ({ ...l, cfdi_id: cfdiGuardado })));
+        if (linErr) console.error("cfdi_lineas no se guardaron:", linErr.message);
+      }
+      const { data: lineas } = await supabase.from("cfdi_lineas").select("venta_linea_id").eq("cfdi_id", cfdiGuardado);
+      const ventaLineaIds = (lineas ?? []).map((l: any) => l.venta_linea_id).filter(Boolean);
+      if (ventaLineaIds.length > 0) {
+        const { data: propias } = await supabase.from("venta_lineas")
+          .select("id, ventas!inner(empresa_id)").in("id", ventaLineaIds).eq("ventas.empresa_id", empresa_id);
+        const ids = (propias ?? []).map((v: any) => v.id);
+        if (ids.length > 0) {
+          const { error: vlErr } = await supabase.from("venta_lineas")
+            .update({ facturado: true, factura_cfdi_id: cfdiGuardado }).in("id", ids);
+          if (vlErr) console.error("venta_lineas no se marcaron facturadas:", vlErr.message);
+        }
+      }
+    } catch (e: any) { console.error("Post-timbrado (líneas/venta) falló:", e?.message); }
   }
 
   // Confirm the previously-reserved timbre and link it to the new CFDI record
@@ -577,8 +712,7 @@ async function timbrar(supabase: any, userId: string, body: any) {
 // CANCELAR CFDI
 // ========================================
 async function cancelar(supabase: any, userId: string, body: any) {
-  const auth = getAuth();
-  const { cfdi_id, rfc_emisor, motivo } = body;
+  const { cfdi_id, motivo } = body;
 
   // Get CFDI record
   const { data: cfdi, error } = await supabase
@@ -593,6 +727,10 @@ async function cancelar(supabase: any, userId: string, body: any) {
   await assertEmpresaAccess(getServiceSupabase(), userId, cfdi.empresa_id);
 
   if (cfdi.status === "cancelado") throw new Error("CFDI ya está cancelado");
+  // Emisor de la BD y el ambiente con que se timbró este CFDI.
+  const emisor = await getEmisor(supabase, cfdi.empresa_id, cfdi.facturama_ambiente);
+  const { auth, api: FACTURAMA_API } = emisor.fac;
+  const rfc_emisor = emisor.rfc;
 
 
   const facturamaId = cfdi.facturama_id;
@@ -649,7 +787,7 @@ async function cancelar(supabase: any, userId: string, body: any) {
 // DESCARGAR PDF/XML
 // ========================================
 async function descargar(body: any) {
-  const auth = getAuth();
+  const { auth, api: FACTURAMA_API } = body.__fac as Fac;
   const { facturama_id, type } = body;
 
   const endpoint = type === "xml"
@@ -667,9 +805,9 @@ async function descargar(body: any) {
   );
 }
 
-async function getSuscriptionPlan() {
-  const res = await fetch(`${FACTURAMA_API}/SuscriptionPlan`, {
-    headers: { Authorization: getAuth() },
+async function getSuscriptionPlan(fx: Fac) {
+  const res = await fetch(`${fx.api}/SuscriptionPlan`, {
+    headers: { Authorization: fx.auth },
   });
   if (!res.ok) {
     const text = await res.text();
@@ -686,7 +824,7 @@ async function getSuscriptionPlan() {
 // TIMBRAR COMPLEMENTO DE PAGOS (REP / Pago 2.0)
 // ========================================
 async function timbrarPago(supabase: any, userId: string, body: any) {
-  const auth = getAuth();
+  const { auth, api: FACTURAMA_API, ambiente } = body.__fac as Fac;
   const serviceDb = getServiceSupabase();
   const {
     empresa_id, cobro_id, issuer, expedition_place,
@@ -779,6 +917,7 @@ async function timbrarPago(supabase: any, userId: string, body: any) {
     if (response.status !== 200 && response.status !== 201) {
       try { await serviceDb.rpc("release_timbre", { p_reservation_id: reservationId, p_motivo: `Facturama rechazó REP: HTTP ${response.status}` }); } catch {}
       await supabase.from("cfdi_pagos").insert({
+        facturama_ambiente: ambiente,
         empresa_id, cobro_id: cobro_id || null,
         fecha_pago, forma_pago, moneda: moneda || "MXN", tipo_cambio: tipo_cambio || 1,
         monto: r2(monto), num_operacion, expedition_place,
@@ -801,8 +940,8 @@ async function timbrarPago(supabase: any, userId: string, body: any) {
         if (pdfData.Content) {
           const pdfBytes = Uint8Array.from(atob(pdfData.Content), c => c.charCodeAt(0));
           const pdfPath = `cfdis/${empresa_id}/REP_${facturamaId}_${timestamp}.pdf`;
-          await supabase.storage.from("empresa-assets").upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: true });
-          pdfUrl = supabase.storage.from("empresa-assets").getPublicUrl(pdfPath).data?.publicUrl;
+          await supabase.storage.from(BUCKET_CFDI).upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: true });
+          pdfUrl = archivoRef(pdfPath);
         }
       }
     } catch (e) { console.error("PDF REP:", e); }
@@ -813,13 +952,14 @@ async function timbrarPago(supabase: any, userId: string, body: any) {
         if (xmlData.Content) {
           const xmlBytes = new TextEncoder().encode(atob(xmlData.Content));
           const xmlPath = `cfdis/${empresa_id}/REP_${facturamaId}_${timestamp}.xml`;
-          await supabase.storage.from("empresa-assets").upload(xmlPath, xmlBytes, { contentType: "application/xml", upsert: true });
-          xmlUrl = supabase.storage.from("empresa-assets").getPublicUrl(xmlPath).data?.publicUrl;
+          await supabase.storage.from(BUCKET_CFDI).upload(xmlPath, xmlBytes, { contentType: "application/xml", upsert: true });
+          xmlUrl = archivoRef(xmlPath);
         }
       }
     } catch (e) { console.error("XML REP:", e); }
 
     const { data: pagoRecord, error: insertErr } = await supabase.from("cfdi_pagos").insert({
+        facturama_ambiente: ambiente,
       empresa_id, cobro_id: cobro_id || null,
       facturama_id: facturamaId, folio_fiscal: folioFiscal,
       serie: serie || "P", folio: folioFinal,
@@ -876,7 +1016,7 @@ async function timbrarPago(supabase: any, userId: string, body: any) {
 // TIMBRAR FACTURA GLOBAL DE PÚBLICO EN GENERAL
 // ========================================
 async function timbrarGlobal(supabase: any, userId: string, body: any) {
-  const auth = getAuth();
+  const { auth, api: FACTURAMA_API, ambiente } = body.__fac as Fac;
   const serviceDb = getServiceSupabase();
   const {
     empresa_id, issuer, expedition_place,
@@ -984,8 +1124,8 @@ async function timbrarGlobal(supabase: any, userId: string, body: any) {
         if (pdfData.Content) {
           const bytes = Uint8Array.from(atob(pdfData.Content), c => c.charCodeAt(0));
           const path = `cfdis/${empresa_id}/GLOBAL_${facturamaId}_${timestamp}.pdf`;
-          await supabase.storage.from("empresa-assets").upload(path, bytes, { contentType: "application/pdf", upsert: true });
-          pdfUrl = supabase.storage.from("empresa-assets").getPublicUrl(path).data?.publicUrl;
+          await supabase.storage.from(BUCKET_CFDI).upload(path, bytes, { contentType: "application/pdf", upsert: true });
+          pdfUrl = archivoRef(path);
         }
       }
     } catch (e) { console.error(e); }
@@ -996,13 +1136,14 @@ async function timbrarGlobal(supabase: any, userId: string, body: any) {
         if (xmlData.Content) {
           const bytes = new TextEncoder().encode(atob(xmlData.Content));
           const path = `cfdis/${empresa_id}/GLOBAL_${facturamaId}_${timestamp}.xml`;
-          await supabase.storage.from("empresa-assets").upload(path, bytes, { contentType: "application/xml", upsert: true });
-          xmlUrl = supabase.storage.from("empresa-assets").getPublicUrl(path).data?.publicUrl;
+          await supabase.storage.from(BUCKET_CFDI).upload(path, bytes, { contentType: "application/xml", upsert: true });
+          xmlUrl = archivoRef(path);
         }
       }
     } catch (e) { console.error(e); }
 
     const { data: cfdiRecord } = await supabase.from("cfdis").insert({
+      facturama_ambiente: ambiente,
       empresa_id, venta_id: null,
       facturama_id: facturamaId, folio_fiscal: folioFiscal,
       serie: serie || "G", folio: folioFinal,
@@ -1044,7 +1185,7 @@ async function timbrarGlobal(supabase: any, userId: string, body: any) {
 // VALIDAR RFC con SAT (Facturama LCO)
 // ========================================
 async function validarRfc(body: any) {
-  const auth = getAuth();
+  const { auth, api: FACTURAMA_API } = body.__fac as Fac;
   const { rfc, name, zip_code, cliente_id } = body;
   if (!rfc) throw new Error("RFC requerido");
 
@@ -1091,6 +1232,7 @@ async function validarRfc(body: any) {
 // ========================================
 async function sustituir(supabase: any, userId: string, body: any) {
   const { original_cfdi_id, original_uuid, rfc_emisor, new_invoice } = body;
+  const { auth, api: FACTURAMA_API } = body.__fac as Fac;
   if (!original_uuid) throw new Error("UUID original requerido");
 
   // 1) Timbrar el nuevo CFDI con CfdiRelacionados tipo 04
@@ -1105,8 +1247,8 @@ async function sustituir(supabase: any, userId: string, body: any) {
   // 2) Cancelar el original con motivo 01 y folio sustituto
   const newUuid = timbrarData.folio_fiscal;
   try {
-    const cancelUrl = `${FACTURAMA_API}/api-lite/cfdis/${(await supabase.from("cfdis").select("facturama_id").eq("id", original_cfdi_id).single()).data?.facturama_id}?motive=01&uuidReplacement=${newUuid}&rfc=${rfc_emisor}`;
-    const r = await fetch(cancelUrl, { method: "DELETE", headers: { Authorization: getAuth() } });
+    const cancelUrl = `${FACTURAMA_API}/api-lite/cfdis/${(await supabase.from("cfdis").select("facturama_id").eq("id", original_cfdi_id).eq("empresa_id", body.empresa_id).single()).data?.facturama_id}?motive=01&uuidReplacement=${newUuid}&rfc=${rfc_emisor}`;
+    const r = await fetch(cancelUrl, { method: "DELETE", headers: { Authorization: auth } });
     const txt = await r.text();
     let cancelResult: any = {};
     try { cancelResult = JSON.parse(txt); } catch {}
@@ -1152,8 +1294,8 @@ async function enviarCorreo(supabase: any, body: any) {
       serie: cfdi.serie || "",
       uuid: cfdi.folio_fiscal || "",
       total: cfdi.total,
-      pdfUrl: cfdi.pdf_url || "",
-      xmlUrl: cfdi.xml_url || "",
+      pdfUrl: (await urlFirmada(getServiceSupabase(), cfdi.pdf_url, 7 * 24 * 3600)) || "",
+      xmlUrl: (await urlFirmada(getServiceSupabase(), cfdi.xml_url, 7 * 24 * 3600)) || "",
       mensaje: mensaje || "",
       emailCc: email_cc || "",
     },

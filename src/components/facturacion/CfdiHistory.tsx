@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { abrirArchivoCfdi } from '@/lib/cfdiArchivos';
 import { Download, Mail, FileText } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate } from '@/lib/utils';
@@ -76,12 +77,12 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
                 <td className="py-1.5 px-2">
                   <div className="flex items-center gap-1">
                     {cfdi.pdf_url && (
-                      <a href={cfdi.pdf_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-[11px] font-medium">PDF</a>
+                      <a href="#" onClick={(e) => abrirArchivoCfdi(e, 'cfdis', cfdi.id, 'pdf', cfdi.pdf_url)} className="text-primary hover:underline text-[11px] font-medium">PDF</a>
                     )}
                     {cfdi.xml_url && (
                       <>
                         <span className="text-muted-foreground">·</span>
-                        <a href={cfdi.xml_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-[11px] font-medium">XML</a>
+                        <a href="#" onClick={(e) => abrirArchivoCfdi(e, 'cfdis', cfdi.id, 'xml', cfdi.xml_url)} className="text-primary hover:underline text-[11px] font-medium">XML</a>
                       </>
                     )}
                   </div>

@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { acreditarTimbresCheckout, acreditarTimbresFacturaPagada } from "../_shared/timbres.ts";
 import { notifyBillingEvent } from "../_shared/billing-notify-utils.ts";
 import { invoiceAffectsSubscription, invoiceMetadataPeriod } from "../_shared/billing-safety.ts";
 
@@ -86,6 +87,12 @@ Deno.serve(async (req) => {
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
+      // S-07: compra de timbres; se abona aquí aunque el cliente cierre la página de éxito.
+      // Sesiones abonadas antes de S-07 traen credited=true.
+      if (session.metadata?.type === "timbres_purchase" && session.metadata?.credited !== "true") {
+        const saldo = await acreditarTimbresCheckout(supabase, session);
+        log("Timbres checkout", { session: session.id, saldo });
+      }
       const empresa_id = session.metadata?.empresa_id;
       const flow = session.metadata?.flow;
       const stripeSubId = typeof session.subscription === "string"
@@ -352,6 +359,9 @@ Deno.serve(async (req) => {
 
     if (event.type === "invoice.paid" || event.type === "invoice.payment_succeeded") {
       const invoice = event.data.object as Stripe.Invoice;
+      // Timbres incluidos en la factura: se abonan solo al pagarse (una vez por factura).
+      const saldoTimbres = await acreditarTimbresFacturaPagada(supabase, invoice);
+      if (saldoTimbres !== null) log("Timbres factura", { invoice: invoice.id, saldo: saldoTimbres });
       const isAdditionalCharge = invoice.metadata?.tipo === "additional_charge" ||
         invoice.metadata?.affects_subscription === "0";
       const invoiceType = isAdditionalCharge ? "additional_charge" : "subscription_renewal";

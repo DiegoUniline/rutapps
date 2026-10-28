@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,10 +18,24 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
 
+    // Solo usuarios con sesión (la anon key pública no basta): evita gasto de IA anónimo.
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: { user } } = await sb.auth.getUser(token);
+    if (!user) {
+      return new Response(JSON.stringify({ error: "No autenticado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
     const { pdf_base64 } = body;
 
     if (!pdf_base64) throw new Error("Falta pdf_base64");
+    if (typeof pdf_base64 !== "string" || pdf_base64.length > 8_000_000) {
+      throw new Error("El PDF es demasiado grande (máximo ~6 MB)");
+    }
 
     // Use Gemini vision to parse the CSF PDF
     const response = await fetch(AI_GATEWAY, {
