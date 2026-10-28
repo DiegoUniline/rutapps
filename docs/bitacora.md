@@ -44,3 +44,4 @@
 2026-10-20 · desarrollador · Búsqueda de clientes también por persona de contacto (venta, cotización, entrega, POS, móvil: nueva venta, clientes, cobrar, CxC, devolución) — pedido de cliente Congelados
 2026-10-23 · desarrollador · D-012 · Mapa de clientes: optimizar otra zona del mismo día/vendedor ya no borra la anterior (zona tras zona); errores de guardado visibles
 2026-10-23 · desarrollador · Logística › Reporte de surtido: productos agrupados por categoría (clasificación) y alfabéticos dentro de cada una; 'Sin categoría' al final (PDF y Excel)
+2026-10-28 · desarrollador · Móvil CxC: el celular también baja las notas pendientes de clientes donde la persona es COBRADOR (antes solo las que vendió, por ruta_sync_v2 activo para todos); 'propios' incluye cobrador. Caso licencia 57012562 (Leo: 6 notas)

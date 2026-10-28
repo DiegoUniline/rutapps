@@ -75,7 +75,8 @@ function RutaCobrarInner() {
   const clientesFiltrados = useMemo(() => {
     if (!clientesRaw) return [];
     if (!limitarPorClientesPropios) return clientesRaw as any[];
-    return (clientesRaw as any[]).filter((c: any) => c.vendedor_id === profile?.id);
+    // Propios = los que vende o los que cobra (clientes.cobrador_id).
+    return (clientesRaw as any[]).filter((c: any) => c.vendedor_id === profile?.id || c.cobrador_id === profile?.id);
   }, [clientesRaw, limitarPorClientesPropios, profile?.id]);
 
   const clientes = useMemo(() => {

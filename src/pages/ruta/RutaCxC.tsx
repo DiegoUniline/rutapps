@@ -33,7 +33,7 @@ export default function RutaCxC() {
   const clientesPermitidos = useMemo(() => {
     if (!limitarPorClientesPropios) return null;
     return new Set(((clientes ?? []) as any[])
-      .filter((c: any) => c.vendedor_id === vendedorId)
+      .filter((c: any) => c.vendedor_id === vendedorId || c.cobrador_id === vendedorId)
       .map((c: any) => c.id));
   }, [clientes, limitarPorClientesPropios, vendedorId]);
 
