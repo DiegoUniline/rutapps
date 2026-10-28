@@ -5,6 +5,7 @@
  */
 import { offlineDb, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
+import { fetchAllPages } from './supabasePaginate';
 import { getSyncScope, syncV2Habilitado, vendedorScopeActivo, vendedorScopeTransaccional, syncHijosScopedHabilitado } from './syncScope';
 import { getFeatureFlagsCache, setFeatureFlagsCache, type FeatureFlag } from './featureFlags';
 
@@ -445,6 +446,33 @@ function localRowInVendorScope(table: CacheTable | string, row: any): boolean {
   return vendorScope.nullable ? rowValue === null : false;
 }
 
+/**
+ * Ventas de los clientes asignados como COBRADOR al vendedor activo: las que
+ * tienen saldo y las movidas en la ventana reciente (así un pago hecho en otro
+ * dispositivo también llega y la nota deja de verse pendiente).
+ */
+async function fetchVentasDeCobranza(empresaId: string, selectStr: string): Promise<any[]> {
+  const cobradorId = getSyncScope().vendedorId;
+  if (!cobradorId) return [];
+  const clientes = await fetchAllPages<{ id: string }>((from, to) => (supabase.from as any)('clientes')
+    .select('id').eq('empresa_id', empresaId).eq('cobrador_id', cobradorId).order('id').range(from, to));
+  if (clientes.length === 0) return [];
+  const desde = new Date();
+  desde.setDate(desde.getDate() - windowDays());
+  const desdeIso = desde.toISOString();
+  const rows: any[] = [];
+  for (const ids of chunk(clientes.map(c => c.id), CHILD_IN_CHUNK_SIZE)) {
+    rows.push(...await fetchAllPages<any>((from, to) => (supabase.from as any)('ventas')
+      .select(selectStr)
+      .eq('empresa_id', empresaId)
+      .in('cliente_id', ids)
+      .or(`saldo_pendiente.gt.0,updated_at.gte.${desdeIso}`)
+      .order('id')
+      .range(from, to)));
+  }
+  return rows;
+}
+
 async function getScopedParentIds(table: CacheTable, empresaId: string): Promise<string[] | null> {
   const scope = CHILD_SCOPES[table];
   if (!scope) return null;
@@ -850,6 +878,17 @@ async function downloadAllDataInternal(
         if (localTable) {
           if (!isDeltaPull) await clearLocalScope(table, empresaId, parentIds);
           if (allData.length > 0) await localTable.bulkPut(allData);
+        }
+
+        // COBRADOR: con el filtro por vendedor solo bajaban las ventas que la
+        // persona vendió; las notas de los clientes que COBRA (clientes.cobrador_id)
+        // pero vendió otro no llegaban y no aparecían en Cobrar / Cuentas por cobrar.
+        if (table === 'ventas' && localTable && scopeAplica(VENDOR_SCOPED_TABLES.ventas)) {
+          const deCobranza = await fetchVentasDeCobranza(empresaId, selectStr);
+          if (deCobranza.length > 0) {
+            await localTable.bulkPut(deCobranza);
+            allData = allData.concat(deCobranza);
+          }
         }
 
         let newCursor = (isUpdatedAtDelta || isUpdatedAtWindow)
