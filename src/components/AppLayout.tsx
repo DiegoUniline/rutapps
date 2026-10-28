@@ -26,7 +26,7 @@ import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import SandboxBanner from '@/components/SandboxBanner';
 import { useProductosRealtime } from '@/hooks/useData';
-import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useFeatureFlags, useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { usePlatformTeam } from '@/hooks/usePlatformTeam';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
@@ -255,12 +255,13 @@ const mobileBottomTabs = [
 /** Filter nav items based on granular sub-module permissions */
 function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean, userEmail?: string | null, isOwner?: boolean) {
   const isSuperAdminUser = isSuperAdminEmail(userEmail);
+  const facturacionFlag = useFeatureFlag('facturacion_cfdi');
   const isBillingOwner = isSuperAdminUser || !!isOwner;
   const stripBilling = (items: NavItem[]): NavItem[] => items
     .flatMap(it => {
       // Top-level Facturación entry (with or without children): only super admin can see it
       if (it.path.startsWith('/facturacion-cfdi')) {
-        return isSuperAdminUser ? [it] : [];
+        return (isSuperAdminUser || facturacionFlag) ? [it] : [];
       }
       if (!it.children) return [it];
       const children = it.children.filter(c => {

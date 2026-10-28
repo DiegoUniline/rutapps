@@ -1,3 +1,4 @@
+import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { lazy, Suspense, useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate, useLocation, Link } from "react-router-dom";
@@ -762,7 +763,8 @@ function renderAuthenticatedRoutes() {
 function GuardedDesktopRoutes() {
   const location = useLocation();
   const { user, empresa } = useAuth();
-  const isFacturacionAdmin = isSuperAdminEmail(user?.email);
+  const facturacionFlag = useFeatureFlag('facturacion_cfdi');
+  const isFacturacionAdmin = isSuperAdminEmail(user?.email) || facturacionFlag;
   const isBillingOwner = isFacturacionAdmin || (!!empresa?.owner_user_id && empresa.owner_user_id === user?.id);
 
   return (
