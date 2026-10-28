@@ -191,6 +191,23 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
 
       const venta = ventas?.find((v: any) => v.id === selectedVentaId);
 
+      const cfdiLineas = ventaLineas.map((l: any) => ({
+        venta_linea_id: l.id,
+        producto_id: l.producto_id,
+        descripcion: l.descripcion || l.productos?.nombre || 'Producto',
+        cantidad: l.cantidad,
+        precio_unitario: l.precio_unitario,
+        subtotal: l.subtotal ?? 0,
+        iva_pct: l.iva_pct ?? 0,
+        ieps_pct: l.ieps_pct ?? 0,
+        iva_monto: l.iva_monto ?? 0,
+        ieps_monto: l.ieps_monto ?? 0,
+        total: l.total ?? 0,
+        product_code: getProductCode(l),
+        unit_code: getUnitCode(l),
+        unit_name: getUnitName(l),
+      }));
+
       const { data, error } = await supabase.functions.invoke('facturama', {
         body: {
           action: 'timbrar',
@@ -217,6 +234,8 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
             tax_zip_code: receiver.tax_zip_code,
           },
           items,
+          // La función guarda estas líneas y marca la venta como facturada (S-09).
+          cfdi_lineas: cfdiLineas,
         },
       });
 
@@ -225,37 +244,6 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
 
       const cfdiId = data?.cfdi?.id;
       if (!cfdiId) throw new Error('Se timbró, pero no se pudo guardar el CFDI localmente');
-
-      const cfdiLineas = ventaLineas.map((l: any) => ({
-        cfdi_id: cfdiId,
-        venta_linea_id: l.id,
-        producto_id: l.producto_id,
-        descripcion: l.descripcion || l.productos?.nombre || 'Producto',
-        cantidad: l.cantidad,
-        precio_unitario: l.precio_unitario,
-        subtotal: l.subtotal ?? 0,
-        iva_pct: l.iva_pct ?? 0,
-        ieps_pct: l.ieps_pct ?? 0,
-        iva_monto: l.iva_monto ?? 0,
-        ieps_monto: l.ieps_monto ?? 0,
-        total: l.total ?? 0,
-        product_code: getProductCode(l),
-        unit_code: getUnitCode(l),
-        unit_name: getUnitName(l),
-      }));
-
-      const { error: linesError } = await supabase.from('cfdi_lineas').insert(cfdiLineas);
-      if (linesError) throw linesError;
-
-      const ventaLineaIds = ventaLineas.map((l: any) => l.id).filter(Boolean);
-      if (ventaLineaIds.length > 0) {
-        const { error: updateError } = await supabase
-          .from('venta_lineas')
-          .update({ facturado: true, factura_cfdi_id: cfdiId })
-          .in('id', ventaLineaIds);
-
-        if (updateError) throw updateError;
-      }
 
       toast.success(`Factura timbrada · UUID: ${data.folio_fiscal?.substring(0, 8)}...`);
       queryClient.invalidateQueries({ queryKey: ['timbres-saldo'] });

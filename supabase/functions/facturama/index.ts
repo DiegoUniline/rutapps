@@ -617,6 +617,31 @@ async function timbrar(supabase: any, userId: string, body: any) {
     cfdiRecord = data;
   }
 
+  // Líneas del CFDI y marca de facturado en la venta: las escribe la función (S-09),
+  // el navegador ya no puede escribir sobre un CFDI timbrado.
+  const cfdiGuardado = cfdiRecord?.id || cfdi_id;
+  if (cfdiGuardado) {
+    try {
+      if (!cfdi_id && Array.isArray(body.cfdi_lineas) && body.cfdi_lineas.length > 0) {
+        const { error: linErr } = await supabase.from("cfdi_lineas")
+          .insert(body.cfdi_lineas.map((l: any) => ({ ...l, cfdi_id: cfdiGuardado })));
+        if (linErr) console.error("cfdi_lineas no se guardaron:", linErr.message);
+      }
+      const { data: lineas } = await supabase.from("cfdi_lineas").select("venta_linea_id").eq("cfdi_id", cfdiGuardado);
+      const ventaLineaIds = (lineas ?? []).map((l: any) => l.venta_linea_id).filter(Boolean);
+      if (ventaLineaIds.length > 0) {
+        const { data: propias } = await supabase.from("venta_lineas")
+          .select("id, ventas!inner(empresa_id)").in("id", ventaLineaIds).eq("ventas.empresa_id", empresa_id);
+        const ids = (propias ?? []).map((v: any) => v.id);
+        if (ids.length > 0) {
+          const { error: vlErr } = await supabase.from("venta_lineas")
+            .update({ facturado: true, factura_cfdi_id: cfdiGuardado }).in("id", ids);
+          if (vlErr) console.error("venta_lineas no se marcaron facturadas:", vlErr.message);
+        }
+      }
+    } catch (e: any) { console.error("Post-timbrado (líneas/venta) falló:", e?.message); }
+  }
+
   // Confirm the previously-reserved timbre and link it to the new CFDI record
   const cfdiIdForDeduct = cfdiRecord?.id || cfdi_id;
   if (cfdiIdForDeduct) {
