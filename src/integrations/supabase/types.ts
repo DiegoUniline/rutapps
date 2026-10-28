@@ -1330,6 +1330,7 @@ export type Database = {
           enviado_at: string | null
           error_detalle: string | null
           expedition_place: string | null
+          facturama_ambiente: string
           facturama_id: string | null
           fecha_pago: string
           fecha_timbrado: string | null
@@ -1368,6 +1369,7 @@ export type Database = {
           enviado_at?: string | null
           error_detalle?: string | null
           expedition_place?: string | null
+          facturama_ambiente?: string
           facturama_id?: string | null
           fecha_pago: string
           fecha_timbrado?: string | null
@@ -1406,6 +1408,7 @@ export type Database = {
           enviado_at?: string | null
           error_detalle?: string | null
           expedition_place?: string | null
+          facturama_ambiente?: string
           facturama_id?: string | null
           fecha_pago?: string
           fecha_timbrado?: string | null
@@ -1461,6 +1464,7 @@ export type Database = {
           enviado_at: string | null
           error_detalle: string | null
           expedition_place: string | null
+          facturama_ambiente: string
           facturama_id: string | null
           fecha_timbrado: string | null
           folio: string | null
@@ -1502,6 +1506,7 @@ export type Database = {
           enviado_at?: string | null
           error_detalle?: string | null
           expedition_place?: string | null
+          facturama_ambiente?: string
           facturama_id?: string | null
           fecha_timbrado?: string | null
           folio?: string | null
@@ -1543,6 +1548,7 @@ export type Database = {
           enviado_at?: string | null
           error_detalle?: string | null
           expedition_place?: string | null
+          facturama_ambiente?: string
           facturama_id?: string | null
           fecha_timbrado?: string | null
           folio?: string | null
@@ -3721,6 +3727,8 @@ export type Database = {
           colonia: string | null
           cp: string | null
           created_at: string
+          csd_no_certificado: string | null
+          csd_vence: string | null
           csf_url: string | null
           demo_expires_at: string | null
           direccion: string | null
@@ -3729,6 +3737,7 @@ export type Database = {
           email_facturacion: string | null
           enviar_recibo_auto: boolean
           estado: string | null
+          facturama_ambiente: string
           forma_pago_sat: string | null
           id: string
           is_partner_sandbox: boolean
@@ -3767,6 +3776,8 @@ export type Database = {
           colonia?: string | null
           cp?: string | null
           created_at?: string
+          csd_no_certificado?: string | null
+          csd_vence?: string | null
           csf_url?: string | null
           demo_expires_at?: string | null
           direccion?: string | null
@@ -3775,6 +3786,7 @@ export type Database = {
           email_facturacion?: string | null
           enviar_recibo_auto?: boolean
           estado?: string | null
+          facturama_ambiente?: string
           forma_pago_sat?: string | null
           id?: string
           is_partner_sandbox?: boolean
@@ -3813,6 +3825,8 @@ export type Database = {
           colonia?: string | null
           cp?: string | null
           created_at?: string
+          csd_no_certificado?: string | null
+          csd_vence?: string | null
           csf_url?: string | null
           demo_expires_at?: string | null
           direccion?: string | null
@@ -3821,6 +3835,7 @@ export type Database = {
           email_facturacion?: string | null
           enviar_recibo_auto?: boolean
           estado?: string | null
+          facturama_ambiente?: string
           forma_pago_sat?: string | null
           id?: string
           is_partner_sandbox?: boolean
@@ -11791,6 +11806,10 @@ export type Database = {
       publicar_solicitud_traspaso: {
         Args: { p_lineas?: Json; p_solicitud_id: string }
         Returns: undefined
+      }
+      puede_configurar_facturacion: {
+        Args: { p_empresa_id: string; p_user_id: string }
+        Returns: boolean
       }
       purge_internal_notifications: { Args: never; Returns: undefined }
       purge_old_gps_history: { Args: never; Returns: undefined }
