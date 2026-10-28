@@ -26,7 +26,7 @@ import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import SandboxBanner from '@/components/SandboxBanner';
 import { useProductosRealtime } from '@/hooks/useData';
-import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useFeatureFlags, useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { usePlatformTeam } from '@/hooks/usePlatformTeam';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
