@@ -62,3 +62,44 @@ describe('motor de impuestos CFDI', () => {
     expect(t).toEqual({ subtotal: 200, descuento: 10, iva: 31.55, ieps: 7.2, total: 228.75 });
   });
 });
+
+import { agruparImpuestos, impuestosProporcionales, fechaLimiteRep, formaPagoSat, repartirAplicacion } from '../../supabase/functions/_shared/cfdiImpuestos';
+
+describe('REP y global', () => {
+  it('agrupa impuestos por nombre y tasa', () => {
+    const g = agruparImpuestos([itemFacturama(base), itemFacturama({ ...base, ieps_pct: 8 }), itemFacturama({ ...base, iva_pct: 0 })]);
+    expect(g).toEqual([
+      { Name: 'IVA', Rate: 0.16, Base: 208, Total: 33.28 },
+      { Name: 'IEPS', Rate: 0.08, Base: 100, Total: 8 },
+      { Name: 'IVA', Rate: 0, Base: 100, Total: 0 },
+    ]);
+  });
+
+  it('impuestos del REP en proporción a lo pagado', () => {
+    const det = agruparImpuestos([itemFacturama(base)]); // total 116
+    expect(impuestosProporcionales(det, 58, 116)).toEqual([{ Name: 'IVA', Rate: 0.16, Base: 50, Total: 8, IsRetention: false }]);
+  });
+
+  it('fecha límite día 5 del mes siguiente', () => {
+    expect(fechaLimiteRep('2026-10-28')).toBe('2026-11-05');
+    expect(fechaLimiteRep('2026-12-02')).toBe('2027-01-05');
+  });
+
+  it('forma de pago según método del cobro', () => {
+    expect(formaPagoSat('Efectivo')).toBe('01');
+    expect(formaPagoSat('transferencia')).toBe('03');
+    expect(formaPagoSat('saldo_favor')).toBeNull();
+  });
+
+  it('reparte un cobro entre facturas de la venta en proporción', () => {
+    // venta 36,000 con dos facturas PPD de 2,000 y 34,000; cobro de 9,000
+    expect(repartirAplicacion(9000, 36000, [{ cfdi_id: 'a', importe: 2000 }, { cfdi_id: 'b', importe: 34000 }]))
+      .toEqual([{ cfdi_id: 'a', pagado: 500 }, { cfdi_id: 'b', pagado: 8500 }]);
+    // parte no facturada no genera REP
+    expect(repartirAplicacion(1000, 4000, [{ cfdi_id: 'a', importe: 2000 }])).toEqual([{ cfdi_id: 'a', pagado: 500 }]);
+  });
+
+  it('global no revisa clave/unidad SAT fijas', () => {
+    expect(erroresLinea({ ...base, product_code: '01010101', unit_code: 'ACT', unit_name: 'Actividad' }, { global: true })).toHaveLength(0);
+  });
+});

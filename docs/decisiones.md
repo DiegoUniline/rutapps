@@ -82,3 +82,13 @@
 - **Productos sin IVA:** se elige **por producto** (`productos.cfdi_iva_sin_iva`: tasa 0% / exento / no objeto). Sin elegir, no se timbra (lo marca la validación previa).
 - **Receptor:** siempre los datos fiscales de la ficha del cliente (`facturama_*`); en el timbrado solo se elige el uso de CFDI.
 - **Cancelación:** motivos 01–04; el 01 exige el UUID de una factura timbrada de la misma empresa que la sustituye. Al quedar cancelada, la venta vuelve a poder facturarse.
+
+## D-015
+- **Fecha:** 2026-10-28 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión (Fase 2 facturación):**
+  - Una venta se puede repartir en varias facturas (PUE o PPD) por líneas, por cantidad dentro de una línea o por monto (el sistema llena cantidades hasta el monto). Se aparta la **cantidad pendiente** de cada línea, no la línea completa. Precio unitario el de la venta; descuento proporcional a la cantidad.
+  - La venta queda facturada cuando toda su cantidad está en facturas timbradas; con cualquier factura ya no se edita; al cancelar, la cantidad vuelve a estar disponible.
+  - Complemento de pago (REP): **lista de cobros pendientes** (fecha límite día 5 del mes siguiente), se timbran a mano. Cada cobro aplicado a una venta se reparte entre sus facturas PPD timbradas en proporción a su importe dentro de la venta; la parte no facturada no genera REP. Parcialidad y saldos según REP anteriores; impuestos del documento en proporción a lo pagado.
+  - Un cobro con REP vigente no se edita, cancela ni desaplica; una factura PPD con REP vigente no se cancela.
+  - Factura global (público en general): las ventas del periodo **se eligen a mano** entre las que no tienen ninguna factura.
+  - Sustitución: desde una factura timbrada se crea el borrador sustituto con las mismas cantidades; al timbrarse (relación 04) se cancela la original con motivo 01.

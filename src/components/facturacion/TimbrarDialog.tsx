@@ -70,20 +70,6 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
     },
   });
 
-  // Load selected venta lines (with product SAT unit join)
-  const { data: ventaLineas } = useQuery({
-    queryKey: ['venta-lineas-cfdi', selectedVentaId],
-    enabled: !!selectedVentaId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('venta_lineas')
-        .select('*, productos(nombre, codigo_sat, codigo, udem_sat_id, unidades_sat(clave, nombre))')
-        .eq('venta_id', selectedVentaId!);
-      return data || [];
-    },
-  });
-
-
   // Catalogs
   const { data: formasPago } = useQuery({
     queryKey: ['cat_forma_pago_active'],
@@ -126,7 +112,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return data as { valido: boolean; secciones: Record<string, string[]>; receptor: typeof receiver; totales: { total: number } | null };
+      return data as { valido: boolean; secciones: Record<string, string[]>; receptor: typeof receiver; totales: { total: number } | null; conceptos: { descripcion: string; cantidad: number; total: number }[] };
     },
   });
   const erroresPreflight = preflight ? Object.values(preflight.secciones).flat() : [];
@@ -141,7 +127,8 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
     if (selectedVentaId) setStep('review');
   }, [selectedVentaId]);
 
-  const lineasPendientes = (ventaLineas || []).filter((l: any) => l.producto_id && !l.facturado && !l.facturado_global && !l.factura_cfdi_id);
+  // Lo pendiente de facturar lo calcula el servidor (una venta puede tener varias facturas, D-015).
+  const conceptos = preflight?.conceptos ?? [];
 
   // Filter ventas
   const filteredVentas = (ventas || []).filter((v: any) => {
@@ -317,25 +304,21 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
 
               {/* Lines preview */}
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-foreground">Conceptos pendientes de facturar ({lineasPendientes.length})</h3>
+                <h3 className="text-sm font-semibold text-foreground">Conceptos pendientes de facturar ({conceptos.length})</h3>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-card text-muted-foreground">
                         <th className="text-left p-2">Descripción</th>
                         <th className="text-right p-2 w-16">Cant</th>
-                        <th className="text-right p-2 w-20">P.U.</th>
-                        <th className="text-right p-2 w-16">IVA%</th>
-                        <th className="text-right p-2 w-20">Total</th>
+                        <th className="text-right p-2 w-24">Total</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {lineasPendientes.map((l: any) => (
-                        <tr key={l.id} className="border-t border-border">
-                          <td className="p-2 truncate max-w-[200px]">{l.descripcion || (l.productos as any)?.nombre}</td>
+                      {conceptos.map((l, i) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="p-2 truncate max-w-[200px]">{l.descripcion}</td>
                           <td className="text-right p-2">{l.cantidad}</td>
-                          <td className="text-right p-2">{fmtC(Number(l.precio_unitario))}</td>
-                          <td className="text-right p-2">{l.iva_pct || 0}%</td>
                           <td className="text-right p-2 font-medium">{fmtC(Number(l.total || 0))}</td>
                         </tr>
                       ))}

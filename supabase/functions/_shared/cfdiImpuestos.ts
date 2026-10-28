@@ -40,6 +40,7 @@ export interface FacturamaTax {
 
 export interface FacturamaItem {
   ProductCode: string;
+  IdentificationNumber?: string;
   Description: string;
   Unit: string;
   UnitCode: string;
@@ -63,13 +64,16 @@ export interface TotalesCfdi {
 export const r2 = (n: number) => Math.round(((Number(n) || 0) + Number.EPSILON) * 100) / 100;
 export const r6 = (n: number) => Math.round(((Number(n) || 0) + Number.EPSILON) * 1e6) / 1e6;
 
-/** Errores de la línea que impiden timbrar (los usa el preflight). */
-export function erroresLinea(l: LineaCfdiInput): string[] {
+/** Errores de la línea que impiden timbrar (los usa el preflight). En la factura global
+ *  la clave y unidad SAT son fijas (01010101 / ACT), así que no se revisan. */
+export function erroresLinea(l: LineaCfdiInput, opts: { global?: boolean } = {}): string[] {
   const e: string[] = [];
   const code = (l.product_code || "").trim();
-  if (!/^\d{8}$/.test(code)) e.push("clave SAT inválida (debe tener 8 dígitos)");
-  else if (code === "01010101") e.push("clave SAT genérica 01010101 no permitida");
-  if (!l.unit_code || !l.unit_name) e.push("falta la unidad SAT");
+  if (!opts.global) {
+    if (!/^\d{8}$/.test(code)) e.push("clave SAT inválida (debe tener 8 dígitos)");
+    else if (code === "01010101") e.push("clave SAT genérica 01010101 no permitida");
+    if (!l.unit_code || !l.unit_name) e.push("falta la unidad SAT");
+  }
   if (!(Number(l.cantidad) > 0)) e.push("la cantidad debe ser mayor que cero");
   if (!(Number(l.precio_unitario) >= 0)) e.push("precio unitario inválido");
   const importe = r2(r6(l.precio_unitario) * r6(l.cantidad));
@@ -144,4 +148,61 @@ export function totalesCfdi(items: FacturamaItem[]): TotalesCfdi {
     }
   }
   return { subtotal: r2(t.subtotal), descuento: r2(t.descuento), iva: r2(t.iva), ieps: r2(t.ieps), total: r2(t.total) };
+}
+
+/** Impuesto agrupado de un CFDI (se guarda en cfdis.impuestos_detalle). */
+export interface ImpuestoAgrupado {
+  Name: FacturamaTax["Name"];
+  Rate: number;
+  IsQuota?: boolean;
+  Base: number;
+  Total: number;
+}
+
+export function agruparImpuestos(items: FacturamaItem[]): ImpuestoAgrupado[] {
+  const m = new Map<string, ImpuestoAgrupado>();
+  for (const it of items) {
+    for (const x of it.Taxes ?? []) {
+      const k = `${x.Name}|${x.Rate}|${x.IsQuota ? 1 : 0}`;
+      const g = m.get(k) ?? { Name: x.Name, Rate: x.Rate, ...(x.IsQuota ? { IsQuota: true } : {}), Base: 0, Total: 0 };
+      g.Base = r2(g.Base + x.Base);
+      g.Total = r2(g.Total + x.Total);
+      m.set(k, g);
+    }
+  }
+  return [...m.values()];
+}
+
+/** Impuestos del documento relacionado en el REP: los del CFDI en proporción a lo pagado. */
+export function impuestosProporcionales(detalle: ImpuestoAgrupado[], pagado: number, totalCfdi: number): FacturamaTax[] {
+  const ratio = totalCfdi > 0 ? pagado / totalCfdi : 0;
+  return detalle.map((g) => ({
+    Name: g.Name,
+    Rate: g.Rate,
+    Base: r2(g.Base * ratio),
+    Total: r2(g.Total * ratio),
+    IsRetention: false,
+    ...(g.IsQuota ? { IsQuota: true } : {}),
+  }));
+}
+
+/** Fecha límite del REP: día 5 del mes siguiente al pago (YYYY-MM-DD). */
+export function fechaLimiteRep(fechaPago: string): string {
+  const [y, m] = fechaPago.slice(0, 10).split("-").map(Number);
+  const ny = m === 12 ? y + 1 : y;
+  const nm = m === 12 ? 1 : m + 1;
+  return `${ny}-${String(nm).padStart(2, "0")}-05`;
+}
+
+/** Forma de pago SAT según el método del cobro; null si hay que elegirla. */
+export function formaPagoSat(metodo: string | null | undefined): string | null {
+  const m = String(metodo || "").toLowerCase().trim();
+  const mapa: Record<string, string> = { efectivo: "01", cheque: "02", transferencia: "03", deposito: "03", "depósito": "03", tarjeta: "04" };
+  return mapa[m] ?? null;
+}
+
+/** Reparto de un cobro aplicado a una venta entre sus facturas PPD, en proporción a su importe en la venta. */
+export function repartirAplicacion(montoAplicado: number, totalVenta: number, partes: { cfdi_id: string; importe: number }[]) {
+  if (!(totalVenta > 0)) return partes.map((p) => ({ cfdi_id: p.cfdi_id, pagado: 0 }));
+  return partes.map((p) => ({ cfdi_id: p.cfdi_id, pagado: r2(montoAplicado * Math.min(p.importe, totalVenta) / totalVenta) }));
 }

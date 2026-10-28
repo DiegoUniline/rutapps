@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,8 @@ import { Loader2, FileText } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import type { VentaLinea, Cliente } from '@/types';
 
@@ -27,15 +28,44 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
+  const [cantidades, setCantidades] = useState<Record<string, number>>({});
+  const [monto, setMonto] = useState('');
 
-  // Una línea con factura_cfdi_id sin facturar está en un timbrado en curso (D-014).
-  const pendientes = useMemo(() => lineas.filter(l => l.producto_id && !l.facturado && !l.factura_cfdi_id), [lineas]);
-  const facturadas = useMemo(() => lineas.filter(l => l.producto_id && l.facturado), [lineas]);
-
-  // Initialize selection with all pending
-  useState(() => {
-    setSelected(new Set(pendientes.map(l => l.id)));
+  // Cantidad ya ocupada por facturas (en proceso, inciertas o vigentes) de cada línea (D-015).
+  const lineaIds = useMemo(() => lineas.filter(l => l.producto_id).map(l => l.id), [lineas]);
+  const { data: ocupada } = useQuery({
+    queryKey: ['venta-cantidad-facturada', ventaId, lineaIds.join(',')],
+    enabled: open && lineaIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('cfdi_lineas')
+        .select('venta_linea_id, cantidad, cfdis!inner(status)').in('venta_linea_id', lineaIds);
+      if (error) throw error;
+      const ocupa = ['timbrando', 'incierto', 'timbrado', 'cancelacion_pendiente', 'cancelacion_rechazada'];
+      const vigente = ['timbrado', 'cancelacion_pendiente', 'cancelacion_rechazada'];
+      const m: Record<string, number> = {};
+      const conVigente = new Set<string>();
+      for (const x of (data ?? []) as any[]) {
+        if (vigente.includes(x.cfdis?.status)) conVigente.add(x.venta_linea_id);
+        if (ocupa.includes(x.cfdis?.status)) m[x.venta_linea_id] = (m[x.venta_linea_id] ?? 0) + (Number(x.cantidad) || 0);
+      }
+      // Marcas anteriores sin factura vigente que las explique: línea completa.
+      for (const l of lineas) if ((l.facturado || (l as any).facturado_global) && !conVigente.has(l.id)) m[l.id] = Number(l.cantidad) || 0;
+      return m;
+    },
   });
+  const disponible = (l: VentaLinea) => Math.max(0, (Number(l.cantidad) || 0) - (ocupada?.[l.id] ?? 0));
+  const unitario = (l: VentaLinea) => (Number(l.cantidad) > 0 ? (Number(l.total) || 0) / Number(l.cantidad) : 0);
+
+  const pendientes = useMemo(() => lineas.filter(l => l.producto_id && disponible(l) > 0.000001), [lineas, ocupada]);
+  const totalVenta = lineas.filter(l => l.producto_id).reduce((s, l) => s + (l.total ?? 0), 0);
+  const totalFacturado = lineas.filter(l => l.producto_id).reduce((s, l) => s + unitario(l) * Math.min(Number(l.cantidad) || 0, ocupada?.[l.id] ?? 0), 0);
+
+  // Al abrir: todo lo pendiente seleccionado con su cantidad disponible.
+  useEffect(() => {
+    if (!ocupada && lineaIds.length > 0) return;
+    setSelected(new Set(pendientes.map(l => l.id)));
+    setCantidades(Object.fromEntries(pendientes.map(l => [l.id, disponible(l)])));
+  }, [ocupada, open]);
 
   const toggleLine = (id: string) => {
     const next = new Set(selected);
@@ -48,10 +78,30 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
     else setSelected(new Set(pendientes.map(l => l.id)));
   };
 
-  const selectedLines = pendientes.filter(l => selected.has(l.id));
-  const totalSelected = selectedLines.reduce((s, l) => s + (l.total ?? 0), 0);
-  const totalFacturado = facturadas.reduce((s, l) => s + (l.total ?? 0), 0);
-  const totalVenta = lineas.filter(l => l.producto_id).reduce((s, l) => s + (l.total ?? 0), 0);
+  const setCantidad = (l: VentaLinea, v: string) => {
+    const n = Math.max(0, Math.min(disponible(l), Number(v) || 0));
+    setCantidades(c => ({ ...c, [l.id]: n }));
+  };
+
+  // Por monto: llena las líneas en orden hasta llegar al monto (con impuestos); se puede ajustar después.
+  const llenarPorMonto = () => {
+    let resta = Number(monto) || 0;
+    if (resta <= 0) { toast.error('Escribe el monto de la factura'); return; }
+    const sel = new Set<string>();
+    const cant: Record<string, number> = {};
+    for (const l of pendientes) {
+      const u = unitario(l);
+      if (resta <= 0.005 || u <= 0) { cant[l.id] = 0; continue; }
+      const q = Math.min(disponible(l), Math.floor((resta / u) * 1000) / 1000);
+      cant[l.id] = q;
+      if (q > 0) { sel.add(l.id); resta -= q * u; }
+    }
+    setCantidades(cant);
+    setSelected(sel);
+  };
+
+  const selectedLines = pendientes.filter(l => selected.has(l.id) && (cantidades[l.id] ?? 0) > 0);
+  const totalSelected = selectedLines.reduce((s, l) => s + unitario(l) * (cantidades[l.id] ?? 0), 0);
 
   const { fmt } = useCurrency();
 
@@ -62,69 +112,21 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
 
     setCreating(true);
     try {
-      // Create CFDI record as borrador
-      const subtotal = selectedLines.reduce((s, l) => s + (l.subtotal ?? 0), 0);
-      const ivaTotal = selectedLines.reduce((s, l) => s + (l.iva_monto ?? 0), 0);
-      const iepsTotal = selectedLines.reduce((s, l) => s + (l.ieps_monto ?? 0), 0);
-
-      const { data: cfdi, error: cfdiErr } = await supabase.from('cfdis').insert({
-        empresa_id: empresa.id,
-        venta_id: ventaId,
-        status: 'borrador',
-        user_id: user.id,
-        receiver_rfc: cliente.facturama_rfc || cliente.rfc || '',
-        receiver_name: cliente.facturama_razon_social || cliente.nombre || '',
-        receiver_cfdi_use: cliente.facturama_uso_cfdi || 'G03',
-        receiver_fiscal_regime: cliente.facturama_regimen_fiscal || '601',
-        receiver_tax_zip_code: cliente.facturama_cp || '',
-        payment_form: '01',
-        payment_method: 'PUE',
-        expedition_place: empresa.cp || '',
-        subtotal: Math.round(subtotal * 100) / 100,
-        iva_total: Math.round(ivaTotal * 100) / 100,
-        ieps_total: Math.round(iepsTotal * 100) / 100,
-        total: Math.round(totalSelected * 100) / 100,
-        cfdi_type: 'I',
-        currency: 'MXN',
-        serie: 'A',
-      }).select('id').single();
-
-      if (cfdiErr) throw cfdiErr;
-
-      // Clave y unidad SAT reales del producto (la venta no las guarda).
-      const prodIds = Array.from(new Set(selectedLines.map(l => l.producto_id).filter(Boolean))) as string[];
-      const { data: prodSat, error: prodErr } = await supabase.from('productos')
-        .select('id, codigo_sat, unidades_sat(clave, nombre)').in('id', prodIds);
-      if (prodErr) throw prodErr;
-
-      // Create CFDI lines: precio sin impuestos antes del descuento + descuento en dinero (D-014)
-      const cfdiLineas = selectedLines.map(l => {
-        const prod = productosList?.find((p: any) => p.id === l.producto_id);
-        const sat: any = prodSat?.find((p: any) => p.id === l.producto_id);
-        const cant = Number(l.cantidad) || 0;
-        const sub = Number(l.subtotal) || 0;
-        return {
-          cfdi_id: cfdi.id,
-          venta_linea_id: l.id,
-          producto_id: l.producto_id,
-          descripcion: prod?.nombre || l.descripcion || 'Producto',
-          cantidad: l.cantidad,
-          precio_unitario: cant > 0 && sub > 0 ? Math.round((sub / cant) * 1e6) / 1e6 : l.precio_unitario,
-          descuento: Math.round(sub * (Number(l.descuento_pct) || 0)) / 100,
-          subtotal: l.subtotal ?? 0,
-          iva_pct: l.iva_pct ?? 0,
-          ieps_pct: l.ieps_pct ?? 0,
-          iva_monto: l.iva_monto ?? 0,
-          ieps_monto: l.ieps_monto ?? 0,
-          total: l.total ?? 0,
-          product_code: sat?.codigo_sat || prod?.codigo_sat || '',
-          unit_code: sat?.unidades_sat?.clave || '',
-          unit_name: sat?.unidades_sat?.nombre || '',
-        };
+      // El servidor arma el borrador con las cantidades elegidas y la ficha fiscal del cliente (D-015).
+      const { data, error } = await supabase.functions.invoke('facturama', {
+        body: {
+          action: 'crear_borrador_venta', empresa_id: empresa.id, venta_id: ventaId,
+          cantidades: Object.fromEntries(selectedLines.map(l => [l.id, cantidades[l.id]])),
+          payment_form: '01', payment_method: 'PUE',
+        },
       });
-
-      const { error: linErr } = await supabase.from('cfdi_lineas').insert(cfdiLineas);
-      if (linErr) throw linErr;
+      if (error) {
+        let msg = error.message;
+        try { const b = await (error as any).context?.json?.(); if (b?.error) msg = b.error; } catch { /* sin cuerpo */ }
+        throw new Error(msg);
+      }
+      if (data?.error) throw new Error(data.error);
+      const cfdi = { id: data.cfdi_id as string };
 
       toast.success('Borrador de factura creado');
       queryClient.invalidateQueries({ queryKey: ['cfdis'] });
@@ -172,6 +174,15 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
             </div>
           </div>
 
+          {/* Por monto */}
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className="text-[11px] text-muted-foreground">Facturar por monto (con impuestos)</label>
+              <Input type="number" min={0} step="any" value={monto} onChange={e => setMonto(e.target.value)} placeholder="Ej. 2000" className="h-8" />
+            </div>
+            <Button variant="outline" size="sm" onClick={llenarPorMonto}>Llenar cantidades</Button>
+          </div>
+
           {/* Lines table */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -186,7 +197,7 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
                       <Checkbox checked={selected.size === pendientes.length && pendientes.length > 0} onCheckedChange={toggleAll} />
                     </th>
                     <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground">Producto</th>
-                    <th className="py-2 px-2 text-right text-[11px] font-medium text-muted-foreground w-16">Cant</th>
+                    <th className="py-2 px-2 text-right text-[11px] font-medium text-muted-foreground w-24">Cant. a facturar</th>
                     <th className="py-2 px-2 text-right text-[11px] font-medium text-muted-foreground w-24">P.Unit</th>
                     <th className="py-2 px-2 text-right text-[11px] font-medium text-muted-foreground w-24">Total</th>
                   </tr>
@@ -200,9 +211,13 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
                           <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggleLine(l.id)} />
                         </td>
                         <td className="py-1.5 px-2 text-[12px]">{prod?.nombre || l.descripcion}</td>
-                        <td className="py-1.5 px-2 text-right">{l.cantidad}</td>
+                        <td className="py-1.5 px-2 text-right">
+                          <Input type="number" min={0} max={disponible(l)} step="any" value={cantidades[l.id] ?? 0}
+                            onChange={e => setCantidad(l, e.target.value)} className="h-7 w-20 ml-auto text-right text-[12px]" />
+                          <span className="text-[10px] text-muted-foreground">de {disponible(l)}</span>
+                        </td>
                         <td className="py-1.5 px-2 text-right">{fmt(l.precio_unitario)}</td>
-                        <td className="py-1.5 px-2 text-right font-medium">{fmt(l.total)}</td>
+                        <td className="py-1.5 px-2 text-right font-medium">{fmt(unitario(l) * (cantidades[l.id] ?? 0))}</td>
                       </tr>
                     );
                   })}

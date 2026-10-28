@@ -40,9 +40,9 @@ const STATUS_MAP: Record<string, string> = {
   accepted: "cancelado",
 };
 
-async function reconcileCancellations(db: any) {
+async function reconcileCancellations(db: any, table: "cfdis" | "cfdi_pagos") {
   const { data: pendientes } = await db
-    .from("cfdis")
+    .from(table)
     .select("id, facturama_id, status, facturama_ambiente")
     .eq("status", "cancelacion_pendiente")
     .not("facturama_id", "is", null)
@@ -65,16 +65,15 @@ async function reconcileCancellations(db: any) {
       const upstream = (json.CancellationStatus || json.Status || "").toString().toLowerCase();
       const mapped = STATUS_MAP[upstream];
       if (mapped && mapped !== row.status) {
-        await db.from("cfdis").update({
+        await db.from(table).update({
           status: mapped,
           cancel_status: upstream,
           updated_at: new Date().toISOString(),
         }).eq("id", row.id);
-        // Cancelado: la venta vuelve a quedar libre para facturarse (D-014).
-        if (mapped === "cancelado") {
-          const { error: vlErr } = await db.from("venta_lineas")
-            .update({ facturado: false, factura_cfdi_id: null }).eq("factura_cfdi_id", row.id);
-          if (vlErr) console.error("liberar venta del CFDI cancelado:", vlErr.message);
+        // Cancelado: la cantidad facturada vuelve a quedar disponible en la venta (D-014, D-015).
+        if (mapped === "cancelado" && table === "cfdis") {
+          const { error: vlErr } = await db.rpc("recalcular_facturacion_cfdi", { p_cfdi_id: row.id });
+          if (vlErr) console.error("recalcular venta del CFDI cancelado:", vlErr.message);
         }
         updates.push({ id: row.id, ok: true, from: row.status, to: mapped });
       } else {
@@ -107,7 +106,9 @@ async function reconcileLast24h(db: any) {
     .from("cfdis")
     .select("facturama_id")
     .in("facturama_id", ids);
-  const knownSet = new Set((known ?? []).map((k: any) => k.facturama_id));
+  // Los complementos de pago (REP) también son CFDI emitidos.
+  const { data: knownPagos } = await db.from("cfdi_pagos").select("facturama_id").in("facturama_id", ids);
+  const knownSet = new Set([...(known ?? []), ...(knownPagos ?? [])].map((k: any) => k.facturama_id));
   const missing = items
     .filter((i) => !knownSet.has(i.Id))
     .map((i) => ({ id: i.Id, uuid: i.Complement?.TaxStamp?.Uuid, total: i.Total, date: i.Date }));
@@ -125,17 +126,19 @@ serve(async (req) => {
     const privileged = await isPrivilegedCaller(req);
     const db = admin();
     const [cancel, audit] = await Promise.all([
-      reconcileCancellations(db),
+      reconcileCancellations(db, "cfdis"),
       reconcileLast24h(db),
     ]);
+    const cancelPagos = await reconcileCancellations(db, "cfdi_pagos");
     if (!privileged) {
       return new Response(JSON.stringify({
         ok: true,
         cancellations: { checked: cancel.checked, changed: cancel.updates.filter((u: any) => u.ok && u.to).length },
+        cancellations_rep: { checked: cancelPagos.checked, changed: cancelPagos.updates.filter((u: any) => u.ok && u.to).length },
         audit: { ok: audit.ok, fetched: (audit as any).fetched ?? 0, missing_count: (audit as any).missing_count ?? 0 },
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    return new Response(JSON.stringify({ ok: true, cancellations: cancel, audit }), {
+    return new Response(JSON.stringify({ ok: true, cancellations: cancel, cancellations_rep: cancelPagos, audit }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {

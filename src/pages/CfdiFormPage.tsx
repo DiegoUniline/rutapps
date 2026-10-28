@@ -256,6 +256,27 @@ export default function CfdiFormPage() {
     }
   };
 
+  // Sustitución (D-015): borrador con las mismas cantidades; al timbrarlo se cancela esta con motivo 01.
+  const [sustituyendo, setSustituyendo] = useState(false);
+  const handleSustituir = async () => {
+    if (!cfdi) return;
+    if (!confirm('Se creará un borrador que sustituye a esta factura. Al timbrarlo, esta se cancelará con motivo 01. ¿Continuar?')) return;
+    setSustituyendo(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('facturama', { body: { action: 'crear_sustituto', cfdi_id: cfdi.id } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(data?.existente ? 'Ya había un borrador sustituto; se abre' : 'Borrador sustituto creado');
+      navigate(`/facturacion-cfdi/${data.cfdi_id}`, { state: { returnTo: `/facturacion-cfdi/${cfdi.id}` } });
+    } catch (e: any) {
+      let msg = e?.message || 'No se pudo crear el sustituto';
+      try { if (e instanceof FunctionsHttpError) { const b = await e.context.json(); if (b?.error) msg = b.error; } } catch { /* sin cuerpo */ }
+      toast.error(msg);
+    } finally {
+      setSustituyendo(false);
+    }
+  };
+
   // Timbrado incierto: busca en Facturama y liga o libera (D-014)
   const handleReconciliar = async () => {
     if (!cfdi) return;
@@ -325,6 +346,9 @@ export default function CfdiFormPage() {
       if (!data?.success) throw new Error(data?.error || 'Respuesta inesperada del servidor');
 
       toast.success(`¡Factura timbrada! UUID: ${data.folio_fiscal?.substring(0, 8)}...`);
+      if (data.cancelacion_original && !data.cancelacion_original.ok) {
+        toast.error(`No se pudo cancelar la factura original: ${data.cancelacion_original.error}. Cancélala con motivo 01.`);
+      }
       queryClient.invalidateQueries({ queryKey: ['cfdis'] });
       queryClient.invalidateQueries({ queryKey: ['cfdi', cfdi.id] });
       queryClient.invalidateQueries({ queryKey: ['cfdi-lineas', cfdi.id] });
@@ -417,6 +441,12 @@ export default function CfdiFormPage() {
               {cfdi.status === 'borrador' ? 'Borrador' : cfdi.status === 'timbrado' ? 'Timbrado' : cfdi.status === 'incierto' ? 'Timbrado incierto' : cfdi.status === 'timbrando' ? 'Timbrando' : cfdi.status}
             </Badge>
           </div>
+          {(cfdi as any).sustituye_cfdi_id && cfdi.status === 'borrador' && (
+            <p className="text-xs text-amber-700 mt-1">Sustituye a otra factura: al timbrar esta, la original se cancela con motivo 01.</p>
+          )}
+          {(cfdi as any).es_global && (
+            <p className="text-xs text-muted-foreground mt-1">Factura global (público en general)</p>
+          )}
           {cfdi.status === 'borrador' && cfdi.error_detalle && (
             <p className="text-xs text-destructive mt-1 whitespace-pre-wrap">Último intento: {cfdi.error_detalle}</p>
           )}
@@ -799,6 +829,10 @@ export default function CfdiFormPage() {
                >
                  <XCircle className="h-4 w-4 mr-1.5" />
                  Cancelar CFDI
+               </Button>
+               <Button variant="outline" size="sm" onClick={handleSustituir} disabled={sustituyendo}>
+                 {sustituyendo ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+                 Sustituir
                </Button>
              </div>
            )}
