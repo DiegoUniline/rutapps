@@ -1148,6 +1148,7 @@ export type Database = {
           cfdi_id: string
           created_at: string
           descripcion: string
+          descuento: number
           id: string
           ieps_monto: number
           ieps_pct: number
@@ -1167,6 +1168,7 @@ export type Database = {
           cfdi_id: string
           created_at?: string
           descripcion?: string
+          descuento?: number
           id?: string
           ieps_monto?: number
           ieps_pct?: number
@@ -1186,6 +1188,7 @@ export type Database = {
           cfdi_id?: string
           created_at?: string
           descripcion?: string
+          descuento?: number
           id?: string
           ieps_monto?: number
           ieps_pct?: number
@@ -1236,6 +1239,7 @@ export type Database = {
           imp_pagado: number
           imp_saldo_ant: number
           imp_saldo_insoluto: number
+          impuestos_dr: Json | null
           iva_trasladado_dr: number
           metodo_pago_dr: string | null
           moneda_dr: string
@@ -1256,6 +1260,7 @@ export type Database = {
           imp_pagado?: number
           imp_saldo_ant?: number
           imp_saldo_insoluto?: number
+          impuestos_dr?: Json | null
           iva_trasladado_dr?: number
           metodo_pago_dr?: string | null
           moneda_dr?: string
@@ -1276,6 +1281,7 @@ export type Database = {
           imp_pagado?: number
           imp_saldo_ant?: number
           imp_saldo_insoluto?: number
+          impuestos_dr?: Json | null
           iva_trasladado_dr?: number
           metodo_pago_dr?: string | null
           moneda_dr?: string
@@ -1320,6 +1326,7 @@ export type Database = {
         Row: {
           cadena_original: string | null
           cancel_date: string | null
+          cancel_motivo: string | null
           cancel_status: string | null
           cobro_id: string | null
           created_at: string
@@ -1345,12 +1352,18 @@ export type Database = {
           nom_banco_ord_ext: string | null
           num_operacion: string | null
           pdf_url: string | null
+          receiver_fiscal_regime: string | null
+          receiver_name: string | null
+          receiver_rfc: string | null
+          receiver_tax_zip_code: string | null
           rfc_emisor_cta_ben: string | null
           rfc_emisor_cta_ord: string | null
           sello_cfdi: string | null
           sello_sat: string | null
           serie: string | null
+          stamping_started_at: string | null
           status: string
+          timbre_reserva_id: string | null
           tipo_cambio: number
           updated_at: string
           user_id: string
@@ -1359,6 +1372,7 @@ export type Database = {
         Insert: {
           cadena_original?: string | null
           cancel_date?: string | null
+          cancel_motivo?: string | null
           cancel_status?: string | null
           cobro_id?: string | null
           created_at?: string
@@ -1384,12 +1398,18 @@ export type Database = {
           nom_banco_ord_ext?: string | null
           num_operacion?: string | null
           pdf_url?: string | null
+          receiver_fiscal_regime?: string | null
+          receiver_name?: string | null
+          receiver_rfc?: string | null
+          receiver_tax_zip_code?: string | null
           rfc_emisor_cta_ben?: string | null
           rfc_emisor_cta_ord?: string | null
           sello_cfdi?: string | null
           sello_sat?: string | null
           serie?: string | null
+          stamping_started_at?: string | null
           status?: string
+          timbre_reserva_id?: string | null
           tipo_cambio?: number
           updated_at?: string
           user_id: string
@@ -1398,6 +1418,7 @@ export type Database = {
         Update: {
           cadena_original?: string | null
           cancel_date?: string | null
+          cancel_motivo?: string | null
           cancel_status?: string | null
           cobro_id?: string | null
           created_at?: string
@@ -1423,12 +1444,18 @@ export type Database = {
           nom_banco_ord_ext?: string | null
           num_operacion?: string | null
           pdf_url?: string | null
+          receiver_fiscal_regime?: string | null
+          receiver_name?: string | null
+          receiver_rfc?: string | null
+          receiver_tax_zip_code?: string | null
           rfc_emisor_cta_ben?: string | null
           rfc_emisor_cta_ord?: string | null
           sello_cfdi?: string | null
           sello_sat?: string | null
           serie?: string | null
+          stamping_started_at?: string | null
           status?: string
+          timbre_reserva_id?: string | null
           tipo_cambio?: number
           updated_at?: string
           user_id?: string
@@ -1451,26 +1478,69 @@ export type Database = {
           },
         ]
       }
+      cfdi_series: {
+        Row: {
+          empresa_id: string
+          serie: string
+          serie_pago: string
+          siguiente_folio: number
+          siguiente_folio_pago: number
+          updated_at: string
+        }
+        Insert: {
+          empresa_id: string
+          serie?: string
+          serie_pago?: string
+          siguiente_folio?: number
+          siguiente_folio_pago?: number
+          updated_at?: string
+        }
+        Update: {
+          empresa_id?: string
+          serie?: string
+          serie_pago?: string
+          siguiente_folio?: number
+          siguiente_folio_pago?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cfdi_series_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cfdis: {
         Row: {
           cadena_original: string | null
           cancel_date: string | null
+          cancel_motivo: string | null
           cancel_status: string | null
+          cancel_uuid_sustitucion: string | null
           cfdi_type: string
           created_at: string
           currency: string
+          descuento_total: number
           empresa_id: string
           enviado_a: string | null
           enviado_at: string | null
           error_detalle: string | null
+          es_global: boolean
           expedition_place: string | null
           facturama_ambiente: string
           facturama_id: string | null
           fecha_timbrado: string | null
           folio: string | null
           folio_fiscal: string | null
+          global_anio: number | null
+          global_meses: string | null
+          global_periodicidad: string | null
           id: string
           ieps_total: number
+          impuestos_detalle: Json | null
           iva_total: number
           no_certificado_emisor: string | null
           no_certificado_sat: string | null
@@ -1486,8 +1556,11 @@ export type Database = {
           sello_cfdi: string | null
           sello_sat: string | null
           serie: string | null
+          stamping_started_at: string | null
           status: string
           subtotal: number
+          sustituye_cfdi_id: string | null
+          timbre_reserva_id: string | null
           total: number
           updated_at: string
           user_id: string
@@ -1497,22 +1570,30 @@ export type Database = {
         Insert: {
           cadena_original?: string | null
           cancel_date?: string | null
+          cancel_motivo?: string | null
           cancel_status?: string | null
+          cancel_uuid_sustitucion?: string | null
           cfdi_type?: string
           created_at?: string
           currency?: string
+          descuento_total?: number
           empresa_id: string
           enviado_a?: string | null
           enviado_at?: string | null
           error_detalle?: string | null
+          es_global?: boolean
           expedition_place?: string | null
           facturama_ambiente?: string
           facturama_id?: string | null
           fecha_timbrado?: string | null
           folio?: string | null
           folio_fiscal?: string | null
+          global_anio?: number | null
+          global_meses?: string | null
+          global_periodicidad?: string | null
           id?: string
           ieps_total?: number
+          impuestos_detalle?: Json | null
           iva_total?: number
           no_certificado_emisor?: string | null
           no_certificado_sat?: string | null
@@ -1528,8 +1609,11 @@ export type Database = {
           sello_cfdi?: string | null
           sello_sat?: string | null
           serie?: string | null
+          stamping_started_at?: string | null
           status?: string
           subtotal?: number
+          sustituye_cfdi_id?: string | null
+          timbre_reserva_id?: string | null
           total?: number
           updated_at?: string
           user_id: string
@@ -1539,22 +1623,30 @@ export type Database = {
         Update: {
           cadena_original?: string | null
           cancel_date?: string | null
+          cancel_motivo?: string | null
           cancel_status?: string | null
+          cancel_uuid_sustitucion?: string | null
           cfdi_type?: string
           created_at?: string
           currency?: string
+          descuento_total?: number
           empresa_id?: string
           enviado_a?: string | null
           enviado_at?: string | null
           error_detalle?: string | null
+          es_global?: boolean
           expedition_place?: string | null
           facturama_ambiente?: string
           facturama_id?: string | null
           fecha_timbrado?: string | null
           folio?: string | null
           folio_fiscal?: string | null
+          global_anio?: number | null
+          global_meses?: string | null
+          global_periodicidad?: string | null
           id?: string
           ieps_total?: number
+          impuestos_detalle?: Json | null
           iva_total?: number
           no_certificado_emisor?: string | null
           no_certificado_sat?: string | null
@@ -1570,8 +1662,11 @@ export type Database = {
           sello_cfdi?: string | null
           sello_sat?: string | null
           serie?: string | null
+          stamping_started_at?: string | null
           status?: string
           subtotal?: number
+          sustituye_cfdi_id?: string | null
+          timbre_reserva_id?: string | null
           total?: number
           updated_at?: string
           user_id?: string
@@ -1584,6 +1679,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdis_sustituye_cfdi_id_fkey"
+            columns: ["sustituye_cfdi_id"]
+            isOneToOne: false
+            referencedRelation: "cfdis"
             referencedColumns: ["id"]
           },
           {
@@ -6562,6 +6664,7 @@ export type Database = {
           almacenes: string[] | null
           calculo_costo: Database["public"]["Enums"]["calculo_costo"] | null
           cantidad: number | null
+          cfdi_iva_sin_iva: string | null
           clasificacion_id: string | null
           clave_alterna: string | null
           codigo: string
@@ -6622,6 +6725,7 @@ export type Database = {
           almacenes?: string[] | null
           calculo_costo?: Database["public"]["Enums"]["calculo_costo"] | null
           cantidad?: number | null
+          cfdi_iva_sin_iva?: string | null
           clasificacion_id?: string | null
           clave_alterna?: string | null
           codigo: string
@@ -6682,6 +6786,7 @@ export type Database = {
           almacenes?: string[] | null
           calculo_costo?: Database["public"]["Enums"]["calculo_costo"] | null
           cantidad?: number | null
+          cfdi_iva_sin_iva?: string | null
           clasificacion_id?: string | null
           clave_alterna?: string | null
           codigo?: string
@@ -8970,6 +9075,7 @@ export type Database = {
           empresa_id: string
           id: string
           notas: string | null
+          referencia_externa: string | null
           referencia_id: string | null
           saldo_anterior: number
           saldo_nuevo: number
@@ -8982,6 +9088,7 @@ export type Database = {
           empresa_id: string
           id?: string
           notas?: string | null
+          referencia_externa?: string | null
           referencia_id?: string | null
           saldo_anterior?: number
           saldo_nuevo?: number
@@ -8994,6 +9101,7 @@ export type Database = {
           empresa_id?: string
           id?: string
           notas?: string | null
+          referencia_externa?: string | null
           referencia_id?: string | null
           saldo_anterior?: number
           saldo_nuevo?: number
@@ -10838,6 +10946,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      acreditar_timbres_pago: {
+        Args: {
+          p_cantidad: number
+          p_empresa_id: string
+          p_notas: string
+          p_referencia: string
+          p_user_id: string
+        }
+        Returns: number
+      }
       actualizar_mi_partner_contacto: {
         Args: { _notas?: string; _telefono?: string }
         Returns: undefined
@@ -11012,6 +11130,17 @@ export type Database = {
         }
         Returns: Json
       }
+      apartar_cfdi_timbrado: { Args: { p_cfdi_id: string }; Returns: Json }
+      apartar_rep: {
+        Args: {
+          p_cabecera: Json
+          p_cobro_id: string
+          p_documentos: Json
+          p_empresa_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       aplicar_cobro:
         | {
             Args: {
@@ -11108,6 +11237,8 @@ export type Database = {
         Args: { p_motivo?: string; p_solicitud_id: string }
         Returns: undefined
       }
+      cfdi_status_ocupa: { Args: { p_status: string }; Returns: boolean }
+      cfdi_status_vigente: { Args: { p_status: string }; Returns: boolean }
       check_stock_lote_paridad: {
         Args: { p_empresa_id?: string }
         Returns: {
@@ -11132,6 +11263,10 @@ export type Database = {
       close_full_audit: {
         Args: { p_auditoria_id: string; p_cerrada_por: string }
         Returns: undefined
+      }
+      cobro_tiene_rep_vigente: {
+        Args: { p_cobro_id: string }
+        Returns: boolean
       }
       confirm_timbre_reserve: {
         Args: { p_cfdi_id: string; p_reservation_id: string }
@@ -11811,6 +11946,10 @@ export type Database = {
         Args: { p_empresa_id: string; p_user_id: string }
         Returns: boolean
       }
+      puede_facturar: {
+        Args: { p_accion: string; p_empresa_id: string; p_user_id: string }
+        Returns: boolean
+      }
       purge_internal_notifications: { Args: never; Returns: undefined }
       purge_old_gps_history: { Args: never; Returns: undefined }
       reabrir_pedido_parcial: {
@@ -11835,6 +11974,10 @@ export type Database = {
         Returns: undefined
       }
       recalc_venta_totales: { Args: { p_venta_id: string }; Returns: undefined }
+      recalcular_facturacion_cfdi: {
+        Args: { p_cfdi_id: string }
+        Returns: undefined
+      }
       recalcular_nivel_partner: {
         Args: { _partner_id: string }
         Returns: number
