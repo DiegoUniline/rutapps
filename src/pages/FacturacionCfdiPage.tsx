@@ -34,6 +34,8 @@ const STATUS_COLORS: Record<string, string> = {
   cancelado: 'outline',
   cancelacion_pendiente: 'secondary',
   cancelacion_rechazada: 'destructive',
+  incierto: 'destructive',
+  timbrando: 'secondary',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -43,7 +45,11 @@ const STATUS_LABELS: Record<string, string> = {
   cancelado: 'Cancelado',
   cancelacion_pendiente: 'Cancel. Pendiente',
   cancelacion_rechazada: 'Cancel. Rechazada',
+  incierto: 'Timbrado incierto',
+  timbrando: 'Timbrando',
 };
+// Requieren atención: van en la pestaña de errores (D-014).
+const ATENCION = ['error', 'incierto', 'timbrando'];
 
 type FacturaSubTab = 'todas' | 'borrador' | 'timbrado' | 'error' | 'canceladas';
 
@@ -182,7 +188,7 @@ export default function FacturacionCfdiPage() {
       case 'timbrado':
         return c.status === 'timbrado';
       case 'error':
-        return c.status === 'error';
+        return ATENCION.includes(c.status);
       case 'canceladas':
         return cancelStatuses.includes(c.status);
       default:
@@ -195,7 +201,7 @@ export default function FacturacionCfdiPage() {
       acc.todas++;
       if (c.status === 'borrador') acc.borrador++;
       else if (c.status === 'timbrado') acc.timbrado++;
-      else if (c.status === 'error') acc.error++;
+      else if (ATENCION.includes(c.status)) acc.error++;
       else if (cancelStatuses.includes(c.status)) acc.canceladas++;
       return acc;
     },

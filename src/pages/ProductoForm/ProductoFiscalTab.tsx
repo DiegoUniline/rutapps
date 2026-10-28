@@ -18,7 +18,8 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
 
   const claveOk = !!form.codigo_sat && /^\d{8}$/.test((form.codigo_sat || '').toString().trim()) && form.codigo_sat !== '01010101';
   const unidadOk = !!form.udem_sat_id;
-  const listoCfdi = claveOk && unidadOk;
+  const ivaSinIvaOk = !!form.tiene_iva || !!form.cfdi_iva_sin_iva;
+  const listoCfdi = claveOk && unidadOk && ivaSinIvaOk;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
@@ -31,7 +32,8 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
           {!listoCfdi && (
             <span className="text-[11px] text-muted-foreground">
               {!claveOk && 'Clave SAT (8 dígitos) requerida. '}
-              {!unidadOk && 'Unidad SAT requerida.'}
+              {!unidadOk && 'Unidad SAT requerida. '}
+              {!ivaSinIvaOk && 'Indica cómo va el IVA en la factura.'}
             </span>
           )}
         </div>
@@ -55,6 +57,19 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
               className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${form.iva_pct === rate ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>{rate}%</button>
           ))}
         </div>
+        {!form.tiene_iva && (
+          <div className="odoo-field-row">
+            <span className="odoo-field-label">IVA en factura</span>
+            <div className="flex flex-wrap gap-2 pt-[2px]">
+              {([['tasa0', 'Tasa 0%'], ['exento', 'Exento'], ['no_objeto', 'No objeto']] as const).map(([v, label]) => (
+                <button key={v} type="button" onClick={() => set('cfdi_iva_sin_iva', v)}
+                  className={`text-[11px] px-3 py-1 rounded border transition-colors ${form.cfdi_iva_sin_iva === v ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="odoo-field-row">
           <span className="odoo-field-label">Tiene IEPS</span>
           <label className="flex items-center gap-2 cursor-pointer pt-[2px]">

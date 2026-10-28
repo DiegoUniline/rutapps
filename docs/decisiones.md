@@ -74,3 +74,11 @@
 - **Decisión (facturación CFDI, rumbo):** se toma como referencia la lógica de `DiegoUniline/user-hub-pro` (validación previa, timbrado sin duplicados, cancelación y complemento de pago) y se adapta a RutApp, que es multiempresa. El saldo de timbres por empresa con Stripe que ya tiene RutApp se conserva. Orden: **Fase 0** seguridad y sandbox → **Fase 1** factura de venta correcta → Fase 2 complemento de pago, global y sustitución → Fase 3 nota de crédito y abrir el módulo a las empresas.
 - **Sandbox:** el dueño da de alta la cuenta sandbox de Facturama con los secrets `FACTURAMA_SANDBOX_USERNAME` y `FACTURAMA_SANDBOX_PASSWORD`. Cada empresa tiene `facturama_ambiente` (`produccion`/`sandbox`) y cada CFDI guarda el ambiente con que se timbró.
 - **CSD y ambiente:** los puede cambiar el dueño de la empresa, quien tenga el permiso Facturación CFDI · editar (sin rol asignado = acceso total, igual que la app) y el super admin. Solo se acepta el CSD del RFC de la propia empresa, validado antes de subirlo.
+
+## D-014
+- **Fecha:** 2026-10-28 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión (Fase 1 facturación, factura de venta):** el servidor valida antes de timbrar, aparta la venta (nadie más puede facturar esas líneas), asigna serie/folio consecutivo por empresa (`cfdi_series`) y solo un rechazo explícito de Facturama (4xx) libera; sin respuesta queda "Timbrado incierto" hasta **Reconciliar** (busca por receptor + serie/folio + total + RFC emisor).
+- **Impuestos:** se toman de la venta (precio sin impuestos antes del descuento + descuento en nodo Discount); IEPS dentro de la base del IVA; IEPS por cuota con `IsQuota`; IVA 0% = objeto 02 con tasa 0.
+- **Productos sin IVA:** se elige **por producto** (`productos.cfdi_iva_sin_iva`: tasa 0% / exento / no objeto). Sin elegir, no se timbra (lo marca la validación previa).
+- **Receptor:** siempre los datos fiscales de la ficha del cliente (`facturama_*`); en el timbrado solo se elige el uso de CFDI.
+- **Cancelación:** motivos 01–04; el 01 exige el UUID de una factura timbrada de la misma empresa que la sustituye. Al quedar cancelada, la venta vuelve a poder facturarse.

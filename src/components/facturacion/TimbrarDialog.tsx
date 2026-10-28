@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { Loader2, Search, FileCheck, ShoppingCart } from 'lucide-react';
+import { Loader2, Search, FileCheck, ShoppingCart, AlertTriangle } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -83,10 +83,6 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
     },
   });
 
-  // Helpers to extract real SAT unit/code from joined product (fallback "H87 / Pieza")
-  const getUnitCode = (l: any) => (l?.productos?.unidades_sat?.clave || 'H87').toString().toUpperCase();
-  const getUnitName = (l: any) => l?.productos?.unidades_sat?.nombre || 'Pieza';
-  const getProductCode = (l: any) => (l?.productos?.codigo_sat || '').toString().trim() || '01010101';
 
   // Catalogs
   const { data: formasPago } = useQuery({
@@ -116,22 +112,36 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
     },
   });
 
-  // When selecting a venta, prefill receiver
-  useEffect(() => {
-    if (!selectedVentaId || !ventas) return;
-    const venta = ventas.find((v: any) => v.id === selectedVentaId);
-    if (venta?.clientes) {
-      const c = venta.clientes as any;
-      setReceiver({
-        rfc: c.rfc || '',
-        name: c.nombre || '',
-        cfdi_use: c.uso_cfdi || 'G01',
-        fiscal_regime: c.regimen_fiscal || '601',
-        tax_zip_code: c.cp || '',
+  // Validación previa en el servidor (D-014): receptor desde la ficha fiscal del cliente.
+  const [usoCfdi, setUsoCfdi] = useState<string>('');
+  const { data: preflight, isFetching: validando } = useQuery({
+    queryKey: ['cfdi-preflight', empresa?.id, selectedVentaId, paymentForm, paymentMethod, usoCfdi],
+    enabled: !!empresa?.id && !!selectedVentaId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('facturama', {
+        body: {
+          action: 'preflight', empresa_id: empresa!.id, venta_id: selectedVentaId,
+          payment_form: paymentForm, payment_method: paymentMethod, receiver_cfdi_use: usoCfdi || undefined,
+        },
       });
-    }
-    setStep('review');
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { valido: boolean; secciones: Record<string, string[]>; receptor: typeof receiver; totales: { total: number } | null };
+    },
+  });
+  const erroresPreflight = preflight ? Object.values(preflight.secciones).flat() : [];
+
+  useEffect(() => {
+    if (!preflight?.receptor) return;
+    setReceiver(preflight.receptor);
+    if (!usoCfdi && preflight.receptor.cfdi_use) setUsoCfdi(preflight.receptor.cfdi_use);
+  }, [preflight]);
+
+  useEffect(() => {
+    if (selectedVentaId) setStep('review');
   }, [selectedVentaId]);
+
+  const lineasPendientes = (ventaLineas || []).filter((l: any) => l.producto_id && !l.facturado && !l.facturado_global && !l.factura_cfdi_id);
 
   // Filter ventas
   const filteredVentas = (ventas || []).filter((v: any) => {
@@ -141,116 +151,38 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
   });
 
   async function handleTimbrar() {
-    if (!empresa || !selectedVentaId || !ventaLineas) return;
-
-    if ((timbreSaldo ?? 0) < 1) {
-      toast.error('No tienes timbres disponibles. Contacta al administrador para adquirir más.');
+    if (!empresa || !selectedVentaId) return;
+    if (!preflight?.valido) {
+      toast.error('Corrige los datos señalados antes de timbrar');
       return;
     }
-
-    if (!empresa.rfc || !empresa.razon_social || !empresa.regimen_fiscal || !empresa.cp) {
-      toast.error('Configura los datos fiscales del emisor primero');
-      return;
-    }
-    if (!receiver.rfc || !receiver.name) {
-      toast.error('RFC y nombre del receptor son obligatorios');
-      return;
-    }
-
-    // Validate SAT data per line (clave 8 dígitos + unidad SAT)
-    const missing: string[] = [];
-    for (const l of ventaLineas as any[]) {
-      const nombre = l.descripcion || l.productos?.nombre || `línea ${l.id?.slice(0, 6)}`;
-      const code = getProductCode(l);
-      if (!/^\d{8}$/.test(code) || code === '01010101') {
-        missing.push(`"${nombre}" sin Clave SAT válida (8 dígitos)`);
-      }
-      if (!l.productos?.udem_sat_id) {
-        missing.push(`"${nombre}" sin Unidad SAT`);
-      }
-    }
-    if (missing.length > 0) {
-      toast.error('Faltan datos SAT en productos:\n• ' + missing.slice(0, 5).join('\n• '));
-      return;
-    }
-
     setTimbrating(true);
     try {
-      const items = (ventaLineas as any[]).map((l: any) => ({
-        product_code: getProductCode(l),
-        description: l.descripcion || l.productos?.nombre || 'Producto',
-        unit: getUnitName(l),
-        unit_code: getUnitCode(l),
-        unit_price: l.precio_unitario,
-        quantity: l.cantidad,
-        iva_rate: (l.iva_pct || 0) / 100,
-        ieps_rate: (l.ieps_pct || 0) / 100,
-        iva_ret_rate: 0,
-        isr_ret_rate: 0,
-      }));
-
-      const venta = ventas?.find((v: any) => v.id === selectedVentaId);
-
-      const cfdiLineas = ventaLineas.map((l: any) => ({
-        venta_linea_id: l.id,
-        producto_id: l.producto_id,
-        descripcion: l.descripcion || l.productos?.nombre || 'Producto',
-        cantidad: l.cantidad,
-        precio_unitario: l.precio_unitario,
-        subtotal: l.subtotal ?? 0,
-        iva_pct: l.iva_pct ?? 0,
-        ieps_pct: l.ieps_pct ?? 0,
-        iva_monto: l.iva_monto ?? 0,
-        ieps_monto: l.ieps_monto ?? 0,
-        total: l.total ?? 0,
-        product_code: getProductCode(l),
-        unit_code: getUnitCode(l),
-        unit_name: getUnitName(l),
-      }));
-
+      // El servidor arma la factura con las líneas pendientes de la venta y la ficha fiscal del cliente.
       const { data, error } = await supabase.functions.invoke('facturama', {
         body: {
           action: 'timbrar',
           empresa_id: empresa.id,
           venta_id: selectedVentaId,
-          folio: venta?.folio || '',
-          serie: 'A',
-          name_id: '1',
-          cfdi_type: 'I',
-          currency: 'MXN',
           payment_form: paymentForm,
           payment_method: paymentMethod,
-          expedition_place: empresa.cp,
-          issuer: {
-            rfc: empresa.rfc,
-            name: empresa.razon_social,
-            fiscal_regime: empresa.regimen_fiscal,
-          },
-          receiver: {
-            rfc: receiver.rfc,
-            name: receiver.name,
-            cfdi_use: receiver.cfdi_use,
-            fiscal_regime: receiver.fiscal_regime,
-            tax_zip_code: receiver.tax_zip_code,
-          },
-          items,
-          // La función guarda estas líneas y marca la venta como facturada (S-09).
-          cfdi_lineas: cfdiLineas,
+          receiver_cfdi_use: usoCfdi || undefined,
         },
       });
-
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-
-      const cfdiId = data?.cfdi?.id;
-      if (!cfdiId) throw new Error('Se timbró, pero no se pudo guardar el CFDI localmente');
+      if (!data?.cfdi?.id) throw new Error('Se timbró, pero no se pudo guardar el CFDI localmente');
 
       toast.success(`Factura timbrada · UUID: ${data.folio_fiscal?.substring(0, 8)}...`);
       queryClient.invalidateQueries({ queryKey: ['timbres-saldo'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas-sin-cfdi'] });
       onSuccess();
       resetForm();
     } catch (e: any) {
-      toast.error(e.message || 'Error al timbrar');
+      let msg = e?.message || 'Error al timbrar';
+      try { const b = await e?.context?.json?.(); if (b?.error) msg = b.error; } catch { /* sin cuerpo */ }
+      toast.error(msg);
+      queryClient.invalidateQueries({ queryKey: ['cfdis'] });
     } finally {
       setTimbrating(false);
     }
@@ -261,6 +193,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
     setSelectedVentaId(null);
     setVentaSearch('');
     setReceiver({ rfc: '', name: '', cfdi_use: 'G01', fiscal_regime: '601', tax_zip_code: '' });
+    setUsoCfdi('');
   }
 
   const formaOptions = (formasPago || []).map((f: any) => ({ value: f.clave, label: `${f.clave} - ${f.descripcion}` }));
@@ -319,32 +252,45 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Receiver */}
+              {/* Receiver: datos fiscales de la ficha del cliente (solo el uso de CFDI se elige aquí) */}
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Datos del Receptor</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">RFC</Label>
-                    <Input value={receiver.rfc} onChange={(e) => setReceiver({ ...receiver, rfc: e.target.value })} className="font-mono uppercase h-9" />
+                    <Input value={receiver.rfc} readOnly className="font-mono uppercase h-9 bg-muted/40" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Nombre / Razón Social</Label>
-                    <Input value={receiver.name} onChange={(e) => setReceiver({ ...receiver, name: e.target.value })} className="h-9" />
+                    <Label className="text-xs">Razón Social</Label>
+                    <Input value={receiver.name} readOnly className="h-9 bg-muted/40" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Uso CFDI</Label>
-                    <SearchableSelect options={usoOptions} value={receiver.cfdi_use} onChange={(v) => setReceiver({ ...receiver, cfdi_use: v })} placeholder="Uso CFDI" />
+                    <SearchableSelect options={usoOptions} value={usoCfdi} onChange={setUsoCfdi} placeholder="Uso CFDI" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Régimen Fiscal</Label>
-                    <SearchableSelect options={regimenOptions} value={receiver.fiscal_regime} onChange={(v) => setReceiver({ ...receiver, fiscal_regime: v })} placeholder="Régimen" />
+                    <Input value={regimenOptions.find((o: any) => o.value === receiver.fiscal_regime)?.label || receiver.fiscal_regime} readOnly className="h-9 bg-muted/40" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">C.P. Domicilio Fiscal</Label>
-                    <Input value={receiver.tax_zip_code} onChange={(e) => setReceiver({ ...receiver, tax_zip_code: e.target.value })} className="h-9" maxLength={5} />
+                    <Input value={receiver.tax_zip_code} readOnly className="h-9 bg-muted/40" />
                   </div>
                 </div>
+                <p className="text-[11px] text-muted-foreground">Para corregir RFC, razón social, régimen o C.P. edita los datos fiscales en la ficha del cliente.</p>
               </div>
+
+              {/* Validación previa */}
+              {validando && !preflight ? (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" />Validando datos fiscales…</p>
+              ) : erroresPreflight.length > 0 ? (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                  <p className="text-xs font-semibold text-destructive flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5" />Corrige antes de timbrar</p>
+                  <ul className="text-xs text-destructive list-disc pl-5 space-y-0.5">
+                    {erroresPreflight.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </div>
+              ) : null}
 
               {/* Payment */}
               <div className="space-y-3">
@@ -371,7 +317,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
 
               {/* Lines preview */}
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-foreground">Conceptos ({ventaLineas?.length || 0})</h3>
+                <h3 className="text-sm font-semibold text-foreground">Conceptos pendientes de facturar ({lineasPendientes.length})</h3>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-xs">
                     <thead>
@@ -384,7 +330,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                       </tr>
                     </thead>
                     <tbody>
-                      {(ventaLineas || []).map((l: any) => (
+                      {lineasPendientes.map((l: any) => (
                         <tr key={l.id} className="border-t border-border">
                           <td className="p-2 truncate max-w-[200px]">{l.descripcion || (l.productos as any)?.nombre}</td>
                           <td className="text-right p-2">{l.cantidad}</td>
@@ -403,7 +349,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                 <Button variant="outline" className="flex-1" onClick={() => { setStep('select'); setSelectedVentaId(null); }}>
                   Atrás
                 </Button>
-                <Button className="flex-1" disabled={timbrating} onClick={handleTimbrar}>
+                <Button className="flex-1" disabled={timbrating || validando || !preflight?.valido} onClick={handleTimbrar}>
                   {timbrating ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-1.5" />Timbrando...</>
                   ) : (

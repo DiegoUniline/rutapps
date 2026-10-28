@@ -36,6 +36,8 @@ interface CfdiLinea {
   descripcion: string;
   cantidad: number;
   precio_unitario: number;
+  /** Descuento en dinero, sin impuestos (D-014). Columna nueva, puede no venir en tipos generados. */
+  descuento?: number;
   subtotal: number;
   iva_pct: number;
   ieps_pct: number;
@@ -53,9 +55,10 @@ function calcLinea(l: Partial<CfdiLinea>): Partial<CfdiLinea> {
   const ivaPct = Number(l.iva_pct) || 0;
   const iepsPct = Number(l.ieps_pct) || 0;
   const subtotal = r2(cant * pu);
-  const ieps_monto = r2(subtotal * iepsPct / 100);
-  const iva_monto = r2((subtotal + ieps_monto) * ivaPct / 100);
-  const total = r2(subtotal + ieps_monto + iva_monto);
+  const base = r2(subtotal - (Number(l.descuento) || 0));
+  const ieps_monto = r2(base * iepsPct / 100);
+  const iva_monto = r2((base + ieps_monto) * ivaPct / 100);
+  const total = r2(base + ieps_monto + iva_monto);
   return { ...l, subtotal, iva_monto, ieps_monto, total };
 }
 
@@ -149,6 +152,8 @@ export default function CfdiFormPage() {
   const [canceling, setCanceling] = useState(false);
 
   const readOnly = cfdi?.status !== 'borrador';
+  const incierto = cfdi?.status === 'incierto' || cfdi?.status === 'timbrando';
+  const [reconciliando, setReconciliando] = useState(false);
 
   useEffect(() => {
     if (lineasDb) setLineas(lineasDb);
@@ -186,10 +191,11 @@ export default function CfdiFormPage() {
   // Totals
   const totals = useMemo(() => {
     const subtotal = lineas.reduce((s, l) => s + (l.subtotal || 0), 0);
+    const descuento = lineas.reduce((s, l) => s + (Number(l.descuento) || 0), 0);
     const iva = lineas.reduce((s, l) => s + (l.iva_monto || 0), 0);
     const ieps = lineas.reduce((s, l) => s + (l.ieps_monto || 0), 0);
     const total = lineas.reduce((s, l) => s + (l.total || 0), 0);
-    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total: r2(total) };
+    return { subtotal: r2(subtotal), descuento: r2(descuento), iva: r2(iva), ieps: r2(ieps), total: r2(total) };
   }, [lineas]);
 
   // Save draft
@@ -207,6 +213,7 @@ export default function CfdiFormPage() {
         payment_form: paymentForm,
         payment_method: paymentMethod,
         subtotal: totals.subtotal,
+        descuento_total: totals.descuento,
         iva_total: totals.iva,
         ieps_total: totals.ieps,
         total: totals.total,
@@ -223,6 +230,7 @@ export default function CfdiFormPage() {
           descripcion: l.descripcion || '',
           cantidad: l.cantidad || 0,
           precio_unitario: l.precio_unitario || 0,
+          descuento: Number(l.descuento) || 0,
           subtotal: l.subtotal || 0,
           iva_pct: l.iva_pct || 0,
           ieps_pct: l.ieps_pct || 0,
@@ -245,6 +253,28 @@ export default function CfdiFormPage() {
       toast.error(e.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Timbrado incierto: busca en Facturama y liga o libera (D-014)
+  const handleReconciliar = async () => {
+    if (!cfdi) return;
+    setReconciliando(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('facturama', { body: { action: 'reconciliar', cfdi_id: cfdi.id } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(data?.resultado === 'ligado'
+        ? `Factura encontrada en Facturama · UUID ${String(data.folio_fiscal || '').substring(0, 8)}…`
+        : 'No se timbró en Facturama: la factura quedó como borrador y puedes volver a timbrar');
+      queryClient.invalidateQueries({ queryKey: ['cfdi', cfdi.id] });
+      queryClient.invalidateQueries({ queryKey: ['cfdis'] });
+    } catch (e: any) {
+      let msg = e?.message || 'No se pudo reconciliar';
+      try { if (e instanceof FunctionsHttpError) { const b = await e.context.json(); if (b?.error) msg = b.error; } } catch { /* sin cuerpo */ }
+      toast.error(msg);
+    } finally {
+      setReconciliando(false);
     }
   };
 
@@ -285,60 +315,14 @@ export default function CfdiFormPage() {
 
     setTimbring(true);
     try {
-      const items = lineas.map(l => ({
-        product_code: l.product_code || '01010101',
-        description: l.descripcion || 'Producto',
-        unit: l.unit_name || 'Pieza',
-        unit_code: l.unit_code || 'H87',
-        unit_price: l.precio_unitario,
-        quantity: l.cantidad,
-        iva_rate: (l.iva_pct || 0) / 100,
-        ieps_rate: (l.ieps_pct || 0) / 100,
-        iva_ret_rate: 0,
-        isr_ret_rate: 0,
-      }));
-
+      // El servidor valida y arma el CFDI desde el borrador guardado (D-014).
       const { data, error } = await supabase.functions.invoke('facturama', {
-        body: {
-          action: 'timbrar',
-          cfdi_id: cfdi.id,
-          empresa_id: empresa.id,
-          venta_id: cfdi.venta_id || null,
-          folio: cfdi.folio || '',
-          serie: cfdi.serie || 'A',
-          name_id: '1',
-          cfdi_type: cfdi.cfdi_type || 'I',
-          currency: cfdi.currency || 'MXN',
-          payment_form: paymentForm,
-          payment_method: paymentMethod,
-          expedition_place: empresa.cp,
-          issuer: {
-            rfc: empresa.rfc,
-            name: empresa.razon_social,
-            fiscal_regime: empresa.regimen_fiscal,
-          },
-          receiver: {
-            rfc: receiver.rfc,
-            name: receiver.name,
-            cfdi_use: receiver.cfdi_use,
-            fiscal_regime: receiver.fiscal_regime,
-            tax_zip_code: receiver.tax_zip_code,
-          },
-          items,
-        },
+        body: { action: 'timbrar', cfdi_id: cfdi.id, empresa_id: empresa.id },
       });
 
-      // Check for errors - preserve FunctionsHttpError so catch can parse body
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (!data?.success) throw new Error(data?.error || 'Respuesta inesperada del servidor');
-
-      // Mark venta_lineas as facturado
-      for (const l of lineas) {
-        if (l.venta_linea_id) {
-          await supabase.from('venta_lineas').update({ facturado: true, factura_cfdi_id: cfdi.id }).eq('id', l.venta_linea_id);
-        }
-      }
 
       toast.success(`¡Factura timbrada! UUID: ${data.folio_fiscal?.substring(0, 8)}...`);
       queryClient.invalidateQueries({ queryKey: ['cfdis'] });
@@ -388,6 +372,7 @@ export default function CfdiFormPage() {
       }
 
       setErrorDialog(errorMsg);
+      queryClient.invalidateQueries({ queryKey: ['cfdi', cfdi.id] });
     } finally {
       setTimbring(false);
     }
@@ -429,14 +414,30 @@ export default function CfdiFormPage() {
               CFDI {cfdi.serie ? `${cfdi.serie}-` : ''}{cfdi.folio || 'Borrador'}
             </h1>
             <Badge variant={cfdi.status === 'timbrado' ? 'default' : cfdi.status === 'borrador' ? 'secondary' : 'destructive'}>
-              {cfdi.status === 'borrador' ? 'Borrador' : cfdi.status === 'timbrado' ? 'Timbrado' : cfdi.status}
+              {cfdi.status === 'borrador' ? 'Borrador' : cfdi.status === 'timbrado' ? 'Timbrado' : cfdi.status === 'incierto' ? 'Timbrado incierto' : cfdi.status === 'timbrando' ? 'Timbrando' : cfdi.status}
             </Badge>
           </div>
+          {cfdi.status === 'borrador' && cfdi.error_detalle && (
+            <p className="text-xs text-destructive mt-1 whitespace-pre-wrap">Último intento: {cfdi.error_detalle}</p>
+          )}
           {cfdi.folio_fiscal && (
             <p className="text-xs text-muted-foreground font-mono mt-0.5">UUID: {cfdi.folio_fiscal}</p>
           )}
         </div>
       </div>
+
+      {incierto && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex flex-wrap items-center gap-3">
+          <AlertTriangle className="h-4 w-4 text-destructive" />
+          <p className="text-xs text-destructive flex-1 min-w-[200px]">
+            No se confirmó si Facturama timbró esta factura. Reconcilia antes de volver a intentar para no facturar dos veces.
+          </p>
+          <Button size="sm" variant="outline" onClick={handleReconciliar} disabled={reconciliando}>
+            {reconciliando ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+            Reconciliar
+          </Button>
+        </div>
+      )}
 
       {/* Statusbar */}
       <OdooStatusbar steps={CFDI_STEPS} current={cfdi.status} onStepClick={() => {}} />
@@ -903,7 +904,7 @@ export default function CfdiFormPage() {
                         cfdi_id: id,
                         rfc_emisor: empresa?.rfc || '',
                         motivo: cancelMotivo,
-                        folio_sustitucion: cancelMotivo === '01' ? cancelUuidSustitucion.trim() : undefined,
+                        uuid_sustitucion: cancelMotivo === '01' ? cancelUuidSustitucion.trim() : undefined,
                       },
                     });
                     if (error) throw error;

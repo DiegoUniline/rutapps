@@ -51,6 +51,8 @@ export interface Producto {
   status: StatusProducto;
   almacenes: string[];
   tiene_iva: boolean;
+  /** Cómo va en el CFDI cuando el producto no tiene IVA (D-014). */
+  cfdi_iva_sin_iva?: 'tasa0' | 'exento' | 'no_objeto' | null;
   tiene_ieps: boolean;
   iva_pct: number;
   ieps_pct: number;
