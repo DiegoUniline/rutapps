@@ -51,16 +51,48 @@ export function ConfigEmisorCard() {
 
   // Check CSD status
   const { data: csdStatus, refetch: refetchCsd } = useQuery({
-    queryKey: ['csd_status'],
+    queryKey: ['csd_status', empresa?.id],
+    enabled: !!empresa?.id,
     staleTime: 30 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('facturama', {
-        body: { action: 'list_csds' },
+        body: { action: 'list_csds', empresa_id: empresa!.id },
       });
       if (error) return { loaded: false, csds: [] };
       return { loaded: true, csds: data?.csds || [] };
     },
   });
+
+  // Ambiente de facturación (producción / sandbox) y datos del CSD guardados (D-013).
+  const { data: facConfig, refetch: refetchFacConfig } = useQuery({
+    queryKey: ['empresa-facturama-config', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from('empresas') as any)
+        .select('facturama_ambiente, csd_no_certificado, csd_vence').eq('id', empresa!.id).single();
+      if (error) throw error;
+      return data as { facturama_ambiente: 'produccion' | 'sandbox'; csd_no_certificado: string | null; csd_vence: string | null };
+    },
+  });
+  const [cambiandoAmbiente, setCambiandoAmbiente] = useState(false);
+  async function cambiarAmbiente(ambiente: 'produccion' | 'sandbox') {
+    if (!empresa?.id || facConfig?.facturama_ambiente === ambiente) return;
+    setCambiandoAmbiente(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('facturama', {
+        body: { action: 'set_ambiente', empresa_id: empresa.id, ambiente },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(ambiente === 'sandbox' ? 'Modo prueba (sandbox): las facturas no son válidas ante el SAT' : 'Modo producción: las facturas son reales');
+      await refetchFacConfig();
+      refetchCsd();
+    } catch (err: any) {
+      toast.error('No se pudo cambiar el ambiente: ' + (err.message || 'Error'));
+    } finally {
+      setCambiandoAmbiente(false);
+    }
+  }
 
   useEffect(() => {
     if (empresa) {
@@ -195,6 +227,7 @@ export function ConfigEmisorCard() {
       const { data, error } = await supabase.functions.invoke('facturama', {
         body: {
           action: 'upload_csd',
+          empresa_id: empresa?.id,
           rfc: form.rfc,
           certificate_base64: toBase64(cerBuffer),
           private_key_base64: toBase64(keyBuffer),
@@ -212,6 +245,7 @@ export function ConfigEmisorCard() {
       if (cerInputRef.current) cerInputRef.current.value = '';
       if (keyInputRef.current) keyInputRef.current.value = '';
       refetchCsd();
+      refetchFacConfig();
     } catch (err: any) {
       console.error('CSD upload error:', err);
       toast.error('Error al subir CSD: ' + (err.message || 'Verifica los archivos'));
@@ -380,6 +414,25 @@ export function ConfigEmisorCard() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Ambiente: los CSD y las facturas de sandbox no valen ante el SAT */}
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Ambiente:</span>
+            <Button size="sm" variant={facConfig?.facturama_ambiente !== 'sandbox' ? 'default' : 'outline'}
+              disabled={cambiandoAmbiente} onClick={() => cambiarAmbiente('produccion')}>Producción</Button>
+            <Button size="sm" variant={facConfig?.facturama_ambiente === 'sandbox' ? 'default' : 'outline'}
+              disabled={cambiandoAmbiente} onClick={() => cambiarAmbiente('sandbox')}>Prueba (sandbox)</Button>
+            {facConfig?.facturama_ambiente === 'sandbox' && (
+              <span className="text-xs text-amber-700">Las facturas de prueba no son válidas ante el SAT y no gastan timbres reales de Facturama.</span>
+            )}
+          </div>
+
+          {facConfig?.csd_no_certificado && (
+            <p className="text-xs text-muted-foreground">
+              Certificado {facConfig.csd_no_certificado}
+              {facConfig.csd_vence && <> · vence el {new Date(facConfig.csd_vence).toLocaleDateString('es-MX')}</>}
+            </p>
+          )}
+
           {/* Status badge */}
           {csdStatus?.loaded && (
             <div className="flex items-center gap-2">

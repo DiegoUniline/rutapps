@@ -45,3 +45,4 @@
 2026-10-23 · desarrollador · D-012 · Mapa de clientes: optimizar otra zona del mismo día/vendedor ya no borra la anterior (zona tras zona); errores de guardado visibles
 2026-10-23 · desarrollador · Logística › Reporte de surtido: productos agrupados por categoría (clasificación) y alfabéticos dentro de cada una; 'Sin categoría' al final (PDF y Excel)
 2026-10-28 · desarrollador · Móvil CxC: el celular también baja las notas pendientes de clientes donde la persona es COBRADOR (antes solo las que vendió, por ruta_sync_v2 activo para todos); 'propios' incluye cobrador. Caso licencia 57012562 (Leo: 6 notas)
+2026-10-28 · desarrollador · D-013 · Facturación Fase 0-A: ambiente Facturama por empresa (sandbox), emisor desde BD (S-08), CSD solo del RFC propio + validación con node-forge (S-13), list_csds solo propio, escrituras con service role; migración 20261028120000 pendiente en producción

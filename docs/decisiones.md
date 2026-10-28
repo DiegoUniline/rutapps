@@ -68,3 +68,9 @@
 - **Fecha:** 2026-10-23 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión (Mapa de clientes, optimizar por zona):** la ruta del día de un vendedor se arma **zona tras zona**. Si se optimiza una zona que ya estaba, solo se reordena su bloque y conserva su lugar. Si la zona es nueva, se agrega al final. Las demás zonas del mismo día y vendedor ya no se borran.
 - **Implementación:** `mergeBloqueOrden` (`src/lib/ordenRuta.ts`). Aplica cuando hay filtro de zona, status, búsqueda o clientes elegidos. Sin esos filtros se reemplaza toda la ruta del día, como antes. El guardado ahora avisa si falla.
+
+## D-013
+- **Fecha:** 2026-10-28 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión (facturación CFDI, rumbo):** se toma como referencia la lógica de `DiegoUniline/user-hub-pro` (validación previa, timbrado sin duplicados, cancelación y complemento de pago) y se adapta a RutApp, que es multiempresa. El saldo de timbres por empresa con Stripe que ya tiene RutApp se conserva. Orden: **Fase 0** seguridad y sandbox → **Fase 1** factura de venta correcta → Fase 2 complemento de pago, global y sustitución → Fase 3 nota de crédito y abrir el módulo a las empresas.
+- **Sandbox:** el dueño da de alta la cuenta sandbox de Facturama con los secrets `FACTURAMA_SANDBOX_USERNAME` y `FACTURAMA_SANDBOX_PASSWORD`. Cada empresa tiene `facturama_ambiente` (`produccion`/`sandbox`) y cada CFDI guarda el ambiente con que se timbró.
+- **CSD y ambiente:** los puede cambiar el dueño de la empresa, quien tenga el permiso Facturación CFDI · editar (sin rol asignado = acceso total, igual que la app) y el super admin. Solo se acepta el CSD del RFC de la propia empresa, validado antes de subirlo.

@@ -99,7 +99,7 @@ export default function FacturacionCfdiPage() {
   const verificarMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('facturama', {
-        body: { action: 'verificar_conexion' },
+        body: { action: 'verificar_conexion', empresa_id: empresa?.id },
       });
       if (error) throw error;
       return data;
