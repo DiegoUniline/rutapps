@@ -15,12 +15,13 @@ DO $$ BEGIN IF to_regclass('public.stock_almacen') IS NULL THEN RAISE EXCEPTION 
 DO $guard$
 DECLARE v_nf text; v_av text;
 BEGIN
-  SELECT prosrc INTO v_nf FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  -- Se compara sin espacios ni saltos de línea (producción tiene el mismo cuerpo con otro formato).
+  SELECT regexp_replace(prosrc, '\s', '', 'g') INTO v_nf FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public' AND p.proname = 'next_folio';
-  SELECT prosrc INTO v_av FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  SELECT regexp_replace(prosrc, '\s', '', 'g') INTO v_av FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public' AND p.proname = 'auto_folio_venta';
   IF v_nf IS NULL OR v_av IS NULL THEN RAISE EXCEPTION 'next_folio o auto_folio_venta no existen; no se aplica nada'; END IF;
-  IF v_nf NOT LIKE '%pg_advisory_xact_lock%' OR (v_nf NOT LIKE '%LPAD(next_num::TEXT, 4, ''0'')%' AND v_nf NOT LIKE '%public.folio_num(%') THEN
+  IF v_nf NOT LIKE '%pg_advisory_xact_lock%' OR (v_nf NOT ILIKE '%LPAD(next_num::TEXT,4,''0'')%' AND v_nf NOT LIKE '%public.folio_num(%') THEN
     RAISE EXCEPTION 'next_folio en producción difiere del repo; no se aplica nada';
   END IF;
   IF v_av NOT LIKE '%next_folio(%' OR v_av NOT LIKE '%SAL-%' THEN
