@@ -58,3 +58,4 @@
 2026-10-28 · desarrollador · D-016 · Migración Fase 3 aplicada en producción por el dueño (permiso_ok, cerrado_ok = true)
 2026-10-28 · desarrollador · Folios después del 9999: LPAD(n,4) cortaba a 4 caracteres (PED-10000 → PED-1000 repetido, caso Distribuidora Tampico). next_folio/auto_folio_venta usan folio_num() (mínimo 4 dígitos sin cortar). Reproducido y corregido en BD local; migración 20261101120000 con guardia de versión
 2026-10-28 · desarrollador · Folios 10000: migración 20261101120000 aplicada en producción por el dueño (folio_num 9999/10000 ok, next_folio y auto_folio_venta usan folio_num). Pendiente: renumerar folios PED-1000 ya duplicados (requiere decisión)
+2026-10-28 · desarrollador · Folios repetidos: dueño decide renumerar TODOS (Tampico PED-1000 ×29; Reginata PED-0004/0016/0020/0022; MG PED-0241/1362). Script docs/sql/2026-10-28_renumerar_folios_repetidos.sql con respaldo ventas_folio_renumeracion; probado en BD local (idempotente)
