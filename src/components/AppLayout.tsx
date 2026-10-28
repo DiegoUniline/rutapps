@@ -255,12 +255,13 @@ const mobileBottomTabs = [
 /** Filter nav items based on granular sub-module permissions */
 function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean, userEmail?: string | null, isOwner?: boolean) {
   const isSuperAdminUser = isSuperAdminEmail(userEmail);
+  const facturacionFlag = useFeatureFlag('facturacion_cfdi');
   const isBillingOwner = isSuperAdminUser || !!isOwner;
   const stripBilling = (items: NavItem[]): NavItem[] => items
     .flatMap(it => {
       // Top-level Facturación entry (with or without children): only super admin can see it
       if (it.path.startsWith('/facturacion-cfdi')) {
-        return isSuperAdminUser ? [it] : [];
+        return (isSuperAdminUser || facturacionFlag) ? [it] : [];
       }
       if (!it.children) return [it];
       const children = it.children.filter(c => {

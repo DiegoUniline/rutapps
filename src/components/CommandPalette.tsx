@@ -1,3 +1,4 @@
+import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Command } from 'cmdk';
@@ -100,7 +101,8 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
   const { empresa, user } = useAuth();
   const empresaId = empresa?.id;
   const isBillingOwner = isSuperAdminEmail(user?.email);
-  const VISIBLE_MENU_ITEMS = isBillingOwner ? MENU_ITEMS : MENU_ITEMS.filter(m => !m.to.startsWith('/facturacion-cfdi') && m.to !== '/mi-suscripcion' && m.to !== '/facturacion');
+  const facturacionFlag = useFeatureFlag('facturacion_cfdi');
+  const VISIBLE_MENU_ITEMS = isBillingOwner ? MENU_ITEMS : MENU_ITEMS.filter(m => (facturacionFlag || !m.to.startsWith('/facturacion-cfdi')) && m.to !== '/mi-suscripcion' && m.to !== '/facturacion');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ResultItem[]>([]);
   const [loading, setLoading] = useState(false);
