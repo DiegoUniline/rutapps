@@ -70,6 +70,14 @@ async function assertPuedeConfigurar(admin: any, userId: string, empresaId: stri
   if (!data) throw new Error("No tienes permiso para configurar la facturación (Facturación CFDI · editar).");
 }
 
+/** Permiso de facturación (D-016): dueño, sin rol o facturacion.cfdi · accion; super admin siempre. */
+async function assertPuedeFacturar(admin: any, userId: string, empresaId: string, accion: "ver" | "crear" | "eliminar") {
+  const { data, error } = await admin.rpc("puede_facturar", { p_user_id: userId, p_empresa_id: empresaId, p_accion: accion });
+  if (error) throw new Error(`No se pudo validar el permiso: ${error.message}`);
+  const nombre = { ver: "ver", crear: "crear (timbrar)", eliminar: "eliminar (cancelar)" }[accion];
+  if (data !== true) throw new Error(`No tienes permiso de Facturación CFDI · ${nombre}.`);
+}
+
 // XML/PDF en bucket PRIVADO (S-12). En pdf_url/xml_url se guarda "storage:<bucket>/<ruta>";
 // la app pide un enlace firmado temporal con la acción url_archivo.
 const BUCKET_CFDI = "cfdi-archivos";
@@ -187,49 +195,56 @@ serve(async (req) => {
       return await getSuscriptionPlan(fac("produccion"));
     }
 
+    // Facturación por permiso (D-016): facturacion.cfdi · ver / crear / eliminar.
+    const puede = (empresaId: string, accion: "ver" | "crear" | "eliminar") => assertPuedeFacturar(admin, user.id, empresaId, accion);
+    const empresaDe = async (tabla: "cfdis" | "cfdi_pagos", id: string) => {
+      const { data } = await admin.from(tabla).select("empresa_id").eq("id", id).maybeSingle();
+      if (!data) throw new Error("Documento no encontrado");
+      return data.empresa_id as string;
+    };
+
     if (action === "timbrar") {
-      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      await puede(body.empresa_id, "crear");
       return await timbrar(admin, user.id, conEmisor(body, await getEmisor(admin, body.empresa_id)));
     } else if (action === "preflight") {
-      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      await puede(body.empresa_id, "ver");
       return await preflight(admin, conEmisor(body, await getEmisor(admin, body.empresa_id)));
     } else if (action === "reconciliar") {
+      await puede(await empresaDe(body.tabla === "cfdi_pagos" ? "cfdi_pagos" : "cfdis", body.id ?? body.cfdi_id), "crear");
       return await reconciliar(admin, user.id, body);
     } else if (action === "set_serie") {
       const empresaId = await empresaDelUsuario(admin, user.id, body.empresa_id);
       await assertPuedeConfigurar(admin, user.id, empresaId);
       return await setSerie(admin, empresaId, body);
     } else if (action === "cancelar") {
+      await puede(await empresaDe(body.tabla === "cfdi_pagos" ? "cfdi_pagos" : "cfdis", body.tabla === "cfdi_pagos" ? body.id : body.cfdi_id), "eliminar");
       return await cancelar(admin, user.id, body);
     } else if (action === "rep_pendientes") {
-      await assertSuperAdmin(user);
-      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      await puede(body.empresa_id, "ver");
       return await repPendientes(admin, body.empresa_id);
     } else if (action === "rep_preparar") {
-      await assertSuperAdmin(user);
-      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      await puede(body.empresa_id, "ver");
       return json(await prepararRep(admin, body.empresa_id, body.cobro_id, body.forma_pago));
     } else if (action === "timbrar_rep") {
-      await assertSuperAdmin(user);
-      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      await puede(body.empresa_id, "crear");
       return await timbrarRep(admin, user.id, body);
     } else if (action === "timbrar_global") {
-      await assertSuperAdmin(user);
-      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      await puede(body.empresa_id, "crear");
       return await crearGlobal(admin, user.id, conEmisor(body, await getEmisor(admin, body.empresa_id)));
     } else if (action === "crear_borrador_venta") {
-      await assertEmpresaAccess(admin, user.id, body.empresa_id);
+      await puede(body.empresa_id, "crear");
       return await crearBorradorVenta(admin, user.id, conEmisor(body, await getEmisor(admin, body.empresa_id)));
     } else if (action === "crear_sustituto") {
+      await puede(await empresaDe("cfdis", body.cfdi_id), "crear");
       return await crearSustituto(admin, user.id, body);
     } else if (action === "validar_rfc") {
-      await assertSuperAdmin(user);
       const empresaId = await empresaDelUsuario(admin, user.id, body.empresa_id);
+      await puede(empresaId, "ver");
       const { data: emp } = await admin.from("empresas").select("facturama_ambiente").eq("id", empresaId).single();
       return await validarRfc({ ...body, __fac: fac(emp?.facturama_ambiente) });
     } else if (action === "enviar_correo") {
-      await assertSuperAdmin(user);
-      return await enviarCorreo(supabase, body);
+      await puede(await empresaDe("cfdis", body.cfdi_id), "crear");
+      return await enviarCorreo(admin, body);
     } else {
       throw new Error(`Acción no válida: ${action}`);
     }

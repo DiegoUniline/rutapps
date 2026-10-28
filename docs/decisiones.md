@@ -92,3 +92,8 @@
   - Un cobro con REP vigente no se edita, cancela ni desaplica; una factura PPD con REP vigente no se cancela.
   - Factura global (público en general): las ventas del periodo **se eligen a mano** entre las que no tienen ninguna factura.
   - Sustitución: desde una factura timbrada se crea el borrador sustituto con las mismas cantidades; al timbrarse (relación 04) se cancela la original con motivo 01.
+
+## D-016
+- **Fecha:** 2026-10-28 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión (Fase 3 facturación):** **no se manejan notas de crédito** por ahora; la facturación queda en PUE, PPD (con complemento de pago), cancelación y factura global.
+- **Apertura a las empresas (D-013):** el módulo sigue activándose por empresa con la bandera `facturacion_cfdi`; dentro, cada acción la valida el servidor con `puede_facturar`: dueño, usuario sin rol (acceso total, igual que la app) o rol con **Facturación CFDI · ver** (consultar, pendientes de complemento, validar RFC), **· crear** (timbrar, complemento, global, sustituir, reconciliar, correo) y **· eliminar** (cancelar ante el SAT). CSD, ambiente y serie siguen con **· editar**. Super admin siempre. La página Avanzado ya no es solo de super admin.

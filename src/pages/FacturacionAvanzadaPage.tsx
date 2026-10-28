@@ -2,7 +2,7 @@ import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, Receipt, Users, Download, Mail, ShieldCheck, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { usePermisos } from '@/hooks/usePermisos';
 import {
   ComplementosPagoSection,
   FacturaGlobalSection,
@@ -32,9 +32,11 @@ const SECTIONS: SectionDef[] = [
 export default function FacturacionAvanzadaPage() {
   const navigate = useNavigate();
   const { section } = useParams<{ section?: string }>();
-  const isSuperAdmin = useIsSuperAdmin();
+  // Abierto a las empresas por permiso (D-016); el servidor valida cada acción.
+  const { hasPermiso, loading } = usePermisos();
 
-  if (!isSuperAdmin) return <Navigate to="/facturacion-cfdi" replace />;
+  if (loading) return null;
+  if (!hasPermiso('facturacion.cfdi', 'ver')) return <Navigate to="/facturacion-cfdi" replace />;
 
   const active = SECTIONS.find(s => s.key === section);
 
@@ -50,7 +52,7 @@ export default function FacturacionAvanzadaPage() {
             {active ? active.title : 'Facturación Avanzada'}
           </h1>
           <p className="text-xs text-muted-foreground">
-            {active ? active.description : 'Operaciones avanzadas de CFDI 4.0 (solo super admin).'}
+            {active ? active.description : 'Operaciones avanzadas de CFDI 4.0.'}
           </p>
         </div>
       </div>

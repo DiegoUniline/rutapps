@@ -23,7 +23,7 @@ import { usePinAuth } from '@/hooks/usePinAuth';
 import { TimbrarDialog } from '@/components/facturacion/TimbrarDialog';
 import { ConfigEmisorCard } from '@/components/facturacion/ConfigEmisorCard';
 // FacturacionAvanzadaTab fue movido a /facturacion-cfdi/avanzado como vistas
-import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { usePermisos } from '@/hooks/usePermisos';
 import ClientesListPage from '@/pages/ClientesListPage';
 import ProductosListPage from '@/pages/ProductosListPage';
 
@@ -55,7 +55,9 @@ type FacturaSubTab = 'todas' | 'borrador' | 'timbrado' | 'error' | 'canceladas';
 
 export default function FacturacionCfdiPage() {
   const { empresa } = useAuth();
-  const isSuperAdmin = useIsSuperAdmin();
+  // Avanzado (complementos, global, etc.) por permiso de facturación (D-016).
+  const { hasPermiso } = usePermisos();
+  const puedeAvanzado = hasPermiso('facturacion.cfdi', 'ver');
   const { fmt } = useCurrency();
   const navigate = useNavigate();
   const { requestPin, PinDialog } = usePinAuth();
@@ -293,7 +295,7 @@ export default function FacturacionCfdiPage() {
           </Badge>
         </div>
         <div className="flex gap-2">
-          {isSuperAdmin && (
+          {puedeAvanzado && (
             <Button variant="outline" size="sm" onClick={() => navigate('/facturacion-cfdi/avanzado')}>
               <Sparkles className="h-4 w-4" />
               <span className="ml-1.5 hidden sm:inline">Avanzado</span>
