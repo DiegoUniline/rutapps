@@ -1,4 +1,4 @@
 // Contador de versión – lo sube vite.config.ts en cada build. La app NO importa
 // este archivo: lee la versión del <meta> de index.html (ver src/lib/appVersion.ts).
-export const APP_VERSION = '000408';
-export const APP_BUILD_DATE = '2026-10-22 11:11';
+export const APP_VERSION = '000409';
+export const APP_BUILD_DATE = '2026-10-28 11:52';
