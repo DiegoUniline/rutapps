@@ -114,18 +114,21 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
   try {
-    // S-14: solo cron (x-cron-secret), service_role o super admin. La anon key no basta.
-    if (!(await isPrivilegedCaller(req))) {
-      return new Response(JSON.stringify({ ok: false, error: "No autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // S-14: el cron (pg_cron con la anon key) sigue corriendo la conciliación, pero el detalle
+    // (Id, UUID, total de CFDI) solo se devuelve a cron secret / service_role / super admin.
+    const privileged = await isPrivilegedCaller(req);
     const db = admin();
     const [cancel, audit] = await Promise.all([
       reconcileCancellations(db),
       reconcileLast24h(db),
     ]);
+    if (!privileged) {
+      return new Response(JSON.stringify({
+        ok: true,
+        cancellations: { checked: cancel.checked, changed: cancel.updates.filter((u: any) => u.ok && u.to).length },
+        audit: { ok: audit.ok, fetched: (audit as any).fetched ?? 0, missing_count: (audit as any).missing_count ?? 0 },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     return new Response(JSON.stringify({ ok: true, cancellations: cancel, audit }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
