@@ -94,7 +94,9 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
           .gte('fecha', desde)
           .lte('fecha', hasta)
           .order('fecha', { ascending: false })
-          .order('folio', { ascending: false })
+          // Desempate por creación, no por folio: como texto, PED-9999 queda antes que PED-10000.
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
           .range(from, to);
         if (vendedorIds?.length) request = request.in('vendedor_id', vendedorIds);
         return request;
