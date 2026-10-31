@@ -117,7 +117,7 @@ export function MultiRouteOverlayML({
 
             {/* Numbered stops */}
             {/* Numeración 1..N sobre las paradas visibles (las del filtro), igual que la lista "Orden de visita". */}
-            {r.optimized_order
+            {[...new Set(r.optimized_order)]
               .filter((cid) => { const c = clientesById.get(cid); return !!c && c.gps_lat != null && c.gps_lng != null; })
               .map((cid, idx) => {
               const c = clientesById.get(cid)!;

@@ -254,8 +254,10 @@ export default function MapaClientesPage() {
       const groupKeys = Array.from(groups.keys());
       if (groupKeys.length <= 1) {
         setMultiResults(null);
+        // Solo las filas del grupo que quedó (sin el residual "sin vendedor", que repetía clientes).
+        const unico = groupKeys.length === 1 ? groups.get(groupKeys[0])!.rows : savedOrder;
         setRouteResult({
-          orderedIds: savedOrder.map(o => o.cliente_id),
+          orderedIds: [...new Set([...unico].sort((a, b) => a.orden - b.orden).map(o => o.cliente_id))],
           polyline: null,
           distance_meters: 0,
           duration: '',
@@ -465,7 +467,8 @@ export default function MapaClientesPage() {
 
   const orderedClients = useMemo(() => {
     if (!routeResult) return null;
-    return routeResult.orderedIds.map(id => withGps.find((c: any) => c.id === id)).filter(Boolean);
+    // Sin ids repetidos: una key repetida en <Marker> deja pines huérfanos en el mapa que ya no se borran.
+    return [...new Set(routeResult.orderedIds)].map(id => withGps.find((c: any) => c.id === id)).filter(Boolean);
   }, [routeResult, withGps]);
 
   const handleMapClick = useCallback((e: any) => {
