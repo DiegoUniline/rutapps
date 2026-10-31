@@ -571,6 +571,7 @@ export default function MapaClientesPage() {
 
       // Multi-route view when more than one vendor
       if (entries.length > 1) {
+        setRouteResult(null);
         setMultiResults(entries);
         const vis: Record<string, boolean> = {};
         entries.forEach(e => { vis[e.vendedor_id] = true; });
@@ -579,6 +580,7 @@ export default function MapaClientesPage() {
       } else {
         const e = entries[0];
         if (e?.error) { toast.error(e.error); return; }
+        setMultiResults(null);
         setRouteResult({
           orderedIds: e.optimized_order,
           polyline: e.polyline,
@@ -1153,13 +1155,15 @@ export default function MapaClientesPage() {
             />
           )}
 
-          {/* Markers when no route is active */}
-          {orderedClients ? (
+          {/* Una sola capa de pines: si hay ruta por vendedor (multiResults) la pinta el overlay;
+              si no, la ruta de un vendedor o los pines sueltos. Antes podían dibujarse dos capas
+              encimadas con números distintos. */}
+          {multiResults ? null : orderedClients ? (
             orderedClients.map((c: any, idx: number) => {
               const p = posOf(c);
               return (
                 <Marker
-                  key={c.id}
+                  key={`ruta-${c.id}`}
                   longitude={Number(p.lng)}
                   latitude={Number(p.lat)}
                   anchor="center"
@@ -1177,13 +1181,13 @@ export default function MapaClientesPage() {
                 </Marker>
               );
             })
-          ) : multiResults ? null : (
+          ) : (
             <>
               {withGps.filter((c: any) => ordenRutaMap.has(c.id)).map((c: any) => {
                 const p = posOf(c);
                 return (
                   <Marker
-                    key={c.id}
+                    key={`orden-${c.id}`}
                     longitude={Number(p.lng)}
                     latitude={Number(p.lat)}
                     anchor="center"
@@ -1208,7 +1212,7 @@ export default function MapaClientesPage() {
                 const size = getMarkerSize(c);
                 return (
                   <Marker
-                    key={c.id}
+                    key={`pin-${c.id}`}
                     longitude={Number(p.lng)}
                     latitude={Number(p.lat)}
                     anchor="center"
