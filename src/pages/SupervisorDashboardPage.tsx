@@ -296,9 +296,10 @@ export default function SupervisorDashboardPage() {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const inicio = new Date(new Date(`${desde}T12:00:00`).getTime() - 40 * 86400000).toISOString();
+      // Última visita por cliente calculada en la base (una fila por cliente).
       return fetchAllPages<any>((from, to) =>
-        supabase.from('visitas').select('cliente_id, fecha')
-          .eq('empresa_id', empresa!.id).gte('fecha', inicio).lt('fecha', visitasRange.start).range(from, to));
+        (supabase as any).rpc('ultima_visita_por_cliente', { p_empresa_id: empresa!.id, p_desde: inicio, p_hasta: visitasRange.start })
+          .order('cliente_id').range(from, to));
     },
   });
 

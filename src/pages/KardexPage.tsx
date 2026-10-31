@@ -38,6 +38,12 @@ const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string }> =
   transferencia: { label: 'Transferencia', icon: RefreshCw, color: 'text-primary' },
 };
 
+/** Fecha local (YYYY-MM-DD) de hace 30 días. */
+function hace30Dias(): string {
+  const d = new Date(); d.setDate(d.getDate() - 30);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function fmtCad(d: string | null): string {
   if (!d) return 'sin caducidad';
   return new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' });
@@ -90,7 +96,9 @@ export default function KardexPage() {
 
   const almacenId = searchParams.get('alm') ?? '';
   const productoId = searchParams.get('prod') ?? '';
-  const fechaDesde = searchParams.get('fd') ?? '';
+  // Sin producto, por defecto los últimos 30 días: el historial completo de la empresa
+  // era la segunda consulta más pesada de la base. Se puede elegir otra fecha.
+  const fechaDesde = searchParams.get('fd') ?? (productoId ? '' : hace30Dias());
   const fechaHasta = searchParams.get('fh') ?? '';
   const filterTipo = searchParams.get('ft') ?? 'todos';
   const search = searchParams.get('q') ?? '';
@@ -454,7 +462,7 @@ export default function KardexPage() {
 
         {!almacenId && !productoId && (
           <div className="text-[12px] text-muted-foreground px-1">
-            Mostrando todos los movimientos de la empresa. Selecciona almacén o producto para filtrar.
+            Mostrando los movimientos de la empresa desde la fecha elegida. Selecciona almacén o producto para filtrar.
           </div>
         )}
 

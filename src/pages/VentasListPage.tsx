@@ -373,8 +373,9 @@ export default function VentasListPage() {
     const iepsMonto = Number(v.ieps_total) || 0;
     const impuestos = ivaMonto + iepsMonto;
     const gravable = Math.max(0, (Number(v.total) || 0) - impuestos);
-    const lineDesc = computeResumenFromLineas(v.venta_lineas ?? []).descuento;
-    const promoAplicada = (v.promocion_aplicada ?? []).reduce((s: number, p: any) => s + (Number(p?.descuento_aplicado) || 0), 0);
+    // Del resumen (ventas_resumen_v) vienen ya sumados; de la página, se calculan de las partidas.
+    const lineDesc = v.lineas_descuento != null ? Number(v.lineas_descuento) || 0 : computeResumenFromLineas(v.venta_lineas ?? []).descuento;
+    const promoAplicada = v.promo_descuento != null ? Number(v.promo_descuento) || 0 : (v.promocion_aplicada ?? []).reduce((s: number, p: any) => s + (Number(p?.descuento_aplicado) || 0), 0);
     const descuento = Math.max(lineDesc, promoAplicada, Number(v.descuento_total) || 0);
     acc.subtotal += gravable + descuento;
     acc.descuento += descuento;
