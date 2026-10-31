@@ -19,3 +19,24 @@ export function clienteTieneDia(cliente: { dia_visita?: string[] | null }, dia?:
   if (!target || !Array.isArray(cliente.dia_visita)) return false;
   return cliente.dia_visita.some(d => normalizeRutaDia(d) === target);
 }
+/** Escritura única del día en cliente_orden_ruta ("Sábado"). El escritorio guardaba "Sábado"
+ *  y el celular "sábado": eran dos rutas distintas para el mismo día. */
+const DIA_CANONICO: Record<string, string> = {
+  lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves',
+  viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo',
+};
+
+export function diaRutaCanonico(dia?: string | null): string | null {
+  const n = normalizeRutaDia(dia);
+  if (!n) return null;
+  return DIA_CANONICO[n] ?? (dia ?? '').trim();
+}
+
+/** Todas las escrituras con las que puede estar guardado un día (para leer y borrar). */
+export function diaRutaVariantes(dia?: string | null): string[] {
+  const c = diaRutaCanonico(dia);
+  if (!c) return [];
+  if (!DIA_CANONICO[normalizeRutaDia(c)]) return [c];
+  const sinAcento = c.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return [...new Set([c, c.toLowerCase(), sinAcento, sinAcento.toLowerCase()])];
+}
