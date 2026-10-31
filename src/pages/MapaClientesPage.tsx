@@ -14,7 +14,7 @@ import {
   Route, Info, Clock, TrendingUp, MapPinOff, Eye, EyeOff, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { cn, todayInTimezone } from '@/lib/utils';
-import { clienteTieneDia } from '@/lib/rutaDays';
+import { clienteTieneDia, diaRutaCanonico, diaRutaVariantes } from '@/lib/rutaDays';
 import { Badge } from '@/components/ui/badge';
 import MapRecenterButton from '@/components/MapRecenterButton';
 import MyLocationMarkerML from '@/components/MyLocationMarkerML';
@@ -187,11 +187,12 @@ export default function MapaClientesPage() {
         .eq('empresa_id', empresa!.id)
         .order('vendedor_id', { ascending: true, nullsFirst: false })
         .order('orden', { ascending: true });
-      q = diaFilter ? q.eq('dia', diaFilter) : q.is('dia', null);
+      // El día puede estar guardado como "Sábado" o "sábado" (celular): se leen todas las escrituras.
+      q = diaFilter ? q.in('dia', diaRutaVariantes(diaFilter)) : q.is('dia', null);
       // If a vendedor filter is set, restrict; otherwise return ALL groups so multi-route persists
       if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
       const { data } = await q;
-      return ((data ?? []) as unknown) as {
+      const rows = ((data ?? []) as unknown) as {
         cliente_id: string;
         orden: number;
         vendedor_id: string | null;
@@ -199,6 +200,14 @@ export default function MapaClientesPage() {
         origin_lng: number | null;
         origin_label: string | null;
       }[];
+      // Si el mismo cliente quedó guardado con "Sábado" y "sábado", se toma una sola vez.
+      const vistos = new Set<string>();
+      return rows.filter(r => {
+        const k = `${r.vendedor_id ?? ''}|${r.cliente_id}`;
+        if (vistos.has(k)) return false;
+        vistos.add(k);
+        return true;
+      });
     },
   });
 
@@ -614,11 +623,11 @@ export default function MapaClientesPage() {
     const tabla = () => (supabase.from('cliente_orden_ruta' as any) as any);
     const scope = (q: any, vendedorId: string | null) => {
       q = q.eq('empresa_id', empresa!.id);
-      q = diaFilter ? q.eq('dia', diaFilter) : q.is('dia', null);
+      q = diaFilter ? q.in('dia', diaRutaVariantes(diaFilter)) : q.is('dia', null);
       return vendedorId ? q.eq('vendedor_id', vendedorId) : q.is('vendedor_id', null);
     };
     const toRow = (vendedorId: string | null) => (r: Omit<OrdenRow, 'orden'>, idx: number) => ({
-      empresa_id: empresa!.id, cliente_id: r.cliente_id, dia: diaFilter || null, vendedor_id: vendedorId,
+      empresa_id: empresa!.id, cliente_id: r.cliente_id, dia: diaRutaCanonico(diaFilter), vendedor_id: vendedorId,
       origin_lat: r.origin_lat, origin_lng: r.origin_lng, origin_label: r.origin_label, orden: idx + 1,
     });
 
@@ -661,7 +670,7 @@ export default function MapaClientesPage() {
         // Wipe full scope (empresa + dia) so old rows with vendedor_id=null or stale vendor groups don't survive
         let wipeQ = (supabase.from('cliente_orden_ruta' as any) as any)
           .delete().eq('empresa_id', empresa!.id);
-        wipeQ = diaFilter ? wipeQ.eq('dia', diaFilter) : wipeQ.is('dia', null);
+        wipeQ = diaFilter ? wipeQ.in('dia', diaRutaVariantes(diaFilter)) : wipeQ.is('dia', null);
         const { error: wipeErr } = await wipeQ;
         if (wipeErr) throw new Error(`No se pudo guardar la ruta: ${wipeErr.message}`);
       }

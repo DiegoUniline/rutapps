@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { diaRutaCanonico, diaRutaVariantes } from '@/lib/rutaDays';
 
 /**
  * Reads `cliente_orden_ruta` (the same table the desktop "Mapa de Clientes"
@@ -23,7 +24,7 @@ export function useClienteOrdenRuta(vendedorId?: string | null, dia?: string | n
         .select('cliente_id, orden, vendedor_id')
         .eq('empresa_id', empresa!.id)
         .order('orden', { ascending: true });
-      q = dia ? q.ilike('dia', dia) : q.is('dia', null);
+      q = dia ? q.in('dia', diaRutaVariantes(dia)) : q.is('dia', null);
       // First try with the vendor scope (route optimized for that seller).
       if (vendedorId) q = q.eq('vendedor_id', vendedorId);
       const { data, error } = await q;
@@ -39,7 +40,7 @@ export function useClienteOrdenRuta(vendedorId?: string | null, dia?: string | n
           .eq('empresa_id', empresa!.id)
           .is('vendedor_id', null)
           .order('orden', { ascending: true });
-        gq = dia ? gq.ilike('dia', dia) : gq.is('dia', null);
+        gq = dia ? gq.in('dia', diaRutaVariantes(dia)) : gq.is('dia', null);
         const { data: gdata } = await gq;
         rows = (gdata ?? []) as any;
       }
@@ -78,14 +79,15 @@ export async function swapOrdenRuta(opts: {
   // Wipe the scope and rewrite. Same strategy desktop uses.
   let delQ = (supabase.from('cliente_orden_ruta' as any) as any)
     .delete().eq('empresa_id', empresaId);
-  delQ = dia ? delQ.eq('dia', dia) : delQ.is('dia', null);
+  delQ = dia ? delQ.in('dia', diaRutaVariantes(dia)) : delQ.is('dia', null);
   delQ = vendedorId ? delQ.eq('vendedor_id', vendedorId) : delQ.is('vendedor_id', null);
-  await delQ;
+  const { error: delError } = await delQ;
+  if (delError) throw delError;
 
   const rows = next.map((cid, idx) => ({
     empresa_id: empresaId,
     cliente_id: cid,
-    dia: dia || null,
+    dia: diaRutaCanonico(dia),
     vendedor_id: vendedorId,
     orden: idx + 1,
   }));
