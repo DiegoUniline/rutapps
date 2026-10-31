@@ -87,14 +87,11 @@ export default function RutaClientes() {
     staleTime: 6 * 60 * 60 * 1000,
     queryFn: async () => {
       const inicio = new Date(new Date(`${todayStr}T12:00:00`).getTime() - 40 * 86400000).toISOString();
-      // Paginado: con un solo select PostgREST cortaba en 1000 filas.
-      return fetchAllPages<{ cliente_id: string | null; fecha: string | null }>((from, to) => supabase
-        .from('visitas')
-        .select('cliente_id, fecha')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', inicio)
-        .lt('fecha', `${todayStr}T00:00:00`)
-        .order('id')
+      // Una fila por cliente (última visita) calculada en la base; antes se bajaban todas las
+      // visitas de la empresa de 40 días en cada celular. Paginado por si hay más de 1000 clientes.
+      return fetchAllPages<{ cliente_id: string | null; fecha: string | null }>((from, to) => (supabase as any)
+        .rpc('ultima_visita_por_cliente', { p_empresa_id: empresa!.id, p_desde: inicio, p_hasta: `${todayStr}T00:00:00` })
+        .order('cliente_id')
         .range(from, to));
     },
   });

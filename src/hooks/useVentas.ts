@@ -142,8 +142,10 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
     queryKey: ['ventas-resumen', empresa?.id, search, statusFilter, tipoFilter, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, promoFilter ?? 'todas'],
     enabled: !!empresa?.id && enabled,
     queryFn: async () => {
-      // SELECT ligero: solo lo que consumen los totales (sin joins de cliente/vendedor/almacén/entregas).
-      const SELECT = 'id, total, iva_total, ieps_total, descuento_total, status, total_efectivo, cerrado_at, cerrado_snapshot, cliente_id, cobro_aplicaciones(monto_aplicado, cobros!inner(status)), venta_lineas(subtotal, descuento_pct, precio_unitario, cantidad, iva_monto, ieps_monto, total), promocion_aplicada(descuento_aplicado)';
+      // Vista ventas_resumen_v: una fila por venta con las sumas de partidas, promociones y
+      // cobros ya hechas en la base. Antes se embebían todas las partidas de cada venta y era
+      // la consulta que más CPU consumía.
+      const SELECT = 'id, total, iva_total, ieps_total, descuento_total, status, total_efectivo, cerrado_at, snapshot_total_efectivo, cliente_id, lineas_descuento, promo_descuento, cobrado_activo';
 
       let promoIds: string[] | null = null;
       if (promoFilter) promoIds = await fetchVentaIdsConPromo(empresa!.id);
@@ -199,8 +201,13 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
         return q;
       };
 
-      const rows = await fetchAllPages((from, to) => applyFilters(supabase.from('ventas').select(SELECT).range(from, to)));
-      return (rows ?? []) as unknown as Venta[];
+      const rows = await fetchAllPages<any>((from, to) => applyFilters((supabase.from('ventas_resumen_v' as any) as any).select(SELECT).order('id').range(from, to)));
+      // Misma forma que consumen totalEfectivoVenta / saldoRealVenta.
+      return (rows ?? []).map((r: any) => ({
+        ...r,
+        cerrado_snapshot: r.snapshot_total_efectivo != null ? { total_efectivo: Number(r.snapshot_total_efectivo) } : null,
+        cobro_aplicaciones: [{ monto_aplicado: Number(r.cobrado_activo) || 0, cobros: { status: 'activo' } }],
+      })) as unknown as Venta[];
     },
   });
 }
