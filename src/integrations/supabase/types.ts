@@ -4308,6 +4308,33 @@ export type Database = {
         }
         Relationships: []
       }
+      folios_renumeracion: {
+        Row: {
+          empresa_id: string
+          folio_anterior: string
+          folio_nuevo: string
+          registro_id: string
+          renumerado_at: string
+          tabla: string
+        }
+        Insert: {
+          empresa_id: string
+          folio_anterior: string
+          folio_nuevo: string
+          registro_id: string
+          renumerado_at?: string
+          tabla: string
+        }
+        Update: {
+          empresa_id?: string
+          folio_anterior?: string
+          folio_nuevo?: string
+          registro_id?: string
+          renumerado_at?: string
+          tabla?: string
+        }
+        Relationships: []
+      }
       gastos: {
         Row: {
           concepto: string
@@ -10378,6 +10405,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ventas_folio_renumeracion: {
+        Row: {
+          empresa_id: string
+          folio_anterior: string
+          folio_nuevo: string
+          renumerado_at: string
+          venta_id: string
+        }
+        Insert: {
+          empresa_id: string
+          folio_anterior: string
+          folio_nuevo: string
+          renumerado_at?: string
+          venta_id: string
+        }
+        Update: {
+          empresa_id?: string
+          folio_anterior?: string
+          folio_nuevo?: string
+          renumerado_at?: string
+          venta_id?: string
+        }
+        Relationships: []
+      }
       visitas: {
         Row: {
           cliente_id: string | null
@@ -11757,6 +11808,12 @@ export type Database = {
           ventas_count: number
         }[]
       }
+      folio_lpad: {
+        Args: { p_largo: number; p_relleno?: string; p_texto: string }
+        Returns: string
+      }
+      folio_num: { Args: { n: number }; Returns: string }
+      folio_orden: { Args: { p_folio: string }; Returns: number }
       generar_bonos_partner: { Args: { _partner_id: string }; Returns: number }
       generar_recibo_volumen: {
         Args: {
