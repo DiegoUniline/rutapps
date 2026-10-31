@@ -116,9 +116,11 @@ export function MultiRouteOverlayML({
             </Marker>
 
             {/* Numbered stops */}
-            {r.optimized_order.map((cid, idx) => {
-              const c = clientesById.get(cid);
-              if (!c || c.gps_lat == null || c.gps_lng == null) return null;
+            {/* Numeración 1..N sobre las paradas visibles (las del filtro), igual que la lista "Orden de visita". */}
+            {r.optimized_order
+              .filter((cid) => { const c = clientesById.get(cid); return !!c && c.gps_lat != null && c.gps_lng != null; })
+              .map((cid, idx) => {
+              const c = clientesById.get(cid)!;
               const visited = !!c.visitado;
               const oor = !!c.outOfRange;
               const fill = visited ? '#22c55e' : color;
