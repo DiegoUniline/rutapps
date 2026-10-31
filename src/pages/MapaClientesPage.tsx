@@ -65,6 +65,8 @@ function decodePolyline(encoded: string): { lat: number; lng: number }[] {
 }
 
 // KPI Card component
+const STATUS_BASE = 'activo';
+
 function KpiCard({ icon: Icon, label, value, sub, color }: {
   icon: any; label: string; value: string | number; sub?: string; color: string;
 }) {
@@ -103,7 +105,9 @@ export default function MapaClientesPage() {
   const [zonaFilter, setZonaFilter] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState('');
   const [diaFilter, setDiaFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  // Por defecto solo activos, igual que la tabla de Clientes (los dados de baja no se visitan ni se optimizan).
+  const [statusFilter, setStatusFilter] = useState(STATUS_BASE);
+  const statusFiltrado = statusFilter !== STATUS_BASE;
   const [clienteIdsFilter, setClienteIdsFilter] = useState<Set<string>>(new Set());
   const [clientesPickerOpen, setClientesPickerOpen] = useState(false);
   const [clientePickerSearch, setClientePickerSearch] = useState('');
@@ -395,7 +399,7 @@ export default function MapaClientesPage() {
     return todayClients.filter((c: any) => ventasHoy.has(c.id)).length;
   }, [todayClients, ventasHoy]);
 
-  const activeFiltersCount = [zonaFilter, vendedorFilter, diaFilter, statusFilter].filter(Boolean).length;
+  const activeFiltersCount = [zonaFilter, vendedorFilter, diaFilter, statusFiltrado].filter(Boolean).length;
 
   /**
    * Map clienteId → posición en la ruta optimizada (1..N) basado en lo que está
@@ -595,7 +599,7 @@ export default function MapaClientesPage() {
    * guarda "zona tras zona" (D-012): solo se reordena el bloque optimizado dentro
    * de lo ya guardado para ese día y vendedor. Sin esos filtros, se reemplaza todo.
    */
-  const optimizacionParcial = !!(zonaFilter || statusFilter || search || clienteIdsFilter.size > 0);
+  const optimizacionParcial = !!(zonaFilter || statusFiltrado || search || clienteIdsFilter.size > 0);
 
   type OrdenRow = { cliente_id: string; orden: number; origin_lat: number | null; origin_lng: number | null; origin_label: string | null };
 
@@ -824,9 +828,9 @@ export default function MapaClientesPage() {
 
           <button onClick={() => setShowFilters(!showFilters)}
             className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-              showFilters || zonaFilter || statusFilter ? "bg-primary/10 border-primary/30 text-primary" : "bg-background border-border text-muted-foreground")}>
+              showFilters || zonaFilter || statusFiltrado ? "bg-primary/10 border-primary/30 text-primary" : "bg-background border-border text-muted-foreground")}>
             <Filter className="h-3.5 w-3.5" />Más
-            {(zonaFilter || statusFilter) && <Badge className="ml-0.5 h-4 w-4 p-0 flex items-center justify-center text-[9px]">{[zonaFilter, statusFilter].filter(Boolean).length}</Badge>}
+            {(zonaFilter || statusFiltrado) && <Badge className="ml-0.5 h-4 w-4 p-0 flex items-center justify-center text-[9px]">{[zonaFilter, statusFiltrado].filter(Boolean).length}</Badge>}
           </button>
 
           {/* Color mode toggle */}
@@ -996,7 +1000,7 @@ export default function MapaClientesPage() {
               />
             </div>
             {activeFiltersCount > 0 && (
-              <button onClick={() => { setZonaFilter(''); setVendedorFilter(''); setDiaFilter(''); setStatusFilter(''); }}
+              <button onClick={() => { setZonaFilter(''); setVendedorFilter(''); setDiaFilter(''); setStatusFilter(STATUS_BASE); }}
                 className="flex items-center gap-1 text-[10px] text-destructive hover:underline py-1">
                 <X className="h-2.5 w-2.5" /> Limpiar todo
               </button>
