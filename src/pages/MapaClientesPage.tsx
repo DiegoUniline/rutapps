@@ -286,8 +286,10 @@ export default function MapaClientesPage() {
 
         // Resolve origin per route (vendor's almacén → fallback to current originPoint or first stop)
         // Build a quick lookup from clientes (effect doesn't depend on memoized clientesById to avoid TDZ)
+        // Solo los clientes del filtro de zona: el trazo por calles no debe pasar por puntos que no se ven.
         const clientesLookup = new Map<string, any>();
         for (const c of (clientes ?? [])) {
+          if (zonaFilter && (c as any).zona_id !== zonaFilter) continue;
           if ((c as any).gps_lat != null && (c as any).gps_lng != null) clientesLookup.set((c as any).id, c);
         }
 
@@ -350,7 +352,7 @@ export default function MapaClientesPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [savedOrder, vendedores, clientes, originPoint, diaFilter]);
+  }, [savedOrder, vendedores, clientes, originPoint, diaFilter, zonaFilter]);
 
   const filtered = useMemo(() => {
     let result = clientes ?? [];
@@ -410,14 +412,16 @@ export default function MapaClientesPage() {
   const ordenRutaMap = useMemo(() => {
     const m = new Map<string, number>();
     if (!multiResults) return m;
+    // Numeración sobre los clientes visibles (filtro), igual que los pines del mapa.
+    const visibles = new Set(withGps.map((c: any) => c.id));
     for (const entry of multiResults) {
       if (routeVisibility[entry.vendedor_id] === false) continue;
-      entry.optimized_order.forEach((cid, idx) => {
+      entry.optimized_order.filter(cid => visibles.has(cid)).forEach((cid, idx) => {
         if (!m.has(cid)) m.set(cid, idx + 1);
       });
     }
     return m;
-  }, [multiResults, routeVisibility]);
+  }, [multiResults, routeVisibility, withGps]);
 
   // Solo hacer fitBounds una vez al cargar inicial o cuando cambian los FILTROS,
   // NO en cada refetch de clientes/ventas (eso reseteaba el zoom del usuario).
