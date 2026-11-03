@@ -72,3 +72,4 @@
 2026-10-31 · desarrollador · Mapa de clientes: el día de cliente_orden_ruta se escribe siempre como "Sábado" (celular escribía "sábado" y partía la ruta); lectura/borrado por todas las escrituras; limpieza docs/sql/2026-10-31_unificar_dia_orden_ruta.sql
 2026-10-31 · desarrollador · Mapa de clientes: ids repetidos en la ruta (residual sin vendedor) dejaban pines huérfanos con números viejos que ningún filtro quitaba; se quitan repetidos antes de pintar
 2026-10-31 · desarrollador · Rendimiento BD (alerta CPU 96%): totales de Ventas desde vista ventas_resumen_v (sumas en la base, sin embeber partidas); visitas previas por RPC ultima_visita_por_cliente; Kardex sin producto = últimos 30 días + índices (migración 20261103120000, pendiente CONFIRMO)
+2026-11-03 · desarrollador · Selector de fecha (OdooDatePicker, 24 pantallas incl. Fecha de alta de clientes): captura con teclado dd/mm/aaaa + Enter y selectores de mes/año
