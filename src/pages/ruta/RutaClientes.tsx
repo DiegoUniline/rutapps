@@ -21,6 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useClienteOrdenRuta, swapOrdenRuta, useInvalidateOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { tocaVisitaPorFrecuencia, etiquetaFrecuencia } from '@/lib/frecuenciaVisita';
 import { ZonaFiltroRuta, useZonaFiltroRuta, clienteEnZona } from '@/components/ruta/ZonaFiltroRuta';
 
@@ -45,7 +46,12 @@ export default function RutaClientes() {
   const navigate = useNavigate();
   const location = useLocation();
   const { empresa, profile, user, overrideEmpresaId, overrideVendedorId } = useAuth();
-  const isSAOverride = !!overrideEmpresaId;
+  // Super admin viendo como un vendedor: también en su propia empresa (sin cambiar de empresa).
+  // Antes solo contaba al cambiar de empresa; en la propia, el vendedor elegido en la barra SA
+  // se ignoraba y la lista salía vacía (sin pendientes ni botón Navegar), a diferencia de
+  // Navegar y Ventas, que sí lo respetan.
+  const saVendedorPropio = !overrideEmpresaId && isSuperAdminEmail(user?.email) && !!overrideVendedorId;
+  const isSAOverride = !!overrideEmpresaId || saVendedorPropio;
   const effectiveVendedorId = isSAOverride ? overrideVendedorId : (profile?.id ?? null);
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const { hasPermisoMovil } = usePermisos();
