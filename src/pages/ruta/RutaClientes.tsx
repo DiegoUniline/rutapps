@@ -23,7 +23,7 @@ import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { tocaVisitaPorFrecuencia, etiquetaFrecuencia } from '@/lib/frecuenciaVisita';
-import { ZonaFiltroRuta, useZonaFiltroRuta, clienteEnZona } from '@/components/ruta/ZonaFiltroRuta';
+import { useZonaFiltroRuta, clienteEnZona } from '@/components/ruta/ZonaFiltroRuta';
 
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
@@ -60,7 +60,7 @@ export default function RutaClientes() {
   const diaHoy = diaFromDate(todayLocal());
   const [diaFiltro, setDiaFiltro] = useState<string>(diaHoy);
   const [modo, setModo] = useState<'visitas' | 'visitados' | 'todos'>('visitas');
-  // Zona elegida (se comparte con Navegar).
+  // Zona universal (barra arriba de las pestañas; la misma en Entregas, CxC y Navegar).
   const { zona, setZona } = useZonaFiltroRuta();
   const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
   const [capturingGpsId, setCapturingGpsId] = useState<string | null>(null);
@@ -443,7 +443,6 @@ export default function RutaClientes() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <ZonaFiltroRuta value={zona} onChange={setZona} clientes={filteredBase} />
           <button
             onClick={() => navigate('/ruta/ventas/nueva')}
             className="shrink-0 h-[44px] w-[44px] rounded-xl bg-emerald-600 text-white flex items-center justify-center active:scale-90 transition-transform"

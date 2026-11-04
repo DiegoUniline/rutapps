@@ -10,6 +10,9 @@ import { Button } from '@/components/ui/button';
 import { fmtDate, cn, todayLocal } from '@/lib/utils';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
+import { fetchAllPages } from '@/lib/supabasePaginate';
+import { useVendedorRutaVista } from '@/hooks/useVendedorRutaVista';
+import { useZonaFiltroRuta, clienteEnZona } from '@/components/ruta/ZonaFiltroRuta';
 
 type StatusFilter = 'todos' | 'pendientes' | 'hecho' | 'no_entregado';
 
@@ -109,18 +112,44 @@ function EntregaCard({ e, navigate, dimmed }: { e: any; navigate: (path: string)
 
 export default function RutaEntregas() {
   const navigate = useNavigate();
-  const { empresa, profile } = useAuth();
+  const { empresa } = useAuth();
   const { clientesVisibilidad } = useDataVisibility('clientes');
-  const vendedorId = profile?.id;
+  // Super admin viendo a otro vendedor: sus entregas y clientes se leen del servidor
+  // (el celular solo tiene sincronizado lo del propio usuario; antes salía «No tienes entregas»).
+  const { vendedorId, desdeServidor } = useVendedorRutaVista();
   const today = todayLocal();
   const diaHoy = diaFromDate(today);
   const [filter, setFilter] = useState<StatusFilter>('todos');
+  // Zona universal: las entregas se filtran por la zona de su cliente.
+  const { zona, setZona } = useZonaFiltroRuta();
 
-  const { data: allEntregas } = useOfflineQuery('entregas', {
+  const { data: entregasOffline } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,
-  }, { enabled: !!empresa?.id, orderBy: 'fecha' });
+  }, { enabled: !!empresa?.id && !desdeServidor, orderBy: 'fecha' });
+  const { data: clientesOffline } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id && !desdeServidor });
 
-  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: entregasServidor } = useQuery({
+    queryKey: ['sa-ruta-entregas', empresa?.id, vendedorId],
+    enabled: !!empresa?.id && !!vendedorId && desdeServidor,
+    queryFn: () => fetchAllPages((from, to) => supabase
+      .from('entregas')
+      .select('id, empresa_id, folio, pedido_id, vendedor_id, cliente_id, almacen_id, fecha, status, notas, vendedor_ruta_id, fecha_asignacion, fecha_carga, orden_entrega, fecha_entrega, motivo_no_entrega, created_at, updated_at')
+      .eq('empresa_id', empresa!.id)
+      .or(`vendedor_ruta_id.eq.${vendedorId},vendedor_id.eq.${vendedorId}`)
+      .in('status', ['cargado', 'en_ruta', 'hecho', 'no_entregado'] as any)
+      .order('fecha')
+      .order('id')
+      .range(from, to)),
+  });
+  const { data: clientesServidor } = useQuery({
+    queryKey: ['sa-ruta-entregas-clientes', empresa?.id],
+    enabled: !!empresa?.id && desdeServidor,
+    queryFn: () => fetchAllPages((from, to) => supabase
+      .from('clientes').select('*').eq('empresa_id', empresa!.id).order('id').range(from, to)),
+  });
+
+  const allEntregas = desdeServidor ? entregasServidor : entregasOffline;
+  const clientes = desdeServidor ? clientesServidor : clientesOffline;
   const { data: entregaLineasOffline } = useOfflineQuery('entrega_lineas', {}, { enabled: !!empresa?.id, localOnly: true });
   const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
@@ -160,7 +189,8 @@ export default function RutaEntregas() {
     .filter((e: any) =>
       ['cargado', 'en_ruta', 'hecho', 'no_entregado'].includes(e.status) &&
       // Si hay vendedor_ruta_id (reasignación), solo cuenta ese; si no, cae al vendedor original
-      (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId)
+      (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId) &&
+      clienteEnZona(clienteMap.get(e.cliente_id) as any, zona)
     )
     .map((e: any) => {
       const cliente = clienteMap.get(e.cliente_id);
@@ -202,14 +232,14 @@ export default function RutaEntregas() {
       !!e._cliente?.gps_lat && !!e._cliente?.gps_lng
     ).length;
     const clientesHoy = (clientes ?? []).filter((c: any) => {
-      if (c.status !== 'activo' || !c.gps_lat || !c.gps_lng || !clienteTieneDia(c, diaHoy)) return false;
+      if (c.status !== 'activo' || !c.gps_lat || !c.gps_lng || !clienteTieneDia(c, diaHoy) || !clienteEnZona(c, zona)) return false;
       if (clientesVisibilidad === 'propios' && vendedorId) {
         return c.vendedor_id === vendedorId || clientesComoRepartidor.has(c.id);
       }
       return true;
     }).length;
     return entregasHoy + clientesHoy;
-  }, [entregas, clientes, today, diaHoy, clientesVisibilidad, vendedorId, clientesComoRepartidor]);
+  }, [entregas, clientes, today, diaHoy, clientesVisibilidad, vendedorId, clientesComoRepartidor, zona]);
 
   const visible = useMemo(() => {
     let list: any[] = entregas;
@@ -269,8 +299,13 @@ export default function RutaEntregas() {
         <div className="text-center py-16">
           <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-muted-foreground text-sm">
-            {filter === 'todos' ? 'No tienes entregas' : 'Sin entregas en este filtro'}
+            {zona ? 'Sin entregas de esta zona' : filter === 'todos' ? 'No tienes entregas' : 'Sin entregas en este filtro'}
           </p>
+          {zona && (
+            <button onClick={() => setZona('')} className="mt-3 inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground active:scale-95">
+              Ver todas las zonas
+            </button>
+          )}
         </div>
       )}
 
