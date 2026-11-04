@@ -927,6 +927,13 @@ export type Database = {
             referencedRelation: "ventas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "carga_pedidos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cargas: {
@@ -1320,6 +1327,13 @@ export type Database = {
             referencedRelation: "ventas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cfdi_pago_documentos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cfdi_pagos: {
@@ -1695,6 +1709,13 @@ export type Database = {
             referencedRelation: "ventas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cfdis_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
+            referencedColumns: ["id"]
+          },
         ]
       }
       clasificaciones: {
@@ -1788,6 +1809,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cliente_orden_ruta_dia_respaldo: {
+        Row: {
+          cliente_id: string | null
+          created_at: string | null
+          dia: string | null
+          empresa_id: string | null
+          id: string | null
+          orden: number | null
+          origin_label: string | null
+          origin_lat: number | null
+          origin_lng: number | null
+          respaldado_en: string | null
+          updated_at: string | null
+          vendedor_id: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string | null
+          dia?: string | null
+          empresa_id?: string | null
+          id?: string | null
+          orden?: number | null
+          origin_label?: string | null
+          origin_lat?: number | null
+          origin_lng?: number | null
+          respaldado_en?: string | null
+          updated_at?: string | null
+          vendedor_id?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string | null
+          dia?: string | null
+          empresa_id?: string | null
+          id?: string | null
+          orden?: number | null
+          origin_label?: string | null
+          origin_lat?: number | null
+          origin_lng?: number | null
+          respaldado_en?: string | null
+          updated_at?: string | null
+          vendedor_id?: string | null
+        }
+        Relationships: []
       }
       cliente_pedido_sugerido: {
         Row: {
@@ -2113,6 +2179,13 @@ export type Database = {
             columns: ["venta_id"]
             isOneToOne: false
             referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobro_aplicaciones_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
             referencedColumns: ["id"]
           },
         ]
@@ -3656,6 +3729,13 @@ export type Database = {
             referencedRelation: "ventas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "devoluciones_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
+            referencedColumns: ["id"]
+          },
         ]
       }
       distancia_cache: {
@@ -4164,6 +4244,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "entregas_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "entregas_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
@@ -4408,6 +4495,13 @@ export type Database = {
             columns: ["venta_id"]
             isOneToOne: false
             referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
             referencedColumns: ["id"]
           },
         ]
@@ -4968,6 +5062,13 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: true
             referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistica_pedido_resumen_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "ventas_resumen_v"
             referencedColumns: ["id"]
           },
         ]
@@ -7071,6 +7172,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "promocion_aplicada_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "promocion_aplicada_venta_linea_id_fkey"
             columns: ["venta_linea_id"]
             isOneToOne: false
@@ -8288,6 +8396,13 @@ export type Database = {
             columns: ["venta_id"]
             isOneToOne: false
             referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_apartado_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
             referencedColumns: ["id"]
           },
           {
@@ -9819,6 +9934,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "venta_comisiones_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "venta_comisiones_venta_linea_id_fkey"
             columns: ["venta_linea_id"]
             isOneToOne: false
@@ -9871,6 +9993,13 @@ export type Database = {
             columns: ["venta_id"]
             isOneToOne: false
             referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_historial_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
             referencedColumns: ["id"]
           },
         ]
@@ -9949,6 +10078,13 @@ export type Database = {
             columns: ["venta_id"]
             isOneToOne: false
             referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_linea_lotes_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
             referencedColumns: ["id"]
           },
           {
@@ -10171,6 +10307,13 @@ export type Database = {
             referencedRelation: "ventas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "venta_lineas_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ventas: {
@@ -10341,6 +10484,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ventas_pedido_origen_id_fkey"
+            columns: ["pedido_origen_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ventas_tarifa_id_fkey"
             columns: ["tarifa_id"]
             isOneToOne: false
@@ -10492,6 +10642,13 @@ export type Database = {
             columns: ["venta_id"]
             isOneToOne: false
             referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_resumen_v"
             referencedColumns: ["id"]
           },
         ]
@@ -10941,6 +11098,62 @@ export type Database = {
           total_pagado: number | null
         }
         Relationships: []
+      }
+      ventas_resumen_v: {
+        Row: {
+          almacen_id: string | null
+          cerrado_at: string | null
+          cliente_id: string | null
+          cobrado_activo: number | null
+          condicion_pago: Database["public"]["Enums"]["condicion_pago"] | null
+          created_at: string | null
+          descuento_total: number | null
+          empresa_id: string | null
+          es_saldo_inicial: boolean | null
+          fecha: string | null
+          folio: string | null
+          id: string | null
+          ieps_total: number | null
+          iva_total: number | null
+          lineas_descuento: number | null
+          promo_descuento: number | null
+          snapshot_total_efectivo: number | null
+          status: Database["public"]["Enums"]["status_venta"] | null
+          tipo: Database["public"]["Enums"]["tipo_venta"] | null
+          total: number | null
+          total_efectivo: number | null
+          vendedor_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ventas_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_vendedor_id_profiles_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -12239,6 +12452,13 @@ export type Database = {
       tiene_cobertura_vigente: {
         Args: { p_empresa_id: string }
         Returns: boolean
+      }
+      ultima_visita_por_cliente: {
+        Args: { p_desde: string; p_empresa_id: string; p_hasta: string }
+        Returns: {
+          cliente_id: string
+          fecha: string
+        }[]
       }
       user_role_empresa_id: { Args: { p_user_id: string }; Returns: string }
       validar_stock_cotizacion: {
