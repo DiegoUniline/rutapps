@@ -574,7 +574,20 @@ export default function RutaClientes() {
           );
         })}
 
-        {!isLoading && filtered.length === 0 && (
+        {!isLoading && filtered.length === 0 && zona && (
+          <div className="text-center py-12">
+            <MapPin className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-muted-foreground text-base">No hay clientes de esta zona en esta vista</p>
+            <button
+              onClick={() => setZona('')}
+              className="mt-3 inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground active:scale-95"
+            >
+              Ver todas las zonas
+            </button>
+          </div>
+        )}
+
+        {!isLoading && filtered.length === 0 && !zona && (
           <div className="text-center py-12">
             {modo === 'visitados' ? (
               <>
