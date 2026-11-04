@@ -5,6 +5,7 @@ import RutaClientes from './RutaClientes';
 import RutaEntregas from './RutaEntregas';
 import RutaCxC from './RutaCxC';
 import RutaSesionBanner from '@/components/ruta/RutaSesionBanner';
+import { ZonaBarraRuta } from '@/components/ruta/ZonaFiltroRuta';
 import { useEmpresaJornadaConfig } from '@/hooks/useEmpresaJornadaConfig';
 import { usePermisos } from '@/hooks/usePermisos';
 
@@ -43,8 +44,8 @@ export default function RutaClientesEntregas() {
           <RutaSesionBanner />
         </div>
       )}
-      {visibleTabs.length > 1 && (
-        <div className="sticky top-0 z-20 bg-card px-4 pt-2 pb-0.5">
+      <div className="sticky top-0 z-20 bg-card px-4 pt-2 pb-0.5 space-y-1.5">
+        {visibleTabs.length > 1 && (
           <div className="flex gap-0.5 bg-accent rounded-lg p-[4px] border-0">
             {visibleTabs.map(t => (
               <button
@@ -60,8 +61,10 @@ export default function RutaClientesEntregas() {
               </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
+        {/* Zona universal: filtra Clientes, Entregas, CxC y Navegar a la vez. */}
+        {visibleTabs.length > 0 && <ZonaBarraRuta />}
+      </div>
 
       <div className="flex-1 overflow-auto">
         {tab === 'clientes' && canClientes && <RutaClientes />}

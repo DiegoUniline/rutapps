@@ -78,3 +78,4 @@
 2026-11-04 · desarrollador · App móvil: la zona elegida se recuerda solo por el día y, si la lista queda vacía por la zona, aparece «Ver todas las zonas» (reporte: dejaron de verse clientes y botón Navegar)
 2026-11-04 · desarrollador · App móvil Clientes: el super admin en su propia empresa ahora ve los clientes del vendedor elegido en la barra SA (antes la lista salía vacía y sin botón Navegar)
 2026-11-04 · desarrollador · App móvil Entregas: el super admin con vendedor elegido en la barra SA ve las entregas de ese vendedor (desde el servidor); hook useVendedorRutaVista
+2026-11-04 · desarrollador · App móvil: zona universal (barra bajo Clientes|Entregas|CxC, la misma en Navegar) filtra Clientes, Entregas y CxC por la zona del cliente; CxC respeta el vendedor elegido por el super admin

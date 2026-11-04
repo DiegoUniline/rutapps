@@ -12,6 +12,7 @@ import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useVendedorRutaVista } from '@/hooks/useVendedorRutaVista';
+import { useZonaFiltroRuta, clienteEnZona } from '@/components/ruta/ZonaFiltroRuta';
 
 type StatusFilter = 'todos' | 'pendientes' | 'hecho' | 'no_entregado';
 
@@ -119,6 +120,8 @@ export default function RutaEntregas() {
   const today = todayLocal();
   const diaHoy = diaFromDate(today);
   const [filter, setFilter] = useState<StatusFilter>('todos');
+  // Zona universal: las entregas se filtran por la zona de su cliente.
+  const { zona, setZona } = useZonaFiltroRuta();
 
   const { data: entregasOffline } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,
@@ -186,7 +189,8 @@ export default function RutaEntregas() {
     .filter((e: any) =>
       ['cargado', 'en_ruta', 'hecho', 'no_entregado'].includes(e.status) &&
       // Si hay vendedor_ruta_id (reasignación), solo cuenta ese; si no, cae al vendedor original
-      (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId)
+      (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId) &&
+      clienteEnZona(clienteMap.get(e.cliente_id) as any, zona)
     )
     .map((e: any) => {
       const cliente = clienteMap.get(e.cliente_id);
@@ -228,14 +232,14 @@ export default function RutaEntregas() {
       !!e._cliente?.gps_lat && !!e._cliente?.gps_lng
     ).length;
     const clientesHoy = (clientes ?? []).filter((c: any) => {
-      if (c.status !== 'activo' || !c.gps_lat || !c.gps_lng || !clienteTieneDia(c, diaHoy)) return false;
+      if (c.status !== 'activo' || !c.gps_lat || !c.gps_lng || !clienteTieneDia(c, diaHoy) || !clienteEnZona(c, zona)) return false;
       if (clientesVisibilidad === 'propios' && vendedorId) {
         return c.vendedor_id === vendedorId || clientesComoRepartidor.has(c.id);
       }
       return true;
     }).length;
     return entregasHoy + clientesHoy;
-  }, [entregas, clientes, today, diaHoy, clientesVisibilidad, vendedorId, clientesComoRepartidor]);
+  }, [entregas, clientes, today, diaHoy, clientesVisibilidad, vendedorId, clientesComoRepartidor, zona]);
 
   const visible = useMemo(() => {
     let list: any[] = entregas;
@@ -295,8 +299,13 @@ export default function RutaEntregas() {
         <div className="text-center py-16">
           <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-muted-foreground text-sm">
-            {filter === 'todos' ? 'No tienes entregas' : 'Sin entregas en este filtro'}
+            {zona ? 'Sin entregas de esta zona' : filter === 'todos' ? 'No tienes entregas' : 'Sin entregas en este filtro'}
           </p>
+          {zona && (
+            <button onClick={() => setZona('')} className="mt-3 inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground active:scale-95">
+              Ver todas las zonas
+            </button>
+          )}
         </div>
       )}
 

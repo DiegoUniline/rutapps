@@ -8,11 +8,16 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { fmtDate } from '@/lib/utils';
 import { isMobileReceivable } from '@/lib/mobileReceivables';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
+import { useVendedorRutaVista } from '@/hooks/useVendedorRutaVista';
+import { useZonaFiltroRuta, clienteEnZona } from '@/components/ruta/ZonaFiltroRuta';
 
 
 export default function RutaCxC() {
   const navigate = useNavigate();
-  const { empresa, profile } = useAuth();
+  const { empresa } = useAuth();
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const [expandido, setExpandido] = useState<string | null>(null);
@@ -20,12 +25,36 @@ export default function RutaCxC() {
 
 
   const { clientesVisibilidad } = useDataVisibility('cobros');
-  const vendedorId = profile?.id;
+  // Super admin viendo a otro vendedor: sus cuentas se leen del servidor (el celular solo
+  // tiene lo del propio usuario). Usuario normal: como siempre, del celular.
+  const { vendedorId, desdeServidor } = useVendedorRutaVista();
+  const { zona, setZona } = useZonaFiltroRuta();
   // La configuración de empresa "clientes_visibilidad" manda en app móvil.
   // 'todos' = todas las ventas; 'propios' = filtrar por clientes asignados al vendedor.
-  const limitarPorClientesPropios = clientesVisibilidad === 'propios' && !!vendedorId;
-  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id && !!vendedorId });
-  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  // Con el super admin viendo a un vendedor, siempre se limita a los clientes de ese vendedor.
+  const limitarPorClientesPropios = (clientesVisibilidad === 'propios' || desdeServidor) && !!vendedorId;
+  const { data: ventasOffline } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id && !!vendedorId && !desdeServidor });
+  const { data: clientesOffline } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id && !desdeServidor });
+  const { data: ventasServidor } = useQuery({
+    queryKey: ['sa-ruta-cxc-ventas', empresa?.id],
+    enabled: !!empresa?.id && desdeServidor,
+    queryFn: () => fetchAllPages((from, to) => supabase
+      .from('ventas')
+      .select('id, folio, fecha, cliente_id, vendedor_id, saldo_pendiente, status')
+      .eq('empresa_id', empresa!.id)
+      .gt('saldo_pendiente', 0)
+      .neq('status', 'cancelado')
+      .order('id')
+      .range(from, to)),
+  });
+  const { data: clientesServidor } = useQuery({
+    queryKey: ['sa-ruta-entregas-clientes', empresa?.id],
+    enabled: !!empresa?.id && desdeServidor,
+    queryFn: () => fetchAllPages((from, to) => supabase
+      .from('clientes').select('*').eq('empresa_id', empresa!.id).order('id').range(from, to)),
+  });
+  const ventas = desdeServidor ? ventasServidor : ventasOffline;
+  const clientes = desdeServidor ? clientesServidor : clientesOffline;
   const { data: vendedores } = useOfflineQuery('vendedores', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
 
@@ -74,11 +103,14 @@ export default function RutaCxC() {
 
 
 
+  // Zona universal: por la zona del cliente.
+  const zonaDeCliente = useMemo(() => new Map(((clientes ?? []) as any[]).map((c: any) => [c.id, c])), [clientes]);
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    if (!s) return clientesConSaldo;
-    return clientesConSaldo.filter(c => clienteCoincide(c, s));
-  }, [clientesConSaldo, search]);
+    const enZona = zona ? clientesConSaldo.filter(c => clienteEnZona(zonaDeCliente.get(c.id), zona)) : clientesConSaldo;
+    if (!s) return enZona;
+    return enZona.filter(c => clienteCoincide(c, s));
+  }, [clientesConSaldo, search, zona, zonaDeCliente]);
 
   const totalCxC = filtered.reduce((s, c) => s + c.saldo, 0);
 
@@ -127,7 +159,12 @@ export default function RutaCxC() {
       {/* Lista */}
       {filtered.length === 0 ? (
         <div className="bg-card border border-dashed border-border rounded-2xl p-8 text-center">
-          <p className="text-[13px] text-muted-foreground">Sin cuentas por cobrar 🎉</p>
+          <p className="text-[13px] text-muted-foreground">{zona ? 'Sin cuentas por cobrar en esta zona' : 'Sin cuentas por cobrar 🎉'}</p>
+          {zona && (
+            <button onClick={() => setZona('')} className="mt-3 inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground active:scale-95">
+              Ver todas las zonas
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
