@@ -3,20 +3,22 @@ import { MapPinned, Check } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
-import { cn } from '@/lib/utils';
+import { cn, todayLocal } from '@/lib/utils';
 
 /** '' = todas las zonas · SIN_ZONA = clientes sin zona · otro = id de la zona. */
 export const SIN_ZONA = '__sin_zona__';
 
-const claveFiltro = (empresaId?: string | null) => `ruta_zona_filtro_${empresaId ?? ''}`;
+// La zona se recuerda solo durante el día: al día siguiente la app arranca con todas las zonas
+// (antes quedaba elegida para siempre y la lista podía verse vacía sin que el vendedor lo notara).
+const claveFiltro = (empresaId?: string | null) => `ruta_zona_filtro_${empresaId ?? ''}_${todayLocal()}`;
 
 function leer(empresaId?: string | null): string {
   try { return localStorage.getItem(claveFiltro(empresaId)) ?? ''; } catch { return ''; }
 }
 
 /**
- * Zona elegida en la app de ruta. Se guarda en el celular para que Clientes
- * (Pendientes) y Navegar muestren la misma zona sin elegirla dos veces.
+ * Zona elegida en la app de ruta. Se guarda en el celular (solo por el día) para que
+ * Clientes (Pendientes) y Navegar muestren la misma zona sin elegirla dos veces.
  */
 export function useZonaFiltroRuta() {
   const { empresa } = useAuth();

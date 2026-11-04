@@ -75,3 +75,5 @@
 2026-11-03 · desarrollador · Selector de fecha (OdooDatePicker, 24 pantallas incl. Fecha de alta de clientes): captura con teclado dd/mm/aaaa + Enter y selectores de mes/año
 2026-11-04 · desarrollador · Tienda en línea: sesión deslizante (edge tienda-refresh, 90 días sin entrar = vence; renueva cada 12 h y corta si el cliente fue bloqueado) y cierre automático al vencer con aviso en Iniciar sesión
 2026-11-04 · desarrollador · App móvil: filtro por zona en Clientes (Pendientes/Visitados/Todos) y en Navegar, compartido y guardado en el celular; reordenar con zona elegida conserva el orden de las demás zonas
+2026-11-04 · desarrollador · App móvil: la zona elegida se recuerda solo por el día y, si la lista queda vacía por la zona, aparece «Ver todas las zonas» (reporte: dejaron de verse clientes y botón Navegar)
+2026-11-04 · desarrollador · App móvil Clientes: el super admin en su propia empresa ahora ve los clientes del vendedor elegido en la barra SA (antes la lista salía vacía y sin botón Navegar)
