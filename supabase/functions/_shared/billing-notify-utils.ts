@@ -1,7 +1,7 @@
 // Shared helpers to notify the client + Rutapp admins on every billing event.
 // - Skips $0 invoices entirely.
 // - Builds rutapp.mx/factura/{folio} pay links.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { sendAppEmail } from "./app-email.ts";
 
 const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
@@ -47,7 +47,7 @@ export interface NotifyOptions {
   overrideClientPhone?: string;
 }
 
-type SB = ReturnType<typeof createClient>;
+type SB = SupabaseClient;
 
 function getPlanModality(start?: string | null, end?: string | null, period?: string | null, months?: number | null): string {
   if (start && end) {
