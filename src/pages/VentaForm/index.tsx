@@ -43,6 +43,7 @@ import { nextVisitDate } from '@/lib/nextVisitDate';
 import { RepriceListaDialog } from '@/components/venta/RepriceListaDialog';
 import { AdminEditVentaDialog } from '@/components/venta/AdminEditVentaDialog';
 import { useVendedores } from '@/hooks/useClientes';
+import { diasCreditoVenta } from '@/lib/creditoVenta';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -92,15 +93,19 @@ export default function VentaFormPage() {
     queryKey: ['checkout-pending-ventas', empresa?.id, form.cliente_id],
     enabled: !!empresa?.id && !!form.cliente_id && showCheckout,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente, dias_credito')
+        .select('id, folio, fecha, total, saldo_pendiente, fecha_vencimiento')
         .eq('empresa_id', empresa!.id)
         .eq('cliente_id', form.cliente_id!)
         .gt('saldo_pendiente', 0)
         .neq('id', form.id ?? '')
         .in('status', ['confirmado', 'entregado', 'facturado'])
         .order('fecha');
+      if (error) {
+        toast.error('No se pudieron cargar las cuentas pendientes del cliente');
+        throw error;
+      }
       return data ?? [];
     },
   });
@@ -144,17 +149,17 @@ export default function VentaFormPage() {
     },
   });
 
-  const checkoutCuentasPendientes = useMemo(() =>
-    (clientePendingVentas ?? []).map((v: any) => ({
+  const checkoutCuentasPendientes = useMemo(() => {
+    const diasCliente = (clientesList?.find(c => c.id === form.cliente_id) as { dias_credito?: number | null } | undefined)?.dias_credito;
+    return (clientePendingVentas ?? []).map(v => ({
       id: v.id,
       folio: v.folio,
       fecha: v.fecha,
       total: v.total ?? 0,
       saldo_pendiente: v.saldo_pendiente ?? 0,
-      dias_credito: v.dias_credito ?? 0,
-    })),
-    [clientePendingVentas]
-  );
+      dias_credito: diasCreditoVenta(v.fecha, v.fecha_vencimiento, diasCliente),
+    }));
+  }, [clientePendingVentas, clientesList, form.cliente_id]);
 
 
   const handleCheckoutConfirm = useCallback(async (
