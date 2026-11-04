@@ -1,6 +1,6 @@
 // Scheduler: envía el Reporte Diario PDF a cada usuario suscrito,
 // en su zona horaria local, una sola vez al día.
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { isPrivilegedCaller } from "../_shared/privilegedCaller.ts";
 import { generarReporteBotPdf } from "./reportePdf.ts";
 import { generarReporteBotXlsx } from "./reporteXlsx.ts";

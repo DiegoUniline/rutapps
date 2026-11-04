@@ -1,5 +1,5 @@
 // Envía mensaje de bienvenida de Jarvis al dar de alta un número en el bot.
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

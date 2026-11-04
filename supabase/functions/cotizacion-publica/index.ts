@@ -7,7 +7,7 @@
 // cuyo token exacto se envía. El token es no-adivinable, así que no se puede
 // enumerar ni leer en bloque (que era la fuga).
 
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
