@@ -73,3 +73,4 @@
 2026-10-31 · desarrollador · Mapa de clientes: ids repetidos en la ruta (residual sin vendedor) dejaban pines huérfanos con números viejos que ningún filtro quitaba; se quitan repetidos antes de pintar
 2026-10-31 · desarrollador · Rendimiento BD (alerta CPU 96%): totales de Ventas desde vista ventas_resumen_v (sumas en la base, sin embeber partidas); visitas previas por RPC ultima_visita_por_cliente; Kardex sin producto = últimos 30 días + índices (migración 20261103120000, pendiente CONFIRMO)
 2026-11-03 · desarrollador · Selector de fecha (OdooDatePicker, 24 pantallas incl. Fecha de alta de clientes): captura con teclado dd/mm/aaaa + Enter y selectores de mes/año
+2026-11-04 · desarrollador · Tienda en línea: sesión deslizante (edge tienda-refresh, 90 días sin entrar = vence; renueva cada 12 h y corta si el cliente fue bloqueado) y cierre automático al vencer con aviso en Iniciar sesión

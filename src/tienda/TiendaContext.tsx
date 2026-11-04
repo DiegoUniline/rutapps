@@ -132,6 +132,8 @@ interface TiendaCtx {
   token: string | null;
   email: string | null;
   isAuth: boolean;
+  /** La sesión anterior venció y se cerró sola (para avisar en la pantalla de entrar). */
+  sesionExpirada: boolean;
   login: (token: string, email: string) => void;
   logout: () => void;
   cart: CartItem[];
@@ -148,13 +150,38 @@ const Ctx = createContext<TiendaCtx | null>(null);
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+const EVENTO_SESION_EXPIRADA = "tienda-sesion-expirada";
+const RENOVAR_CADA_MS = 12 * 60 * 60 * 1000;
+
+/** Vencimiento del token (ms) leído de su payload; null si no se puede leer. */
+export function tokenExpiraEn(token: string | null): number | null {
+  try {
+    const p = token?.split(".")[1];
+    if (!p) return null;
+    const b64 = p.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (p.length % 4)) % 4);
+    const exp = Number(JSON.parse(atob(b64))?.exp);
+    return Number.isFinite(exp) ? exp * 1000 : null;
+  } catch {
+    return null; // token ilegible: se trata como sin vencimiento conocido y decide el servidor
+  }
+}
+
+/** Solo un 401 de sesión vencida/inválida cierra sesión (no una contraseña actual incorrecta). */
+function avisarSiSesionVencio(status: number, data: any) {
+  if (status !== 401) return;
+  const msg = String(data?.error ?? "");
+  if (data?.code === "sesion_expirada" || /^Sesión (expirada|de tienda inválida)/.test(msg)) {
+    window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA));
+  }
+}
+
 export async function fnGet(path: string, params: Record<string, string> = {}) {
   const qs = new URLSearchParams(params).toString();
   const r = await fetch(`${FN_URL}/${path}?${qs}`, {
     headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
   });
   const data = await r.json();
-  if (!r.ok) throw new Error(data?.error ?? "Error de red");
+  if (!r.ok) { avisarSiSesionVencio(r.status, data); throw new Error(data?.error ?? "Error de red"); }
   return data;
 }
 
@@ -165,7 +192,7 @@ export async function fnPost(path: string, body: unknown) {
     body: JSON.stringify(body),
   });
   const data = await r.json();
-  if (!r.ok) throw new Error(data?.error ?? "Error de red");
+  if (!r.ok) { avisarSiSesionVencio(r.status, data); throw new Error(data?.error ?? "Error de red"); }
   return data;
 }
 
@@ -215,9 +242,14 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
     };
   }, [config]);
 
+  // La sesión anterior venció sola (aviso en "Iniciar sesión").
+  const [sesionExpirada, setSesionExpirada] = useState(() => localStorage.getItem(`${tokenKey}_expirada`) === "1");
+
   const login = useCallback((t: string, e: string) => {
     localStorage.setItem(tokenKey, t);
     localStorage.setItem(`${tokenKey}_email`, e);
+    localStorage.removeItem(`${tokenKey}_expirada`);
+    setSesionExpirada(false);
     setToken(t);
     setEmail(e);
   }, [tokenKey]);
@@ -225,9 +257,66 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
   const logout = useCallback(() => {
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(`${tokenKey}_email`);
+    localStorage.removeItem(`${tokenKey}_renovado`);
     setToken(null);
     setEmail(null);
   }, [tokenKey]);
+
+  // ── Sesión: se renueva sola mientras el cliente entre; si vence, se cierra sola ──
+
+  const expirar = useCallback(() => {
+    if (!localStorage.getItem(tokenKey)) return;
+    logout();
+    localStorage.setItem(`${tokenKey}_expirada`, "1");
+    setSesionExpirada(true);
+  }, [logout, tokenKey]);
+
+  // Cualquier respuesta "Sesión expirada" del servidor cierra sesión.
+  useEffect(() => {
+    window.addEventListener(EVENTO_SESION_EXPIRADA, expirar);
+    return () => window.removeEventListener(EVENTO_SESION_EXPIRADA, expirar);
+  }, [expirar]);
+
+  // Vencimiento local: al abrir, al volver a la pestaña y en el momento exacto en que vence.
+  useEffect(() => {
+    if (!token) return;
+    const exp = tokenExpiraEn(token);
+    if (exp == null) return;
+    const revisar = () => { if (Date.now() >= exp) expirar(); };
+    revisar();
+    const timer = window.setTimeout(revisar, Math.min(Math.max(exp - Date.now(), 0) + 1000, 2_147_000_000));
+    document.addEventListener("visibilitychange", revisar);
+    return () => { window.clearTimeout(timer); document.removeEventListener("visibilitychange", revisar); };
+  }, [token, expirar]);
+
+  // Renovación (sesión deslizante): como máximo cada 12 h, al abrir o volver a la tienda.
+  useEffect(() => {
+    if (!token) return;
+    const renovar = () => {
+      if (document.visibilityState === "hidden") return;
+      // Token vencido o ya cerrado: no se renueva (lo cierra el efecto de vencimiento).
+      const exp = tokenExpiraEn(token);
+      if ((exp != null && Date.now() >= exp) || localStorage.getItem(tokenKey) !== token) return;
+      const ultimo = Number(localStorage.getItem(`${tokenKey}_renovado`) ?? 0);
+      if (Date.now() - ultimo < RENOVAR_CADA_MS) return;
+      localStorage.setItem(`${tokenKey}_renovado`, String(Date.now()));
+      fnPost("tienda-refresh", { slug, token })
+        .then((res) => {
+          if (res?.token && localStorage.getItem(tokenKey)) {
+            localStorage.setItem(tokenKey, res.token);
+            setToken(res.token);
+          }
+        })
+        .catch((e) => {
+          // Sin red: se reintenta en la siguiente apertura. Sesión vencida: ya la cerró el evento.
+          localStorage.removeItem(`${tokenKey}_renovado`);
+          console.warn("[tienda] no se pudo renovar la sesión:", (e as Error).message);
+        });
+    };
+    renovar();
+    document.addEventListener("visibilitychange", renovar);
+    return () => document.removeEventListener("visibilitychange", renovar);
+  }, [token, slug, tokenKey]);
 
   const addToCart = useCallback((item: CartItem) => {
     setCart((prev) => {
@@ -257,7 +346,7 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
 
   const value: TiendaCtx = {
     slug, config, empresa, loadingConfig, configError,
-    token, email, isAuth: !!token, login, logout,
+    token, email, isAuth: !!token, sesionExpirada, login, logout,
     cart, addToCart, updateQty, removeFromCart, clearCart, cartCount, cartTotal,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

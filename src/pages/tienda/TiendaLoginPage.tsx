@@ -62,6 +62,11 @@ function Inner() {
       <div className="tienda-auth-card">
         <h2>{mode === "login" ? "Iniciar sesión" : "Solicitar cuenta"}</h2>
         <p className="sub">{mode === "login" ? "Accede para ver tus precios personalizados." : "Envíanos tus datos. La empresa revisará tu solicitud antes de activar la cuenta."}</p>
+        {mode === "login" && t.sesionExpirada && (
+          <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", borderRadius: 10, padding: 10, marginBottom: 12, fontSize: 13 }}>
+            Tu sesión expiró. Inicia sesión de nuevo para continuar.
+          </div>
+        )}
 
         <form onSubmit={submit}>
           {mode === "signup" && (
