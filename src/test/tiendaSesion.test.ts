@@ -33,7 +33,7 @@ describe('TiendaProvider: sesión vencida', () => {
     const Espia = () => { estado = useTienda(); return null; };
     const div = document.createElement('div');
     const root = createRoot(div);
-    await act(async () => { root.render(createElement(TiendaProvider, { slug: 'demo' }, createElement(Espia))); });
+    await act(async () => { root.render(createElement(TiendaProvider, { slug: 'demo', children: createElement(Espia) })); });
     act(() => root.unmount());
     expect(estado.isAuth).toBe(false);
     expect(estado.sesionExpirada).toBe(true);
@@ -56,7 +56,7 @@ describe('TiendaProvider: renovación', () => {
     let estado: any = null;
     const Espia = () => { estado = useTienda(); return null; };
     const root = createRoot(document.createElement('div'));
-    await act(async () => { root.render(createElement(TiendaProvider, { slug: 'demo' }, createElement(Espia))); });
+    await act(async () => { root.render(createElement(TiendaProvider, { slug: 'demo', children: createElement(Espia) })); });
     await act(async () => { await new Promise(r => setTimeout(r, 0)); });
     const e = estado;
     act(() => root.unmount());
