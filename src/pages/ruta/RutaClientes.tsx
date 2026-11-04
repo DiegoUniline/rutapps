@@ -22,6 +22,7 @@ import { useClienteOrdenRuta, swapOrdenRuta, useInvalidateOrdenRuta } from '@/ho
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
 import { tocaVisitaPorFrecuencia, etiquetaFrecuencia } from '@/lib/frecuenciaVisita';
+import { ZonaFiltroRuta, useZonaFiltroRuta, clienteEnZona } from '@/components/ruta/ZonaFiltroRuta';
 
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
@@ -53,6 +54,8 @@ export default function RutaClientes() {
   const diaHoy = diaFromDate(todayLocal());
   const [diaFiltro, setDiaFiltro] = useState<string>(diaHoy);
   const [modo, setModo] = useState<'visitas' | 'visitados' | 'todos'>('visitas');
+  // Zona elegida (se comparte con Navegar).
+  const { zona, setZona } = useZonaFiltroRuta();
   const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
   const [capturingGpsId, setCapturingGpsId] = useState<string | null>(null);
   const [localVisited, setLocalVisited] = useState<Set<string>>(getLocalVisitedSet);
@@ -270,7 +273,8 @@ export default function RutaClientes() {
     tocaVisitaPorFrecuencia(c.frecuencia, ultimaVisitaPorCliente.get(c.id) ?? null, todayStr)
   ), [ultimaVisitaPorCliente, todayStr]);
 
-  const filtered = myClientes.filter((c: any) => {
+  // Lista del modo/día/búsqueda, antes de la zona (base del reordenamiento y de los conteos por zona).
+  const filteredBase = myClientes.filter((c: any) => {
     if (search) {
       if (!clienteCoincide(c, search, [c.direccion])) return false;
     }
@@ -292,44 +296,51 @@ export default function RutaClientes() {
     // Priority 2: legacy global orden on the cliente row
     return (a.orden ?? 9999) - (b.orden ?? 9999);
   });
+  const filtered = zona ? filteredBase.filter((c: any) => clienteEnZona(c, zona)) : filteredBase;
 
-  const visitadosCount = myClientes.filter((c: any) => visited.has(c.id)).length;
+  const visitadosCount = myClientes.filter((c: any) => visited.has(c.id) && clienteEnZona(c, zona)).length;
   const pendientesCount = myClientes.filter((c: any) => {
-    if (visited.has(c.id)) return false;
+    if (visited.has(c.id) || !clienteEnZona(c, zona)) return false;
     return clienteTieneDia(c, diaFiltro) && tocaHoy(c);
   }).length;
 
   const clienteById = useMemo(() => new Map((clientes ?? []).map((c: any) => [c.id, c])), [clientes]);
   const paradasNavegablesCount = useMemo(() => {
-    const clientesDelDia = myClientes.filter((c: any) => c.gps_lat && c.gps_lng && clienteTieneDia(c, diaFiltro)).length;
+    const clientesDelDia = myClientes.filter((c: any) => c.gps_lat && c.gps_lng && clienteTieneDia(c, diaFiltro) && clienteEnZona(c, zona)).length;
     const entregasDelDia = (allEntregas ?? []).filter((e: any) => {
       const cliente = clienteById.get(e.cliente_id) as any;
       return (e.status === 'cargado' || e.status === 'en_ruta')
         && (e.fecha ?? '').slice(0, 10) === todayStr
         && (e.vendedor_ruta_id ? e.vendedor_ruta_id === effectiveVendedorId : e.vendedor_id === effectiveVendedorId)
-        && !!cliente?.gps_lat && !!cliente?.gps_lng;
+        && !!cliente?.gps_lat && !!cliente?.gps_lng && clienteEnZona(cliente, zona);
     }).length;
     return clientesDelDia + entregasDelDia;
-  }, [myClientes, allEntregas, clienteById, diaFiltro, todayStr, effectiveVendedorId]);
+  }, [myClientes, allEntregas, clienteById, diaFiltro, todayStr, effectiveVendedorId, zona]);
 
   const moveItem = useCallback(async (idx: number, direction: 'up' | 'down') => {
     if (!filtered || !empresa?.id) return;
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (targetIdx < 0 || targetIdx >= filtered.length) return;
+    // Con zona elegida se reordena sobre la ruta completa del día (todas las zonas):
+    // guardar solo la zona visible borraría el orden de las demás.
+    const ordenCompleto = filteredBase.map((c: any) => c.id);
+    const fromIdx = ordenCompleto.indexOf(filtered[idx].id);
+    const toIdx = ordenCompleto.indexOf(filtered[targetIdx].id);
+    if (fromIdx < 0 || toIdx < 0) return;
     try {
       await swapOrdenRuta({
         empresaId: empresa.id,
         vendedorId: profile?.id ?? null,
         dia: diaFiltro,
-        currentOrder: filtered.map((c: any) => c.id),
-        fromIdx: idx,
-        toIdx: targetIdx,
+        currentOrder: ordenCompleto,
+        fromIdx,
+        toIdx,
       });
       invalidateOrdenRuta();
     } catch (e: any) {
       toast.error(e?.message || 'No se pudo reordenar (necesitas conexión)');
     }
-  }, [filtered, empresa?.id, profile?.id, diaFiltro, invalidateOrdenRuta]);
+  }, [filtered, filteredBase, empresa?.id, profile?.id, diaFiltro, invalidateOrdenRuta]);
 
   const openMaps = (lat: number, lng: number, nombre: string) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${encodeURIComponent(nombre)}`, '_blank');
@@ -397,7 +408,7 @@ export default function RutaClientes() {
         {modo === 'visitas' && (
           <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
             {DIAS.map(d => {
-              const count = myClientes.filter((c: any) => clienteTieneDia(c, d)).length;
+              const count = myClientes.filter((c: any) => clienteTieneDia(c, d) && clienteEnZona(c, zona)).length;
               return (
                 <button
                   key={d}
@@ -426,6 +437,7 @@ export default function RutaClientes() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+          <ZonaFiltroRuta value={zona} onChange={setZona} clientes={filteredBase} />
           <button
             onClick={() => navigate('/ruta/ventas/nueva')}
             className="shrink-0 h-[44px] w-[44px] rounded-xl bg-emerald-600 text-white flex items-center justify-center active:scale-90 transition-transform"

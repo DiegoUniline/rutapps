@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useClienteOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
+import { ZonaFiltroRuta, useZonaFiltroRuta, clienteEnZona } from '@/components/ruta/ZonaFiltroRuta';
 
 /* ─── Voice Navigation ─── */
 const speak = (text: string) => {
@@ -68,6 +69,8 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const { isLoaded } = useGoogleMaps();
   const [filterDate, setFilterDate] = useState(todayLocal());
   const filterDia = diaFromDate(filterDate);
+  // Zona elegida (la misma que en Clientes).
+  const { zona, setZona } = useZonaFiltroRuta();
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
 
   // Super-admin: override read from global context (set in MobileLayout bar)
@@ -153,7 +156,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     queryFn: async () => {
       const { data } = await supabase
         .from('clientes')
-        .select('id, nombre, direccion, colonia, telefono, dia_visita, gps_lat, gps_lng, orden, vendedor_id')
+        .select('id, nombre, direccion, colonia, telefono, dia_visita, gps_lat, gps_lng, orden, vendedor_id, zona_id')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('orden', { ascending: true });
@@ -186,6 +189,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   // Build unified stops: clients + entregas merged, avoiding duplicates (same client GPS)
   const stops: Stop[] = useMemo(() => {
     const clientStops: Stop[] = (clientesData ?? [])
+      .filter((c) => clienteEnZona(c, zona))
       .map((c, i) => {
         const ord = ordenMap.get(c.id);
         return {
@@ -202,7 +206,8 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
       .filter((e: any) =>
         (e.status === 'cargado' || e.status === 'en_ruta') &&
         (e.fecha ?? '').slice(0, 10) === filterDate &&
-        (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId)
+        (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId) &&
+        clienteEnZona(clienteMap.get(e.cliente_id) as any, zona)
       )
       .sort((a: any, b: any) => (a.orden_entrega ?? 999) - (b.orden_entrega ?? 999))
       .map((e: any) => {
@@ -228,7 +233,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
       return a.orden - b.orden;
     });
     return all;
-  }, [clientesData, allEntregas, vendedorId, clienteMap, ordenMap, filterDate]);
+  }, [clientesData, allEntregas, vendedorId, clienteMap, ordenMap, filterDate, zona]);
 
   const completedCount = completedIds.size;
   const totalCount = stops.length;
@@ -512,11 +517,14 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
         <header className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-3">
           <button onClick={() => onBack ? onBack() : navigate('/ruta')} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
           <h1 className="text-base font-bold text-foreground">Navegación</h1>
+          <div className="ml-auto">
+            <ZonaFiltroRuta value={zona} onChange={setZona} clientes={(clientesData ?? []) as any[]} className="h-9" />
+          </div>
         </header>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center px-8">
             <Navigation className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-            <p className="text-muted-foreground text-sm">No hay paradas con GPS</p>
+            <p className="text-muted-foreground text-sm">{zona ? 'No hay paradas con GPS en esta zona' : 'No hay paradas con GPS'}</p>
           </div>
         </div>
       </div>
@@ -738,6 +746,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
                 className="bg-transparent text-[12px] text-foreground border-0 focus:outline-none flex-1"
               />
               <span className="text-[11px] text-muted-foreground capitalize">{filterDia}</span>
+              <ZonaFiltroRuta value={zona} onChange={setZona} clientes={(clientesData ?? []) as any[]} className="h-7 px-2 rounded-lg" />
             </div>
             {/* Super admin override is now in the global SuperAdminMobileBar */}
           </div>
