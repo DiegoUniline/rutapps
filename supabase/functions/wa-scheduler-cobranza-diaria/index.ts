@@ -1,5 +1,5 @@
 // Scheduler: aviso de cobranza a la 1pm local. Lista facturas que vencen mañana.
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { isPrivilegedCaller } from "../_shared/privilegedCaller.ts";
 import { localParts, sleep, waSendText, buildIntroMessage } from "../_shared/wa-scheduler-utils.ts";
 

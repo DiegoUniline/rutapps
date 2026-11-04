@@ -3,7 +3,7 @@
 // Uso: GET ?dryRun=true para previsualizar, luego sin dryRun para aplicar.
 
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

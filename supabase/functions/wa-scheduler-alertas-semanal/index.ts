@@ -1,5 +1,5 @@
 // Scheduler: alertas inteligentes los lunes a las 9am local.
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { isPrivilegedCaller } from "../_shared/privilegedCaller.ts";
 import { localParts, sleep, waSendText, buildIntroMessage } from "../_shared/wa-scheduler-utils.ts";
 

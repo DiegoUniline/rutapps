@@ -1,6 +1,6 @@
 // Trigger de un solo uso para ejecutar billing-realign-to-month-start
 // desde el sandbox sin exponer CRON_SECRET. BORRAR después de usar.
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));

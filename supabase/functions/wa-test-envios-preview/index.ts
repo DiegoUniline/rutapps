@@ -1,6 +1,6 @@
 // Test único — manda al número de prueba: 1) el Reporte Diario REAL (mismo del módulo Ventas)
 // y 2) tres Reportes Generales en PDF (Ventas por Cliente, Ventas por Producto, Utilidad).
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { fetchReportesGenerales } from "../_shared/reportes-generales-data.ts";
 import { generarReporteGeneralPdf } from "../_shared/reportes-generales-pdf.ts";
 import { localParts, waSendFile, sleep } from "../_shared/wa-scheduler-utils.ts";

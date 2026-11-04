@@ -1,6 +1,6 @@
 // Fetch + cómputo server-side para los Reportes Generales (espejo de useReportesData).
 // Reutilizado por el bot WhatsApp.
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 

@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 /**
  * true si la petición viene del cron (x-cron-secret), del servidor (service_role)

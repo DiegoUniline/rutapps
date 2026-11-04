@@ -236,7 +236,7 @@ const Email = ({
                     <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
                       <tbody>
                         <tr>
-                          <td align="center" bgcolor={PRIMARY} style={btnPrimaryCell}>
+                          <td align="center" {...{ bgcolor: PRIMARY }} style={btnPrimaryCell}>
                             <a href={primaryUrl} style={btnPrimaryLink}>{primaryLabel}</a>
                           </td>
                         </tr>
@@ -250,7 +250,7 @@ const Email = ({
                     <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
                       <tbody>
                         <tr>
-                          <td align="center" bgcolor="#ffffff" style={btnSecondaryCell}>
+                          <td align="center" {...{ bgcolor: "#ffffff" }} style={btnSecondaryCell}>
                             <a href={secondaryUrl} style={btnSecondaryLink}>{secondaryLabel}</a>
                           </td>
                         </tr>

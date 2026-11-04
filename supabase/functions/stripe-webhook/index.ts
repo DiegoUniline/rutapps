@@ -1,5 +1,5 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { acreditarTimbresCheckout, acreditarTimbresFacturaPagada } from "../_shared/timbres.ts";
 import { notifyBillingEvent } from "../_shared/billing-notify-utils.ts";
 import { invoiceAffectsSubscription, invoiceMetadataPeriod } from "../_shared/billing-safety.ts";
