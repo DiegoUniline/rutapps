@@ -10,6 +10,7 @@
 - **Siguiente paso exacto:** publicar en Lovable (#162 #163 #164) y probar editar venta y ajustar entrega; re-medir huecos G1–G5 en 7 días (0 casos nuevos); fase 3b (editar entregas antes de cargar) y saldo a favor por pago de más (D-008) pendientes. Pendiente: P-002
 
 ## Decisiones recientes (últimas 10)
+- [D-017](./decisiones.md#d-017) 2026-11-04 · Restaurar las 48 suscripciones Stripe canceladas sin cobro inicial, conservando fecha/hora de corte original; ejecutado y verificado 48/48.
 - [D-004](./decisiones.md#d-004) 2026-10-19 · Ventas sin `fecha_vencimiento` vencen a los días de crédito del cliente.
 - [D-003](./decisiones.md#d-003) 2026-10-19 · Plan de corrección PR A/B; relleno de `fecha_entrega` con `validado_at` → `updated_at`.
 - [D-002](./decisiones.md#d-002) 2026-10-19 · El dueño ejecuta los SQL correctivos de producción.
@@ -19,6 +20,7 @@
 - (ninguna)
 
 ## Pendientes / bloqueos
+- Suscripciones, verificación puntual 2026-11-04 23:47 UTC: 48 reemplazos vinculados, activos y desbloqueados en RutApp; Stripe en `trialing` hasta cada corte original; 48 facturas iniciales de total/importe pagado $0, sin cargos desde la creación y sin duplicados activos. Planes, usuarios, descuentos y configuración manual/legacy sin diferencias. No se modificó código, esquema, funciones ni se publicó. Los cobros futuros dependen de la tarjeta y no están probados antes de su fecha.
 - Inventario Fase 1 hecho. Producción 2026-10-19: R-001, R-004…R-006 corregidos (PR #148) y **publicado**; Control de descuentos validado por el dueño con datos reales; portal del cliente y alertas WA (edge functions) sin confirmar; R-009 y huecos de R-010 resueltos (PR #150 aplicado por el dueño). Pendientes: PR #149 crédito (en espera de avisar vendedores), R-002, R-013, registrar migraciones en `supabase_migrations`.
 - Validar el AutoPrompter con una solicitud real (comportamiento del modelo no probado; solo integración documental y hooks).
 
