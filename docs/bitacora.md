@@ -77,3 +77,4 @@
 2026-11-04 · desarrollador · App móvil: filtro por zona en Clientes (Pendientes/Visitados/Todos) y en Navegar, compartido y guardado en el celular; reordenar con zona elegida conserva el orden de las demás zonas
 2026-11-04 · desarrollador · App móvil: la zona elegida se recuerda solo por el día y, si la lista queda vacía por la zona, aparece «Ver todas las zonas» (reporte: dejaron de verse clientes y botón Navegar)
 2026-11-04 · desarrollador · App móvil Clientes: el super admin en su propia empresa ahora ve los clientes del vendedor elegido en la barra SA (antes la lista salía vacía y sin botón Navegar)
+2026-11-04 · desarrollador · App móvil Entregas: el super admin con vendedor elegido en la barra SA ve las entregas de ese vendedor (desde el servidor); hook useVendedorRutaVista
