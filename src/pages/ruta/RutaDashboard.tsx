@@ -10,7 +10,7 @@ import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
 import { estadoPagoMovil } from '@/lib/estadoPagoMovil';
 import { esCobroSinDinero } from '@/lib/saldoFavor';
-import { usePagadoPorVentaOffline } from '@/hooks/usePagadoPorVentaOffline';
+import { usePagadoPorVentaOffline, usePagadoServidor, idsPedidosSinEntregarSaldoCero } from '@/hooks/usePagadoPorVentaOffline';
 
 type TabKey = 'resumen' | 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluciones';
 
@@ -72,6 +72,8 @@ export default function RutaDashboard() {
     .filter((v: any) => matchSearch([v.folio, clienteById.get(v.cliente_id)?.nombre]))
     .sort((a: any, b: any) => (b.fecha ?? '').localeCompare(a.fecha ?? '') || (b.created_at ?? '').localeCompare(a.created_at ?? ''))
   , [ventas, from, to, search, clienteById]);
+  // Con conexión, lo pagado de los pedidos sin entregar sale del servidor (cobros de oficina y ajustes).
+  const pagadoServidor = usePagadoServidor(useMemo(() => idsPedidosSinEntregarSaldoCero(ventasFiltradas), [ventasFiltradas]));
 
   const entregasFiltradas = useMemo(() => (entregas ?? [])
     .filter((e: any) => belongsToVendedor(e.vendedor_ruta_id || e.vendedor_id))
@@ -361,7 +363,7 @@ export default function RutaDashboard() {
           ? <Empty label="Sin ventas en el rango" />
           : ventasFiltradas.map((v: any) => {
             // Un pedido sin entregar tiene saldo 0 y NO está pagado (antes salía «Pagada»).
-            const pago = estadoPagoMovil(v, pagadoPorVenta.get(v.id) ?? null);
+            const pago = estadoPagoMovil(v, pagadoServidor?.get(v.id) ?? pagadoPorVenta.get(v.id) ?? null);
             return (
             <Row
               key={v.id}
