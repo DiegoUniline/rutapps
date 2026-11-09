@@ -7,6 +7,7 @@ import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
 import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { useCurrency } from '@/hooks/useCurrency';
+import { esCobroSinDinero } from '@/lib/saldoFavor';
 
 const METODO_ICONS: Record<string, any> = {
   efectivo: Banknote,
@@ -36,7 +37,7 @@ export default function RutaCobros() {
   const filteredCobros = filterByDate((cobros ?? []) as any[], 'fecha');
   // El saldo a favor no es dinero cobrado: se excluye del total (pero se lista).
   const totalFiltrado = filteredCobros
-    .filter((c: any) => c.metodo_pago !== 'saldo_favor')
+    .filter((c: any) => !esCobroSinDinero(c.metodo_pago))
     .reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
 
   const formatDate = (d: string) => {

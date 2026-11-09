@@ -9,6 +9,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
 import { estadoPagoMovil } from '@/lib/estadoPagoMovil';
+import { esCobroSinDinero } from '@/lib/saldoFavor';
 import { usePagadoPorVentaOffline } from '@/hooks/usePagadoPorVentaOffline';
 
 type TabKey = 'resumen' | 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluciones';
@@ -167,7 +168,7 @@ export default function RutaDashboard() {
     pedidos: totalPedidosRango,
     pedidosCount: pedidosRango.length,
     // El saldo a favor no es dinero recibido: se excluye del total de cobros.
-    cobros: cobrosFiltrados.filter((c: any) => c.metodo_pago !== 'saldo_favor').reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
+    cobros: cobrosFiltrados.filter((c: any) => !esCobroSinDinero(c.metodo_pago)).reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
     gastos: totalGastosRango,
     entregas: entregasFinalizadasRango.length,
     clientesVisitados: new Set([

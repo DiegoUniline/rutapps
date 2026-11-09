@@ -115,6 +115,7 @@ function metodoLabel(metodo: string): string {
     deposito: 'Depósito',
     credito: 'Crédito',
     saldo_favor: 'Saldo a favor',
+    ajuste_liquidacion: 'Ajuste de liquidación',
   };
   return labels[m] || (m ? m.charAt(0).toUpperCase() + m.slice(1) : '—');
 }

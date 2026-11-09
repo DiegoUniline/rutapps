@@ -18,6 +18,7 @@ const METODO_LABELS: Record<string, string> = {
   tarjeta: 'Tarjeta',
   cheque: 'Cheque',
   saldo_favor: 'Saldo a favor',
+  ajuste_liquidacion: 'Ajuste de liquidación',
   otro: 'Otro',
 };
 const metodoLabel = (m?: string | null) =>
