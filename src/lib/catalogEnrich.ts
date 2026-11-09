@@ -9,7 +9,7 @@
  *
  * FIX: se pide sólo el `id` foráneo desde Postgres y se resuelve el
  * `nombre` en el cliente usando los catálogos pequeños ya cacheados por
- * `useBootstrapPrefetch` (['vendedores', eid], ['cobradores', eid],
+ * `useBootstrapPrefetch` (['perfiles-nombres', eid] para vendedor y cobrador,
  * ['zonas', eid], ['listas', eid], ['unidades', eid], y las tarifas via
  * ['tarifas-select', eid]).
  *
@@ -40,7 +40,9 @@ export async function ensureCatalogsForEnrich(qc: QueryClient, empresaId: string
   await Promise.all([
     qc.ensureQueryData({ queryKey: ['zonas', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('zonas').select('id, nombre').eq('empresa_id', empresaId).eq('activo', true).order('nombre')).data ?? [] }),
     qc.ensureQueryData({ queryKey: ['listas', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('listas').select('id, nombre').eq('empresa_id', empresaId).eq('activo', true).order('nombre')).data ?? [] }),
-    qc.ensureQueryData({ queryKey: ['vendedores', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresaId).order('nombre')).data ?? [] }),
+    // Nombres de todos los usuarios (incluye dados de baja) para enriquecer registros; los filtros
+    // usan ['vendedores'] / ['cobradores'], que son solo activos.
+    qc.ensureQueryData({ queryKey: ['perfiles-nombres', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresaId).order('nombre')).data ?? [] }),
     qc.ensureQueryData({ queryKey: ['cobradores', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresaId).eq('estado', 'activo').order('nombre')).data ?? [] }),
     qc.ensureQueryData({ queryKey: ['tarifas-select', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('tarifas').select('id, nombre, tipo, activa, moneda').eq('empresa_id', empresaId).eq('activa', true).order('nombre')).data ?? [] }),
     qc.ensureQueryData({ queryKey: ['unidades', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('unidades').select('id, nombre, abreviatura').eq('activo', true).order('nombre')).data ?? [] }),
@@ -73,8 +75,9 @@ export function enrichClientes<T extends {
 }>(rows: T[], qc: QueryClient, empresaId: string): T[] {
   const zonas = readCatalog(qc, ['zonas', empresaId]);
   const listas = readCatalog(qc, ['listas', empresaId]);
-  const vendedores = readCatalog(qc, ['vendedores', empresaId]);
-  const cobradores = readCatalog(qc, ['cobradores', empresaId]);
+  // Un cliente asignado a un vendedor dado de baja sigue mostrando su nombre.
+  const vendedores = readCatalog(qc, ['perfiles-nombres', empresaId]);
+  const cobradores = vendedores;
   // Tarifas: bootstrap las guarda como ['tarifas-select', eid]; algunos hooks
   // también las almacenan como ['tarifas', eid]. Probamos ambos.
   const tarifas = (() => {

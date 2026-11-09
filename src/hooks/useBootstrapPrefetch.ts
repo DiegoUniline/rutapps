@@ -39,7 +39,20 @@ export function useBootstrapPrefetch() {
     // (slow queries #4 y #8) sin cambiar la forma de las filas.
     const lightCatalogsReady = Promise.all([
       qc.prefetchQuery({
+        // Filtros y selectores: solo usuarios activos (los dados de baja no se ofrecen).
+        // Misma consulta que useVendedores(); antes se precargaba SIN filtro y, al compartir
+        // la llave, los dados de baja aparecían en los filtros de los módulos.
         queryKey: ['vendedores', eid],
+        staleTime: CATALOG_STALE_TIME,
+        queryFn: async () => {
+          const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', eid).eq('estado', 'activo').order('nombre');
+          return data ?? [];
+        },
+      }),
+      qc.prefetchQuery({
+        // Nombres de TODOS los usuarios (también dados de baja) para mostrar quién fue el
+        // vendedor/cobrador en registros históricos. No se usa para filtros.
+        queryKey: ['perfiles-nombres', eid],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
           const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', eid).order('nombre');

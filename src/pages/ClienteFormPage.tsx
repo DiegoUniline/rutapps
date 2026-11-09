@@ -8,7 +8,7 @@ import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
-import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores, usePedidoSugerido, useSavePedidoSugerido } from '@/hooks/useClientes';
+import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores, usePerfilesNombres, opcionesUsuarioConAsignado, usePedidoSugerido, useSavePedidoSugerido } from '@/hooks/useClientes';
 import { useTarifasForSelect, useProductosForSelect, useAllListasPrecios } from '@/hooks/useData';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -232,6 +232,7 @@ export default function ClienteFormPage() {
   const { data: zonas } = useZonas();
   const { data: vendedores } = useVendedores();
   const { data: cobradores } = useCobradores();
+  const { data: perfilesNombres } = usePerfilesNombres();
   const { data: tarifas } = useTarifasForSelect();
   const { data: productosSelect } = useProductosForSelect();
   const { data: pedidoSugerido } = usePedidoSugerido(isNew ? undefined : id);
@@ -764,9 +765,9 @@ export default function ClienteFormPage() {
               <div className="space-y-1">
                 <OdooSection title="Asignación">
                   <OdooField label="Vendedor" value={form.vendedor_id} onChange={v => set('vendedor_id', v || null)} type="select"
-                    options={vendedores?.map(v => ({ value: v.id, label: v.nombre })) ?? []} />
+                    options={opcionesUsuarioConAsignado(vendedores, perfilesNombres, form.vendedor_id)} />
                   <OdooField label="Cobrador" value={form.cobrador_id} onChange={v => set('cobrador_id', v || null)} type="select"
-                    options={cobradores?.map(c => ({ value: c.id, label: c.nombre })) ?? []} />
+                    options={opcionesUsuarioConAsignado(cobradores, perfilesNombres, form.cobrador_id)} />
                 </OdooSection>
                 <OdooSection title="Crédito">
                   <div className="odoo-field-row">

@@ -296,6 +296,40 @@ export function useVendedores() {
   });
 }
 
+/**
+ * Nombres de TODOS los usuarios de la empresa (también dados de baja), para mostrar quién
+ * fue el vendedor/cobrador en registros ya existentes. Para filtros y selectores usa
+ * useVendedores()/useCobradores(), que solo traen activos.
+ */
+export function usePerfilesNombres() {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['perfiles-nombres', empresa?.id],
+    staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      if (error) throw error;
+      return (data || []) as { id: string; nombre: string | null }[];
+    },
+  });
+}
+
+/** Opciones de un selector de usuario: los activos y, si el registro ya tiene asignado a
+ *  alguien dado de baja, ese usuario (marcado «baja») para que no se vea en blanco. */
+export function opcionesUsuarioConAsignado(
+  activos: { id: string; nombre: string | null }[] | undefined,
+  todos: { id: string; nombre: string | null }[] | undefined,
+  asignadoId: string | null | undefined,
+) {
+  const opts = (activos ?? []).map(v => ({ value: v.id, label: v.nombre ?? '' }));
+  if (asignadoId && !opts.some(o => o.value === asignadoId)) {
+    const p = (todos ?? []).find(x => x.id === asignadoId);
+    if (p) opts.push({ value: p.id, label: `${p.nombre ?? ''} (baja)` });
+  }
+  return opts;
+}
+
 export function useCobradores() {
   const { empresa } = useAuth();
   return useQuery({
