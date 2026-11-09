@@ -8,6 +8,8 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
+import { estadoPagoMovil } from '@/lib/estadoPagoMovil';
+import { usePagadoPorVentaOffline } from '@/hooks/usePagadoPorVentaOffline';
 
 type TabKey = 'resumen' | 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluciones';
 
@@ -15,6 +17,7 @@ export default function RutaDashboard() {
   const navigate = useNavigate();
   const { profile, empresa, user, overrideEmpresaId, overrideVendedorId } = useAuth();
   const { fmt } = useCurrency();
+  const pagadoPorVenta = usePagadoPorVentaOffline(empresa?.id);
   const { hasPermisoMovil } = usePermisos();
   const canResumen = hasPermisoMovil('ruta.resumen');
   const today = todayLocal();
@@ -355,18 +358,25 @@ export default function RutaDashboard() {
 
         {tab === 'ventas' && (ventasFiltradas.length === 0
           ? <Empty label="Sin ventas en el rango" />
-          : ventasFiltradas.map((v: any) => (
+          : ventasFiltradas.map((v: any) => {
+            // Un pedido sin entregar tiene saldo 0 y NO está pagado (antes salía «Pagada»).
+            const pago = estadoPagoMovil(v, pagadoPorVenta.get(v.id) ?? null);
+            return (
             <Row
               key={v.id}
               onClick={() => navigate(`/ruta/ventas/${v.id}`)}
               title={clienteById.get(v.cliente_id)?.nombre ?? 'Cliente'}
               subtitle={`${v.folio ?? ''} · ${formatDate(v.fecha)}`}
               right={fmt(v.total ?? 0)}
-              rightSub={isCancelado(v.status) ? 'Cancelada' : (v.saldo_pendiente > 0 ? `Saldo ${fmt(v.saldo_pendiente)}` : 'Pagada')}
-              rightColor={isCancelado(v.status) ? 'text-muted-foreground' : v.saldo_pendiente > 0 ? 'text-warning' : 'text-success'}
+              rightSub={pago.tipo === 'cancelada' ? 'Cancelada'
+                : pago.tipo === 'saldo' ? `Saldo ${fmt(pago.monto)}`
+                : pago.tipo === 'pendiente' ? 'Pendiente de pago'
+                : pago.tipo === 'pagado' ? 'Pagada' : undefined}
+              rightColor={pago.tipo === 'cancelada' || pago.tipo === 'sin_estado' ? 'text-muted-foreground' : pago.tipo === 'pagado' ? 'text-success' : 'text-warning'}
               dim={isCancelado(v.status)}
             />
-          )))}
+            );
+          }))}
 
         {tab === 'entregas' && (entregasFiltradas.length === 0
           ? <Empty label="Sin entregas en el rango" />
