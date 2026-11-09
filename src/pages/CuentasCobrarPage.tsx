@@ -33,6 +33,10 @@ import {
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { usePinAuth } from '@/hooks/usePinAuth';
 
+// Solo documentos confirmados generan cuenta por cobrar: un borrador (aún no confirmado) o un
+// cancelado no se cobran aunque traigan saldo guardado. Entregado/facturado son confirmados.
+const STATUS_CXC = ['confirmado', 'entregado', 'facturado'];
+
 function useCuentasCobrar() {
   const { empresa } = useAuth();
   return useQuery({
@@ -46,7 +50,7 @@ function useCuentasCobrar() {
           const ventas = await offlineDb.ventas
             .where('empresa_id').equals(empresa!.id).toArray();
           return (ventas as any[])
-            .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.status !== 'cancelado')
+            .filter(v => (v.saldo_pendiente ?? 0) > 0 && STATUS_CXC.includes(v.status))
             .sort((a, b) => (a.fecha ?? '').localeCompare(b.fecha ?? ''));
         } catch { return [] as any[]; }
       };
@@ -61,7 +65,7 @@ function useCuentasCobrar() {
           .select('id, folio, fecha, total, total_efectivo, cerrado_at, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, cliente_id, vendedor_id, clientes(id, nombre, codigo), vendedores:profiles!vendedor_id(nombre), cobro_aplicaciones(monto_aplicado, cobros!inner(status))')
           .eq('empresa_id', empresa!.id)
           .gt('saldo_pendiente', 0)
-          .neq('status', 'cancelado')
+          .in('status', STATUS_CXC as any)
           .order('fecha', { ascending: true });
         if (error) throw error;
         return data ?? [];
