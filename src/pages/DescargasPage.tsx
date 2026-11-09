@@ -7,7 +7,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
-import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
+import { esCobroSinDinero } from '@/lib/saldoFavor';
 import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, useDescargasLiveCuadre, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useVendedores } from '@/hooks/useClientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -347,7 +347,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const totalGastos = (gastos || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
   // Saldo a favor no es dinero recibido: se excluye del total de cobros.
   const totalCobros = (cobros || [])
-    .filter((c: any) => c.metodo_pago !== SALDO_FAVOR_METODO)
+    .filter((c: any) => !esCobroSinDinero(c.metodo_pago))
     .reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
 
   // Entregas agregados
@@ -361,7 +361,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   // Cobros by payment method
   const cobrosPorMetodo: Record<string, number> = {};
   (cobros || []).forEach((c: any) => {
-    if (c.metodo_pago === SALDO_FAVOR_METODO) return; // no es dinero real
+    if (esCobroSinDinero(c.metodo_pago)) return; // no es dinero real
     const m = c.metodo_pago || 'efectivo';
     cobrosPorMetodo[m] = (cobrosPorMetodo[m] || 0) + Number(c.monto);
   });

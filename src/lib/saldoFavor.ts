@@ -14,6 +14,14 @@
 /** Valor de metodo_pago que identifica un pago hecho con saldo a favor. */
 export const SALDO_FAVOR_METODO = 'saldo_favor';
 
+/** Cobro de ajuste que liquida saldos sin que haya entrado dinero (p. ej. depuración de cartera). */
+export const AJUSTE_LIQUIDACION_METODO = 'ajuste_liquidacion';
+
+/** ¿El cobro NO es dinero recibido? (saldo a favor o ajuste de liquidación). No suma en cobranza ni en caja. */
+export function esCobroSinDinero(metodo?: string | null): boolean {
+  return metodo === SALDO_FAVOR_METODO || metodo === AJUSTE_LIQUIDACION_METODO;
+}
+
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
 /**
