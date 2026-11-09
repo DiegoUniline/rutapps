@@ -11,7 +11,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { estadoPagoMovil, etiquetaCondicionPago } from '@/lib/estadoPagoMovil';
-import { usePagadoPorVentaOffline } from '@/hooks/usePagadoPorVentaOffline';
+import { usePagadoPorVentaOffline, usePagadoServidor, idsPedidosSinEntregarSaldoCero } from '@/hooks/usePagadoPorVentaOffline';
 
 type Tab = 'directas' | 'pedidos' | 'por_cobrar';
 
@@ -97,6 +97,11 @@ export default function RutaVentas() {
     !search || v.folio?.toLowerCase().includes(search.toLowerCase()) ||
     v._clienteNombre?.toLowerCase().includes(search.toLowerCase())
   );
+  // Con conexión, lo pagado de los pedidos sin entregar se toma del servidor (incluye cobros de
+  // oficina y ajustes de liquidación que el celular no descarga).
+  const idsPorConsultar = useMemo(() => idsPedidosSinEntregarSaldoCero(filtered), [filtered]);
+  const pagadoServidor = usePagadoServidor(idsPorConsultar);
+  const pagadoDe = (id: string) => pagadoServidor?.get(id) ?? pagadoPorVenta.get(id) ?? null;
 
   const today = new Date();
   const diasVencido = (fecha: string) =>
@@ -214,7 +219,7 @@ export default function RutaVentas() {
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
         {filtered.map((v: any) => {
           const esCredito = v.condicion_pago === 'credito';
-          const pago = estadoPagoMovil(v, pagadoPorVenta.get(v.id) ?? null);
+          const pago = estadoPagoMovil(v, pagadoDe(v.id));
           const dias = tab === 'por_cobrar' ? diasVencido(v.fecha) : 0;
           return (
             <div
