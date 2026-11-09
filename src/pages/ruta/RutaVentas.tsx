@@ -10,12 +10,15 @@ import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { useCurrency } from '@/hooks/useCurrency';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
+import { estadoPagoMovil, etiquetaCondicionPago } from '@/lib/estadoPagoMovil';
+import { usePagadoPorVentaOffline } from '@/hooks/usePagadoPorVentaOffline';
 
 type Tab = 'directas' | 'pedidos' | 'por_cobrar';
 
 export default function RutaVentas() {
   const navigate = useNavigate();
   const { empresa, profile, user, overrideVendedorId } = useAuth();
+  const pagadoPorVenta = usePagadoPorVentaOffline(empresa?.id);
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<Tab>('directas');
@@ -210,8 +213,8 @@ export default function RutaVentas() {
       <div className="flex-1 px-4 space-y-1.5 pb-4">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
         {filtered.map((v: any) => {
-          const saldo = v.saldo_pendiente ?? 0;
           const esCredito = v.condicion_pago === 'credito';
+          const pago = estadoPagoMovil(v, pagadoPorVenta.get(v.id) ?? null);
           const dias = tab === 'por_cobrar' ? diasVencido(v.fecha) : 0;
           return (
             <div
@@ -228,7 +231,7 @@ export default function RutaVentas() {
                     {v.status}
                   </span>
                   <span className={`text-[10px] font-medium ${esCredito ? 'text-warning' : 'text-muted-foreground'}`}>
-                    {esCredito ? '· Crédito' : '· Contado'}
+                    · {etiquetaCondicionPago(v.condicion_pago)}
                   </span>
                 </div>
                 <p className="text-[12px] text-muted-foreground truncate mt-0.5">{v._clienteNombre}</p>
@@ -243,10 +246,13 @@ export default function RutaVentas() {
               </button>
               <div className="text-right shrink-0">
                 <p className="text-[14px] font-bold text-foreground">{fmt(v.total ?? 0)}</p>
-                {saldo > 0 && v.status !== 'cancelado' && (
-                  <p className="text-[11px] font-medium text-destructive">Saldo: {fmt(saldo)}</p>
+                {pago.tipo === 'saldo' && (
+                  <p className="text-[11px] font-medium text-destructive">Saldo: {fmt(pago.monto)}</p>
                 )}
-                {saldo <= 0 && v.status !== 'borrador' && v.status !== 'cancelado' && (
+                {pago.tipo === 'pendiente' && (
+                  <p className="text-[11px] font-medium text-warning">Pendiente de pago</p>
+                )}
+                {pago.tipo === 'pagado' && (
                   <p className="text-[11px] font-medium text-primary">Pagado</p>
                 )}
               </div>
