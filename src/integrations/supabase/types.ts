@@ -4863,6 +4863,36 @@ export type Database = {
         }
         Relationships: []
       }
+      liquidacion_saldos_respaldo: {
+        Row: {
+          cliente_id: string | null
+          cobro_id: string | null
+          empresa_id: string
+          folio: string | null
+          liquidado_at: string
+          saldo_antes: number
+          venta_id: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          cobro_id?: string | null
+          empresa_id: string
+          folio?: string | null
+          liquidado_at?: string
+          saldo_antes: number
+          venta_id: string
+        }
+        Update: {
+          cliente_id?: string | null
+          cobro_id?: string | null
+          empresa_id?: string
+          folio?: string | null
+          liquidado_at?: string
+          saldo_antes?: number
+          venta_id?: string
+        }
+        Relationships: []
+      }
       lista_precios: {
         Row: {
           activa: boolean
