@@ -5,7 +5,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { cn, fmtDate } from '@/lib/utils';
 import { FileText } from 'lucide-react';
 import { useAllListasPrecios } from '@/hooks/useData';
-import { useVendedores } from '@/hooks/useClientes';
+import { useVendedores, usePerfilesNombres, opcionesUsuarioConAsignado } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
@@ -31,7 +31,8 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
   const { data: listasPrecios } = useAllListasPrecios(empresa?.id);
   const { data: vendedoresList } = useVendedores();
 
-  const vendedorOptions = (vendedoresList ?? []).map((v: any) => ({ value: v.id, label: v.nombre }));
+  const { data: perfilesNombres } = usePerfilesNombres();
+  const vendedorOptions = opcionesUsuarioConAsignado(vendedoresList, perfilesNombres, form.vendedor_id);
   const vendedorNombre = (form as any).vendedores?.nombre
     ?? vendedorOptions.find(v => v.value === form.vendedor_id)?.label
     ?? '—';

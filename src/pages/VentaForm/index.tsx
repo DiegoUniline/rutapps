@@ -42,7 +42,7 @@ import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { nextVisitDate } from '@/lib/nextVisitDate';
 import { RepriceListaDialog } from '@/components/venta/RepriceListaDialog';
 import { AdminEditVentaDialog } from '@/components/venta/AdminEditVentaDialog';
-import { useVendedores } from '@/hooks/useClientes';
+import { useVendedores, usePerfilesNombres } from '@/hooks/useClientes';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -58,6 +58,7 @@ export default function VentaFormPage() {
   const [showDevolucion, setShowDevolucion] = useState(false);
   const h = useVentaForm();
   const { data: vendedoresList } = useVendedores();
+  const { data: perfilesNombres } = usePerfilesNombres();
   const manejaLotesEmpresa = useManejaLotes();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading, ventaLoadError, catalogLoadError, retryInitialLoad,
@@ -284,7 +285,8 @@ export default function VentaFormPage() {
   const clienteNombre = clienteSel?.nombre;
   const clienteNotasFiscales = (clienteSel as any)?.notas_fiscales as string | undefined;
   const registradoPorId = (form as any).creado_por ?? (isNew ? profile?.id : null);
-  const registradoPorNombre = (vendedoresList ?? []).find((v: any) => v.id === registradoPorId)?.nombre
+  // Quien registró puede estar dado de baja: su nombre sale de la lista completa.
+  const registradoPorNombre = (perfilesNombres ?? vendedoresList ?? []).find((v: any) => v.id === registradoPorId)?.nombre
     ?? (registradoPorId === profile?.id ? profile?.nombre : undefined);
   const steps = form.entrega_inmediata ? VENTA_STEPS_INMEDIATA : VENTA_STEPS_FULL;
 

@@ -22,6 +22,7 @@ export default function SuperAdminMobileBar() {
         .from('profiles')
         .select('id, nombre, telefono')
         .eq('empresa_id', empresa!.id)
+        .eq('estado', 'activo')
         .order('nombre');
       if (error) console.error('[SA-Mobile] vendedores error:', error);
       return data ?? [];
