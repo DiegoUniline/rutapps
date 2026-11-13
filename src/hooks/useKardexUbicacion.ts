@@ -41,12 +41,30 @@ interface KardexMovementRecord {
   lote_id: string | null;
 }
 
-const REVERSO_VENTA_REFS = new Set([
-  'cancelacion_venta',
-  'reverso_borrador',
-  'cancelacion_venta_lote',
-  'reverso_borrador_lote',
-]);
+/**
+ * Efecto de un movimiento en el saldo de UNA ubicación (almacén o camión).
+ *
+ * Se lee según el tipo, igual que como el movimiento cambió el stock:
+ * - 'entrada' solo suma en el almacén DESTINO (aunque traiga origen);
+ * - 'salida' solo resta en el almacén ORIGEN (aunque traiga destino);
+ * - otros tipos (p. ej. traspaso en un solo renglón): suma en destino y resta en origen.
+ *
+ * Por qué: los movimientos entre almacenes (reasignar entrega, cargas) se guardan como DOS
+ * renglones —salida y entrada— y ambos llevan origen y destino. Leerlos «por almacén» restaba
+ * dos veces en el origen y sumaba dos veces en el destino (caso Tampico Ruta03: stock 12,
+ * kardex 0). También cubre la carga a camión ('entrega_cargado', entrada) y los reversos
+ * viejos guardados con el mismo almacén como origen y destino.
+ */
+export function deltaKardexUbicacion(
+  m: { tipo: string; cantidad: number | string; almacen_origen_id: string | null; almacen_destino_id: string | null },
+  ubicacionId: string,
+): number {
+  const cantidad = Number(m.cantidad) || 0;
+  if (m.tipo === 'entrada') return m.almacen_destino_id === ubicacionId ? cantidad : 0;
+  if (m.tipo === 'salida') return m.almacen_origen_id === ubicacionId ? -cantidad : 0;
+  return (m.almacen_destino_id === ubicacionId ? cantidad : 0)
+    - (m.almacen_origen_id === ubicacionId ? cantidad : 0);
+}
 
 /**
  * Fetches inventory movements. All parameters are optional:
@@ -122,26 +140,7 @@ export function useKardexUbicacion(
       let delta = 0;
       const cantidad = Number(m.cantidad) || 0;
       if (ubicacionId) {
-        if (m.referencia_tipo === 'entrega_cargado') {
-          // El surtido ('entrega') ya descontó el almacén origen.
-          // La carga representa únicamente la entrada al almacén/camión destino;
-          // volver a restar el origen duplicaría la salida solo en el Kardex.
-          delta = m.almacen_destino_id === ubicacionId ? cantidad : 0;
-        } else if (
-          m.tipo === 'entrada'
-          && REVERSO_VENTA_REFS.has(m.referencia_tipo ?? '')
-          && m.almacen_origen_id === ubicacionId
-          && m.almacen_destino_id === ubicacionId
-        ) {
-          // Compatibilidad histórica: algunas cancelaciones/reversos viejos quedaron
-          // guardados con el mismo almacén como origen y destino. La operación real
-          // fue una devolución de stock (entrada), por lo que no debe anularse como
-          // +cantidad -cantidad. Se cuenta únicamente la entrada al almacén.
-          delta = cantidad;
-        } else {
-          delta = (m.almacen_destino_id === ubicacionId ? cantidad : 0)
-            - (m.almacen_origen_id === ubicacionId ? cantidad : 0);
-        }
+        delta = deltaKardexUbicacion(m, ubicacionId);
       } else {
         delta = m.tipo === 'entrada' ? cantidad : m.tipo === 'salida' ? -cantidad : 0;
       }
