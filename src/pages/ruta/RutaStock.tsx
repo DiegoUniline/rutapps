@@ -1,5 +1,9 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Search, Package, Eye } from 'lucide-react';
+import { Search, Package, Eye, AlertTriangle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { fmtDate } from '@/lib/utils';
+import { ReportarMermaSheet } from '@/components/ruta/ReportarMermaSheet';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
@@ -11,11 +15,16 @@ import { thumbUrl } from '@/lib/imageThumb';
 export default function RutaStock() {
   const { empresa, profile } = useAuth();
   const { fmt } = useCurrency();
-  const { hasPermiso, isOwner } = usePermisos();
+  const { hasPermiso, isOwner, hasPermisoMovil } = usePermisos();
+  const canReportarMerma = hasPermisoMovil('ruta.devoluciones');
   const canViewPrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver') || hasPermiso('productos', 'ver');
   const [search, setSearch] = useState('');
   const [detalleProducto, setDetalleProducto] = useState<any | null>(null);
   const almacenId = profile?.almacen_id;
+  // Disponible = stock a bordo que se puede vender. Merma = lo que este vendedor reportó como
+  // merma desde su ruta (ya salió de su stock hacia el almacén Mermas; no se puede vender).
+  const [vista, setVista] = useState<'disponible' | 'merma'>('disponible');
+  const [mermaOpen, setMermaOpen] = useState(false);
 
   // Filtro con/sin stock, persistente por usuario hasta que él lo cambie.
   const [stockFilter, setStockFilter] = useState<'todos' | 'con' | 'sin'>('todos');
@@ -40,11 +49,28 @@ export default function RutaStock() {
     orderBy: 'nombre',
   });
 
-  const { data: stockAlmacen } = useOfflineQuery('stock_almacen', {
+  const { data: stockAlmacen, refetch: refetchStock } = useOfflineQuery('stock_almacen', {
     empresa_id: empresa?.id,
     almacen_id: almacenId,
   }, {
     enabled: !!empresa?.id && !!almacenId,
+  });
+
+  const { data: mermasRuta, isLoading: loadingMermas, refetch: refetchMermas } = useQuery({
+    queryKey: ['ruta-mermas', empresa?.id, almacenId],
+    enabled: !!empresa?.id && !!almacenId && vista === 'merma',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mermas')
+        .select('id, folio, fecha, merma_motivos:motivo_id(nombre), merma_lineas(cantidad, productos:producto_id(nombre, codigo))')
+        .eq('empresa_id', empresa!.id)
+        .eq('almacen_origen_id', almacenId!)
+        .eq('cancelada', false)
+        .order('fecha', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
   });
 
   const productosConStock = useMemo(() => {
@@ -76,7 +102,32 @@ export default function RutaStock() {
   return (
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 bg-background px-3 pt-3 pb-2 border-b border-border">
-        <h1 className="text-[18px] font-bold text-foreground mb-2">Stock abordo</h1>
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <h1 className="text-[18px] font-bold text-foreground">Stock abordo</h1>
+          {canReportarMerma && almacenId && (
+            <button
+              onClick={() => setMermaOpen(true)}
+              className="inline-flex items-center gap-1 rounded-lg border border-destructive/40 text-destructive px-2.5 py-1.5 text-[11.5px] font-semibold active:scale-95"
+            >
+              <AlertTriangle className="h-3.5 w-3.5" /> Reportar merma
+            </button>
+          )}
+        </div>
+        {almacenId && (
+          <div className="flex gap-0.5 bg-accent rounded-lg p-[3px] mb-2">
+            {(['disponible', 'merma'] as const).map(v => (
+              <button
+                key={v}
+                onClick={() => setVista(v)}
+                className={cn('flex-1 py-1.5 rounded-md text-[11.5px] font-semibold transition-colors',
+                  vista === v ? (v === 'merma' ? 'bg-destructive text-white shadow-sm' : 'bg-primary text-primary-foreground shadow-sm') : 'text-muted-foreground')}
+              >
+                {v === 'disponible' ? 'Disponible para vender' : 'Merma reportada'}
+              </button>
+            ))}
+          </div>
+        )}
+        {vista === 'disponible' && (<>
         <div className="relative mb-2">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -110,8 +161,33 @@ export default function RutaStock() {
             Sin stock <span className="opacity-80">({sinStock})</span>
           </button>
         </div>
+        </>)}
       </div>
 
+      {vista === 'merma' && (
+        <div className="flex-1 overflow-auto px-3 py-2 space-y-2">
+          {loadingMermas && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
+          {!loadingMermas && (mermasRuta ?? []).length === 0 && (
+            <p className="text-center text-muted-foreground text-[13px] py-8">No has reportado merma</p>
+          )}
+          {(mermasRuta ?? []).map((m: any) => (
+            <div key={m.id} className="rounded-xl border border-border bg-card p-2.5">
+              <div className="flex items-center justify-between text-[11.5px]">
+                <span className="font-semibold text-foreground">{m.folio}</span>
+                <span className="text-muted-foreground">{fmtDate(m.fecha)} · {m.merma_motivos?.nombre ?? '—'}</span>
+              </div>
+              {(m.merma_lineas ?? []).map((l: any, i: number) => (
+                <div key={i} className="flex items-center justify-between text-[12.5px] mt-1">
+                  <span className="truncate pr-2 text-foreground">{l.productos?.nombre ?? 'Producto'}</span>
+                  <span className="font-bold tabular-nums text-destructive shrink-0">{Number(l.cantidad)}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {vista === 'disponible' && (
       <div className="flex-1 overflow-auto">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
 
@@ -175,6 +251,17 @@ export default function RutaStock() {
           <p className="text-center text-muted-foreground text-[13px] py-8">No hay productos</p>
         )}
       </div>
+      )}
+
+      {almacenId && (
+        <ReportarMermaSheet
+          open={mermaOpen}
+          onOpenChange={setMermaOpen}
+          almacenId={almacenId}
+          productos={productosConStock as any}
+          onRegistrada={() => { refetchStock(); refetchMermas(); setVista('merma'); }}
+        />
+      )}
 
       <ProductoDetalleModal
         open={!!detalleProducto}

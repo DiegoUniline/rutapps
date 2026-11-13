@@ -25,6 +25,8 @@ import { fmtMoney } from '@/lib/currency';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { confirmDialog } from '@/lib/confirm';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 
 interface LineaForm {
@@ -64,6 +66,24 @@ export default function MermasPage() {
   const manejaLotes = useManejaLotes();
   const { data: lotesMerma } = useLotesPorReferencia(detalleId ?? undefined, ['merma_lote']);
 
+  // Existencia de cada producto en el almacén origen elegido: la merma sale de donde está el
+  // producto. Si viene en el camión, el origen es la ruta (antes se descontaba de AlmGeneral,
+  // dejaba negativos ahí y el vendedor lo seguía viendo disponible en su ruta).
+  const productoIdsForm = useMemo(() => lineas.map(l => l.producto_id).sort().join(','), [lineas]);
+  const { data: stockOrigen } = useQuery({
+    queryKey: ['merma-stock-origen', almacenId, productoIdsForm],
+    enabled: !!almacenId && lineas.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('stock_almacen')
+        .select('producto_id, cantidad').eq('almacen_id', almacenId).in('producto_id', lineas.map(l => l.producto_id));
+      if (error) throw error;
+      const m = new Map<string, number>();
+      for (const r of (data ?? []) as any[]) m.set(r.producto_id, Number(r.cantidad) || 0);
+      return m;
+    },
+  });
+  const disponibleEnOrigen = (pid: string) => stockOrigen?.get(pid) ?? 0;
+
   const totalCosto = useMemo(() => lineas.reduce((s, l) => s + l.cantidad * l.costo_unitario, 0), [lineas]);
   const totalVenta = useMemo(() => lineas.reduce((s, l) => s + l.cantidad * l.precio_venta_unitario, 0), [lineas]);
   const almacenDestinoMerma = useMemo(
@@ -102,6 +122,10 @@ export default function MermasPage() {
     if (!motivoId) return toast.error('Selecciona un motivo');
     if (lineas.length === 0) return toast.error('Agrega al menos un producto');
     if (lineas.some(l => l.cantidad <= 0)) return toast.error('Cantidades deben ser mayores a 0');
+    const excede = stockOrigen ? lineas.find(l => l.cantidad > disponibleEnOrigen(l.producto_id) + 0.0001) : undefined;
+    if (excede) {
+      return toast.error(`En ese almacén solo hay ${fmtNum(disponibleEnOrigen(excede.producto_id))} de ${excede.nombre}. Si el producto viene en el camión, elige la ruta como almacén origen.`);
+    }
     if (manejaLotes) {
       const sinAsignar = lineas.find(l => l.maneja_lote
         && Math.abs((l.lotes ?? []).reduce((s, x) => s + Number(x.cantidad || 0), 0) - l.cantidad) > 0.0001);
@@ -337,6 +361,11 @@ export default function MermasPage() {
                         <TableCell>
                           <div className="font-medium">{l.nombre}</div>
                           <div className="text-xs text-muted-foreground">{l.unidad}</div>
+                          {almacenId && stockOrigen && (
+                            <div className={`text-xs ${l.cantidad > disponibleEnOrigen(l.producto_id) + 0.0001 ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                              Hay {fmtNum(disponibleEnOrigen(l.producto_id))} en el almacén origen
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Input type="number" min={0} step="0.001" value={l.cantidad}
