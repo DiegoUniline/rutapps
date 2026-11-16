@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
@@ -42,6 +42,20 @@ const appVersionMeta = () => ({
     { tag: "meta", attrs: { name: "app-version", content: APP_VERSION }, injectTo: "head" as const },
     { tag: "meta", attrs: { name: "app-build-date", content: APP_BUILD_DATE }, injectTo: "head" as const },
   ],
+});
+
+// public/ no pasa por Vite: al terminar el build se inyecta la URL de Supabase
+// del entorno en las páginas HTML estáticas que llaman edge functions.
+const publicHtmlEnv = (supabaseUrl: string) => ({
+  name: "public-html-env",
+  apply: "build" as const,
+  closeBundle() {
+    const file = path.resolve(__dirname, "dist/proveedor/solicitud-compra.html");
+    if (!fs.existsSync(file)) return;
+    if (!supabaseUrl) throw new Error("VITE_SUPABASE_URL no definida: no se puede construir proveedor/solicitud-compra.html");
+    const html = fs.readFileSync(file, "utf-8");
+    fs.writeFileSync(file, html.split("__VITE_SUPABASE_URL__").join(supabaseUrl), "utf-8");
+  },
 });
 
 export default defineConfig(({ mode }) => ({
@@ -88,6 +102,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     appVersionMeta(),
+    publicHtmlEnv(loadEnv(mode, process.cwd(), "VITE_").VITE_SUPABASE_URL || ""),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "prompt",

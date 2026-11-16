@@ -186,7 +186,7 @@
 
 <script>
 (() => {
-  const ENDPOINT = 'https://pkdwemunxxpafpmiqxiq.supabase.co/functions/v1/solicitud-compra-proveedor';
+  const ENDPOINT = '__VITE_SUPABASE_URL__/functions/v1/solicitud-compra-proveedor'; // lo reemplaza vite.config.ts al construir
   const params = new URLSearchParams(location.search);
   const token = params.get('token') || '';
   const app = document.getElementById('app');

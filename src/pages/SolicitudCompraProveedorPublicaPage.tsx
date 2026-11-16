@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, Loader2, LockKeyhole, Package2, Save, X } from 'lucide-react';
 
-const ENDPOINT = 'https://pkdwemunxxpafpmiqxiq.supabase.co/functions/v1/solicitud-compra-proveedor';
+const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/solicitud-compra-proveedor`;
 
 type SupplierLine = {
   id: string;
