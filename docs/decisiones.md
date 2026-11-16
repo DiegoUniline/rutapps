@@ -106,3 +106,9 @@
 - **Verificación 23:47 UTC:** 48/48 Stripe `trialing`; fechas/anchors originales futuros; una única suscripción no cancelada por cliente; una factura inicial por reemplazo con total, monto adeudado y pagado $0, sin payment intent/cargo; cero cargos desde cada creación. 48/48 filas de RutApp vinculadas al ID nuevo, `active`, desbloqueadas y sin diferencias en plan, usuarios, descuento, manual/legacy.
 - **Fechas de corte en CDMX:** 2 el 11/11/2026; 1 el 21/11; 1 el 26/11; 1 el 27/11; 7 el 30/11; 32 el 01/12; 2 el 03/12; 1 el 15/12; 1 el 02/03/2027. Se preservó el timestamp original, no se normalizó el horario.
 - **Límite:** verificadas programación y ausencia de cobro inicial; no se puede verificar hoy el éxito de cobros futuros. Stripe factura al terminar el periodo sin cobro e intenta cobrar después; una tarjeta rechazada puede provocar reintentos.
+
+## D-018
+- **Fecha:** 2026-11-16 · **Autor:** Diego León (dueño) · **Estado:** APROBADO (en curso)
+- **Decisión:** salir de Lovable Cloud. Destino de BD/Auth/Storage/Edge Functions: Supabase propio `amybkerwkybffllaxpnz` (nombre RutApp, us-east-1, Postgres 17). Front en Cloudflare Pages. Lovable sigue conectado a GitHub hasta el corte.
+- **Estado verificado 2026-11-16 (MCP Supabase):** `ACTIVE_HEALTHY`; 0 tablas en `public`, 0 migraciones, 0 edge functions; extensiones instaladas solo las de fábrica (pgcrypto, uuid-ossp, pg_stat_statements, vault).
+- **Fuente de datos:** ZIP exportado por el dueño desde Lovable (contenido por revisar). Origen actual: `pkdwemunxxpafpmiqxiq`.
