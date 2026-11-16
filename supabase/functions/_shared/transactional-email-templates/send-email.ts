@@ -1,19 +1,15 @@
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
-import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0'
 import { TEMPLATES } from './registry.ts'
 
-// Server-only: reads LOVABLE_API_KEY. Import from edge functions only — never
+// Server-only: reads RESEND_API_KEY. Import from edge functions only — never
 // expose sending to the browser.
 
 // Configuration baked in at scaffold time
 const SITE_NAME = "Rutapp Ventas Inteligentes"
-// SENDER_DOMAIN is the verified sender subdomain FQDN (e.g., "notify.example.com").
-// It MUST match the subdomain delegated to Lovable's nameservers. NEVER use the root domain.
-const SENDER_DOMAIN = "notify.rutapp.mx"
-// FROM_DOMAIN is the domain shown in the From: header (e.g., "example.com").
-// Can be the root domain when display_from_root is enabled — this is cosmetic only.
-const FROM_DOMAIN = "rutapp.mx"
+// FROM_DOMAIN must be a domain verified in Resend. Override with EMAIL_FROM_DOMAIN.
+const FROM_DOMAIN = Deno.env.get('EMAIL_FROM_DOMAIN') || "rutapp.mx"
+const RESEND_URL = "https://api.resend.com/emails"
 
 export type SendTemplateEmailResult =
   | { sent: true }
@@ -29,20 +25,17 @@ export interface SendTemplateEmailOptions {
 }
 
 /**
- * Renders a registered template and sends it through Lovable's managed email
- * API. Suppression, retries, and rate limits are enforced by Lovable
- * server-side. A suppressed recipient is an expected outcome
- * ({ sent: false }); any other failure throws — EmailAPIError exposes
- * .code and .status for branching.
+ * Renders a registered template and sends it through Resend.
+ * Any failure throws with the HTTP status and Resend's error message.
  */
 export async function sendTemplateEmail(
   templateName: string,
   to: string,
   options: SendTemplateEmailOptions = {}
 ): Promise<SendTemplateEmailResult> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY')
+  const apiKey = Deno.env.get('RESEND_API_KEY')
   if (!apiKey) {
-    throw new Error('LOVABLE_API_KEY is not configured')
+    throw new Error('RESEND_API_KEY is not configured')
   }
 
   const template = TEMPLATES[templateName]
@@ -76,27 +69,26 @@ export async function sendTemplateEmail(
     .trim()
     .slice(0, 100) || SITE_NAME
 
-  try {
-    await sendLovableEmail(
-      {
-        to: recipient,
-        from: `"${safeFromName}" <noreply@${FROM_DOMAIN}>`,
-        sender_domain: SENDER_DOMAIN,
-        subject,
-        html,
-        text,
-        purpose: 'transactional',
-        label: templateName,
-        idempotency_key: options.idempotencyKey || crypto.randomUUID(),
-        reply_to: options.replyTo,
-      },
-      { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') }
-    )
-  } catch (error) {
-    if (error instanceof EmailAPIError && error.code === 'recipient_suppressed') {
-      return { sent: false, reason: 'recipient_suppressed' }
-    }
-    throw error
+  const res = await fetch(RESEND_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': options.idempotencyKey || crypto.randomUUID(),
+    },
+    body: JSON.stringify({
+      from: `"${safeFromName}" <noreply@${FROM_DOMAIN}>`,
+      to: [recipient],
+      subject,
+      html,
+      text,
+      ...(options.replyTo ? { reply_to: options.replyTo } : {}),
+      tags: [{ name: 'template', value: templateName.replace(/[^A-Za-z0-9_-]/g, '_') }],
+    }),
+  })
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(`Resend ${res.status}: ${detail.slice(0, 500)}`)
   }
 
   return { sent: true }

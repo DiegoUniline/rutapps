@@ -91,3 +91,4 @@
 2026-11-16 · desarrollador · D-018 migración fuera de Lovable: destino Supabase amybkerwkybffllaxpnz (vacío, verificado) + Cloudflare Pages; siguiente: revisar ZIP de export
 2026-11-16 · desarrollador · D-018 BD restaurada en amybkerwkybffllaxpnz (185 tablas, 3.08M filas, 401 usuarios); sin crons ni vault; siguiente: storage, edge functions y secrets
 2026-11-16 · desarrollador · D-018 76/76 edge functions desplegadas en amybkerwkybffllaxpnz (verify_jwt según config.toml); secrets internos cargados (SITE_URL, CRON_SECRET, TIENDA_JWT_SECRET, BILLING_BRIDGE_INTERNAL_SECRET); llaves de proveedores pendientes
+2026-11-16 · desarrollador · D-018 IA → Gemini directo (6 funciones) y correo → Resend (send-email.ts); pendiente GEMINI_API_KEY, RESEND_API_KEY y verificar dominio en Resend
