@@ -526,9 +526,9 @@ Deno.serve(async (req) => {
 });
 
 // ----------------- AI AGENT -----------------
-const LOVABLE_AI_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const AI_MODEL = "google/gemini-3-flash-preview";
+const GEMINI_AI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
+const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const AI_MODEL = "gemini-3-flash-preview";
 
 // parseFecha legacy eliminado: usar parseFechaTz(input, tz) que respeta zona horaria de la empresa.
 
@@ -1022,8 +1022,8 @@ function inferRequiredTool(text: string): { name: string; args: any } | null {
 }
 
 async function runAgent(opts: { empresaId: string; permisos: Record<string, boolean>; phone: string; userMessage: string }) {
-  if (!LOVABLE_AI_KEY) {
-    return { reply: "⚠️ El agente IA no está configurado (falta LOVABLE_API_KEY). Usa *ayuda* para ver comandos.", intent: "no_ai", pdfUrl: null as string | null, pdfName: null as string | null, toolsUsed: null as any };
+  if (!GEMINI_AI_KEY) {
+    return { reply: "⚠️ El agente IA no está configurado (falta GEMINI_API_KEY). Usa *ayuda* para ver comandos.", intent: "no_ai", pdfUrl: null as string | null, pdfName: null as string | null, toolsUsed: null as any };
   }
 
   // Empresa: nombre + zona horaria para el system prompt y las herramientas
@@ -1109,7 +1109,7 @@ Hoy es ${hoyMx} (${hoyIso}) en la zona horaria *${tz}* de la empresa. Cuando use
   for (let step = 0; step < 6; step++) {
     const res = await fetch(AI_URL, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${LOVABLE_AI_KEY}`, "Content-Type": "application/json" },
+      headers: { "Authorization": `Bearer ${GEMINI_AI_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: AI_MODEL, messages, tools: TOOLS, tool_choice: "auto" }),
     });
     if (!res.ok) {

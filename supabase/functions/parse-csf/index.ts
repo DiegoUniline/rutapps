@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_GATEWAY = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -15,8 +15,8 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY no configurada");
 
     // Solo usuarios con sesión (la anon key pública no basta): evita gasto de IA anónimo.
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -41,17 +41,15 @@ serve(async (req) => {
     const response = await fetch(AI_GATEWAY, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "x-goog-api-key": GEMINI_API_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
+        contents: [
           {
             role: "user",
-            content: [
+            parts: [
               {
-                type: "text",
                 text: `Analiza esta Constancia de Situación Fiscal del SAT mexicano y extrae los siguientes datos en formato JSON exacto (sin markdown, solo el JSON):
 {
   "rfc": "RFC del contribuyente",
@@ -67,15 +65,12 @@ serve(async (req) => {
 Si algún dato no está disponible, usa null. El régimen fiscal debe ser SOLO la clave numérica (ej: "612"), no la descripción completa.`,
               },
               {
-                type: "image_url",
-                image_url: {
-                  url: `data:application/pdf;base64,${pdf_base64}`,
-                },
+                inline_data: { mime_type: "application/pdf", data: pdf_base64 },
               },
             ],
           },
         ],
-        max_tokens: 1000,
+        generationConfig: { maxOutputTokens: 1000, thinkingConfig: { thinkingBudget: 0 } },
       }),
     });
 
@@ -86,7 +81,7 @@ Si algún dato no está disponible, usa null. El régimen fiscal debe ser SOLO l
     }
 
     const aiResult = await response.json();
-    const rawContent = aiResult.choices?.[0]?.message?.content || "";
+    const rawContent = (aiResult.candidates?.[0]?.content?.parts ?? []).map((p: any) => p?.text ?? "").join("");
     console.log("AI raw response:", rawContent);
 
     // Extract JSON from response (handle markdown code blocks)

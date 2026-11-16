@@ -1,4 +1,4 @@
-// Lovable AI advisor for executive dashboard.
+// Gemini AI advisor for executive dashboard.
 // - Authenticates the user via JWT
 // - Enforces max 4 generations per user per month (~1 per week)
 // - Uses a low-cost model
@@ -11,17 +11,17 @@ const corsHeaders = {
 };
 
 const MONTHLY_LIMIT = 4;
-const MODEL = "google/gemini-2.5-flash-lite"; // cheapest tier
+const MODEL = "gemini-2.5-flash-lite"; // cheapest tier
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    if (!LOVABLE_API_KEY) {
-      return json({ error: "Missing LOVABLE_API_KEY" }, 500);
+    if (!GEMINI_API_KEY) {
+      return json({ error: "Missing GEMINI_API_KEY" }, 500);
     }
 
     const authHeader = req.headers.get("Authorization") ?? "";
@@ -140,10 +140,10 @@ REGLAS DURAS:
 
     const userPrompt = `Empresa: ${empresaNombre ?? "(sin nombre)"}\n\nContexto temporal:\n\`\`\`json\n${JSON.stringify(dateContext, null, 2)}\n\`\`\`\n\nSnapshot de KPIs:\n\n\`\`\`json\n${JSON.stringify(snapshot, null, 2)}\n\`\`\`\n\nEntrega tu análisis estratégico siguiendo EXACTAMENTE la estructura de 5 secciones.`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
