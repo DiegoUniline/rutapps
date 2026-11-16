@@ -92,3 +92,4 @@
 2026-11-16 · desarrollador · D-018 BD restaurada en amybkerwkybffllaxpnz (185 tablas, 3.08M filas, 401 usuarios); sin crons ni vault; siguiente: storage, edge functions y secrets
 2026-11-16 · desarrollador · D-018 76/76 edge functions desplegadas en amybkerwkybffllaxpnz (verify_jwt según config.toml); secrets internos cargados (SITE_URL, CRON_SECRET, TIENDA_JWT_SECRET, BILLING_BRIDGE_INTERNAL_SECRET); llaves de proveedores pendientes
 2026-11-16 · desarrollador · D-018 IA → Gemini directo (6 funciones) y correo → Resend (send-email.ts); pendiente GEMINI_API_KEY, RESEND_API_KEY y verificar dominio en Resend
+2026-11-16 · desarrollador · D-018 dueño desconectó el repo de Lovable (Lovable ya no empuja a main); front sin ref fijo (build verificado contra amybkerwkybffllaxpnz, 0 refs al proyecto viejo en dist; typecheck:strict y 382 tests OK)
