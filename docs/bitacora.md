@@ -90,3 +90,4 @@
 2026-11-13 · desarrollador · Mermas: el vendedor reporta merma desde Stock del móvil (sale de su ruta a Mermas) y ve «Disponible | Merma reportada»; en escritorio Mermas muestra la existencia del almacén origen y no deja descontar más de lo que hay (Tampico registraba casi todo desde AlmGeneral)
 2026-11-16 · desarrollador · D-018 migración fuera de Lovable: destino Supabase amybkerwkybffllaxpnz (vacío, verificado) + Cloudflare Pages; siguiente: revisar ZIP de export
 2026-11-16 · desarrollador · D-018 BD restaurada en amybkerwkybffllaxpnz (185 tablas, 3.08M filas, 401 usuarios); sin crons ni vault; siguiente: storage, edge functions y secrets
+2026-11-16 · desarrollador · D-018 76/76 edge functions desplegadas en amybkerwkybffllaxpnz (verify_jwt según config.toml); secrets internos cargados (SITE_URL, CRON_SECRET, TIENDA_JWT_SECRET, BILLING_BRIDGE_INTERNAL_SECRET); llaves de proveedores pendientes
