@@ -1049,7 +1049,12 @@ export function useVentaForm() {
           p_venta_id: ventaId,
           p_lineas: pLineas,
           p_version: formExt.updated_at ?? null,
-          p_header: { notas: form.notas ?? null, descuento_extra: formExt.descuento_extra ?? 0, descuento_extra_tipo: formExt.descuento_extra_tipo ?? 'porcentaje', ...(excedente ? { excedente } : {}) },
+          p_header: {
+            notas: form.notas ?? null, descuento_extra: formExt.descuento_extra ?? 0, descuento_extra_tipo: formExt.descuento_extra_tipo ?? 'porcentaje',
+            // D-028: también cliente, fecha, condición de pago y vendedor.
+            cliente_id: form.cliente_id ?? null, fecha: form.fecha ?? null, condicion_pago: form.condicion_pago ?? null, vendedor_id: form.vendedor_id ?? null,
+            ...(excedente ? { excedente } : {}),
+          },
           p_promos: pPromos,
         }), pedirDestino);
         if (cancelado) { toast.info('No se guardó: la edición sigue abierta.'); return ventaId; }

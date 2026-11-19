@@ -160,3 +160,9 @@
 ## D-027
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** en el buscador de productos de **venta y pedido** (web) aparecen **solo productos con existencia** en el almacén de la venta (sin almacén: existencia total), salvo los marcados **"vender sin stock"**. Los productos que ya están en un renglón se conservan. El buscador muestra **todos** los que coinciden (con scroll), ya no solo 10.
+
+## D-028
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** se quita el botón **Corregir**; **Editar venta** permite cambiar **todo**: líneas, cliente, fecha, condición de pago, vendedor y notas.
+- **Cliente con pagos:** los pagos aplicados **solo** a esa venta se mueven al nuevo cliente junto con ella. Si un pago también cubre otras ventas del cliente anterior, no se cambia el cliente hasta separarlo. Los precios de la venta se conservan (no se recalculan con la lista del nuevo cliente).
+- **🧭 Criterio:** cambiar vendedor o fecha actualiza las comisiones **no pagadas**; si alguna comisión ya se pagó, no se permite cambiar el vendedor.

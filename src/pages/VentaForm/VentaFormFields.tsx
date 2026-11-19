@@ -20,11 +20,13 @@ interface Props {
   totalPagado: number;
   saldoPendiente: number;
   canEditCondicion?: boolean;
+  /** Editando una venta confirmada: tipo, almacén y entrega no se cambian (mueven inventario). */
+  bloquearTipoAlmacen?: boolean;
   set: (field: string, val: any) => void;
   onClienteChange: (cId: string) => void;
 }
 
-export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, set, onClienteChange }: Props) {
+export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, bloquearTipoAlmacen = false, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
@@ -47,7 +49,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
     { value: 'por_definir', label: 'Por definir' },
   ];
 
-  const renderTipo = () => readOnly
+  const renderTipo = () => (readOnly || bloquearTipoAlmacen)
     ? <div className="text-[13px] py-1.5 px-1 text-foreground">{form.tipo === 'pedido' ? 'Pedido' : 'Venta directa'}</div>
     : (
       <div className="flex gap-1">
@@ -109,7 +111,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
     </div>
   );
 
-  const renderAlmacen = () => readOnly
+  const renderAlmacen = () => (readOnly || bloquearTipoAlmacen)
     ? <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenOptions.find(a => a.value === form.almacen_id)?.label || 'Sin almacén'}</div>
     : <SearchableSelect options={almacenOptions} value={form.almacen_id ?? ''} onChange={val => set('almacen_id', val || null)} placeholder="Buscar almacén..." />;
 
@@ -122,7 +124,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
       </label>
       {form.tipo === 'venta_directa' || form.entrega_inmediata
         ? <div className="text-xs text-muted-foreground py-1.5 px-1">{isMobile ? 'Inmediata' : 'Entrega inmediata'}</div>
-        : readOnly
+        : (readOnly || bloquearTipoAlmacen)
           ? <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha_entrega ? fmtDate(form.fecha_entrega) : '—'}</div>
           : <OdooDatePicker value={form.fecha_entrega} onChange={v => set('fecha_entrega', v)} placeholder="Fecha entrega" />
       }

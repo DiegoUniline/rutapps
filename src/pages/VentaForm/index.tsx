@@ -402,6 +402,11 @@ export default function VentaFormPage() {
   const onClienteChange = (cId: string) => {
     set('cliente_id', cId);
     const c = clientesList?.find(cl => cl.id === cId);
+    // D-028: al editar una venta confirmada se conservan sus precios (no se cambia lista/tarifa).
+    if (h.editandoConfirmada) {
+      set('condicion_pago', condicionPagoDesdeCliente(c));
+      return;
+    }
     const clienteTarifa = c?.tarifa_id || tarifasList?.find(t => t.tipo === 'general')?.id;
     if (clienteTarifa) set('tarifa_id', clienteTarifa);
     if (c && (c as any).lista_precio_id) set('lista_precio_id', (c as any).lista_precio_id);
@@ -477,7 +482,7 @@ export default function VentaFormPage() {
               Esta venta llegó sin sus productos: el equipo móvil registró el total pero las partidas todavía no se subieron. Pide al vendedor que abra la App Móvil con señal para completar el envío.
             </div>
           )}
-          <VentaFormFields form={form} readOnly={readOnly || h.editandoConfirmada} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
+          <VentaFormFields form={form} readOnly={readOnly} bloquearTipoAlmacen={h.editandoConfirmada} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
         </div>
         <div className="bg-card border border-border rounded-md">
           <OdooTabs tabs={[
