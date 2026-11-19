@@ -127,3 +127,4 @@
 2026-11-19 · desarrollador · Venta: encabezado en ficha compacta (sin barra gris ni cuadro de totales repetido; etiqueta de saldo junto al estado); sin avisos de stock en modo consulta; barra de listas solo con colores RutApp (se quitó token accion)
 2026-11-19 · desarrollador · D-029 colores universales de botones aplicados (clases base + detalle de venta reacomodado: Cobrar y Editar al final)
 2026-11-19 · desarrollador · F1b cancelar_venta (D-020) listo en código; migración 20261119230000 pendiente de CONFIRMO F1b
+2026-11-19 · desarrollador · F1b aplicada (CONFIRMO F1b): cancelar_venta + fn_venta_cobrable=0 en canceladas; probada en BD con rollback (pide destino, saldo_favor, cancelar_pago, reembolso, ya cancelada); fix front supabase.rpc sin cliente ('rest')
