@@ -57,6 +57,8 @@ interface ProductRow {
   manejaLote: boolean;
 }
 
+type RpcSinTipos = (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+
 export default function AjustesInventarioPage() {
   const { empresa, user, profile } = useAuth();
   const qc = useQueryClient();
@@ -207,26 +209,6 @@ export default function AjustesInventarioPage() {
     },
   });
 
-  const syncProductTotals = async (productIds: string[]) => {
-    const uniqueIds = [...new Set(productIds)];
-    if (!empresa?.id || uniqueIds.length === 0) return;
-
-    const stockRows = await fetchAllPages<any>((from, to) =>
-      supabase
-        .from('stock_almacen')
-        .select('producto_id, cantidad')
-        .eq('empresa_id', empresa.id)
-        .in('producto_id', uniqueIds as any)
-        .range(from, to)
-    );
-
-    const totalMap = new Map<string, number>();
-    for (const row of (stockRows ?? [])) {
-      totalMap.set(row.producto_id, (totalMap.get(row.producto_id) ?? 0) + (row.cantidad ?? 0));
-    }
-
-    // productos.cantidad is auto-recalculated by trigger when stock_almacen changes
-  };
 
   // Initialize rows when products load
   const initRows = () => {
@@ -448,49 +430,17 @@ export default function AjustesInventarioPage() {
     if (changedRows.length > 0 && !motivo.trim()) { toast.error('Indica un motivo para el ajuste'); return; }
     setApplying(true);
     try {
-      const today = todayLocal();
-      const batchId = crypto.randomUUID();
-
-      for (const row of changedRows) {
-        const diferencia = (row.cantidadReal ?? 0) - row.cantidadSistema;
-
-        await supabase.from('ajustes_inventario').insert({
-          empresa_id: empresa!.id,
-          producto_id: row.id,
-          cantidad_anterior: row.cantidadSistema,
-          cantidad_nueva: row.cantidadReal,
-          diferencia,
-          motivo,
-          user_id: user!.id,
-          almacen_id: almacenId || null,
-          batch_id: batchId,
-        } as any);
-
-        await supabase.from('stock_almacen').upsert({
-          empresa_id: empresa!.id,
-          almacen_id: almacenId,
-          producto_id: row.id,
-          cantidad: row.cantidadReal ?? 0,
-        } as any, { onConflict: 'almacen_id,producto_id' });
-
-        if (diferencia !== 0) {
-          await supabase.from('movimientos_inventario').insert({
-            empresa_id: empresa!.id,
-            tipo: diferencia > 0 ? 'entrada' : 'salida',
-            producto_id: row.id,
-            cantidad: Math.abs(diferencia),
-            referencia_tipo: 'ajuste',
-            user_id: user?.id,
-            fecha: today,
-            ...(diferencia > 0
-              ? { almacen_destino_id: almacenId || null }
-              : { almacen_origen_id: almacenId || null }),
-            notas: `Ajuste masivo: ${motivo}`,
-          } as any);
-        }
+      // Todo el ajuste en UNA operación de la BD (aplicar_ajuste_inventario): toma la existencia
+      // real, registra ajuste + existencia + kardex de todos los productos y si falla no aplica nada.
+      if (changedRows.length > 0) {
+        const { error: ajErr } = await (supabase.rpc as unknown as RpcSinTipos)('aplicar_ajuste_inventario', {
+          p_almacen_id: almacenId,
+          p_motivo: motivo,
+          p_lineas: changedRows.map(row => ({ producto_id: row.id, cantidad_nueva: row.cantidadReal ?? 0 })),
+          p_reset: false,
+        });
+        if (ajErr) throw new Error(ajErr.message);
       }
-
-      if (changedRows.length > 0) await syncProductTotals(changedRows.map(row => row.id));
 
       // Asignación masiva de lote: crea/reutiliza el lote por producto y fija su
       // existencia = cantidad contada (SET). Cuadra con el stock del almacén.
@@ -569,49 +519,14 @@ export default function AjustesInventarioPage() {
     if (!almacenId) { toast.error('Selecciona un almacén primero'); return; }
     setResetting(true);
     try {
-      const today = todayLocal();
-      const allProds = productos ?? [];
-      const nonZero = allProds.filter((p: any) => (p.cantidad ?? 0) !== 0);
-      const batchId = crypto.randomUUID();
-
-      for (const p of nonZero) {
-        const cantAnterior = p.cantidad ?? 0;
-
-        await supabase.from('ajustes_inventario').insert({
-          empresa_id: empresa!.id,
-          producto_id: p.id,
-          cantidad_anterior: cantAnterior,
-          cantidad_nueva: 0,
-          diferencia: -cantAnterior,
-          motivo: resetMotivo,
-          user_id: user!.id,
-          almacen_id: almacenId,
-          batch_id: batchId,
-        } as any);
-
-        await supabase.from('stock_almacen').upsert({
-          empresa_id: empresa!.id,
-          almacen_id: almacenId,
-          producto_id: p.id,
-          cantidad: 0,
-        } as any, { onConflict: 'almacen_id,producto_id' });
-
-        if (cantAnterior !== 0) {
-          await supabase.from('movimientos_inventario').insert({
-            empresa_id: empresa!.id,
-            tipo: 'salida',
-            producto_id: p.id,
-            cantidad: cantAnterior,
-            referencia_tipo: 'ajuste',
-            user_id: user?.id,
-            fecha: today,
-            almacen_origen_id: almacenId,
-            notas: `Reinicio a ceros: ${resetMotivo}`,
-          } as any);
-        }
-      }
-
-      await syncProductTotals(nonZero.map((p: any) => p.id));
+      const nonZero = (productos ?? []).filter((p: any) => (p.cantidad ?? 0) !== 0);
+      const { error: rsErr } = await (supabase.rpc as unknown as RpcSinTipos)('aplicar_ajuste_inventario', {
+        p_almacen_id: almacenId,
+        p_motivo: resetMotivo,
+        p_lineas: [],
+        p_reset: true,
+      });
+      if (rsErr) throw new Error(rsErr.message);
 
       toast.success(`Stock reiniciado a 0 en ${nonZero.length} productos`);
       setShowResetDialog(false);
@@ -627,6 +542,62 @@ export default function AjustesInventarioPage() {
       setResetting(false);
     }
   };
+
+  // Vista «Detalle» del historial: hooks a nivel del componente (antes vivían dentro de un
+  // bloque condicional y React marcaba error #310 al cambiar de pestaña).
+  // Flatten all historial items
+  const allItems = useMemo(() => {
+    if (!historial) return [];
+    return historial.flatMap((g: any) =>
+      (g.items ?? []).map((a: any) => ({
+        id: a.id,
+        fecha: a.fecha,
+        almacen: g.almacenName,
+        almacen_id: a.almacen_id,
+        usuario: g.userName,
+        codigo: a.productos?.codigo ?? '',
+        producto: a.productos?.nombre ?? '',
+        cantidad_anterior: a.cantidad_anterior,
+        cantidad_nueva: a.cantidad_nueva,
+        diferencia: a.diferencia,
+        motivo: a.motivo ?? g.motivo ?? '',
+      }))
+    );
+  }, [historial]);
+
+  const filteredH = useMemo(() => {
+    let list = allItems;
+    const almF = filtersH.almacen;
+    if (almF && almF.length > 0) list = list.filter(l => almF.includes(l.almacen_id));
+    if (searchH) {
+      const s = searchH.toLowerCase();
+      list = list.filter(l =>
+        l.producto.toLowerCase().includes(s) ||
+        l.codigo.toLowerCase().includes(s) ||
+        l.almacen.toLowerCase().includes(s) ||
+        l.usuario.toLowerCase().includes(s) ||
+        l.motivo.toLowerCase().includes(s)
+      );
+    }
+    if (desdeH) list = list.filter(l => (l.fecha ?? '') >= desdeH);
+    if (hastaH) list = list.filter(l => (l.fecha ?? '') <= hastaH);
+    return list;
+  }, [allItems, searchH, filtersH.almacen, desdeH, hastaH]);
+
+  const totalH = filteredH.length;
+  const fromH = Math.min((pageH - 1) * PAGE_SIZE_H + 1, totalH);
+  const toH = Math.min(pageH * PAGE_SIZE_H, totalH);
+  const pageDataH = filteredH.slice(fromH - 1, toH);
+  const totalDiffH = filteredH.reduce((s, l) => s + (l.diferencia ?? 0), 0);
+
+  const groupsH = useMemo(() => groupData(pageDataH, groupByH, (item: any, key) => {
+    if (key === 'almacen') return item.almacen;
+    if (key === 'producto') return item.producto;
+    if (key === 'motivo') return item.motivo || 'Sin motivo';
+    if (key === 'usuario') return item.usuario;
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
+    return '';
+  }, groupByLevelsH), [pageDataH, groupByH, groupByLevelsH]);
 
   return (
     <ListPage scroll>
@@ -996,60 +967,6 @@ export default function AjustesInventarioPage() {
               { key: 'diferencia', header: 'Diferencia', format: 'number', width: 12 },
               { key: 'motivo', header: 'Motivo', width: 20 },
             ];
-
-            // Flatten all historial items
-            const allItems = useMemo(() => {
-              if (!historial) return [];
-              return historial.flatMap((g: any) =>
-                (g.items ?? []).map((a: any) => ({
-                  id: a.id,
-                  fecha: a.fecha,
-                  almacen: g.almacenName,
-                  almacen_id: a.almacen_id,
-                  usuario: g.userName,
-                  codigo: a.productos?.codigo ?? '',
-                  producto: a.productos?.nombre ?? '',
-                  cantidad_anterior: a.cantidad_anterior,
-                  cantidad_nueva: a.cantidad_nueva,
-                  diferencia: a.diferencia,
-                  motivo: a.motivo ?? g.motivo ?? '',
-                }))
-              );
-            }, [historial]);
-
-            const filteredH = useMemo(() => {
-              let list = allItems;
-              const almF = filtersH.almacen;
-              if (almF && almF.length > 0) list = list.filter(l => almF.includes(l.almacen_id));
-              if (searchH) {
-                const s = searchH.toLowerCase();
-                list = list.filter(l =>
-                  l.producto.toLowerCase().includes(s) ||
-                  l.codigo.toLowerCase().includes(s) ||
-                  l.almacen.toLowerCase().includes(s) ||
-                  l.usuario.toLowerCase().includes(s) ||
-                  l.motivo.toLowerCase().includes(s)
-                );
-              }
-              if (desdeH) list = list.filter(l => (l.fecha ?? '') >= desdeH);
-              if (hastaH) list = list.filter(l => (l.fecha ?? '') <= hastaH);
-              return list;
-            }, [allItems, searchH, filtersH.almacen, desdeH, hastaH]);
-
-            const totalH = filteredH.length;
-            const fromH = Math.min((pageH - 1) * PAGE_SIZE_H + 1, totalH);
-            const toH = Math.min(pageH * PAGE_SIZE_H, totalH);
-            const pageDataH = filteredH.slice(fromH - 1, toH);
-            const totalDiffH = filteredH.reduce((s, l) => s + (l.diferencia ?? 0), 0);
-
-            const groupsH = useMemo(() => groupData(pageDataH, groupByH, (item: any, key) => {
-              if (key === 'almacen') return item.almacen;
-              if (key === 'producto') return item.producto;
-              if (key === 'motivo') return item.motivo || 'Sin motivo';
-              if (key === 'usuario') return item.usuario;
-              if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
-              return '';
-            }, groupByLevelsH), [pageDataH, groupByH, groupByLevelsH]);
 
             const renderDetalleTable = (items: any[]) => (
               <div className={cn(!groupByH && "bg-card border border-border rounded overflow-x-auto")}>
