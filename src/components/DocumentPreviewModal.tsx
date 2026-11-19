@@ -89,7 +89,7 @@ export default function DocumentPreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90dvh] flex flex-col">
+      <DialogContent className="w-[96vw] max-w-6xl h-[95dvh] max-h-[95dvh] flex flex-col gap-3 p-4 sm:p-5 overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base">{fileName}</DialogTitle>
         </DialogHeader>
@@ -97,7 +97,7 @@ export default function DocumentPreviewModal({
         {pdfUrl && (
           <iframe
             src={pdfUrl}
-            className="flex-1 min-h-[300px] sm:min-h-[400px] w-full rounded-lg border border-border"
+            className="flex-1 min-h-[45dvh] w-full rounded-md border border-border bg-muted"
             title="Vista previa PDF"
           />
         )}
