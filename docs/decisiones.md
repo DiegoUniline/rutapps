@@ -145,3 +145,8 @@
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** en **Ajustar entrega**, quien ajusta elige **camión o bodega** (depende de quién hizo el error) y esa elección aplica a **ambos lados**: lo que sale de la entrega (p. ej. Coca) regresa ahí y lo que sí se entregó (p. ej. Pepsi) se descuenta de ahí. Hoy el producto nuevo siempre se descuenta del camión (auditoría 2026-11-19, caso Coca/Pepsi).
 - **Interpretación registrada:** respuesta del dueño «todo depende de quien lo haga, por ende debemos elegir se devuelve al camión o a bodega» = una sola elección para ambos lados.
+
+## D-025
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** cuando un cambio deja el total de una venta **abajo de lo ya pagado** (Editar venta, Corrección administrativa, Ajustar entrega, cierre parcial), el sistema **pregunta** qué hacer con el excedente: **(a) saldo a favor** del cliente, **(b) se devolvió el dinero** (reembolso registrado), o **(c) nada** (no se registra movimiento). Complementa D-008 y D-020.
+- **Interpretación registrada:** «que digan saldo a favor o se devolvió el dinero o nada».
