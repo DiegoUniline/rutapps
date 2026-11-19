@@ -48,6 +48,21 @@ function getNumericPageSize(ps: PageSizeOption): number {
   return ps === 'all' ? 10000 : ps;
 }
 
+type TabEstado = 'activas' | 'canceladas' | 'todas';
+const ESTADOS_ACTIVOS = ['borrador', 'confirmado', 'entregado', 'facturado'];
+const TABS_ESTADO: { key: TabEstado; label: string }[] = [
+  { key: 'activas', label: 'Activas' },
+  { key: 'canceladas', label: 'Canceladas' },
+  { key: 'todas', label: 'Todas' },
+];
+/** Combina la pestaña con el filtro de Estado que el usuario haya elegido. */
+function statusFilterPorTab(tab: TabEstado, elegidos: string[]): string {
+  if (tab === 'canceladas') return 'cancelado';
+  if (tab === 'todas') return elegidos.length ? elegidos.join(',') : 'todos';
+  const activos = elegidos.filter(s => s !== 'cancelado');
+  return (activos.length ? activos : ESTADOS_ACTIVOS).join(',');
+}
+
 export default function VentasListPage() {
   const { empresa } = useAuth();
   // Realtime: ventas y venta_lineas ya los escucha AppLayout (useProductosRealtime,
@@ -93,7 +108,16 @@ export default function VentasListPage() {
   const { visible: columnVisibility, toggleColumn, setAll, reset } = useColumnPreferences('ventas', VENTAS_DEFAULT_COLUMN_VISIBILITY);
 
   const numericPageSize = getNumericPageSize(pageSize);
-  const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
+  // Pestañas por estado: Activas (todo menos canceladas) · Canceladas · Todas. Aplican a Ventas y Productos.
+  const [tabEstado, setTabEstadoState] = useState<TabEstado>(() => {
+    try { const v = localStorage.getItem('ventas.tabEstado'); return v === 'canceladas' || v === 'todas' ? v : 'activas'; } catch { return 'activas'; }
+  });
+  const setTabEstado = (t: TabEstado) => {
+    setTabEstadoState(t);
+    setPage(1);
+    try { localStorage.setItem('ventas.tabEstado', t); } catch { /* preferencia opcional */ }
+  };
+  const statusFilter = statusFilterPorTab(tabEstado, filters.status ?? []);
   const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
   const condicionFilter = filters.condicion_pago?.length ? filters.condicion_pago.join(',') : 'todos';
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
@@ -559,6 +583,23 @@ export default function VentasListPage() {
           </>
         )}
       </OdooFilterBar>
+
+      <nav className="flex gap-5 border-b border-border -mx-4 px-4 sm:mx-0 sm:px-0" role="tablist" aria-label="Estado de las ventas">
+        {TABS_ESTADO.map(t => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={tabEstado === t.key}
+            onClick={() => setTabEstado(t.key)}
+            className={cn(
+              "px-1 pb-2 pt-1 text-[13px] font-medium border-b-2 -mb-px transition-colors",
+              tabEstado === t.key ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
 
 
 
