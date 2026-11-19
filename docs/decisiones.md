@@ -131,3 +131,7 @@
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO (corregida el mismo día: primero "el borrador deja de existir", luego el dueño eligió conservarlo solo al inicio)
 - **Decisión:** el **borrador existe solo al inicio**: una venta o pedido puede guardarse como borrador al crearse (como hoy), pero una vez **confirmado ya no regresa a borrador**; para cambiarlo se usa **Editar venta** (`editar_venta`, una operación, inventario por diferencia, excedente → saldo a favor D-008). Los borradores existentes (731 pedidos internos, 169 ventas directas; corte 2026-11-16) se quedan como están. Pedidos de la tienda en línea siguen llegando en borrador para aprobarse.
 - **Motivo:** regresar a borrador y guardar era la fuga principal del pago de más (auditoría C2: 105 casos en nov-2026).
+
+## D-022
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** toda **reasignación** de entrega a otro vendedor y todo **cambio de almacén/camión del vendedor** con mercancía ya **asignada o cargada** mueve el stock del camión A al B en la misma operación, en todas las pantallas y funciones (`reasignar_entregas_bulk`, `reasignar_pendientes_usuario`, cambio de `profiles.almacen_id`). Auditoría R1/R3.
