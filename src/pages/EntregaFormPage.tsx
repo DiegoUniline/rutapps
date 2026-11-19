@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { clienteTextoBusqueda } from '@/lib/buscarCliente';
 import { AjustarEntregaDialog } from '@/components/entregas/AjustarEntregaDialog';
+import { EntregaCargadaAcciones } from '@/components/entregas/EntregaCargadaAcciones';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -89,6 +90,15 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const isSurtido = form.status === 'surtido';
   const isAsignado = form.status === 'asignado';
   const isBorrador = form.status === 'borrador';
+  // D-030: asignada / cargada / en ruta → quitar productos, reasignar o cancelar eligiendo destino.
+  const enCamion = !isNew && ['asignado', 'cargado', 'en_ruta'].includes(form.status);
+  const lineasCargadas = lineas
+    .filter((l: any) => l.hecho && Number(l.cantidad_entregada) > 0)
+    .map((l: any) => ({
+      id: l.id as string,
+      nombre: l.productos?.nombre ?? productosList?.find((p: any) => p.id === l.producto_id)?.nombre ?? 'Producto',
+      cargada: Number(l.cantidad_entregada) || 0,
+    }));
   // Corregir surtido (cambiar lote / des-surtir): solo antes de cargar al camión.
   const puedeCorregir = isBorrador || isSurtido;
 
@@ -552,8 +562,18 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
             </Button>
           )}
           {/* Cancel */}
-          {!isNew && !readOnly && (
-            <Button onClick={handleCancelar} size="sm" variant="ghost" className="text-destructive text-xs">Cancelar</Button>
+          {!isNew && !readOnly && !enCamion && (
+            <Button onClick={handleCancelar} size="sm" variant="destructive" className="text-xs">Cancelar</Button>
+          )}
+          {enCamion && puedeAjustarEntrega && id && (
+            <EntregaCargadaAcciones
+              entregaId={id}
+              folio={form.folio}
+              version={form.updated_at}
+              vendedorActualId={form.vendedor_ruta_id ?? form.vendedor_id}
+              lineas={lineasCargadas}
+              vendedores={(vendedores ?? []).map((v: any) => ({ id: v.id, nombre: v.nombre }))}
+            />
           )}
           {/* Ajustar lo realmente entregado (cantidad / producto equivocado) */}
           {!isNew && form.status === 'hecho' && puedeAjustarEntrega && id && (
@@ -586,7 +606,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       <div className="p-5 space-y-4 max-w-[1200px]">
         {/* Header card */}
         <div className="bg-card border border-border rounded-md p-5">
-          {readOnly && (
+          {readOnly && !enCamion && (
             <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />
               Esta entrega está {form.status} y no se puede editar.

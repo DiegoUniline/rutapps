@@ -130,3 +130,4 @@
 2026-11-19 · desarrollador · F1b aplicada (CONFIRMO F1b): cancelar_venta + fn_venta_cobrable=0 en canceladas; probada en BD con rollback (pide destino, saldo_favor, cancelar_pago, reembolso, ya cancelada); fix front supabase.rpc sin cliente ('rest')
 2026-11-19 · desarrollador · Ventas: pestaña Devoluciones se refresca al registrar (antes tardaba por otra consulta); columna Cant. neta de devoluciones en lista
 2026-11-19 · desarrollador · Fix inventario cancelar venta con devoluciones aplicado (CONFIRMO fix devoluciones): VTA-0001 #269 105→100, #229 15→10
+2026-11-19 · desarrollador · D-030 entrega cargada: quitar productos / reasignar / cancelar con destino camión o bodega; probado en BD con rollback; pendiente CONFIRMO

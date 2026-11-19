@@ -171,3 +171,9 @@
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** regla universal de color de botones, solo con colores RutApp: **azul sólido** = confirmar, guardar, cobrar, crear/nueva; **naranja sólido** = editar; **rojo contorno** = cancelar, eliminar, devolución; **gris contorno** = consulta/impresión (documento, imprimir, PDF, exportar, ver entrega). En el detalle de venta las acciones van en un renglón: gris → rojo → azul → Editar al final.
 - **Implementación:** `.btn-odoo-primary/-action/-success/-info` y `Button` default = azul; `.btn-odoo-editar` y `Button variant="editar"` = naranja; `.btn-odoo-danger` y `Button variant="destructive"` = rojo contorno.
+
+## D-030
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** una entrega **asignada, cargada o en ruta** permite **quitar productos** (solo bajar cantidades), **reasignar** repartidor (mueve el stock de camión, D-022) y **cancelar**. Al quitar o cancelar, el sistema **pregunta** a dónde va la mercancía: **se queda en el camión** (se reconcilia en la descarga) o **regresa a bodega** (traspaso camión → almacén de surtido). Mismo criterio que D-024.
+- **Límite:** productos con lote solo pueden quedarse en el camión (se regresan con la descarga).
+- **Implementación:** `ajustar_entrega_cargada`, `cancelar_entrega_cargada` (migración 20261119234000).
