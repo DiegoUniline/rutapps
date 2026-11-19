@@ -23,7 +23,8 @@ export function useSaldoFavor(clienteId?: string | null) {
   const { data: devoluciones } = useOfflineQuery('devoluciones', { empresa_id: eid, cliente_id: clienteId }, { enabled });
   // Líneas SOLO de esas devoluciones (antes se bajaba la tabla completa). Se
   // consulta por los ids del cliente; si aún no hay devoluciones, no se consulta.
-  const devIdsList = useMemo(() => (devoluciones ?? []).map((d: any) => d.id), [devoluciones]);
+  // Las devoluciones canceladas (venta cancelada, D-033) ya no dan crédito.
+  const devIdsList = useMemo(() => (devoluciones ?? []).filter((d: any) => !d.cancelado_at).map((d: any) => d.id), [devoluciones]);
   const { data: devLineas } = useOfflineQuery(
     'devolucion_lineas',
     devIdsList.length ? { devolucion_id: devIdsList } : undefined,

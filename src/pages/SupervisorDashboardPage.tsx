@@ -200,7 +200,7 @@ export default function SupervisorDashboardPage() {
     queryKey: ['supervisor-gastos-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
     queryFn: async () => fetchAllPages<any>((from, to) =>
       supabase.from('gastos')
-        .select('id, vendedor_id, monto, concepto, created_at')
+        .select('id, vendedor_id, monto, concepto, created_at').is('cancelado_at', null)
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false }).range(from, to)),
   });
 

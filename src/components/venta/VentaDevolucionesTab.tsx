@@ -24,7 +24,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, reemplazo_producto_id, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
+        .select('id, fecha, tipo, notas, cancelado_at, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, reemplazo_producto_id, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
         .eq('venta_id', ventaId);
       return data ?? [];
     },
@@ -39,6 +39,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
       accion: l.accion ?? 'reposicion',
       monto_credito: Number(l.monto_credito) ?? 0,
       cliente: d.clientes?.nombre ?? '—',
+      cancelada: !!d.cancelado_at,
     }))
   );
 
@@ -59,6 +60,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-3 text-xs">
         {lineas.length > 0 && <span className="bg-card border border-border px-2 py-1 rounded font-medium">{totalUnidades} unidades devueltas</span>}
+        {lineas.some(l => l.cancelada) && <span className="bg-destructive/10 text-destructive border border-destructive/20 px-2 py-1 rounded font-medium">Cancelada con la venta</span>}
         {totalCredito > 0 && (
           <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">Crédito: {fmt(totalCredito)}</span>
         )}

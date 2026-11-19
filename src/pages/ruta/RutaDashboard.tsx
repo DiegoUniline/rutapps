@@ -90,7 +90,7 @@ export default function RutaDashboard() {
   , [cobros, from, to, search, clienteById]);
 
   const gastosFiltrados = useMemo(() => (gastos ?? [])
-    .filter((g: any) => belongsToVendedor(g.vendedor_id))
+    .filter((g: any) => !g.cancelado_at && belongsToVendedor(g.vendedor_id))
     .filter((g: any) => inRange(g.fecha))
     .filter((g: any) => matchSearch([g.concepto, g.descripcion, g.categoria]))
     .sort((a: any, b: any) => (b.fecha ?? '').localeCompare(a.fecha ?? ''))

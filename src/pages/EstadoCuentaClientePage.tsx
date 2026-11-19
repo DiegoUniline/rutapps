@@ -118,6 +118,7 @@ interface ExcedenteRow {
 interface NotaCreditoRow {
   fecha: string;
   created_at: string | null;
+  cancelado_at: string | null;
   ventas: { folio: string | null } | null;
   devolucion_lineas: { monto_credito: number | null; accion: string | null }[] | null;
 }
@@ -163,7 +164,7 @@ function useClienteDetalle(clienteId: string | null) {
           .order('created_at', { ascending: false }),
         supabase
           .from('devoluciones')
-          .select('id, fecha, created_at, ventas(folio), devolucion_lineas(monto_credito, accion)')
+          .select('id, fecha, created_at, cancelado_at, ventas(folio), devolucion_lineas(monto_credito, accion)')
           .eq('empresa_id', empresa!.id)
           .eq('cliente_id', clienteId!),
       ]);
@@ -171,6 +172,7 @@ function useClienteDetalle(clienteId: string | null) {
       if (ncRes.error) throw ncRes.error;
       const excedentes = (excRes.data ?? []) as unknown as ExcedenteRow[];
       const notasCredito = ((ncRes.data ?? []) as unknown as NotaCreditoRow[])
+        .filter(d => !d.cancelado_at)
         .map(d => ({
           fecha: d.created_at ?? d.fecha,
           folio: d.ventas?.folio ?? null,

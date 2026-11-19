@@ -63,7 +63,7 @@ export function useDescargaCalculos(cargaId: string | null) {
           .neq('status', 'cancelado'),
         supabase
           .from('gastos')
-          .select('monto')
+          .select('monto').is('cancelado_at', null)
           .eq('vendedor_id', cargaInfo!.vendedor_id!)
           .eq('fecha', cargaInfo!.fecha),
       ]);
@@ -193,7 +193,7 @@ export function useDescargasLiveCuadre(descargas: any[] | undefined) {
           .gte('fecha', minFecha!).lte('fecha', maxFecha!)
           .range(from, to)),
         fetchAllPages((from, to) => supabase.from('gastos')
-          .select('vendedor_id, monto, fecha')
+          .select('vendedor_id, monto, fecha').is('cancelado_at', null)
           .eq('empresa_id', empresa!.id)
           .gte('fecha', minFecha!).lte('fecha', maxFecha!)
           .range(from, to)),

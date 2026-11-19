@@ -33,7 +33,8 @@ export function useCancelarPagoPrompt(nota?: string) {
         <DialogHeader>
           <DialogTitle>La venta tiene pagos</DialogTitle>
           <DialogDescription>
-            Se pagaron <strong className="text-foreground">{fmt(info?.monto ?? 0)}</strong>. ¿Qué hacemos con ese dinero al cancelar?
+            {info?.mensaje && <span className="block mb-1">{info.mensaje}</span>}
+            ¿Qué hacemos con <strong className="text-foreground">{fmt(info?.monto ?? 0)}</strong> al cancelar?
             {nota && <span className="block mt-1">{nota}</span>}
           </DialogDescription>
         </DialogHeader>

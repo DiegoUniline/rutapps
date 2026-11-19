@@ -206,7 +206,7 @@ export function useDashboardGastos(range: DateRange, vendedorId?: string) {
       return fetchAllPages((from, to) => {
         let q = supabase
           .from('gastos')
-          .select('id, fecha, monto, concepto, vendedor_id')
+          .select('id, fecha, monto, concepto, vendedor_id').is('cancelado_at', null)
           .eq('empresa_id', empresa!.id)
           .gte('fecha', fmt(range.from))
           .lte('fecha', fmt(range.to))
@@ -673,7 +673,7 @@ export function useDashboardHoy(vendedorId?: string, enabled = true) {
 
       const baseGastos = supabase
         .from('gastos')
-        .select('id, monto, vendedor_id', { count: 'exact' })
+        .select('id, monto, vendedor_id', { count: 'exact' }).is('cancelado_at', null)
         .eq('empresa_id', eid)
         .eq('fecha', today);
       const gastosQ = vendedorId ? baseGastos.eq('vendedor_id', vendedorId) : baseGastos;

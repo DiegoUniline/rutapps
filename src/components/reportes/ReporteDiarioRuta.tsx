@@ -120,7 +120,7 @@ export default function ReporteDiarioRuta() {
     enabled,
     queryFn: async () => {
       let q = (supabase as any).from('gastos')
-        .select('id, monto, concepto, notas, vendedor_id, profiles:vendedor_id(nombre)')
+        .select('id, monto, concepto, notas, vendedor_id, profiles:vendedor_id(nombre)').is('cancelado_at', null)
         .eq('empresa_id', empresa!.id)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');

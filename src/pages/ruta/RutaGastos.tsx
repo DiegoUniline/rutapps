@@ -35,7 +35,7 @@ export default function RutaGastos() {
     ascending: false,
   });
 
-  const filteredGastos = useMemo(() => filterByDate((gastos ?? []) as any[], 'fecha'), [gastos, filterByDate]);
+  const filteredGastos = useMemo(() => filterByDate(((gastos ?? []) as any[]).filter(g => !g.cancelado_at), 'fecha'), [gastos, filterByDate]);
   const totalPeriodo = filteredGastos.reduce((s: number, g: any) => s + (g.monto ?? 0), 0);
 
   // Realtime: actualizar al instante cuando se inserta/edita/elimina un gasto

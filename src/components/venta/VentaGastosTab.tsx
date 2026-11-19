@@ -17,7 +17,7 @@ export function VentaGastosTab({ ventaId }: { ventaId: string }) {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('gastos')
-        .select('id, fecha, concepto, monto, metodo_pago, notas')
+        .select('id, fecha, concepto, monto, metodo_pago, notas').is('cancelado_at', null)
         .eq('venta_id', ventaId)
         .order('fecha', { ascending: false });
       return data ?? [];

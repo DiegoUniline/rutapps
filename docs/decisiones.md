@@ -187,3 +187,8 @@
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** cuando se elige «se le devolvió el dinero» (al cancelar o corregir una venta) y quien lo registra tiene un **turno de caja abierto**, se anota como **retiro** de ese turno («Devolución de dinero <folio>») y el arqueo lo resta. Si no tiene turno abierto, queda registrado con fecha y usuario (sin tocar caja) y se ve en estado de cuenta.
 - **Implementación:** tabla `cobro_excedentes` (saldo a favor y devoluciones con fecha/usuario/venta/turno), `_registrar_excedente`, `saldos_a_favor_empresa()`; estado de cuenta muestra movimientos de saldo a favor y devoluciones de dinero (migración 20261120000000).
+
+## D-033
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («cancela todo»)
+- **Decisión:** cancelar una venta **cancela todo lo que cuelga de ella**: sus devoluciones quedan canceladas (ya no dan nota de crédito) y el **gasto** con que se reembolsó una devolución en efectivo se cancela (deja de contar en Gastos y Dashboard); ese dinero queda como «devolución de dinero» del cliente. La pregunta de qué hacer con el pago se hace **solo por lo que falta** (pagado − ya devuelto).
+- **Implementación:** `gastos.cancelado_at`, `devoluciones.cancelado_at` (no se borran), `_cancelar_devoluciones_venta`, `cancelar_venta` actualizada; todas las consultas de gastos excluyen cancelados (migración 20261120010000).

@@ -128,8 +128,8 @@ export const COLUMN_SELECTS_V2: Record<string, string> = {
   cobros: 'id,empresa_id,cliente_id,monto,fecha,metodo_pago,referencia,notas,user_id,status,saldo_favor_monto,reembolso_monto,created_at,updated_at',
   visitas: 'id,empresa_id,cliente_id,user_id,tipo,motivo,notas,gps_lat,gps_lng,fecha,venta_id,created_at',
   entregas: 'id,empresa_id,folio,pedido_id,vendedor_id,cliente_id,almacen_id,fecha,status,notas,vendedor_ruta_id,fecha_asignacion,fecha_carga,orden_entrega,fecha_entrega,motivo_no_entrega,created_at,updated_at',
-  devoluciones: 'id,empresa_id,vendedor_id,cliente_id,carga_id,tipo,fecha,notas,user_id,venta_id,almacen_destino_id,reembolso_efectivo,reembolso_metodo,created_at',
-  gastos: 'id,empresa_id,vendedor_id,user_id,fecha,concepto,monto,foto_url,notas,venta_id,devolucion_id,metodo_pago,created_at',
+  devoluciones: 'id,empresa_id,vendedor_id,cliente_id,carga_id,tipo,fecha,notas,user_id,venta_id,almacen_destino_id,reembolso_efectivo,reembolso_metodo,cancelado_at,created_at',
+  gastos: 'id,empresa_id,vendedor_id,user_id,fecha,concepto,monto,foto_url,notas,venta_id,devolucion_id,metodo_pago,cancelado_at,created_at',
   cargas: 'id,empresa_id,vendedor_id,fecha,status,notas,almacen_id,repartidor_id,almacen_destino_id,created_at',
   descarga_ruta: 'id,empresa_id,carga_id,vendedor_id,user_id,fecha,status,efectivo_esperado,efectivo_entregado,diferencia_efectivo,notas,aprobado_por,fecha_aprobacion,notas_supervisor,fecha_inicio,fecha_fin,descargo_camion,almacen_destino_id,created_at',
 };

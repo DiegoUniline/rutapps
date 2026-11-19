@@ -128,7 +128,7 @@ export default function VentaFormPage() {
     queryKey: ['venta-gastos-count', form.id],
     enabled: !!form.id && !isNew,
     queryFn: async () => {
-      const { count } = await supabase.from('gastos').select('id', { count: 'exact', head: true }).eq('venta_id', form.id!);
+      const { count } = await supabase.from('gastos').select('id', { count: 'exact', head: true }).is('cancelado_at', null).eq('venta_id', form.id!);
       return count ?? 0;
     },
   });

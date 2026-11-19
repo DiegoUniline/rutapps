@@ -25,7 +25,7 @@ function useGastos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('gastos')
-        .select('*, vendedores:profiles!vendedor_id(id,nombre)')
+        .select('*, vendedores:profiles!vendedor_id(id,nombre)').is('cancelado_at', null)
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
       if (error) throw error;

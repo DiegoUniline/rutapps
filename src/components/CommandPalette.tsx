@@ -191,7 +191,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         .or(`nombre.ilike.${term},codigo.ilike.${term}`, { referencedTable: 'productos' })
         .limit(5)),
       // Gastos
-      safe<any>(supabase.from('gastos').select('id,concepto,monto,fecha')
+      safe<any>(supabase.from('gastos').select('id,concepto,monto,fecha').is('cancelado_at', null)
         .eq('empresa_id', empresaId)
         .or(`concepto.ilike.${term},notas.ilike.${term},categoria.ilike.${term}`)
         .limit(5)),

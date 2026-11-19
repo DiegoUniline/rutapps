@@ -266,7 +266,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
       if (!descarga.vendedor_id) return [];
       let q = supabase
         .from('gastos')
-        .select('id, monto, concepto, fecha, notas')
+        .select('id, monto, concepto, fecha, notas').is('cancelado_at', null)
         .eq('empresa_id', descarga.empresa_id)
         .gte('fecha', fInicio)
         .lte('fecha', fFin)
@@ -1886,7 +1886,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('gastos')
-        .select('id, monto, concepto, fecha, notas')
+        .select('id, monto, concepto, fecha, notas').is('cancelado_at', null)
         .eq('empresa_id', empresa!.id)
         .eq('vendedor_id', vendedorRealId)
         .gte('fecha', fechaInicio)

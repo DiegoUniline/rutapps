@@ -94,7 +94,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
 
       const gastosBasePromise = needsGastos
         ? fetchAllPages<any>((from, to) => {
-            let q = supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).range(from, to);
+            let q = supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores:profiles!vendedor_id(nombre)').is('cancelado_at', null).eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).range(from, to);
             if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
             return q.abortSignal(signal);
           })
