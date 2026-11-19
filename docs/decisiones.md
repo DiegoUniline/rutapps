@@ -116,3 +116,8 @@
 - **Pendiente:** archivos de storage (no vienen en el backup), colas pgmq, crons, secrets, edge functions, reemplazo de `LOVABLE_API_KEY`, baseline de migraciones en repo, Cloudflare Pages, corte final con delta de datos.
 - **IA (2026-11-16, dueño eligió):** Google Gemini directo. 5 funciones usan el endpoint OpenAI-compatible de Gemini; `parse-csf` usa `generateContent` nativo (PDF inline). Secret `GEMINI_API_KEY`. `tienda-asistente-pedido` ya usaba OpenAI directo (`OPENAI_API_KEY`), sin cambio.
 - **Correo (2026-11-16, dueño eligió):** Resend. `_shared/transactional-email-templates/send-email.ts` envía por la API de Resend. Secrets `RESEND_API_KEY` y opcional `EMAIL_FROM_DOMAIN` (default `rutapp.mx`, debe estar verificado en Resend). `handle-email-events` y `preview-transactional-email` son exclusivos de Lovable y quedan sin uso.
+
+## D-019
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** el precio de lo ya entregado **sigue el precio vivo del pedido** (comportamiento actual, auditoría H1). Editar el precio del pedido recalcula también el importe de lo entregado. No se agrega precio a `entrega_lineas`.
+- **Consecuencia:** al bajar el total por debajo de lo pagado debe aplicar la regla de saldo a favor de D-008 en todos los caminos (corrección administrativa incluida, hallazgo H2/C2).
