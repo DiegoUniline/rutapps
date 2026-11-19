@@ -87,7 +87,7 @@ function IndependentFilterDropdown({
           compact ? "h-7 px-2 text-[11px] font-medium" : "btn-odoo-secondary",
           count > 0 && "border-primary text-primary",
           bloque && "w-full h-8 justify-between text-[12px] font-normal",
-          bloque && count > 0 && "border-accion/50 text-accion"
+          bloque && count > 0 && "border-primary/50 text-primary"
         )}
       >
         {bloque ? (
@@ -303,7 +303,7 @@ export function OdooFilterBar({
                 compact ? "h-7 px-2 text-[11px] font-medium" : "btn-odoo-secondary",
                 hasGroupBy && "border-primary text-primary",
                 !isMobile && "w-full h-8 text-[12px] font-normal",
-                !isMobile && hasGroupBy && "border-accion/50 text-accion"
+                !isMobile && hasGroupBy && "border-primary/50 text-primary"
               )}
             >
               <Layers className={cn("shrink-0", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
@@ -410,7 +410,7 @@ export function OdooFilterBar({
       {/* Escritorio: barra central (fecha · buscador · filtros) y acciones a la derecha */}
       <div className="hidden sm:flex items-center gap-2">
         <div className={cn("flex-1 min-w-0", hayAcciones && "hidden xl:block")} aria-hidden />
-        <div className="flex items-stretch h-9 w-full max-w-2xl min-w-0 rounded-xl border border-border bg-card shadow-sm overflow-visible focus-within:border-accion/50 focus-within:ring-2 focus-within:ring-accion/15 transition-shadow">
+        <div className="flex items-stretch h-9 w-full max-w-2xl min-w-0 rounded-xl border border-border bg-card shadow-sm overflow-visible focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15 transition-shadow">
           {hayFecha && (
             <div className="shrink-0 rounded-l-[11px] overflow-hidden">{renderDate(false)}</div>
           )}
@@ -437,13 +437,13 @@ export function OdooFilterBar({
                 aria-expanded={filtrosOpen}
                 className={cn(
                   "h-full inline-flex items-center gap-1.5 px-3 text-[12px] font-medium rounded-r-[11px] transition-colors",
-                  filtrosActivos > 0 ? "text-accion bg-accion/5 hover:bg-accion/10" : "text-foreground hover:bg-muted"
+                  filtrosActivos > 0 ? "text-primary bg-primary/5 hover:bg-primary/10" : "text-foreground hover:bg-muted"
                 )}
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 Filtros
                 {filtrosActivos > 0 && (
-                  <span className="bg-accion text-accion-foreground text-[10px] font-bold rounded-full h-4 min-w-4 px-1 inline-flex items-center justify-center">{filtrosActivos}</span>
+                  <span className="bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-4 min-w-4 px-1 inline-flex items-center justify-center">{filtrosActivos}</span>
                 )}
                 <ChevronDown className="h-3 w-3" />
               </button>
@@ -476,7 +476,7 @@ export function OdooFilterBar({
                         <X className="h-3 w-3" /> Limpiar filtros
                       </button>
                     ) : <span />}
-                    <button type="button" onClick={() => setFiltrosOpen(false)} className="text-[11px] font-semibold text-accion hover:underline">Listo</button>
+                    <button type="button" onClick={() => setFiltrosOpen(false)} className="text-[11px] font-semibold text-primary hover:underline">Listo</button>
                   </div>
                 </div>
               )}
@@ -511,7 +511,7 @@ export function OdooFilterBar({
               <span
                 key={`${chip.filterKey}-${v.value}`}
                 className={cn(
-                  "inline-flex items-center gap-1 bg-accion/10 text-accion font-medium rounded-full text-[11px] px-2 py-0.5"
+                  "inline-flex items-center gap-1 bg-primary/10 text-primary font-medium rounded-full text-[11px] px-2 py-0.5"
                 )}
               >
                 {chip.filterLabel}: {v.label}

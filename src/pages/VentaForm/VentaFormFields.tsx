@@ -26,7 +26,7 @@ interface Props {
   onClienteChange: (cId: string) => void;
 }
 
-export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, bloquearTipoAlmacen = false, set, onClienteChange }: Props) {
+export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, canEditCondicion = true, bloquearTipoAlmacen = false, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
@@ -69,8 +69,8 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
 
   const renderCondicion = () => (readOnly || !canEditCondicion)
     ? (
-      <div className="text-[13px] py-1.5 px-1 text-foreground capitalize flex items-center gap-1.5">
-        <span>{form.condicion_pago}</span>
+      <div className="text-[13px] py-1.5 px-1 text-foreground flex items-center gap-1.5">
+        <span>{condicionBtns.find(o => o.value === form.condicion_pago)?.label ?? form.condicion_pago ?? '—'}</span>
         {!readOnly && !canEditCondicion && (
           <span className="text-[10px] text-muted-foreground italic">(según cliente)</span>
         )}
@@ -131,39 +131,6 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
     </>
   );
 
-  const isCerrado = !!(form as any).cerrado_at;
-  const totalMostrar = isCerrado
-    ? Number((form as any).total_efectivo ?? form.total ?? 0)
-    : Number(form.total ?? 0);
-  const renderSaldo = () => !isNew && form.status !== 'borrador' && (
-    <div className="bg-card border border-border rounded-md p-2.5 space-y-0.5 text-[13px]">
-      <div className="flex justify-between">
-        <span className="text-muted-foreground inline-flex items-center gap-1">
-          Total
-          {isCerrado && Number(form.total ?? 0) !== totalMostrar && (
-            <span className="text-[10px] text-warning font-semibold">(cerrado)</span>
-          )}
-        </span>
-        <span className="font-medium">{fmt(totalMostrar)}</span>
-      </div>
-      <div className="flex justify-between"><span className="text-muted-foreground">Pagado</span><span className="font-medium">{fmt(totalPagado)}</span></div>
-      <div className="flex justify-between border-t border-border pt-0.5">
-        <span className="font-medium">
-          {saldoPendiente < 0 ? 'Saldo a favor' : 'Saldo'}
-        </span>
-        <span className={cn(
-          "font-semibold",
-          saldoPendiente > 0 && "text-destructive",
-          saldoPendiente < 0 && "text-success",
-          saldoPendiente === 0 && "text-foreground"
-        )}>
-          {fmt(Math.abs(saldoPendiente))}
-        </span>
-      </div>
-    </div>
-  );
-
-
   if (isMobile) {
     return (
       <div className="space-y-3">
@@ -176,52 +143,42 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
           <div>{renderEntrega()}</div>
         </div>
         <div><label className="label-odoo label-required">Almacén</label>{renderAlmacen()}</div>
-        {renderSaldo()}
       </div>
     );
   }
 
+  // Ficha compacta: 2 renglones de 4 columnas (los totales viven abajo, junto a las líneas).
   return (
-    <div className="grid grid-cols-12 gap-x-3 gap-y-2">
-      {/* Fila principal: lo necesario para comenzar a capturar productos. */}
-      <div className="col-span-12 md:col-span-6 lg:col-span-3">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-2.5">
+      <div className="min-w-0">
         <label className="label-odoo label-required">Cliente</label>
         {renderCliente()}
       </div>
-      <div className="col-span-12 md:col-span-6 lg:col-span-2">
+      <div className="min-w-0">
         <label className="label-odoo">Tipo</label>
         {renderTipo()}
       </div>
-      <div className="col-span-12 md:col-span-6 lg:col-span-2">
+      <div className="min-w-0">
         <label className="label-odoo label-required">Almacén</label>
         {renderAlmacen()}
       </div>
-      <div className="col-span-12 md:col-span-6 lg:col-span-3">
+      <div className="min-w-0">
         <label className="label-odoo">Condición de pago</label>
         {renderCondicion()}
       </div>
-      <div className="col-span-12 md:col-span-6 lg:col-span-2">
+      <div className="min-w-0">
+        <label className="label-odoo">Vendedor</label>
+        {renderVendedor()}
+      </div>
+      <div className="min-w-0">
         <label className="label-odoo">Fecha</label>
         {readOnly
           ? <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha)}</div>
           : <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />}
       </div>
-
-      {/* Segunda fila: únicamente los datos operativos restantes. */}
-      <div className="col-span-12 md:col-span-6 lg:col-span-6">
-        <label className="label-odoo">Vendedor</label>
-        {renderVendedor()}
-      </div>
-      <div className="col-span-12 md:col-span-6 lg:col-span-6">
+      <div className="min-w-0">
         {renderEntrega()}
       </div>
-
-      {!isNew && form.status !== 'borrador' && (
-        <div className="col-span-12 lg:col-start-9 lg:col-span-4">
-          {renderSaldo()}
-        </div>
-      )}
     </div>
   );
-
 }

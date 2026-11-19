@@ -195,7 +195,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       </td>
       )}
       <td className="py-1 px-2">
-        {readOnly ? <span className="text-[12px]">{prodDisplay ? `${prodDisplay.codigo ?? ''} · ${prodDisplay.nombre}`.replace(/^ · /, '') : (l.descripcion || '—')}{prod?._stock != null && <span className="ml-1.5 text-[10px] text-muted-foreground font-medium">(Stock: {prod._stock})</span>}</span> : (
+        {readOnly ? <span className="text-[12px]">{prodDisplay ? `${prodDisplay.codigo ?? ''} · ${prodDisplay.nombre}`.replace(/^ · /, '') : (l.descripcion || '—')}</span> : (
           <ProductSearchInput
             products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, formula: p.formula, precio_principal: p.precio_principal, _stock: p._stock }))}
             presentaciones={presentaciones}
@@ -208,7 +208,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           ? <VentaPresentacion line={l} unit={unidadLabel || 'unidades'} />
           : <VentaPresentacionEditor line={l} idx={idx} unit={unidadLabel || 'unidades'} disabled={!pricingReady} onChange={onChangePresentation} onUpdateLine={onUpdateLine} />)}
         {/* Aviso (no bloquea): la cantidad pasa la existencia del almacén. */}
-        {!isEmpty && prod?._stock != null && (Number(l.cantidad) || 0) > Number(prod._stock) && (
+        {!readOnly && !isEmpty && prod?._stock != null && (Number(l.cantidad) || 0) > Number(prod._stock) && (
           <div className="text-[10px] text-destructive font-medium mt-0.5">
             Excede el stock: disponible {prod._stock}, pides {Number(l.cantidad) || 0}
           </div>

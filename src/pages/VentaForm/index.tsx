@@ -37,7 +37,8 @@ import { fmtMoney } from '@/lib/currency';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fetchVentaDesktopTicketSaldo } from '@/lib/ventaDesktopTicketSaldo';
 import { printCobroTicket } from '@/lib/cobroTicket';
-import { fmtDate, todayInTimezone } from '@/lib/utils';
+import { fmtDate, todayInTimezone, cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { nextVisitDate } from '@/lib/nextVisitDate';
 import { RepriceListaDialog } from '@/components/venta/RepriceListaDialog';
@@ -73,6 +74,7 @@ export default function VentaFormPage() {
     handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell, changeLineListaPrecio,
   } = h;
+  const { fmt: fmtMoneda } = useCurrency();
 
   // Wrap handleSave: for venta_directa, open checkout modal after save+confirm
   const handleSave = useCallback(async (autoConfirm = false) => {
@@ -453,7 +455,21 @@ export default function VentaFormPage() {
       />
       {!isNew && (
         <div className="px-5 pt-3 flex items-center gap-3 flex-wrap">
-          <div className="flex-1 min-w-[240px]"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly || h.editandoConfirmada ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>
+          <div className="flex-1 min-w-[240px] flex items-center gap-3 flex-wrap">
+            <OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly || h.editandoConfirmada ? undefined : (k => handleStatusChange(k as StatusVenta))} />
+            {form.status !== 'borrador' && form.status !== 'cancelado' && (
+              <span className={cn(
+                "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-semibold border",
+                saldoPendiente > 0.005 ? "bg-destructive/10 text-destructive border-destructive/20"
+                  : saldoPendiente < -0.005 ? "bg-success/10 text-success border-success/20"
+                  : "bg-muted text-muted-foreground border-border"
+              )}>
+                {saldoPendiente > 0.005 ? <>Saldo {fmtMoneda(saldoPendiente)}</>
+                  : saldoPendiente < -0.005 ? <>Saldo a favor {fmtMoneda(Math.abs(saldoPendiente))}</>
+                  : 'Pagada'}
+              </span>
+            )}
+          </div>
           {h.puedeEditarConfirmada && (
             <button className="btn-odoo-primary text-xs" onClick={h.iniciarEdicionConfirmada}>Editar venta</button>
           )}
@@ -476,7 +492,6 @@ export default function VentaFormPage() {
         )}
         <div className="bg-card border border-border rounded-md p-3">
           {h.editandoConfirmada && <div className="mb-3 text-xs text-foreground bg-accent/40 border border-border px-3 py-2 rounded">Editando venta {form.status}: agrega, quita o cambia productos. Al guardar se mueve solo la diferencia de stock y se recalcula el saldo.</div>}
-          {readOnly && <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />Esta venta está {form.status} y no se puede editar.</div>}
           {!isNew && String(form.tipo) !== 'saldo_inicial' && Number(form.total) > 0 && lineas.filter(l => l.producto_id).length === 0 && (
             <div className="mb-3 text-xs bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 rounded">
               Esta venta llegó sin sus productos: el equipo móvil registró el total pero las partidas todavía no se subieron. Pide al vendedor que abra la App Móvil con señal para completar el envío.

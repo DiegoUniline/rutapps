@@ -500,7 +500,7 @@ export default function VentasListPage() {
                 />
               </MenuAcciones>
               {canCreate && (
-                <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-accion text-accion-foreground hover:bg-accion/90 text-[12px] font-semibold shadow-sm shrink-0">
+                <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[12px] font-semibold shadow-sm shrink-0">
                   <Plus className="h-3.5 w-3.5" /> Nueva venta
                 </button>
               )}
