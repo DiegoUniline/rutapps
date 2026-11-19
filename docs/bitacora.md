@@ -115,3 +115,4 @@
 2026-11-19 · qa · F2a verificada en amybkerwkybffllaxpnz (transacción revertida): Coca→Pepsi con bodega: bodega Coca 90→100, Pepsi 100→90, camión 0/0, pedido 155→294.50 (Pepsi x10); editar precio con entrega OK; editar cantidad con entrega bloqueado; reabrir deja todo en 100/100 y camión 0; pedido con entrega cancelada editable (H3). tests 382 OK, typecheck OK
 2026-11-19 · auditor · D-025 excedente al bajar total: preguntar saldo a favor / devolución / nada (dueño)
 2026-11-19 · auditor · D-026 todo documento crear/editar/cancelar; cancelar ajuste = movimiento contrario exacto (dueño)
+2026-11-19 · auditor · D-026 editar ajuste = corregir lo contado moviendo solo la diferencia (dueño)

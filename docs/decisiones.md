@@ -155,3 +155,4 @@
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Regla general del dueño:** todo documento tiene **crear, editar y cancelar** (y ver/PDF).
 - **Decisión (cancelar ajuste de inventario):** cancelar un ajuste ya aplicado **revierte exacto**: se registra el movimiento contrario por la misma diferencia de cada producto y el ajuste queda **Cancelado** (quién, cuándo, motivo). No se borra historial (D-006).
+- **Decisión (editar ajuste de inventario):** editar = **corregir lo contado** de uno o varios productos del ajuste; el sistema mueve **solo la diferencia** contra lo que ya aplicó ese ajuste y guarda quién/cuándo editó. El motivo también se puede cambiar.
