@@ -74,6 +74,7 @@ export const VENTAS_TABLE_COLUMNS: { key: string; label: string; required?: bool
   { key: 'almacen', label: 'Almacén', defaultVisible: true },
   { key: 'condicion', label: 'Condición', defaultVisible: true },
   { key: 'fecha', label: 'Fecha / Hora', defaultVisible: true },
+  { key: 'cantidad', label: 'Cant. (neta de devoluciones)', defaultVisible: true },
   { key: 'subtotal', label: 'Subtotal', defaultVisible: true },
   { key: 'descuento', label: 'Descuento', defaultVisible: true },
   { key: 'iva', label: 'IVA', defaultVisible: true },

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { cantidadNetaVenta } from '@/lib/ventaCantidad';
 import { Trash2, Gift, ChevronDown, Lock } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { cn, fmtDateTime } from '@/lib/utils';
@@ -85,6 +86,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     if (k === 'tipo') return TIPO_LABELS[r.tipo] || r.tipo;
     if (k === 'factura') return requiereFactura(r) ? 1 : 0;
     if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
+    if (k === 'cantidad') return cantidadNetaVenta(r);
     if (k === 'subtotal') return resById[r.id]?.sinImpuestos ?? 0;
     if (k === 'descuento') return resById[r.id]?.descuento ?? 0;
     if (k === 'iva') return resById[r.id]?.impuestos ?? 0;
@@ -94,7 +96,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
   });
 
   // Count visible data columns for the empty/footer colSpan
-  const dataCols = ['folio','tipo','factura','cliente','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','pagado','saldo','status']
+  const dataCols = ['folio','tipo','factura','cliente','vendedor','almacen','condicion','fecha','cantidad','subtotal','descuento','iva','total','pagado','saldo','status']
     .filter(k => v(k)).length;
   const totalCols = 1 /* checkbox */ + dataCols + 1 /* chevron */;
 
@@ -113,6 +115,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           {v('almacen') && <SortableTh sortKey="almacen" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Almacén</SortableTh>}
           {v('condicion') && <SortableTh sortKey="condicion" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden 2xl:table-cell">Condición</SortableTh>}
           {v('fecha') && <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden 2xl:table-cell">Fecha / Hora</SortableTh>}
+          {v('cantidad') && <SortableTh sortKey="cantidad" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cant.</SortableTh>}
           {v('subtotal') && <SortableTh sortKey="subtotal" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Subtotal s/imp</SortableTh>}
           {v('descuento') && <SortableTh sortKey="descuento" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Desc. / promo</SortableTh>}
           {v('iva') && <SortableTh sortKey="iva" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Impuestos</SortableTh>}
@@ -180,6 +183,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 {v('almacen') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{row.almacenes?.nombre ?? <span className="text-destructive">Sin almacén</span>}</td>}
                 {v('condicion') && <td className="py-2 px-3 hidden 2xl:table-cell text-muted-foreground">{CONDICION_LABELS[row.condicion_pago] || row.condicion_pago}</td>}
                 {v('fecha') && <td className="py-2 px-3 hidden 2xl:table-cell text-muted-foreground">{fmtDateTime(row.created_at)}</td>}
+                {v('cantidad') && <td className="py-2 px-3 text-right tabular-nums">{cantidadNetaVenta(row)}</td>}
                 {v('subtotal') && <td className="py-2 px-3 text-right hidden lg:table-cell text-muted-foreground tabular-nums">{fmt(resById[row.id]?.sinImpuestos ?? row.subtotal)}</td>}
                 {v('descuento') && (() => {
                   const desc = resById[row.id]?.descuento ?? 0;
@@ -291,6 +295,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
               {v('almacen') && <td className="hidden lg:table-cell" />}
               {v('condicion') && <td className="hidden 2xl:table-cell" />}
               {v('fecha') && <td className="hidden 2xl:table-cell" />}
+              {v('cantidad') && <td className="py-2 px-3 text-right tabular-nums font-bold">{Math.round(sorted.reduce((s: number, r: any) => s + cantidadNetaVenta(r), 0) * 1000) / 1000}</td>}
               {v('subtotal') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums font-bold">{fmt(totSubtotal)}</td>}
               {v('descuento') && <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums font-bold text-destructive">{totDescuento > 0 ? `-${fmt(totDescuento)}` : '—'}</td>}
               {v('iva') && <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums font-bold">{fmt(totIva)}</td>}

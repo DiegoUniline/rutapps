@@ -109,7 +109,8 @@ export default function VentaFormPage() {
 
   // Devoluciones de esta venta (para ticket/impresión)
   const { data: devolucionesVenta } = useQuery({
-    queryKey: ['venta-devoluciones-ticket', form.id],
+    // Bajo el prefijo 'venta-devoluciones' para que se refresque al registrar una devolución.
+    queryKey: ['venta-devoluciones', form.id, 'ticket'],
     enabled: !!form.id && !isNew,
     queryFn: async () => {
       const { data: heads } = await supabase.from('devoluciones').select('id').eq('venta_id', form.id!);
