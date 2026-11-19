@@ -125,3 +125,4 @@
 2026-11-19 · auditor · D-028 Editar venta permite cliente/fecha/condición/vendedor; pagos se mueven con la venta (dueño)
 2026-11-19 · desarrollador · Barra de listas rediseñada (opción A): buscador central con fecha y panel Filtros; acciones de Ventas en menú ⋯; token de color accion (azul marino)
 2026-11-19 · desarrollador · Venta: encabezado en ficha compacta (sin barra gris ni cuadro de totales repetido; etiqueta de saldo junto al estado); sin avisos de stock en modo consulta; barra de listas solo con colores RutApp (se quitó token accion)
+2026-11-19 · desarrollador · D-029 colores universales de botones aplicados (clases base + detalle de venta reacomodado: Cobrar y Editar al final)

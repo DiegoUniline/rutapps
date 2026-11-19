@@ -362,7 +362,7 @@ export default function RutaClientes() {
           {paradasNavegablesCount > 0 && (
             <button
               onClick={() => navigate('/ruta/navegacion')}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-brand-orange px-2.5 py-1 text-[11px] font-semibold text-brand-orange-foreground shadow-sm hover:bg-brand-orange/90"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
             >
               <Navigation className="h-3.5 w-3.5" /> Navegar
             </button>

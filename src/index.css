@@ -267,21 +267,26 @@ html, body, #root {
     box-shadow: var(--shadow-xs);
   }
 
-  /* Buttons */
-  .btn-odoo-primary {
+  /* Buttons — regla de color por acción (D-029):
+     azul = confirmar/guardar/cobrar/crear · naranja = editar ·
+     rojo contorno = cancelar/eliminar/devolución · gris contorno = secundarias. */
+  .btn-odoo-primary,
+  .btn-odoo-action,
+  .btn-odoo-success,
+  .btn-odoo-info {
     @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
-           bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90 transition-all
-           disabled:opacity-50 disabled:pointer-events-none;
-    box-shadow: var(--shadow-xs);
-  }
-  .btn-odoo-action {
-    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
-           bg-brand-orange text-brand-orange-foreground hover:opacity-90 transition-all
+           bg-primary text-primary-foreground hover:bg-primary/90 transition-all
            disabled:opacity-50 disabled:pointer-events-none;
     box-shadow: var(--shadow-xs);
   }
   .btn-orange-action {
-    @apply bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90 border-brand-orange;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 border-primary;
+  }
+  .btn-odoo-editar {
+    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
+           bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90 transition-all
+           disabled:opacity-50 disabled:pointer-events-none;
+    box-shadow: var(--shadow-xs);
   }
   .btn-odoo-secondary {
     @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium
@@ -289,22 +294,9 @@ html, body, #root {
            disabled:opacity-50 disabled:pointer-events-none;
   }
   .btn-odoo-danger {
-    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
-           bg-destructive text-destructive-foreground hover:opacity-90 transition-all
+    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium
+           bg-card text-destructive border border-destructive/40 hover:bg-destructive/5 transition-all
            disabled:opacity-50 disabled:pointer-events-none;
-    box-shadow: var(--shadow-xs);
-  }
-  .btn-odoo-success {
-    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
-           bg-success text-success-foreground hover:opacity-90 transition-all
-           disabled:opacity-50 disabled:pointer-events-none;
-    box-shadow: var(--shadow-xs);
-  }
-  .btn-odoo-info {
-    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
-           bg-info text-info-foreground hover:opacity-90 transition-all
-           disabled:opacity-50 disabled:pointer-events-none;
-    box-shadow: var(--shadow-xs);
   }
 
   /* Segmented control (corporate style — matches shadcn Tabs) */

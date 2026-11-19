@@ -272,7 +272,7 @@ export default function PartnerAdminDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setEditOpen(true)}><Edit3 className="h-4 w-4 mr-1" /> Editar expediente</Button>
+          <Button variant="editar" onClick={() => setEditOpen(true)}><Edit3 className="h-4 w-4 mr-1" /> Editar expediente</Button>
           <Button disabled={summary.pending <= 0 || (partner.estado === 'activo' && summary.pending < 500) || paying} onClick={() => setPayOpen(true)} title={partner.estado === 'activo' && summary.pending < 500 ? 'El mínimo de pago es $500 MXN' : undefined}>
             {paying ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wallet className="h-4 w-4 mr-1" />} Pagar {fmt(summary.pending)}
           </Button>

@@ -166,3 +166,8 @@
 - **Decisión:** se quita el botón **Corregir**; **Editar venta** permite cambiar **todo**: líneas, cliente, fecha, condición de pago, vendedor y notas.
 - **Cliente con pagos:** los pagos aplicados **solo** a esa venta se mueven al nuevo cliente junto con ella. Si un pago también cubre otras ventas del cliente anterior, no se cambia el cliente hasta separarlo. Los precios de la venta se conservan (no se recalculan con la lista del nuevo cliente).
 - **🧭 Criterio:** cambiar vendedor o fecha actualiza las comisiones **no pagadas**; si alguna comisión ya se pagó, no se permite cambiar el vendedor.
+
+## D-029
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** regla universal de color de botones, solo con colores RutApp: **azul sólido** = confirmar, guardar, cobrar, crear/nueva; **naranja sólido** = editar; **rojo contorno** = cancelar, eliminar, devolución; **gris contorno** = consulta/impresión (documento, imprimir, PDF, exportar, ver entrega). En el detalle de venta las acciones van en un renglón: gris → rojo → azul → Editar al final.
+- **Implementación:** `.btn-odoo-primary/-action/-success/-info` y `Button` default = azul; `.btn-odoo-editar` y `Button variant="editar"` = naranja; `.btn-odoo-danger` y `Button variant="destructive"` = rojo contorno.

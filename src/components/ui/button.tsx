@@ -9,8 +9,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        // D-029: azul = confirmar/guardar/cobrar/crear; naranja = editar; rojo contorno = cancelar/eliminar.
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        editar: "bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90",
+        destructive: "border border-destructive/40 bg-background text-destructive hover:bg-destructive/5",
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",

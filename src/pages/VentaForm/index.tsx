@@ -452,6 +452,19 @@ export default function VentaFormPage() {
         onPrintTicket={!isNew ? handlePrintTicket : undefined}
         onFacturar={() => setShowFacturaDrawer(true)}
         onDevolucion={!isNew ? () => setShowDevolucion(true) : undefined}
+        accionesFinales={!isNew ? (
+          <>
+            {!h.editandoConfirmada && form.status !== 'borrador' && form.status !== 'cancelado' && saldoPendiente > 0.005 && (
+              <button className="btn-odoo-primary text-xs" onClick={() => setShowPago(true)}>Cobrar</button>
+            )}
+            {h.editandoConfirmada && (
+              <button className="btn-odoo-secondary text-xs" onClick={h.cancelarEdicionConfirmada}>Cancelar edición</button>
+            )}
+            {h.puedeEditarConfirmada && (
+              <button className="btn-odoo-editar text-xs" onClick={h.iniciarEdicionConfirmada}>Editar venta</button>
+            )}
+          </>
+        ) : undefined}
       />
       {!isNew && (
         <div className="px-5 pt-3 flex items-center gap-3 flex-wrap">
@@ -470,12 +483,6 @@ export default function VentaFormPage() {
               </span>
             )}
           </div>
-          {h.puedeEditarConfirmada && (
-            <button className="btn-odoo-primary text-xs" onClick={h.iniciarEdicionConfirmada}>Editar venta</button>
-          )}
-          {h.editandoConfirmada && (
-            <button className="btn-odoo-secondary text-xs" onClick={h.cancelarEdicionConfirmada}>Cancelar edición</button>
-          )}
         </div>
       )}
       <div className="w-full max-w-none p-2.5 sm:p-3 space-y-2.5">

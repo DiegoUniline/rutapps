@@ -233,7 +233,7 @@ function BottomActions({ venta, initCobrar, onBack, fmt }: Props & { s: string }
       <div className="flex gap-2">
         <button
           onClick={onBack}
-          className={`${showCobrar ? 'flex-1' : 'w-full'} bg-brand-orange text-brand-orange-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-brand-orange/20 flex items-center justify-center gap-1.5`}
+          className={`${showCobrar ? 'flex-1' : 'w-full'} bg-card text-foreground border border-border rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg flex items-center justify-center gap-1.5`}
         >
           <ArrowLeft className="h-5 w-5" /> Salir
         </button>

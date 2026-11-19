@@ -29,12 +29,9 @@ export function ExportButton({ onExcel, onPDF, label = 'Exportar', compact }: Ex
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "flex items-center gap-1.5 rounded-lg border font-medium transition-colors shrink-0",
+          "flex items-center gap-1.5 rounded-lg border border-border bg-card text-foreground hover:bg-accent font-medium transition-colors shrink-0",
           compact ? "h-7 px-2 text-[11px]" : "text-[13px] px-3 py-1.5"
         )}
-        style={{ backgroundColor: '#217346', borderColor: '#1a5c38', color: '#fff' }}
-        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1a5c38')}
-        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#217346')}
       >
         <Download className={cn("shrink-0", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
         {label}

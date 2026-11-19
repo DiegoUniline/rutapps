@@ -308,7 +308,7 @@ function ReporteRunner({ config, empresaId, empresaNombre, empresaInfo, onEdit, 
             <p className="text-[11px] text-muted-foreground capitalize">Fuente: {fuenteMeta.label}</p>
           </div>
           <div className="flex gap-1">
-            <Button size="sm" variant="outline" onClick={onEdit}><Pencil className="w-3.5 h-3.5 mr-1" /> Editar</Button>
+            <Button size="sm" variant="editar" onClick={onEdit}><Pencil className="w-3.5 h-3.5 mr-1" /> Editar</Button>
             <Button size="sm" variant="ghost" onClick={onDelete}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
           </div>
         </div>
