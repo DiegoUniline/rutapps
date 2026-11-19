@@ -117,3 +117,4 @@
 2026-11-19 · auditor · D-026 todo documento crear/editar/cancelar; cancelar ajuste = movimiento contrario exacto (dueño)
 2026-11-19 · auditor · D-026 editar ajuste = corregir lo contado moviendo solo la diferencia (dueño)
 2026-11-19 · desarrollador · CONFIRMO publicar ajustes: ajuste en un clic (aplicar_ajuste_inventario), fix React #310 en historial, historial con editar/cancelar/PDF (D-026)
+2026-11-19 · qa · Ajustes verificados en amybkerwkybffllaxpnz (transacción revertida): ajuste A 100→50, B 100→30; editar A a 48 mueve −2 (dif −52, motivo actualizado); cancelar regresa A=100 y B=100, status cancelado; doble cancelación bloqueada
