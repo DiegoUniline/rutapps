@@ -174,17 +174,30 @@ export function useVentaForm() {
     () => new Set(lineas.map(l => l.producto_id).filter(Boolean) as string[]),
     [lineas],
   );
+  // Lo que esta venta YA descontó del almacén (venta directa guardada que movió stock):
+  // para ella cuenta como disponible, si no la línea diría "sin stock" justo por su propia salida.
+  const tomadoPorEstaVenta = useMemo(() => {
+    const m = new Map<string, number>();
+    const v = existingVenta as { tipo?: string; status?: string; entrega_inmediata?: boolean; venta_lineas?: { producto_id?: string | null; cantidad?: number | null }[] } | undefined;
+    if (!v || v.tipo !== 'venta_directa' || v.status === 'borrador' || v.status === 'cancelado') return m;
+    if (!v.entrega_inmediata && v.status !== 'entregado' && v.status !== 'facturado') return m;
+    for (const l of v.venta_lineas ?? []) {
+      if (!l.producto_id) continue;
+      m.set(l.producto_id, (m.get(l.producto_id) ?? 0) + (Number(l.cantidad) || 0));
+    }
+    return m;
+  }, [existingVenta]);
   const productosList = useMemo(() => {
     if (!productosListRaw) return productosListRaw;
     const stockMap = stockAlmacenData ?? new Map<string, number>();
     const enriched = productosListRaw.map((p: any) => ({
       ...p,
-      _stock: form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0),
+      _stock: (form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0)) + (tomadoPorEstaVenta.get(p.id) ?? 0),
     }));
     // Con almacén elegido esperamos su existencia antes de filtrar (si no, todo saldría en 0).
     if (form.almacen_id && !stockAlmacenData) return enriched;
     return enriched.filter((p: any) => p.vender_sin_stock || (p._stock ?? 0) > 0 || productosEnLineas.has(p.id));
-  }, [productosListRaw, form.almacen_id, stockAlmacenData, productosEnLineas]);
+  }, [productosListRaw, form.almacen_id, stockAlmacenData, productosEnLineas, tomadoPorEstaVenta]);
 
   const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {
     const key = `${row}-${col}`;
