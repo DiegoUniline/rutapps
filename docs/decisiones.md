@@ -150,3 +150,8 @@
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** cuando un cambio deja el total de una venta **abajo de lo ya pagado** (Editar venta, Corrección administrativa, Ajustar entrega, cierre parcial), el sistema **pregunta** qué hacer con el excedente: **(a) saldo a favor** del cliente, **(b) se devolvió el dinero** (reembolso registrado), o **(c) nada** (no se registra movimiento). Complementa D-008 y D-020.
 - **Interpretación registrada:** «que digan saldo a favor o se devolvió el dinero o nada».
+
+## D-026
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Regla general del dueño:** todo documento tiene **crear, editar y cancelar** (y ver/PDF).
+- **Decisión (cancelar ajuste de inventario):** cancelar un ajuste ya aplicado **revierte exacto**: se registra el movimiento contrario por la misma diferencia de cada producto y el ajuste queda **Cancelado** (quién, cuándo, motivo). No se borra historial (D-006).
