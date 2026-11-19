@@ -133,3 +133,4 @@
 2026-11-19 · desarrollador · D-030 entrega cargada: quitar productos / reasignar / cancelar con destino camión o bodega; probado en BD con rollback; pendiente CONFIRMO
 2026-11-19 · dueño · D-031 autorización fija: migraciones no destructivas en BD de pruebas hasta el corte
 2026-11-19 · desarrollador · ventas_resumen_v.cantidad_neta + Cant. en el resumen de la lista (D-031)
+2026-11-19 · desarrollador · D-032 + F1b: cobro_excedentes, retiro de caja en devoluciones, estado de cuenta con saldo a favor y devoluciones de dinero

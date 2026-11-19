@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
-import { Users, ChevronRight, CreditCard, FileText, Banknote, Download, ArrowLeft } from 'lucide-react';
+import { Users, ChevronRight, CreditCard, FileText, Banknote, Download, ArrowLeft, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,6 +17,8 @@ import { useListPreferences } from '@/hooks/useListPreferences';
 import AplicarPagoClienteDialog from '@/components/finanzas/AplicarPagoClienteDialog';
 
 /* ── hooks ── */
+type RpcSinTipos<T> = (fn: string, args: Record<string, unknown>) => Promise<{ data: T | null; error: { message: string } | null }>;
+
 function useClientesSaldo(desde: string, hasta: string) {
   const { empresa } = useAuth();
   return useQuery({
@@ -31,37 +33,16 @@ function useClientesSaldo(desde: string, hasta: string) {
         .in('status', ['confirmado', 'entregado', 'facturado']);
       if (desde) q = q.gte('fecha', desde);
       if (hasta) q = q.lte('fecha', hasta);
-      const [ventasRes, devsRes, favUsadoRes] = await Promise.all([
+      // Saldo a favor por cliente lo calcula la BD (notas de crédito + pagos que quedaron a favor − usado).
+      const [ventasRes, favRes] = await Promise.all([
         q,
-        supabase
-          .from('devoluciones')
-          .select('cliente_id, devolucion_lineas(monto_credito, accion)')
-          .eq('empresa_id', empresa!.id),
-        supabase
-          .from('cobros')
-          .select('cliente_id, monto')
-          .eq('empresa_id', empresa!.id)
-          .eq('status', 'activo')
-          .eq('metodo_pago', 'saldo_favor'),
+        (supabase.rpc.bind(supabase) as unknown as RpcSinTipos<{ cliente_id: string; disponible: number }[]>)('saldos_a_favor_empresa', {}),
       ]);
       if (ventasRes.error) throw ventasRes.error;
-
-      // Saldo a favor por cliente = emitido (notas de crédito) − usado (cobros con saldo_favor)
-      const favorEmitido = new Map<string, number>();
-      (devsRes.data ?? []).forEach((d: any) => {
-        if (!d.cliente_id) return;
-        const emit = (d.devolucion_lineas ?? [])
-          .filter((l: any) => l.accion === 'nota_credito')
-          .reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
-        favorEmitido.set(d.cliente_id, (favorEmitido.get(d.cliente_id) ?? 0) + emit);
-      });
-      const favorUsado = new Map<string, number>();
-      (favUsadoRes.data ?? []).forEach((c: any) => {
-        if (!c.cliente_id) return;
-        favorUsado.set(c.cliente_id, (favorUsado.get(c.cliente_id) ?? 0) + (Number(c.monto) || 0));
-      });
-      const favorDisponible = (cid: string) =>
-        Math.max(0, Math.round(((favorEmitido.get(cid) ?? 0) - (favorUsado.get(cid) ?? 0)) * 100) / 100);
+      if (favRes.error) throw favRes.error;
+      const favor = new Map<string, number>();
+      (favRes.data ?? []).forEach(r => favor.set(r.cliente_id, Number(r.disponible) || 0));
+      const favorDisponible = (cid: string) => favor.get(cid) ?? 0;
 
       const map = new Map<string, {
         id: string; nombre: string; codigo: string | null; telefono: string | null;
@@ -90,7 +71,7 @@ function useClientesSaldo(desde: string, hasta: string) {
         }
       });
       // Incluir clientes que solo tienen saldo a favor (sin ventas en el rango)
-      favorEmitido.forEach((_v, cid) => {
+      favor.forEach((_v, cid) => {
         if (!map.has(cid) && favorDisponible(cid) > 0.009) {
           map.set(cid, {
             id: cid, nombre: 'Cliente', codigo: null, telefono: null,
@@ -125,6 +106,27 @@ function useClientesSaldo(desde: string, hasta: string) {
   });
 }
 
+interface ExcedenteRow {
+  id: string;
+  tipo: 'saldo_favor' | 'reembolso';
+  origen: 'correccion' | 'cancelacion' | 'previo';
+  monto: number;
+  created_at: string;
+  turno_id: string | null;
+  ventas: { folio: string | null } | null;
+}
+interface NotaCreditoRow {
+  fecha: string;
+  created_at: string | null;
+  ventas: { folio: string | null } | null;
+  devolucion_lineas: { monto_credito: number | null; accion: string | null }[] | null;
+}
+const ORIGEN_EXCEDENTE: Record<ExcedenteRow['origen'], string> = {
+  cancelacion: 'Venta cancelada',
+  correccion: 'Corrección de venta',
+  previo: 'Registro anterior',
+};
+
 function useClienteDetalle(clienteId: string | null) {
   const { empresa } = useAuth();
   return useQuery({
@@ -150,7 +152,32 @@ function useClienteDetalle(clienteId: string | null) {
       ]);
       if (ventasRes.error) throw ventasRes.error;
       if (cobrosRes.error) throw cobrosRes.error;
-      return { ventas: ventasRes.data ?? [], cobros: cobrosRes.data ?? [] };
+
+      // Saldo a favor y devoluciones de dinero (F1b): de dónde salió y en qué se usó.
+      const [excRes, ncRes] = await Promise.all([
+        supabase
+          .from('cobro_excedentes' as never)
+          .select('id, tipo, origen, monto, created_at, turno_id, ventas(folio)')
+          .eq('empresa_id', empresa!.id)
+          .eq('cliente_id', clienteId!)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('devoluciones')
+          .select('id, fecha, created_at, ventas(folio), devolucion_lineas(monto_credito, accion)')
+          .eq('empresa_id', empresa!.id)
+          .eq('cliente_id', clienteId!),
+      ]);
+      if (excRes.error) throw excRes.error;
+      if (ncRes.error) throw ncRes.error;
+      const excedentes = (excRes.data ?? []) as unknown as ExcedenteRow[];
+      const notasCredito = ((ncRes.data ?? []) as unknown as NotaCreditoRow[])
+        .map(d => ({
+          fecha: d.created_at ?? d.fecha,
+          folio: d.ventas?.folio ?? null,
+          monto: (d.devolucion_lineas ?? []).filter(l => l.accion === 'nota_credito').reduce((s, l) => s + (Number(l.monto_credito) || 0), 0),
+        }))
+        .filter(n => n.monto > 0.009);
+      return { ventas: ventasRes.data ?? [], cobros: cobrosRes.data ?? [], excedentes, notasCredito };
     },
   });
 }
@@ -279,6 +306,15 @@ export default function EstadoCuentaClientePage() {
     const totalSaldo = detalle?.ventas.reduce((sum, v) => sum + saldoRealVenta(v), 0) ?? 0;
     const totalLiquidado = Math.max(0, totalVentas - totalSaldo);
     const totalCobrosRegistrados = detalle?.cobros.reduce((s, c) => s + (c.monto ?? 0), 0) ?? 0;
+    // Saldo a favor: + notas de crédito y pagos que quedaron a favor; − lo usado como pago.
+    const movFavor = [
+      ...(detalle?.notasCredito ?? []).map(n => ({ fecha: n.fecha, concepto: 'Nota de crédito (devolución)', folio: n.folio, monto: n.monto })),
+      ...(detalle?.excedentes ?? []).filter(e => e.tipo === 'saldo_favor')
+        .map(e => ({ fecha: e.created_at, concepto: `${ORIGEN_EXCEDENTE[e.origen]}: pago a favor`, folio: e.ventas?.folio ?? null, monto: Number(e.monto) })),
+      ...(detalle?.cobros ?? []).filter(c => c.metodo_pago === 'saldo_favor')
+        .map(c => ({ fecha: c.fecha, concepto: 'Usado como pago', folio: c.referencia ?? null, monto: -(Number(c.monto) || 0) })),
+    ].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+    const reembolsos = (detalle?.excedentes ?? []).filter(e => e.tipo === 'reembolso');
 
     return (
       <div className="p-4 space-y-4 min-h-full">
@@ -332,6 +368,77 @@ export default function EstadoCuentaClientePage() {
             </div>
           )}
         </div>
+
+        {(movFavor.length > 0 || reembolsos.length > 0) && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div>
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-primary" /> Saldo a favor
+                <span className="ml-auto text-[12px] font-normal text-muted-foreground">Disponible <strong className="text-primary text-sm">{fmt(selected.saldoFavor)}</strong></span>
+              </h3>
+              <div className="bg-card border border-border rounded overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[11px]">Fecha</TableHead>
+                      <TableHead className="text-[11px]">Concepto</TableHead>
+                      <TableHead className="text-[11px]">Venta</TableHead>
+                      <TableHead className="text-[11px] text-right">Monto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movFavor.map((m, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="text-[12px]">{fmtDate(m.fecha)}</TableCell>
+                        <TableCell className="text-[12px]">{m.concepto}</TableCell>
+                        <TableCell className="font-mono text-[11px]">{m.folio ?? '—'}</TableCell>
+                        <TableCell className={cn('text-right text-[12px] font-semibold tabular-nums', m.monto < 0 ? 'text-destructive' : 'text-success')}>
+                          {m.monto < 0 ? '−' : '+'}{fmt(Math.abs(m.monto))}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {movFavor.length === 0 && (
+                      <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground text-sm">Sin movimientos</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <Banknote className="h-4 w-4 text-destructive" /> Devoluciones de dinero
+                <span className="ml-auto text-[12px] font-normal text-muted-foreground">Total <strong className="text-destructive text-sm">{fmt(reembolsos.reduce((s, r) => s + Number(r.monto), 0))}</strong></span>
+              </h3>
+              <div className="bg-card border border-border rounded overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[11px]">Fecha</TableHead>
+                      <TableHead className="text-[11px]">Motivo</TableHead>
+                      <TableHead className="text-[11px]">Venta</TableHead>
+                      <TableHead className="text-[11px]">Caja</TableHead>
+                      <TableHead className="text-[11px] text-right">Monto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reembolsos.map(r => (
+                      <TableRow key={r.id}>
+                        <TableCell className="text-[12px]">{fmtDate(r.created_at)}</TableCell>
+                        <TableCell className="text-[12px]">{ORIGEN_EXCEDENTE[r.origen]}</TableCell>
+                        <TableCell className="font-mono text-[11px]">{r.ventas?.folio ?? '—'}</TableCell>
+                        <TableCell className="text-[11px] text-muted-foreground">{r.turno_id ? 'Retiro de turno' : 'Sin turno'}</TableCell>
+                        <TableCell className="text-right text-[12px] font-semibold tabular-nums text-destructive">{fmt(Number(r.monto))}</TableCell>
+                      </TableRow>
+                    ))}
+                    {reembolsos.length === 0 && (
+                      <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground text-sm">Sin devoluciones de dinero</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div>
           <h3 className="text-sm font-semibold mb-2 text-success flex items-center gap-2">

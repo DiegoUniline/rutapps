@@ -182,3 +182,8 @@
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («CONFIRMO migraciones de prueba hasta el corte»)
 - **Decisión:** mientras la base nueva (`amybkerwkybffllaxpnz`) sea **de pruebas** y hasta el corte de producción, las migraciones **no destructivas** (crear/reemplazar funciones, vistas, columnas nuevas, recalcular datos de prueba) se aplican sin pedir `CONFIRMO` por cada una. Siguen requiriendo `CONFIRMO <acción>`: todo lo destructivo (DROP, DELETE masivo, quitar columnas/constraints/RLS), cualquier acción sobre la BD de producción (Lovable) y el corte mismo.
 - **Vence:** el día del corte (docs/migracion-corte.md).
+
+## D-032
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** cuando se elige «se le devolvió el dinero» (al cancelar o corregir una venta) y quien lo registra tiene un **turno de caja abierto**, se anota como **retiro** de ese turno («Devolución de dinero <folio>») y el arqueo lo resta. Si no tiene turno abierto, queda registrado con fecha y usuario (sin tocar caja) y se ve en estado de cuenta.
+- **Implementación:** tabla `cobro_excedentes` (saldo a favor y devoluciones con fecha/usuario/venta/turno), `_registrar_excedente`, `saldos_a_favor_empresa()`; estado de cuenta muestra movimientos de saldo a favor y devoluciones de dinero (migración 20261120000000).
