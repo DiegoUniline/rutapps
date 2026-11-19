@@ -95,3 +95,4 @@
 2026-11-16 · desarrollador · D-018 dueño desconectó el repo de Lovable (Lovable ya no empuja a main); front sin ref fijo (build verificado contra amybkerwkybffllaxpnz, 0 refs al proyecto viejo en dist; typecheck:strict y 382 tests OK)
 2026-11-19 · desarrollador · D-018 kit de corte: scripts/migracion/recargar-datos.sh (recarga de datos en una transacción con validación de tablas/columnas), copiar-storage.mjs + función temporal export-storage-lovable.ts; runbook docs/migracion-corte.md
 2026-11-19 · dueño · esquema del origen congelado hasta el corte (solo crecen datos); repo desconectado de Lovable
+2026-11-19 · desarrollador · D-018 13 crons recreados en amybkerwkybffllaxpnz apuntando a la URL nueva, todos inactive (verificado cron.job); vault.sh para secretos de Vault; wrangler.jsonc para Cloudflare

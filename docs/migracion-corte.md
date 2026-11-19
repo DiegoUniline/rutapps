@@ -11,7 +11,7 @@ Repo: `DiegoUniline/rutapps` (desconectado de Lovable el 2026-11-16).
 | Secrets internos (SITE_URL, CRON_SECRET, TIENDA_JWT_SECRET, BILLING_BRIDGE_INTERNAL_SECRET) | ✅ |
 | IA → Gemini, correo → Resend, front sin ref fijo | ✅ código |
 | Secrets de proveedores | ❌ al corte |
-| Crons | ❌ falta extraer lista real del backup |
+| Crons (13, copiados de `cron.job` del origen) | ✅ creados APAGADOS (`scripts/migracion/crons.sql`) |
 | Storage (archivos) | ❌ `scripts/migracion/copiar-storage.mjs` listo |
 | Auth (URLs, SMTP) | ❌ |
 | Cloudflare Pages | ❓ |
@@ -30,7 +30,12 @@ f="$HOME/Downloads/<backup_nuevo>.backup"
 ```bash
 OLD_URL=https://pkdwemunxxpafpmiqxiq.supabase.co OLD_ANON_KEY=<anon viejo> MIGRACION_TOKEN=<token> NEW_URL=https://amybkerwkybffllaxpnz.supabase.co NEW_SERVICE_ROLE_KEY=<service_role nuevo> node scripts/migracion/copiar-storage.mjs
 ```
-Después: secrets de proveedores, crons, webhooks (Stripe, Openpay, Evolution/WhatsApp, Facturama) a `https://amybkerwkybffllaxpnz.supabase.co/functions/v1/...`, DNS `rutapp.mx` → Cloudflare Pages.
+Después:
+```bash
+SERVICE_ROLE_KEY='<service_role nuevo>' ./scripts/migracion/vault.sh "$db"
+psql -d "$db" -c "select cron.alter_job(jobid, active := true) from cron.job;"
+```
+Y: secrets de proveedores, webhooks (Stripe, Openpay, Evolution/WhatsApp, Facturama) a `https://amybkerwkybffllaxpnz.supabase.co/functions/v1/...`, DNS `rutapp.mx` → Cloudflare Pages.
 
 ## Auth (dashboard → Authentication → URL Configuration / SMTP)
 - Site URL: `https://rutapp.mx`
@@ -40,3 +45,7 @@ Después: secrets de proveedores, crons, webhooks (Stripe, Openpay, Evolution/Wh
 
 ## Storage
 Buckets privados (`csf`, `cfdi-archivos`, `recibos-cobros`, `tienda-assets`, `email-assets`, `wa-bot-reports`) solo se leen con service_role del origen → función temporal `scripts/migracion/export-storage-lovable.ts` publicada en Lovable con nombre `migracion-export-storage`; borrarla al terminar. `database_export_*` se omiten.
+
+## Notas
+- `fn_notify_empresa_alta` (trigger en `empresas`) manda webhook a hadesai.com.mx: altas de empresa hechas en el entorno de prueba también lo disparan.
+- Crons que leen Vault: `create-invoice-reminder-daily` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) y `billing-align-bridge-aug2026-daily` (BILLING_BRIDGE_INTERNAL_SECRET) → `vault.sh`.
