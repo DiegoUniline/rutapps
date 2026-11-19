@@ -1,15 +1,20 @@
 # Estado del proyecto — DOCUMENTO VIVO
 > Se lee al iniciar cada sesión. Se actualiza tras decisiones confirmadas o cambios verificados (no por consultas).
 
-**Última actualización:** 2026-10-20 · **Agente:** desarrollador
+**Última actualización:** 2026-11-19 · **Agente:** auditor/desarrollador
 
 ## Dónde vamos
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
-- **Módulo en curso:** —
+- **Módulo en curso:** Migración fuera de Lovable (D-018) + corrección pedido↔entrega↔inventario↔cobros (auditoría 2026-11-19)
 - **Última pregunta:** —
-- **Siguiente paso exacto:** publicar en Lovable (#162 #163 #164) y probar editar venta y ajustar entrega; re-medir huecos G1–G5 en 7 días (0 casos nuevos); fase 3b (editar entregas antes de cargar) y saldo a favor por pago de más (D-008) pendientes. Pendiente: P-002
+- **Siguiente paso exacto:** decidir datos históricos (cobros sin aplicar, pagado > total, saldos negativos); luego orden de trabajo por fases: F0 seguridad RPC → F1 saldo único + saldo a favor (D-008, D-020, D-021) → F2 pedido↔entrega → F3 inventario (D-022). Corte a Supabase propio: `docs/migracion-corte.md`.
 
 ## Decisiones recientes (últimas 10)
+- [D-022](./decisiones.md#d-022) 2026-11-19 · Reasignar entrega o cambiar camión siempre mueve stock.
+- [D-021](./decisiones.md#d-021) 2026-11-19 · Borrador solo al inicio; confirmada no regresa a borrador, se edita con Editar venta.
+- [D-020](./decisiones.md#d-020) 2026-11-19 · Cancelar venta con pagos pregunta: cancelar pago o saldo a favor.
+- [D-019](./decisiones.md#d-019) 2026-11-19 · Lo entregado sigue el precio vivo del pedido.
+- [D-018](./decisiones.md#d-018) 2026-11-16 · Salir de Lovable: Supabase propio `amybkerwkybffllaxpnz` + Cloudflare; repo desconectado, se trabaja en `main`; integración GitHub→Supabase activa.
 - [D-017](./decisiones.md#d-017) 2026-11-04 · Restaurar las 48 suscripciones Stripe canceladas sin cobro inicial, conservando fecha/hora de corte original; ejecutado y verificado 48/48.
 - [D-004](./decisiones.md#d-004) 2026-10-19 · Ventas sin `fecha_vencimiento` vencen a los días de crédito del cliente.
 - [D-003](./decisiones.md#d-003) 2026-10-19 · Plan de corrección PR A/B; relleno de `fecha_entrega` con `validado_at` → `updated_at`.
