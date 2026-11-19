@@ -559,7 +559,7 @@ export function evaluatePromociones(
             producto_id: item.producto_id,
             ...conLinea(item),
             descuento: r2(totalGratis * precioGratis),
-            descripcion: `${cantGratis}x gratis (${promo.cantidad_minima || 1}×${(promo.cantidad_minima || 1) - cantGratis}) — ${promo.nombre}`,
+            descripcion: `${totalGratis}x gratis (${promo.cantidad_minima || 1}×${(promo.cantidad_minima || 1) - cantGratis}) — ${promo.nombre}`,
             producto_gratis_id: freeProductId,
             cantidad_gratis: totalGratis,
           });
