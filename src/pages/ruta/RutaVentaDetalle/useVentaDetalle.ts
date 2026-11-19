@@ -25,6 +25,8 @@ import { buildSalePricingSnapshot, calculateSaleLineAmounts } from '@/lib/salePr
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { saldoVentaTrasEditar } from '@/lib/ventaEditBalance';
 import { resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
+import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
+import { ejecutarConExcedente, type RpcSinTipos as RpcEditar } from '@/lib/excedente';
 
 export function useVentaDetalle() {
   const { id } = useParams();
@@ -33,6 +35,7 @@ export function useVentaDetalle() {
 
   const { user, empresa, profile } = useAuth();
   const queryClient = useQueryClient();
+  const { pedirDestino, excedenteDialog } = useExcedentePrompt();
   const { data: venta, isLoading } = useVenta(id);
 
   const [view, setView] = useState<View>('detalle');
@@ -388,7 +391,12 @@ export function useVentaDetalle() {
           p_header: { notas: editNotas || null },
         };
         if (navigator.onLine) {
-          const { error: rpcErr } = await (supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ error: { message: string } | null }>)('editar_venta', args);
+          // D-025: si el nuevo total queda abajo de lo pagado, se pregunta qué hacer con el excedente.
+          const { error: rpcErr, cancelado } = await ejecutarConExcedente(excedente => (supabase.rpc as unknown as RpcEditar)('editar_venta', {
+            ...args,
+            p_header: { ...args.p_header, ...(excedente ? { excedente } : {}) },
+          }), pedirDestino);
+          if (cancelado) { toast.info('No se guardó: la edición sigue abierta.'); return; }
           if (rpcErr) throw new Error(rpcErr.message);
         } else {
           await queueOperation('rpc:editar_venta', 'rpc', args, 'p_venta_id');
@@ -1104,6 +1112,7 @@ export function useVentaDetalle() {
     // Lotes en edición
     manejaLotesEmpresa, productoManejaLote, lotePendienteEdit, setEditLineaLotes, almacenLotesBase,
     handleSaveEdits, initCobrar, updateCuentaMonto, liquidarTodas, handleCobrar,
+    excedenteDialog,
     handleCancelar, handleVolverBorrador, handleWhatsAppSend, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta,
   };
 }

@@ -17,6 +17,9 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel, type CerradoSnapshot } from '@/lib/ventaCerrada';
+import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
+import { ejecutarConExcedente } from '@/lib/excedente';
+import type { RpcSinTipos as RpcCerrar } from '@/lib/excedente';
 
 const EntregaFormPage = lazy(() => import('./EntregaFormPage'));
 
@@ -25,6 +28,7 @@ export default function PedidoPendienteDetailPage() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
   const qc = useQueryClient();
+  const { pedirDestino, excedenteDialog } = useExcedentePrompt();
   const crearEntrega = useCrearEntrega();
   const entregaExpress = useEntregaExpress();
   const { fmt: fmtC } = useCurrency();
@@ -118,10 +122,12 @@ export default function PedidoPendienteDetailPage() {
     setCerrarBusy(true);
     try {
       const { data: userRes } = await supabase.auth.getUser();
-      const { error } = await supabase.rpc('cerrar_pedido_parcial', {
+      const { error, cancelado } = await ejecutarConExcedente(excedente => (supabase.rpc as unknown as RpcCerrar)('cerrar_pedido_parcial', {
         p_venta_id: (pedido as any).id,
         p_user_id: userRes.user?.id ?? null,
-      } as any);
+        ...(excedente ? { p_excedente: excedente } : {}),
+      }), pedirDestino);
+      if (cancelado) { toast.info('No se cerró el pedido.'); return; }
       if (error) throw error;
       toast.success('Pedido cerrado. Ya no se aceptarán más entregas.');
       setCerrarOpen(false);
@@ -246,6 +252,7 @@ export default function PedidoPendienteDetailPage() {
 
   return (
     <div className="min-h-full">
+      {excedenteDialog}
       {/* Header */}
       <div className="bg-card border-b border-border px-5 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">

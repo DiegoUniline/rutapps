@@ -8,6 +8,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from '@/components/ui/checkbox';
 import { usePermisos } from '@/hooks/usePermisos';
 import { isCerradaParcial, sumCobrosActivos } from '@/lib/ventaCerrada';
+import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
+import { ejecutarConExcedente } from '@/lib/excedente';
+import type { RpcSinTipos as RpcCerrar } from '@/lib/excedente';
 
 interface Props {
   venta: any;
@@ -26,6 +29,7 @@ interface Props {
  */
 export function CerrarPedidoButton({ venta, fmt, compact = false }: Props) {
   const qc = useQueryClient();
+  const { pedirDestino, excedenteDialog } = useExcedentePrompt();
   const { hasPermiso } = usePermisos();
   const [open, setOpen] = useState(false);
   const [ack, setAck] = useState(false);
@@ -90,10 +94,12 @@ export function CerrarPedidoButton({ venta, fmt, compact = false }: Props) {
     setBusy(true);
     try {
       const { data: userRes } = await supabase.auth.getUser();
-      const { error } = await supabase.rpc('cerrar_pedido_parcial', {
+      const { error, cancelado } = await ejecutarConExcedente(excedente => (supabase.rpc as unknown as RpcCerrar)('cerrar_pedido_parcial', {
         p_venta_id: venta.id,
         p_user_id: userRes.user?.id ?? null,
-      } as any);
+        ...(excedente ? { p_excedente: excedente } : {}),
+      }), pedirDestino);
+      if (cancelado) { toast.info('No se cerró el pedido.'); return; }
       if (error) throw error;
       toast.success('Pedido cerrado a lo entregado.');
       setOpen(false);
@@ -113,6 +119,7 @@ export function CerrarPedidoButton({ venta, fmt, compact = false }: Props) {
 
   return (
     <>
+      {excedenteDialog}
       <Button
         size="sm"
         variant="outline"

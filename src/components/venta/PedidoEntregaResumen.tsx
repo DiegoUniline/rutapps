@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { usePermisos } from '@/hooks/usePermisos';
 import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel } from '@/lib/ventaCerrada';
+import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
+import { ejecutarConExcedente } from '@/lib/excedente';
+import type { RpcSinTipos as RpcCerrar } from '@/lib/excedente';
 
 interface Props {
   venta: any;
@@ -23,6 +26,7 @@ interface Props {
 export function PedidoEntregaResumen({ venta, fmt }: Props) {
   const { hasPermiso } = usePermisos();
   const qc = useQueryClient();
+  const { pedirDestino, excedenteDialog } = useExcedentePrompt();
   const [openCerrar, setOpenCerrar] = useState(false);
   const [ack, setAck] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -130,6 +134,7 @@ export function PedidoEntregaResumen({ venta, fmt }: Props) {
   const saldoEntrega = Math.max(0, totalEntregado - cobrado);
   return (
     <div className="space-y-2">
+      {excedenteDialog}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div className="bg-card border border-border rounded-xl p-3 space-y-1.5">
           <div className="flex items-center gap-1.5">
@@ -177,10 +182,12 @@ export function PedidoEntregaResumen({ venta, fmt }: Props) {
             setBusy(true);
             try {
               const { data: userRes } = await supabase.auth.getUser();
-              const { error } = await supabase.rpc('cerrar_pedido_parcial', {
+              const { error, cancelado } = await ejecutarConExcedente(excedente => (supabase.rpc as unknown as RpcCerrar)('cerrar_pedido_parcial', {
                 p_venta_id: venta.id,
                 p_user_id: userRes.user?.id ?? null,
-              } as any);
+                ...(excedente ? { p_excedente: excedente } : {}),
+              }), pedirDestino);
+              if (cancelado) { toast.info('No se cerró el pedido.'); return; }
               if (error) throw error;
               toast.success('Pedido cerrado a lo entregado.');
               setOpenCerrar(false);

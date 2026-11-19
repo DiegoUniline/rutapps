@@ -125,7 +125,7 @@ export const COLUMN_SELECTS: Record<string, string> = {
  */
 export const COLUMN_SELECTS_V2: Record<string, string> = {
   ventas: 'id,empresa_id,folio,tipo,status,cliente_id,vendedor_id,condicion_pago,tarifa_id,almacen_id,fecha,fecha_entrega,entrega_inmediata,notas,subtotal,descuento_total,iva_total,ieps_total,total,saldo_pendiente,pedido_origen_id,requiere_factura,descuento_extra,descuento_extra_tipo,es_saldo_inicial,concepto,fecha_vencimiento,origen,politica_cobro,cerrado_at,total_efectivo,cerrado_snapshot,creado_por,created_at,updated_at',
-  cobros: 'id,empresa_id,cliente_id,monto,fecha,metodo_pago,referencia,notas,user_id,status,created_at,updated_at',
+  cobros: 'id,empresa_id,cliente_id,monto,fecha,metodo_pago,referencia,notas,user_id,status,saldo_favor_monto,reembolso_monto,created_at,updated_at',
   visitas: 'id,empresa_id,cliente_id,user_id,tipo,motivo,notas,gps_lat,gps_lng,fecha,venta_id,created_at',
   entregas: 'id,empresa_id,folio,pedido_id,vendedor_id,cliente_id,almacen_id,fecha,status,notas,vendedor_ruta_id,fecha_asignacion,fecha_carga,orden_entrega,fecha_entrega,motivo_no_entrega,created_at,updated_at',
   devoluciones: 'id,empresa_id,vendedor_id,cliente_id,carga_id,tipo,fecha,notas,user_id,venta_id,almacen_destino_id,reembolso_efectivo,reembolso_metodo,created_at',

@@ -5,6 +5,7 @@
  *   disponible = emitido − usado
  * donde
  *   emitido = Σ devolucion_lineas.monto_credito con accion = 'nota_credito'
+ *           + Σ cobros.saldo_favor_monto (excedentes de correcciones, F1a)
  *   usado   = Σ pagos/cobros con metodo_pago = SALDO_FAVOR_METODO
  *
  * Estas funciones son la ÚNICA fuente de verdad del cálculo; las usan tanto

@@ -8,6 +8,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
+import { parseExcedente, type DestinoExcedente } from '@/lib/excedente';
+import type { RpcSinTipos as RpcCerrar } from '@/lib/excedente';
 
 interface Props {
   open: boolean;
@@ -36,6 +39,7 @@ interface Elegible {
  */
 export function BulkCerrarPedidosDialog({ open, onOpenChange, ventaIds, fmt, onDone }: Props) {
   const qc = useQueryClient();
+  const { pedirDestino, excedenteDialog } = useExcedentePrompt();
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<{ elegibles: Elegible[]; noElegibles: number } | null>(null);
@@ -98,11 +102,22 @@ export function BulkCerrarPedidosDialog({ open, onOpenChange, ventaIds, fmt, onD
     let ok = 0, fail = 0;
     try {
       const { data: userRes } = await supabase.auth.getUser();
+      // Si algún pedido quedó con pago de más, se pregunta UNA vez qué hacer y se aplica a todos (D-025).
+      let destino: DestinoExcedente | undefined;
       for (const el of preview.elegibles) {
         try {
-          const { error } = await supabase.rpc('cerrar_pedido_parcial', {
+          const cerrar = (excedente?: DestinoExcedente) => (supabase.rpc as unknown as RpcCerrar)('cerrar_pedido_parcial', {
             p_venta_id: el.id, p_user_id: userRes.user?.id ?? null,
-          } as any);
+            ...(excedente ? { p_excedente: excedente } : {}),
+          });
+          let { error } = await cerrar(destino);
+          const info = parseExcedente(error?.message);
+          if (info && !destino) {
+            const elegido = await pedirDestino({ ...info, mensaje: `${info.mensaje} Lo que elijas se aplicará a todos los pedidos con excedente.` });
+            if (!elegido) { toast.info('Se detuvo el cierre masivo.'); break; }
+            destino = elegido;
+            ({ error } = await cerrar(destino));
+          }
           if (error) throw error;
           ok++;
         } catch (e) { console.error('bulk close', el.id, e); fail++; }
@@ -126,6 +141,7 @@ export function BulkCerrarPedidosDialog({ open, onOpenChange, ventaIds, fmt, onD
   return (
     <AlertDialog open={open} onOpenChange={(v) => { if (!busy) { onOpenChange(v); if (!v) setPreview(null); } }}>
       <AlertDialogContent className="max-w-2xl">
+        {excedenteDialog}
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-warning" />

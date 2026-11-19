@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, RotateCcw, Lock, ChevronRight } from 'lucide-react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, Lock, ChevronRight } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { phoneWithLada } from '@/lib/phoneWithLada';
@@ -104,7 +104,7 @@ function Header({ venta, onBack, showCancelChip, onCancelClick }: Props & { show
 }
 
 
-function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar, handleCancelar, handleVolverBorrador }: Props) {
+function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar, handleCancelar }: Props) {
   const { hasPermiso } = usePermisos();
   const actions: { icon: any; label: string; color: string; onClick: () => void }[] = [
     { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
@@ -119,9 +119,7 @@ function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPD
   if (venta.status === 'borrador' || editableConfirmada) {
     actions.push({ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar });
   }
-  if (venta.status === 'confirmado') {
-    actions.push({ icon: RotateCcw, label: 'A borrador', color: 'text-warning', onClick: handleVolverBorrador });
-  }
+  // D-021: una venta confirmada ya no regresa a borrador; se corrige con Editar.
 
   return (
     <div className="grid grid-cols-3 gap-1">

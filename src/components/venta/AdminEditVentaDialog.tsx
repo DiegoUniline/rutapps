@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Wrench } from 'lucide-react';
 import { calcularLineaAdmin } from '@/lib/adminEditVenta';
+import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
+import { ejecutarConExcedente } from '@/lib/excedente';
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 type RpcSinTipos = (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
@@ -41,6 +43,7 @@ interface Props {
  */
 export function AdminEditVentaDialog({ venta, lineas, onSaved }: Props) {
   const qc = useQueryClient();
+  const { pedirDestino, excedenteDialog } = useExcedentePrompt();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [rows, setRows] = useState<LineaEdit[]>([]);
@@ -93,7 +96,7 @@ export function AdminEditVentaDialog({ venta, lineas, onSaved }: Props) {
           descripcion: r.descripcion,
         };
       });
-      const { error } = await (supabase.rpc as unknown as RpcSinTipos)('editar_venta', {
+      const { error, cancelado } = await ejecutarConExcedente(excedente => (supabase.rpc as unknown as RpcSinTipos)('editar_venta', {
         p_venta_id: venta.id,
         p_lineas: pLineas,
         p_version: venta?.updated_at ?? null,
@@ -101,9 +104,11 @@ export function AdminEditVentaDialog({ venta, lineas, onSaved }: Props) {
           fecha: fecha || venta.fecha,
           condicion_pago: condicion,
           notas: notas || null,
+          ...(excedente ? { excedente } : {}),
         },
         p_promos: null,
-      });
+      }), pedirDestino);
+      if (cancelado) { toast.info('No se guardó la corrección.'); return; }
       if (error) throw new Error(error.message);
 
       qc.invalidateQueries({ queryKey: ['ventas'] });
@@ -128,6 +133,7 @@ export function AdminEditVentaDialog({ venta, lineas, onSaved }: Props) {
         <Wrench className="h-3 w-3" /> Corregir
       </Button>
 
+      {excedenteDialog}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto z-[60]">
           <DialogHeader>

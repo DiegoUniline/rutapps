@@ -26,6 +26,8 @@ import { toast } from 'sonner';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 import { usePermisos } from '@/hooks/usePermisos';
+import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
+import { ejecutarConExcedente } from '@/lib/excedente';
 
 /** Campos de ventas que el tipo Venta no declara y usa la edición de confirmadas. */
 type VentaEdicionCampos = { updated_at?: string; cerrado_at?: string | null; descuento_extra?: number; descuento_extra_tipo?: string };
@@ -83,6 +85,7 @@ export function useVentaForm() {
   const deleteLinea = useDeleteVentaLinea();
   const deleteVenta = useDeleteVenta();
   const queryClient = useQueryClient();
+  const { pedirDestino, excedenteDialog } = useExcedentePrompt();
   // En una venta existente primero cargamos su detalle aislado. Los catálogos
   // completos (que pueden contener miles de filas) arrancan después y ya no
   // compiten con la información que el usuario necesita ver de inmediato.
@@ -1025,13 +1028,14 @@ export function useVentaForm() {
         const pPromos = promoPersistHabilitado(empresa?.licencia)
           ? buildPromoAplicadaRows({ ventaId, promoResults, effectiveByProduct: promoEffectiveByLine, lineIdByProduct: lineIdByKey, lineTotalByProduct: lineTotalByKey })
           : null;
-        const { error: rpcErr } = await (supabase.rpc as unknown as RpcSinTipos)('editar_venta', {
+        const { error: rpcErr, cancelado } = await ejecutarConExcedente(excedente => (supabase.rpc as unknown as RpcSinTipos)('editar_venta', {
           p_venta_id: ventaId,
           p_lineas: pLineas,
           p_version: formExt.updated_at ?? null,
-          p_header: { notas: form.notas ?? null, descuento_extra: formExt.descuento_extra ?? 0, descuento_extra_tipo: formExt.descuento_extra_tipo ?? 'porcentaje' },
+          p_header: { notas: form.notas ?? null, descuento_extra: formExt.descuento_extra ?? 0, descuento_extra_tipo: formExt.descuento_extra_tipo ?? 'porcentaje', ...(excedente ? { excedente } : {}) },
           p_promos: pPromos,
-        });
+        }), pedirDestino);
+        if (cancelado) { toast.info('No se guardó: la edición sigue abierta.'); return ventaId; }
         if (rpcErr) throw new Error(rpcErr.message);
         toast.success('Venta actualizada: stock y saldo recalculados');
         setEditandoConfirmada(false);
@@ -1322,6 +1326,7 @@ export function useVentaForm() {
     },
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
+    excedenteDialog,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
     pagosData, totalPagado, saldoPendiente, totals: displayTotals, promoResults, tarifaRules,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,

@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import { lineaVentaParaProducto, type ProductoAjuste } from '@/lib/ajusteEntrega';
+import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
+import { ejecutarConExcedente } from '@/lib/excedente';
 import type { TarifaLineaRule } from '@/lib/priceResolver';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -32,6 +34,7 @@ const PRODUCTO_COLS = 'id, nombre, codigo, precio_principal, costo, costo_incluy
  */
 export function AjustarEntregaDialog({ entregaId, className, onDone }: { entregaId: string; className?: string; onDone?: () => void }) {
   const qc = useQueryClient();
+  const { pedirDestino, excedenteDialog } = useExcedentePrompt();
   const { empresa } = useAuth();
   const [open, setOpen] = useState(false);
   const [filas, setFilas] = useState<Fila[]>([]);
@@ -96,9 +99,11 @@ export function AjustarEntregaDialog({ entregaId, className, onDone }: { entrega
         cantidad_entregada: f.cantidad,
         ...(f.nuevo ? { unidad_id: f.nuevo.unidad_venta_id ?? null, venta_linea: lineaVentaParaProducto(f.nuevo, base.rules, base.listaId, f.cantidad) } : {}),
       }));
-      const { error } = await (supabase.rpc as unknown as RpcSinTipos)('ajustar_entrega', {
+      const { error, cancelado } = await ejecutarConExcedente(excedente => (supabase.rpc as unknown as RpcSinTipos)('ajustar_entrega', {
         p_entrega_id: entregaId, p_lineas: pLineas, p_destino: destino, p_version: base.updated_at,
-      });
+        ...(excedente ? { p_excedente: excedente } : {}),
+      }), pedirDestino);
+      if (cancelado) { toast.info('No se guardó el ajuste.'); return; }
       if (error) throw new Error(error.message);
       toast.success('Entrega ajustada: stock, pedido y saldo actualizados');
       ['entrega', 'entregas-list', 'venta', 'ventas', 'ajustar-entrega'].forEach(k => qc.invalidateQueries({ queryKey: [k] }));
@@ -115,6 +120,7 @@ export function AjustarEntregaDialog({ entregaId, className, onDone }: { entrega
 
   return (
     <>
+      {excedenteDialog}
       <Button size="sm" variant="outline" className={className ?? 'h-8 text-xs gap-1.5'} onClick={() => setOpen(true)}>
         <Wrench className="h-3.5 w-3.5" /> Ajustar entrega
       </Button>

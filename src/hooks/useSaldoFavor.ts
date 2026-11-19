@@ -10,7 +10,9 @@ import { saldoFavorDisponible, SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
  *
  *   emitido = Σ devolucion_lineas.monto_credito con accion='nota_credito'
  *             de las devoluciones del cliente
- *   usado   = Σ cobros.monto del cliente con metodo_pago='saldo_favor'
+ *           + Σ cobros.saldo_favor_monto (excedentes que quedaron a favor, F1a)
+ *   usado   = Σ cobros.monto del cliente con metodo_pago='saldo_favor' (activos)
+ *   Misma regla que la función SQL saldo_a_favor_cliente.
  */
 export function useSaldoFavor(clienteId?: string | null) {
   const { empresa } = useAuth();
@@ -38,10 +40,14 @@ export function useSaldoFavor(clienteId?: string | null) {
       .filter((l: any) => devIds.has(l.devolucion_id) && l.accion === 'nota_credito')
       .reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
 
-    const usado = (cobros ?? [])
-      .filter((c: any) => c.cliente_id === clienteId && c.metodo_pago === SALDO_FAVOR_METODO)
+    // F1a: los cobros cancelados no cuentan; lo que una corrección dejó a favor (cobros.saldo_favor_monto) suma.
+    const activos = (cobros ?? []).filter((c: any) => c.cliente_id === clienteId && (c.status ?? 'activo') !== 'cancelado');
+    const emitidoCobros = activos.reduce((s: number, c: any) => s + (Number(c.saldo_favor_monto) || 0), 0);
+    const usado = activos
+      .filter((c: any) => c.metodo_pago === SALDO_FAVOR_METODO)
       .reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
 
-    return { disponible: saldoFavorDisponible(emitido, usado), emitido, usado };
+    const emitidoTotal = emitido + emitidoCobros;
+    return { disponible: saldoFavorDisponible(emitidoTotal, usado), emitido: emitidoTotal, usado };
   }, [clienteId, devIdsList, devLineas, cobros]);
 }
