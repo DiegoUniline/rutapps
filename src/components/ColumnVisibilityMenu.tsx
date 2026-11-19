@@ -7,6 +7,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { CLASE_ITEM_MENU } from '@/components/shared/MenuAcciones';
 
 export interface ColumnDef {
   key: string;
@@ -39,11 +40,13 @@ interface Props {
   groupOrder?: string[];
   /** Compact trigger for dense toolbars. */
   compact?: boolean;
+  /** Renglón del menú «⋯». */
+  item?: boolean;
 }
 
 
 export function ColumnVisibilityMenu({
-  columns, visible, onToggle, onShowAll, onReset, presets, onApplyPreset, groupOrder, compact,
+  columns, visible, onToggle, onShowAll, onReset, presets, onApplyPreset, groupOrder, compact, item,
 }: Props) {
 
   const visibleCount = columns.filter(c => c.required || visible[c.key]).length;
@@ -89,7 +92,7 @@ export function ColumnVisibilityMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className={cn(
+          className={item ? CLASE_ITEM_MENU : cn(
             "flex items-center gap-1.5 rounded-lg border bg-card text-foreground hover:bg-accent transition-colors shrink-0",
             compact ? "h-7 px-2 text-[11px] font-medium" : "btn-odoo-secondary"
           )}

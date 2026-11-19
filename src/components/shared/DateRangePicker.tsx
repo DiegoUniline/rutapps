@@ -28,6 +28,8 @@ export interface DateRangePickerProps {
   compact?: boolean;
   /** Optional control area rendered at the top of the same date popover. */
   headerContent?: React.ReactNode;
+  /** Se dibuja como el segmento izquierdo de la barra central de búsqueda. */
+  segmento?: boolean;
 }
 
 
@@ -61,6 +63,7 @@ export function DateRangePicker({
   placeholder = 'Seleccionar rango',
   compact,
   headerContent,
+  segmento,
 }: DateRangePickerProps) {
 
   const [open, setOpen] = React.useState(false);
@@ -135,7 +138,7 @@ export function DateRangePicker({
   const hasValue = !!(from || to);
 
   return (
-    <div className={cn('inline-flex items-center gap-1', className)}>
+    <div className={cn('inline-flex items-center', segmento ? 'h-full bg-accion text-accion-foreground' : 'gap-1', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -143,7 +146,8 @@ export function DateRangePicker({
             size="sm"
             className={cn(
               "gap-2 font-normal bg-primary text-primary-foreground hover:bg-primary/90",
-              compact ? "h-7 px-2 text-[11px] gap-1" : "h-9"
+              compact ? "h-7 px-2 text-[11px] gap-1" : "h-9",
+              segmento && "h-full rounded-none px-3 text-[12px] font-medium bg-accion text-accion-foreground hover:bg-white/10 shadow-none"
             )}
           >
             <CalendarIcon className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
@@ -249,10 +253,13 @@ export function DateRangePicker({
         <button
           type="button"
           onClick={handleClearAll}
-          className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className={cn(
+            "inline-flex items-center justify-center rounded-md transition-colors",
+            segmento ? "h-6 w-6 mr-1 text-accion-foreground/70 hover:bg-white/10 hover:text-accion-foreground" : "h-7 w-7 text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
           aria-label="Limpiar rango"
         >
-          <X className="h-4 w-4" />
+          <X className={segmento ? "h-3.5 w-3.5" : "h-4 w-4"} />
         </button>
       )}
     </div>

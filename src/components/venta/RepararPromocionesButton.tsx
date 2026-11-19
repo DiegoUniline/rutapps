@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CLASE_ITEM_MENU } from '@/components/shared/MenuAcciones';
 import { Wand2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -30,7 +31,7 @@ interface Fila {
  * líneas. Los totales y el saldo del cliente se recalculan con los triggers
  * existentes. Es idempotente: una venta con promociones ya registradas se omite.
  */
-export function RepararPromocionesButton({ compact }: { compact?: boolean }) {
+export function RepararPromocionesButton({ compact, item }: { compact?: boolean; /** Renglón del menú «⋯». */ item?: boolean }) {
   const isSuper = useIsSuperAdmin();
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
@@ -70,7 +71,7 @@ export function RepararPromocionesButton({ compact }: { compact?: boolean }) {
       <button
         type="button"
         onClick={() => { setResult(null); setOpen(true); }}
-        className={cn(
+        className={item ? CLASE_ITEM_MENU : cn(
           "flex items-center gap-1.5 rounded-lg border bg-card text-foreground hover:bg-accent transition-colors shrink-0 whitespace-nowrap",
           compact ? "h-7 px-2 text-[11px] font-medium" : "btn-odoo-secondary"
         )}

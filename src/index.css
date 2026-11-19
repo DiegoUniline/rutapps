@@ -58,6 +58,8 @@ html, body, #root {
 
     /* Rutapp corporate orange #ff7a00 — secondary brand accent */
     --brand-orange: 29 100% 50%;
+    --accion: 222 47% 20%;
+    --accion-foreground: 0 0% 100%;
     --brand-orange-foreground: 0 0% 100%;
 
     --destructive: 0 65% 52%;
@@ -143,6 +145,8 @@ html, body, #root {
     --accent-foreground: 215 100% 65%;
 
     --brand-orange: 29 100% 55%;
+    --accion: 217 45% 32%;
+    --accion-foreground: 0 0% 100%;
     --brand-orange-foreground: 0 0% 100%;
 
     --destructive: 0 65% 55%;

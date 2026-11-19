@@ -123,3 +123,4 @@
 2026-11-19 · desarrollador · D-027 buscador de ventas/pedidos solo con stock y sin tope de 10 resultados
 2026-11-19 · qa · Auditoría VTA-0001 (venta directa, Almacén Principal): stock SKU-0269 100→0→50 y SKU-0229 100→0→90 cuadran con kardex (salida 100 c/u, entrada 50/90) y productos.cantidad; total 3789.75 = Σ líneas; cobro 8835 aplicado 3789.75 + reembolso 5045.25 (excedente_reembolso en historial); promocion_aplicada correcta (Volumen 12+ 193.75; 3X2 46.50). Hallazgos: caché de pagos/promos tras editar (corregido), nota de kardex 'Reverso venta' en ediciones (pendiente), descripción '1x gratis' con cantidad_gratis 3 (pendiente)
 2026-11-19 · auditor · D-028 Editar venta permite cliente/fecha/condición/vendedor; pagos se mueven con la venta (dueño)
+2026-11-19 · desarrollador · Barra de listas rediseñada (opción A): buscador central con fecha y panel Filtros; acciones de Ventas en menú ⋯; token de color accion (azul marino)

@@ -4,7 +4,8 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2, Ban, Lock, Loader2 } from 'lucide-react';
+import { Plus, Banknote, List, Package, FileSpreadsheet, FileText, Printer, Trash2, Ban, Lock, Loader2 } from 'lucide-react';
+import { MenuAcciones, CLASE_ITEM_MENU } from '@/components/shared/MenuAcciones';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -435,12 +436,16 @@ export default function VentasListPage() {
     </div>
   );
 
+  const datosExport = () => ({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0), saldo_pendiente: ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0) } });
+  const exportarExcel = () => exportToExcel(datosExport());
+  const exportarPDF = () => exportToPDF(datosExport());
+
   return (
     <ListPage>
       <ListPage.Toolbar>
       {!isMobile && (
         <div className="border-b border-border -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex items-center justify-between">
+          <div className="flex items-end justify-between">
             <nav className="flex gap-6" role="tablist" aria-label="Vista de ventas">
               <button
                 role="tab"
@@ -470,6 +475,36 @@ export default function VentasListPage() {
               <Package className="h-4 w-4" /> Productos
               </button>
             </nav>
+            <div className="flex items-center gap-1.5 pb-1.5">
+              <HelpButton compact title={HELP.ventas.title} sections={HELP.ventas.sections} />
+              <VideoHelpButton compact module="ventas" />
+              <MenuAcciones>
+                <button type="button" data-cierra-menu onClick={exportarExcel} className={CLASE_ITEM_MENU}>
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" /> Exportar Excel
+                </button>
+                <button type="button" data-cierra-menu onClick={exportarPDF} className={CLASE_ITEM_MENU}>
+                  <FileText className="h-3.5 w-3.5 text-red-500" /> Exportar PDF
+                </button>
+                <button type="button" data-cierra-menu onClick={() => navigate('/finanzas/aplicar-pagos')} className={CLASE_ITEM_MENU}>
+                  <Banknote className="h-3.5 w-3.5" /> Aplicar pagos
+                </button>
+                <RepararPromocionesButton item />
+                <div className="border-t border-border my-1" />
+                <ColumnVisibilityMenu
+                  item
+                  columns={VENTAS_TABLE_COLUMNS}
+                  visible={columnVisibility}
+                  onToggle={toggleColumn}
+                  onShowAll={() => setAll(true)}
+                  onReset={reset}
+                />
+              </MenuAcciones>
+              {canCreate && (
+                <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-accion text-accion-foreground hover:bg-accion/90 text-[12px] font-semibold shadow-sm shrink-0">
+                  <Plus className="h-3.5 w-3.5" /> Nueva venta
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -490,6 +525,8 @@ export default function VentasListPage() {
         onDateFromChange={v => { setDateFrom(v); setPage(1); }}
         onDateToChange={v => { setDateTo(v); setPage(1); }}
       >
+        {isMobile && (
+          <>
         <div className="flex items-center gap-1 shrink-0">
           <HelpButton compact title={HELP.ventas.title} sections={HELP.ventas.sections} />
           <VideoHelpButton compact module="ventas" />
@@ -507,8 +544,8 @@ export default function VentasListPage() {
         {!isMobile && (
           <ExportButton
             compact
-            onExcel={() => exportToExcel({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0), saldo_pendiente: ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0) } })}
-            onPDF={() => exportToPDF({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0), saldo_pendiente: ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0) } })}
+            onExcel={exportarExcel}
+            onPDF={exportarPDF}
           />
         )}
         <RepararPromocionesButton compact />
@@ -520,6 +557,8 @@ export default function VentasListPage() {
           <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-7 px-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[11px] font-medium shrink-0">
             <Plus className="h-3 w-3" /> Nueva venta
           </button>
+        )}
+          </>
         )}
       </OdooFilterBar>
 
