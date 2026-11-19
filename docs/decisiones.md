@@ -177,3 +177,8 @@
 - **Decisión:** una entrega **asignada, cargada o en ruta** permite **quitar productos** (solo bajar cantidades), **reasignar** repartidor (mueve el stock de camión, D-022) y **cancelar**. Al quitar o cancelar, el sistema **pregunta** a dónde va la mercancía: **se queda en el camión** (se reconcilia en la descarga) o **regresa a bodega** (traspaso camión → almacén de surtido). Mismo criterio que D-024.
 - **Límite:** productos con lote solo pueden quedarse en el camión (se regresan con la descarga).
 - **Implementación:** `ajustar_entrega_cargada`, `cancelar_entrega_cargada` (migración 20261119234000).
+
+## D-031
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («CONFIRMO migraciones de prueba hasta el corte»)
+- **Decisión:** mientras la base nueva (`amybkerwkybffllaxpnz`) sea **de pruebas** y hasta el corte de producción, las migraciones **no destructivas** (crear/reemplazar funciones, vistas, columnas nuevas, recalcular datos de prueba) se aplican sin pedir `CONFIRMO` por cada una. Siguen requiriendo `CONFIRMO <acción>`: todo lo destructivo (DROP, DELETE masivo, quitar columnas/constraints/RLS), cualquier acción sobre la BD de producción (Lovable) y el corte mismo.
+- **Vence:** el día del corte (docs/migracion-corte.md).
