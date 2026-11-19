@@ -26,6 +26,8 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 import { saldoVentaTrasEditar } from '@/lib/ventaEditBalance';
 import { resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
 import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
+import { useCancelarPagoPrompt } from '@/components/venta/CancelarPagoDialog';
+import { cancelarVenta, type DestinoPagoCancelacion } from '@/lib/cancelarVenta';
 import { ejecutarConExcedente, type RpcSinTipos as RpcEditar } from '@/lib/excedente';
 
 export function useVentaDetalle() {
@@ -36,6 +38,7 @@ export function useVentaDetalle() {
   const { user, empresa, profile } = useAuth();
   const queryClient = useQueryClient();
   const { pedirDestino, excedenteDialog } = useExcedentePrompt();
+  const { pedirDestinoPago, cancelarPagoDialog } = useCancelarPagoPrompt();
   const { data: venta, isLoading } = useVenta(id);
 
   const [view, setView] = useState<View>('detalle');
@@ -756,39 +759,28 @@ export function useVentaDetalle() {
     }
     setSaving(true);
     try {
-      const prevStatus = venta.status;
       if (navigator.onLine) {
-        const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
-        if (error) throw error;
-        // Cancel associated cobros
-        const { data: apps } = await supabase.from('cobro_aplicaciones').select('id, cobro_id, monto_aplicado').eq('venta_id', venta.id);
-        if (apps && apps.length > 0) {
-          const cobroIds = [...new Set(apps.map(a => a.cobro_id))];
-          for (const cid of cobroIds) {
-            const { data: allApps } = await supabase.from('cobro_aplicaciones').select('venta_id').eq('cobro_id', cid);
-            const onlyThisVenta = (allApps ?? []).every(a => a.venta_id === venta.id);
-            if (onlyThisVenta) {
-              await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cid);
-            }
-          }
-        }
-        await logHistorial(venta.id, 'cancelada', { status: { anterior: prevStatus, nuevo: 'cancelado' } });
+        // D-020: una sola operación en la BD; si hay pagos pregunta qué hacer con el dinero.
+        const r = await cancelarVenta(venta.id, pedirDestinoPago);
+        if (r.cancelado) return;
+        if (r.error) throw new Error(r.error.message);
       } else {
-        // Offline: encola la cancelación (antes fallaba y no hacía nada).
-        // Los cobros aplicados SOLO a esta venta se cancelan usando la caché
-        // local de cobro_aplicaciones.
-        const ops: any[] = [{ table: 'ventas', operation: 'update', data: { id: venta.id, status: 'cancelado' } }];
+        // Offline: se encola la misma operación de la BD. Si la caché local muestra pagos,
+        // se pregunta ya; si no, por seguridad cualquier pago que aparezca queda como saldo a favor.
+        let destino: DestinoPagoCancelacion = 'saldo_favor';
         const caTable = getOfflineTable('cobro_aplicaciones');
         if (caTable) {
-          const allCa = (await caTable.toArray().catch(() => [])) as any[];
-          const cobroIds = [...new Set(allCa.filter(a => a.venta_id === venta.id).map(a => a.cobro_id))];
-          for (const cid of cobroIds) {
-            const appsDeCobro = allCa.filter(a => a.cobro_id === cid);
-            const onlyThisVenta = appsDeCobro.length > 0 && appsDeCobro.every(a => a.venta_id === venta.id);
-            if (onlyThisVenta) ops.push({ table: 'cobros', operation: 'update', data: { id: cid, status: 'cancelado' } });
+          const allCa = (await caTable.toArray().catch(() => [])) as { venta_id?: string; monto_aplicado?: number }[];
+          const pagadoLocal = allCa.filter(a => a.venta_id === venta.id).reduce((s, a) => s + (Number(a.monto_aplicado) || 0), 0);
+          if (pagadoLocal > 0.009) {
+            const elegido = await pedirDestinoPago({ monto: pagadoLocal, mensaje: '' });
+            if (!elegido) return;
+            destino = elegido;
           }
         }
-        await queueOperations(ops);
+        await queueOperations([{ table: 'rpc:cancelar_venta', operation: 'rpc', data: { p_venta_id: venta.id, p_destino_pago: destino, p_motivo: null } }]);
+        const vt = getOfflineTable('ventas');
+        if (vt) await vt.update(venta.id, { status: 'cancelado' }).catch(() => undefined);
       }
       toast.success('Venta cancelada');
       queryClient.invalidateQueries({ queryKey: ['venta', id] });
@@ -1113,6 +1105,7 @@ export function useVentaDetalle() {
     manejaLotesEmpresa, productoManejaLote, lotePendienteEdit, setEditLineaLotes, almacenLotesBase,
     handleSaveEdits, initCobrar, updateCuentaMonto, liquidarTodas, handleCobrar,
     excedenteDialog,
+    cancelarPagoDialog,
     handleCancelar, handleVolverBorrador, handleWhatsAppSend, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta,
   };
 }

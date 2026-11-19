@@ -12,6 +12,8 @@ import {
   ChevronDown, ChevronRight, Loader2, Search, X,
 } from 'lucide-react';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { useCancelarPagoPrompt } from '@/components/venta/CancelarPagoDialog';
+import { cancelarVenta as cancelarVentaBd } from '@/lib/cancelarVenta';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useState, useMemo } from 'react';
@@ -51,6 +53,7 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
   const { user, empresa, profile } = useAuth();
   const { turno } = useCajaTurno();
   const { requestPin, PinDialog } = usePinAuth();
+  const { pedirDestinoPago, cancelarPagoDialog } = useCancelarPagoPrompt();
   const { fmt } = useCurrency();
   const qc = useQueryClient();
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
@@ -173,40 +176,10 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
   const cancelarVenta = async (ventaId: string) => {
     setCancelandoId(ventaId);
     try {
-      const { error: vErr } = await supabase
-        .from('ventas')
-        .update({ status: 'cancelado' } as any)
-        .eq('id', ventaId);
-      if (vErr) throw vErr;
-
-      const { data: apps } = await supabase
-        .from('cobro_aplicaciones')
-        .select('cobro_id')
-        .eq('venta_id', ventaId);
-      if (apps && apps.length > 0) {
-        const cobroIds = [...new Set(apps.map((a: any) => a.cobro_id))];
-        for (const cid of cobroIds) {
-          const { data: allApps } = await supabase
-            .from('cobro_aplicaciones')
-            .select('venta_id')
-            .eq('cobro_id', cid);
-          const onlyThisVenta = (allApps ?? []).every((a: any) => a.venta_id === ventaId);
-          if (onlyThisVenta) {
-            await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cid);
-          }
-        }
-      }
-
-      try {
-        await supabase.from('venta_historial').insert({
-          venta_id: ventaId,
-          empresa_id: empresa!.id,
-          user_id: user!.id,
-          user_nombre: profile?.nombre ?? user?.email ?? '',
-          accion: 'cancelada',
-          detalles: { origen: 'pos-turno' },
-        } as any);
-      } catch (e) { console.error(e); }
+      // D-020: una sola operación en la BD; si hay pagos pregunta qué hacer con el dinero.
+      const r = await cancelarVentaBd(ventaId, pedirDestinoPago, { motivo: 'POS turno' });
+      if (r.cancelado) return;
+      if (r.error) throw new Error(r.error.message);
 
       toast.success('Venta cancelada');
       await Promise.all([
@@ -408,6 +381,7 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
         </DialogContent>
       </Dialog>
       <PinDialog />
+      {cancelarPagoDialog}
     </>
   );
 }

@@ -27,6 +27,8 @@ import { usePinAuth } from '@/hooks/usePinAuth';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
+import { useCancelarPagoPrompt } from '@/components/venta/CancelarPagoDialog';
+import { cancelarVenta } from '@/lib/cancelarVenta';
 import { ejecutarConExcedente } from '@/lib/excedente';
 
 /** Campos de ventas que el tipo Venta no declara y usa la edición de confirmadas. */
@@ -86,6 +88,7 @@ export function useVentaForm() {
   const deleteVenta = useDeleteVenta();
   const queryClient = useQueryClient();
   const { pedirDestino, excedenteDialog } = useExcedentePrompt();
+  const { pedirDestinoPago, cancelarPagoDialog } = useCancelarPagoPrompt();
   // En una venta existente primero cargamos su detalle aislado. Los catálogos
   // completos (que pueden contener miles de filas) arrancan después y ya no
   // compiten con la información que el usuario necesita ver de inmediato.
@@ -1204,24 +1207,15 @@ export function useVentaForm() {
   const _handleStatusChangeInner = async (newStatus: StatusVenta) => {
     if (newStatus === 'cancelado') {
       requestPin('Cancelar venta', 'Ingresa tu PIN de autorización para cancelar esta venta.', async () => {
-        const prevStatus = form.status;
+        // D-020: una sola operación en la BD; si hay pagos pregunta qué hacer con el dinero.
+        const r = await cancelarVenta(form.id!, pedirDestinoPago);
+        if (r.cancelado) return;
+        if (r.error) { toast.error(r.error.message); return; }
         setForm(prev => ({ ...prev, status: newStatus }));
-        await saveVenta.mutateAsync({ id: form.id!, status: newStatus } as any);
-        // Cancel associated cobros
-        const { data: apps } = await supabase.from('cobro_aplicaciones').select('id, cobro_id, monto_aplicado').eq('venta_id', form.id!);
-        if (apps && apps.length > 0) {
-          const cobroIds = [...new Set(apps.map(a => a.cobro_id))];
-          for (const cid of cobroIds) {
-            const { data: allApps } = await supabase.from('cobro_aplicaciones').select('venta_id').eq('cobro_id', cid);
-            const onlyThisVenta = (allApps ?? []).every(a => a.venta_id === form.id!);
-            if (onlyThisVenta) {
-              await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cid);
-            }
-          }
-        }
-        await logHistorial(form.id!, 'cancelada', { status: { anterior: prevStatus, nuevo: 'cancelado' } });
         toast.success('Venta cancelada');
-        queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
+        for (const k of ['venta', 'venta-pagos', 'ventas', 'cxc', 'saldos', 'saldo-favor', 'cobros-desktop', 'stock-almacen-form', 'productos']) {
+          queryClient.invalidateQueries({ queryKey: k === 'venta' || k === 'venta-pagos' ? [k, form.id] : [k] });
+        }
       });
       return;
     }
@@ -1353,6 +1347,7 @@ export function useVentaForm() {
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     excedenteDialog,
+    cancelarPagoDialog,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
     pagosData, totalPagado, saldoPendiente, totals: displayTotals, promoResults, tarifaRules,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,

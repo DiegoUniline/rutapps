@@ -431,6 +431,7 @@ export default function VentaFormPage() {
     <div className="min-h-full">
       <RepriceListaDialog pending={pendingReprice} onConfirm={confirmReprice} onDismiss={dismissReprice} />
       {h.excedenteDialog}
+      {h.cancelarPagoDialog}
       <VentaFormHeader
         isNew={isNew} folio={form.folio} clienteNombre={clienteNombre} registradoPorNombre={registradoPorNombre} status={form.status}
         entregaInmediata={form.entrega_inmediata} tipo={form.tipo}

@@ -6,6 +6,8 @@ import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Banknote, List, Package, FileSpreadsheet, FileText, Printer, Trash2, Ban, Lock, Loader2 } from 'lucide-react';
 import { MenuAcciones, CLASE_ITEM_MENU } from '@/components/shared/MenuAcciones';
+import { useCancelarPagoPrompt } from '@/components/venta/CancelarPagoDialog';
+import { cancelarVenta, type DestinoPagoCancelacion } from '@/lib/cancelarVenta';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -86,6 +88,8 @@ export default function VentasListPage() {
   const [bulkCancelling, setBulkCancelling] = useState(false);
   const [bulkCloseOpen, setBulkCloseOpen] = useState(false);
   const { requestPin, PinDialog } = usePinAuth();
+  const { pedirDestinoPago, cancelarPagoDialog } = useCancelarPagoPrompt();
+  const { pedirDestinoPago: pedirDestinoPagoLote, cancelarPagoDialog: cancelarPagoLoteDialog } = useCancelarPagoPrompt('Se aplicará a todas las ventas con pagos de esta selección.');
   
 
   const { visible: columnVisibility, toggleColumn, setAll, reset } = useColumnPreferences('ventas', VENTAS_DEFAULT_COLUMN_VISIBILITY);
@@ -295,13 +299,22 @@ export default function VentasListPage() {
       } catch (e: any) {
         toast.error(`Algunas entregas no se pudieron revertir: ${e.message}`);
       }
-      // 2) Desligar pagos aplicados (los cobros quedan como saldo a favor del cliente)
-      await supabase.from('cobro_aplicaciones').delete().in('venta_id', ids);
-      // 3) Marcar ventas como canceladas
-      const { error } = await supabase.from('ventas').update({ status: 'cancelado' } as any).in('id', ids);
-      if (error) throw error;
+      // 2) Cancelar cada venta en la BD (D-020); con pagos se pregunta una vez y aplica a todas.
+      let destinoLote: DestinoPagoCancelacion | null = null;
+      let ok = 0;
+      const errores: string[] = [];
+      for (const v of cancelables) {
+        const r = await cancelarVenta(v.id, async info => {
+          destinoLote = await pedirDestinoPagoLote(info);
+          return destinoLote;
+        }, { destinoFijo: destinoLote });
+        if (r.cancelado) break;
+        if (r.error) errores.push(`${v.folio ?? v.id.slice(0, 8)}: ${r.error.message}`);
+        else ok++;
+      }
 
-      toast.success(`${ids.length} venta(s) cancelada(s)${stockRestored > 0 ? ` · ${stockRestored} entrega(s) cancelada(s)` : ''}.`);
+      if (ok > 0) toast.success(`${ok} venta(s) cancelada(s)${stockRestored > 0 ? ` · ${stockRestored} entrega(s) cancelada(s)` : ''}.`);
+      if (errores.length > 0) toast.error(`${errores.length} no se pudieron cancelar. ${errores[0]}`);
       qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['entregas'] });
       qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
@@ -338,11 +351,10 @@ export default function VentasListPage() {
           } catch (e: any) {
             toast.error(`Algunas entregas no se pudieron revertir: ${e.message}`);
           }
-          // 2) Desligar pagos aplicados
-          await supabase.from('cobro_aplicaciones').delete().eq('venta_id', id);
-          // 3) Marcar venta como cancelada
-          const { error } = await supabase.from('ventas').update({ status: 'cancelado' } as any).eq('id', id);
-          if (error) throw error;
+          // 2) Cancelar en la BD (D-020): si tiene pagos pregunta qué hacer con el dinero.
+          const r = await cancelarVenta(id, pedirDestinoPago);
+          if (r.cancelado) return;
+          if (r.error) throw new Error(r.error.message);
           toast.success(`Venta cancelada${stockRestored > 0 ? ` · ${stockRestored} entrega(s) cancelada(s)` : ''}.`);
           qc.invalidateQueries({ queryKey: ['ventas'] });
           qc.invalidateQueries({ queryKey: ['entregas'] });
@@ -769,6 +781,8 @@ export default function VentasListPage() {
 
 
       <PinDialog />
+      {cancelarPagoDialog}
+      {cancelarPagoLoteDialog}
     </ListPage>
   );
 }

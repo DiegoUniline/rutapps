@@ -126,3 +126,4 @@
 2026-11-19 · desarrollador · Barra de listas rediseñada (opción A): buscador central con fecha y panel Filtros; acciones de Ventas en menú ⋯; token de color accion (azul marino)
 2026-11-19 · desarrollador · Venta: encabezado en ficha compacta (sin barra gris ni cuadro de totales repetido; etiqueta de saldo junto al estado); sin avisos de stock en modo consulta; barra de listas solo con colores RutApp (se quitó token accion)
 2026-11-19 · desarrollador · D-029 colores universales de botones aplicados (clases base + detalle de venta reacomodado: Cobrar y Editar al final)
+2026-11-19 · desarrollador · F1b cancelar_venta (D-020) listo en código; migración 20261119230000 pendiente de CONFIRMO F1b

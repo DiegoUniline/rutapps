@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseExcedente } from '@/lib/excedente';
 import { saldoFavorDisponible } from '@/lib/saldoFavor';
+import { parsePagada } from '@/lib/cancelarVenta';
 
 describe('parseExcedente', () => {
   it('lee monto y mensaje del error de la BD', () => {
@@ -21,5 +22,15 @@ describe('saldoFavorDisponible', () => {
   it('nunca es negativo', () => {
     expect(saldoFavorDisponible(50, 80)).toBe(0);
     expect(saldoFavorDisponible(120.5, 20.25)).toBe(100.25);
+  });
+});
+
+describe('parsePagada', () => {
+  it('lee monto y mensaje del aviso de venta pagada', () => {
+    expect(parsePagada('PAGADA|8835.00|La venta VTA-0001 tiene pagos por 8835.00.')).toEqual({ monto: 8835, mensaje: 'La venta VTA-0001 tiene pagos por 8835.00.' });
+  });
+  it('ignora otros errores', () => {
+    expect(parsePagada('EXCEDENTE|5|x')).toBeNull();
+    expect(parsePagada(null)).toBeNull();
   });
 });
