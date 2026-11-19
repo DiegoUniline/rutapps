@@ -100,3 +100,4 @@
 2026-11-19 · desarrollador · CONFIRMO mover migraciones a legacy: 723 → supabase/migrations_legacy/ (git mv, sin borrar); base 000 extensiones y 002 storage/auth agregadas; tests con rutas actualizadas (382 OK)
 2026-11-19 · auditor · Auditoría pedido↔entrega↔inventario↔cobros (solo lectura): docs/auditoria/2026-11-19-pedido-entrega-inventario-cobros.md; 5 decisiones materiales pendientes
 2026-11-19 · auditor · D-019 precio de entrega = precio vivo del pedido (dueño)
+2026-11-19 · auditor · D-020 cancelar venta pagada: preguntar cancelar pago o dejar saldo a favor (dueño)

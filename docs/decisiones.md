@@ -121,3 +121,8 @@
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** el precio de lo ya entregado **sigue el precio vivo del pedido** (comportamiento actual, auditoría H1). Editar el precio del pedido recalcula también el importe de lo entregado. No se agrega precio a `entrega_lineas`.
 - **Consecuencia:** al bajar el total por debajo de lo pagado debe aplicar la regla de saldo a favor de D-008 en todos los caminos (corrección administrativa incluida, hallazgo H2/C2).
+
+## D-020
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** al **cancelar una venta con pagos**, el sistema **pregunta** qué hacer con el dinero: (a) **cancelar también el pago**, o (b) **dejarlo como saldo a favor** del cliente (el pago se desaplica de la venta y queda disponible). Aplica igual en las tres formas de cancelar (detalle web, ruta y lista/masivo), que hoy hacen cosas distintas (auditoría C4).
+- **Implica:** el saldo a favor se calcula en la BD e incluye cobros activos no aplicados (D-008, auditoría C3).
