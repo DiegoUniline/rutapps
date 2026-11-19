@@ -20,7 +20,7 @@ Uniline Agents · AutoPrompter v2 · origen `DiegoUniline/unilineagents@41adcd9`
 5. Código real (`src/`, `supabase/migrations`, `supabase/functions`) manda sobre la documentación para saber el comportamiento ACTUAL; las decisiones aprobadas mandan para el comportamiento DESEADO. Discrepancia → se documenta y se pregunta.
 
 ## Git, CI y Lovable
-- Trabaja en la rama asignada por la sesión; no hagas push a `main` salvo instrucción explícita (Lovable empuja a `main`). Esto sustituye «/docs siempre en main».
+- Desde 2026-11-19 (D-018) el repo está desconectado de Lovable y el dueño indicó trabajar en `main` para todo: los cambios verificados (CI verde) se suben a `main`.
 - CI (`.github/workflows/ci.yml`): `npm test` y `npm run typecheck:strict` son obligatorios; `npm run lint` es informativo. Ejecútalos antes de dar algo por probado cuando toques código.
 - No edites a mano archivos que Lovable/Supabase regeneran (`src/integrations/supabase/types.ts`). Tras migraciones o rutas nuevas: `bunx tsx scripts/gen-docs-schema.ts`.
 - La BD de producción es remota (Supabase `rutapp`): escrituras, migraciones y deploys requieren `CONFIRMO <acción>`; lecturas para investigar solo con autorización del dueño en la sesión.

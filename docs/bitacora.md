@@ -96,3 +96,4 @@
 2026-11-19 · desarrollador · D-018 kit de corte: scripts/migracion/recargar-datos.sh (recarga de datos en una transacción con validación de tablas/columnas), copiar-storage.mjs + función temporal export-storage-lovable.ts; runbook docs/migracion-corte.md
 2026-11-19 · dueño · esquema del origen congelado hasta el corte (solo crecen datos); repo desconectado de Lovable
 2026-11-19 · desarrollador · D-018 13 crons recreados en amybkerwkybffllaxpnz apuntando a la URL nueva, todos inactive (verificado cron.job); vault.sh para secretos de Vault; wrangler.jsonc para Cloudflare
+2026-11-19 · desarrollador · D-018 main = rama de trabajo (dueño); historial de migraciones: 601 aplicadas hasta 2026-09-16, 23 posteriores aplicadas sin registro; propuesta línea base

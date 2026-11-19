@@ -49,3 +49,9 @@ Buckets privados (`csf`, `cfdi-archivos`, `recibos-cobros`, `tienda-assets`, `em
 ## Notas
 - `fn_notify_empresa_alta` (trigger en `empresas`) manda webhook a hadesai.com.mx: altas de empresa hechas en el entorno de prueba también lo disparan.
 - Crons que leen Vault: `create-invoice-reminder-daily` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) y `billing-align-bridge-aug2026-daily` (BILLING_BRIDGE_INTERNAL_SECRET) → `vault.sh`.
+
+## Migraciones: repo vs producción (2026-11-19)
+- Historial real (`supabase_migrations` del backup → `migracion.schema_migrations`): **601** registros, último `20260916203947`. Lovable registra la hora de aplicación (segundos después del nombre del archivo), no el nombre.
+- Repo: **723** archivos; 700 hasta el 16-sep (≈99 sin registro equivalente) y **23** posteriores sin registro.
+- Los 23 posteriores (promociones, inventario fase 1, editar venta, ajustar entrega, facturación 0a–3, folios, rendimiento, cerrado total efectivo) **sí están aplicados**: sus objetos existen en la BD (22/22 verificados).
+- Conclusión: las 723 migraciones no reproducen la BD de forma confiable → **línea base desde la BD real** (pendiente CONFIRMO para mover las 723 a `supabase/migrations_legacy/`).
