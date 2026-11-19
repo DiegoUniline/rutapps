@@ -126,3 +126,9 @@
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** al **cancelar una venta con pagos**, el sistema **pregunta** qué hacer con el dinero: (a) **cancelar también el pago**, o (b) **dejarlo como saldo a favor** del cliente (el pago se desaplica de la venta y queda disponible). Aplica igual en las tres formas de cancelar (detalle web, ruta y lista/masivo), que hoy hacen cosas distintas (auditoría C4).
 - **Implica:** el saldo a favor se calcula en la BD e incluye cobros activos no aplicados (D-008, auditoría C3).
+
+## D-021
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** el **borrador deja de existir** para ventas directas y pedidos internos: al guardarse nacen **confirmados**, no hay "regresar a borrador" y para cambiarlos solo se usa **Editar venta** (`editar_venta`, una operación, inventario por diferencia, excedente → saldo a favor D-008). **Excepción:** los pedidos de la **tienda en línea** (`tienda-checkout`) llegan "por aprobar" para revisarse antes de surtir.
+- **Motivo:** regresar a borrador y guardar era la fuga principal del pago de más (auditoría C2: 105 casos en nov-2026).
+- **Pendiente:** qué hacer con los borradores existentes (731 pedidos internos, 169 ventas directas, ~590 con pagos; corte 2026-11-16).
