@@ -108,3 +108,4 @@
 2026-11-19 · dueño · integración GitHub→Supabase activada (repo DiegoUniline/rutapps, dir '.', main, deploy a producción; sin branching automático)
 2026-11-19 · auditor · D-023 históricos de dinero se dejan como están (dueño)
 2026-11-19 · desarrollador · F0a seguridad: migración 20261119120000_seguridad_quitar_anon (CONFIRMO del dueño); se aplica por integración GitHub→Supabase
+2026-11-19 · desarrollador · F0a verificada en amybkerwkybffllaxpnz: anon EXECUTE 7/199 (solo is_email_blacklisted + helpers RLS), authenticated 199/199, service_role 199/199; tests 382 OK, typecheck OK. Lovable (producción actual) sin cambios por decisión del dueño
