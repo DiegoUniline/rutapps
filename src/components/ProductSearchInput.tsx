@@ -87,7 +87,8 @@ export default function ProductSearchInput({ products, presentaciones, value, di
   }, [products, presentaciones]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return options.slice(0, 10);
+    // Se muestran TODOS los que coinciden (la lista tiene scroll); antes se cortaba a 10.
+    if (!search.trim()) return options;
     const q = search.toLowerCase();
     return options
       .filter(p =>
@@ -95,8 +96,7 @@ export default function ProductSearchInput({ products, presentaciones, value, di
         || p.codigo.toLowerCase().includes(q)
         || (p.formula ?? '').toLowerCase().includes(q)
         || (p._barcode ?? '').toLowerCase().includes(q)
-      )
-      .slice(0, 10);
+      );
   }, [search, options]);
 
   // No auto-focus on mount — the parent uses focusCell() to explicitly

@@ -166,8 +166,14 @@ export function useVentaForm() {
     },
   });
 
-  // Always enrich each product with its live _stock. For venta_directa we ALSO hide
-  // products with 0 stock (unless vender_sin_stock). Pedidos show everything.
+  // Cada producto lleva su existencia viva (_stock): la del almacén de la venta o, sin
+  // almacén, la total. D-027: venta y pedido muestran SOLO productos con existencia
+  // (salvo "vender sin stock"). Los que ya están en un renglón se conservan para que
+  // la línea siga mostrando su producto y precio.
+  const productosEnLineas = useMemo(
+    () => new Set(lineas.map(l => l.producto_id).filter(Boolean) as string[]),
+    [lineas],
+  );
   const productosList = useMemo(() => {
     if (!productosListRaw) return productosListRaw;
     const stockMap = stockAlmacenData ?? new Map<string, number>();
@@ -175,12 +181,10 @@ export function useVentaForm() {
       ...p,
       _stock: form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0),
     }));
-    // Solo ocultamos productos sin stock cuando hay un almacén seleccionado
-    // (ahí sí conocemos la existencia real). Sin almacén no filtramos: de lo
-    // contrario el buscador aparece vacío y no se puede agregar nada.
-    if (form.tipo !== 'venta_directa' || !form.almacen_id) return enriched;
-    return enriched.filter((p: any) => p.vender_sin_stock || (p._stock ?? 0) > 0);
-  }, [productosListRaw, form.tipo, form.almacen_id, stockAlmacenData]);
+    // Con almacén elegido esperamos su existencia antes de filtrar (si no, todo saldría en 0).
+    if (form.almacen_id && !stockAlmacenData) return enriched;
+    return enriched.filter((p: any) => p.vender_sin_stock || (p._stock ?? 0) > 0 || productosEnLineas.has(p.id));
+  }, [productosListRaw, form.almacen_id, stockAlmacenData, productosEnLineas]);
 
   const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {
     const key = `${row}-${col}`;

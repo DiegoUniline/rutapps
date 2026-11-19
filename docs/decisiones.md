@@ -156,3 +156,7 @@
 - **Regla general del dueño:** todo documento tiene **crear, editar y cancelar** (y ver/PDF).
 - **Decisión (cancelar ajuste de inventario):** cancelar un ajuste ya aplicado **revierte exacto**: se registra el movimiento contrario por la misma diferencia de cada producto y el ajuste queda **Cancelado** (quién, cuándo, motivo). No se borra historial (D-006).
 - **Decisión (editar ajuste de inventario):** editar = **corregir lo contado** de uno o varios productos del ajuste; el sistema mueve **solo la diferencia** contra lo que ya aplicó ese ajuste y guarda quién/cuándo editó. El motivo también se puede cambiar.
+
+## D-027
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** en el buscador de productos de **venta y pedido** (web) aparecen **solo productos con existencia** en el almacén de la venta (sin almacén: existencia total), salvo los marcados **"vender sin stock"**. Los productos que ya están en un renglón se conservan. El buscador muestra **todos** los que coinciden (con scroll), ya no solo 10.
