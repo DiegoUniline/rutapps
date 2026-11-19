@@ -41,7 +41,6 @@ import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { nextVisitDate } from '@/lib/nextVisitDate';
 import { RepriceListaDialog } from '@/components/venta/RepriceListaDialog';
-import { AdminEditVentaDialog } from '@/components/venta/AdminEditVentaDialog';
 import { useVendedores, usePerfilesNombres } from '@/hooks/useClientes';
 
 export default function VentaFormPage() {
@@ -451,17 +450,10 @@ export default function VentaFormPage() {
         <div className="px-5 pt-3 flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[240px]"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly || h.editandoConfirmada ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>
           {h.puedeEditarConfirmada && (
-            <button className="btn-odoo-secondary text-xs" onClick={h.iniciarEdicionConfirmada}>Editar venta</button>
+            <button className="btn-odoo-primary text-xs" onClick={h.iniciarEdicionConfirmada}>Editar venta</button>
           )}
           {h.editandoConfirmada && (
             <button className="btn-odoo-secondary text-xs" onClick={h.cancelarEdicionConfirmada}>Cancelar edición</button>
-          )}
-          {!h.editandoConfirmada && form.status !== 'cancelado' && form.status !== 'facturado' && canChangePrice && !lineas.some(l => l.facturado) && (
-            <AdminEditVentaDialog
-              venta={form}
-              lineas={lineas.filter(l => l.producto_id)}
-              onSaved={() => { queryClient.invalidateQueries({ queryKey: ['venta', form.id] }); queryClient.invalidateQueries({ queryKey: ['ventas'] }); }}
-            />
           )}
         </div>
       )}

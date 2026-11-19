@@ -1061,6 +1061,10 @@ export function useVentaForm() {
         queryClient.invalidateQueries({ queryKey: ['venta'] });
         queryClient.invalidateQueries({ queryKey: ['ventas'] });
         queryClient.invalidateQueries({ queryKey: ['venta_linea_lotes'] });
+        // La edición puede mover pagos (excedente) y recalcular promociones: refrescar ambos.
+        queryClient.invalidateQueries({ queryKey: ['venta-pagos', ventaId] });
+        queryClient.invalidateQueries({ queryKey: ['promocion_aplicada', ventaId] });
+        queryClient.invalidateQueries({ queryKey: ['stock-almacen-form'] });
         return ventaId;
       }
 
@@ -1312,7 +1316,7 @@ export function useVentaForm() {
   const puedeEditarConfirmada = !isNew && canEditVenta && !editandoConfirmada
     && ['confirmado', 'entregado'].includes(String(form.status ?? ''))
     && !formExt.cerrado_at
-    && !(form.tipo === 'pedido' && entregasActivas.length > 0)
+    // Pedido con entregas: se puede editar; la BD solo acepta precio/descuento (D-019, F2a).
     && !lineas.some(l => l.facturado || l.factura_cfdi_id);
 
   const iniciarEdicionConfirmada = () => {
