@@ -17,7 +17,7 @@ Repo: `DiegoUniline/rutapps` (desconectado de Lovable el 2026-11-16).
 | Cloudflare Pages | ❓ |
 
 ## Congelar desde ya
-Ningún cambio de esquema en Lovable (chat/SQL). `recargar-datos.sh` aborta si tablas o columnas difieren.
+✅ Confirmado por el dueño 2026-11-19: esquema congelado en origen, solo crecen datos. `recargar-datos.sh` aborta si tablas o columnas difieren.
 
 ## Día del corte (en la Mac, desde ~/rutapps)
 ```bash
