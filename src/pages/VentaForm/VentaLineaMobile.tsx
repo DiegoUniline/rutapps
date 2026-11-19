@@ -85,6 +85,12 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
           {!isEmpty && ((readOnly || !onChangePresentation)
           ? <VentaPresentacion line={l} unit={unidadLabel || 'unidades'} />
           : <VentaPresentacionEditor line={l} idx={idx} unit={unidadLabel || 'unidades'} disabled={!pricingReady} onChange={onChangePresentation} onUpdateLine={onUpdateLine} />)}
+          {/* Aviso (no bloquea): la cantidad pasa la existencia del almacén. */}
+          {!isEmpty && prod?._stock != null && (Number(l.cantidad) || 0) > Number(prod._stock) && (
+            <div className="text-[11px] text-destructive font-medium mt-0.5">
+              Excede el stock: disponible {prod._stock}, pides {Number(l.cantidad) || 0}
+            </div>
+          )}
           {linePromoDesc > 0 && (
             <div className="text-[11px] text-primary font-medium mt-0.5">
               🎁 {linePromos[0].descripcion || linePromos[0].nombre} · −{money(linePromoDesc)}
