@@ -40,7 +40,7 @@ export async function cancelarVenta(
   pedirDestino: PedirDestinoPago,
   opciones: { motivo?: string | null; destinoFijo?: DestinoPagoCancelacion | null } = {},
 ): Promise<{ error: { message: string } | null; cancelado: boolean; destino: DestinoPagoCancelacion | null }> {
-  const rpc = supabase.rpc as unknown as RpcSinTipos;
+  const rpc = supabase.rpc.bind(supabase) as unknown as RpcSinTipos;
   const llamar = (destino: DestinoPagoCancelacion | null) =>
     rpc('cancelar_venta', { p_venta_id: ventaId, p_destino_pago: destino, p_motivo: opciones.motivo ?? null });
 
