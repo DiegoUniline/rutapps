@@ -104,3 +104,4 @@
 2026-11-19 · auditor · D-021 sin borrador para ventas/pedidos internos; tienda en línea queda por aprobar (dueño)
 2026-11-19 · auditor · D-021 corregida: borrador solo al inicio; confirmada no regresa a borrador (dueño)
 2026-11-19 · auditor · D-022 reasignar/cambiar camión siempre mueve stock (dueño)
+2026-11-19 · desarrollador · línea base completa: 3 migraciones en main y registradas como aplicadas en amybkerwkybffllaxpnz (list_migrations)
