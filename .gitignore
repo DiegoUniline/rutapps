@@ -25,3 +25,7 @@ dist-ssr
 
 # Lovable Cloud auto-generated env
 .env
+
+# Migración fuera de Lovable (scripts/migracion)
+copiar-storage.manifest.json
+copiar-storage.errores.txt
