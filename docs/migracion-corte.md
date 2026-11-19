@@ -6,7 +6,7 @@ Repo: `DiegoUniline/rutapps` (desconectado de Lovable el 2026-11-16).
 ## Estado (2026-11-19)
 | Pieza | Estado |
 |---|---|
-| Esquema + datos de prueba (backup 16-nov) | ✅ |
+| Esquema ✅ · datos: base de PRUEBA limpia 2026-11-19 (2 empresas, sin transacciones); el corte recarga todo con `recargar-datos.sh` | ✅ |
 | 76 edge functions | ✅ (rama `claude/ecstatic-bohr-9mairg`) |
 | Secrets internos (SITE_URL, CRON_SECRET, TIENDA_JWT_SECRET, BILLING_BRIDGE_INTERNAL_SECRET) | ✅ |
 | IA → Gemini, correo → Resend, front sin ref fijo | ✅ código |
