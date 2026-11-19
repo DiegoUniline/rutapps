@@ -5,6 +5,7 @@ import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { Plus, List, Package, FileSpreadsheet, FileText, Printer, Trash2, Ban, Lock, Loader2 } from 'lucide-react';
+import { cantidadNetaVenta } from '@/lib/ventaCantidad';
 import { useCancelarPagoPrompt } from '@/components/venta/CancelarPagoDialog';
 import { cancelarVenta, type DestinoPagoCancelacion } from '@/lib/cancelarVenta';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -417,6 +418,9 @@ export default function VentasListPage() {
     acc.impuestos += impuestos;
     return acc;
   }, { subtotal: 0, descuento: 0, impuestos: 0 });
+  // Cantidad neta (vendido − devuelto): de la vista en el resumen, de las partidas en la página.
+  const cantidadResumen = Math.round(resumenSource.reduce((s, v: any) => s + cantidadNetaVenta(v), 0) * 1000) / 1000;
+  const cantidadPagina = Math.round(ventas.reduce((s, v: any) => s + cantidadNetaVenta(v), 0) * 1000) / 1000;
   const totalPagado = resumenSource.reduce((s, v: any) => s + Math.max(0, totalEfectivoVenta(v) - saldoRealVenta(v)), 0);
   // Vista Productos: totales de todo el filtro (fallback a la página al agrupar/cargar).
   const totalLineas = (!groupBy && lineasResumenAll) ? lineasResumenAll.total : productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
@@ -637,6 +641,7 @@ export default function VentasListPage() {
                     </span>
                   ) : (
                     <>
+                      <span>Cant.: <strong className="text-foreground">{cantidadResumen}</strong></span>
                       <span>Subtotal s/imp: <strong className="text-foreground">{fmt(resumenVentas.subtotal)}</strong></span>
                       {resumenVentas.descuento > 0.005 && <span>Desc: <strong className="text-destructive">-{fmt(resumenVentas.descuento)}</strong></span>}
                       <span>Imp: <strong className="text-foreground">{fmt(resumenVentas.impuestos)}</strong></span>
@@ -709,6 +714,7 @@ export default function VentasListPage() {
             ) : (
               <>
                 <span><strong className="text-foreground">{ventas.length}</strong> venta{ventas.length !== 1 ? 's' : ''}</span>
+                <span>Cant.: <strong className="text-foreground">{cantidadPagina}</strong></span>
                 <span>Subtotal s/imp: <strong className="text-foreground">{fmt(pageResumen.subtotal)}</strong></span>
                 {pageResumen.descuento > 0.005 && <span>Descuentos: <strong className="text-destructive">-{fmt(pageResumen.descuento)}</strong></span>}
                 <span>Impuestos: <strong className="text-foreground">{fmt(pageResumen.impuestos)}</strong></span>

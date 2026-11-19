@@ -132,3 +132,4 @@
 2026-11-19 · desarrollador · Fix inventario cancelar venta con devoluciones aplicado (CONFIRMO fix devoluciones): VTA-0001 #269 105→100, #229 15→10
 2026-11-19 · desarrollador · D-030 entrega cargada: quitar productos / reasignar / cancelar con destino camión o bodega; probado en BD con rollback; pendiente CONFIRMO
 2026-11-19 · dueño · D-031 autorización fija: migraciones no destructivas en BD de pruebas hasta el corte
+2026-11-19 · desarrollador · ventas_resumen_v.cantidad_neta + Cant. en el resumen de la lista (D-031)

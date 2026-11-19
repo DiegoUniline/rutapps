@@ -145,7 +145,7 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
       // Vista ventas_resumen_v: una fila por venta con las sumas de partidas, promociones y
       // cobros ya hechas en la base. Antes se embebían todas las partidas de cada venta y era
       // la consulta que más CPU consumía.
-      const SELECT = 'id, total, iva_total, ieps_total, descuento_total, status, total_efectivo, cerrado_at, snapshot_total_efectivo, cliente_id, lineas_descuento, promo_descuento, cobrado_activo';
+      const SELECT = 'id, total, iva_total, ieps_total, descuento_total, status, total_efectivo, cerrado_at, snapshot_total_efectivo, cliente_id, lineas_descuento, promo_descuento, cobrado_activo, cantidad_neta';
 
       let promoIds: string[] | null = null;
       if (promoFilter) promoIds = await fetchVentaIdsConPromo(empresa!.id);
