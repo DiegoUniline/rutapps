@@ -135,3 +135,8 @@
 ## D-022
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** toda **reasignación** de entrega a otro vendedor y todo **cambio de almacén/camión del vendedor** con mercancía ya **asignada o cargada** mueve el stock del camión A al B en la misma operación, en todas las pantallas y funciones (`reasignar_entregas_bulk`, `reasignar_pendientes_usuario`, cambio de `profiles.almacen_id`). Auditoría R1/R3.
+
+## D-023
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** los **datos históricos de dinero se dejan como están** (911 cobros activos sin aplicar 1.78 M, 377 ventas con pagado > total ~140 k, 21 saldos negativos, 28 canceladas con cobro aplicado; corte 2026-11-16). Solo se corrige hacia adelante.
+- **Implica (🧭 criterio):** el saldo a favor nuevo cuenta solo lo generado desde su puesta en marcha (cobros desaplicados/excedentes con fecha ≥ implementación), para no hacer aparecer de golpe el histórico.
