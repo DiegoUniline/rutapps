@@ -102,3 +102,4 @@
 2026-11-19 · auditor · D-019 precio de entrega = precio vivo del pedido (dueño)
 2026-11-19 · auditor · D-020 cancelar venta pagada: preguntar cancelar pago o dejar saldo a favor (dueño)
 2026-11-19 · auditor · D-021 sin borrador para ventas/pedidos internos; tienda en línea queda por aprobar (dueño)
+2026-11-19 · auditor · D-021 corregida: borrador solo al inicio; confirmada no regresa a borrador (dueño)
