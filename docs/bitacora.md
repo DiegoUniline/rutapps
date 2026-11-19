@@ -111,3 +111,4 @@
 2026-11-19 · desarrollador · F0a verificada en amybkerwkybffllaxpnz: anon EXECUTE 7/199 (solo is_email_blacklisted + helpers RLS), authenticated 199/199, service_role 199/199; tests 382 OK, typecheck OK. Lovable (producción actual) sin cambios por decisión del dueño
 2026-11-19 · desarrollador · CONFIRMO limpiar base de prueba: amybkerwkybffllaxpnz queda con 2 empresas (Mi Empresa Demo, Multi), 9 usuarios (7 con perfil + 2 de plataforma), catálogos completos (310 productos, 175 clientes, 12 almacenes, 17 tarifas, 7 listas), 0 ventas/cobros/entregas/movimientos/stock. Revertible con el backup 2026-11-16; el corte usa recargar-datos.sh
 2026-11-19 · auditor · D-024 ajustar entrega: camión/bodega aplica a regreso y descuento (dueño)
+2026-11-19 · desarrollador · F2a (CONFIRMO): migración 20261119150000 (ajustar_entrega con origen bodega D-024, editar_venta solo-precio con entregas D-019, entregas canceladas no bloquean H3) + Corrección administrativa vía editar_venta

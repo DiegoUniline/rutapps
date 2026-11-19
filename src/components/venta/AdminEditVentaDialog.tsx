@@ -12,6 +12,7 @@ import { Loader2, Wrench } from 'lucide-react';
 import { calcularLineaAdmin } from '@/lib/adminEditVenta';
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+type RpcSinTipos = (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
 
 interface LineaEdit {
   id: string;
@@ -76,33 +77,34 @@ export function AdminEditVentaDialog({ venta, lineas, onSaved }: Props) {
   const save = async () => {
     setSaving(true);
     try {
-      for (const r of rows) {
+      // Una sola operación en la BD (editar_venta): mismos renglones, solo precio/descuento,
+      // así funciona también en pedidos con entregas (D-019) y no deja la venta a medias.
+      const pLineas = rows.map(r => {
         const m = calcular(r);
-        const { error } = await supabase
-          .from('venta_lineas')
-          .update({
-            subtotal: m.subtotal,
-            iva_monto: m.iva,
-            ieps_monto: m.ieps,
-            total: m.total,
-            descuento_pct: r.descuento_pct,
-            precio_unitario: r.cantidad > 0 ? r2(m.subtotal / r.cantidad) : 0,
-            precio_unitario_sin_redondeo: r.cantidad > 0 ? m.subtotal / r.cantidad : 0,
-            descripcion: r.descripcion,
-          })
-          .eq('id', r.id);
-        if (error) throw error;
-      }
-
-      const { error: eHead } = await supabase
-        .from('ventas')
-        .update({
+        return {
+          id: r.id,
+          subtotal: m.subtotal,
+          iva_monto: m.iva,
+          ieps_monto: m.ieps,
+          total: m.total,
+          descuento_pct: r.descuento_pct,
+          precio_unitario: r.cantidad > 0 ? r2(m.subtotal / r.cantidad) : 0,
+          precio_unitario_sin_redondeo: r.cantidad > 0 ? m.subtotal / r.cantidad : 0,
+          descripcion: r.descripcion,
+        };
+      });
+      const { error } = await (supabase.rpc as unknown as RpcSinTipos)('editar_venta', {
+        p_venta_id: venta.id,
+        p_lineas: pLineas,
+        p_version: venta?.updated_at ?? null,
+        p_header: {
           fecha: fecha || venta.fecha,
-          condicion_pago: condicion as 'contado' | 'credito' | 'por_definir',
+          condicion_pago: condicion,
           notas: notas || null,
-        })
-        .eq('id', venta.id);
-      if (eHead) throw eHead;
+        },
+        p_promos: null,
+      });
+      if (error) throw new Error(error.message);
 
       qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['venta-lineas'] });

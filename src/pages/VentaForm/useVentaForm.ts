@@ -1291,7 +1291,7 @@ export function useVentaForm() {
   const puedeEditarConfirmada = !isNew && canEditVenta && !editandoConfirmada
     && ['confirmado', 'entregado'].includes(String(form.status ?? ''))
     && !formExt.cerrado_at
-    && !(form.tipo === 'pedido' && hayEntregas)
+    && !(form.tipo === 'pedido' && entregasActivas.length > 0)
     && !lineas.some(l => l.facturado || l.factura_cfdi_id);
 
   const iniciarEdicionConfirmada = () => {
