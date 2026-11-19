@@ -123,7 +123,9 @@ export default function ProductSearchInput({ products, presentaciones, value, di
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setShowDropdown(false);
-      if (!value) setEditing(false);
+      // Si la línea ya tiene producto, Escape regresa a mostrarlo sin cambiarlo.
+      setEditing(false);
+      setSearch('');
       return;
     }
 
@@ -200,11 +202,13 @@ export default function ProductSearchInput({ products, presentaciones, value, di
         onBlur={() => {
           setTimeout(() => {
             setShowDropdown(false);
-            if (!value) setEditing(false);
+            // Salir sin elegir otro producto NO borra el de la línea: vuelve a mostrarlo.
+            setEditing(false);
+            setSearch('');
           }, 180);
         }}
         onKeyDown={handleKeyDown}
-        placeholder="Buscar producto o presentación..."
+        placeholder={value && displayText ? `Cambiar: ${displayText}` : 'Buscar producto o presentación...'}
         autoComplete="off"
       />
 
