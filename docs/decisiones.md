@@ -140,3 +140,8 @@
 - **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** los **datos históricos de dinero se dejan como están** (911 cobros activos sin aplicar 1.78 M, 377 ventas con pagado > total ~140 k, 21 saldos negativos, 28 canceladas con cobro aplicado; corte 2026-11-16). Solo se corrige hacia adelante.
 - **Implica (🧭 criterio):** el saldo a favor nuevo cuenta solo lo generado desde su puesta en marcha (cobros desaplicados/excedentes con fecha ≥ implementación), para no hacer aparecer de golpe el histórico.
+
+## D-024
+- **Fecha:** 2026-11-19 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** en **Ajustar entrega**, quien ajusta elige **camión o bodega** (depende de quién hizo el error) y esa elección aplica a **ambos lados**: lo que sale de la entrega (p. ej. Coca) regresa ahí y lo que sí se entregó (p. ej. Pepsi) se descuenta de ahí. Hoy el producto nuevo siempre se descuenta del camión (auditoría 2026-11-19, caso Coca/Pepsi).
+- **Interpretación registrada:** respuesta del dueño «todo depende de quien lo haga, por ende debemos elegir se devuelve al camión o a bodega» = una sola elección para ambos lados.
