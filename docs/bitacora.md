@@ -107,3 +107,4 @@
 2026-11-19 · desarrollador · línea base completa: 3 migraciones en main y registradas como aplicadas en amybkerwkybffllaxpnz (list_migrations)
 2026-11-19 · dueño · integración GitHub→Supabase activada (repo DiegoUniline/rutapps, dir '.', main, deploy a producción; sin branching automático)
 2026-11-19 · auditor · D-023 históricos de dinero se dejan como están (dueño)
+2026-11-19 · desarrollador · F0a seguridad: migración 20261119120000_seguridad_quitar_anon (CONFIRMO del dueño); se aplica por integración GitHub→Supabase
