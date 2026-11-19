@@ -58,6 +58,24 @@ interface ProductRow {
 }
 
 type RpcSinTipos = (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+interface AjusteItem {
+  id: string;
+  cantidad_anterior: number | null;
+  cantidad_nueva: number | null;
+  diferencia: number | null;
+  productos?: { codigo?: string | null; nombre?: string | null } | null;
+}
+interface AjusteGrupo {
+  key: string;
+  fecha: string;
+  userName: string;
+  almacenName: string;
+  motivo: string;
+  cancelado: boolean;
+  cancelado_motivo: string;
+  items: AjusteItem[];
+}
+const errMsg = (e: unknown, fallback: string) => (e instanceof Error && e.message) ? e.message : fallback;
 
 export default function AjustesInventarioPage() {
   const { empresa, user, profile } = useAuth();
@@ -94,7 +112,7 @@ export default function AjustesInventarioPage() {
   const [editGroupKey, setEditGroupKey] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [editMotivo, setEditMotivo] = useState('');
-  const [cancelGroup, setCancelGroup] = useState<any | null>(null);
+  const [cancelGroup, setCancelGroup] = useState<AjusteGrupo | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState('');
   const [histBusy, setHistBusy] = useState(false);
   const [historialView, setHistorialView] = useState<'agrupado' | 'detalle'>('agrupado');
@@ -441,7 +459,7 @@ export default function AjustesInventarioPage() {
     qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
   };
 
-  const pdfDeGrupo = async (group: any) => {
+  const pdfDeGrupo = async (group: AjusteGrupo) => {
     const blob = await generarAjusteInventarioPdf({
       empresa: {
         nombre: empresa?.nombre ?? '',
@@ -456,7 +474,7 @@ export default function AjustesInventarioPage() {
         almacen: group.almacenName,
         responsable: group.userName,
       },
-      lineas: (group.items ?? []).map((a: any) => ({
+      lineas: (group.items ?? []).map((a: AjusteItem) => ({
         codigo: a.productos?.codigo ?? '',
         nombre: a.productos?.nombre ?? '',
         cantidad_anterior: Number(a.cantidad_anterior) || 0,
@@ -468,30 +486,30 @@ export default function AjustesInventarioPage() {
     setShowPdfModal(true);
   };
 
-  const iniciarEdicion = (group: any) => {
+  const iniciarEdicion = (group: AjusteGrupo) => {
     setEditGroupKey(group.key);
     setEditMotivo(group.motivo ?? '');
-    setEditValues(Object.fromEntries((group.items ?? []).map((a: any) => [a.id, String(a.cantidad_nueva ?? 0)])));
+    setEditValues(Object.fromEntries((group.items ?? []).map((a: AjusteItem) => [a.id, String(a.cantidad_nueva ?? 0)])));
   };
 
-  const guardarEdicion = async (group: any) => {
+  const guardarEdicion = async (group: AjusteGrupo) => {
     const lineas = (group.items ?? [])
-      .filter((a: any) => editValues[a.id] !== undefined && Number(editValues[a.id]) !== Number(a.cantidad_nueva))
-      .map((a: any) => ({ id: a.id, cantidad_nueva: Number(editValues[a.id]) || 0 }));
+      .filter((a: AjusteItem) => editValues[a.id] !== undefined && Number(editValues[a.id]) !== Number(a.cantidad_nueva))
+      .map((a: AjusteItem) => ({ id: a.id, cantidad_nueva: Number(editValues[a.id]) || 0 }));
     const motivoCambio = editMotivo.trim() && editMotivo.trim() !== (group.motivo ?? '') ? editMotivo.trim() : null;
     if (lineas.length === 0 && !motivoCambio) { setEditGroupKey(null); return; }
     setHistBusy(true);
     try {
       const { error } = await (supabase.rpc as unknown as RpcSinTipos)('editar_ajuste_inventario', {
-        p_lineas: lineas.length > 0 ? lineas : (group.items ?? []).map((a: any) => ({ id: a.id, cantidad_nueva: Number(a.cantidad_nueva) || 0 })),
+        p_lineas: lineas.length > 0 ? lineas : (group.items ?? []).map((a: AjusteItem) => ({ id: a.id, cantidad_nueva: Number(a.cantidad_nueva) || 0 })),
         p_motivo: motivoCambio,
       });
       if (error) throw new Error(error.message);
       toast.success('Ajuste editado: se movió solo la diferencia');
       setEditGroupKey(null);
       refrescarInventario();
-    } catch (e: any) {
-      toast.error(e?.message || 'No se pudo editar el ajuste');
+    } catch (e: unknown) {
+      toast.error(errMsg(e, 'No se pudo editar el ajuste'));
     } finally {
       setHistBusy(false);
     }
@@ -503,7 +521,7 @@ export default function AjustesInventarioPage() {
     setHistBusy(true);
     try {
       const { error } = await (supabase.rpc as unknown as RpcSinTipos)('cancelar_ajuste_inventario', {
-        p_ids: (cancelGroup.items ?? []).map((a: any) => a.id),
+        p_ids: (cancelGroup.items ?? []).map((a: AjusteItem) => a.id),
         p_motivo: cancelMotivo.trim(),
       });
       if (error) throw new Error(error.message);
@@ -511,8 +529,8 @@ export default function AjustesInventarioPage() {
       setCancelGroup(null);
       setCancelMotivo('');
       refrescarInventario();
-    } catch (e: any) {
-      toast.error(e?.message || 'No se pudo cancelar el ajuste');
+    } catch (e: unknown) {
+      toast.error(errMsg(e, 'No se pudo cancelar el ajuste'));
     } finally {
       setHistBusy(false);
     }
