@@ -54,4 +54,4 @@ Buckets privados (`csf`, `cfdi-archivos`, `recibos-cobros`, `tienda-assets`, `em
 - Historial real (`supabase_migrations` del backup → `migracion.schema_migrations`): **601** registros, último `20260916203947`. Lovable registra la hora de aplicación (segundos después del nombre del archivo), no el nombre.
 - Repo: **723** archivos; 700 hasta el 16-sep (≈99 sin registro equivalente) y **23** posteriores sin registro.
 - Los 23 posteriores (promociones, inventario fase 1, editar venta, ajustar entrega, facturación 0a–3, folios, rendimiento, cerrado total efectivo) **sí están aplicados**: sus objetos existen en la BD (22/22 verificados).
-- Conclusión: las 723 migraciones no reproducen la BD de forma confiable → **línea base desde la BD real** (pendiente CONFIRMO para mover las 723 a `supabase/migrations_legacy/`).
+- Conclusión: las 723 migraciones no reproducen la BD de forma confiable → **línea base desde la BD real** (723 movidas a `supabase/migrations_legacy/` con CONFIRMO del dueño 2026-11-19; falta `20261119000001_base_public.sql` desde pg_dump).

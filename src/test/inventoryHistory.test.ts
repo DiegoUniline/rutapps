@@ -9,7 +9,7 @@ import {
 } from '@/lib/inventoryHistory';
 
 const migration = readFileSync(
-  `${process.cwd()}/supabase/migrations/20260909050000_inventory_stock_history_v3.sql`,
+  `${process.cwd()}/supabase/migrations_legacy/20260909050000_inventory_stock_history_v3.sql`,
   'utf8',
 );
 

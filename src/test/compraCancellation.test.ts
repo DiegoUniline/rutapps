@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const projectRoot = process.cwd();
 const migration = readFileSync(
-  `${projectRoot}/supabase/migrations/20260908223000_cancelar_compra_atomica.sql`,
+  `${projectRoot}/supabase/migrations_legacy/20260908223000_cancelar_compra_atomica.sql`,
   'utf8',
 );
 const formHook = readFileSync(
