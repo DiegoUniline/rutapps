@@ -132,6 +132,17 @@ export default function VentasListPage() {
 
   const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, clienteFilter, promocionFilter, viewMode === 'productos');
   const primaryRowsReady = viewMode === 'ventas' ? ventasData !== undefined : lineasData !== undefined;
+
+  // Conteo por pestaña (mismos filtros, sin la pestaña): una consulta de 1 renglón con count exacto.
+  const elegidosEstado = filters.status ?? [];
+  const esVentas = viewMode === 'ventas';
+  const useCuentaV = (t: TabEstado) => useVentasPaginated(search, statusFilterPorTab(t, elegidosEstado), tipoFilter, 1, 1, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, false, promocionFilter, clienteFilter, esVentas);
+  const useCuentaL = (t: TabEstado) => useVentaLineasPaginated(search, statusFilterPorTab(t, elegidosEstado), tipoFilter, 1, 1, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, false, clienteFilter, promocionFilter, !esVentas);
+  const cvActivas = useCuentaV('activas'), cvCanceladas = useCuentaV('canceladas'), cvTodas = useCuentaV('todas');
+  const clActivas = useCuentaL('activas'), clCanceladas = useCuentaL('canceladas'), clTodas = useCuentaL('todas');
+  const conteoTab: Record<TabEstado, number | undefined> = esVentas
+    ? { activas: cvActivas.data?.total, canceladas: cvCanceladas.data?.total, todas: cvTodas.data?.total }
+    : { activas: clActivas.data?.total, canceladas: clCanceladas.data?.total, todas: clTodas.data?.total };
   const [loadHistoricalSummary, setLoadHistoricalSummary] = useState(false);
 
   // La tabla visible tiene prioridad. El resumen histórico puede abarcar miles
@@ -601,6 +612,7 @@ export default function VentasListPage() {
             )}
           >
             {t.label}
+            {conteoTab[t.key] != null && <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">· {conteoTab[t.key]}</span>}
           </button>
         ))}
       </nav>
