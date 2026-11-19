@@ -116,3 +116,4 @@
 2026-11-19 · auditor · D-025 excedente al bajar total: preguntar saldo a favor / devolución / nada (dueño)
 2026-11-19 · auditor · D-026 todo documento crear/editar/cancelar; cancelar ajuste = movimiento contrario exacto (dueño)
 2026-11-19 · auditor · D-026 editar ajuste = corregir lo contado moviendo solo la diferencia (dueño)
+2026-11-19 · desarrollador · CONFIRMO publicar ajustes: ajuste en un clic (aplicar_ajuste_inventario), fix React #310 en historial, historial con editar/cancelar/PDF (D-026)
