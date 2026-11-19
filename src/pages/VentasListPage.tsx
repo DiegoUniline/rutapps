@@ -4,8 +4,7 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Banknote, List, Package, FileSpreadsheet, FileText, Printer, Trash2, Ban, Lock, Loader2 } from 'lucide-react';
-import { MenuAcciones, CLASE_ITEM_MENU } from '@/components/shared/MenuAcciones';
+import { Plus, List, Package, FileSpreadsheet, FileText, Printer, Trash2, Ban, Lock, Loader2 } from 'lucide-react';
 import { useCancelarPagoPrompt } from '@/components/venta/CancelarPagoDialog';
 import { cancelarVenta, type DestinoPagoCancelacion } from '@/lib/cancelarVenta';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -34,7 +33,6 @@ import { usePinAuth } from '@/hooks/usePinAuth';
 import { totalEfectivoVenta, saldoRealVenta } from '@/lib/ventaCerrada';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
 import { BulkCerrarPedidosDialog } from '@/components/venta/BulkCerrarPedidosDialog';
-import { RepararPromocionesButton } from '@/components/venta/RepararPromocionesButton';
 
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
@@ -490,27 +488,19 @@ export default function VentasListPage() {
             <div className="flex items-center gap-1.5 pb-1.5">
               <HelpButton compact title={HELP.ventas.title} sections={HELP.ventas.sections} />
               <VideoHelpButton compact module="ventas" />
-              <MenuAcciones>
-                <button type="button" data-cierra-menu onClick={exportarExcel} className={CLASE_ITEM_MENU}>
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" /> Exportar Excel
-                </button>
-                <button type="button" data-cierra-menu onClick={exportarPDF} className={CLASE_ITEM_MENU}>
-                  <FileText className="h-3.5 w-3.5 text-red-500" /> Exportar PDF
-                </button>
-                <button type="button" data-cierra-menu onClick={() => navigate('/finanzas/aplicar-pagos')} className={CLASE_ITEM_MENU}>
-                  <Banknote className="h-3.5 w-3.5" /> Aplicar pagos
-                </button>
-                <RepararPromocionesButton item />
-                <div className="border-t border-border my-1" />
-                <ColumnVisibilityMenu
-                  item
-                  columns={VENTAS_TABLE_COLUMNS}
-                  visible={columnVisibility}
-                  onToggle={toggleColumn}
-                  onShowAll={() => setAll(true)}
-                  onReset={reset}
-                />
-              </MenuAcciones>
+              <button type="button" onClick={exportarExcel} className="btn-odoo-secondary !h-8 !px-3 !py-0 text-[12px]">
+                <FileSpreadsheet className="h-3.5 w-3.5 text-success" /> Excel
+              </button>
+              <button type="button" onClick={exportarPDF} className="btn-odoo-secondary !h-8 !px-3 !py-0 text-[12px]">
+                <FileText className="h-3.5 w-3.5 text-destructive" /> PDF
+              </button>
+              <ColumnVisibilityMenu
+                columns={VENTAS_TABLE_COLUMNS}
+                visible={columnVisibility}
+                onToggle={toggleColumn}
+                onShowAll={() => setAll(true)}
+                onReset={reset}
+              />
               {canCreate && (
                 <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[12px] font-semibold shadow-sm shrink-0">
                   <Plus className="h-3.5 w-3.5" /> Nueva venta
@@ -560,10 +550,6 @@ export default function VentasListPage() {
             onPDF={exportarPDF}
           />
         )}
-        <RepararPromocionesButton compact />
-        <button onClick={() => navigate('/finanzas/aplicar-pagos')} className="inline-flex items-center gap-1.5 h-7 px-2 rounded-lg border bg-card text-foreground hover:bg-accent text-[11px] font-medium shrink-0">
-          <Banknote className="h-3 w-3" /> Aplicar pagos
-        </button>
 
         {canCreate && (
           <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-7 px-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[11px] font-medium shrink-0">
