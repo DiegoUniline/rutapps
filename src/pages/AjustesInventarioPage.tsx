@@ -90,6 +90,13 @@ export default function AjustesInventarioPage() {
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  // Historial: editar (corregir lo contado) y cancelar (movimiento contrario) — D-026.
+  const [editGroupKey, setEditGroupKey] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
+  const [editMotivo, setEditMotivo] = useState('');
+  const [cancelGroup, setCancelGroup] = useState<any | null>(null);
+  const [cancelMotivo, setCancelMotivo] = useState('');
+  const [histBusy, setHistBusy] = useState(false);
   const [historialView, setHistorialView] = useState<'agrupado' | 'detalle'>('agrupado');
   const [searchH, setSearchH] = useState('');
   const [pageH, setPageH] = useState(1);
@@ -188,7 +195,7 @@ export default function AjustesInventarioPage() {
         .in('user_id', userIds);
       const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
 
-      const groups = new Map<string, { key: string; fecha: string; userName: string; almacenName: string; motivo: string; created_at: string; items: any[] }>();
+      const groups = new Map<string, { key: string; fecha: string; userName: string; almacenName: string; motivo: string; created_at: string; cancelado: boolean; cancelado_motivo: string; items: any[] }>();
       for (const a of (data ?? [])) {
         // Use batch_id when available, fallback to legacy grouping
         const gKey = (a as any).batch_id ?? `${a.fecha}_${a.user_id}_${a.motivo ?? ''}_${a.almacen_id ?? ''}`;
@@ -200,6 +207,8 @@ export default function AjustesInventarioPage() {
             almacenName: (a.almacenes as any)?.nombre ?? 'Sin almacén',
             motivo: a.motivo ?? '',
             created_at: a.created_at,
+            cancelado: a.status === 'cancelado',
+            cancelado_motivo: a.cancelado_motivo ?? '',
             items: [],
           });
         }
@@ -422,6 +431,92 @@ export default function AjustesInventarioPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+
+  const refrescarInventario = () => {
+    qc.invalidateQueries({ queryKey: ['productos'] });
+    qc.invalidateQueries({ queryKey: ['productos-ajuste'] });
+    qc.invalidateQueries({ queryKey: ['ajustes-historial'] });
+    qc.invalidateQueries({ queryKey: ['movimientos'] });
+    qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+    qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
+  };
+
+  const pdfDeGrupo = async (group: any) => {
+    const blob = await generarAjusteInventarioPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+      },
+      ajuste: {
+        fecha: group.fecha,
+        motivo: group.motivo + (group.cancelado ? ' (CANCELADO)' : ''),
+        almacen: group.almacenName,
+        responsable: group.userName,
+      },
+      lineas: (group.items ?? []).map((a: any) => ({
+        codigo: a.productos?.codigo ?? '',
+        nombre: a.productos?.nombre ?? '',
+        cantidad_anterior: Number(a.cantidad_anterior) || 0,
+        cantidad_nueva: Number(a.cantidad_nueva) || 0,
+        diferencia: Number(a.diferencia) || 0,
+      })),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
+
+  const iniciarEdicion = (group: any) => {
+    setEditGroupKey(group.key);
+    setEditMotivo(group.motivo ?? '');
+    setEditValues(Object.fromEntries((group.items ?? []).map((a: any) => [a.id, String(a.cantidad_nueva ?? 0)])));
+  };
+
+  const guardarEdicion = async (group: any) => {
+    const lineas = (group.items ?? [])
+      .filter((a: any) => editValues[a.id] !== undefined && Number(editValues[a.id]) !== Number(a.cantidad_nueva))
+      .map((a: any) => ({ id: a.id, cantidad_nueva: Number(editValues[a.id]) || 0 }));
+    const motivoCambio = editMotivo.trim() && editMotivo.trim() !== (group.motivo ?? '') ? editMotivo.trim() : null;
+    if (lineas.length === 0 && !motivoCambio) { setEditGroupKey(null); return; }
+    setHistBusy(true);
+    try {
+      const { error } = await (supabase.rpc as unknown as RpcSinTipos)('editar_ajuste_inventario', {
+        p_lineas: lineas.length > 0 ? lineas : (group.items ?? []).map((a: any) => ({ id: a.id, cantidad_nueva: Number(a.cantidad_nueva) || 0 })),
+        p_motivo: motivoCambio,
+      });
+      if (error) throw new Error(error.message);
+      toast.success('Ajuste editado: se movió solo la diferencia');
+      setEditGroupKey(null);
+      refrescarInventario();
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo editar el ajuste');
+    } finally {
+      setHistBusy(false);
+    }
+  };
+
+  const confirmarCancelacion = async () => {
+    if (!cancelGroup) return;
+    if (!cancelMotivo.trim()) { toast.error('Indica el motivo de la cancelación'); return; }
+    setHistBusy(true);
+    try {
+      const { error } = await (supabase.rpc as unknown as RpcSinTipos)('cancelar_ajuste_inventario', {
+        p_ids: (cancelGroup.items ?? []).map((a: any) => a.id),
+        p_motivo: cancelMotivo.trim(),
+      });
+      if (error) throw new Error(error.message);
+      toast.success('Ajuste cancelado: se revirtió el inventario');
+      setCancelGroup(null);
+      setCancelMotivo('');
+      refrescarInventario();
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo cancelar el ajuste');
+    } finally {
+      setHistBusy(false);
+    }
+  };
 
   // Apply all changes
   const applyAdjustments = async () => {
@@ -903,6 +998,7 @@ export default function AjustesInventarioPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
+                        {group.cancelado && <Badge variant="destructive" className="text-xs">Cancelado</Badge>}
                         <Badge variant="outline" className="text-xs">{totalItems} producto{totalItems !== 1 ? 's' : ''}</Badge>
                         <span className={`font-mono text-sm font-semibold ${totalDiff > 0 ? 'text-green-600' : totalDiff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
                           {totalDiff > 0 ? '+' : ''}{totalDiff}
@@ -911,6 +1007,31 @@ export default function AjustesInventarioPage() {
                     </button>
                     {isOpen && (
                       <div className="border-t border-border">
+                        <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-muted/30">
+                          {group.cancelado ? (
+                            <span className="text-xs text-destructive">Cancelado{group.cancelado_motivo ? `: ${group.cancelado_motivo}` : ''}</span>
+                          ) : editGroupKey === group.key ? (
+                            <>
+                              <Input value={editMotivo} onChange={e => setEditMotivo(e.target.value)} placeholder="Motivo" className="h-8 max-w-xs text-xs" />
+                              <Button size="sm" className="h-8 text-xs gap-1" disabled={histBusy} onClick={() => guardarEdicion(group)}>
+                                <Save className="h-3.5 w-3.5" /> {histBusy ? 'Guardando…' : 'Guardar cambios'}
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-8 text-xs" disabled={histBusy} onClick={() => setEditGroupKey(null)}>Descartar</Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => iniciarEdicion(group)}>
+                                <Settings2 className="h-3.5 w-3.5" /> Editar
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-8 text-xs gap-1 text-destructive" onClick={() => { setCancelGroup(group); setCancelMotivo(''); }}>
+                                <X className="h-3.5 w-3.5" /> Cancelar ajuste
+                              </Button>
+                            </>
+                          )}
+                          <Button size="sm" variant="outline" className="h-8 text-xs gap-1 ml-auto" onClick={() => pdfDeGrupo(group)}>
+                            <FileText className="h-3.5 w-3.5" /> PDF
+                          </Button>
+                        </div>
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -927,7 +1048,17 @@ export default function AjustesInventarioPage() {
                                 <TableCell className="font-mono text-xs text-muted-foreground">{a.productos?.codigo}</TableCell>
                                 <TableCell className="text-sm">{a.productos?.nombre}</TableCell>
                                 <TableCell className="text-right font-mono text-sm">{a.cantidad_anterior}</TableCell>
-                                <TableCell className="text-right font-mono text-sm">{a.cantidad_nueva}</TableCell>
+                                <TableCell className="text-right font-mono text-sm">
+                                  {editGroupKey === group.key ? (
+                                    <Input
+                                      type="number"
+                                      inputMode="decimal"
+                                      value={editValues[a.id] ?? ''}
+                                      onChange={e => setEditValues(prev => ({ ...prev, [a.id]: e.target.value }))}
+                                      className="h-7 w-24 ml-auto text-right font-mono text-sm"
+                                    />
+                                  ) : a.cantidad_nueva}
+                                </TableCell>
                                 <TableCell className={`text-right font-mono text-sm font-semibold ${a.diferencia > 0 ? 'text-green-600' : a.diferencia < 0 ? 'text-destructive' : ''}`}>
                                   {a.diferencia > 0 ? '+' : ''}{a.diferencia}
                                 </TableCell>
@@ -1137,6 +1268,27 @@ export default function AjustesInventarioPage() {
             <Button variant="outline" onClick={() => setShowLoteConfirm(false)} disabled={applying}>Cancelar</Button>
             <Button onClick={() => { setShowLoteConfirm(false); applyAdjustments(); }} disabled={applying}>
               {applying ? 'Aplicando…' : 'Sí, asignar'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!cancelGroup} onOpenChange={o => { if (!o) setCancelGroup(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar ajuste de inventario</DialogTitle>
+            <DialogDescription>
+              Se registra el movimiento contrario por la misma diferencia de cada producto y el ajuste queda como Cancelado. El historial no se borra.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Motivo de la cancelación</Label>
+            <Textarea value={cancelMotivo} onChange={e => setCancelMotivo(e.target.value)} rows={3} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setCancelGroup(null)} disabled={histBusy}>Volver</Button>
+            <Button variant="destructive" onClick={confirmarCancelacion} disabled={histBusy}>
+              {histBusy ? 'Cancelando…' : 'Cancelar ajuste'}
             </Button>
           </div>
         </DialogContent>
