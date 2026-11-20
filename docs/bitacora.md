@@ -152,3 +152,4 @@
 2026-11-20 · desarrollador · aplicar_pago_proveedor: pagos a proveedor en una transacción con saldo calculado en BD
 2026-11-20 · desarrollador · Listas de historial abren en el mes actual con filtro de fechas en BD: traspasos, órdenes de compra, gastos, pagos a proveedor, conteos, auditorías, ajustes
 2026-11-20 · desarrollador · Kardex por ubicación con índices origen/destino; RutaCxC baja solo columnas necesarias; comisiones con orden estable
+2026-11-20 · desarrollador · Datos de prueba en BD de pruebas (Mi Empresa Demo, notas='Dato de prueba'): 1 000 ventas/pedidos sin entregas, 505 cobros, stock 5 000/1 000 en Principal/Norte, 5 proveedores, 60 compras (25 pagos), 120 gastos. No es migración: no llega a producción.
