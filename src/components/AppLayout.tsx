@@ -495,6 +495,14 @@ function isVentaFormPath(pathname: string) {
     && (segments[1] === 'nuevo' || UUID_RE.test(segments[1]));
 }
 
+/** Nombre de la pantalla actual (último segmento con nombre; un id cae al segmento anterior). */
+function tituloDeRuta(pathname: string): string {
+  const segs = pathname.split('/').filter(Boolean).filter(seg => !UUID_RE.test(seg));
+  const seg = segs[segs.length - 1];
+  if (!seg) return 'Inicio';
+  return BREADCRUMB_LABELS[seg] || seg.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function Breadcrumb() {
   const location = useLocation();
   const segments = location.pathname.split('/').filter(Boolean);
@@ -746,7 +754,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <SandboxBanner />
         <NotificationRuntime bannersOnly />
         {/* Mobile top bar */}
-        <header className="min-h-14 flex items-center justify-between gap-2 pl-1.5 pr-1 bg-card border-b border-border shrink-0 safe-area-top">
+        {/* Teléfono: UNA sola barra compacta (menú · nombre de la pantalla · buscar). Licencia, empresa,
+            modo oscuro y versión viven en el menú ☰; la ruta de navegación no se muestra. */}
+        <header className="h-12 flex items-center justify-between gap-1 pl-1 pr-1 bg-card border-b border-border shrink-0 safe-area-top">
           <div className="flex items-center gap-1.5 min-w-0">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
@@ -758,7 +768,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="h-14 flex items-center px-4 border-b border-sidebar-border/30 shrink-0">
                   <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-7 w-7 rounded object-contain" />
                   <span className="text-[18px] font-black text-primary tracking-tight">Rutapp</span>
+                  {empresa?.licencia && (
+                    <span className="ml-auto text-[10px] font-mono text-sidebar-foreground/60" title="Licencia">Lic. {empresa.licencia}</span>
+                  )}
                 </div>
+                <SuperAdminEmpresaSelector />
                 <div className="flex-1 min-h-0 overflow-y-auto">
                   <SidebarNav
                     collapsed={false}
@@ -807,8 +821,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
               </SheetContent>
             </Sheet>
-            <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-6 w-6 rounded object-contain" />
-            <span className="text-[16px] font-black text-primary tracking-tight">Rutapp</span>
+            <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-5 w-5 rounded object-contain shrink-0" />
+            <span className="text-[15px] font-semibold text-foreground truncate">{tituloDeRuta(location.pathname)}</span>
           </div>
           <div className="flex items-center gap-0.5">
             <TiendaOrdersBell />
@@ -820,31 +834,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             >
               <Search className="h-[18px] w-[18px]" />
             </button>
-            <button
-              onClick={applySwUpdate}
-              aria-label="Actualizar app"
-              className={cn(
-                "h-10 w-10 inline-flex items-center justify-center rounded-md transition-colors",
-                swUpdateAvailable
-                  ? "text-primary animate-pulse hover:text-primary/80"
-                  : "text-foreground/70 hover:text-foreground"
-              )}
-              title="Actualizar app"
-            >
-              <RefreshCw className="h-[18px] w-[18px]" />
-            </button>
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="h-10 w-10 inline-flex items-center justify-center rounded-md text-foreground/70 hover:text-foreground transition-colors"
-              aria-label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-            >
-              {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
-            </button>
+            {swUpdateAvailable && (
+              <button
+                onClick={applySwUpdate}
+                aria-label="Actualizar app"
+                className="h-10 w-10 inline-flex items-center justify-center rounded-md text-primary animate-pulse hover:text-primary/80 transition-colors"
+                title="Hay una versión nueva: actualizar"
+              >
+                <RefreshCw className="h-[18px] w-[18px]" />
+              </button>
+            )}
           </div>
         </header>
-
-        <SuperAdminEmpresaSelector />
-        <Breadcrumb />
         <main className="flex-1 overflow-auto" style={{ paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}>
           {children}
         </main>

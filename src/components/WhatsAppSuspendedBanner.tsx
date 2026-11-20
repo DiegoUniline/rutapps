@@ -1,11 +1,14 @@
 import { useLocation } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function WhatsAppSuspendedBanner() {
   const location = useLocation();
   const { empresa } = useAuth();
-  if (location.pathname.startsWith('/ruta')) return null;
+  const isMobile = useIsMobile();
+  // En teléfono la licencia va dentro del menú ☰ (barra superior compacta).
+  if (location.pathname.startsWith('/ruta') || isMobile) return null;
 
   const licencia = empresa?.licencia;
 

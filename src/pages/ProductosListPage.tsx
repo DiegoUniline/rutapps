@@ -426,24 +426,10 @@ export default function ProductosListPage() {
       {isMobile ? (
         // Teléfono: título + «+» arriba y buscador a todo lo ancho; sin tarjetas de resumen ni pestañas
         // (el estado se elige en Filtros) para que la lista use la pantalla completa.
-        <div className="shrink-0 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="text-lg font-semibold text-foreground">
-              Productos
-              {statusFilter !== 'activo' && (
-                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                  · {statusFilter.split(',').map(s => ESTADOS_PRODUCTO.find(e => e.value === s)?.label ?? s).join(', ')}
-                </span>
-              )}
-            </h1>
-            <button
-              onClick={() => setMobileNewOpen(true)}
-              aria-label="Nuevo producto"
-              className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95 shrink-0"
-            >
-              <Plus className="h-5 w-5" />
-            </button>
-          </div>
+        <div className="shrink-0 space-y-1.5">
+          <h1 className="sr-only">Productos</h1>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
           <OdooFilterBar
             search={search}
             onSearchChange={val => { setSearch(val); resetMobile(); }}
@@ -457,6 +443,20 @@ export default function ProductosListPage() {
             onSetFilter={(key, vals) => { setFilter(key, vals); resetMobile(); }}
             onClearFilters={() => { clearFilters(); resetMobile(); }}
           />
+            </div>
+            <button
+              onClick={() => setMobileNewOpen(true)}
+              aria-label="Nuevo producto"
+              className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95 shrink-0"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </div>
+          {statusFilter !== 'activo' && (
+            <p className="text-xs text-muted-foreground">
+              Mostrando: {statusFilter.split(',').map(s => ESTADOS_PRODUCTO.find(e => e.value === s)?.label ?? s).join(', ')}
+            </p>
+          )}
         </div>
       ) : (<>
       <ListPage.Header title={<>Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /> <VideoHelpButton module="productos" /></>} />
