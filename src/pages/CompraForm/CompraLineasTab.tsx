@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, X, PackageCheck, Boxes } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
 import QuickProductDialog from '@/components/QuickProductDialog';
@@ -9,6 +9,8 @@ import { getNombreCompra } from '@/lib/productoNombres';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoteReceptionModal } from '@/components/lotes/LoteReceptionModal';
 import { CompraLineaLotesDialog } from '@/components/lotes/CompraLineaLotesDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { BuscadorProductoMovil, RenglonCompactoMovil, type AgregarProductoDatos, type ProductoBuscable } from '@/components/productos/BuscadorProductoMovil';
 
 interface Props {
   lineas: Partial<CompraLinea>[];
@@ -30,6 +32,13 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
 
   const { fmt } = useCurrency();
   const { empresa, user } = useAuth();
+  // D-038: en teléfono se agrega con el buscador a pantalla completa y los
+  // renglones se ven compactos; escritorio no cambia.
+  const isMobile = useIsMobile();
+  const capturaMovil = isMobile && isEditable;
+  const [renglonAbierto, setRenglonAbierto] = useState<number | null>(null);
+  // Al quitar o agregar renglones cambian los índices: se cierra el que estaba abierto.
+  useEffect(() => { setRenglonAbierto(null); }, [lineas.length]);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickIdx, setQuickIdx] = useState<number | null>(null);
   const [quickName, setQuickName] = useState('');
@@ -102,6 +111,38 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
   const seleccionarProducto = (idx: number, productoId: string) => {
     updateLinea(idx, 'producto_id', productoId);
     if (productoId) focusCantidad(idx);
+  };
+
+  // Renglón libre para el buscador móvil: el primero vacío o uno nuevo al final.
+  const renglonLibre = () => {
+    const vacio = lineas.findIndex(l => !l.producto_id);
+    if (vacio >= 0) return vacio;
+    addLine();
+    return lineas.length;
+  };
+  const productosBuscador = (productosList ?? []).map((p: any) => ({
+    id: p.id, codigo: p.codigo ?? '', nombre: getNombreCompra(p), textoBusqueda: [p.nombre, p.nombre_compra].filter(Boolean).join(' '),
+    unidad: p.unidades_compra?.abreviatura ?? p.unidades_venta?.abreviatura ?? 'pz',
+    unidadExistencia: p.unidades_venta?.abreviatura ?? 'pz',
+    _raw: p,
+  })) as Array<ProductoBuscable & { _raw: any }>;
+  // Costo sugerido: el del renglón si ya está; si no, el mismo que pone updateLinea (costo × factor).
+  const costoSugerido = (p: ProductoBuscable & { _raw: any }) => {
+    const enLinea = lineas.find(l => l.producto_id === p.id);
+    if (enLinea) return Number(enLinea.precio_unitario) || 0;
+    return (Number(p._raw.costo) || 0) * (Number(p._raw.factor_conversion) || 1);
+  };
+  const agregarDesdeBuscador = ({ producto, cantidad, precio }: AgregarProductoDatos<ProductoBuscable & { _raw: any }>) => {
+    const existente = lineas.findIndex(l => l.producto_id === producto.id);
+    if (existente >= 0) {
+      updateLinea(existente, 'cantidad', (Number(lineas[existente].cantidad) || 0) + cantidad);
+      updateLinea(existente, 'precio_unitario', precio);
+      return;
+    }
+    const idx = renglonLibre();
+    updateLinea(idx, 'producto_id', producto.id);
+    updateLinea(idx, 'cantidad', cantidad);
+    updateLinea(idx, 'precio_unitario', precio);
   };
 
   return (
@@ -210,8 +251,8 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
       </div>
 
       {/* Mobile cards */}
-      <div className="md:hidden space-y-2">
-        {lineas.map((line, idx) => {
+      {(() => {
+        const tarjetaMovil = (line: Partial<CompraLinea>, idx: number, embebida: boolean) => {
           const iepsLabel = line._tiene_ieps ? (line._ieps_tipo === 'cuota' ? `$${line._ieps_pct}` : `${line._ieps_pct}%`) : '';
           const factor = Number(line._factor_conversion) || 1;
           const totalPz = (Number(line.cantidad) || 0) * factor;
@@ -219,7 +260,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
           const pendiente = Math.max(0, totalPz - recibido);
           const fullyReceived = totalPz > 0 && pendiente === 0;
           return (
-            <div key={idx} className="bg-card border border-border rounded-lg p-3 space-y-2">
+            <div key={idx} className={embebida ? 'space-y-2' : 'bg-card border border-border rounded-lg p-3 space-y-2'}>
               <div className="flex items-start justify-between gap-2">
                 <span className="text-[11px] font-semibold text-muted-foreground">#{idx + 1}</span>
                 {isEditable && <button onClick={() => removeLine(idx)} className="text-destructive hover:text-destructive/80 -mt-1"><X className="h-4 w-4" /></button>}
@@ -304,10 +345,49 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
               )}
             </div>
           );
-        })}
-      </div>
+        };
+        if (!capturaMovil) return <div className="md:hidden space-y-2">{lineas.map((line, idx) => tarjetaMovil(line, idx, false))}</div>;
+        const conProducto = lineas.map((line, idx) => ({ line, idx })).filter(({ line }) => !!line.producto_id);
+        return (
+          <div className="md:hidden">
+            <BuscadorProductoMovil
+              modo="compra"
+              productos={productosBuscador}
+              getExistencia={p => Number(p._raw.cantidad ?? 0)}
+              getPrecio={costoSugerido}
+              puedeEditarPrecio
+              agregados={new Set(conProducto.map(({ line }) => line.producto_id as string))}
+              onAgregar={agregarDesdeBuscador}
+              onCrearNuevo={name => triggerQuickCreate(renglonLibre(), name)}
+              fmt={v => fmt(v)}
+            />
+            {conProducto.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">Aún no hay productos. Toca «Buscar producto».</p>
+            ) : (
+              <div className="mt-3 border-b border-border">
+                {conProducto.map(({ line, idx }) => {
+                  const unidad = line._unidad_compra || 'pz';
+                  const factor = Number(line._factor_conversion) || 1;
+                  return (
+                    <RenglonCompactoMovil
+                      key={idx}
+                      nombre={line.productos ? getNombreCompra(line.productos) : '—'}
+                      detalle={`${(Number(line.cantidad) || 0).toLocaleString('es-MX')} × ${unidad}${factor > 1 ? ` (${factor.toLocaleString('es-MX')} pz)` : ''} · ${fmt(line.precio_unitario ?? 0)}`}
+                      importe={fmt(line.total ?? 0)}
+                      abierto={renglonAbierto === idx}
+                      onToggle={() => setRenglonAbierto(a => (a === idx ? null : idx))}
+                    >
+                      {tarjetaMovil(line, idx, true)}
+                    </RenglonCompactoMovil>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
-      {isEditable && <button onClick={addLine} className="btn-odoo-secondary text-xs gap-1 w-full md:w-auto justify-center"><Plus className="h-3.5 w-3.5" /> Agregar línea</button>}
+      {isEditable && !capturaMovil && <button onClick={addLine} className="btn-odoo-secondary text-xs gap-1 w-full md:w-auto justify-center"><Plus className="h-3.5 w-3.5" /> Agregar línea</button>}
 
       <QuickProductDialog
         open={quickOpen}
