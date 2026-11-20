@@ -37,11 +37,12 @@ function fmtDate(d?: string | null) {
 
 export default function CotizacionesListPage() {
   const navigate = useNavigate();
-  const { data, isLoading } = useCotizaciones();
+  const { dateFrom, dateTo, setDates } = useListPreferences('cotizaciones', { defaultMesActual: true });
+  // Mes actual por omisión, filtrado en el servidor (antes traía todo el historial).
+  const { data, isLoading } = useCotizaciones(dateFrom, dateTo);
   const del = useDeleteCotizacion();
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<CotizacionEstado | 'todas'>('todas');
-  const { dateFrom, dateTo, setDates } = useListPreferences('cotizaciones');
   const setDateFrom = (val: string) => setDates(val, dateTo);
   const setDateTo = (val: string) => setDates(dateFrom, val);
   const [toDelete, setToDelete] = useState<Cotizacion | null>(null);

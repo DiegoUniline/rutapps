@@ -1,34 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchAllPages } from '@/lib/supabasePaginate';
 import { pickColumns, CARGA_COLUMNS } from '@/lib/allowlist';
 import { toast } from 'sonner';
-
-export function useCargas(search?: string, statusFilter?: string) {
-  const { empresa } = useAuth();
-  return useQuery({
-    queryKey: ['cargas', empresa?.id, search, statusFilter],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      return fetchAllPages((from, to) => {
-        let q = supabase
-          .from('cargas')
-          .select('id, fecha, status, vendedor_id, almacen_id, almacen_destino_id, notas, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), almacen_origen:almacen_id(nombre), almacen_destino:almacen_destino_id(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_devuelta, cantidad_vendida, productos(codigo, nombre))')
-          .eq('empresa_id', empresa!.id)
-          .order('fecha', { ascending: false })
-          .range(from, to);
-        if (search) q = q.ilike('vendedores.nombre', `%${search}%`);
-        if (statusFilter && statusFilter !== 'todos') {
-          const arr = statusFilter.split(',');
-          if (arr.length > 1) q = q.in('status', arr as any);
-          else q = q.eq('status', statusFilter as any);
-        }
-        return q;
-      });
-    },
-  });
-}
 
 export function useCarga(id?: string) {
   return useQuery({

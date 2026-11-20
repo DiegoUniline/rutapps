@@ -45,12 +45,16 @@ interface Props {
 export default function KardexUbicacionModal({
   open, onClose, productoId, productoNombre, ubicacionId, ubicacionNombre, ubicacionTipo, stockActual,
 }: Props) {
-  const [fechaDesde, setFechaDesde] = useState('');
+  // Últimos 90 días por omisión; el saldo de antes lo calcula la BD (kardex_saldo_inicial).
+  const [fechaDesde, setFechaDesde] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() - 90);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
   const [fechaHasta, setFechaHasta] = useState('');
   const [filterTipo, setFilterTipo] = useState('todos');
   const [search, setSearch] = useState('');
 
-  const { rows, isLoading, refetch } = useKardexUbicacion(
+  const { rows, isLoading, refetch, saldoInicial } = useKardexUbicacion(
     open ? productoId : null,
     open ? ubicacionId : null,
     ubicacionTipo,
@@ -247,7 +251,7 @@ export default function KardexUbicacionModal({
 
         {/* Stock comparison footer */}
         {rows.length > 0 && (() => {
-          const saldoFinal = rows[rows.length - 1]?.saldo ?? 0;
+          const saldoFinal = rows[rows.length - 1]?.saldo ?? saldoInicial;
           const coincide = saldoFinal === stockActual;
           return (
             <div className={cn(
