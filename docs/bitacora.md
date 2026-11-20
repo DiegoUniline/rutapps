@@ -177,3 +177,4 @@
 2026-11-20 · desarrollador · D-037: fondo gris, hoja blanca única (ListPage y detalle de Venta), mayor contraste de texto y bordes
 2026-11-20 · desarrollador · Compra (teléfono): solo Recibir y Pagar (sin monto) a la vista, en azul (D-029); PDF, Excel, editar, marcar pagada, cancelar y eliminar en menú «⋯»; escritorio: Recibir/Registrar pago en azul y Cancelar en rojo contorno (D-029)
 2026-11-20 · arquitecto · D-038 aprobado: agregar productos en teléfono con buscador y editor desplegable (compras, traspasos, ventas, pedidos)
+2026-11-20 · desarrollador · D-038 Compra: en teléfono «Buscar producto» abre el buscador a pantalla completa (existencia, costo editable, Agregar regresa al documento) y los renglones se ven compactos; tocar uno abre su edición de siempre. Componente compartido src/components/productos/BuscadorProductoMovil.tsx + pruebas
