@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export interface TiendaConfig {
   id: string;
@@ -84,7 +84,7 @@ export function expandProductosConPresentaciones(productos: TiendaProducto[]): T
     // Una tarjeta por presentación
     for (const pr of pres) {
       const factor = Number(pr.factor_base);
-      const precio = pr.precio_especial ?? p.precio * factor;
+      const precio = precioPresentacion(p, pr);
       const precio_base = p.precio_base ? p.precio_base * factor : precio;
       out.push({
         ...p,
@@ -100,6 +100,11 @@ export function expandProductosConPresentaciones(productos: TiendaProducto[]): T
     }
   }
   return out;
+}
+
+/** Precio de una presentación (caja/paquete): su precio especial o precio × factor. */
+export function precioPresentacion(p: Pick<TiendaProducto, "precio">, pr: Pick<TiendaPresentacion, "precio_especial" | "factor_base">): number {
+  return pr.precio_especial != null ? Number(pr.precio_especial) : p.precio * Number(pr.factor_base);
 }
 
 export interface CartItem {
@@ -123,6 +128,32 @@ export function cartKeyOf(producto_id: string, presentacion_id?: string | null) 
 }
 export const cartLineKey = (c: CartItem) => cartKeyOf(c.producto_id, c.presentacion_id);
 
+/**
+ * Pone en el carrito los precios vigentes del catálogo que el servidor calculó
+ * para quien está viendo la tienda. Así, si agregó productos como visitante y
+ * luego inició sesión (o le cambiaron su lista), el carrito muestra SUS precios.
+ * Devuelve el mismo arreglo si no cambió nada.
+ */
+export function repreciarCarrito(cart: CartItem[], productos: TiendaProducto[]): CartItem[] {
+  if (!cart.length || !productos?.length) return cart;
+  const porId = new Map(productos.map((p) => [p.id, p]));
+  let cambio = false;
+  const next = cart.map((c) => {
+    const p = porId.get(c.producto_id);
+    if (!p) return c;
+    let precio = p.precio;
+    if (c.presentacion_id) {
+      const pr = (p.presentaciones ?? []).find((x) => x.id === c.presentacion_id);
+      if (!pr) return c;
+      precio = precioPresentacion(p, pr);
+    }
+    if (!Number.isFinite(precio) || precio === c.precio_unitario) return c;
+    cambio = true;
+    return { ...c, precio_unitario: precio };
+  });
+  return cambio ? next : cart;
+}
+
 interface TiendaCtx {
   slug: string;
   config: TiendaConfig | null;
@@ -141,6 +172,8 @@ interface TiendaCtx {
   updateQty: (lineKey: string, cantidad: number) => void;
   removeFromCart: (lineKey: string) => void;
   clearCart: () => void;
+  /** Actualiza los precios del carrito con los del catálogo vigente. */
+  sincronizarPreciosCarrito: (productos: TiendaProducto[]) => void;
   cartCount: number;
   cartTotal: number;
 }
@@ -151,7 +184,22 @@ const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 const EVENTO_SESION_EXPIRADA = "tienda-sesion-expirada";
+/** Renovación de rutina mientras el cliente usa la tienda. */
 const RENOVAR_CADA_MS = 12 * 60 * 60 * 1000;
+/** Si al token le queda menos que esto, se renueva al abrir aunque no toque. */
+const RENOVAR_SI_VENCE_EN_MS = 7 * 24 * 60 * 60 * 1000;
+
+// localStorage puede fallar (navegación privada, navegadores dentro de apps):
+// la sesión sigue en memoria aunque no se pueda guardar.
+function lsGet(k: string): string | null {
+  try { return localStorage.getItem(k); } catch { return null; }
+}
+function lsSet(k: string, v: string) {
+  try { localStorage.setItem(k, v); } catch (e) { console.warn("[tienda] no se pudo guardar en el navegador:", (e as Error).message); }
+}
+function lsRemove(k: string) {
+  try { localStorage.removeItem(k); } catch (e) { console.warn("[tienda] no se pudo borrar del navegador:", (e as Error).message); }
+}
 
 /** Vencimiento del token (ms) leído de su payload; null si no se puede leer. */
 export function tokenExpiraEn(token: string | null): number | null {
@@ -166,34 +214,70 @@ export function tokenExpiraEn(token: string | null): number | null {
   }
 }
 
-/** Solo un 401 de sesión vencida/inválida cierra sesión (no una contraseña actual incorrecta). */
-function avisarSiSesionVencio(status: number, data: any) {
-  if (status !== 401) return;
+/** ¿El servidor dijo que la sesión ya no sirve? (no una contraseña actual incorrecta). */
+export function esSesionVencida(status: number, data: any): boolean {
+  if (status !== 401) return false;
   const msg = String(data?.error ?? "");
-  if (data?.code === "sesion_expirada" || /^Sesión (expirada|de tienda inválida)/.test(msg)) {
-    window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA));
+  return data?.code === "sesion_expirada" || /^Sesión (expirada|de tienda inválida)/.test(msg);
+}
+
+interface Respuesta { status: number; ok: boolean; data: any }
+
+/** fetch que nunca truena por una respuesta que no es JSON (504 del proxy, HTML…). */
+async function pedir(url: string, init?: RequestInit): Promise<Respuesta> {
+  let r: Response;
+  try {
+    r = await fetch(url, init);
+  } catch {
+    throw new Error("Sin conexión. Revisa tu internet e intenta de nuevo.");
   }
+  let data: any = null;
+  try { data = await r.json(); } catch { data = null; }
+  return { status: r.status, ok: r.ok, data };
+}
+
+function errorDe(res: Respuesta): Error {
+  return new Error(res.data?.error ?? (res.status >= 500 || res.status === 0
+    ? "El servidor no respondió. Intenta de nuevo en un momento."
+    : "Error de red"));
+}
+
+/** Renueva la sesión y devuelve el token nuevo (null si no se pudo). Lo registra el TiendaProvider. */
+let renovadorSesion: ((tokenViejo: string) => Promise<string | null>) | null = null;
+
+/**
+ * Hace la llamada y, si el servidor dice que la sesión venció, la renueva y
+ * reintenta UNA vez con el token nuevo. Solo se cierra sesión si la renovación
+ * también es rechazada (cliente bloqueado, tienda desactivada, token alterado).
+ */
+async function conSesion(token: unknown, llamar: (token: unknown) => Promise<Respuesta>) {
+  let res = await llamar(token);
+  if (!res.ok && esSesionVencida(res.status, res.data) && typeof token === "string" && token) {
+    if (renovadorSesion) {
+      const nuevo = await renovadorSesion(token);
+      if (nuevo) res = await llamar(nuevo);
+    } else {
+      window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA));
+    }
+  }
+  if (!res.ok) throw errorDe(res);
+  return res.data;
 }
 
 export async function fnGet(path: string, params: Record<string, string> = {}) {
-  const qs = new URLSearchParams(params).toString();
-  const r = await fetch(`${FN_URL}/${path}?${qs}`, {
-    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+  return conSesion(params.token, (token) => {
+    const qs = new URLSearchParams(token ? { ...params, token: String(token) } : params).toString();
+    return pedir(`${FN_URL}/${path}?${qs}`, { headers: { apikey: ANON, Authorization: `Bearer ${ANON}` } });
   });
-  const data = await r.json();
-  if (!r.ok) { avisarSiSesionVencio(r.status, data); throw new Error(data?.error ?? "Error de red"); }
-  return data;
 }
 
 export async function fnPost(path: string, body: unknown) {
-  const r = await fetch(`${FN_URL}/${path}`, {
+  const b = (body ?? {}) as Record<string, unknown>;
+  return conSesion(b.token, (token) => pedir(`${FN_URL}/${path}`, {
     method: "POST",
     headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await r.json();
-  if (!r.ok) { avisarSiSesionVencio(r.status, data); throw new Error(data?.error ?? "Error de red"); }
-  return data;
+    body: JSON.stringify(token ? { ...b, token } : body),
+  }));
 }
 
 export function TiendaProvider({ slug, children }: { slug: string; children: ReactNode }) {
@@ -205,11 +289,14 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
   const tokenKey = `tienda_token_${slug}`;
   const cartKey = `tienda_cart_${slug}`;
 
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(tokenKey));
-  const [email, setEmail] = useState<string | null>(() => localStorage.getItem(`${tokenKey}_email`));
+  const [token, setToken] = useState<string | null>(() => lsGet(tokenKey));
+  const [email, setEmail] = useState<string | null>(() => lsGet(`${tokenKey}_email`));
   const [cart, setCart] = useState<CartItem[]>(() => {
-    try { return JSON.parse(localStorage.getItem(cartKey) ?? "[]"); } catch { return []; }
+    try { return JSON.parse(lsGet(cartKey) ?? "[]"); } catch { return []; }
   });
+  // Token vigente para callbacks asíncronos (evita cerrar/actualizar una sesión que ya cambió).
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
 
   useEffect(() => {
     let cancel = false;
@@ -227,7 +314,7 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
   }, [slug]);
 
   useEffect(() => {
-    localStorage.setItem(cartKey, JSON.stringify(cart));
+    lsSet(cartKey, JSON.stringify(cart));
   }, [cart, cartKey]);
 
   // Inject brand colors via CSS variables scoped to the tienda root
@@ -242,81 +329,119 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
     };
   }, [config]);
 
-  // La sesión anterior venció sola (aviso en "Iniciar sesión").
-  const [sesionExpirada, setSesionExpirada] = useState(() => localStorage.getItem(`${tokenKey}_expirada`) === "1");
+  // La sesión se cerró sola (bloqueo / tienda desactivada): aviso en "Iniciar sesión".
+  const [sesionExpirada, setSesionExpirada] = useState(() => lsGet(`${tokenKey}_expirada`) === "1");
 
-  const login = useCallback((t: string, e: string) => {
-    localStorage.setItem(tokenKey, t);
-    localStorage.setItem(`${tokenKey}_email`, e);
-    localStorage.removeItem(`${tokenKey}_expirada`);
-    setSesionExpirada(false);
+  const guardarToken = useCallback((t: string) => {
+    tokenRef.current = t;
+    lsSet(tokenKey, t);
     setToken(t);
-    setEmail(e);
   }, [tokenKey]);
 
+  const login = useCallback((t: string, e: string) => {
+    lsSet(`${tokenKey}_email`, e);
+    lsSet(`${tokenKey}_renovado`, String(Date.now()));
+    lsRemove(`${tokenKey}_expirada`);
+    setSesionExpirada(false);
+    guardarToken(t);
+    setEmail(e);
+  }, [tokenKey, guardarToken]);
+
+  /** Cierre de sesión: SOLO cuando el cliente lo pide o el servidor rechaza la renovación. */
   const logout = useCallback(() => {
-    localStorage.removeItem(tokenKey);
-    localStorage.removeItem(`${tokenKey}_email`);
-    localStorage.removeItem(`${tokenKey}_renovado`);
+    tokenRef.current = null;
+    lsRemove(tokenKey);
+    lsRemove(`${tokenKey}_email`);
+    lsRemove(`${tokenKey}_renovado`);
     setToken(null);
     setEmail(null);
   }, [tokenKey]);
 
-  // ── Sesión: se renueva sola mientras el cliente entre; si vence, se cierra sola ──
-
   const expirar = useCallback(() => {
-    if (!localStorage.getItem(tokenKey)) return;
+    if (!tokenRef.current) return;
     logout();
-    localStorage.setItem(`${tokenKey}_expirada`, "1");
+    lsSet(`${tokenKey}_expirada`, "1");
     setSesionExpirada(true);
   }, [logout, tokenKey]);
 
-  // Cualquier respuesta "Sesión expirada" del servidor cierra sesión.
-  useEffect(() => {
-    window.addEventListener(EVENTO_SESION_EXPIRADA, expirar);
-    return () => window.removeEventListener(EVENTO_SESION_EXPIRADA, expirar);
-  }, [expirar]);
-
-  // Vencimiento local: al abrir, al volver a la pestaña y en el momento exacto en que vence.
-  useEffect(() => {
-    if (!token) return;
-    const exp = tokenExpiraEn(token);
-    if (exp == null) return;
-    const revisar = () => { if (Date.now() >= exp) expirar(); };
-    revisar();
-    const timer = window.setTimeout(revisar, Math.min(Math.max(exp - Date.now(), 0) + 1000, 2_147_000_000));
-    document.addEventListener("visibilitychange", revisar);
-    return () => { window.clearTimeout(timer); document.removeEventListener("visibilitychange", revisar); };
-  }, [token, expirar]);
-
-  // Renovación (sesión deslizante): como máximo cada 12 h, al abrir o volver a la tienda.
-  useEffect(() => {
-    if (!token) return;
-    const renovar = () => {
-      if (document.visibilityState === "hidden") return;
-      // Token vencido o ya cerrado: no se renueva (lo cierra el efecto de vencimiento).
-      const exp = tokenExpiraEn(token);
-      if ((exp != null && Date.now() >= exp) || localStorage.getItem(tokenKey) !== token) return;
-      const ultimo = Number(localStorage.getItem(`${tokenKey}_renovado`) ?? 0);
-      if (Date.now() - ultimo < RENOVAR_CADA_MS) return;
-      localStorage.setItem(`${tokenKey}_renovado`, String(Date.now()));
-      fnPost("tienda-refresh", { slug, token })
-        .then((res) => {
-          if (res?.token && localStorage.getItem(tokenKey)) {
-            localStorage.setItem(tokenKey, res.token);
-            setToken(res.token);
-          }
-        })
-        .catch((e) => {
-          // Sin red: se reintenta en la siguiente apertura. Sesión vencida: ya la cerró el evento.
-          localStorage.removeItem(`${tokenKey}_renovado`);
-          console.warn("[tienda] no se pudo renovar la sesión:", (e as Error).message);
+  // ── Sesión persistente: no vence por tiempo; se renueva sola ──
+  // tienda-refresh renueva incluso un token ya vencido (firma válida). Solo un
+  // rechazo explícito del servidor cierra la sesión; sin red o con error del
+  // servidor la sesión se conserva y se reintenta después.
+  const renovando = useRef<Promise<string | null> | null>(null);
+  const renovarSesion = useCallback((tokenViejo: string): Promise<string | null> => {
+    if (renovando.current) return renovando.current;
+    const p = (async () => {
+      let res: Respuesta;
+      try {
+        res = await pedir(`${FN_URL}/tienda-refresh`, {
+          method: "POST",
+          headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ slug, token: tokenViejo }),
         });
+      } catch (e) {
+        console.warn("[tienda] sin conexión para renovar la sesión:", (e as Error).message);
+        return null;
+      }
+      // Mientras tanto el cliente cerró sesión o entró con otra cuenta: no tocar.
+      if (tokenRef.current !== tokenViejo) return tokenRef.current;
+      if (res.ok && typeof res.data?.token === "string") {
+        lsSet(`${tokenKey}_renovado`, String(Date.now()));
+        guardarToken(res.data.token);
+        return res.data.token as string;
+      }
+      if (esSesionVencida(res.status, res.data)) { expirar(); return null; }
+      console.warn("[tienda] no se pudo renovar la sesión:", res.status, res.data?.error ?? "");
+      return null;
+    })().finally(() => { renovando.current = null; });
+    renovando.current = p;
+    return p;
+  }, [slug, tokenKey, guardarToken, expirar]);
+
+  // Las llamadas a la tienda (fnGet/fnPost) usan este renovador ante un 401 de sesión.
+  useEffect(() => {
+    const fn = (t: string) => renovarSesion(t);
+    renovadorSesion = fn;
+    return () => { if (renovadorSesion === fn) renovadorSesion = null; };
+  }, [renovarSesion]);
+
+  // Compatibilidad: un aviso de sesión vencida sin renovador intenta renovar.
+  useEffect(() => {
+    const onVencida = () => { if (tokenRef.current) void renovarSesion(tokenRef.current); };
+    window.addEventListener(EVENTO_SESION_EXPIRADA, onVencida);
+    return () => window.removeEventListener(EVENTO_SESION_EXPIRADA, onVencida);
+  }, [renovarSesion]);
+
+  // Renovación al abrir y al volver a la tienda: cada 12 h, o antes si el token
+  // vence pronto o ya venció (no depende de que el reloj del celular esté bien).
+  useEffect(() => {
+    if (!token) return;
+    const revisar = () => {
+      if (document.visibilityState === "hidden") return;
+      const ultimo = Number(lsGet(`${tokenKey}_renovado`) ?? 0);
+      if (Date.now() - ultimo < 60_000) return; // como máximo una vez por minuto
+      const exp = tokenExpiraEn(token);
+      const vencePronto = exp != null && exp - Date.now() < RENOVAR_SI_VENCE_EN_MS;
+      if (!vencePronto && Date.now() - ultimo < RENOVAR_CADA_MS) return;
+      void renovarSesion(token);
     };
-    renovar();
-    document.addEventListener("visibilitychange", renovar);
-    return () => document.removeEventListener("visibilitychange", renovar);
-  }, [token, slug, tokenKey]);
+    revisar();
+    document.addEventListener("visibilitychange", revisar);
+    return () => document.removeEventListener("visibilitychange", revisar);
+  }, [token, tokenKey, renovarSesion]);
+
+  // Otra pestaña de la misma tienda inició/cerró sesión o renovó el token.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== tokenKey) return;
+      tokenRef.current = e.newValue;
+      setToken(e.newValue);
+      if (!e.newValue) setEmail(null);
+      else setEmail(lsGet(`${tokenKey}_email`));
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [tokenKey]);
 
   const addToCart = useCallback((item: CartItem) => {
     setCart((prev) => {
@@ -341,15 +466,39 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
 
   const clearCart = useCallback(() => setCart([]), []);
 
+  const sincronizarPreciosCarrito = useCallback((productos: TiendaProducto[]) => {
+    setCart((prev) => repreciarCarrito(prev, productos));
+  }, []);
+
   const cartCount = useMemo(() => cart.reduce((s, x) => s + x.cantidad, 0), [cart]);
   const cartTotal = useMemo(() => cart.reduce((s, x) => s + x.cantidad * x.precio_unitario, 0), [cart]);
 
   const value: TiendaCtx = {
     slug, config, empresa, loadingConfig, configError,
     token, email, isAuth: !!token, sesionExpirada, login, logout,
-    cart, addToCart, updateQty, removeFromCart, clearCart, cartCount, cartTotal,
+    cart, addToCart, updateQty, removeFromCart, clearCart, sincronizarPreciosCarrito, cartCount, cartTotal,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+/**
+ * Mantiene el carrito con los precios del catálogo vigente (mismo query que las
+ * páginas, así no se descarga dos veces). Se monta una vez dentro del TiendaProvider.
+ */
+export function SincronizarPreciosCarrito() {
+  const t = useTienda();
+  const conCarrito = t.cart.length > 0;
+  const { data } = useQuery({
+    queryKey: ["tienda-catalog", t.slug, t.token],
+    queryFn: () => fnGet("tienda-catalog", { slug: t.slug, ...(t.token ? { token: t.token } : {}) }),
+    staleTime: 60_000,
+    enabled: conCarrito,
+  });
+  const { sincronizarPreciosCarrito } = t;
+  useEffect(() => {
+    if (conCarrito && Array.isArray(data?.productos)) sincronizarPreciosCarrito(data.productos);
+  }, [data, conCarrito, sincronizarPreciosCarrito]);
+  return null;
 }
 
 export function useTienda() {

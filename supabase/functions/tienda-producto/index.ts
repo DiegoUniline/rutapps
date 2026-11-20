@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, json, verifyToken } from "../_shared/tiendaAuth.ts";
-import { resolvePrice, type Rule, type Prod } from "../_shared/tiendaPricing.ts";
+import { corsHeaders, json, sesionVencida, verifyToken } from "../_shared/tiendaAuth.ts";
+import { resolvePrice, type Prod } from "../_shared/tiendaPricing.ts";
+import { contextoPreciosTienda, PRODUCTO_COLS_PRECIO } from "../_shared/tiendaPreciosContexto.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -23,28 +24,26 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!cfg || !cfg.activa) return json({ error: "Tienda no disponible" }, 404);
 
-    let listaPrecioId: string | null = cfg.lista_precios_default_id;
+    // Misma resolución de lista/reglas y de sesión que tienda-catalog.
+    let cliente: { lista_precio_id: string | null; tarifa_id: string | null } | null = null;
     if (tokenStr) {
       const payload = await verifyToken(tokenStr, Deno.env.get("TIENDA_JWT_SECRET")!);
-      if (payload && payload.empresa_id === cfg.empresa_id) {
-        const { data: cli } = await supabase
-          .from("clientes")
-          .select("lista_precio_id")
-          .eq("id", payload.cliente_id)
-          .maybeSingle();
-        if (cfg.usar_lista_cliente !== false && cli?.lista_precio_id) listaPrecioId = cli.lista_precio_id;
-      }
+      if (!payload || payload.empresa_id !== cfg.empresa_id) return sesionVencida();
+      const { data: cli, error: cliErr } = await supabase
+        .from("clientes")
+        .select("lista_precio_id, tarifa_id")
+        .eq("id", payload.cliente_id)
+        .eq("empresa_id", cfg.empresa_id)
+        .maybeSingle();
+      if (cliErr) throw cliErr;
+      if (!cli) return sesionVencida();
+      cliente = cli;
     }
-
-    let tarifaId: string | null = null;
-    if (listaPrecioId) {
-      const { data: lp } = await supabase.from("lista_precios").select("tarifa_id").eq("id", listaPrecioId).maybeSingle();
-      if (lp) tarifaId = lp.tarifa_id;
-    }
+    const { listaPrecioId, rules } = await contextoPreciosTienda(supabase, cfg, cliente);
 
     const { data: p } = await supabase
       .from("productos")
-      .select("id, nombre, codigo, notas, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio, vender_sin_stock, status, se_puede_vender, empresa_id")
+      .select(`id, nombre, codigo, notas, marca_id, imagen_url, unidad_venta_id, vender_sin_stock, status, se_puede_vender, empresa_id, ${PRODUCTO_COLS_PRECIO}`)
       .eq("id", productoId)
       .maybeSingle();
 
@@ -55,7 +54,7 @@ Deno.serve(async (req) => {
     // Related: 12 products in same category
     const { data: relacionadosRaw } = await supabase
       .from("productos")
-      .select("id, nombre, codigo, notas, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio, vender_sin_stock")
+      .select(`id, nombre, codigo, notas, marca_id, imagen_url, unidad_venta_id, vender_sin_stock, ${PRODUCTO_COLS_PRECIO}`)
       .eq("empresa_id", cfg.empresa_id)
       .eq("status", "activo")
       .eq("se_puede_vender", true)
@@ -66,7 +65,7 @@ Deno.serve(async (req) => {
     // Other popular (any) — limit 12
     const { data: otrosRaw } = await supabase
       .from("productos")
-      .select("id, nombre, codigo, notas, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio, vender_sin_stock")
+      .select(`id, nombre, codigo, notas, marca_id, imagen_url, unidad_venta_id, vender_sin_stock, ${PRODUCTO_COLS_PRECIO}`)
       .eq("empresa_id", cfg.empresa_id)
       .eq("status", "activo")
       .eq("se_puede_vender", true)
@@ -78,16 +77,6 @@ Deno.serve(async (req) => {
     const marcaIds = [...new Set(all.map((x: any) => x.marca_id).filter(Boolean))];
     const unidadIds = [...new Set(all.map((x: any) => x.unidad_venta_id).filter(Boolean))];
     const prodIds = all.map((x: any) => x.id);
-
-    let rules: Rule[] = [];
-    if (tarifaId && listaPrecioId) {
-      const { data: tr } = await supabase
-        .from("tarifa_lineas")
-        .select("aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id")
-        .eq("tarifa_id", tarifaId)
-        .or(`lista_precio_id.eq.${listaPrecioId},lista_precio_id.is.null`);
-      rules = (tr ?? []) as Rule[];
-    }
 
     const [cR, mR, uR, sR, pR] = await Promise.all([
       clasifIds.length ? supabase.from("clasificaciones").select("id, nombre").in("id", clasifIds) : { data: [] },
