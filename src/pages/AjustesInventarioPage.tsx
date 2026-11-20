@@ -36,6 +36,7 @@ import * as XLSX from 'xlsx';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 interface LoteImportItem {
   producto_id: string;
@@ -286,7 +287,8 @@ export default function AjustesInventarioPage() {
       const s = search.toLowerCase();
       result = result.filter(r => r.nombre.toLowerCase().includes(s) || r.codigo.toLowerCase().includes(s));
     }
-    return result;
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(result, search, r => [r.codigo], r => [r.nombre]);
   }, [modeRows, search, selectedCats]);
 
   const changedRows = modeRows.filter(r => r.touched && r.cantidadReal !== null && r.cantidadReal !== r.cantidadSistema);
@@ -700,7 +702,8 @@ export default function AjustesInventarioPage() {
     }
     if (desdeH) list = list.filter(l => (l.fecha ?? '') >= desdeH);
     if (hastaH) list = list.filter(l => (l.fecha ?? '') <= hastaH);
-    return list;
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(list, searchH, l => [l.codigo], l => [l.producto, l.almacen, l.usuario, l.motivo]);
   }, [allItems, searchH, filtersH.almacen, desdeH, hastaH]);
 
   const totalH = filteredH.length;

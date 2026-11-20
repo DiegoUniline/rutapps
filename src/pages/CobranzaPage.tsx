@@ -34,6 +34,7 @@ import { CobranzaTabs } from '@/components/CobranzaTabs';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { hasRealConnection } from '@/lib/connectivity';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 
 
@@ -345,7 +346,8 @@ export default function CobranzaPage() {
     }
     if (dateFrom) list = list.filter(c => (c.fecha ?? '').slice(0, 10) >= dateFrom);
     if (dateTo) list = list.filter(c => (c.fecha ?? '').slice(0, 10) <= dateTo);
-    return list;
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(list, search, c => [c.referencia], c => [(c.clientes as any)?.nombre]);
   }, [cobros, filters, search, dateFrom, dateTo]);
 
   // KPIs use full filtered data (cancelled excluded from money totals)

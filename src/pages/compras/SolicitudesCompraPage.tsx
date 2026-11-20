@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { todayLocal } from '@/lib/utils';
 import { calcLineTotals } from '@/pages/CompraForm/types';
 import { calcularTotalesCompra } from '@/lib/compraAjustes';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   borrador: { label: 'Borrador', cls: 'bg-slate-100 text-slate-700' },
@@ -81,11 +82,11 @@ export default function SolicitudesCompraPage() {
   // Teléfono: búsqueda y estado locales (solo presentación) y «Cargar más».
   const [buscarMovil, setBuscarMovil] = useState('');
   const [estadoMovil, setEstadoMovil] = useState('');
-  const itemsMovil = (listQuery.data ?? []).filter((s: any) => {
+  const itemsMovil = ordenarPorRelevancia((listQuery.data ?? []).filter((s: any) => {
     if (estadoMovil && s.status !== estadoMovil) return false;
     const q = buscarMovil.trim().toLowerCase();
     return !q || `${s.folio ?? ''} ${s.proveedores?.nombre ?? s.proveedor_nombre ?? ''}`.toLowerCase().includes(q);
-  });
+  }), buscarMovil, (s: any) => [s.folio], (s: any) => [s.proveedores?.nombre ?? s.proveedor_nombre]); // D-047
   const movil = useCargarMasMovil(itemsMovil, `${buscarMovil}|${estadoMovil}`);
 
   const detailQuery = useQuery({

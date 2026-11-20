@@ -1,7 +1,7 @@
 # Estado del proyecto — DOCUMENTO VIVO
 > Se lee al iniciar cada sesión. Se actualiza tras decisiones confirmadas o cambios verificados (no por consultas).
 
-**Última actualización:** 2026-11-19 · **Agente:** auditor/desarrollador
+**Última actualización:** 2026-11-20 · **Agente:** auditor/desarrollador
 
 ## Dónde vamos
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
@@ -10,6 +10,7 @@
 - **Siguiente paso exacto:** decidir datos históricos (cobros sin aplicar, pagado > total, saldos negativos); luego orden de trabajo por fases: F0 seguridad RPC → F1 saldo único + saldo a favor (D-008, D-020, D-021) → F2 pedido↔entrega → F3 inventario (D-022). Corte a Supabase propio: `docs/migracion-corte.md`.
 
 ## Decisiones recientes (últimas 10)
+- [D-047](./decisiones.md#d-047) 2026-11-20 · Con búsqueda, relevancia antes que fecha: folio/código exacto (o mismo número) → empieza con → contiene; la página 1 trae la coincidencia exacta.
 - [D-044](./decisiones.md#d-044) 2026-11-20 · Lo inactivo no se ofrece para elegir (se conserva marcado «(inactivo)» donde ya estaba); un maestro en uso no se elimina, se desactiva.
 - [D-043](./decisiones.md#d-043) 2026-11-20 · «−/+» por caja en renglones por presentación (POS y ruta); teclado con decimales en devoluciones a granel.
 - [D-022](./decisiones.md#d-022) 2026-11-19 · Reasignar entrega o cambiar camión siempre mueve stock.
@@ -19,7 +20,6 @@
 - [D-018](./decisiones.md#d-018) 2026-11-16 · Salir de Lovable: Supabase propio `amybkerwkybffllaxpnz` + Cloudflare; repo desconectado, se trabaja en `main`; integración GitHub→Supabase activa.
 - [D-017](./decisiones.md#d-017) 2026-11-04 · Restaurar las 48 suscripciones Stripe canceladas sin cobro inicial, conservando fecha/hora de corte original; ejecutado y verificado 48/48.
 - [D-004](./decisiones.md#d-004) 2026-10-19 · Ventas sin `fecha_vencimiento` vencen a los días de crédito del cliente.
-- [D-003](./decisiones.md#d-003) 2026-10-19 · Plan de corrección PR A/B; relleno de `fecha_entrega` con `validado_at` → `updated_at`.
 
 ## Propuestas pendientes de aprobación 💡
 - (ninguna)

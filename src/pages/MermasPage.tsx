@@ -30,6 +30,7 @@ import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarM
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 
 interface LineaForm {
@@ -56,10 +57,10 @@ export default function MermasPage() {
   const { data: mermas, isLoading } = useMermas({ desde: desde || undefined, hasta: hasta || undefined });
   // Teléfono: búsqueda local (solo presentación) y «Cargar más».
   const [busquedaMovil, setBusquedaMovil] = useState('');
-  const mermasMovil = (mermas ?? []).filter((m: any) => {
+  const mermasMovil = ordenarPorRelevancia((mermas ?? []).filter((m: any) => {
     const q = busquedaMovil.trim().toLowerCase();
     return !q || `${m.folio ?? ''} ${m.merma_motivos?.nombre ?? ''} ${m.almacenes?.nombre ?? ''} ${m.profiles?.nombre ?? ''}`.toLowerCase().includes(q);
-  });
+  }), busquedaMovil, (m: any) => [m.folio], (m: any) => [m.merma_motivos?.nombre, m.almacenes?.nombre, m.profiles?.nombre]); // D-047
   const movil = useCargarMasMovil(mermasMovil, `${busquedaMovil}|${desde}|${hasta}`);
   const registrar = useRegistrarMerma();
   const cancelar = useCancelarMerma();

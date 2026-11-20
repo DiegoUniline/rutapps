@@ -27,6 +27,7 @@ import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPr
 import { getNombreCompra } from '@/lib/productoNombres';
 import { toast } from 'sonner';
 import { prorratearAjustesCompra } from '@/lib/compraAjustes';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
@@ -196,7 +197,8 @@ function useCompras(search: string, statusFilter: string[], empresaId?: string, 
           ((c.proveedores as any)?.nombre ?? '').toLowerCase().includes(s)
         );
       }
-      return filtered;
+      // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+      return ordenarPorRelevancia(filtered, search, (c: any) => [c.folio, c.numero_factura], (c: any) => [(c.proveedores as any)?.nombre]);
     },
   });
 }
@@ -424,7 +426,8 @@ export default function ComprasPage() {
     }
     if (desdeD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) >= desdeD);
     if (hastaD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) <= hastaD);
-    return list;
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(list, searchD, l => [l.folio, l.numero_factura, l.codigo], l => [l.producto, l.proveedor]);
   }, [lineasRaw, searchD, filtersD.status, desdeD, hastaD]);
 
   const totalD = filteredLineas.length;

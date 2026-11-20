@@ -12,6 +12,7 @@ import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 const PAGE_SIZE = 50;
 
@@ -42,7 +43,8 @@ export default function ProveedoresListPage() {
       if (search) q = q.or(`nombre.ilike.%${search}%,contacto.ilike.%${search}%,email.ilike.%${search}%,telefono.ilike.%${search}%`);
       const { data, error } = await q;
       if (error) throw error;
-      return data as any[];
+      // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+      return ordenarPorRelevancia(data as any[], search, () => [], (p: any) => [p.nombre, p.contacto, p.email, p.telefono]);
     },
   });
 

@@ -41,8 +41,16 @@ Deno.serve(async (req) => {
 
       if (expired?.length) {
         for (const e of expired) {
-          // Delete empresa: FK cascades wipe all related data
-          await admin.from("empresas").delete().eq("id", e.id);
+          // Borra la empresa demo con todos sus datos en una transacción (las FKs NO ACTION
+          // impedían borrar `empresas` directo). Si falla, se conserva el usuario y se reintenta luego.
+          const { error: delErr } = await admin.rpc("delete_empresa_cascade", {
+            p_empresa_id: e.id,
+            p_deleted_by: null,
+          });
+          if (delErr) {
+            console.warn("demo GC: no se pudo eliminar la empresa", e.id, delErr.message);
+            continue;
+          }
           // Delete the auth user too
           if (e.owner_user_id) {
             try { await admin.auth.admin.deleteUser(e.owner_user_id); } catch (_) {}

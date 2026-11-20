@@ -13,6 +13,7 @@ import {
   SOLICITUD_STATUS_LABELS,
   type StatusSolicitudTraspaso,
 } from '@/hooks/useSolicitudesTraspaso';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 const STATUS_TABS: Array<{ value: 'todas' | StatusSolicitudTraspaso; label: string }> = [
   { value: 'todas', label: 'Todas' },
@@ -35,12 +36,14 @@ export default function SolicitudTraspasoListPage() {
 
   const filtradas = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return solicitudes.filter(s => {
+    const lista = solicitudes.filter(s => {
       if (tab !== 'todas' && s.status !== tab) return false;
       if (!q) return true;
       return [s.folio, s.almacen_origen?.nombre, s.almacen_destino?.nombre, s.solicitante?.nombre]
         .some(v => (v ?? '').toLowerCase().includes(q));
     });
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(lista, search, s => [s.folio], s => [s.almacen_origen?.nombre, s.almacen_destino?.nombre, s.solicitante?.nombre]);
   }, [solicitudes, tab, search]);
 
   const movil = useCargarMasMovil(filtradas, `${search}|${tab}`);

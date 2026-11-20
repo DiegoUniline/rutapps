@@ -19,6 +19,7 @@ import { usePermisos } from '@/hooks/usePermisos';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { MermaConfigDialog } from '@/components/devoluciones/MermaConfigDialog';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 const ACCION_LABELS: Record<string, string> = { reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero' };
@@ -161,7 +162,7 @@ export default function DevolucionesListPage() {
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    return (rows as any[]).filter(d => {
+    const lista = (rows as any[]).filter(d => {
       if (tabEstado === 'activas' && d.cancelado_at) return false;
       if (tabEstado === 'canceladas' && !d.cancelado_at) return false;
       const lineas = d.devolucion_lineas ?? [];
@@ -187,6 +188,10 @@ export default function DevolucionesListPage() {
       }
       return true;
     });
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(lista, search,
+      d => [d.ventas?.folio, ...(d.devolucion_lineas ?? []).map((l: any) => l.productos?.codigo)],
+      d => [d.clientes?.nombre, d.ventas?.vendedor?.nombre, d.vendedores?.nombre, d.registradoPor, ...(d.devolucion_lineas ?? []).map((l: any) => l.productos?.nombre)]);
   }, [rows, tabEstado, search, clienteFilter, vendedorFilter, motivoFilter, accionFilter, desde, hasta]);
   const conteoTab = useMemo(() => ({
     activas: (rows as any[]).filter(d => !d.cancelado_at).length,

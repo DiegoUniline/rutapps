@@ -3,6 +3,7 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { filtroCoincidenciaExacta, listaIdsPostgrest, paginaConExactosPrimero } from '@/lib/busquedaRelevancia';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, CLIENTE_COLUMNS } from '@/lib/allowlist';
@@ -41,7 +42,9 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
         if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
         if (search) {
           const s = search.replace(/'/g, "''");
-          q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%,telefono.ilike.%${s}%,contacto.ilike.%${s}%,email.ilike.%${s}%,direccion.ilike.%${s}%,colonia.ilike.%${s}%`);
+          // D-047: el código exacto (o mismo número: «C-002000» → C-2000) también entra.
+          const exacto = filtroCoincidenciaExacta(['codigo'], search);
+          q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%,telefono.ilike.%${s}%,contacto.ilike.%${s}%,email.ilike.%${s}%,direccion.ilike.%${s}%,colonia.ilike.%${s}%${exacto ? `,${exacto}` : ''}`);
         }
         if (statusFilter && statusFilter !== 'todos') {
           const arr = statusFilter.split(',');
@@ -71,12 +74,21 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
         return { rows: enriched as unknown as Cliente[], total: enriched.length };
       }
 
-      let q = supabase.from('clientes').select(SELECT, { count: 'exact' }).range((page - 1) * pageSize, page * pageSize - 1);
-      q = applyFilters(q);
-      const { data, error, count } = await q;
-      if (error) throw error;
-      const enriched = enrichClientes((data ?? []) as any[], qc, empresa!.id);
-      return { rows: enriched as unknown as Cliente[], total: count ?? 0 };
+      // D-047: con búsqueda, el cliente con código exacto va primero (página 1) sin repetirse.
+      const pagina = await paginaConExactosPrimero<any>({
+        busqueda: search,
+        columnas: ['codigo'],
+        page,
+        pageSize,
+        consultarExactos: (filtro, limite) => applyFilters(supabase.from('clientes').select(SELECT)).or(filtro).limit(limite),
+        consultarPagina: (desde, hasta, excluir) => {
+          let q = applyFilters(supabase.from('clientes').select(SELECT, { count: 'exact' }).range(desde, hasta));
+          if (excluir.length) q = q.not('id', 'in', listaIdsPostgrest(excluir));
+          return q;
+        },
+      });
+      const enriched = enrichClientes(pagina.rows, qc, empresa!.id);
+      return { rows: enriched as unknown as Cliente[], total: pagina.total };
     },
   });
 }
