@@ -81,21 +81,27 @@ export default function DevolucionesListPage() {
 
   // Almacén DESTINO de cada devolución (a dónde entró el producto: Mermas o vendible).
   // Se toma de los movimientos de inventario ligados a la devolución.
+  // Solo los movimientos de las devoluciones cargadas (por id, en trozos de 200; usa el índice
+  // de referencia_id). Antes traía todos los movimientos de devolución de la empresa sin límite.
+  const devIds = useMemo(() => (rows as any[]).map(r => r.id as string), [rows]);
   const { data: destinoMap = {} } = useQuery({
-    queryKey: ['devoluciones-destinos', empresa?.id],
-    enabled: !!empresa?.id,
+    queryKey: ['devoluciones-destinos', empresa?.id, devIds.length, devIds[0] ?? ''],
+    enabled: !!empresa?.id && devIds.length > 0,
     queryFn: async () => {
-      const [movRes, almRes] = await Promise.all([
-        (supabase as any).from('movimientos_inventario')
+      const movs: any[] = [];
+      for (let i = 0; i < devIds.length; i += 200) {
+        const { data, error } = await (supabase as any).from('movimientos_inventario')
           .select('referencia_id, almacen_destino_id')
-          .eq('empresa_id', empresa!.id)
+          .in('referencia_id', devIds.slice(i, i + 200))
           .in('referencia_tipo', ['devolucion_aplicada', 'devolucion'])
-          .gt('cantidad', 0),
-        (supabase as any).from('almacenes').select('id, nombre, es_merma').eq('empresa_id', empresa!.id),
-      ]);
+          .gt('cantidad', 0);
+        if (error) throw error;
+        movs.push(...(data ?? []));
+      }
+      const almRes = await (supabase as any).from('almacenes').select('id, nombre, es_merma').eq('empresa_id', empresa!.id);
       const almById = new Map<string, any>((almRes.data ?? []).map((a: any) => [a.id, a]));
       const map: Record<string, { nombre: string; es_merma: boolean }[]> = {};
-      for (const m of (movRes.data ?? [])) {
+      for (const m of movs) {
         const a = almById.get(m.almacen_destino_id);
         if (!a) continue;
         const arr = map[m.referencia_id] ?? (map[m.referencia_id] = []);
@@ -107,15 +113,19 @@ export default function DevolucionesListPage() {
 
   // Lote con el que reingresó cada producto devuelto (FEFO-in), por devolución+producto.
   const { data: loteMapDev = {} } = useQuery({
-    queryKey: ['devoluciones-lotes', empresa?.id],
-    enabled: manejaLotes && !!empresa?.id,
+    queryKey: ['devoluciones-lotes', empresa?.id, devIds.length, devIds[0] ?? ''],
+    enabled: manejaLotes && !!empresa?.id && devIds.length > 0,
     queryFn: async () => {
-      const { data: mvs } = await (supabase as any).from('movimientos_inventario')
-        .select('referencia_id, producto_id, lote_id')
-        .eq('empresa_id', empresa!.id)
-        .eq('referencia_tipo', 'devolucion_lote')
-        .not('lote_id', 'is', null);
-      const movs = mvs ?? [];
+      const movs: any[] = [];
+      for (let i = 0; i < devIds.length; i += 200) {
+        const { data, error } = await (supabase as any).from('movimientos_inventario')
+          .select('referencia_id, producto_id, lote_id')
+          .in('referencia_id', devIds.slice(i, i + 200))
+          .eq('referencia_tipo', 'devolucion_lote')
+          .not('lote_id', 'is', null);
+        if (error) throw error;
+        movs.push(...(data ?? []));
+      }
       const loteIds = Array.from(new Set(movs.map((r: any) => r.lote_id).filter(Boolean)));
       let lotesById: Record<string, string> = {};
       if (loteIds.length > 0) {
