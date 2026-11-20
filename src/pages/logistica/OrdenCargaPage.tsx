@@ -112,25 +112,25 @@ export default function OrdenCargaPage() {
   const sc = statusConfig[carga?.status ?? 'pendiente'] ?? statusConfig.pendiente;
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate(-1)} aria-label="Regresar">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <Truck className="h-5 w-5" /> Orden de carga
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
+              <Truck className="h-5 w-5 shrink-0" /> Orden de carga
             </h1>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground mt-0.5">
               <span>{(carga as any)?.vendedores?.nombre ?? 'Sin vendedor'}</span>
               <span>·</span>
               <span>{(carga as any)?.almacen_origen?.nombre ?? '—'} → {(carga as any)?.almacen_destino?.nombre ?? '—'}</span>
-              <Badge variant={sc.variant} className="ml-2">{sc.label}</Badge>
+              <Badge variant={sc.variant} className="sm:ml-2">{sc.label}</Badge>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2 ml-auto">
           <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-1" /> Imprimir
           </Button>

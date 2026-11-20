@@ -399,7 +399,7 @@ export default function ConcentradoSurtidoPage() {
           <Button size="sm" variant="outline" onClick={() => { const t = addDays(todayLocal(), 1); setDesde(t); setHasta(t); }}>Mañana</Button>
           <Button size="sm" variant="outline" onClick={() => { const t = todayLocal(); setDesde(t); setHasta(addDays(t, 6)); }}>7 días</Button>
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap justify-end gap-2">
           <Button size="sm" variant="outline" onClick={() => viewMode === 'productos' ? refetchProductos() : refetchPedidos()}>Refrescar</Button>
           <Button size="sm" variant="outline" onClick={handleExportExcel} disabled={isFetchingProductos || !almacenInit}>
             {isFetchingProductos ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />} Excel

@@ -177,7 +177,7 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
   return (
     <div className="space-y-4">
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <div className="bg-card border border-border rounded-lg p-3 text-center">
           <div className="text-[9px] text-muted-foreground uppercase font-semibold">Total clientes</div>
           <div className="text-lg font-bold text-foreground">{data.totalClientes}</div>

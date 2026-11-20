@@ -17,13 +17,13 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
 
 function KpiCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: number; color: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4 flex items-center gap-3">
-      <div className={cn('p-2.5 rounded-lg', color)}>
-        <Icon className="h-5 w-5 text-white" />
+    <div className="rounded-lg border border-border bg-card p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 min-w-0">
+      <div className={cn('p-2 sm:p-2.5 rounded-lg shrink-0', color)}>
+        <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
       </div>
-      <div>
-        <div className="text-2xl font-bold text-foreground">{value}</div>
-        <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="min-w-0">
+        <div className="text-lg sm:text-2xl font-bold text-foreground leading-tight">{value}</div>
+        <div className="text-[11px] sm:text-xs text-muted-foreground truncate">{label}</div>
       </div>
     </div>
   );
@@ -36,18 +36,18 @@ export default function LogisticaDashboardPage() {
   const { data: cargas, isLoading: loadingCargas } = useCargasDia(fecha);
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <LayoutDashboard className="h-5 w-5" /> Logística — Dashboard
+          <h1 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
+            <LayoutDashboard className="h-5 w-5 shrink-0" /> Logística — Dashboard
           </h1>
           <p className="text-sm text-muted-foreground">Resumen de operaciones del día</p>
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         <KpiCard icon={Package} label="Pedidos del día" value={kpis?.totalPedidos ?? 0} color="bg-blue-500" />
         <KpiCard icon={AlertTriangle} label="Sin asignar" value={kpis?.sinAsignar ?? 0} color="bg-amber-500" />
         <KpiCard icon={Truck} label="Camiones" value={kpis?.totalCamiones ?? 0} color="bg-slate-500" />

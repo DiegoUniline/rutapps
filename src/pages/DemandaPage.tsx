@@ -1070,8 +1070,8 @@ export default function DemandaPage() {
       </div>
 
       {/* Status tabs */}
-      <div className="border-b border-border">
-        <nav className="flex gap-1 -mb-px">
+      <div className="border-b border-border overflow-x-auto no-scrollbar">
+        <nav className="flex gap-1 -mb-px w-max min-w-full">
           {([
             { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
             { key: 'generadas', label: 'Pendiente de surtir', count: counts.generadas },
@@ -1085,7 +1085,7 @@ export default function DemandaPage() {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={cn(
-                'px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                'px-3 sm:px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
                 tab === t.key
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'

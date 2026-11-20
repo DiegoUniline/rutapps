@@ -176,9 +176,9 @@ export default function PromocionesPage() {
   const listaMap = useMemo(() => new Map((listasPrecios ?? []).map(l => [l.id, l.nombre])), [listasPrecios]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">Promociones <HelpButton title={HELP.promociones.title} sections={HELP.promociones.sections} /></h1>
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">Promociones <HelpButton title={HELP.promociones.title} sections={HELP.promociones.sections} /></h1>
         <Button onClick={() => setEditing({ ...emptyPromo })} size="sm">
           <Plus className="h-4 w-4 mr-1.5" /> Nueva promoción
         </Button>
@@ -187,7 +187,7 @@ export default function PromocionesPage() {
       <OdooFilterBar search={search} onSearchChange={setSearch} placeholder="Buscar promociones..." />
 
       {isLoading ? <TableSkeleton /> : (
-        <div className="border border-border rounded-xl overflow-hidden bg-card">
+        <div className="border border-border rounded-xl overflow-x-auto bg-card">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-card">
