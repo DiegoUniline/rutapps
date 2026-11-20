@@ -25,6 +25,8 @@ import { TraspasoLineaLotesDialog } from '@/components/lotes/TraspasoLineaLotesD
 import { Button } from '@/components/ui/button';
 import { Wand2 } from 'lucide-react';
 import { useSugerenciasResurtido } from '@/hooks/useProductoAlmacenConfig';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { BuscadorProductoMovil, RenglonCompactoMovil, type AgregarProductoDatos } from '@/components/productos/BuscadorProductoMovil';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -112,6 +114,11 @@ export default function TraspasoFormPage() {
   };
 
   const readOnly = !isNew && status !== 'borrador';
+  // D-038: en teléfono se agrega con el buscador a pantalla completa (existencia
+  // del origen) y los productos elegidos se ven compactos; escritorio no cambia.
+  const isMobile = useIsMobile();
+  const capturaMovil = isMobile && !readOnly;
+  const [renglonAbierto, setRenglonAbierto] = useState<string | null>(null);
   const isCancelled = status === 'cancelado';
   // Fetch existing traspaso
   const { data: existing, isLoading } = useQuery({
@@ -754,6 +761,7 @@ export default function TraspasoFormPage() {
                   {/* Filters bar */}
                   {!readOnly && (
                     <div className="flex flex-wrap gap-2 items-center">
+                      {!capturaMovil && <>
                       <div className="relative flex-1 min-w-[200px]">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <input
@@ -788,6 +796,7 @@ export default function TraspasoFormPage() {
                           ))}
                         </select>
                       )}
+                      </>}
                       {!!almacenDestinoId && (
                         <button type="button" onClick={sugerirPorMinimos} className="btn-odoo-secondary flex items-center gap-1.5 whitespace-nowrap">
                           <Wand2 className="h-3.5 w-3.5" /> Sugerir por mínimos/máximos
@@ -808,8 +817,83 @@ export default function TraspasoFormPage() {
                     </div>
                   )}
 
+                  {/* D-038 · Teléfono: buscador + productos elegidos compactos */}
+                  {capturaMovil && (almacenOrigenId || vendedorOrigenId) && (() => {
+                    const elegidos = Object.entries(cantidades).filter(([, q]) => q > 0);
+                    const unidadDe = (p: any) => p?.unidades_venta?.abreviatura || 'pz';
+                    const agregarDesdeBuscador = ({ producto, cantidad }: AgregarProductoDatos<any>) => {
+                      const disponible = maxStockMap.get(producto.id) ?? 0;
+                      const nueva = (cantidades[producto.id] ?? 0) + cantidad;
+                      if (disponible <= 0) { toast.error(`"${producto.nombre}" no tiene existencia en el origen`); return false; }
+                      if (nueva > disponible) toast.warning(`Solo hay ${fmtNum(disponible)} de "${producto.nombre}" en el origen; se ajustó la cantidad`);
+                      updateCantidad(producto.id, nueva);
+                    };
+                    return (
+                      <div>
+                        <BuscadorProductoMovil
+                          modo="traspaso"
+                          productos={(productosList ?? []).map((p: any) => ({ ...p, codigo: p.codigo ?? '', unidad: unidadDe(p) }))}
+                          getExistencia={p => maxStockMap.get(p.id) ?? 0}
+                          agregados={new Set(elegidos.map(([pid]) => pid))}
+                          onAgregar={agregarDesdeBuscador}
+                        />
+                        {elegidos.length === 0 ? (
+                          <p className="py-4 text-center text-sm text-muted-foreground">Aún no hay productos. Toca «Buscar producto».</p>
+                        ) : (
+                          <div className="mt-3 border-b border-border">
+                            {elegidos.map(([pid, qty]) => {
+                              const prod: any = (allProductos ?? []).find(p => p.id === pid);
+                              const disponible = maxStockMap.get(pid) ?? 0;
+                              const unidad = unidadDe(prod);
+                              const linea = lineas.find(item => item.producto_id === pid);
+                              const resumen = linea?.id ? lotesResumenMap.get(linea.id) : undefined;
+                              return (
+                                <RenglonCompactoMovil
+                                  key={pid}
+                                  nombre={prod?.nombre ?? '—'}
+                                  detalle={`${fmtNum(qty)} ${unidad} · disponible ${fmtNum(disponible)}`}
+                                  abierto={renglonAbierto === pid}
+                                  onToggle={() => setRenglonAbierto(a => (a === pid ? null : pid))}
+                                >
+                                  <div className="space-y-2.5">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="text-xs font-semibold text-muted-foreground">Cantidad ({unidad})</span>
+                                      <div className="flex items-center gap-2">
+                                        <button type="button" aria-label="Menos" onClick={() => updateCantidad(pid, Math.max(1, qty - 1))} className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card text-lg text-foreground">−</button>
+                                        <input
+                                          key={qty}
+                                          type="number"
+                                          inputMode="decimal"
+                                          min={1}
+                                          max={disponible}
+                                          defaultValue={qty}
+                                          onFocus={e => e.target.select()}
+                                          onBlur={e => { const v = Number(e.target.value); if (v > 0) updateCantidad(pid, v); else e.target.value = String(qty); }}
+                                          className="h-10 w-20 rounded-lg border border-border bg-card text-center text-base font-bold tabular-nums text-foreground outline-none focus:border-primary"
+                                        />
+                                        <button type="button" aria-label="Más" onClick={() => updateCantidad(pid, qty + 1)} className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card text-lg text-foreground">+</button>
+                                      </div>
+                                    </div>
+                                    {manejaLotes && prod?.maneja_lote && (
+                                      <Button size="sm" variant="outline" className="h-9 w-full text-xs" disabled={autoSaving} onClick={() => abrirLotes(pid, qty)}>
+                                        <Boxes className="mr-1 h-3.5 w-3.5" />{resumen ? `Lotes ${fmtNum(resumen.cantidad)} / ${fmtNum(qty)}` : 'Asignar lotes'}
+                                      </Button>
+                                    )}
+                                    <button type="button" onClick={() => { updateCantidad(pid, 0); setRenglonAbierto(null); }} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-destructive/40 py-2 text-sm font-semibold text-destructive">
+                                      <Trash2 className="h-4 w-4" /> Quitar
+                                    </button>
+                                  </div>
+                                </RenglonCompactoMovil>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* Bulk product grid */}
-                  {(readOnly || almacenOrigenId || vendedorOrigenId) && (
+                  {(readOnly || almacenOrigenId || vendedorOrigenId) && !capturaMovil && (
                     <div className="max-h-[500px] overflow-auto border border-border rounded">
                       <table className="w-full text-[13px]">
                         <thead className="sticky top-0 bg-card z-[1]">
