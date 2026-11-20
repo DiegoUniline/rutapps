@@ -605,27 +605,50 @@ export function useVentaForm() {
 
   const set = (field: string, val: any) => { if (readOnly) return; setForm(prev => ({ ...prev, [field]: val })); setDirty(true); };
 
+  // Datos de precio del producto (impuestos + entrada del resolver). Lo usan
+  // handleProductSelect y el precio de lista que muestra el buscador móvil (D-038).
+  const datosPrecioProducto = (producto: any) => {
+    const ivaPct = producto.tiene_iva ? Number(producto.iva_pct ?? 16) : 0;
+    // Trata IEPS como activo si tiene_ieps=true o si ieps_pct > 0 (por si el flag no se marcó explícito)
+    const hasIeps = !!producto.tiene_ieps || Number(producto.ieps_pct ?? 0) > 0;
+    const iepsPct = hasIeps ? Number(producto.ieps_pct ?? 0) : 0;
+    const prodForPricing: ProductForPricing = {
+      id: producto.id, precio_principal: Number(producto.precio_principal) || 0, costo: Number(producto.costo) || 0,
+      clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: Number(producto.iva_pct ?? 16),
+      tiene_ieps: hasIeps, ieps_pct: iepsPct, ieps_tipo: producto.ieps_tipo,
+      usa_listas_precio: producto.usa_listas_precio, lista_id: (producto as any).lista_id ?? null,
+    };
+    return { ivaPct, hasIeps, iepsPct, prodForPricing };
+  };
+
+  // D-038: precio neto por unidad base con el que handleProductSelect armaría el
+  // renglón (lista del cliente; precio especial si se elige una presentación).
+  const precioListaProducto = (productoId: string, presentacion?: ProductoPresentacion | null): number => {
+    const producto = productosList?.find((p: any) => p.id === productoId);
+    if (!producto) return 0;
+    const { ivaPct, iepsPct, prodForPricing } = datosPrecioProducto(producto);
+    const snap = buildSalePricingSnapshot(prodForPricing, resolveProductPricing(tarifaRules ?? [], prodForPricing, (form as any).lista_precio_id));
+    if (!presentacion) return snap.unitPrice;
+    try {
+      return Number(buildPresentationPatch(presentacion, 1, snap, { iva_pct: ivaPct, ieps_pct: iepsPct }).precio_unitario) || 0;
+    } catch {
+      // Solo es el precio que se muestra; al agregar, handleProductSelect avisa el error.
+      return snap.unitPrice;
+    }
+  };
+
   const handleProductSelect = (idx: number, productoId: string, presentacion?: Partial<ProductoPresentacion> & { id: string; producto_id: string; nombre: string; factor_base: number }) => {
     if (readOnly) return;
     if (!productoId) { updateLine(idx, 'producto_id', ''); return; }
     const producto = productosList?.find((p: any) => p.id === productoId);
     if (!producto) return;
-    const ivaPct = producto.tiene_iva ? Number(producto.iva_pct ?? 16) : 0;
-    // Trata IEPS como activo si tiene_ieps=true o si ieps_pct > 0 (por si el flag no se marcó explícito)
-    const hasIeps = !!producto.tiene_ieps || Number(producto.ieps_pct ?? 0) > 0;
-    const iepsPct = hasIeps ? Number(producto.ieps_pct ?? 0) : 0;
+    const { ivaPct, hasIeps, iepsPct, prodForPricing } = datosPrecioProducto(producto);
     const unidadId = producto.unidad_venta_id || producto.unidad_compra_id || null;
     const unidadData = (producto as any).unidades_venta;
     const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
     const taxes: string[] = [];
     if (producto.tiene_iva) taxes.push(`IVA ${ivaPct}%`);
     if (hasIeps) { taxes.push(producto.ieps_tipo === 'cuota' ? 'IEPS cuota' : `IEPS ${iepsPct}%`); }
-    const prodForPricing: ProductForPricing = {
-      id: productoId, precio_principal: Number(producto.precio_principal) || 0, costo: Number(producto.costo) || 0,
-      clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: Number(producto.iva_pct ?? 16),
-      tiene_ieps: hasIeps, ieps_pct: iepsPct, ieps_tipo: producto.ieps_tipo,
-      usa_listas_precio: producto.usa_listas_precio, lista_id: (producto as any).lista_id ?? null,
-    };
     // Siempre resolvemos con el resolver: aunque la lista NO tenga reglas,
     // `resolveProductPricing` cae en `precioPrincipalFallback`, donde
     // `precio_principal` ES el precio FINAL (con impuestos) y el neto se deriva
@@ -1371,6 +1394,7 @@ export function useVentaForm() {
     set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
     handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell, changeLineListaPrecio, changePresentation,
+    precioListaProducto,
     loteParaLinea, setLoteParaLinea, setLineaLote,
   };
 }

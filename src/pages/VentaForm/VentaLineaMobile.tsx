@@ -29,9 +29,11 @@ interface Props {
   sinImpuestos?: boolean;
   onChangeLineListaPrecio?: (idx: number, selection: ListaPrecioSelection) => void;
   promoResults?: PromoResult[];
+  /** D-038: dentro del renglón compacto móvil, sin marco propio (hoja única D-037). */
+  sinMarco?: boolean;
 }
 
-export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, pricingReady = true, onChangePresentation, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, presentaciones }: Props) {
+export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, pricingReady = true, onChangePresentation, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults, presentaciones, sinMarco = false }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -66,7 +68,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   if (isEmpty && readOnly) return null;
 
   return (
-    <div className="border border-border rounded-lg p-3 bg-card space-y-2">
+    <div className={sinMarco ? 'space-y-2' : 'border border-border rounded-lg p-3 bg-card space-y-2'}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           {readOnly ? (
