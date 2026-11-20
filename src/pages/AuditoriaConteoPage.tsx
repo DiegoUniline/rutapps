@@ -4,6 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Search, Save, Package, Check, Plus, Eye, ChevronDown, ChevronRight, Trash2, User, Lock, Unlock, Link2, Copy, Share2, CheckCircle2 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
+import { estadoPildora } from '@/components/layout/ListaTarjetaMovil';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +47,7 @@ export default function AuditoriaConteoPage() {
   const { id } = useParams<{ id: string }>();
   const { empresa, user, profile } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
@@ -273,10 +277,22 @@ export default function AuditoriaConteoPage() {
   };
 
   return (
-    <div className="min-h-full flex flex-col">
+    <div className="min-h-full p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border p-3 space-y-2">
-        <div className="flex items-center gap-2">
+      <div className="sticky top-0 z-10 bg-card border-b border-border p-3 space-y-2">
+        {isMobile && (
+          <EncabezadoDetalleMovil
+            onBack={() => navigate('/almacen/auditorias')}
+            titulo={auditoria?.nombre ?? 'Conteo'}
+            estado={auditoria?.status ? { texto: STATUS_LABEL[auditoria.status]?.label ?? auditoria.status, tono: estadoPildora(auditoria.status).tono } : null}
+            subtitulo={`${fmtDt(auditoria?.created_at)} · ${contadas}/${totalLineas} contados · ${Math.round((contadas / Math.max(totalLineas, 1)) * 100)}%`}
+            principales={!isCerrada ? [{ key: 'finalizar', label: 'Finalizar conteo', icon: Check, onClick: handleFinalizarConteo, disabled: contadas === 0, cargando: saving }] : []}
+            menu={!isCerrada ? [{ key: 'cerrar', label: 'Cerrar auditoría', icon: Lock, destructiva: true, onClick: () => setShowCloseDialog(true), disabled: closing }] : []}
+          />
+        )}
+        <div className="flex items-center gap-2 max-md:hidden">
           <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate('/almacen/auditorias')} aria-label="Regresar">
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -519,7 +535,7 @@ export default function AuditoriaConteoPage() {
       </div>
 
       {/* Bottom action bar */}
-      <div className="sticky bottom-0 bg-background border-t border-border p-3 flex flex-wrap gap-2">
+      <div className="sticky bottom-0 bg-card border-t border-border p-3 flex flex-wrap gap-2 max-md:hidden">
         <Button variant="outline" className="flex-1 min-w-[140px]" onClick={() => navigate('/almacen/auditorias')}>
           Volver al listado
         </Button>
@@ -584,6 +600,7 @@ export default function AuditoriaConteoPage() {
         />
       )}
       <PinDialog />
+    </div>
     </div>
   );
 }

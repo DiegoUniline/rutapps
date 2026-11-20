@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Truck, Printer, CheckCircle } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
 import { useCarga, useUpdateCargaStatus, useSaveCargaLineas } from '@/hooks/useCargas';
 import { useCargaPedidos } from '@/hooks/useLogistica';
 import { Button } from '@/components/ui/button';
@@ -29,6 +31,7 @@ interface ConsolidatedProduct {
 export default function OrdenCargaPage() {
   const { camionId } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { data: carga, isLoading: loadingCarga } = useCarga(camionId);
   const { data: cargaPedidos, isLoading: loadingPedidos } = useCargaPedidos(camionId);
   const updateStatus = useUpdateCargaStatus();
@@ -112,8 +115,20 @@ export default function OrdenCargaPage() {
   const sc = statusConfig[carga?.status ?? 'pendiente'] ?? statusConfig.pendiente;
 
   return (
-    <div className="p-3 sm:p-6 space-y-4 sm:space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip px-3 sm:px-5 py-3 space-y-4">
+      {isMobile && (
+        <EncabezadoDetalleMovil
+          onBack={() => navigate(-1)}
+          titulo="Orden de carga"
+          estado={{ texto: sc.label, tono: isConfirmed ? 'exito' : 'neutro' }}
+          subtitulo={`${(carga as any)?.vendedores?.nombre ?? 'Sin vendedor'} · ${(carga as any)?.almacen_origen?.nombre ?? '—'} → ${(carga as any)?.almacen_destino?.nombre ?? '—'}`}
+          principales={!isConfirmed ? [{ key: 'confirmar', label: 'Confirmar carga', icon: CheckCircle, onClick: handleConfirm, disabled: consolidated.length === 0 }] : []}
+          menu={[{ key: 'imprimir', label: 'Imprimir', icon: Printer, onClick: handlePrint }]}
+        />
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-2 max-md:hidden">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate(-1)} aria-label="Regresar">
             <ArrowLeft className="h-4 w-4" />
@@ -149,7 +164,7 @@ export default function OrdenCargaPage() {
 
       {/* Consolidated product table */}
       {loadingPedidos ? <TableSkeleton /> : (
-        <div className="border border-border rounded-lg overflow-hidden">
+        <div className="border-t border-border -mx-3 sm:-mx-5">
           <Table>
             <TableHeader>
               <TableRow>
@@ -198,6 +213,7 @@ export default function OrdenCargaPage() {
           </Table>
         </div>
       )}
+    </div>
     </div>
   );
 }

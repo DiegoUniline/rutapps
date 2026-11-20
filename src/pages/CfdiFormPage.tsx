@@ -6,10 +6,11 @@ import { supabase } from '@/lib/supabase';
 import { abrirArchivoCfdi } from '@/lib/cfdiArchivos';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, FileCheck, Loader2, Trash2, Save, AlertTriangle, Download, FileText, XCircle } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -65,6 +66,7 @@ function calcLinea(l: Partial<CfdiLinea>): Partial<CfdiLinea> {
 export default function CfdiFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const location = useLocation();
   const backTo = (location.state as any)?.returnTo as string | undefined;
   const goBack = () => { if (backTo) navigate(backTo); else navigate('/facturacion-cfdi'); };
@@ -425,10 +427,33 @@ export default function CfdiFormPage() {
     );
   }
 
+  const estadoCfdi = cfdi.status === 'borrador' ? 'Borrador' : cfdi.status === 'timbrado' ? 'Timbrado' : cfdi.status === 'incierto' ? 'Incierto' : cfdi.status === 'cancelado' ? 'Cancelado' : cfdi.status;
   return (
-    <div className="p-3 sm:p-5 space-y-4 max-w-[1200px]">
+    <div className="p-2 md:p-4 max-w-[1200px]">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip px-3 sm:px-5 py-3 space-y-4">
+      {isMobile && (
+        <div className="-mx-3 px-3 pb-2.5 border-b border-border">
+          <EncabezadoDetalleMovil
+            onBack={() => goBack()}
+            titulo={`CFDI ${cfdi.serie ? `${cfdi.serie}-` : ''}${cfdi.folio || 'Borrador'}`}
+            estado={{ texto: estadoCfdi, tono: cfdi.status === 'timbrado' ? 'exito' : cfdi.status === 'borrador' ? 'neutro' : 'peligro' }}
+            subtitulo={cfdi.folio_fiscal ? `UUID ${cfdi.folio_fiscal}` : undefined}
+            principales={!readOnly ? [
+              { key: 'guardar', label: 'Guardar', icon: Save, onClick: handleSave, disabled: !dirty, cargando: saving },
+              { key: 'timbrar', label: 'Timbrar', icon: FileCheck, onClick: handleTimbrar, disabled: lineas.length === 0, cargando: timbring },
+            ] : []}
+            menu={cfdi.status === 'timbrado' ? [
+              ...(cfdi.xml_url ? [{ key: 'xml', label: 'Descargar XML', icon: FileText, onClick: () => abrirArchivoCfdi(null, 'cfdis', cfdi.id, 'xml', cfdi.xml_url) }] : []),
+              ...(cfdi.pdf_url ? [{ key: 'pdf', label: 'PDF Facturama (original)', icon: Download, onClick: () => abrirArchivoCfdi(null, 'cfdis', cfdi.id, 'pdf', cfdi.pdf_url) }] : []),
+              { key: 'sustituir', label: 'Sustituir', onClick: handleSustituir, disabled: sustituyendo },
+              { key: 'cancelar', label: 'Cancelar CFDI', icon: XCircle, destructiva: true, separar: true, onClick: () => setShowCancelDialog(true) },
+            ] : []}
+          />
+        </div>
+      )}
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 max-md:hidden">
         <Button variant="ghost" size="icon" onClick={() => goBack()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -474,8 +499,8 @@ export default function CfdiFormPage() {
 
       {/* Receptor & Pago */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="pt-4 space-y-3">
+        <div className="border border-border rounded-lg">
+          <div className="p-3 sm:p-4 space-y-3">
             <h3 className="text-sm font-semibold text-foreground">Receptor</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -517,11 +542,11 @@ export default function CfdiFormPage() {
                 <SearchableSelect options={usoOptions} value={receiver.cfdi_use} onChange={v => { setReceiver({ ...receiver, cfdi_use: v }); setDirty(true); }} placeholder="Uso" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="pt-4 space-y-3">
+        <div className="border border-border rounded-lg">
+          <div className="p-3 sm:p-4 space-y-3">
             <h3 className="text-sm font-semibold text-foreground">Datos de Pago</h3>
             <div className="space-y-1">
               <label className="text-[11px] text-muted-foreground font-medium">Forma de Pago</label>
@@ -547,13 +572,13 @@ export default function CfdiFormPage() {
               <div className="flex justify-between"><span className="text-muted-foreground">IVA</span><span>{fmt(totals.iva)}</span></div>
               <div className="flex justify-between font-bold text-base border-t pt-1"><span>Total</span><span>{fmt(totals.total)}</span></div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Lines table */}
-      <Card>
-        <CardContent className="pt-4">
+      <div className="border border-border rounded-lg">
+        <div className="py-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-foreground">Conceptos ({lineas.length})</h3>
           </div>
@@ -836,12 +861,12 @@ export default function CfdiFormPage() {
                </Button>
              </div>
            )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Actions */}
       {!readOnly && (
-        <div className="flex gap-2 justify-end sticky bottom-4">
+        <div className="flex gap-2 justify-end sticky bottom-4 max-md:hidden">
           <Button variant="outline" onClick={handleSave} disabled={saving || !dirty}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
             Guardar borrador
@@ -960,6 +985,7 @@ export default function CfdiFormPage() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }
