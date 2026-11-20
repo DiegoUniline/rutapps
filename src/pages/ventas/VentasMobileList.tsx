@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreVertical, MessageCircle, FileText, Banknote, Loader2, Trash2, Ban } from 'lucide-react';
-import { StatusChip } from '@/components/StatusChip';
-import { MobileListCard } from '@/components/MobileListCard';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { MessageCircle, FileText, Banknote, Trash2, Ban } from 'lucide-react';
+import { ListaTarjetaMovil, ListaTarjetasMovil, type TonoPildora } from '@/components/layout/ListaTarjetaMovil';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
-import { fmtDateTime } from '@/lib/utils';
+import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
-import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
+
 import { isVentaEntregadaParcial } from '@/lib/ventaEntregaParcial';
 import { saldoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
 
@@ -20,9 +18,20 @@ interface Props {
   fmtCurrency: (v: number) => string;
   onDeleteTarget: (id: string) => void;
   onCancelTarget?: (id: string) => void;
+  /** Total de ventas del filtro y «Cargar más» (teléfono). */
+  total?: number;
+  onCargarMas?: () => void;
 }
 
-export function VentasMobileList({ items, clientesList, empresaId, canDelete, fmtCurrency, onDeleteTarget, onCancelTarget }: Props) {
+const ESTADO_LABEL: Record<string, string> = {
+  borrador: 'Borrador', confirmado: 'Confirmada', entregado: 'Entregada', entregado_parcial: 'Entrega parcial',
+  facturado: 'Facturada', cancelado: 'Cancelada',
+};
+const ESTADO_TONO: Record<string, TonoPildora> = {
+  borrador: 'neutro', confirmado: 'primario', entregado: 'exito', entregado_parcial: 'aviso', facturado: 'exito', cancelado: 'peligro',
+};
+
+export function VentasMobileList({ items, clientesList, empresaId, canDelete, fmtCurrency, onDeleteTarget, onCancelTarget, total, onCargarMas }: Props) {
   const navigate = useNavigate();
   const [waOpen, setWaOpen] = useState(false);
   const [waPhone, setWaPhone] = useState('');
@@ -31,16 +40,18 @@ export function VentasMobileList({ items, clientesList, empresaId, canDelete, fm
   const [waPdfName, setWaPdfName] = useState('');
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
-  if (items.length === 0) {
-    return <div className="text-center py-12 text-muted-foreground text-sm">No hay ventas. Crea la primera.</div>;
-  }
-
   return (
     <>
+      <ListaTarjetasMovil
+        vacia={items.length === 0}
+        mensajeVacio="No hay ventas. Crea la primera."
+        mostrados={items.length}
+        total={total ?? items.length}
+        onCargarMas={onCargarMas}
+      >
       {items.map((v) => {
         const cliente = clientesList?.find(c => c.id === v.cliente_id);
-        const openWa = async (e: React.MouseEvent) => {
-          e.stopPropagation();
+        const openWa = async () => {
           setGeneratingPdf(v.id);
           try {
             const { blob, fileName, caption } = await generateVentaPdfById(v.id, empresaId);
@@ -55,61 +66,31 @@ export function VentasMobileList({ items, clientesList, empresaId, canDelete, fm
             setGeneratingPdf(null);
           }
         };
+        const estado = isVentaEntregadaParcial(v) ? 'entregado_parcial' : v.status;
+        const saldo = saldoRealVenta(v);
         return (
-          <MobileListCard
+          <ListaTarjetaMovil
             key={v.id}
-            title={v.clientes?.nombre || (v.cliente_id ? '—' : 'Público en general')}
-            subtitle={`${v.folio || v.id.slice(0, 8)} · ${TIPO_LABELS[v.tipo] || v.tipo}`}
-            badge={
-              <div className="flex items-center gap-1">
-                <StatusChip status={isVentaEntregadaParcial(v) ? 'entregado_parcial' : v.status} />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                    <button className="p-1 rounded hover:bg-accent"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/ventas/${v.id}`); }}>
-                      <FileText className="h-3.5 w-3.5 mr-2" /> Ver detalle
-                    </DropdownMenuItem>
-                    {v.status !== 'borrador' && saldoRealVenta(v) > 0 && (
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/ventas/cobranza`, { state: { clienteId: v.cliente_id, ventaId: v.id } }); }}>
-                        <Banknote className="h-3.5 w-3.5 mr-2" /> Cobrar
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={openWa} disabled={generatingPdf === v.id}>
-                      {generatingPdf === v.id ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-2" />}
-                      {generatingPdf === v.id ? 'Generando PDF...' : 'WhatsApp'}
-                    </DropdownMenuItem>
-                    {onCancelTarget && canDelete && v.status !== 'borrador' && v.status !== 'cancelado' && (
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={(e) => { e.stopPropagation(); onCancelTarget(v.id); }}
-                      >
-                        <Ban className="h-3.5 w-3.5 mr-2" /> Cancelar
-                      </DropdownMenuItem>
-                    )}
-                    {(v.status === 'borrador' || (v.status === 'cancelado' && canDelete)) && (
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={(e) => { e.stopPropagation(); onDeleteTarget(v.id); }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-2" /> Eliminar
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            }
+            titulo={v.clientes?.nombre || (v.cliente_id ? '—' : 'Público en general')}
+            linea2={<>
+              {fmtCurrency(totalEfectivoVenta(v))} · {fmtDate(v.fecha ?? v.created_at)}
+              <span className="text-xs"> · {v.folio || v.id.slice(0, 8)}</span>
+              {saldo > 0 && v.status !== 'cancelado' && <span className="text-warning"> · Saldo {fmtCurrency(saldo)}</span>}
+            </>}
+            pildora={ESTADO_LABEL[estado] ?? estado}
+            tono={ESTADO_TONO[estado] ?? 'neutro'}
             onClick={() => navigate(`/ventas/${v.id}`)}
-            fields={[
-              { label: 'Fecha', value: fmtDateTime(v.created_at) },
-              { label: 'Total', value: fmtCurrency(totalEfectivoVenta(v)) },
-              { label: 'Condición', value: CONDICION_LABELS[v.condicion_pago] || v.condicion_pago },
-              ...(saldoRealVenta(v) > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmtCurrency(saldoRealVenta(v))}</span> }] : []),
+            acciones={[
+              { key: 'ver', label: 'Ver detalle', icon: FileText, onClick: () => navigate(`/ventas/${v.id}`) },
+              ...(v.status !== 'borrador' && saldo > 0 ? [{ key: 'cobrar', label: 'Cobrar', icon: Banknote, onClick: () => navigate(`/ventas/cobranza`, { state: { clienteId: v.cliente_id, ventaId: v.id } }) }] : []),
+              { key: 'wa', label: generatingPdf === v.id ? 'Generando PDF...' : 'WhatsApp', icon: MessageCircle, disabled: generatingPdf === v.id, onClick: openWa },
+              ...(onCancelTarget && canDelete && v.status !== 'borrador' && v.status !== 'cancelado' ? [{ key: 'cancelar', label: 'Cancelar', icon: Ban, destructiva: true, separar: true, onClick: () => onCancelTarget(v.id) }] : []),
+              ...((v.status === 'borrador' || (v.status === 'cancelado' && canDelete)) ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, onClick: () => onDeleteTarget(v.id) }] : []),
             ]}
           />
         );
       })}
+      </ListaTarjetasMovil>
       <WhatsAppPreviewDialog open={waOpen} onClose={() => { setWaOpen(false); setWaPdfBlob(null); }} phone={waPhone} message={waMessage} empresaId={empresaId} tipo="venta" pdfBlob={waPdfBlob} pdfFileName={waPdfName} />
     </>
   );

@@ -18,6 +18,7 @@ import { ExportButton } from '@/components/ExportButton';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { ListPage, SCROLL_AREA } from '@/components/layout/ListPage';
+import { EncabezadoListaMovil, PASO_MOVIL } from '@/components/layout/ListaTarjetaMovil';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
 import { useVentasPaginated, useVentaLineasPaginated, useVentasResumen, useVentaLineasResumen, useDeleteVenta } from '@/hooks/useVentas';
@@ -113,7 +114,9 @@ export default function VentasListPage() {
 
   const { visible: columnVisibility, toggleColumn, setAll, reset } = useColumnPreferences('ventas', VENTAS_DEFAULT_COLUMN_VISIBILITY);
 
-  const numericPageSize = getNumericPageSize(pageSize);
+  // Teléfono: lista continua con «Cargar más» (de 50 en 50) en lugar de paginación.
+  const [mobileLimit, setMobileLimit] = useState(PASO_MOVIL);
+  const numericPageSize = isMobile ? mobileLimit : getNumericPageSize(pageSize);
   // Pestañas por estado: Activas (todo menos canceladas) · Canceladas · Todas. Aplican a Ventas y Productos.
   const [tabEstado, setTabEstadoState] = useState<TabEstado>(() => {
     try { const v = localStorage.getItem('ventas.tabEstado'); return v === 'canceladas' || v === 'todas' ? v : 'activas'; } catch { return 'activas'; }
@@ -121,6 +124,7 @@ export default function VentasListPage() {
   const setTabEstado = (t: TabEstado) => {
     setTabEstadoState(t);
     setPage(1);
+    setMobileLimit(PASO_MOVIL);
     try { localStorage.setItem('ventas.tabEstado', t); } catch { /* preferencia opcional */ }
   };
   const statusFilter = statusFilterPorTab(tabEstado, filters.status ?? []);
@@ -133,7 +137,7 @@ export default function VentasListPage() {
 
   // Solo consulta el conjunto de la pestaña visible. Los resúmenes de abajo
   // permanecen separados y siguen calculando TODO el filtro, no solo la página.
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter, clienteFilter, viewMode === 'ventas');
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, isMobile ? 1 : page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter, clienteFilter, viewMode === 'ventas');
 
   const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, clienteFilter, promocionFilter, viewMode === 'productos');
   const primaryRowsReady = viewMode === 'ventas' ? ventasData !== undefined : lineasData !== undefined;
@@ -475,6 +479,34 @@ export default function VentasListPage() {
   return (
     <ListPage>
       <ListPage.Toolbar>
+      {isMobile ? (
+        // Teléfono (estándar de listas, docs/sistema-diseno.md): título + «+», buscador a lo ancho
+        // y el estado (Activas/Canceladas/Todas) dentro de Filtros; sin pestañas ni paginación arriba.
+        <EncabezadoListaMovil
+          titulo="Ventas"
+          estado={tabEstado !== 'activas' ? TABS_ESTADO.find(t => t.key === tabEstado)?.label : undefined}
+          onNuevo={canCreate ? () => navigate('/ventas/nuevo') : undefined}
+          nuevoLabel="Nueva venta"
+        >
+          <OdooFilterBar
+            search={searchInput} onSearchChange={val => { setSearch(val); setPage(1); setMobileLimit(PASO_MOVIL); }}
+            placeholder="Buscar ventas"
+            filterOptions={[{ key: 'tab_estado', label: 'Estado', options: TABS_ESTADO.map(t => ({ value: t.key, label: t.label })) }, ...FILTER_OPTIONS]}
+            activeFilters={tabEstado !== 'activas' ? { ...filters, tab_estado: [tabEstado] } : filters}
+            onToggleFilter={(key, val) => {
+              if (key === 'tab_estado') setTabEstado(val as TabEstado); else { toggleFilterValue(key, val); setMobileLimit(PASO_MOVIL); }
+            }}
+            onSetFilter={(key, vals) => {
+              if (key === 'tab_estado') setTabEstado((vals[vals.length - 1] as TabEstado) ?? 'activas'); else { setFilter(key, vals); setMobileLimit(PASO_MOVIL); }
+            }}
+            onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); setTabEstado('activas'); }}
+            dateFrom={dateFrom} dateTo={dateTo}
+            onDateRangeChange={(f, t) => { setDates(f, t); setMobileLimit(PASO_MOVIL); }}
+            onDateFromChange={v => { setDateFrom(v); setMobileLimit(PASO_MOVIL); }}
+            onDateToChange={v => { setDateTo(v); setMobileLimit(PASO_MOVIL); }}
+          />
+        </EncabezadoListaMovil>
+      ) : (<>
       {!isMobile && (
         <div className="border-b border-border -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="flex items-end justify-between">
@@ -661,13 +693,14 @@ export default function VentasListPage() {
           </div>
         </div>
       )}
+      </>)}
       </ListPage.Toolbar>
 
       {activeLoading ? (
         <ListPage.Body className="p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 10} /></ListPage.Body>
       ) : isMobile ? (
-        <ListPage.Body card={false} className="space-y-2">
-          <VentasMobileList items={pageData} clientesList={clientesList} empresaId={empresa?.id ?? ''} canDelete={canDelete} fmtCurrency={fmtCurrency} onDeleteTarget={setDeleteTarget} onCancelTarget={handleCancelOne} />
+        <ListPage.Body card={false}>
+          <VentasMobileList items={pageData} clientesList={clientesList} empresaId={empresa?.id ?? ''} canDelete={canDelete} fmtCurrency={fmtCurrency} onDeleteTarget={setDeleteTarget} onCancelTarget={handleCancelOne} total={total} onCargarMas={() => setMobileLimit(l => l + PASO_MOVIL)} />
         </ListPage.Body>
       ) : isProductView ? (
         <>
