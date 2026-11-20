@@ -180,8 +180,8 @@ export default function GastosDesktopPage() {
   const hasFilters = !!search || vendedorFilter !== 'all' || !!desde || !!hasta;
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Receipt className="h-5 w-5" /> Gastos
           <HelpButton title={HELP.gastos.title} sections={HELP.gastos.sections} />
@@ -191,14 +191,14 @@ export default function GastosDesktopPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-card border border-border rounded-lg p-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Total gastos {hasFilters && '(filtrado)'}</p>
-          <p className="text-2xl font-bold text-destructive">{fmt(totalGastos)}</p>
+          <p className="text-lg sm:text-2xl font-bold text-destructive truncate">{fmt(totalGastos)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Registros</p>
-          <p className="text-2xl font-bold text-foreground">{filtered.length}</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground">{filtered.length}</p>
         </div>
       </div>
 
@@ -235,8 +235,8 @@ export default function GastosDesktopPage() {
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-semibold uppercase">
           <Filter className="h-3 w-3" /> Filtros
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-          <div className="relative">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="relative col-span-2 md:col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar concepto/notas..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
@@ -250,7 +250,7 @@ export default function GastosDesktopPage() {
               ))}
             </SelectContent>
           </Select>
-          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
+          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} className="col-span-2 md:col-span-1" />
         </div>
         {hasFilters && (
           <div className="flex justify-end">

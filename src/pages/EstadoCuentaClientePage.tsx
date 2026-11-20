@@ -263,7 +263,7 @@ export default function EstadoCuentaClientePage() {
     const reembolsos = (detalle?.excedentes ?? []).filter(e => e.tipo === 'reembolso');
 
     return (
-      <div className="p-4 space-y-4 min-h-full">
+      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setSelectedId(null)}>
             <ArrowLeft className="h-4 w-4" />
@@ -537,22 +537,22 @@ export default function EstadoCuentaClientePage() {
       </h1>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Saldo total pendiente</p>
-          <p className="text-2xl font-bold text-destructive">{fmt(totalPendienteGlobal)}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-destructive">{fmt(totalPendienteGlobal)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Saldo a favor</p>
-          <p className="text-2xl font-bold text-destructive">{fmt(totalFavorGlobal)}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-destructive">{fmt(totalFavorGlobal)}</p>
           <p className="text-[10px] text-muted-foreground">{clientesConFavor} cliente{clientesConFavor === 1 ? '' : 's'}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Clientes con saldo</p>
-          <p className="text-2xl font-bold text-foreground">{clientesConSaldo}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-foreground">{clientesConSaldo}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Total clientes</p>
-          <p className="text-2xl font-bold text-muted-foreground">{clientes?.length ?? 0}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-muted-foreground">{clientes?.length ?? 0}</p>
         </div>
       </div>
 

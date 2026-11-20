@@ -217,7 +217,7 @@ export default function CuentasCobrarPage() {
   });
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
       <CobranzaTabs />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
@@ -239,21 +239,21 @@ export default function CuentasCobrarPage() {
 
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Total pendiente</p>
-          <p className="text-2xl font-bold text-destructive">{fmt(totalPendiente)}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-destructive">{fmt(totalPendiente)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Documentos</p>
-          <p className="text-2xl font-bold text-foreground">{filtered.length}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-foreground">{filtered.length}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Venta total</p>
-          <p className="text-2xl font-bold text-foreground">{fmt(totalVentas)}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-foreground">{fmt(totalVentas)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">% Cobrado</p>
-          <p className="text-2xl font-bold text-success">{totalVentas > 0 ? Math.round(((totalVentas - totalPendiente) / totalVentas) * 100) : 0}%</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-success">{totalVentas > 0 ? Math.round(((totalVentas - totalPendiente) / totalVentas) * 100) : 0}%</p>
         </div>
       </div>
 

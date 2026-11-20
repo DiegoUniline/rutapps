@@ -370,7 +370,7 @@ export default function SaldosProveedorPage() {
     const totalSaldo = compras?.reduce((s, c) => s + (c.saldo_pendiente ?? 0), 0) ?? 0;
 
     return (
-      <div className="p-4 space-y-4 min-h-full">
+      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setSelectedId(null)}>
             <ArrowLeft className="h-4 w-4" />
@@ -489,21 +489,21 @@ export default function SaldosProveedorPage() {
       </h1>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Total por pagar</p>
-          <p className="text-2xl font-bold text-destructive">{fmt(totalPendienteGlobal)}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-destructive">{fmt(totalPendienteGlobal)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Total comprado</p>
-          <p className="text-2xl font-bold text-foreground">{fmt(totalComprado)}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-foreground">{fmt(totalComprado)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Proveedores con saldo</p>
-          <p className="text-2xl font-bold text-foreground">{provConSaldo}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-foreground">{provConSaldo}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Total proveedores</p>
-          <p className="text-2xl font-bold text-muted-foreground">{totalProveedores}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-muted-foreground">{totalProveedores}</p>
         </div>
       </div>
 

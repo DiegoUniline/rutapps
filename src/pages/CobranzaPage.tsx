@@ -607,7 +607,7 @@ export default function CobranzaPage() {
   };
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
       <CobranzaTabs />
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Banknote className="h-5 w-5" /> Cobranza
@@ -616,14 +616,14 @@ export default function CobranzaPage() {
       </h1>
 
       {/* Summary — uses full filtered data, NOT paginated */}
-      <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-2")}>
-        <div className="bg-card border border-border rounded-lg p-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Total cobrado</p>
-          <p className="text-2xl font-bold text-success">{fmtC(totalCobrado)}</p>
+          <p className="text-lg sm:text-2xl font-bold text-success truncate">{fmtC(totalCobrado)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Cobros</p>
-          <p className="text-2xl font-bold text-foreground">{filtered.length}</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground">{filtered.length}</p>
         </div>
       </div>
 
@@ -650,7 +650,7 @@ export default function CobranzaPage() {
       />
 
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2">
           <span className="text-sm font-medium text-primary">{selectedIds.size} seleccionado(s)</span>
           <div className="flex-1" />
           <Button size="sm" variant="ghost" className="h-8 gap-1 text-muted-foreground hover:text-foreground" onClick={handlePrintMany}>
