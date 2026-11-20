@@ -151,3 +151,4 @@
 2026-11-20 · desarrollador · aprobar_auditoria: ajuste de existencias en una transacción vía aplicar_ajuste_inventario (antes lectura+sobrescritura de stock desde el navegador)
 2026-11-20 · desarrollador · aplicar_pago_proveedor: pagos a proveedor en una transacción con saldo calculado en BD
 2026-11-20 · desarrollador · Listas de historial abren en el mes actual con filtro de fechas en BD: traspasos, órdenes de compra, gastos, pagos a proveedor, conteos, auditorías, ajustes
+2026-11-20 · desarrollador · Kardex por ubicación con índices origen/destino; RutaCxC baja solo columnas necesarias; comisiones con orden estable

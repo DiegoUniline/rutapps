@@ -39,7 +39,8 @@ export default function ComisionesGeneradasPage() {
           .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, pago_comision_id, ventas!inner(folio, status), productos(nombre), vendedores:profiles!vendedor_id(nombre), pago_comisiones(fecha_corte, estado)')
           .eq('empresa_id', empresa!.id)
           .neq('ventas.status', 'cancelado')
-          .order('fecha_venta', { ascending: false });
+          .order('fecha_venta', { ascending: false })
+          .order('id', { ascending: true });
         if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
         if (statusFilter === 'pendientes') q = q.eq('pagada', false);
         if (statusFilter === 'pagadas') q = q.eq('pagada', true);

@@ -48,10 +48,11 @@ export default function RutaCxC() {
       .range(from, to)),
   });
   const { data: clientesServidor } = useQuery({
-    queryKey: ['sa-ruta-entregas-clientes', empresa?.id],
+    // Solo las columnas que usa esta pantalla (antes select('*') de todos los clientes).
+    queryKey: ['sa-ruta-cxc-clientes', empresa?.id],
     enabled: !!empresa?.id && desdeServidor,
     queryFn: () => fetchAllPages((from, to) => supabase
-      .from('clientes').select('*').eq('empresa_id', empresa!.id).order('id').range(from, to)),
+      .from('clientes').select('id, nombre, codigo, contacto, vendedor_id, cobrador_id, zona_id').eq('empresa_id', empresa!.id).order('id').range(from, to)),
   });
   const ventas = desdeServidor ? ventasServidor : ventasOffline;
   const clientes = desdeServidor ? clientesServidor : clientesOffline;
