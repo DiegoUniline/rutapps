@@ -115,6 +115,22 @@ export function useKardexUbicacion(
   });
 
 
+  // Con ventana de fechas, el saldo corrido arranca del saldo de la ubicación antes de «desde»
+  // (calculado en la BD) en vez de traer todo el historial del producto.
+  const conSaldo = !!productoId && !!ubicacionId;
+  const saldoInicialQuery = useQuery({
+    queryKey: ['kardex-saldo-inicial', productoId, ubicacionId, empresa?.id, fechaDesde, loteId],
+    enabled: !!empresa?.id && conSaldo && !!fechaDesde,
+    queryFn: async () => {
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+      const { data, error } = await rpc('kardex_saldo_inicial', {
+        p_producto_id: productoId, p_ubicacion_id: ubicacionId, p_antes_de: fechaDesde, p_lote_id: loteId ?? null,
+      });
+      if (error) throw new Error(error.message);
+      return Number(data) || 0;
+    },
+  });
+
   const almacenesQuery = useQuery({
     queryKey: ['kardex-almacenes-map', empresa?.id],
     enabled: !!empresa?.id,
@@ -134,8 +150,8 @@ export function useKardexUbicacion(
     if (!query.data) return [];
     const almMap = almacenesQuery.data ?? {};
     // Saldo corrido solo cuando hay producto + ubicacion
-    const computeSaldo = !!productoId && !!ubicacionId;
-    let saldo = 0;
+    const computeSaldo = conSaldo;
+    let saldo = computeSaldo && fechaDesde ? (saldoInicialQuery.data ?? 0) : 0;
     return query.data.map((m: KardexMovementRecord) => {
       let delta = 0;
       const cantidad = Number(m.cantidad) || 0;
@@ -149,7 +165,14 @@ export function useKardexUbicacion(
       const destino_nombre = m.almacen_destino_id && almMap[m.almacen_destino_id] ? almMap[m.almacen_destino_id].nombre : null;
       return { ...m, delta, saldo: computeSaldo ? saldo : 0, origen_nombre, destino_nombre };
     });
-  }, [query.data, almacenesQuery.data, ubicacionId, productoId]);
+  }, [query.data, almacenesQuery.data, ubicacionId, conSaldo, fechaDesde, saldoInicialQuery.data]);
 
-  return { ...query, rows };
+  const esperandoSaldo = conSaldo && !!fechaDesde && saldoInicialQuery.isLoading;
+  return {
+    ...query,
+    isLoading: query.isLoading || esperandoSaldo,
+    refetch: async () => { void saldoInicialQuery.refetch(); return query.refetch(); },
+    rows: esperandoSaldo ? [] : rows,
+    saldoInicial: conSaldo && fechaDesde ? (saldoInicialQuery.data ?? 0) : 0,
+  };
 }

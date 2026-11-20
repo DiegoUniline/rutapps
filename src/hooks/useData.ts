@@ -65,14 +65,29 @@ export function useProductosRealtime() {
 
     // Una venta de N renglones dispara N eventos: se agrupan en UNA sola
     // invalidación para no re-descargar listas pesadas N veces (ahorro de datos).
+    // Los números de las pestañas (consultas 'conteo') se refrescan como máximo cada 30 s:
+    // con muchos administradores conectados, recontar en cada venta de ruta no escala.
+    // Las acciones propias (cancelar, eliminar…) invalidan ['ventas'] completo y sí los
+    // actualizan al momento.
+    const esConteo = (k: readonly unknown[]) => k[k.length - 1] === 'conteo';
     let ventasTimer: ReturnType<typeof setTimeout> | undefined;
+    let conteoTimer: ReturnType<typeof setTimeout> | undefined;
     const invalidateVentas = () => {
       if (ventasTimer) clearTimeout(ventasTimer);
       ventasTimer = setTimeout(() => {
-        qc.invalidateQueries({ queryKey: ['ventas'] });
+        const filas = { predicate: (q: { queryKey: readonly unknown[] }) => !esConteo(q.queryKey) };
+        qc.invalidateQueries({ queryKey: ['ventas'], ...filas });
         qc.invalidateQueries({ queryKey: ['ventas-list'] });
-        qc.invalidateQueries({ queryKey: ['venta-lineas'] });
+        qc.invalidateQueries({ queryKey: ['venta-lineas'], ...filas });
       }, 2500);
+      if (!conteoTimer) {
+        conteoTimer = setTimeout(() => {
+          conteoTimer = undefined;
+          const conteos = { predicate: (q: { queryKey: readonly unknown[] }) => esConteo(q.queryKey) };
+          qc.invalidateQueries({ queryKey: ['ventas'], ...conteos });
+          qc.invalidateQueries({ queryKey: ['venta-lineas'], ...conteos });
+        }, 30000);
+      }
     };
 
     const ventasCh = supabase

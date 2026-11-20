@@ -70,7 +70,9 @@ export default function VentasListPage() {
   // Realtime: ventas y venta_lineas ya los escucha AppLayout (useProductosRealtime,
   // agrupado); aquí solo lo que no cubre.
   useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['entregas']] });
-  useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['cxc'], ['saldos']] });
+  // El saldo de la venta lo actualiza la BD al aplicar el cobro y ese cambio ya llega por el canal de
+  // ventas (useData): aquí no se vuelve a recargar la lista ni sus conteos por cada cobro.
+  useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['cxc'], ['saldos']] });
   useRealtimeInvalidate({ table: 'clientes', empresaId: empresa?.id, queryKeys: [['ventas'], ['clientes'], ['clientes-filter']] });
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -139,13 +141,21 @@ export default function VentasListPage() {
   // Conteo por pestaña (mismos filtros, sin la pestaña): una consulta de 1 renglón con count exacto.
   const elegidosEstado = filters.status ?? [];
   const esVentas = viewMode === 'ventas';
-  const useCuentaV = (t: TabEstado) => useVentasPaginated(search, statusFilterPorTab(t, elegidosEstado), tipoFilter, 1, 1, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, false, promocionFilter, clienteFilter, esVentas, true);
-  const useCuentaL = (t: TabEstado) => useVentaLineasPaginated(search, statusFilterPorTab(t, elegidosEstado), tipoFilter, 1, 1, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, false, clienteFilter, promocionFilter, !esVentas, true);
-  const cvActivas = useCuentaV('activas'), cvCanceladas = useCuentaV('canceladas'), cvTodas = useCuentaV('todas');
-  const clActivas = useCuentaL('activas'), clCanceladas = useCuentaL('canceladas'), clTodas = useCuentaL('todas');
+  // Activas = Todas − Canceladas (o = Todas si el filtro de Estado excluye canceladas):
+  // 2 conteos en vez de 3. Solo se consulta aparte si el filtro es únicamente «cancelado».
+  const activasConsulta = elegidosEstado.length > 0 && elegidosEstado.every(s => s === 'cancelado');
+  const useCuentaV = (t: TabEstado, on = true) => useVentasPaginated(search, statusFilterPorTab(t, elegidosEstado), tipoFilter, 1, 1, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, false, promocionFilter, clienteFilter, esVentas && on, true);
+  const useCuentaL = (t: TabEstado, on = true) => useVentaLineasPaginated(search, statusFilterPorTab(t, elegidosEstado), tipoFilter, 1, 1, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, false, clienteFilter, promocionFilter, !esVentas && on, true);
+  const cvActivas = useCuentaV('activas', activasConsulta), cvCanceladas = useCuentaV('canceladas'), cvTodas = useCuentaV('todas');
+  const clActivas = useCuentaL('activas', activasConsulta), clCanceladas = useCuentaL('canceladas'), clTodas = useCuentaL('todas');
+  const activasDe = (consulta?: number, todas?: number, canceladas?: number): number | undefined => {
+    if (activasConsulta) return consulta;
+    if (elegidosEstado.length > 0 && !elegidosEstado.includes('cancelado')) return todas;
+    return todas === undefined || canceladas === undefined ? undefined : Math.max(0, todas - canceladas);
+  };
   const conteoTab: Record<TabEstado, number | undefined> = esVentas
-    ? { activas: cvActivas.data?.total, canceladas: cvCanceladas.data?.total, todas: cvTodas.data?.total }
-    : { activas: clActivas.data?.total, canceladas: clCanceladas.data?.total, todas: clTodas.data?.total };
+    ? { activas: activasDe(cvActivas.data?.total, cvTodas.data?.total, cvCanceladas.data?.total), canceladas: cvCanceladas.data?.total, todas: cvTodas.data?.total }
+    : { activas: activasDe(clActivas.data?.total, clTodas.data?.total, clCanceladas.data?.total), canceladas: clCanceladas.data?.total, todas: clTodas.data?.total };
   const [loadHistoricalSummary, setLoadHistoricalSummary] = useState(false);
 
   // La tabla visible tiene prioridad. El resumen histórico puede abarcar miles

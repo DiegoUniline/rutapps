@@ -131,21 +131,27 @@ export default function RutaEntregas() {
   const { data: entregasServidor } = useQuery({
     queryKey: ['sa-ruta-entregas', empresa?.id, vendedorId],
     enabled: !!empresa?.id && !!vendedorId && desdeServidor,
-    queryFn: () => fetchAllPages((from, to) => supabase
-      .from('entregas')
-      .select('id, empresa_id, folio, pedido_id, vendedor_id, cliente_id, almacen_id, fecha, status, notas, vendedor_ruta_id, fecha_asignacion, fecha_carga, orden_entrega, fecha_entrega, motivo_no_entrega, created_at, updated_at')
-      .eq('empresa_id', empresa!.id)
-      .or(`vendedor_ruta_id.eq.${vendedorId},vendedor_id.eq.${vendedorId}`)
-      .in('status', ['cargado', 'en_ruta', 'hecho', 'no_entregado'] as any)
-      .order('fecha')
-      .order('id')
-      .range(from, to)),
+    queryFn: () => {
+      // Pendientes completas; entregadas / no entregadas solo de los últimos 7 días
+      // (antes todo el historial del repartidor, que crece sin límite).
+      const desde = new Date(Date.now() - 7 * 86400000).toISOString();
+      return fetchAllPages((from, to) => supabase
+        .from('entregas')
+        .select('id, empresa_id, folio, pedido_id, vendedor_id, cliente_id, almacen_id, fecha, status, notas, vendedor_ruta_id, fecha_asignacion, fecha_carga, orden_entrega, fecha_entrega, motivo_no_entrega, created_at, updated_at')
+        .eq('empresa_id', empresa!.id)
+        .or(`vendedor_ruta_id.eq.${vendedorId},vendedor_id.eq.${vendedorId}`)
+        .or(`status.in.(cargado,en_ruta),and(status.in.(hecho,no_entregado),updated_at.gte.${desde})`)
+        .order('fecha')
+        .order('id')
+        .range(from, to));
+    },
   });
   const { data: clientesServidor } = useQuery({
     queryKey: ['sa-ruta-entregas-clientes', empresa?.id],
     enabled: !!empresa?.id && desdeServidor,
     queryFn: () => fetchAllPages((from, to) => supabase
-      .from('clientes').select('*').eq('empresa_id', empresa!.id).order('id').range(from, to)),
+      .from('clientes').select('id, nombre, direccion, colonia, gps_lat, gps_lng, status, vendedor_id, dia_visita, zona_id')
+      .eq('empresa_id', empresa!.id).order('id').range(from, to)),
   });
 
   const allEntregas = desdeServidor ? entregasServidor : entregasOffline;
@@ -168,11 +174,17 @@ export default function RutaEntregas() {
     queryKey: ['ruta-entrega-lineas', empresa?.id, entregaIds.join(',')],
     enabled: !!empresa?.id && entregaIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('entrega_lineas')
-        .select('id, entrega_id, producto_id, cantidad_pedida, cantidad_entregada, hecho, almacen_origen_id')
-        .in('entrega_id', entregaIds);
-      return data ?? [];
+      // En trozos de 200 ids: una lista larga en la URL hacía fallar la consulta (y se veía vacía).
+      const out: any[] = [];
+      for (let i = 0; i < entregaIds.length; i += 200) {
+        const { data, error } = await supabase
+          .from('entrega_lineas')
+          .select('id, entrega_id, producto_id, cantidad_pedida, cantidad_entregada, hecho, almacen_origen_id')
+          .in('entrega_id', entregaIds.slice(i, i + 200));
+        if (error) throw error;
+        out.push(...(data ?? []));
+      }
+      return out;
     },
   });
 

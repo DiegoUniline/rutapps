@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { useListPreferences } from '@/hooks/useListPreferences';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -91,18 +93,28 @@ export default function FacturacionCfdiPage() {
   });
 
   // Load CFDIs
+  // Mes actual por omisión (antes traía todo el historial al abrir).
+  const { dateFrom: desde, dateTo: hasta, setDates } = useListPreferences('cfdis', { defaultMesActual: true });
   const { data: cfdis, isLoading } = useQuery({
-    queryKey: ['cfdis', empresa?.id],
+    queryKey: ['cfdis', empresa?.id, desde, hasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      // Todas las páginas (antes se cortaba en 1 000 renglones).
-      return fetchAllPages<any>((from, to) => supabase
-        .from('cfdis')
-        .select('*, ventas(folio)')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: true })
-        .range(from, to));
+      return fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('cfdis')
+          .select('*, ventas(folio)')
+          .eq('empresa_id', empresa!.id);
+        if (desde) q = q.gte('created_at', new Date(`${desde}T00:00:00`).toISOString());
+        if (hasta) {
+          const fin = new Date(`${hasta}T00:00:00`);
+          fin.setDate(fin.getDate() + 1);
+          q = q.lt('created_at', fin.toISOString());
+        }
+        return q
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: true })
+          .range(from, to);
+      });
     },
   });
 
@@ -348,6 +360,7 @@ export default function FacturacionCfdiPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar por RFC, nombre, folio..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9" />
             </div>
+            <DateRangePicker from={desde} to={hasta} onChange={(f, t) => setDates(f, t)} />
             <Badge variant="secondary" className="text-xs">{filtered.length} facturas</Badge>
           </div>
 

@@ -86,7 +86,7 @@ const SELECT_FULL = `
   cotizacion_lineas(*, productos:producto_id(id, codigo, nombre, precio_principal, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, unidad_venta_id, es_granel, unidad_granel), unidades:unidad_id(nombre, abreviatura))
 `;
 
-export function useCotizaciones() {
+export function useCotizaciones(desde?: string, hasta?: string) {
   const { empresa } = useAuth();
   useRealtimeInvalidate({
     table: 'cotizaciones',
@@ -94,7 +94,7 @@ export function useCotizaciones() {
     queryKeys: [['cotizaciones'], ['cotizacion']],
   });
   return useQuery({
-    queryKey: ['cotizaciones', empresa?.id],
+    queryKey: ['cotizaciones', empresa?.id, desde ?? '', hasta ?? ''],
     enabled: !!empresa?.id,
     networkMode: 'always',
     queryFn: async () => {
@@ -114,12 +114,14 @@ export function useCotizaciones() {
       }
 
       try {
-        const rows = await fetchAllPages((from, to) =>
-          supabase.from('cotizaciones').select(SELECT_LIST)
-            .eq('empresa_id', empresa!.id)
-            .order('created_at', { ascending: false }).order('id', { ascending: true })
-            .range(from, to)
-        );
+        const rows = await fetchAllPages((from, to) => {
+          let q = supabase.from('cotizaciones').select(SELECT_LIST)
+            .eq('empresa_id', empresa!.id);
+          if (desde) q = q.gte('fecha', desde);
+          if (hasta) q = q.lte('fecha', hasta);
+          return q.order('created_at', { ascending: false }).order('id', { ascending: true })
+            .range(from, to);
+        });
         try {
           const { offlineDb } = await import('@/lib/offlineDb');
           if (rows.length) await offlineDb.cotizaciones.bulkPut(rows as any);

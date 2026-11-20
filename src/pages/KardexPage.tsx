@@ -39,8 +39,8 @@ const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string }> =
 };
 
 /** Fecha local (YYYY-MM-DD) de hace 30 días. */
-function hace30Dias(): string {
-  const d = new Date(); d.setDate(d.getDate() - 30);
+function haceDias(n: number): string {
+  const d = new Date(); d.setDate(d.getDate() - n);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -98,7 +98,8 @@ export default function KardexPage() {
   const productoId = searchParams.get('prod') ?? '';
   // Sin producto, por defecto los últimos 30 días: el historial completo de la empresa
   // era la segunda consulta más pesada de la base. Se puede elegir otra fecha.
-  const fechaDesde = searchParams.get('fd') ?? (productoId ? '' : hace30Dias());
+  // Por omisión: 90 días con producto (el saldo inicial lo da la BD), 30 días sin producto.
+  const fechaDesde = searchParams.get('fd') ?? haceDias(productoId ? 90 : 30);
   const fechaHasta = searchParams.get('fh') ?? '';
   const filterTipo = searchParams.get('ft') ?? 'todos';
   const search = searchParams.get('q') ?? '';
@@ -181,7 +182,7 @@ export default function KardexPage() {
     },
   });
 
-  const { rows, isLoading, refetch } = useKardexUbicacion(
+  const { rows, isLoading, refetch, saldoInicial } = useKardexUbicacion(
     productoId || null,
     almacenId || null,
     'almacen',
@@ -292,7 +293,7 @@ export default function KardexPage() {
     return list;
   }, [rows, filterTipo, search]);
 
-  const saldoFinal = rows.length > 0 ? rows[rows.length - 1].saldo : 0;
+  const saldoFinal = rows.length > 0 ? rows[rows.length - 1].saldo : saldoInicial;
   const cuadra = stockActual !== undefined && Math.abs(saldoFinal - (stockActual ?? 0)) < 0.001;
 
   const handleExportCSV = () => {

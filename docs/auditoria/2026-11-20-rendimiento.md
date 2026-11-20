@@ -17,10 +17,16 @@ Revisión de 1 378 consultas `.from()` y 124 `.rpc()` del front contra los índi
 - Reportes personalizados con ids en trozos de 200; Devoluciones consulta destinos/lotes solo de sus ids.
 - Demanda (surtir lo disponible por renglón) y Saldos iniciales (RPC por cliente con reporte de errores) se dejan así a propósito: cada renglón ya es atómico y el resultado parcial es el comportamiento deseado.
 
-## Pendiente (patrones que no escalan, de mayor a menor impacto)
-| # | Dónde | Problema | Arreglo propuesto |
-|---|---|---|---|
-| 1 | Traspasos, Órdenes de compra, Gastos, CFDI, Pagos proveedores, Conteos, Auditorías, Ajustes, Cotizaciones | Ya completas, pero cargan todo el historial al abrir | Ventana de fechas por omisión + paginación en servidor |
-| 2 | VentasListPage + realtime (`useData.ts`) | Conteos exactos que se repiten con cada cambio para cada administrador | Conteo estimado o RPC con conteos agrupados |
-| 3 | Comisiones generadas, Kardex por ubicación, RutaCxC/RutaEntregas | Historial completo sin ventana | Rango obligatorio / RPC |
-| 4 | Código muerto: `useVentas` (`useVentas.ts`), `useEntregasList`, `EntregasPage`, `useCargas`, `useDevoluciones`; scripts `lib/safe_sweep*.ts`, `lib/temp_sweep_tampico.ts` | Consultas sin límite y cliente anónimo propio | Quitar (requiere `CONFIRMO`) |
+## Aplicado (4ª pasada)
+- Facturas (CFDI) y Cotizaciones: mes actual por omisión, filtrado en el servidor (índice `cotizaciones (empresa_id, fecha)`).
+- Ventas: conteos de pestañas 3 → 2 consultas (Activas = Todas − Canceladas); por tiempo real se recuentan como máximo cada 30 s (las acciones propias los refrescan al momento); un cobro ya no recarga la lista (el saldo llega por el canal de ventas).
+- Kardex por ubicación: 90 días por omisión con producto; saldo inicial calculado en la BD (`kardex_saldo_inicial`, probado: 369/369 existencias cuadran).
+- Entregas de ruta (vista del supervisor): pendientes + entregadas de 7 días; renglones en trozos de 200 (antes la URL larga fallaba en silencio y se veían vacías); clientes con columnas mínimas.
+- Código muerto quitado (`CONFIRMO quitar código muerto`): `EntregasPage.tsx`, `lib/safe_sweep*.ts`, `lib/temp_sweep_tampico.ts`, `useVentas`, `useEntregasList`, `useCargas`, `useDevoluciones`.
+- Comisiones generadas y CxC de ruta ya tenían ventana / columnas mínimas: sin cambio.
+
+## Hallazgo de seguridad (no corregido, requiere CONFIRMO)
+- `cotizaciones` y `cotizacion_lineas` tienen políticas `SELECT … TO anon, authenticated USING (true)`: cualquiera con la llave pública lee las cotizaciones de TODAS las empresas. Arreglo propuesto: quitar esas políticas y servir la cotización pública por RPC con su token.
+
+## Pendiente
+- Ninguno de la lista original (filas 1–4 atendidas en las pasadas 3 y 4).

@@ -378,42 +378,6 @@ export function useVentaLineasPaginated(
   });
 }
 
-/** All ventas (for lookups) */
-export function useVentas(search?: string, statusFilter?: string, tipoFilter?: string) {
-  const qc = useQueryClient();
-  const { empresa } = useAuth();
-
-  // Realtime ya está cubierto por el canal 'ventas-realtime' de useVentasPaginated.
-  // No duplicamos suscripción aquí para evitar doble invalidación.
-
-  return useQuery({
-    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      return fetchAllPages((from, to) => {
-        let q = supabase
-          .from('ventas')
-          .select('id, folio, fecha, total, subtotal, iva_total, descuento_total, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
-          .eq('empresa_id', empresa!.id)
-          .order('created_at', { ascending: false })
-          .range(from, to);
-        if (search) q = q.or(`folio.ilike.%${search}%`);
-        if (statusFilter && statusFilter !== 'todos') {
-          const arr = statusFilter.split(',').filter(Boolean);
-          if (arr.length > 1) q = q.in('status', arr as any);
-          else q = q.eq('status', statusFilter as Venta['status']);
-        }
-        if (tipoFilter && tipoFilter !== 'todos') {
-          const arr = tipoFilter.split(',').filter(Boolean);
-          if (arr.length > 1) q = q.in('tipo', arr as any);
-          else q = q.eq('tipo', tipoFilter as Venta['tipo']);
-        }
-        return q;
-      }) as Promise<Venta[]>;
-    },
-  });
-}
-
 export function useVenta(id?: string) {
   const { empresa } = useAuth();
   return useQuery({

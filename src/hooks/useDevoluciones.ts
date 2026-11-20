@@ -1,31 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchAllPages } from '@/lib/supabasePaginate';
 import { todayInTimezone } from '@/lib/utils';
 import { queueOperations } from '@/lib/syncQueue';
 import { deterministicUuid } from '@/lib/deterministicId';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { toast } from 'sonner';
-
-export function useDevoluciones(search?: string) {
-  const { empresa } = useAuth();
-  return useQuery({
-    queryKey: ['devoluciones', empresa?.id, search],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      return fetchAllPages((from, to) => {
-        let q = supabase
-          .from('devoluciones')
-          .select('id, fecha, tipo, notas, vendedor_id, cliente_id, user_id, vendedores:profiles!vendedor_id(nombre), clientes(nombre), devolucion_lineas(id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
-          .eq('empresa_id', empresa!.id)
-          .order('fecha', { ascending: false })
-          .range(from, to);
-        return q;
-      });
-    },
-  });
-}
 
 export function useSaveDevolucion() {
   const qc = useQueryClient();
