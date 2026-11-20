@@ -613,7 +613,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           )}
           {/* Document */}
           {!isNew && (
-            <Button onClick={handleGenerarEntregaPdf} size="sm" variant="outline" className="text-xs max-sm:hidden">
+            <Button onClick={handleGenerarEntregaPdf} size="sm" variant="outline" className="btn-pdf text-xs max-sm:hidden">
               <FileText className="h-3.5 w-3.5" /> Documento
             </Button>
           )}

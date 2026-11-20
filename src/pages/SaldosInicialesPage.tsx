@@ -188,7 +188,7 @@ export default function SaldosInicialesPage() {
           <Landmark className="h-5 w-5" /> Saldos Iniciales
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => setShowImport(true)} className="gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => setShowImport(true)} className="btn-excel gap-1.5">
             <Upload className="h-3.5 w-3.5" /> Importar Excel
           </Button>
           <Button size="sm" onClick={() => setShowModal(true)} className="gap-1.5">

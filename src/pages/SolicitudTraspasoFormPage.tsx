@@ -390,7 +390,7 @@ export default function SolicitudTraspasoFormPage() {
               </>
             )}
             {!esNueva && (
-              <button onClick={generarPdf} className="btn-odoo-secondary flex items-center gap-1.5">
+              <button onClick={generarPdf} className="btn-pdf btn-odoo-secondary flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5" /> PDF
               </button>
             )}

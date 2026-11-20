@@ -852,7 +852,7 @@ export default function AjustesInventarioPage() {
                   </Button>
                   <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
                   {rows.length > 0 && (
-                    <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
+                    <Button variant="outline" size="sm" className="btn-pdf" onClick={handleGenerarPdf}>
                       <FileText className="h-4 w-4 mr-1" /> PDF
                     </Button>
                   )}
@@ -1052,7 +1052,7 @@ export default function AjustesInventarioPage() {
                               </Button>
                             </>
                           )}
-                          <Button size="sm" variant="outline" className="h-8 text-xs gap-1 ml-auto" onClick={() => pdfDeGrupo(group)}>
+                          <Button size="sm" variant="outline" className="btn-pdf h-8 text-xs gap-1 ml-auto" onClick={() => pdfDeGrupo(group)}>
                             <FileText className="h-3.5 w-3.5" /> PDF
                           </Button>
                         </div>

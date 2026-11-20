@@ -148,10 +148,10 @@ export default function ConcentradoReportDialog({ filters, empresa, initialSelle
         )}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={!!exporting}>Cerrar</Button>
-          <Button variant="outline" disabled={busy || !!failure || !productCount} onClick={() => exportReport('excel')}>
+          <Button className="btn-excel" variant="outline" disabled={busy || !!failure || !productCount} onClick={() => exportReport('excel')}>
             {exporting === 'excel' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />} Excel
           </Button>
-          <Button disabled={busy || !!failure || !productCount} onClick={() => exportReport('pdf')}>
+          <Button className="btn-pdf" disabled={busy || !!failure || !productCount} onClick={() => exportReport('pdf')}>
             {exporting === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} PDF
           </Button>
         </div>

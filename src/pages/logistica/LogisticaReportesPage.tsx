@@ -205,7 +205,7 @@ export default function LogisticaReportesPage() {
           </h1>
           <p className="text-sm text-muted-foreground">Productos cargados y pedidos pendientes de entregar</p>
         </div>
-        <button onClick={handlePrint} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+        <button onClick={handlePrint} className="btn-pdf inline-flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
           <Printer className="h-4 w-4" /> Imprimir / PDF
         </button>
       </div>

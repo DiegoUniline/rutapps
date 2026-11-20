@@ -228,3 +228,8 @@
 - **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO (mockup https://claude.ai/artifact/UJToieXWdZfJquwHXw8QwP; quitó «buscador sigue abierto»)
 - **Decisión (solo teléfono, módulo administrativo):** en **compras, traspasos, ventas y pedidos** los productos se agregan así: botón «Buscar producto» → buscador a pantalla completa (con existencias por producto) → al tocar un producto se despliegan **debajo** cantidad (− / +), presentación, precio/costo editable y subtotal, con botón **Agregar** → al agregar **regresa al documento**.
 - **Variantes:** ventas/pedidos: precio de la lista del cliente, editable solo con permiso; compras: costo; traspasos: sin precio, muestra existencia del almacén origen. Escritorio sin cambios.
+
+## D-039
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Excepción Excel/PDF»)
+- **Decisión:** única excepción a «solo colores RutApp» (D-029): los botones de **Excel** van en **verde suave** y los de **PDF** en **rojo suave**, en todo el sistema, para reconocerlos de un vistazo. Todo lo demás sigue con colores RutApp.
+- **Implementación:** clases `btn-excel` / `btn-pdf` en `src/index.css` (con modo oscuro); se aplican con `className` a cada botón de exportar. Los nuevos botones de Excel/PDF deben usarlas.

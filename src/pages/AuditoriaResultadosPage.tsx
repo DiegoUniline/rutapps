@@ -243,7 +243,7 @@ export default function AuditoriaResultadosPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 ml-auto shrink-0">
-            <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
+            <Button className="btn-pdf" variant="outline" size="sm" onClick={handleGenerarPdf}>
               <FileText className="h-4 w-4 mr-1" /> PDF
             </Button>
             <Badge variant={badge?.variant}>{badge?.label}</Badge>

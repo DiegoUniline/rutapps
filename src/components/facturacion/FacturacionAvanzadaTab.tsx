@@ -181,7 +181,7 @@ export function ComplementosPagoSection() {
                         {p.status === 'error' && p.error_detalle && <p className="text-[10px] text-destructive mt-0.5 max-w-[220px] truncate" title={p.error_detalle}>{p.error_detalle}</p>}
                       </TableCell>
                       <TableCell className="flex gap-1 flex-wrap">
-                        {p.pdf_url && <Button size="sm" variant="ghost" onClick={(e) => abrirArchivoCfdi(e, 'cfdi_pagos', p.id, 'pdf', p.pdf_url)}>PDF</Button>}
+                        {p.pdf_url && <Button className="btn-pdf" size="sm" variant="ghost" onClick={(e) => abrirArchivoCfdi(e, 'cfdi_pagos', p.id, 'pdf', p.pdf_url)}>PDF</Button>}
                         {p.xml_url && <Button size="sm" variant="ghost" onClick={(e) => abrirArchivoCfdi(e, 'cfdi_pagos', p.id, 'xml', p.xml_url)}>XML</Button>}
                         {(p.status === 'incierto' || p.status === 'timbrando') && (
                           <Button size="sm" variant="outline" disabled={accion === p.id} onClick={() => reconciliarRep(p.id)}>Reconciliar</Button>

@@ -670,7 +670,7 @@ export default function TraspasoFormPage() {
             </button>
           )}
           {!isNew && (
-            <button onClick={handleGenerarPdf} className="btn-odoo-secondary max-sm:hidden">
+            <button onClick={handleGenerarPdf} className="btn-pdf btn-odoo-secondary max-sm:hidden">
               <FileText className="h-3.5 w-3.5" /> PDF
             </button>
           )}

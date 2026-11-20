@@ -747,7 +747,7 @@ export default function ReporteDiarioRuta() {
             <Button variant="outline" size="sm" onClick={handlePrint}>
               <Printer className="h-3.5 w-3.5 mr-1" /> Imprimir
             </Button>
-            <Button variant="default" size="sm" onClick={handleDownloadPdf}>
+            <Button className="btn-pdf" variant="default" size="sm" onClick={handleDownloadPdf}>
               <Download className="h-3.5 w-3.5 mr-1" /> Descargar PDF
             </Button>
           </>

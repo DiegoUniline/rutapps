@@ -387,10 +387,10 @@ export default function ConcentradoSurtidoPage() {
             <FileDown className="w-3.5 h-3.5" /> Reporte de surtido
           </Button>
           <Button size="sm" variant="outline" onClick={() => viewMode === 'productos' ? refetchProductos() : refetchPedidos()}>Refrescar</Button>
-          <Button size="sm" variant="outline" onClick={handleExportExcel} disabled={isFetchingProductos || !almacenInit}>
+          <Button className="btn-excel" size="sm" variant="outline" onClick={handleExportExcel} disabled={isFetchingProductos || !almacenInit}>
             {isFetchingProductos ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />} Excel
           </Button>
-          <Button size="sm" variant="outline" onClick={handleExportPdf} disabled={isFetchingProductos || !almacenInit}>
+          <Button className="btn-pdf" size="sm" variant="outline" onClick={handleExportPdf} disabled={isFetchingProductos || !almacenInit}>
             {isFetchingProductos ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />} PDF
           </Button>
           <Button size="sm" onClick={generarCompras} disabled={generando || isFetchingProductos || !almacenInit} className="bg-primary text-primary-foreground">

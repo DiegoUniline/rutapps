@@ -654,3 +654,31 @@ table[data-no-odoo] tbody td {
     max-width: none;
   }
 }
+
+/* D-039: única excepción a «solo colores RutApp»: los botones de Excel y PDF llevan el color de su
+   programa, suave, para reconocerlos de un vistazo. Úsalos con className="btn-excel" / "btn-pdf". */
+.btn-excel {
+  background-color: hsl(142 55% 95%) !important;
+  color: hsl(142 64% 24%) !important;
+  border: 1px solid hsl(142 40% 78%) !important;
+}
+.btn-excel:hover:not(:disabled) { background-color: hsl(142 55% 90%) !important; }
+.btn-pdf {
+  background-color: hsl(0 85% 96%) !important;
+  color: hsl(0 65% 40%) !important;
+  border: 1px solid hsl(0 60% 85%) !important;
+}
+.btn-pdf:hover:not(:disabled) { background-color: hsl(0 85% 92%) !important; }
+.btn-excel svg, .btn-pdf svg { color: currentColor !important; }
+.dark .btn-excel {
+  background-color: hsl(142 35% 14%) !important;
+  color: hsl(142 55% 68%) !important;
+  border-color: hsl(142 30% 28%) !important;
+}
+.dark .btn-excel:hover:not(:disabled) { background-color: hsl(142 35% 18%) !important; }
+.dark .btn-pdf {
+  background-color: hsl(0 40% 16%) !important;
+  color: hsl(0 75% 72%) !important;
+  border-color: hsl(0 35% 30%) !important;
+}
+.dark .btn-pdf:hover:not(:disabled) { background-color: hsl(0 40% 20%) !important; }

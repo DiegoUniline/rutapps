@@ -450,7 +450,7 @@ function ExportButtons({ rows, fileName }: { rows: MatchedRow[]; fileName: strin
   };
   return (
     <div className="flex justify-end">
-      <button onClick={exportXlsx} className="btn-odoo-secondary gap-1 text-xs">
+      <button onClick={exportXlsx} className="btn-excel btn-odoo-secondary gap-1 text-xs">
         <Download className="h-3.5 w-3.5" /> Exportar reporte a Excel
       </button>
     </div>
@@ -996,7 +996,7 @@ function JobDetailDialog({ jobId, onClose }: { jobId: string; onClose: () => voi
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Detalle de importación</span>
-            <button onClick={exportXlsx} className="btn-odoo-secondary text-xs gap-1">
+            <button onClick={exportXlsx} className="btn-excel btn-odoo-secondary text-xs gap-1">
               <Download className="h-3.5 w-3.5" /> Exportar Excel
             </button>
           </DialogTitle>

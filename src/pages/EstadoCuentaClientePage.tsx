@@ -272,7 +272,7 @@ export default function EstadoCuentaClientePage() {
             <h1 className="text-xl font-semibold text-foreground">Estado de cuenta</h1>
             <p className="text-sm text-muted-foreground">{selected.nombre} {selected.codigo ? `· ${selected.codigo}` : ''}</p>
           </div>
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleDescargarPdf} disabled={loadingDetalle}>
+          <Button variant="outline" size="sm" className="btn-pdf gap-2" onClick={handleDescargarPdf} disabled={loadingDetalle}>
             <Download className="h-3.5 w-3.5" /> PDF
           </Button>
           <Button size="sm" className="gap-2" onClick={() => setShowAplicarPago(true)}>

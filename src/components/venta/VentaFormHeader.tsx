@@ -132,7 +132,7 @@ export function VentaFormHeader({
           </button>
         ))}
         {!isNew && (
-          <button onClick={onGenerarPdf} className="btn-odoo-secondary text-xs max-sm:hidden">
+          <button onClick={onGenerarPdf} className="btn-pdf btn-odoo-secondary text-xs max-sm:hidden">
             <FileText className="h-3.5 w-3.5" /> Documento
           </button>
         )}

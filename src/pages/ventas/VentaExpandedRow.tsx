@@ -366,7 +366,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
 
 
 
-                <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={handlePdf} disabled={generatingPdf}>
+                <Button size="sm" variant="outline" className="btn-pdf h-7 text-xs gap-1.5" onClick={handlePdf} disabled={generatingPdf}>
                   {generatingPdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
                   PDF
                 </Button>

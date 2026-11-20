@@ -542,10 +542,10 @@ export default function VentasListPage() {
             <div className="flex items-center gap-1.5 pb-1.5">
               <HelpButton compact title={HELP.ventas.title} sections={HELP.ventas.sections} />
               <VideoHelpButton compact module="ventas" />
-              <button type="button" onClick={exportarExcel} className="btn-odoo-secondary !h-8 !px-3 !py-0 text-[12px]">
+              <button type="button" onClick={exportarExcel} className="btn-excel btn-odoo-secondary !h-8 !px-3 !py-0 text-[12px]">
                 <FileSpreadsheet className="h-3.5 w-3.5 text-success" /> Excel
               </button>
-              <button type="button" onClick={exportarPDF} className="btn-odoo-secondary !h-8 !px-3 !py-0 text-[12px]">
+              <button type="button" onClick={exportarPDF} className="btn-pdf btn-odoo-secondary !h-8 !px-3 !py-0 text-[12px]">
                 <FileText className="h-3.5 w-3.5 text-destructive" /> PDF
               </button>
               <ColumnVisibilityMenu

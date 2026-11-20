@@ -119,10 +119,10 @@ function ExportarOrdenCompra({ compraId, item }: { compraId: string; item?: bool
 
   return (
     <>
-      <button onClick={() => exportar('pdf')} disabled={exporting !== null} className={item ? CLASE_ITEM_MENU : 'btn-odoo gap-1'} title="Descargar orden de compra en PDF">
+      <button onClick={() => exportar('pdf')} disabled={exporting !== null} className={item ? CLASE_ITEM_MENU : 'btn-pdf btn-odoo gap-1'} title="Descargar orden de compra en PDF">
         {exporting === 'pdf' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />} PDF
       </button>
-      <button onClick={() => exportar('excel')} disabled={exporting !== null} className={item ? CLASE_ITEM_MENU : 'btn-odoo gap-1'} title="Descargar orden de compra en Excel">
+      <button onClick={() => exportar('excel')} disabled={exporting !== null} className={item ? CLASE_ITEM_MENU : 'btn-excel btn-odoo gap-1'} title="Descargar orden de compra en Excel">
         {exporting === 'excel' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />} Excel
       </button>
     </>

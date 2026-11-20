@@ -231,7 +231,7 @@ export default function InventarioStockFechaTab() {
             <div className="relative mt-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input value={search} onChange={event => setSearch(event.target.value)} placeholder="Producto, código, ubicación, marca…" className="h-9 pl-9 bg-background" /></div>
           </div>
           <Button variant="outline" className="h-9" onClick={() => query.refetch()} disabled={query.isFetching}><RefreshCw className={`mr-1.5 h-4 w-4 ${query.isFetching ? 'animate-spin' : ''}`} />Actualizar</Button>
-          <Button variant="outline" className="h-9" onClick={exportRows} disabled={!filtered.length}><Download className="mr-1.5 h-4 w-4" />Excel</Button>
+          <Button variant="outline" className="btn-excel h-9" onClick={exportRows} disabled={!filtered.length}><Download className="mr-1.5 h-4 w-4" />Excel</Button>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <Segmented value={locationType} onChange={value => setLocationType(value as HistoricalLocationFilter)} options={[['todas', 'Todas'], ['almacenes', 'Almacenes'], ['rutas', 'Rutas']]} />

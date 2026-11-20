@@ -342,10 +342,10 @@ function ReporteRunner({ config, empresaId, empresaNombre, empresaInfo, onEdit, 
             <Button variant="secondary" onClick={() => exportar('csv')} disabled={!!loading}>
               {loading === 'csv' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <FileDown className="w-4 h-4 mr-1" />} CSV
             </Button>
-            <Button variant="secondary" onClick={() => exportar('pdf')} disabled={!!loading}>
+            <Button className="btn-pdf" variant="secondary" onClick={() => exportar('pdf')} disabled={!!loading}>
               {loading === 'pdf' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <FileText className="w-4 h-4 mr-1" />} PDF
             </Button>
-            <Button onClick={() => exportar('xlsx')} disabled={!!loading}>
+            <Button className="btn-excel" onClick={() => exportar('xlsx')} disabled={!!loading}>
               {loading === 'xlsx' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-1" />} Excel
             </Button>
           </div>

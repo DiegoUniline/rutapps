@@ -77,7 +77,7 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
                 <td className="py-1.5 px-2">
                   <div className="flex items-center gap-1">
                     {cfdi.pdf_url && (
-                      <a href="#" onClick={(e) => abrirArchivoCfdi(e, 'cfdis', cfdi.id, 'pdf', cfdi.pdf_url)} className="text-primary hover:underline text-[11px] font-medium">PDF</a>
+                      <a href="#" onClick={(e) => abrirArchivoCfdi(e, 'cfdis', cfdi.id, 'pdf', cfdi.pdf_url)} className="btn-pdf text-primary hover:underline text-[11px] font-medium">PDF</a>
                     )}
                     {cfdi.xml_url && (
                       <>

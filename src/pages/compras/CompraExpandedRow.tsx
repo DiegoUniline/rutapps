@@ -90,10 +90,10 @@ export function CompraExpandedRow({ compra, colSpan, fmt, onCollapse }: Props) {
               <span className="text-muted-foreground text-xs">{compra.condicion_pago === 'credito' ? 'Crédito' : 'Contado'}</span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled={exporting !== null} onClick={() => exportar('pdf')}>
+              <Button size="sm" variant="outline" className="btn-pdf h-7 text-xs gap-1.5" disabled={exporting !== null} onClick={() => exportar('pdf')}>
                 {exporting === 'pdf' ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />} PDF
               </Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled={exporting !== null} onClick={() => exportar('excel')}>
+              <Button size="sm" variant="outline" className="btn-excel h-7 text-xs gap-1.5" disabled={exporting !== null} onClick={() => exportar('excel')}>
                 {exporting === 'excel' ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileSpreadsheet className="h-3 w-3" />} Excel
               </Button>
               <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => navigate(`/almacen/compras/${compra.id}`)}>

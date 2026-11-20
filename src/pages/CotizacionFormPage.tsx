@@ -484,7 +484,7 @@ export default function CotizacionFormPage() {
           )}
           {!isNew && (
             <>
-              <Button variant="outline" onClick={handleDownloadPdf}><FileDown className="h-4 w-4 mr-1" /> PDF</Button>
+              <Button variant="outline" className="btn-pdf" onClick={handleDownloadPdf}><FileDown className="h-4 w-4 mr-1" /> PDF</Button>
               <Button variant="outline" onClick={handleSendWhatsApp}><Send className="h-4 w-4 mr-1" /> Enviar por WhatsApp</Button>
               {form.estado !== 'aprobada' && form.estado !== 'convertida' && (
                 <Button variant="outline" onClick={handleApprove}><CheckCircle2 className="h-4 w-4 mr-1" /> Aprobar</Button>
