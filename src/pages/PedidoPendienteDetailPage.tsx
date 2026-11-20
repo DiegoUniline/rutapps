@@ -254,9 +254,9 @@ export default function PedidoPendienteDetailPage() {
     <div className="min-h-full">
       {excedenteDialog}
       {/* Header */}
-      <div className="bg-card border-b border-border px-5 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-10">
+      <div className="bg-card border-b border-border px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate('/logistica/pedidos')} className="btn-odoo-secondary !px-2.5">
+          <button onClick={() => navigate('/logistica/pedidos')} className="btn-odoo-secondary !px-2.5 shrink-0" aria-label="Regresar">
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
           <div className="min-w-0">
@@ -272,7 +272,7 @@ export default function PedidoPendienteDetailPage() {
             <p className="text-xs text-muted-foreground truncate">{pedido.clientes?.nombre ?? '—'}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-2 min-w-0 max-w-full ml-auto">
           {!fullyDelivered && !isCerrado && (
             <>
               <Button onClick={handleCrearEntrega} size="sm" variant="outline" disabled={crearEntrega.isPending || entregaExpress.isPending}>
@@ -297,9 +297,9 @@ export default function PedidoPendienteDetailPage() {
       </div>
 
 
-      <div className="p-5 space-y-5 max-w-[1200px]">
+      <div className="p-3 sm:p-5 space-y-4 sm:space-y-5 max-w-[1200px]">
         {/* Info card */}
-        <div className="bg-card border border-border rounded-md p-5">
+        <div className="bg-card border border-border rounded-md p-3 sm:p-5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px]">
             <div>
               <span className="text-muted-foreground text-[11px]">Cliente</span>

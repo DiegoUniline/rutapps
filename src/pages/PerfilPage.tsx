@@ -28,18 +28,18 @@ export default function PerfilPage() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-5">
+    <div className="p-3 sm:p-6 max-w-3xl mx-auto space-y-4 sm:space-y-5">
       <div>
         <h1 className="text-xl font-bold text-foreground">Mi perfil</h1>
         <p className="text-xs text-muted-foreground mt-0.5">Administra tu información personal y contraseña</p>
       </div>
 
       {/* Datos del usuario */}
-      <section className="bg-card border border-border rounded-lg p-5">
+      <section className="bg-card border border-border rounded-lg p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
           <UserIcon className="h-4 w-4 text-primary" /> Información personal
         </h2>
-        <div className="flex items-start gap-5">
+        <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
           {user?.id && profile?.id && (
             <AvatarUploader
               userId={user.id}
@@ -49,28 +49,28 @@ export default function PerfilPage() {
               size={88}
             />
           )}
-          <div className="flex-1 space-y-2.5 text-sm">
-            <div className="flex items-center gap-2">
-              <UserIcon className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground">Nombre:</span>
-              <span className="font-medium text-foreground">{profile?.nombre || '—'}</span>
+          <div className="flex-1 min-w-0 w-full space-y-2.5 text-sm">
+            <div className="flex items-start gap-2">
+              <UserIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <span className="text-muted-foreground shrink-0">Nombre:</span>
+              <span className="font-medium text-foreground min-w-0 break-all">{profile?.nombre || '—'}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground">Correo:</span>
-              <span className="font-medium text-foreground">{user?.email}</span>
+            <div className="flex items-start gap-2">
+              <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <span className="text-muted-foreground shrink-0">Correo:</span>
+              <span className="font-medium text-foreground min-w-0 break-all">{user?.email}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground">Empresa:</span>
-              <span className="font-medium text-foreground">{empresa?.nombre || '—'}</span>
+            <div className="flex items-start gap-2">
+              <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <span className="text-muted-foreground shrink-0">Empresa:</span>
+              <span className="font-medium text-foreground min-w-0 break-all">{empresa?.nombre || '—'}</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* Cambiar contraseña */}
-      <section className="bg-card border border-border rounded-lg p-5">
+      <section className="bg-card border border-border rounded-lg p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
           <KeyRound className="h-4 w-4 text-primary" /> Cambiar contraseña
         </h2>
@@ -130,7 +130,7 @@ export default function PerfilPage() {
       </section>
 
       {/* Apariencia */}
-      <section className="bg-card border border-border rounded-lg p-5">
+      <section className="bg-card border border-border rounded-lg p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
           {theme === 'dark' ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-primary" />} Apariencia
         </h2>

@@ -882,7 +882,7 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-3 mt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-4">
           <div className="bg-card rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Cargado</p>
             <p className="text-lg font-bold text-foreground">{fmtNum(totalCargado)}</p>

@@ -1,3 +1,4 @@
+import { MasAccionesMovil } from '@/components/shared/MasAccionesMovil';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -566,9 +567,9 @@ export default function TraspasoFormPage() {
   return (
     <div className="min-h-full">
       {/* Header bar */}
-      <div className="bg-card border-b border-border px-5 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-10">
+      <div className="bg-card border-b border-border px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate('/almacen/traspasos')} className="btn-odoo-secondary !px-2.5">
+          <button onClick={() => navigate('/almacen/traspasos')} className="btn-odoo-secondary !px-2.5 shrink-0" aria-label="Regresar">
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
           <div className="min-w-0">
@@ -580,7 +581,18 @@ export default function TraspasoFormPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-2 min-w-0 max-w-full ml-auto">
+          <MasAccionesMovil acciones={[
+            ...(!isNew ? [{ key: 'pdf', label: 'PDF', icon: FileText, onClick: handleGenerarPdf }] : []),
+            ...(!isNew && status !== 'cancelado' ? [{ key: 'cancelar', label: 'Cancelar traspaso', icon: Ban, destructiva: true, separar: true, disabled: cancelarMut.isPending, onClick: () => setConfirmDialog({
+              open: true, action: 'cancelar',
+              title: 'Cancelar traspaso',
+              description: status === 'confirmado'
+                ? '¿Cancelar este traspaso? Se revertirá todo el stock movido.'
+                : '¿Cancelar este traspaso?',
+            }) }] : []),
+            ...(!isNew && status === 'borrador' ? [{ key: 'eliminar', label: 'Eliminar borrador', icon: Trash2, destructiva: true, onClick: handleDelete }] : []),
+          ]} />
           {!readOnly && (
             <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="btn-odoo-primary">
               <Save className="h-3.5 w-3.5" /> Guardar
@@ -594,7 +606,7 @@ export default function TraspasoFormPage() {
                 description: '¿Confirmar este traspaso? Se moverá el stock del origen al destino.',
               })}
               disabled={confirmarMut.isPending}
-              className="btn-odoo-primary bg-green-600 hover:bg-green-700 border-green-600"
+              className="btn-odoo-primary"
             >
               <Check className="h-3.5 w-3.5" /> Confirmar
             </button>
@@ -609,18 +621,18 @@ export default function TraspasoFormPage() {
                   : '¿Cancelar este traspaso?',
               })}
               disabled={cancelarMut.isPending}
-              className="btn-odoo-secondary text-destructive"
+              className="btn-odoo-danger max-sm:hidden"
             >
               <Ban className="h-3.5 w-3.5" /> Cancelar
             </button>
           )}
           {!isNew && (
-            <button onClick={handleGenerarPdf} className="btn-odoo-secondary">
+            <button onClick={handleGenerarPdf} className="btn-odoo-secondary max-sm:hidden">
               <FileText className="h-3.5 w-3.5" /> PDF
             </button>
           )}
           {!isNew && status === 'borrador' && (
-            <button onClick={handleDelete} className="btn-odoo-secondary text-destructive !px-2">
+            <button onClick={handleDelete} className="btn-odoo-danger !px-2 max-sm:hidden" aria-label="Eliminar borrador">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
@@ -629,7 +641,7 @@ export default function TraspasoFormPage() {
 
       {/* Status chips */}
       {!isNew && (
-        <div className="px-5 pt-3 flex gap-1.5">
+        <div className="px-3 sm:px-5 pt-3 flex gap-1.5 overflow-x-auto no-scrollbar">
           {Object.entries(STATUS_LABELS).map(([key, cfg]) => (
             <span
               key={key}
@@ -645,8 +657,8 @@ export default function TraspasoFormPage() {
       )}
 
       {/* Form body */}
-      <div className="p-5 space-y-4 max-w-[1200px]">
-        <div className="bg-card border border-border rounded-md p-5">
+      <div className="p-3 sm:p-5 space-y-3 sm:space-y-4 max-w-[1200px]">
+        <div className="bg-card border border-border rounded-md p-3 sm:p-5">
           {readOnly && (
             <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />

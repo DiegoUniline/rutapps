@@ -169,22 +169,22 @@ export function ReporteEntregas() {
       )}
 
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-3">
-        <div className="bg-card border border-border rounded-lg p-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Entregas</p>
-          <p className="text-2xl font-bold text-foreground">{entregas?.length ?? 0}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-foreground">{entregas?.length ?? 0}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Rutas</p>
-          <p className="text-2xl font-bold text-foreground">{byRoute.length}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-foreground">{byRoute.length}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Unidades totales</p>
-          <p className="text-2xl font-bold text-warning">{totalUnidades}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-warning">{totalUnidades}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Monto total</p>
-          <p className="text-2xl font-bold text-primary">{fmt(totalMonto)}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate text-primary">{fmt(totalMonto)}</p>
         </div>
       </div>
 
