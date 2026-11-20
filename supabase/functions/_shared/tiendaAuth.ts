@@ -84,7 +84,14 @@ export interface TiendaTokenPayload {
   exp: number; // unix seconds
 }
 
-export async function signToken(payload: Omit<TiendaTokenPayload, "exp">, secret: string, ttlSeconds = 60 * 60 * 24 * 30): Promise<string> {
+/** Vigencia de cada token de la tienda. La tienda lo renueva sola al abrirse y
+ *  tienda-refresh acepta tokens vencidos con firma válida: la sesión solo se
+ *  cierra si el cliente la cierra, lo bloquean o se desactiva la tienda. */
+export const TTL_SESION_SEGUNDOS = 60 * 60 * 24 * 90;
+
+export const BLOCKED_HASH = "BLOCKED$NO_LOGIN";
+
+export async function signToken(payload: Omit<TiendaTokenPayload, "exp">, secret: string, ttlSeconds = TTL_SESION_SEGUNDOS): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
   const full: TiendaTokenPayload = { ...payload, exp: Math.floor(Date.now() / 1000) + ttlSeconds };
   const h = b64url(JSON.stringify(header));
@@ -95,7 +102,9 @@ export async function signToken(payload: Omit<TiendaTokenPayload, "exp">, secret
   return `${data}.${b64url(sig)}`;
 }
 
-export async function verifyToken(token: string, secret: string): Promise<TiendaTokenPayload | null> {
+/** Valida firma y vencimiento. `aceptarVencido` (solo tienda-refresh) valida la
+ *  firma pero ignora el vencimiento, para poder renovar una sesión vieja. */
+export async function verifyToken(token: string, secret: string, opts: { aceptarVencido?: boolean } = {}): Promise<TiendaTokenPayload | null> {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
@@ -104,7 +113,8 @@ export async function verifyToken(token: string, secret: string): Promise<Tienda
     const ok = await crypto.subtle.verify("HMAC", key, new Uint8Array(b64urlDecode(s)).buffer, enc.encode(`${h}.${p}`));
     if (!ok) return null;
     const payload = JSON.parse(dec.decode(b64urlDecode(p))) as TiendaTokenPayload;
-    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    if (!payload?.empresa_id || !payload?.tienda_cliente_id) return null;
+    if (!opts.aceptarVencido && payload.exp < Math.floor(Date.now() / 1000)) return null;
     return payload;
   } catch {
     return null;
@@ -114,6 +124,32 @@ export async function verifyToken(token: string, secret: string): Promise<Tienda
 /** Escapa comodines de LIKE/ILIKE (% _ \\) para comparar texto del usuario de forma exacta. */
 export function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/** Correo como lo escribe la gente en el celular: sin espacios, en minúsculas y
+ *  con la comilla tipográfica que a veces queda en lugar de "@". */
+export function normalizarCorreo(raw: unknown): string {
+  let c = String(raw ?? "").toLowerCase().trim().replace(/\s+/g, "");
+  if (!c.includes("@")) c = c.replace(/[“”‘’"'`]/g, "@");
+  return c;
+}
+
+export const correoValido = (c: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c);
+
+/** ¿El campo correo de la ficha del cliente contiene este correo? Tolera
+ *  mayúsculas, espacios y varios correos separados por coma, punto y coma o "/". */
+export function correoCoincide(campo: string | null | undefined, correoNormal: string): boolean {
+  if (!campo || !correoNormal) return false;
+  return String(campo).toLowerCase().split(/[,;/\s]+/).some((c) => c.trim() === correoNormal);
+}
+
+/** Contraseña tal cual; si no coincide y trae espacios al inicio/fin (teclado del
+ *  celular), se intenta sin ellos. */
+export async function verificarPasswordTolerante(password: unknown, hash: string): Promise<boolean> {
+  const p = String(password ?? "");
+  if (await verifyPassword(p, hash)) return true;
+  const recortada = p.trim();
+  return recortada !== p && recortada.length > 0 && await verifyPassword(recortada, hash);
 }
 
 export const corsHeaders = {
@@ -127,4 +163,10 @@ export function json(data: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+/** Respuesta única de "la sesión ya no sirve": la tienda intenta renovarla y, si
+ *  tienda-refresh también la rechaza, cierra sesión. */
+export function sesionVencida() {
+  return json({ error: "Sesión expirada", code: "sesion_expirada" }, 401);
 }

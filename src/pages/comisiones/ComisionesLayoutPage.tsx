@@ -51,13 +51,15 @@ export default function ComisionesLayoutPage() {
   });
 
   return (
-    <div className="min-h-full">
-      <div className="px-4 md:px-6 pt-4">
+    <div className="min-h-full p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip">
+      <div className="px-3 md:px-4 pt-3">
         <div className="flex items-center gap-2 mb-3">
           <Percent className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-bold">Comisiones</h1>
         </div>
-        <div className="flex gap-1 overflow-x-auto border-b border-border -mx-4 px-4 md:-mx-6 md:px-6 py-1.5">
+        <div className="flex gap-1 overflow-x-auto border-b border-border -mx-3 px-3 md:-mx-4 md:px-4 py-1.5">
           {TABS.map(t => {
             const active = t.end ? pathname === t.path : pathname.startsWith(t.path);
             return (
@@ -83,7 +85,8 @@ export default function ComisionesLayoutPage() {
           })}
         </div>
       </div>
-      <Outlet />
+      <div className="p-3 md:p-4"><Outlet /></div>
+    </div>
     </div>
   );
 }

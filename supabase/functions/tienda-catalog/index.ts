@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, json, verifyToken } from "../_shared/tiendaAuth.ts";
+import { corsHeaders, json, sesionVencida, verifyToken } from "../_shared/tiendaAuth.ts";
 import { resolvePrice, type Rule, type Prod } from "../_shared/tiendaPricing.ts";
+import { contextoPreciosTienda, PRODUCTO_COLS_PRECIO } from "../_shared/tiendaPreciosContexto.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -23,51 +24,28 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!cfg || !cfg.activa) return json({ error: "Tienda no disponible" }, 404);
 
-    // Resolve which lista_precios to use
-    let listaPrecioId: string | null = cfg.lista_precios_default_id;
+    // Sesión del cliente: si manda token y ya no sirve, se avisa (401) para que la
+    // tienda renueve la sesión en vez de mostrarle en silencio precios de visitante.
     let cliente: any = null;
     if (tokenStr) {
       const payload = await verifyToken(tokenStr, Deno.env.get("TIENDA_JWT_SECRET")!);
-      if (payload && payload.empresa_id === cfg.empresa_id) {
-        const { data: cli } = await supabase
-          .from("clientes")
-          .select("id, nombre, lista_precio_id, tarifa_id")
-          .eq("id", payload.cliente_id)
-          .maybeSingle();
-        if (cli) {
-          cliente = cli;
-          if (cfg.usar_lista_cliente !== false && cli.lista_precio_id) {
-            listaPrecioId = cli.lista_precio_id;
-          }
-        }
-      }
-    }
-
-    // Fetch lista to get tarifa_id
-    let tarifaId: string | null = null;
-    let listaNombre: string | null = null;
-    if (listaPrecioId) {
-      const { data: lp } = await supabase
-        .from("lista_precios")
-        .select("id, nombre, tarifa_id")
-        .eq("id", listaPrecioId)
+      if (!payload || payload.empresa_id !== cfg.empresa_id) return sesionVencida();
+      const { data: cli, error: cliErr } = await supabase
+        .from("clientes")
+        .select("id, nombre, lista_precio_id, tarifa_id")
+        .eq("id", payload.cliente_id)
+        .eq("empresa_id", cfg.empresa_id)
         .maybeSingle();
-      if (lp) {
-        tarifaId = lp.tarifa_id;
-        listaNombre = lp.nombre;
-      }
+      if (cliErr) throw cliErr;
+      if (!cli) return sesionVencida();
+      cliente = cli;
     }
 
-    // Tarifa rules
-    let rules: Rule[] = [];
-    if (tarifaId && listaPrecioId) {
-      const { data: tr } = await supabase
-        .from("tarifa_lineas")
-        .select("aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id")
-        .eq("tarifa_id", tarifaId)
-        .or(`lista_precio_id.eq.${listaPrecioId},lista_precio_id.is.null`);
-      rules = (tr ?? []) as Rule[];
-    }
+    // Lista y reglas: misma resolución que la app (ver _shared/tiendaPreciosContexto.ts).
+    const precios = await contextoPreciosTienda(supabase, cfg, cliente);
+    const listaPrecioId = precios.listaPrecioId;
+    const listaNombre = precios.listaNombre;
+    const rules: Rule[] = precios.rules;
 
     // Productos — paginar para evitar el tope de 1000 filas de Supabase
     const productos: any[] = [];
@@ -77,7 +55,7 @@ Deno.serve(async (req) => {
       const to = from + PAGE - 1;
       const { data: chunk, error: pErr } = await supabase
         .from("productos")
-        .select("id, nombre, codigo, notas, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio, vender_sin_stock")
+        .select(`id, nombre, codigo, notas, marca_id, imagen_url, unidad_venta_id, vender_sin_stock, ${PRODUCTO_COLS_PRECIO}`)
         .eq("empresa_id", cfg.empresa_id)
         .eq("status", "activo")
         .eq("se_puede_vender", true)
