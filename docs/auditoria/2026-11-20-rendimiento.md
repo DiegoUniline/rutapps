@@ -27,3 +27,6 @@ Revisión de 1 378 consultas `.from()` y 124 `.rpc()` del front contra los índi
 
 ## Hallazgo de seguridad (no corregido, requiere CONFIRMO)
 - `cotizaciones` y `cotizacion_lineas` tienen políticas `SELECT … TO anon, authenticated USING (true)`: cualquiera con la llave pública lee las cotizaciones de TODAS las empresas. Arreglo propuesto: quitar esas políticas y servir la cotización pública por RPC con su token.
+
+## Pendiente
+- Ninguno de la lista original (filas 1–4 atendidas en las pasadas 3 y 4).
