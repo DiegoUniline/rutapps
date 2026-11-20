@@ -735,6 +735,15 @@ export default function DemandaPage() {
   const totalLineasPendientes = Number(countsQuery.data?.totalPendiente ?? 0);
   const totalValorPendiente = Number(countsQuery.data?.totalValorPendiente ?? 0);
 
+  const tabsEstado = [
+    { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
+    { key: 'generadas', label: 'Pendiente de surtir', count: counts.generadas },
+    { key: 'surtidos', label: 'Surtidos', count: counts.surtidos },
+    { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
+    { key: 'entregados', label: 'Entregados', count: counts.entregados },
+    { key: 'cerrados', label: 'Cerrados', count: counts.cerrados },
+    { key: 'todos', label: 'Todos', count: counts.todos },
+  ] as const;
   return (
     <ListPage scroll>
       <PedidosTabs
@@ -849,6 +858,18 @@ export default function DemandaPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 items-end bg-card border border-border rounded-lg p-3">
+        {isMobile && (
+          // Teléfono: el estado (antes pestañas) se elige aquí, dentro de Filtros.
+          <div className="flex flex-col gap-1">
+            <Label className="text-[11px] text-muted-foreground">Estado</Label>
+            <Select value={tab} onValueChange={(v: any) => setTab(v)}>
+              <SelectTrigger className="h-9 w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {tabsEstado.map(t => <SelectItem key={t.key} value={t.key}>{t.label} ({t.count})</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="flex flex-col gap-1">
           <Label className="text-[11px] text-muted-foreground">Filtrar por</Label>
           <Select value={fechaTipo} onValueChange={(v: any) => setFechaTipo(v)}>
@@ -910,18 +931,10 @@ export default function DemandaPage() {
         )}
       </div>
 
-      {/* Status tabs */}
-      <div className="border-b border-border overflow-x-auto no-scrollbar">
+      {/* Status tabs (en teléfono el estado va dentro de Filtros) */}
+      <div className="border-b border-border overflow-x-auto no-scrollbar max-md:hidden">
         <nav className="flex gap-1 -mb-px w-max min-w-full">
-          {([
-            { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
-            { key: 'generadas', label: 'Pendiente de surtir', count: counts.generadas },
-            { key: 'surtidos', label: 'Surtidos', count: counts.surtidos },
-            { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
-            { key: 'entregados', label: 'Entregados', count: counts.entregados },
-            { key: 'cerrados', label: 'Cerrados', count: counts.cerrados },
-            { key: 'todos', label: 'Todos', count: counts.todos },
-          ] as const).map(t => (
+          {tabsEstado.map(t => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}

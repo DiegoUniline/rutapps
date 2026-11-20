@@ -1,4 +1,7 @@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { ClienteQuickForm } from '@/components/ClienteQuickForm';
+import { MobileProductoQuickForm } from '@/components/MobileProductoQuickForm';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { clienteCoincide } from '@/lib/buscarCliente';
 import { todayInTimezone, addDaysToDate, cn } from '@/lib/utils';
@@ -146,6 +149,9 @@ export default function PuntoVentaPage() {
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [clienteNombre, setClienteNombre] = useState('Público general');
   const [showClientes, setShowClientes] = useState(false);
+  // Altas rápidas desde Punto de venta (cliente y producto).
+  const [showNuevoCliente, setShowNuevoCliente] = useState(false);
+  const [showNuevoProducto, setShowNuevoProducto] = useState(false);
   const [clienteSearch, setClienteSearch] = useState('');
   const [showPago, setShowPago] = useState(false);
   const [payEfectivo, setPayEfectivo] = useState('');
@@ -282,12 +288,14 @@ export default function PuntoVentaPage() {
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('clientes')
+      // Todas las páginas (antes se cortaba en 1 000 clientes).
+      return fetchAllPages<any>((from, to) => supabase.from('clientes')
         .select('id, codigo, nombre, contacto, telefono, rfc, direccion, colonia, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id, lista_precios:lista_precio_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
-        .order('nombre');
-      return data ?? [];
+        .order('nombre')
+        .order('id')
+        .range(from, to));
     },
   });
 
@@ -613,6 +621,18 @@ export default function PuntoVentaPage() {
       );
     });
   }, [productos, search, filterClasificacion, filterMarca, presByProducto]);
+
+  const seleccionarCliente = (c: any) => {
+    setClienteId(c.id); setClienteNombre(c.nombre);
+    setClienteTarifaId(c.tarifa_id || null);
+    setClienteListaPrecioId(c.lista_precio_id || null);
+    setClienteListaNombre(c.lista_precios?.nombre ?? null);
+    setClienteCredito(!!c.credito);
+    setClienteDiasCredito(c.dias_credito ?? 0);
+    setClienteLimiteCredito(c.limite_credito ?? 0);
+    setShowClientes(false); setClienteSearch('');
+    if (!c.credito && condicion === 'credito') setCondicion('contado');
+  };
 
   const filteredClientes = useMemo(() => {
     if (!clientes) return [];
@@ -1329,6 +1349,9 @@ export default function PuntoVentaPage() {
                 autoFocus={!isMobile}
               />
             </div>
+            <Button variant="outline" className="h-auto shrink-0 px-3" onClick={() => setShowNuevoProducto(true)} title="Alta rápida de producto">
+              <Plus className="h-4 w-4" /><span className="hidden sm:inline">Producto</span>
+            </Button>
             {!isMobile && (
               <div className="flex items-center gap-1 bg-accent/30 rounded-lg px-3 text-muted-foreground">
                 <Barcode className="h-4 w-4" />
@@ -1880,6 +1903,9 @@ export default function PuntoVentaPage() {
                   autoFocus
                 />
               </div>
+              <Button size="sm" className="mt-2 w-full sm:w-auto" onClick={() => setShowNuevoCliente(true)}>
+                <Plus className="h-4 w-4" /> Nuevo cliente
+              </Button>
             </div>
             <div className="max-h-[60vh] overflow-auto -mx-2 px-2 divide-y divide-border">
               <button
@@ -1891,31 +1917,51 @@ export default function PuntoVentaPage() {
               {filteredClientes.map(c => (
                 <button
                   key={c.id}
-                  onClick={() => { 
-                    setClienteId(c.id); setClienteNombre(c.nombre); 
-                    setClienteTarifaId((c as any).tarifa_id || null); 
-                    setClienteListaPrecioId((c as any).lista_precio_id || null);
-                    const lpName = (c as any).lista_precios?.nombre ?? null;
-                    setClienteListaNombre(lpName);
-                    setClienteCredito(!!(c as any).credito);
-                    setClienteDiasCredito((c as any).dias_credito ?? 0);
-                    setClienteLimiteCredito((c as any).limite_credito ?? 0);
-                    setShowClientes(false); setClienteSearch(''); 
-                    if (!(c as any).credito && condicion === 'credito') setCondicion('contado'); 
-                  }}
+                  onClick={() => seleccionarCliente(c)}
                   className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-accent transition-colors ${clienteId === c.id ? 'bg-primary/10' : ''}`}
                 >
-                  <p className="text-[13px] font-medium text-foreground truncate">{c.nombre}</p>
-                  <div className="flex items-center gap-2">
-                    {c.codigo && <span className="text-[10px] text-muted-foreground">{c.codigo}</span>}
-                    {(c as any).credito && <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">Crédito</span>}
-                    {(c as any).lista_precios?.nombre && <span className="text-[9px] text-muted-foreground">{(c as any).lista_precios.nombre}</span>}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-medium text-foreground truncate">{c.nombre}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {[c.codigo, (c as any).telefono, (c as any).rfc].filter(Boolean).join(' · ') || 'Sin datos de contacto'}
+                      </p>
+                      {((c as any).direccion || (c as any).colonia) && (
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {[(c as any).direccion, (c as any).colonia].filter(Boolean).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {(c as any).credito ? (
+                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium tabular-nums">
+                          Crédito {fmt(Number((c as any).limite_credito) || 0)} · {(c as any).dias_credito ?? 0} d
+                        </span>
+                      ) : (
+                        <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium">Contado</span>
+                      )}
+                      {(c as any).lista_precios?.nombre && <span className="text-[10px] text-muted-foreground">{(c as any).lista_precios.nombre}</span>}
+                    </div>
                   </div>
                 </button>
               ))}
             </div>
         </DialogContent>
       </Dialog>
+      <ClienteQuickForm
+        open={showNuevoCliente}
+        onOpenChange={setShowNuevoCliente}
+        nombreInicial={clienteSearch}
+        onCreated={(c) => {
+          void queryClient.invalidateQueries({ queryKey: ['pos-clientes'] });
+          seleccionarCliente(c);
+        }}
+      />
+      <MobileProductoQuickForm
+        open={showNuevoProducto}
+        onOpenChange={setShowNuevoProducto}
+        onCreated={() => { void queryClient.invalidateQueries({ queryKey: ['pos-productos'] }); }}
+      />
 
       {/* ─── Payment modal ─── */}
       {/* D-040: modal estándar. Escape lo sigue manejando el atajo de teclado de la página (ESC/F2). */}

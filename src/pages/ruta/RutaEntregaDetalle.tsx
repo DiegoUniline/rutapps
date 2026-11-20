@@ -814,9 +814,9 @@ export default function RutaEntregaDetalle() {
                 className="w-full bg-success text-success-foreground rounded-xl py-3 text-[14px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
                 <Check className="h-4 w-4" /> Solo entregar (cobrar después)
               </button>
-              <button className="btn-cancelar"
+              <button className="btn-cancelar w-full bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium"
                 onClick={() => setShowCobrarPrompt(false)}
-                className="w-full bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">
+                >
                 Cancelar
               </button>
             </div>
@@ -854,8 +854,8 @@ export default function RutaEntregaDetalle() {
               </div>
             )}
             <div className="flex gap-2 pt-1">
-              <button className="btn-cancelar" onClick={() => setShowNoEntregadoModal(false)} disabled={savingNoEntregado}
-                className="flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">Cancelar</button>
+              <button className="btn-cancelar flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium" onClick={() => setShowNoEntregadoModal(false)} disabled={savingNoEntregado}
+                >Cancelar</button>
               <button onClick={marcarNoEntregado}
                 disabled={savingNoEntregado || !motivoSeleccionado || (motivoSeleccionado === 'Otro' && !motivoCustom.trim())}
                 className="flex-1 bg-destructive text-destructive-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
@@ -885,8 +885,8 @@ export default function RutaEntregaDetalle() {
               />
             </div>
             <div className="flex gap-2 pt-1">
-              <button className="btn-cancelar" onClick={() => setShowReprogramarModal(false)} disabled={savingReprog}
-                className="flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">Cancelar</button>
+              <button className="btn-cancelar flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium" onClick={() => setShowReprogramarModal(false)} disabled={savingReprog}
+                >Cancelar</button>
               <button onClick={reprogramarFecha} disabled={savingReprog || !nuevaFecha}
                 className="flex-1 bg-primary text-primary-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
                 {savingReprog ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
@@ -978,8 +978,8 @@ export default function RutaEntregaDetalle() {
                 </div>
               )}
               <div className="flex gap-2 pt-1">
-                <button className="btn-cancelar" onClick={() => setEditLinea(null)} disabled={savingLinea}
-                  className="flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">Cancelar</button>
+                <button className="btn-cancelar flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium" onClick={() => setEditLinea(null)} disabled={savingLinea}
+                  >Cancelar</button>
                 <button onClick={guardarLineaEditada} disabled={savingLinea || quitada <= 0 || !editMotivo.trim() || !editCondicion}
                   className="flex-1 bg-primary text-primary-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
                   {savingLinea ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}

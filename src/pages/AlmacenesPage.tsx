@@ -158,6 +158,7 @@ export default function AlmacenesPage() {
 
   return (
     <ListPage>
+      <ListPage.Toolbar>
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Warehouse className="h-5 w-5" /> Almacenes
       </h1>
@@ -173,6 +174,7 @@ export default function AlmacenesPage() {
           Inactivos ({inactiveItems.length})
         </button>
       </div>
+      </ListPage.Toolbar>
 
       <div className={TABLE_CARD}>
         {isLoading ? (
