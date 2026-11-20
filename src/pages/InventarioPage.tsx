@@ -18,11 +18,15 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
 import { ProductoLink } from '@/components/links/EntityLinks';
+import { useNavigate } from 'react-router-dom';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { EntityMultiSelect, type MSOption } from '@/components/reportes/EntityMultiSelect';
 import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibilityMenu';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
 import InventarioStockFechaTab from '@/pages/inventario/InventarioStockFechaTab';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas' | 'demanda' | 'historico';
 
@@ -264,6 +268,9 @@ export default function InventarioPage() {
     if (provSet.size > 0 && !provSet.has((p as any).proveedor_preferido_id)) return false;
     return true;
   });
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const movil = useCargarMasMovil(filteredProducts, `${search}|${stockFilter}|${categoriaIds.join()}|${marcaIds.join()}|${proveedorIds.join()}`);
 
   const handleExportExcel = useCallback(() => {
     if (!data || !filteredProducts) return;
@@ -374,8 +381,45 @@ export default function InventarioPage() {
   ];
 
   return (
-    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+    <div className="p-2 md:p-4 min-h-full">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
+      {isMobile && (
+        <EncabezadoListaMovil titulo="Inventario">
+          {view !== 'rutas' && view !== 'historico' && (
+            <OdooFilterBar
+              search={search}
+              onSearchChange={setSearch}
+              placeholder="Buscar productos"
+              filterOptions={[
+                { key: 'stock', label: 'Existencias', options: [{ value: 'con', label: 'Con stock' }, { value: 'sin', label: 'Sin stock' }] },
+                { key: 'categoria', label: 'Categoría', options: (lookups?.categorias ?? []).map((o: any) => ({ value: o.value ?? o.id, label: o.label ?? o.nombre })) },
+                { key: 'marca', label: 'Marca', options: (lookups?.marcas ?? []).map((o: any) => ({ value: o.value ?? o.id, label: o.label ?? o.nombre })) },
+                { key: 'proveedor', label: 'Proveedor', options: (lookups?.proveedores ?? []).map((o: any) => ({ value: o.value ?? o.id, label: o.label ?? o.nombre })) },
+              ]}
+              activeFilters={{
+                ...(stockFilter !== 'todos' ? { stock: [stockFilter] } : {}),
+                categoria: categoriaIds, marca: marcaIds, proveedor: proveedorIds,
+              }}
+              onToggleFilter={(key, val) => {
+                const alternar = (arr: string[]) => arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
+                if (key === 'stock') setStockFilter(stockFilter === val ? 'todos' : val as 'con' | 'sin');
+                if (key === 'categoria') setCategoriaIds(alternar);
+                if (key === 'marca') setMarcaIds(alternar);
+                if (key === 'proveedor') setProveedorIds(alternar);
+              }}
+              onSetFilter={(key, vals) => {
+                if (key === 'stock') setStockFilter((vals[vals.length - 1] as 'con' | 'sin') ?? 'todos');
+                if (key === 'categoria') setCategoriaIds(vals);
+                if (key === 'marca') setMarcaIds(vals);
+                if (key === 'proveedor') setProveedorIds(vals);
+              }}
+              onClearFilters={() => { setStockFilter('todos'); setCategoriaIds([]); setMarcaIds([]); setProveedorIds([]); }}
+            />
+          )}
+        </EncabezadoListaMovil>
+      )}
+      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 max-md:hidden">
         <Warehouse className="h-5 w-5" /> Inventario
         <HelpButton title={HELP.inventario.title} sections={HELP.inventario.sections} />
         <VideoHelpButton module="inventario" />
@@ -383,7 +427,7 @@ export default function InventarioPage() {
 
       {/* Summary cards */}
       {data && view !== 'historico' && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 max-md:hidden">
           <SummaryCard icon={Warehouse} label="Almacenes" value={`${fmtNum(data.totales.stockTipoAlmacen)} uds`} sub={`Costo: ${fmt(data.totales.valorCostoTipoAlmacen)}`} color="text-primary" />
           <SummaryCard icon={Truck} label="Rutas" value={`${fmtNum(data.totales.stockTipoRuta)} uds`} sub={`Costo: ${fmt(data.totales.valorCostoTipoRuta)}`} color="text-warning" />
           <SummaryCard icon={DollarSign} label="Valor total (costo)" value={`${fmt(data.totales.valorCostoTotal)}`} sub={`${fmtNum(data.totales.stockTotal)} unidades totales`} color="text-success" />
@@ -423,10 +467,7 @@ export default function InventarioPage() {
           {(view === 'resumen' || view === 'almacen') && data && (
             <button
               onClick={handleExportExcel}
-              className="flex items-center gap-1.5 text-[13px] px-3 py-1.5 rounded-lg border font-medium transition-colors"
-              style={{ backgroundColor: '#217346', borderColor: '#1a5c38', color: '#fff' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1a5c38')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#217346')}
+              className="btn-excel flex items-center gap-1.5 text-[13px] px-3 py-1.5 rounded-lg border font-medium transition-colors"
             >
               <Download className="h-3.5 w-3.5" /> Excel
             </button>
@@ -436,7 +477,7 @@ export default function InventarioPage() {
 
       {/* Search + stock filter */}
       {view !== 'rutas' && view !== 'historico' && (
-        <div className="space-y-2">
+        <div className="space-y-2 max-md:hidden">
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative sm:max-w-sm flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -513,7 +554,21 @@ export default function InventarioPage() {
       {view === 'historico' && <InventarioStockFechaTab />}
 
       {/* Resumen view */}
-      {view === 'resumen' && data && (
+      {view === 'resumen' && data && isMobile && (
+        <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio="Sin productos con los filtros actuales" {...movil}>
+          {movil.visibles.map(p => (
+            <ListaTarjetaMovil
+              key={p.id}
+              titulo={p.nombre}
+              linea2={<>{fmt(p.valorCostoTotal)}<span className="text-xs"> · {p.codigo}</span></>}
+              pildora={`${fmtNum(p.stockTotal)} ${(p.unidades as any)?.abreviatura ?? 'pz'}`}
+              tono={(p.stockTotal ?? 0) <= 0 ? 'peligro' : 'exito'}
+              onClick={() => navigate(`/productos/${p.id}`)}
+            />
+          ))}
+        </ListaTarjetasMovil>
+      )}
+      {view === 'resumen' && data && !isMobile && (
         <div className="bg-card border border-border rounded overflow-x-auto">
           <Table>
             <TableHeader>
@@ -847,6 +902,7 @@ export default function InventarioPage() {
         stockMap={data?.stockAlmacenMap ?? {}}
         presByProd={presByProd as any}
       />
+    </div>
     </div>
   );
 }
