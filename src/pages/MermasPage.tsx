@@ -169,11 +169,11 @@ export default function MermasPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 space-y-4 bg-background min-h-[100dvh]">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 bg-background min-h-[100dvh]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <AlertTriangle className="h-6 w-6 text-primary" />
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
             Mermas y Desperdicio
             
           </h1>
@@ -194,7 +194,7 @@ export default function MermasPage() {
       {/* Filtros */}
       <div className="flex flex-wrap gap-2 items-end bg-card border rounded-lg p-3">
         <div>
-          <Label className="text-xs">Rango de fechas</Label>
+          <Label className="text-xs block mb-1">Rango de fechas</Label>
           <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         </div>
         {(desde || hasta) && (

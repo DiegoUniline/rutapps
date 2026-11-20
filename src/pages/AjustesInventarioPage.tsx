@@ -34,6 +34,8 @@ import { generarAjusteInventarioPdf } from '@/lib/ajusteInventarioPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import * as XLSX from 'xlsx';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 interface LoteImportItem {
   producto_id: string;
@@ -81,6 +83,7 @@ const errMsg = (e: unknown, fallback: string) => (e instanceof Error && e.messag
 export default function AjustesInventarioPage() {
   const { empresa, user, profile } = useAuth();
   const qc = useQueryClient();
+  const isMobile = useIsMobile();
   // Tiempo real: escuchamos la CABECERA (ajustes_inventario), no
   // movimientos_inventario (alto volumen), para no inflar el egress.
   useRealtimeInvalidate({
@@ -734,8 +737,8 @@ export default function AjustesInventarioPage() {
         <TabsContent value="ajuste" className="space-y-4 mt-4">
           {/* Controls */}
           <div className="flex flex-wrap gap-3 items-end">
-            <div className="space-y-1 min-w-[200px]">
-              <Label className="text-xs text-muted-foreground">Almacén</Label>
+            <div className="space-y-1 w-full sm:w-auto sm:min-w-[200px]">
+              <Label className="text-xs text-muted-foreground block">Almacén</Label>
               <Select
                 value={almacenId}
                 onValueChange={(next) => {
@@ -748,7 +751,7 @@ export default function AjustesInventarioPage() {
                   setAlmacenId(next);
                 }}
               >
-                <SelectTrigger className="w-[220px]">
+                <SelectTrigger className="w-full sm:w-[220px]">
                   <SelectValue placeholder="Selecciona almacén" />
                 </SelectTrigger>
                 <SelectContent>
@@ -769,11 +772,11 @@ export default function AjustesInventarioPage() {
               <Label className="text-xs text-muted-foreground">Motivo del ajuste</Label>
               <Input value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ej: Conteo físico..." />
             </div>
-            <div className="space-y-1 min-w-[200px]">
-              <Label className="text-xs text-muted-foreground">Categorías</Label>
+            <div className="space-y-1 w-full sm:w-auto sm:min-w-[200px]">
+              <Label className="text-xs text-muted-foreground block">Categorías</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-[220px] justify-between font-normal">
+                  <Button variant="outline" className="w-full sm:w-[220px] justify-between font-normal">
                     {selectedCats.length === 0
                       ? <span className="text-muted-foreground">Todas</span>
                       : selectedCats.length <= 3
@@ -994,11 +997,11 @@ export default function AjustesInventarioPage() {
                 return (
                   <div key={group.key} className="border border-border rounded-lg overflow-hidden">
                     <button
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-card transition-colors"
+                      className="w-full flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 sm:px-4 py-3 text-left hover:bg-card transition-colors"
                       onClick={() => setExpandedGroup(isOpen ? null : group.key)}
                     >
                       {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
-                      <div className="flex items-center gap-4 flex-1 flex-wrap">
+                      <div className="flex items-center gap-x-4 gap-y-1 flex-1 min-w-0 flex-wrap">
                         <span className="flex items-center gap-1.5 text-sm font-medium">
                           <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                           {fmtDate(group.fecha)}{' '}
@@ -1018,7 +1021,7 @@ export default function AjustesInventarioPage() {
                           {group.motivo || 'Sin motivo'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-3 shrink-0 ml-auto">
                         {group.cancelado && <Badge variant="destructive" className="text-xs">Cancelado</Badge>}
                         <Badge variant="outline" className="text-xs">{totalItems} producto{totalItems !== 1 ? 's' : ''}</Badge>
                         <span className={`font-mono text-sm font-semibold ${totalDiff > 0 ? 'text-green-600' : totalDiff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
@@ -1041,10 +1044,10 @@ export default function AjustesInventarioPage() {
                             </>
                           ) : (
                             <>
-                              <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => iniciarEdicion(group)}>
+                              <Button size="sm" variant="editar" className="h-8 text-xs gap-1" onClick={() => iniciarEdicion(group)}>
                                 <Settings2 className="h-3.5 w-3.5" /> Editar
                               </Button>
-                              <Button size="sm" variant="outline" className="h-8 text-xs gap-1 text-destructive" onClick={() => { setCancelGroup(group); setCancelMotivo(''); }}>
+                              <Button size="sm" variant="destructive" className="h-8 text-xs gap-1" onClick={() => { setCancelGroup(group); setCancelMotivo(''); }}>
                                 <X className="h-3.5 w-3.5" /> Cancelar ajuste
                               </Button>
                             </>
@@ -1120,7 +1123,29 @@ export default function AjustesInventarioPage() {
               { key: 'motivo', header: 'Motivo', width: 20 },
             ];
 
-            const renderDetalleTable = (items: any[]) => (
+            const renderDetalleTable = (items: any[]) => isMobile ? (
+              <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay ajustes." className={cn(!groupByH && 'flex-1 min-h-0 overflow-auto')}>
+                {items.map((l: any) => (
+                  <ListaTarjetaMovil
+                    key={l.id}
+                    titulo={l.producto}
+                    subtitulo={[l.codigo, l.almacen].filter(Boolean).join(' · ')}
+                    estado={
+                      <span className={`font-mono text-sm font-semibold ${l.diferencia > 0 ? 'text-green-600' : l.diferencia < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {l.diferencia > 0 ? '+' : ''}{l.diferencia}
+                      </span>
+                    }
+                    campos={[
+                      { label: 'Fecha', value: fmtDate(l.fecha) },
+                      { label: 'Usuario', value: l.usuario },
+                      { label: 'Anterior', value: l.cantidad_anterior },
+                      { label: 'Nueva', value: l.cantidad_nueva },
+                      ...(l.motivo ? [{ label: 'Motivo', value: l.motivo, className: 'col-span-2' }] : []),
+                    ]}
+                  />
+                ))}
+              </ListaTarjetasMovil>
+            ) : (
               <div className={cn(!groupByH && "bg-card border border-border rounded overflow-x-auto")}>
                 <table className="w-full text-[13px]">
                   <thead>
@@ -1212,7 +1237,7 @@ export default function AjustesInventarioPage() {
                   <div className="text-center text-muted-foreground py-8">Cargando...</div>
                 ) : (
                   <>
-                    <GroupedTableWrapper groupBy={groupByH} groups={groupsH} renderTable={renderDetalleTable} />
+                    <GroupedTableWrapper sinMarcoMovil groupBy={groupByH} groups={groupsH} renderTable={renderDetalleTable} />
                     {!groupByH && totalH > 0 && (
                       <OdooPagination from={fromH} to={toH} total={totalH}
                         onPrev={() => setPageH(p => Math.max(1, p - 1))}

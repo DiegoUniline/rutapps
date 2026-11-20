@@ -193,7 +193,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey, image
                         "p-1 transition-opacity",
                         item.activo === false
                           ? "text-success hover:text-success/80"
-                          : "text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
+                          : "text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                       )}
                       onClick={() => handleToggleActivo(item.id, item.activo !== false)}
                       title={item.activo === false ? 'Reactivar' : 'Dar de baja'}

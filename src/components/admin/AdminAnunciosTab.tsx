@@ -282,7 +282,7 @@ function ImageUploadField({ type, imageUrl, onUrlChange }: { type: string; image
               type === 'bubble' ? 'w-14 h-14' : 'w-full max-h-40',
             )}
           />
-          <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
             <button
               type="button"
               onClick={() => inputRef.current?.click()}

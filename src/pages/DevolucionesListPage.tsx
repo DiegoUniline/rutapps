@@ -12,6 +12,8 @@ import { OdooPagination } from '@/components/OdooPagination';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { MermaConfigDialog } from '@/components/devoluciones/MermaConfigDialog';
@@ -27,6 +29,7 @@ export default function DevolucionesListPage() {
   const { empresa } = useAuth();
   const manejaLotes = useManejaLotes();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const canConfig = hasPermiso('ventas.devoluciones', 'editar');
   const [mermaConfigOpen, setMermaConfigOpen] = useState(false);
@@ -295,7 +298,54 @@ export default function DevolucionesListPage() {
         )}
       </div>
 
-      <div className="bg-card border border-border rounded-md overflow-hidden">
+      {isMobile ? (
+        isLoading ? <div className="py-8 text-center text-muted-foreground text-sm">Cargando...</div> : (
+        <>
+          {!!filtered.length && (
+            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
+              <span className="text-muted-foreground">Totales ({filtered.length}) · {totalUds} uds.</span>
+              <span className="text-destructive tabular-nums">{fmt(totalCredito)}</span>
+            </div>
+          )}
+          <ListaTarjetasMovil vacia={paged.length === 0} mensajeVacio={hasFilters ? 'No hay devoluciones que coincidan con los filtros' : 'No hay devoluciones registradas'}>
+            {paged.map((d: any) => {
+              const lineas = d.devolucion_lineas ?? [];
+              const tUds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+              const tCred = lineas.reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
+              const motivos = [...new Set(lineas.map((l: any) => l.motivo))] as string[];
+              const acciones = [...new Set(lineas.map((l: any) => l.accion))] as string[];
+              const lotesDev: Record<string, string> = (loteMapDev as any)[d.id] ?? {};
+              const productosText = lineas.map((l: any) => {
+                const lote = lotesDev[l.producto_id];
+                return `${l.productos?.nombre ?? '?'} (${l.cantidad})${lote ? ` · lote ${lote}` : ''}`;
+              }).join(', ');
+              const destinos = ((destinoMap as any)[d.id] ?? []) as any[];
+              return (
+                <ListaTarjetaMovil
+                  key={d.id}
+                  titulo={d.clientes?.nombre ?? '—'}
+                  subtitulo={[d.ventas?.folio, d.ventas?.vendedor?.nombre ?? d.vendedores?.nombre].filter(Boolean).join(' · ') || undefined}
+                  className={d.cancelado_at ? 'opacity-60' : undefined}
+                  estado={d.cancelado_at ? <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">Cancelada</span> : undefined}
+                  onClick={d.venta_id ? () => navigate(`/ventas/${d.venta_id}`) : undefined}
+                  campos={[
+                    { label: 'Fecha', value: fmtDate(d.fecha) },
+                    { label: 'Uds.', value: tUds },
+                    ...(tCred > 0 ? [{ label: 'Crédito', value: <span className="text-destructive">{fmt(tCred)}</span> }] : []),
+                    ...(motivos.length ? [{ label: 'Motivo', value: motivos.map(m => MOTIVO_LABELS[m] ?? m.replace(/_/g, ' ')).join(', ') }] : []),
+                    ...(acciones.length ? [{ label: 'Acción', value: acciones.map(a => ACCION_LABELS[a] ?? a).join(', ') }] : []),
+                    ...(destinos.length ? [{ label: 'Destino', value: destinos.map(a => a.nombre).join(', ') }] : []),
+                    ...(productosText ? [{ label: 'Productos', value: productosText, className: 'col-span-2 line-clamp-2' }] : []),
+                    ...(d.registradoPor ? [{ label: 'Registró', value: d.registradoPor, className: 'col-span-2' }] : []),
+                  ]}
+                />
+              );
+            })}
+          </ListaTarjetasMovil>
+        </>
+        )
+      ) : (
+      <div className="bg-card border border-border rounded-md overflow-x-auto">
         <table className="w-full text-[12px]">
           <thead>
             <tr className="text-[10px] text-muted-foreground uppercase border-b border-border bg-card">
@@ -393,6 +443,7 @@ export default function DevolucionesListPage() {
           )}
         </table>
       </div>
+      )}
 
       {total > pageSize && (
         <OdooPagination

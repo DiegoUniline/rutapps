@@ -10,11 +10,14 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 const PAGE_SIZE = 50;
 
 export default function ProveedoresListPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
@@ -50,7 +53,7 @@ export default function ProveedoresListPage() {
 
   return (
     <ListPage>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-foreground">Proveedores</h1>
         {canCreate && (
           <button onClick={() => navigate('/proveedores/nuevo')} className="btn-odoo-primary flex items-center gap-1.5">
@@ -72,6 +75,27 @@ export default function ProveedoresListPage() {
         </div>
       </div>
 
+      {isMobile && !isLoading ? (
+        <div className={`${SCROLL_AREA} -mx-1 px-1`}>
+          <ListaTarjetasMovil vacia={pageData.length === 0} mensajeVacio="Sin proveedores">
+            {pageData.map(p => (
+              <ListaTarjetaMovil
+                key={p.id}
+                titulo={p.nombre}
+                subtitulo={p.contacto ?? undefined}
+                estado={<StatusChip status={p.status ?? 'activo'} />}
+                onClick={() => navigate(`/proveedores/${p.id}`)}
+                campos={[
+                  { label: 'Teléfono', value: p.telefono ?? '—' },
+                  { label: 'Pago', value: <span className="capitalize">{p.condicion_pago ?? 'contado'}</span> },
+                  { label: 'Ciudad', value: [p.ciudad, p.estado].filter(Boolean).join(', ') || '—' },
+                  ...(p.email ? [{ label: 'Email', value: <span className="break-all">{p.email}</span>, className: 'col-span-2' }] : []),
+                ]}
+              />
+            ))}
+          </ListaTarjetasMovil>
+        </div>
+      ) : (
       <div className={TABLE_CARD}>
         {isLoading ? (
           <div className="p-4"><TableSkeleton rows={6} cols={6} /></div>
@@ -115,6 +139,7 @@ export default function ProveedoresListPage() {
           </table>
         )}
       </div>
+      )}
 
       {total > PAGE_SIZE && (
         <OdooPagination from={from} to={to} total={total}

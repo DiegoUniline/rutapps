@@ -608,7 +608,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         return columnsOrder.map(col => cell(col.key, col.content));
       })()}
       <td className="py-1 px-2">
-        {!readOnly && !isEmpty && <button onClick={() => onRemoveLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>}
+        {!readOnly && !isEmpty && <button onClick={() => onRemoveLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>}
       </td>
     </tr>
   );

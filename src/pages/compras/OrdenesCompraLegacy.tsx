@@ -4,7 +4,9 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, List, Package, ChevronDown, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Plus, List, Package, ChevronDown, FileSpreadsheet, Trash2, FileText } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { StatusChip } from '@/components/StatusChip';
 import { CompraExpandedRow } from './CompraExpandedRow';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -215,6 +217,7 @@ function LoteadoChip({ compra }: { compra: any }) {
 
 export default function ComprasPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   useRealtimeInvalidate({
@@ -452,7 +455,37 @@ export default function ComprasPage() {
     return '';
   }, groupByLevelsD), [pageDataD, groupByD, groupByLevelsD]);
 
-  const renderTable = (items: any[]) => (
+  const renderTable = (items: any[]) => isMobile ? (
+    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay compras." className={cn(!groupBy && 'flex-1 min-h-0 overflow-auto')}>
+      {items.map((c: any) => (
+        <ListaTarjetaMovil
+          key={c.id}
+          titulo={c.proveedores?.nombre ?? '—'}
+          subtitulo={[c.folio ?? c.id.slice(0, 8), c.almacenes?.nombre].filter(Boolean).join(' · ')}
+          estado={<StatusChip status={c.status} />}
+          leading={
+            <input
+              type="checkbox"
+              aria-label="Seleccionar compra"
+              checked={selected.has(c.id)}
+              onClick={e => e.stopPropagation()}
+              onChange={() => toggleOne(c.id)}
+              className="h-4 w-4 rounded border-input shrink-0"
+            />
+          }
+          onClick={() => navigate(`/almacen/compras/${c.id}`)}
+          acciones={[{ key: 'ver', label: 'Ver detalle', icon: FileText, onClick: () => navigate(`/almacen/compras/${c.id}`) }]}
+          campos={[
+            { label: 'Fecha', value: fmtDate(c.fecha) },
+            { label: 'Total', value: fmt(c.total ?? 0) },
+            { label: 'Condición', value: c.condicion_pago === 'credito' ? 'Crédito' : 'Contado' },
+            ...((c.saldo_pendiente ?? 0) > 0 ? [{ label: 'Saldo', value: <span className="text-destructive">{fmt(c.saldo_pendiente)}</span> }] : []),
+            ...(c.numero_factura ? [{ label: 'Factura', value: c.numero_factura }] : []),
+          ]}
+        />
+      ))}
+    </ListaTarjetasMovil>
+  ) : (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
       <table className="w-full text-sm">
         <thead>
@@ -550,7 +583,25 @@ export default function ComprasPage() {
     </div>
   );
 
-  const renderDetalleTable = (items: any[]) => (
+  const renderDetalleTable = (items: any[]) => isMobile ? (
+    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay líneas de detalle." className={cn(!groupByD && 'flex-1 min-h-0 overflow-auto')}>
+      {items.map((l: any, i: number) => (
+        <ListaTarjetaMovil
+          key={`${l.compra_id}-${l.linea_id}-${i}`}
+          titulo={l.producto}
+          subtitulo={[l.codigo, l.folio, l.proveedor].filter(Boolean).join(' · ')}
+          estado={<StatusChip status={l.status} />}
+          onClick={() => navigate(`/almacen/compras/${l.compra_id}`)}
+          campos={[
+            { label: 'Fecha', value: fmtDate(l.fecha) },
+            { label: 'Cantidad', value: fmtNum(l.cantidad) },
+            { label: 'P. unit.', value: fmt(l.precio_unitario) },
+            { label: 'Total', value: fmt(l.total_neto_linea) },
+          ]}
+        />
+      ))}
+    </ListaTarjetasMovil>
+  ) : (
     <div className={cn(!groupByD && "bg-card border border-border rounded overflow-x-auto")}>
       <table className="w-full text-[13px]">
         <thead>
@@ -700,6 +751,7 @@ export default function ComprasPage() {
           ) : (
             <>
               <GroupedTableWrapper
+                sinMarcoMovil
                 groupBy={groupBy}
                 groups={groups}
                 renderTable={renderTable}
@@ -765,7 +817,7 @@ export default function ComprasPage() {
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={9} /></div>
           ) : (
             <>
-              <GroupedTableWrapper groupBy={groupByD} groups={groupsD} renderTable={renderDetalleTable} />
+              <GroupedTableWrapper sinMarcoMovil groupBy={groupByD} groups={groupsD} renderTable={renderDetalleTable} />
               {!groupByD && totalD > 0 && (
                 <OdooPagination from={fromD} to={toD} total={totalD}
                   onPrev={() => setPageD(p => Math.max(1, p - 1))}

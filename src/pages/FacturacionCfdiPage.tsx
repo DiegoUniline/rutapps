@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -63,6 +65,7 @@ export default function FacturacionCfdiPage() {
   const puedeAvanzado = hasPermiso('facturacion.cfdi', 'ver');
   const { fmt } = useCurrency();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { requestPin, PinDialog } = usePinAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -400,8 +403,46 @@ export default function FacturacionCfdiPage() {
                 <p className="text-sm text-muted-foreground">No hay facturas aún. Presiona "Timbrar CFDI" para crear tu primera factura.</p>
               </CardContent>
             </Card>
+          ) : isMobile ? (
+            <>
+              <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold mb-2">
+                <span className="text-muted-foreground">Totales ({filtered.length})</span>
+                <span className="tabular-nums">{fmt(filtered.reduce((s: number, c: any) => s + Number(c.total || 0), 0))}</span>
+              </div>
+              <ListaTarjetasMovil>
+                {filtered.map((cfdi: any) => (
+                  <ListaTarjetaMovil
+                    key={cfdi.id}
+                    titulo={cfdi.receiver_name || '—'}
+                    subtitulo={[`${cfdi.serie ? `${cfdi.serie}-` : ''}${cfdi.folio || '—'}`, cfdi.receiver_rfc].filter(Boolean).join(' · ')}
+                    estado={
+                      <Badge variant={(STATUS_COLORS[cfdi.status] || 'secondary') as any} className="text-[10px] whitespace-nowrap">
+                        {STATUS_LABELS[cfdi.status] || cfdi.status}
+                      </Badge>
+                    }
+                    leading={
+                      <span onClick={(e) => e.stopPropagation()} className="shrink-0 inline-flex">
+                        <Checkbox checked={selectedIds.has(cfdi.id)} onCheckedChange={() => toggleOne(cfdi.id)} aria-label="Seleccionar factura" />
+                      </span>
+                    }
+                    onClick={() => navigate(`/facturacion-cfdi/${cfdi.id}`)}
+                    acciones={[
+                      ...(cfdi.pdf_url ? [{ key: 'pdf', label: 'PDF', icon: Download, onClick: () => abrirArchivoCfdi(null, 'cfdis', cfdi.id, 'pdf', cfdi.pdf_url) }] : []),
+                      ...(cfdi.xml_url ? [{ key: 'xml', label: 'XML', icon: FileText, onClick: () => abrirArchivoCfdi(null, 'cfdis', cfdi.id, 'xml', cfdi.xml_url) }] : []),
+                      ...(cfdi.status === 'timbrado' ? [{ key: 'cancelar', label: 'Cancelar', icon: XCircle, destructiva: true, separar: true, onClick: () => { setCancelingId(cfdi.id); setShowCancel(true); } }] : []),
+                      ...((cfdi.status === 'borrador' || cfdi.status === 'error') ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, separar: true, onClick: () => { setDeletingId(cfdi.id); setShowDelete(true); } }] : []),
+                    ]}
+                    campos={[
+                      { label: 'Fecha', value: format(new Date(cfdi.created_at), 'd MMM yy', { locale: es }) },
+                      { label: 'Total', value: fmt(Number(cfdi.total || 0)) },
+                      ...((cfdi.ventas as any)?.folio ? [{ label: 'Venta', value: <span className="text-primary font-mono">{(cfdi.ventas as any).folio}</span> }] : []),
+                    ]}
+                  />
+                ))}
+              </ListaTarjetasMovil>
+            </>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-card">

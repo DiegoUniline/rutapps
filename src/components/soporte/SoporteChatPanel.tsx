@@ -311,7 +311,7 @@ export default function SoporteChatPanel({ compact = false, onAfterNavigate }: P
                   e.stopPropagation();
                   if (confirm("¿Eliminar esta conversación?")) deleteThread(t.id);
                 }}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-opacity"
+                className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-opacity"
                 aria-label="Eliminar"
               >
                 <Trash2 className="h-3 w-3" />

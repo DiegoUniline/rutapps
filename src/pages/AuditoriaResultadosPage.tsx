@@ -226,12 +226,12 @@ export default function AuditoriaResultadosPage() {
   return (
     <div className="min-h-full flex flex-col">
       {/* Header */}
-      <div className="bg-background border-b border-border p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/almacen/auditorias')}>
+      <div className="bg-background border-b border-border p-3 sm:p-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate('/almacen/auditorias')} aria-label="Regresar">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-[180px]">
             <h1 className="text-lg font-semibold truncate">{auditoria?.nombre ?? 'Resultados'}</h1>
             <p className="text-xs text-muted-foreground">
               Almacén: {almacenNombre}
@@ -242,10 +242,12 @@ export default function AuditoriaResultadosPage() {
               Cerrado: {fmtDt((auditoria as any)?.cerrada_at) !== '—' ? fmtDt((auditoria as any)?.cerrada_at) : (auditoria?.fecha_aprobacion ? fmtDt(auditoria.fecha_aprobacion) : 'Pendiente')}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
-            <FileText className="h-4 w-4 mr-1" /> PDF
-          </Button>
-          <Badge variant={badge?.variant}>{badge?.label}</Badge>
+          <div className="flex items-center gap-2 ml-auto shrink-0">
+            <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
+              <FileText className="h-4 w-4 mr-1" /> PDF
+            </Button>
+            <Badge variant={badge?.variant}>{badge?.label}</Badge>
+          </div>
         </div>
 
         {/* Public URL */}

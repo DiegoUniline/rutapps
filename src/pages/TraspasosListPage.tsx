@@ -23,6 +23,8 @@ import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPr
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { toast } from 'sonner';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -95,6 +97,7 @@ const DETALLE_GROUP_BY_OPTIONS = [
 
 export default function TraspasosListPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { empresa } = useAuth();
   const [viewMode, setViewMode] = useState<'traspasos' | 'detalle'>('traspasos');
   const [search, setSearch] = useState('');
@@ -302,7 +305,30 @@ export default function TraspasosListPage() {
   }));
 
   // ─── RENDER TABLES ───────────────────────────────────────
-  const renderTable = (items: any[]) => (
+  const renderTable = (items: any[]) => isMobile ? (
+    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay traspasos. Crea el primero." className={cn(!groupBy && 'flex-1 min-h-0 overflow-auto')}>
+      {items.map((t: any) => (
+        <ListaTarjetaMovil
+          key={t.id}
+          titulo={`${getOrigenLabel(t)} → ${getDestinoLabel(t)}`}
+          subtitulo={`${t.folio || t.id.slice(0, 8)} · ${TIPO_LABELS[t.tipo] || t.tipo}`}
+          estado={<StatusChip status={t.status} />}
+          leading={
+            <input
+              type="checkbox"
+              aria-label="Seleccionar traspaso"
+              checked={selected.has(t.id)}
+              onClick={e => e.stopPropagation()}
+              onChange={() => toggleOne(t.id)}
+              className="h-4 w-4 rounded border-input shrink-0"
+            />
+          }
+          onClick={() => navigate(`/almacen/traspasos/${t.id}`)}
+          campos={[{ label: 'Fecha', value: fmtDate(t.fecha) }]}
+        />
+      ))}
+    </ListaTarjetasMovil>
+  ) : (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
       <table className="w-full text-[13px]">
         <thead>
@@ -384,7 +410,25 @@ export default function TraspasosListPage() {
     </div>
   );
 
-  const renderDetalleTable = (items: any[]) => (
+  const renderDetalleTable = (items: any[]) => isMobile ? (
+    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay líneas de detalle." className={cn(!groupByD && 'flex-1 min-h-0 overflow-auto')}>
+      {items.map((l: any, i: number) => (
+        <ListaTarjetaMovil
+          key={`${l.traspaso_id}-${l.linea_id}-${i}`}
+          titulo={l.producto}
+          subtitulo={[l.codigo, l.folio, TIPO_LABELS[l.tipo] || l.tipo].filter(Boolean).join(' · ')}
+          estado={<StatusChip status={l.status} />}
+          onClick={() => navigate(`/almacen/traspasos/${l.traspaso_id}`)}
+          campos={[
+            { label: 'Origen', value: l.origen },
+            { label: 'Destino', value: l.destino },
+            { label: 'Fecha', value: fmtDate(l.fecha) },
+            { label: 'Cantidad', value: fmtNum(l.cantidad) },
+          ]}
+        />
+      ))}
+    </ListaTarjetasMovil>
+  ) : (
     <div className={cn(!groupByD && "bg-card border border-border rounded overflow-x-auto")}>
       <table className="w-full text-[13px]">
         <thead>
@@ -522,7 +566,7 @@ export default function TraspasosListPage() {
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={7} /></div>
           ) : (
             <>
-              <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
+              <GroupedTableWrapper sinMarcoMovil groupBy={groupBy} groups={groups} renderTable={renderTable} />
               {!groupBy && total > 0 && (
                 <OdooPagination from={from} to={to} total={total}
                   onPrev={() => setPage(p => Math.max(1, p - 1))}
@@ -577,7 +621,7 @@ export default function TraspasosListPage() {
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={9} /></div>
           ) : (
             <>
-              <GroupedTableWrapper groupBy={groupByD} groups={groupsD} renderTable={renderDetalleTable} />
+              <GroupedTableWrapper sinMarcoMovil groupBy={groupByD} groups={groupsD} renderTable={renderDetalleTable} />
               {!groupByD && totalD > 0 && (
                 <OdooPagination from={fromD} to={toD} total={totalD}
                   onPrev={() => setPageD(p => Math.max(1, p - 1))}

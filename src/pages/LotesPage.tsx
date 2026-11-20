@@ -643,7 +643,7 @@ export default function LotesPage() {
                         {nQty(disp)}
                       </td>
                       <td className="py-1.5 px-3 text-right">
-                        <button className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(l)} title="Editar">
+                        <button className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity" onClick={() => openEdit(l)} title="Editar">
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
                       </td>
@@ -720,7 +720,7 @@ export default function LotesPage() {
                         {total.toLocaleString('es-MX', { maximumFractionDigits: 3 })}
                       </td>
                       <td className="py-1.5 px-3 text-right">
-                        <button className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(l)} title="Editar">
+                        <button className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity" onClick={() => openEdit(l)} title="Editar">
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
                       </td>

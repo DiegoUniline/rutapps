@@ -10,6 +10,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ClipboardCheck, Plus, Search, Package, Eye, Calendar, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -39,6 +41,7 @@ type FiltroTipo = 'todos' | 'clasificacion' | 'marca' | 'productos';
 export default function AuditoriasPage() {
   const { empresa, user, profile } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [fechaDesde, setFechaDesde] = useState(() => mesActualLocal().from);
@@ -273,9 +276,9 @@ export default function AuditoriasPage() {
   const canCreate = almacenId && (filtroTipo === 'todos' || selectedIds.size > 0);
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+        <h1 className="text-lg sm:text-xl font-semibold text-foreground flex items-center gap-2">
           <ClipboardCheck className="h-5 w-5" /> Auditorías de inventario
           <HelpButton title={HELP.auditorias.title} sections={HELP.auditorias.sections} />
         </h1>
@@ -293,6 +296,34 @@ export default function AuditoriasPage() {
       </div>
 
 
+      {isMobile ? (
+        isLoading ? <div className="text-center py-12 text-muted-foreground text-sm">Cargando...</div> : (
+        <ListaTarjetasMovil vacia={filtered.length === 0} mensajeVacio="No hay auditorías">
+          {filtered.map((a: any) => {
+            const badge = STATUS_BADGE[a.status] ?? STATUS_BADGE.pendiente;
+            const almNombre = almacenes?.find(al => al.id === a.filtro_valor)?.nombre ?? '-';
+            const lineasCount = a.auditoria_lineas?.[0]?.count ?? 0;
+            const abrir = () => {
+              if (a.status === 'en_proceso') navigate(`/almacen/auditorias/${a.id}/conteo`);
+              else navigate(`/almacen/auditorias/${a.id}/resultados`);
+            };
+            return (
+              <ListaTarjetaMovil
+                key={a.id}
+                titulo={a.nombre}
+                subtitulo={almNombre}
+                estado={<Badge variant={badge.variant} className="whitespace-nowrap">{badge.label}</Badge>}
+                onClick={abrir}
+                campos={[
+                  { label: 'Fecha', value: fmtDate(a.fecha) },
+                  { label: 'Líneas', value: lineasCount },
+                ]}
+              />
+            );
+          })}
+        </ListaTarjetasMovil>
+        )
+      ) : (
       <div className="border border-border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -337,6 +368,7 @@ export default function AuditoriasPage() {
           </TableBody>
         </Table>
       </div>
+      )}
 
       <Dialog open={showDialog} onOpenChange={v => !v && resetForm()}>
         <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto">
