@@ -70,10 +70,11 @@ export default function VentasListPage() {
   const { empresa } = useAuth();
   // Realtime: ventas y venta_lineas ya los escucha AppLayout (useProductosRealtime,
   // agrupado); aquí solo lo que no cubre.
-  useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['entregas']] });
+  useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas']] });
   // El saldo de la venta lo actualiza la BD al aplicar el cobro y ese cambio ya llega por el canal de
   // ventas (useData): aquí no se vuelve a recargar la lista ni sus conteos por cada cobro.
-  useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['cxc'], ['saldos']] });
+  // Las consultas que leen cobros salen del mapa central (antes invalidaba 'cxc'/'saldos', claves sin consulta).
+  useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [] });
   useRealtimeInvalidate({ table: 'clientes', empresaId: empresa?.id, queryKeys: [['ventas'], ['clientes'], ['clientes-filter']] });
   const navigate = useNavigate();
   const isMobile = useIsMobile();

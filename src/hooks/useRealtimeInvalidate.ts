@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { programarRefrescoRemoto } from "@/lib/refresco/refrescoRemoto";
 
 /**
  * Suscribe a cambios Realtime de una tabla filtrada por empresa_id e
@@ -9,25 +10,27 @@ import { supabase } from "@/lib/supabase";
  * Reemplaza el patrón refetchInterval para no consumir red mientras
  * no hay cambios reales en la base de datos.
  *
- * IMPORTANTE (costo/egress): las invalidaciones se AGRUPAN con un pequeño
- * debounce. Si llega una ráfaga de N eventos (p. ej. un ajuste de inventario
- * que toca muchas filas, o varias ventas seguidas), se dispara UN solo
- * refetch al final de la ventana, no N. Así "todo en vivo" no multiplica el
- * tráfico de datos.
+ * Además de `queryKeys`, se refrescan TODAS las consultas que leen la tabla (y lo que cambian sus
+ * triggers) según el mapa central (src/lib/refresco): un cambio hecho en otro dispositivo se ve en
+ * cualquier pantalla abierta, no solo en la que abrió el canal.
+ *
+ * IMPORTANTE (costo/egress): las invalidaciones se AGRUPAN en el refresco remoto central
+ * (programarRefrescoRemoto): una ráfaga de N eventos produce una sola recarga, como máximo una
+ * cada pocos segundos, y solo de las consultas visibles.
  */
 export function useRealtimeInvalidate(opts: {
   table: string;
   empresaId: string | undefined;
   queryKeys: (readonly unknown[])[];
   enabled?: boolean;
-  /** Ventana de agrupamiento en ms (default 400). */
+  /** @deprecated El agrupamiento lo hace el refresco remoto central; se ignora. */
   debounceMs?: number;
   /** Columna por la cual filtrar por tenant. Default 'empresa_id'. Si la tabla no tiene esa columna, pasa null para no filtrar. */
   tenantColumn?: string | null;
   /** Filtro Realtime explícito (p. ej. `user_id=eq.<id>`); reemplaza al de tenant. */
   filter?: string;
 }) {
-  const { table, empresaId, queryKeys, enabled = true, debounceMs = 400, tenantColumn = 'empresa_id', filter } = opts;
+  const { table, empresaId, queryKeys, enabled = true, tenantColumn = 'empresa_id', filter } = opts;
   const qc = useQueryClient();
   const keysSig = JSON.stringify(queryKeys);
 
@@ -38,15 +41,7 @@ export function useRealtimeInvalidate(opts: {
   useEffect(() => {
     if (!enabled || !empresaId) return;
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const flush = () => {
-      timer = null;
-      keysRef.current.forEach((k) => qc.invalidateQueries({ queryKey: k }));
-    };
-    const schedule = () => {
-      if (timer != null) return; // ya hay un flush programado en esta ventana
-      timer = setTimeout(flush, debounceMs);
-    };
+    const schedule = () => programarRefrescoRemoto(qc, { tablas: [table], claves: keysRef.current });
 
     const cfg: any = { event: '*', schema: 'public', table };
     if (filter) cfg.filter = filter;
@@ -58,9 +53,8 @@ export function useRealtimeInvalidate(opts: {
       .subscribe();
 
     return () => {
-      if (timer != null) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, empresaId, enabled, keysSig, debounceMs, tenantColumn, filter]);
+  }, [table, empresaId, enabled, keysSig, tenantColumn, filter]);
 }

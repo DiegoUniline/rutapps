@@ -21,6 +21,7 @@
     "src/lib/refresco/refrescoTrasEscritura.ts",
     "src/lib/refresco/lectores.generated.ts",
     "src/lib/formSync.ts",
+    "src/lib/refresco/refrescoRemoto.ts",
     "src/pages/CompraForm/types.ts"
   ]
 }

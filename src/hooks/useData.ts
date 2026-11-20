@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { programarRefrescoRemoto } from '@/lib/refresco/refrescoRemoto';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import { enrichProductos, ensureCatalogsForEnrich } from '@/lib/catalogEnrich';
 import { pickColumns, PRODUCTO_COLUMNS, TARIFA_COLUMNS, TARIFA_LINEA_COLUMNS, PRODUCTO_PROVEEDOR_COLUMNS } from '@/lib/allowlist';
@@ -32,67 +33,31 @@ export function useProductosRealtime() {
     if (!empresaId) return;
 
     const filter = `empresa_id=eq.${empresaId}`;
+    // Todos los eventos pasan por el refresco remoto central (src/lib/refresco/refrescoRemoto.ts):
+    // agrupa ráfagas (una venta de N renglones = una recarga), recarga cada consulta a lo más una vez
+    // cada pocos segundos, solo las visibles, y los conteos de pestañas a lo más cada 30 s.
+    const remoto = (tablas: string[]) => () => programarRefrescoRemoto(qc, { tablas });
 
-    // Una venta o un ajuste mueve el stock de muchos productos a la vez: los
-    // eventos se agrupan para re-consultar UNA vez y no una por renglón.
-    const pendientes = new Set<string>();
-    let catalogoTimer: ReturnType<typeof setTimeout> | undefined;
-    const invalidateCatalogo = (keys: string[]) => {
-      keys.forEach(k => pendientes.add(k));
-      if (catalogoTimer) return;
-      catalogoTimer = setTimeout(() => {
-        catalogoTimer = undefined;
-        pendientes.forEach(k => qc.invalidateQueries({ queryKey: [k] }));
-        pendientes.clear();
-      }, 1500);
-    };
-
+    // `productos` se escucha por el total de stock que mueve la BD (trg_recalc_stock_total_almacen):
+    // solo se recarga el catálogo (claves explícitas), no todas las pantallas que leen productos.
     const productosCh = supabase
       .channel(`data-productos-${empresaId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'productos', filter }, () => {
-        invalidateCatalogo(['productos', 'productos-page', 'productos-select', 'pos-productos', 'inventario-dashboard']);
+        programarRefrescoRemoto(qc, {
+          claves: [['productos'], ['productos-page'], ['productos-select'], ['pos-productos'], ['inventario-dashboard']],
+        });
       })
       .subscribe();
 
+    // Existencias por almacén, kardex y vistas de inventario (mapa central; sin recargar el catálogo).
     const stockCh = supabase
       .channel(`data-stock_almacen-${empresaId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_almacen', filter }, () => {
-        // productos.cantidad lo actualiza la BD (trg_recalc_stock_total_almacen) y ese cambio ya llega por
-        // el canal de `productos`: aquí no se vuelve a bajar el catálogo completo en cada venta.
-        invalidateCatalogo(['stock-almacen', 'stock-almacen-origen', 'inventario-dashboard']);
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_almacen', filter }, remoto(['stock_almacen']))
       .subscribe();
-
-    // Una venta de N renglones dispara N eventos: se agrupan en UNA sola
-    // invalidación para no re-descargar listas pesadas N veces (ahorro de datos).
-    // Los números de las pestañas (consultas 'conteo') se refrescan como máximo cada 30 s:
-    // con muchos administradores conectados, recontar en cada venta de ruta no escala.
-    // Las acciones propias (cancelar, eliminar…) invalidan ['ventas'] completo y sí los
-    // actualizan al momento.
-    const esConteo = (k: readonly unknown[]) => k[k.length - 1] === 'conteo';
-    let ventasTimer: ReturnType<typeof setTimeout> | undefined;
-    let conteoTimer: ReturnType<typeof setTimeout> | undefined;
-    const invalidateVentas = () => {
-      if (ventasTimer) clearTimeout(ventasTimer);
-      ventasTimer = setTimeout(() => {
-        const filas = { predicate: (q: { queryKey: readonly unknown[] }) => !esConteo(q.queryKey) };
-        qc.invalidateQueries({ queryKey: ['ventas'], ...filas });
-        qc.invalidateQueries({ queryKey: ['ventas-list'] });
-        qc.invalidateQueries({ queryKey: ['venta-lineas'], ...filas });
-      }, 2500);
-      if (!conteoTimer) {
-        conteoTimer = setTimeout(() => {
-          conteoTimer = undefined;
-          const conteos = { predicate: (q: { queryKey: readonly unknown[] }) => esConteo(q.queryKey) };
-          qc.invalidateQueries({ queryKey: ['ventas'], ...conteos });
-          qc.invalidateQueries({ queryKey: ['venta-lineas'], ...conteos });
-        }, 30000);
-      }
-    };
 
     const ventasCh = supabase
       .channel(`data-ventas-${empresaId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas', filter }, invalidateVentas)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas', filter }, remoto(['ventas']))
       .subscribe();
 
     // Todo filtrado por empresa: sin filtro, Realtime evalúa RLS de cada usuario
@@ -102,16 +67,13 @@ export function useProductosRealtime() {
     // entrega_lineas no tiene empresa_id: se escucha entregas (auto_venta_entregado).
     const ventaLineasCh = supabase
       .channel(`data-venta-lineas-${empresaId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'venta_lineas', filter }, invalidateVentas)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'entregas', filter }, invalidateVentas)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'venta_lineas', filter }, remoto(['venta_lineas']))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'entregas', filter }, remoto(['entregas']))
       .subscribe();
 
     const almacenesCh = supabase
       .channel(`data-almacenes-${empresaId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'almacenes', filter }, () => {
-        qc.invalidateQueries({ queryKey: ['almacenes'] });
-        qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'almacenes', filter }, remoto(['almacenes']))
       .subscribe();
 
     return () => {
@@ -120,8 +82,6 @@ export function useProductosRealtime() {
       supabase.removeChannel(ventasCh);
       supabase.removeChannel(ventaLineasCh);
       supabase.removeChannel(almacenesCh);
-      if (ventasTimer) clearTimeout(ventasTimer);
-      if (catalogoTimer) clearTimeout(catalogoTimer);
     };
   }, [qc, empresaId]);
 }
