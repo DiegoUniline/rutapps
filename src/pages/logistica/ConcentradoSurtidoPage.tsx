@@ -1,13 +1,13 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Package, AlertTriangle, ShoppingCart, Calendar as CheckCircle2, Loader2, FileDown, FileSpreadsheet } from 'lucide-react';
+import { AlertTriangle, ShoppingCart, Calendar as CheckCircle2, Loader2, FileDown, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProveedores, useAlmacenes } from '@/hooks/useData';
 import { fmtMoney } from '@/lib/currency';
-import { todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
+import { cn, todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import PedidosTabs from '@/components/PedidosTabs';
 import ConcentradoReportDialog from '@/components/logistica/ConcentradoReportDialog';
@@ -341,22 +341,11 @@ export default function ConcentradoSurtidoPage() {
   };
 
   return (
-    <div className="p-4 min-h-full space-y-4">
+    // Misma estructura que Pedidos y Entregas (D-037): fondo gris y una sola hoja blanca con
+    // barra (fecha · buscar · filtros) → acciones → pestañas de vista + paginación → tabla.
+    <div className="p-2 md:p-4 min-h-full">
+    <div className="bg-card border border-border rounded-xl shadow-sm p-3 md:p-4 space-y-3">
       <PedidosTabs fechas={{ desde, hasta, onChange: (f, t) => { setDesde(f); setHasta(t); } }} />
-
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <Package className="w-5 h-5 text-primary" /> Concentrado a surtir
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            Pedidos levantados/a entregar en el rango, con lo ya surtido y lo pendiente.
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => setShowReport(true)} disabled={!empresa?.id}>
-          <FileDown className="w-4 h-4" /> Reporte de surtido
-        </Button>
-      </div>
 
       {showReport && empresa?.id && (
         <ConcentradoReportDialog
@@ -394,6 +383,9 @@ export default function ConcentradoSurtidoPage() {
           <Button size="sm" variant="outline" onClick={() => { const t = todayLocal(); setDesde(t); setHasta(addDays(t, 6)); }}>7 días</Button>
         </div>
         <div className="ml-auto flex flex-wrap justify-end gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowReport(true)} disabled={!empresa?.id}>
+            <FileDown className="w-3.5 h-3.5" /> Reporte de surtido
+          </Button>
           <Button size="sm" variant="outline" onClick={() => viewMode === 'productos' ? refetchProductos() : refetchPedidos()}>Refrescar</Button>
           <Button size="sm" variant="outline" onClick={handleExportExcel} disabled={isFetchingProductos || !almacenInit}>
             {isFetchingProductos ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />} Excel
@@ -533,26 +525,62 @@ export default function ConcentradoSurtidoPage() {
         </div>
       )}
 
-      {/* Toggle vista */}
-      <div className="flex items-center gap-1 bg-muted/30 border border-border rounded-lg p-1 w-fit">
-        <button
-          type="button"
-          onClick={() => setViewMode('pedidos')}
-          className={`text-xs px-3 py-1.5 rounded-md transition ${
-            viewMode === 'pedidos' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'
-          }`}
-        >
-          Por pedido
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode('productos')}
-          className={`text-xs px-3 py-1.5 rounded-md transition ${
-            viewMode === 'productos' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'
-          }`}
-        >
-          {isFetchingProductos && viewMode === 'productos' && <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />}Por producto
-        </button>
+      {/* Vista: mismas pestañas que Pedidos; paginación a la derecha (sin recuadros aparte) */}
+      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border">
+        <nav className="flex gap-1 -mb-px overflow-x-auto no-scrollbar">
+          {([
+            { key: 'pedidos', label: 'Por pedido' },
+            { key: 'productos', label: 'Por producto' },
+          ] as const).map(t => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setViewMode(t.key)}
+              className={cn(
+                'px-3 sm:px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                viewMode === t.key
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              )}
+            >
+              {t.key === 'productos' && isFetchingProductos && viewMode === 'productos' && <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />}
+              {t.label}
+            </button>
+          ))}
+        </nav>
+        {viewMode === 'pedidos' && pedidoTotalCount > 0 && (
+          <div className="flex flex-wrap items-center justify-end gap-3 pb-1.5">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              {pedidoPageStart}-{pedidoPageEnd} de {pedidoTotalCount} pedido{pedidoTotalCount === 1 ? '' : 's'}
+              {isFetchingPedidos && !isLoadingPedidos ? ' · Actualizando…' : ''}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">Ver</span>
+              <Select value={String(pedidoPageSize)} onValueChange={(value) => { setPedidoPageSize(Number(value)); setPedidoPage(0); setOpenGroups(new Set()); setExpandedPedidoId(null); }}>
+                <SelectTrigger className="h-7 w-[92px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                  <SelectItem value="500">500</SelectItem>
+                  <SelectItem value="0">Todo</SelectItem>
+                </SelectContent>
+              </Select>
+              {pedidoShowAll && <span className="text-[10px] text-amber-600">Puede tardar más</span>}
+            </div>
+          </div>
+          {!pedidoShowAll ? (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={pedidoPage <= 0 || isFetchingPedidos} onClick={() => goPedidoPage(pedidoPage - 1)}>Anterior</Button>
+              <span className="text-xs text-muted-foreground tabular-nums">Página {pedidoPage + 1} de {pedidoTotalPages}</span>
+              <Button variant="outline" size="sm" disabled={pedidoPage + 1 >= pedidoTotalPages || isFetchingPedidos} onClick={() => goPedidoPage(pedidoPage + 1)}>Siguiente</Button>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">Todos los pedidos</span>
+          )}
+        </div>
+        )}
       </div>
 
       {/* Tabla */}
@@ -720,39 +748,7 @@ export default function ConcentradoSurtidoPage() {
         </div>
       </div>
 
-      {viewMode === 'pedidos' && pedidoTotalCount > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card rounded-lg px-3 py-2">
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
-              {pedidoPageStart}-{pedidoPageEnd} de {pedidoTotalCount} pedido{pedidoTotalCount === 1 ? '' : 's'}
-              {isFetchingPedidos && !isLoadingPedidos ? ' · Actualizando…' : ''}
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-muted-foreground">Ver</span>
-              <Select value={String(pedidoPageSize)} onValueChange={(value) => { setPedidoPageSize(Number(value)); setPedidoPage(0); setOpenGroups(new Set()); setExpandedPedidoId(null); }}>
-                <SelectTrigger className="h-7 w-[92px] text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="200">200</SelectItem>
-                  <SelectItem value="500">500</SelectItem>
-                  <SelectItem value="0">Todo</SelectItem>
-                </SelectContent>
-              </Select>
-              {pedidoShowAll && <span className="text-[10px] text-amber-600">Puede tardar más</span>}
-            </div>
-          </div>
-          {!pedidoShowAll ? (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={pedidoPage <= 0 || isFetchingPedidos} onClick={() => goPedidoPage(pedidoPage - 1)}>Anterior</Button>
-              <span className="text-xs text-muted-foreground tabular-nums">Página {pedidoPage + 1} de {pedidoTotalPages}</span>
-              <Button variant="outline" size="sm" disabled={pedidoPage + 1 >= pedidoTotalPages || isFetchingPedidos} onClick={() => goPedidoPage(pedidoPage + 1)}>Siguiente</Button>
-            </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">Todos los pedidos</span>
-          )}
-        </div>
-      )}
+    </div>
     </div>
   );
 }
