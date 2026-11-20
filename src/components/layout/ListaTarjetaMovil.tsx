@@ -95,7 +95,7 @@ export function ListaTarjetasMovil({ children, vacia, mensajeVacio = 'Sin regist
   if (vacia) {
     return <div className="text-center py-12 text-muted-foreground text-sm">{mensajeVacio}</div>;
   }
-  return <div className={cn('space-y-2', className)}>{children}</div>;
+  return <div data-lista-tarjetas="" className={cn('space-y-2', className)}>{children}</div>;
 }
 
 export default ListaTarjetaMovil;

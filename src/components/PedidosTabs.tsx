@@ -69,7 +69,7 @@ export function PedidosTabs() {
       .filter(Boolean);
 
     const applySearch = () => {
-      const rows = root.querySelectorAll<HTMLTableRowElement>('tbody > tr');
+      const rows = root.querySelectorAll<HTMLElement>('tbody > tr, [data-lista-tarjetas] > *');
       rows.forEach((row) => {
         if (terms.length === 0) {
           row.style.removeProperty('display');
@@ -87,7 +87,7 @@ export function PedidosTabs() {
 
     return () => {
       observer.disconnect();
-      root.querySelectorAll<HTMLTableRowElement>('tbody > tr').forEach(row => row.style.removeProperty('display'));
+      root.querySelectorAll<HTMLElement>('tbody > tr, [data-lista-tarjetas] > *').forEach(row => row.style.removeProperty('display'));
     };
   }, [universalSearch, pathname, mode]);
 

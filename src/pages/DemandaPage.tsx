@@ -34,6 +34,8 @@ import {
   usePedidosOperacionPage,
 } from '@/hooks/usePedidosOperacion';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 // ─── Data hooks ────────────────────────────────────────────
 
@@ -229,6 +231,7 @@ export default function DemandaPage() {
   const { fmt } = useCurrency();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const today = todayLocal();
   const weekStart = weekStartLocal();
   const weekEnd = weekEndLocal();
@@ -1144,7 +1147,69 @@ export default function DemandaPage() {
       )}
 
       {/* Pedidos table */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className={cn("bg-card border border-border rounded-lg overflow-hidden", isMobile && "max-md:bg-transparent max-md:border-0 max-md:overflow-visible")}>
+        {isMobile ? (
+          <ListaTarjetasMovil vacia={!isLoading && filtered.length === 0} mensajeVacio="No hay pedidos pendientes de surtir">
+            {filtered.map(pedido => (
+              <ListaTarjetaMovil
+                key={pedido.id}
+                titulo={pedido.clientes?.nombre ?? '—'}
+                subtitulo={[pedido.folio, pedido.vendedores?.nombre].filter(Boolean).join(' · ')}
+                className={selectedIds.has(pedido.id) ? 'bg-primary/5' : undefined}
+                estado={<span className="shrink-0" onClick={e => e.stopPropagation()}>
+                  {pedido.status === 'cancelado' ? (
+                    <Badge variant="outline" className="text-[10px] border-red-500 text-red-700">Cancelado</Badge>
+                  ) : pedido.status === 'facturado' ? (
+                    <Badge variant="outline" className="text-[10px] border-emerald-600 text-emerald-700">Facturado</Badge>
+                  ) : pedido.estadoOdoo === 'entregado' ? (
+                    <Badge className="text-[10px] bg-green-600 text-white hover:bg-green-600">Entregado</Badge>
+                  ) : pedido.estadoOdoo === 'en_ruta' ? (
+                    <Badge className="text-[10px] bg-purple-600 text-white hover:bg-purple-600">En ruta</Badge>
+                  ) : pedido.estadoOdoo === 'surtido_completo' ? (
+                    <Badge variant="outline" className="text-[10px] border-amber-600 text-amber-700">Surtido completo</Badge>
+                  ) : pedido.estadoOdoo === 'surtido_parcial' ? (
+                    <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600">Surtido parcial</Badge>
+                  ) : pedido.estadoOdoo === 'pendiente_surtir' ? (
+                    <Badge variant="outline" className="text-[10px] border-blue-600 text-blue-700">Pendiente de surtir</Badge>
+                  ) : pedido.estadoOdoo === 'en_surtido' ? (
+                    <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-600">En surtido</Badge>
+                  ) : pedido.status === 'borrador' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-[11px] border-green-600 text-green-700 hover:bg-green-50"
+                      onClick={() => confirmarPedidoMut.mutate([pedido.id])}
+                      disabled={confirmarPedidoMut.isPending}
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      Confirmar
+                    </Button>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] border-primary text-primary">
+                      Confirmado
+                    </Badge>
+                  )}
+                </span>}
+                leading={
+                  <span onClick={e => e.stopPropagation()} className="shrink-0 inline-flex">
+                    <Checkbox checked={selectedIds.has(pedido.id)} onCheckedChange={() => toggleSelect(pedido.id)} aria-label="Seleccionar pedido" />
+                  </span>
+                }
+                onClick={() => navigate(`/logistica/pedidos/${pedido.id}`)}
+                campos={[
+                  { label: 'Fecha', value: fmtDate(pedido.fecha) },
+                  { label: 'Total', value: fmt(pedido.total) },
+                  { label: 'Programada', value: pedido.fechaProgramada ? fmtDate(pedido.fechaProgramada) : '—' },
+                  { label: 'Repartidor', value: pedido.vendedorRutaId ? (pedido.vendedorRutaNombre ?? '—') : 'Sin asignar' },
+                  { label: 'Surtido', value: `${pedido.pctSurtido}%` },
+                  { label: 'Entregado', value: `${pedido.pctEntregado}%` },
+                  { label: 'Pendiente', value: pedido.totalPendiente },
+                  ...(pedido.fechaEntrega ? [{ label: 'Entrega', value: fmtDate(pedido.fechaEntrega) }] : []),
+                ]}
+              />
+            ))}
+          </ListaTarjetasMovil>
+        ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -1285,6 +1350,7 @@ export default function DemandaPage() {
             })}
           </TableBody>
         </Table>
+        )}
       </div>
 
 
