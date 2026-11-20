@@ -180,26 +180,17 @@ export default function AplicarPagosProveedorPage() {
 
     setSaving(true);
     try {
-      for (const c of aplicaciones) {
-        // Insert pago_compras record
-        const { error: pagoErr } = await supabase.from('pago_compras').insert({
-          empresa_id: empresa.id,
-          compra_id: c.id,
-          proveedor_id: selectedProv.id,
-          user_id: user.id,
-          monto: roundMoney(c.montoAplicar),
-          metodo_pago: metodoPago,
-          referencia: referencia || null,
-          notas: notas || null,
-          fecha: todayInTimezone(empresa?.zona_horaria),
-        } as any);
-        if (pagoErr) throw pagoErr;
-
-        const nuevoSaldo = roundMoney(Math.max(0, c.saldo_pendiente - c.montoAplicar));
-        const updates: any = { saldo_pendiente: nuevoSaldo };
-        if (nuevoSaldo <= 0.01) updates.status = 'pagada';
-        await supabase.from('compras').update(updates).eq('id', c.id);
-      }
+      // Una sola operación en la BD: registra los pagos y recalcula el saldo de cada compra.
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      const { error: pagoErr } = await rpc('aplicar_pago_proveedor', {
+        p_proveedor_id: selectedProv.id,
+        p_metodo: metodoPago,
+        p_referencia: referencia || null,
+        p_notas: notas || null,
+        p_fecha: todayInTimezone(empresa?.zona_horaria),
+        p_aplicaciones: aplicaciones.map(c => ({ compra_id: c.id, monto: roundMoney(c.montoAplicar) })),
+      });
+      if (pagoErr) throw new Error(pagoErr.message);
 
       toast.success(`Pago de ${fmt(totalDistribuido)} aplicado a ${aplicaciones.length} compra(s)`);
       queryClient.invalidateQueries({ queryKey: ['compras-pendientes-aplicar'] });
