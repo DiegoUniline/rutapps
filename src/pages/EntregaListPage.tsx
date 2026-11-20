@@ -70,7 +70,7 @@ export default function EntregaListPage() {
     pageSize,
   });
   const allEntregas = entregasResult?.rows ?? [];
-  const counts = entregasResult?.counts ?? { total: 0, borrador: 0, surtido: 0, asignado: 0, cargado: 0, en_ruta: 0, hecho: 0, no_entregado: 0 };
+  const counts = entregasResult?.counts ?? { total: 0, borrador: 0, surtido: 0, asignado: 0, cargado: 0, en_ruta: 0, hecho: 0, no_entregado: 0, cancelado: 0 };
   const totalCount = entregasResult?.totalCount ?? 0;
   const showAll = pageSize === 0;
   const totalPages = showAll ? 1 : Math.max(1, Math.ceil(totalCount / pageSize));
@@ -413,6 +413,7 @@ export default function EntregaListPage() {
     { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
     { key: 'hecho', label: 'Entregadas', count: counts.hecho },
     { key: 'no_entregado', label: 'No entregadas', count: counts.no_entregado },
+    { key: 'cancelado', label: 'Canceladas', count: counts.cancelado ?? 0 },
     { key: 'todos', label: 'Todos', count: counts.total },
   ];
   return (
