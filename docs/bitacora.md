@@ -209,3 +209,4 @@
 2026-11-20 · ui-movil · Corrige compilación de main tras D-042: botones «Cancelar» de ruta (entrega, nueva venta, sin compra, detalle de venta) tenían dos atributos className; se fusionaron en uno con btn-cancelar
 2026-11-20 · ui-movil · Cliente/Proveedor: «Descartar» (D-042, rojo suave) cuando hay cambios sin guardar: restaura el formulario (y el pedido sugerido del cliente) al último guardado; en teléfono dentro de «⋯»
 2026-11-20 · ui-movil · Pedidos/Entregas en teléfono: las pestañas de estado pasan a la opción «Estado» dentro de Filtros (respetando la barra de PedidosTabs con fechas y búsqueda); en escritorio siguen las pestañas
+2026-11-20 · ui-movil · Almacenes/Lotes/Listas de precio: encabezado y filtros dentro de ListPage.Toolbar (con padding de la hoja D-037; antes quedaban pegados al borde); revisados en teléfono Kardex, Inventario, Comisiones, Reportes personalizados, Configuración, POS admin y Supervisor sin desbordes
