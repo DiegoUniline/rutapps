@@ -8,6 +8,18 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 import type { ExportColumn } from '@/lib/exportUtils';
 import { prorratearAjustesCompra } from '@/lib/compraAjustes';
 
+/** Trozos de 200 ids: una lista larga en `.in()` desborda la URL y la consulta falla. */
+const TROZO_IDS = 200;
+async function fetchAllPagesEnTrozos<T = any>(ids: string[], build: (chunk: string[], from: number, to: number) => any): Promise<T[]> {
+  const out: T[] = [];
+  for (let i = 0; i < ids.length; i += TROZO_IDS) {
+    const chunk = ids.slice(i, i + TROZO_IDS);
+    out.push(...await fetchAllPages<T>((from, to) => build(chunk, from, to)));
+  }
+  return out;
+}
+
+
 export type ReporteFuente =
   | 'ventas'
   | 'ventas_folio'
@@ -297,8 +309,13 @@ const METODO_LABELS: Record<string, string> = {
 
 async function loadMap<T extends { id: string }>(table: string, ids: string[], cols: string): Promise<Map<string, any>> {
   if (!ids.length) return new Map();
-  const { data } = await supabase.from(table as any).select(cols).in('id', ids);
-  return new Map((data || []).map((r: any) => [r.id, r]));
+  const map = new Map<string, any>();
+  for (let i = 0; i < ids.length; i += TROZO_IDS) {
+    const { data, error } = await supabase.from(table as any).select(cols).in('id', ids.slice(i, i + TROZO_IDS));
+    if (error) throw error;
+    for (const r of (data || []) as any[]) map.set(r.id, r);
+  }
+  return map;
 }
 
 export async function runReporte(
@@ -364,11 +381,11 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
     loadMap('profiles', vendedorIds, 'id, nombre'),
   ]);
 
-  let lineas = await fetchAllPages<any>((from, to) =>
+  let lineas = await fetchAllPagesEnTrozos<any>(ventaIds, (chunk, from, to) =>
     supabase
       .from('venta_lineas')
       .select('venta_id, producto_id, descripcion, cantidad, precio_unitario, descuento_pct, subtotal, iva_pct, ieps_pct, iva_monto, ieps_monto, total')
-      .in('venta_id', ventaIds)
+      .in('venta_id', chunk)
       .range(from, to)
   );
   if (allowedProductoIds) {
@@ -381,8 +398,8 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
 
   const metodoPagoMap = new Map<string, string>();
   if (config.columnas.some(c => c.key === 'metodo_pago' || c.key === 'forma_pago')) {
-    const aplicaciones = await fetchAllPages<any>((from, to) =>
-      supabase.from('cobro_aplicaciones').select('venta_id, cobros!inner(metodo_pago, status)').in('venta_id', ventaIds).neq('cobros.status', 'cancelado').range(from, to)
+    const aplicaciones = await fetchAllPagesEnTrozos<any>(ventaIds, (chunk, from, to) =>
+      supabase.from('cobro_aplicaciones').select('venta_id, cobros!inner(metodo_pago, status)').in('venta_id', chunk).neq('cobros.status', 'cancelado').range(from, to)
     );
     const tmp = new Map<string, Set<string>>();
     for (const a of aplicaciones) {
@@ -462,10 +479,10 @@ async function runVentasFolio(filtros: ReporteFiltros, empresaId: string) {
   ]);
 
   // Abonado (Σ cobros aplicados no cancelados) + método de pago por venta.
-  const apps = await fetchAllPages<any>((from, to) =>
+  const apps = await fetchAllPagesEnTrozos<any>(ventaIds, (chunk, from, to) =>
     supabase.from('cobro_aplicaciones')
       .select('venta_id, monto_aplicado, cobros!inner(metodo_pago, status)')
-      .in('venta_id', ventaIds)
+      .in('venta_id', chunk)
       .neq('cobros.status', 'cancelado')
       .range(from, to)
   );
@@ -527,8 +544,8 @@ async function runCobranza(filtros: ReporteFiltros, empresaId: string) {
   const [clientesMap, usersMap, apps] = await Promise.all([
     loadMap('clientes', clienteIds, 'id, codigo, nombre'),
     loadMap('profiles', userIds, 'id, nombre'),
-    fetchAllPages<any>((from, to) =>
-      supabase.from('cobro_aplicaciones').select('cobro_id, venta_id, monto_aplicado').in('cobro_id', cobroIds).range(from, to)
+    fetchAllPagesEnTrozos<any>(cobroIds, (chunk, from, to) =>
+      supabase.from('cobro_aplicaciones').select('cobro_id, venta_id, monto_aplicado').in('cobro_id', chunk).range(from, to)
     ),
   ]);
   const ventaIds = Array.from(new Set(apps.map(a => a.venta_id).filter(Boolean)));
@@ -579,7 +596,7 @@ async function runInventario(filtros: ReporteFiltros, empresaId: string) {
     allowedProductoIds = prods.map(p => p.id);
     if (!allowedProductoIds.length) return [];
   }
-  const movs = await fetchAllPages<any>((from, to) => {
+  const construirMovs = (chunk: string[] | null, from: number, to: number) => {
     let q = supabase
       .from('movimientos_inventario')
       .select('fecha, tipo, producto_id, cantidad, almacen_origen_id, almacen_destino_id, vendedor_destino_id, referencia_tipo, referencia_id, notas, user_id')
@@ -589,11 +606,15 @@ async function runInventario(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo as any);
-    if (allowedProductoIds) q = q.in('producto_id', allowedProductoIds);
+    if (chunk) q = q.in('producto_id', chunk);
     if (filtros.almacenIds?.length) q = q.or(`almacen_origen_id.in.(${filtros.almacenIds.join(',')}),almacen_destino_id.in.(${filtros.almacenIds.join(',')})`);
     if (filtros.search?.trim()) q = q.ilike('notas', `%${filtros.search.trim()}%`);
     return q;
-  });
+  };
+  // Con filtro de productos: en trozos de 200 ids; sin filtro: una sola consulta paginada.
+  const movs = allowedProductoIds
+    ? await fetchAllPagesEnTrozos<any>(allowedProductoIds, construirMovs)
+    : await fetchAllPages<any>((from, to) => construirMovs(null, from, to));
   if (!movs.length) return [];
   const productoIds = Array.from(new Set(movs.map(m => m.producto_id).filter(Boolean)));
   const almacenIds = Array.from(new Set(movs.flatMap(m => [m.almacen_origen_id, m.almacen_destino_id]).filter(Boolean)));
@@ -648,8 +669,8 @@ async function runCompras(filtros: ReporteFiltros, empresaId: string) {
   const [provMap, almMap, lineas] = await Promise.all([
     loadMap('proveedores', provIds, 'id, nombre, rfc'),
     loadMap('almacenes', almIds, 'id, nombre'),
-    fetchAllPages<any>((from, to) =>
-      supabase.from('compra_lineas').select('id, compra_id, producto_id, cantidad, cantidad_recibida, factor_conversion, piezas_total, precio_unitario, subtotal, total').in('compra_id', compraIds).range(from, to)
+    fetchAllPagesEnTrozos<any>(compraIds, (chunk, from, to) =>
+      supabase.from('compra_lineas').select('id, compra_id, producto_id, cantidad, cantidad_recibida, factor_conversion, piezas_total, precio_unitario, subtotal, total').in('compra_id', chunk).range(from, to)
     ),
   ]);
   const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));
@@ -784,8 +805,8 @@ async function runEntregas(filtros: ReporteFiltros, empresaId: string) {
     loadMap('profiles', vendIds, 'id, nombre'),
     loadMap('almacenes', almIds, 'id, nombre'),
     loadMap('ventas', pedidoIds, 'id, folio'),
-    fetchAllPages<any>((from, to) =>
-      supabase.from('entrega_lineas').select('entrega_id, producto_id, cantidad_pedida, cantidad_entregada').in('entrega_id', entregaIds).range(from, to)
+    fetchAllPagesEnTrozos<any>(entregaIds, (chunk, from, to) =>
+      supabase.from('entrega_lineas').select('entrega_id, producto_id, cantidad_pedida, cantidad_entregada').in('entrega_id', chunk).range(from, to)
     ),
   ]);
   const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));

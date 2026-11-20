@@ -146,3 +146,4 @@
 2026-11-20 · desarrollador · Cobro en checkout: un cobro por forma de pago aplicado a todas las ventas en una operación (antes N cobros y errores ignorados)
 2026-11-20 · desarrollador · D-035 eliminar_ventas: borrado seguro en una operación (individual y masivo)
 2026-11-20 · desarrollador · Detalle de venta: saldo de pedido por lo entregado desde la BD (D-034); el tope de pago sigue siendo el total (pago anticipado)
+2026-11-20 · desarrollador · Reportes personalizados: listas de ids en trozos de 200 (no desbordan la URL); loadMap con errores visibles
