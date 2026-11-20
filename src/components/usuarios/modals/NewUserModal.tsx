@@ -115,7 +115,7 @@ export default function NewUserModal({
         </div>
 
         <div className="p-5 border-t border-border flex gap-2 justify-end">
-          <button onClick={onClose} className="btn-odoo text-sm">Cancelar</button>
+          <button onClick={onClose} className="btn-cancelar btn-odoo text-sm">Cancelar</button>
           <button onClick={onCreate} disabled={creatingUser} className="btn-odoo-primary text-sm">
             {creatingUser ? 'Creando...' : 'Crear usuario'}
           </button>

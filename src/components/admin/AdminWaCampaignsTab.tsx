@@ -971,7 +971,7 @@ export default function AdminWaCampaignsTab() {
                 {pendingModal.removedPending.size > 0 && ` (${pendingModal.removedPending.size} removidos)`}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPendingModal(null)}>
+                <Button variant="cancelar" size="sm" onClick={() => setPendingModal(null)}>
                   Cancelar
                 </Button>
                 <Button

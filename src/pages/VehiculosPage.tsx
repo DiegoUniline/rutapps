@@ -181,7 +181,7 @@ export default function VehiculosPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setEditing(null)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={upsert.isPending}>
               {upsert.isPending ? 'Guardando...' : 'Guardar'}
             </Button>

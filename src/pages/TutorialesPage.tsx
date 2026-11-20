@@ -447,7 +447,7 @@ export default function TutorialesPage() {
                 disabled={!form.url.trim() || !form.title.trim() || updateMut.isPending}
                 onClick={() => updateMut.mutate()}
               >
-                {updateMut.isPending ? 'Guardando...' : 'Guardar cambios'}
+                {updateMut.isPending ? 'Guardando...' : 'Guardar'}
               </Button>
             </div>
           </DialogContent>

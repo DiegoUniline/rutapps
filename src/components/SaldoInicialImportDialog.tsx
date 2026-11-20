@@ -205,7 +205,7 @@ export default function SaldoInicialImportDialog({ open, onOpenChange }: Props) 
               {rows.length > 10 && <p className="text-center text-muted-foreground py-1">...y {rows.length - 10} filas más</p>}
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={reset}>Cancelar</Button>
+              <Button variant="cancelar" onClick={reset}>Cancelar</Button>
               <Button onClick={handleImport} className="gap-2">
                 <Upload className="h-4 w-4" /> Importar {rows.length} saldos
               </Button>

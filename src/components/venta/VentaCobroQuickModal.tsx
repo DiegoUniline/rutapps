@@ -213,7 +213,7 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
             <Checkbox checked={imprimir} onCheckedChange={(v) => toggleImprimir(v === true)} />
             Imprimir ticket
           </label>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
+          <Button variant="cancelar" onClick={onClose} disabled={saving}>Cancelar</Button>
           <Button onClick={submit} disabled={saving || montoNum <= 0}>
             {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando</> : <>Registrar cobro</>}
           </Button>

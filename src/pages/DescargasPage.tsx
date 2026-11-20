@@ -1016,7 +1016,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                           >
                             Guardar
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setEditingEfectivo(false)} className="h-9 text-xs">
+                          <Button size="sm" variant="cancelar" onClick={() => setEditingEfectivo(false)} className="h-9 text-xs">
                             Cancelar
                           </Button>
                         </div>
@@ -1062,7 +1062,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                             >
                               Guardar
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setEditingFecha(false)} className="h-9 text-xs">
+                            <Button size="sm" variant="cancelar" onClick={() => setEditingFecha(false)} className="h-9 text-xs">
                               Cancelar
                             </Button>
                           </div>

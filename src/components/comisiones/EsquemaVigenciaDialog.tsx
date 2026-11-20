@@ -50,7 +50,7 @@ export default function EsquemaVigenciaDialog({ nombre, onCancel, onConfirm, sav
         </label>
 
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onCancel} className="btn-odoo-secondary">Cancelar</button>
+          <button onClick={onCancel} className="btn-cancelar btn-odoo-secondary">Cancelar</button>
           <button onClick={() => onConfirm(modo)} disabled={saving} className="btn-odoo-primary">
             {saving ? 'Guardando...' : 'Aplicar'}
           </button>

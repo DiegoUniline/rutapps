@@ -436,7 +436,7 @@ export default function RutaClienteDetalle() {
           <button onClick={handleSave} disabled={saveMut.isPending}
             className="flex-1 h-12 rounded-xl bg-primary text-primary-foreground text-base font-bold flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 shadow-md">
             {saveMut.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
-            {saveMut.isPending ? 'Guardando...' : 'Guardar cambios'}
+            {saveMut.isPending ? 'Guardando...' : 'Guardar'}
           </button>
         ) : (
           <>

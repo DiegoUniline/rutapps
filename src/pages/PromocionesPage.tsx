@@ -301,7 +301,7 @@ export default function PromocionesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDelete}>Eliminar</AlertDialogAction>
+            <AlertDialogAction className="border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10" onClick={handleDelete}>Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -544,7 +544,7 @@ export default function PromocionesPage() {
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
+                <Button variant="cancelar" onClick={() => setEditing(null)}>Cancelar</Button>
                 <Button onClick={handleSave} disabled={savePromo.isPending}>
                   {savePromo.isPending ? 'Guardando...' : 'Guardar'}
                 </Button>

@@ -468,7 +468,7 @@ export default function MermasPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={registrar.isPending}>
               {registrar.isPending ? 'Guardando…' : 'Registrar merma'}
             </Button>

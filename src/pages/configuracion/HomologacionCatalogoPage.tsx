@@ -305,7 +305,7 @@ function ImportTab() {
           </div>
 
           <div className="flex justify-end gap-2">
-            <button onClick={reset} className="btn-odoo-secondary">Cancelar</button>
+            <button onClick={reset} className="btn-cancelar btn-odoo-secondary">Cancelar</button>
             <button onClick={runPreview} className="btn-odoo-primary gap-1">
               <Search className="h-3.5 w-3.5" /> Procesar coincidencias
             </button>
@@ -325,7 +325,7 @@ function ImportTab() {
           <SummaryCards s={s} />
           <ResultTable rows={matched} />
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
-            <button onClick={reset} className="btn-odoo-secondary">Cancelar</button>
+            <button onClick={reset} className="btn-cancelar btn-odoo-secondary">Cancelar</button>
             <button onClick={confirmImport} className="btn-odoo-primary gap-1">
               <CheckCircle2 className="h-3.5 w-3.5" /> Confirmar e importar
             </button>
@@ -881,7 +881,7 @@ function AddEquivalenciaDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             <textarea value={notas} onChange={e => setNotas(e.target.value)} className="w-full mt-1 input-odoo" rows={2} />
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button onClick={() => onOpenChange(false)} className="btn-odoo-secondary">Cancelar</button>
+            <button onClick={() => onOpenChange(false)} className="btn-cancelar btn-odoo-secondary">Cancelar</button>
             <button onClick={() => save.mutate()} disabled={save.isPending} className="btn-odoo-primary">
               {save.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Guardar'}
             </button>

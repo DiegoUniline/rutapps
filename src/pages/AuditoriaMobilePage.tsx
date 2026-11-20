@@ -556,7 +556,7 @@ export default function AuditoriaMobilePage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCloseAllMobile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleCloseAllMobile} className="border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10">
               Sí, cerrar todo
             </AlertDialogAction>
           </AlertDialogFooter>

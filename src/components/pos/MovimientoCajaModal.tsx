@@ -72,7 +72,7 @@ export function MovimientoCajaModal({ open, onOpenChange, tipo }: Props) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>
+          <Button variant="cancelar" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={busy}>{busy ? 'Guardando…' : 'Registrar'}</Button>
         </DialogFooter>
       </DialogContent>

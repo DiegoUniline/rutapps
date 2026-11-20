@@ -330,9 +330,9 @@ export default function AdminPublicidadTab() {
             </div>
 
             <div className="flex gap-2 pt-4 border-t">
-              <Button variant="outline" className="flex-1" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button variant="cancelar" className="flex-1" onClick={() => setOpen(false)}>Cancelar</Button>
               <Button className="flex-1" onClick={save} disabled={saving}>
-                {saving ? 'Guardando…' : (form.id ? 'Guardar cambios' : 'Crear')}
+                {saving ? 'Guardando…' : (form.id ? 'Guardar' : 'Crear')}
               </Button>
             </div>
           </div>

@@ -137,7 +137,7 @@ export default function WhatsAppPreviewDialog({
           </div>
 
           <div className="flex gap-2 justify-end pt-1">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="cancelar" onClick={onClose}>
               Cancelar
             </Button>
             <Button

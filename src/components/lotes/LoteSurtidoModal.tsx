@@ -134,7 +134,7 @@ export function LoteSurtidoModal({ empresaId, almacenId, producto, cantidadObjet
           <div className="px-5 text-[11px] text-amber-600">Ojo: se surtirá menos de lo pedido (no alcanza el stock por lote).</div>
         )}
         <div className="p-5 border-t border-border flex gap-2 justify-end">
-          <button onClick={onClose} className="btn-odoo text-sm">Cancelar</button>
+          <button onClick={onClose} className="btn-cancelar btn-odoo text-sm">Cancelar</button>
           <button onClick={confirmar} className="btn-odoo-primary text-sm" disabled={excedeAlguno || excedeGeneral || totalAsignado <= 0}>
             Surtir {totalAsignado > 0 ? totalAsignado.toLocaleString('es-MX', { maximumFractionDigits: 3 }) : ''}
           </button>

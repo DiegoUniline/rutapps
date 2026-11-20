@@ -254,7 +254,7 @@ export default function MultiRoutePanel({
           </div>
 
           <div className="px-3 py-2 border-t border-border bg-muted/30 rounded-b-xl flex items-center gap-2">
-            <button onClick={onClose} className="text-[11px] text-muted-foreground hover:text-foreground">Cancelar</button>
+            <button onClick={onClose} className="btn-cancelar text-[11px] text-muted-foreground hover:text-foreground">Cancelar</button>
             <button
               onClick={onApply}
               disabled={applying || applied || results.every(r => !!r.error)}

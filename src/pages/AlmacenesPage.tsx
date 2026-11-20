@@ -299,7 +299,7 @@ export default function AlmacenesPage() {
               </div>
             </div>
             <div className="p-5 border-t border-border flex gap-2 justify-end">
-              <button onClick={() => setReasign(null)} className="btn-odoo text-sm">Cancelar</button>
+              <button onClick={() => setReasign(null)} className="btn-cancelar btn-odoo text-sm">Cancelar</button>
               <button
                 onClick={handleReasignAndDeactivate}
                 disabled={reasigning || !reasign.targetAlmacenId}

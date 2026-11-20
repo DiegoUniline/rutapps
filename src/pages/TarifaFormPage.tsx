@@ -1023,7 +1023,7 @@ export default function TarifaFormPage() {
           <button onClick={handleSave} disabled={saveMutation.isPending || !isDirty} className={isDirty ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
             <Save className="h-3.5 w-3.5" /> Guardar
           </button>
-          <button onClick={() => navigate(backUrl)} className="btn-odoo-secondary">
+          <button onClick={() => navigate(backUrl)} className="btn-cancelar btn-odoo-secondary">
             <X className="h-3.5 w-3.5" /> Descartar
           </button>
         </div>
@@ -1326,7 +1326,7 @@ export default function TarifaFormPage() {
                                   <button onClick={handleAddLinea} disabled={saveLinea.isPending} className="btn-odoo-primary text-[12px] py-1 px-3">
                                     <Plus className="h-3 w-3" /> Agregar
                                   </button>
-                                  <button onClick={() => { setShowAddRow(false); setNewLinea({ ...EMPTY_LINEA }); }} className="btn-odoo-secondary text-[12px] py-1 px-3">
+                                  <button onClick={() => { setShowAddRow(false); setNewLinea({ ...EMPTY_LINEA }); }} className="btn-cancelar btn-odoo-secondary text-[12px] py-1 px-3">
                                     Cancelar
                                   </button>
                                 </div>

@@ -209,7 +209,7 @@ export default function CrearConteoDialog({ open, onClose, onCreated }: Props) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="cancelar" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleCreate} disabled={saving || !almacenId}>
             {saving ? 'Creando...' : 'Crear Conteo'}
           </Button>

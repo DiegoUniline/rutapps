@@ -278,7 +278,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
             <button onClick={handleSubmit} disabled={saving} className="btn-odoo-primary text-xs flex-1">
               <Check className="h-3.5 w-3.5" /> Guardar pago
             </button>
-            <button onClick={() => setShowForm(false)} className="btn-odoo-secondary text-xs">Cancelar</button>
+            <button onClick={() => setShowForm(false)} className="btn-cancelar btn-odoo-secondary text-xs">Cancelar</button>
           </div>
         </div>
       )}

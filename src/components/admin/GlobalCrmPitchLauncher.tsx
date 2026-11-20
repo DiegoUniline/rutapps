@@ -347,7 +347,7 @@ function PitchEditorDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             {!status && <span className="mr-auto" />}
             <Button variant="outline" onClick={() => setConfig(DEFAULT_CRM_CALL_PITCH)}><RotateCcw className="mr-2 h-4 w-4" /> Restaurar base</Button>
             <Button variant="outline" onClick={() => setPreview(true)}><Eye className="mr-2 h-4 w-4" /> Vista previa</Button>
-            <Button onClick={save} disabled={saving || loading}><Save className="mr-2 h-4 w-4" /> {saving ? 'Guardando…' : 'Guardar cambios'}</Button>
+            <Button onClick={save} disabled={saving || loading}><Save className="mr-2 h-4 w-4" /> {saving ? 'Guardando…' : 'Guardar'}</Button>
           </div>
         </div>
       </DialogContent>

@@ -1227,7 +1227,7 @@ export default function DemandaPage() {
             </div>
           </div>
           <DialogFooter className="shrink-0 border-t border-border pt-4 bg-background">
-            <Button variant="outline" onClick={() => setShowCrearDialog(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowCrearDialog(false)}>Cancelar</Button>
             <Button onClick={() => crearEntregasMut.mutate()} disabled={crearEntregasMut.isPending}>
               <Truck className="h-3.5 w-3.5" />
               Crear entrega{selectedPedidos.length > 1 ? 's' : ''}
@@ -1291,7 +1291,7 @@ export default function DemandaPage() {
             )}
           </div>
           <DialogFooter className="shrink-0 border-t border-border pt-4 bg-background">
-            <Button variant="outline" onClick={() => setShowSurtirDialog(false)} disabled={surtirMasivoMut.isPending}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowSurtirDialog(false)} disabled={surtirMasivoMut.isPending}>Cancelar</Button>
             <Button
               onClick={() => surtirMasivoMut.mutate()}
               disabled={surtirMasivoMut.isPending || !almacenId}
@@ -1329,7 +1329,7 @@ export default function DemandaPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAsignarDialog(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowAsignarDialog(false)}>Cancelar</Button>
             <Button
               onClick={() => asignarRepartidorMut.mutate()}
               disabled={asignarRepartidorMut.isPending || !asignarRepartidorId}

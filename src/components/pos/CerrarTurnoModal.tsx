@@ -100,7 +100,7 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>
+          <Button variant="cancelar" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>
           <Button variant="destructive" onClick={handleSubmit} disabled={busy}>{busy ? 'Cerrando…' : 'Cerrar turno'}</Button>
         </DialogFooter>
       </DialogContent>

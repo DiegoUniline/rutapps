@@ -488,7 +488,7 @@ export default function AuditoriasPage() {
               <Textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2} />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={resetForm}>Cancelar</Button>
+              <Button variant="cancelar" onClick={resetForm}>Cancelar</Button>
               <Button onClick={() => crearAuditoria.mutate()} disabled={crearAuditoria.isPending || !canCreate}>
                 {crearAuditoria.isPending ? 'Creando...' : 'Crear y comenzar conteo'}
               </Button>

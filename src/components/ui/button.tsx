@@ -12,7 +12,9 @@ const buttonVariants = cva(
         // D-029: azul = confirmar/guardar/cobrar/crear; naranja = editar; rojo contorno = cancelar/eliminar.
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         editar: "bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90",
-        destructive: "border border-destructive/40 bg-background text-destructive hover:bg-destructive/5",
+        // D-042: rojo suave (texto y borde rojos, fondo casi blanco) para Cancelar/Descartar/Eliminar.
+        destructive: "border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10",
+        cancelar: "border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10",
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",

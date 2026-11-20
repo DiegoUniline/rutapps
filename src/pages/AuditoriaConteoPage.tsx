@@ -562,7 +562,7 @@ export default function AuditoriaConteoPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCerrarAuditoria} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleCerrarAuditoria} className="border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10">
               {closing ? 'Cerrando...' : 'Sí, cerrar auditoría'}
             </AlertDialogAction>
           </AlertDialogFooter>

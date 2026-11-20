@@ -381,9 +381,9 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="cancelar" onClick={onClose}>Cancelar</Button>
           <Button onClick={submit} disabled={upsert.isPending || batch.isPending || !canSave()}>
-            {upsert.isPending || batch.isPending ? 'Guardando...' : (isEdit ? 'Guardar cambios' : 'Guardar metas')}
+            {upsert.isPending || batch.isPending ? 'Guardando...' : (isEdit ? 'Guardar' : 'Guardar metas')}
           </Button>
         </DialogFooter>
       </DialogContent>

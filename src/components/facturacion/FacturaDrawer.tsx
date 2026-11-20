@@ -238,7 +238,7 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
               {creating ? 'Creando...' : `Crear Factura (${fmt(totalSelected)})`}
             </Button>
-            <Button variant="outline" onClick={onClose} disabled={creating}>Cancelar</Button>
+            <Button variant="cancelar" onClick={onClose} disabled={creating}>Cancelar</Button>
           </div>
         </div>
       </SheetContent>

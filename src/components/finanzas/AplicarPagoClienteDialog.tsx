@@ -321,7 +321,7 @@ export default function AplicarPagoClienteDialog({ open, onOpenChange, cliente, 
         )}
 
         <DialogFooter className="border-t pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+          <Button variant="cancelar" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
           <Button onClick={handleAplicar} disabled={saving || isLoading || totalDistribuido <= 0} className="gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             {saving ? 'Aplicando…' : `Aplicar ${fmt(totalDistribuido)}`}

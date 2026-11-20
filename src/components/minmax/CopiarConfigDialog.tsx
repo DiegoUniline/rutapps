@@ -59,7 +59,7 @@ export function CopiarConfigDialog({ open, onOpenChange, almacenes, origenInicia
           )}
         </div>
         <DialogFooter>
-          <button className="btn-odoo" onClick={() => onOpenChange(false)}>Cancelar</button>
+          <button className="btn-cancelar btn-odoo" onClick={() => onOpenChange(false)}>Cancelar</button>
           <button
             className="btn-odoo-primary"
             disabled={!origen || destinos.length === 0}

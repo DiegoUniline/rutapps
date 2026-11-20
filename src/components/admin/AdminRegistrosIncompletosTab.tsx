@@ -336,7 +336,7 @@ export default function AdminRegistrosIncompletosTab() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
+              <Button variant="cancelar" onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
               <Button onClick={handleManualCreate} disabled={creating}>
                 {creating && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
                 Crear empresa y usuario

@@ -337,7 +337,7 @@ export default function CommissionClientsPanel({ companies, people, attributions
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedCompany(null)} disabled={saving}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setSelectedCompany(null)} disabled={saving}>Cancelar</Button>
             <Button onClick={save} disabled={saving}>{saving ? 'Guardando...' : 'Guardar asignación'}</Button>
           </DialogFooter>
         </DialogContent>

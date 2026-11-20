@@ -411,7 +411,7 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
         </label>
 
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="btn-odoo-secondary">Cancelar</button>
+          <button onClick={onClose} className="btn-cancelar btn-odoo-secondary">Cancelar</button>
           <button onClick={onSave} disabled={saving} className="btn-odoo-primary">{saving ? 'Guardando...' : 'Guardar'}</button>
         </div>
       </div>

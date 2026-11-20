@@ -1088,7 +1088,7 @@ export default function TraspasoFormPage() {
             <AlertDialogDescription>{confirmDialog?.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>No, volver</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className={confirmDialog?.action === 'cancelar' ? 'bg-destructive hover:bg-destructive/90' : ''}
               onClick={() => {

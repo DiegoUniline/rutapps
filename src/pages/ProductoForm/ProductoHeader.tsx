@@ -76,7 +76,7 @@ export function ProductoHeader({ form, set, isNew, isDirty, starred, setStarred,
               <button onClick={handleSave} disabled={saving || !isDirty} className={isDirty ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
                 <Save className="h-3.5 w-3.5" /> Guardar
               </button>
-              <button onClick={onDiscard} className="btn-odoo-secondary"><X className="h-3.5 w-3.5" /> Descartar</button>
+              <button onClick={onDiscard} className="btn-cancelar btn-odoo-secondary"><X className="h-3.5 w-3.5" /> Descartar</button>
               {!isNew && <button onClick={handleDelete} className="btn-odoo-danger" aria-label="Eliminar producto"><Trash2 className="h-3.5 w-3.5" /></button>}
             </div>
           </div>

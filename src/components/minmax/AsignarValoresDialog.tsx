@@ -61,7 +61,7 @@ export function AsignarValoresDialog({ open, onOpenChange, almacenes, almacenIni
           {invalido && <p className="text-[12px] text-destructive">El máximo no puede ser menor al mínimo.</p>}
         </div>
         <DialogFooter>
-          <button className="btn-odoo" onClick={() => onOpenChange(false)}>Cancelar</button>
+          <button className="btn-cancelar btn-odoo" onClick={() => onOpenChange(false)}>Cancelar</button>
           <button
             className="btn-odoo-primary"
             disabled={destinos.length === 0 || invalido || (nMin == null && nMax == null)}

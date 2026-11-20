@@ -118,7 +118,7 @@ export function MermaConfigDialog({ open, onOpenChange }: { open: boolean; onOpe
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+          <Button variant="cancelar" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
           <Button onClick={save} disabled={saving || loading}>
             {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
           </Button>

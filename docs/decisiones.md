@@ -245,3 +245,9 @@
 - **Decisión:** la comisión sigue el **modo de precio** del producto. **Listas de precio** → la da la regla de la lista (el producto no muestra casilla propia; se cambia en la lista). **Precio fijo** → la da el producto (porcentaje o monto fijo por pieza) y las listas no aplican.
 - **Implementación:** `fn_fill_venta_linea_comision` (migración `20261120190000`), pestaña Comisiones del producto, matriz Precios y Comisiones. Solo renglones nuevos o editados.
 - **Corrige además:** la comisión de productos de precio fijo nunca se cobraba en ventas (la BD solo miraba listas).
+
+## D-042
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Aplicar las 4»)
+- **Decisión (botones en todo el sistema):** (1) formularios: «Guardar» azul RutApp y «Descartar» rojo suave; se eliminan «Guardar cambios», «Salir» o «Cancelar» para no guardar. (2) Modales/confirmaciones: «Cancelar» rojo suave (texto y borde rojos, fondo casi blanco); «No, volver» → «Cancelar». (3) Destructivos (Eliminar, Dar de baja, Cancelar venta/compra) también rojo suave, nunca rojo sólido; la confirmación dice la acción concreta. (4) Ventanas solo de consulta: «Cerrar» gris contorno; regresar = flecha ← gris.
+- **Implementación:** `Button` variante `cancelar` y `destructive` suave; `AlertDialogCancel` usa `cancelar`; clase `btn-cancelar` para botones HTML; barrido de 128 «Cancelar», 11 rojos sólidos y 15 textos.
+- **Forma de preguntar:** el dueño marcó las 4 opciones de «MARCA LO QUE QUIERES QUITAR» queriendo aplicarlas; en adelante preguntar en positivo («marca lo que SÍ quieres»).
