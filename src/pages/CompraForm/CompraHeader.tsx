@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { downloadOrdenCompraPdf, downloadOrdenCompraExcel } from '@/lib/ordenCompraPdf';
 import { toast } from 'sonner';
 import { setUnsavedChanges } from '@/lib/unsavedChanges';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MenuAcciones, CLASE_ITEM_MENU } from '@/components/shared/MenuAcciones';
 
 
 interface Props {
@@ -37,6 +39,7 @@ interface Props {
 
 export function CompraHeader(p: Props) {
   const { fmt } = useCurrency();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const key = `compra:${p.form.id ?? (p.isNew ? 'nueva' : 'sin-id')}`;
@@ -56,6 +59,8 @@ export function CompraHeader(p: Props) {
       window.removeEventListener('beforeunload', beforeUnload);
     };
   }, [p.dirty, p.form.id, p.form.folio, p.isNew]);
+
+  if (isMobile) return <CompraHeaderMovil {...p} />;
 
   return (
     <>
@@ -93,7 +98,7 @@ export function CompraHeader(p: Props) {
 }
 
 /** Descarga individual de la orden de compra (PDF B/N o Excel). */
-function ExportarOrdenCompra({ compraId }: { compraId: string }) {
+function ExportarOrdenCompra({ compraId, item }: { compraId: string; item?: boolean }) {
   const { empresa } = useAuth();
   const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
 
@@ -114,16 +119,119 @@ function ExportarOrdenCompra({ compraId }: { compraId: string }) {
 
   return (
     <>
-      <button onClick={() => exportar('pdf')} disabled={exporting !== null} className="btn-odoo gap-1" title="Descargar orden de compra en PDF">
+      <button onClick={() => exportar('pdf')} disabled={exporting !== null} className={item ? CLASE_ITEM_MENU : 'btn-odoo gap-1'} title="Descargar orden de compra en PDF">
         {exporting === 'pdf' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />} PDF
       </button>
-      <button onClick={() => exportar('excel')} disabled={exporting !== null} className="btn-odoo gap-1" title="Descargar orden de compra en Excel">
+      <button onClick={() => exportar('excel')} disabled={exporting !== null} className={item ? CLASE_ITEM_MENU : 'btn-odoo gap-1'} title="Descargar orden de compra en Excel">
         {exporting === 'excel' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />} Excel
       </button>
     </>
   );
 }
 
+
+const ESTATUS_COMPRA_CLASE: Record<string, string> = {
+  borrador: 'bg-muted text-muted-foreground',
+  confirmada: 'bg-primary/10 text-primary',
+  recibida: 'bg-success/10 text-success',
+  pagada: 'bg-success/10 text-success',
+  cancelada: 'bg-destructive/10 text-destructive',
+};
+
+/**
+ * Teléfono: solo las acciones principales a la vista (Recibir y Pagar, o Confirmar / Guardar);
+ * todo lo demás (PDF, Excel, editar, marcar pagada, cancelar, eliminar) va en el menú «⋯».
+ */
+function CompraHeaderMovil(p: Props) {
+  const { fmt } = useCurrency();
+  const { form, setConfirmDialog, saldoActual, totals, hayPendienteRecibir } = p;
+  const enCurso = !p.isNew && !p.editingExisting;
+  const puedeRecibir = enCurso && hayPendienteRecibir && !['borrador', 'cancelada'].includes(form.status);
+  const puedePagar = enCurso && saldoActual > 0 && !['borrador', 'pagada', 'cancelada'].includes(form.status) && !!p.onRegistrarPago;
+  const puedeConfirmar = enCurso && form.status === 'borrador';
+  const puedeMarcarPagada = enCurso && form.status === 'recibida' && saldoActual === 0 && totals.total > 0;
+  const puedeCancelar = enCurso && form.status !== 'cancelada' && form.status !== 'borrador';
+  const puedeEditar = !p.isNew && !p.isEditable && form.status !== 'cancelada';
+  const hayMenu = (!p.isNew && !!form.id) || puedeEditar || p.editingExisting || puedeMarcarPagada || puedeCancelar
+    || (form.status === 'borrador' && !p.isNew);
+  const botonPrincipal = 'flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-lg text-sm font-semibold bg-primary text-primary-foreground active:scale-[0.98] disabled:opacity-50';
+
+  return (
+    <>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <button onClick={p.onBack} className="btn-odoo-secondary !h-9 !w-9 !p-0 shrink-0" aria-label="Regresar"><ArrowLeft className="h-4 w-4" /></button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <h1 className="text-base font-semibold text-foreground truncate">{p.isNew ? 'Nueva compra' : `Compra ${form.folio ?? ''}`}</h1>
+              {!p.isNew && (
+                <span className={cn('shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide', ESTATUS_COMPRA_CLASE[form.status] ?? 'bg-muted text-muted-foreground')}>
+                  {form.status}
+                </span>
+              )}
+            </div>
+            {!p.isNew && <p className="text-xs text-muted-foreground tabular-nums">Pagado {fmt(p.totalPagado)} · Saldo {fmt(Math.max(0, totals.total - p.totalPagado))}</p>}
+          </div>
+          {hayMenu && (
+            <MenuAcciones className="shrink-0">
+              {!p.isNew && form.id && <ExportarOrdenCompra compraId={form.id} item />}
+              {puedeEditar && (
+                <button data-cierra-menu onClick={p.beginEditing} className={CLASE_ITEM_MENU}><Pencil className="h-3.5 w-3.5" /> Editar factura</button>
+              )}
+              {p.editingExisting && (
+                <button data-cierra-menu onClick={p.cancelEditing} disabled={p.saving} className={CLASE_ITEM_MENU}><X className="h-3.5 w-3.5" /> Descartar edición</button>
+              )}
+              {puedeMarcarPagada && (
+                <button data-cierra-menu onClick={() => setConfirmDialog({ open: true, action: 'pagada', title: 'Marcar como pagada', description: '¿Marcar esta compra como pagada?' })} className={CLASE_ITEM_MENU}>
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Marcar pagada
+                </button>
+              )}
+              {puedeCancelar && (
+                <button data-cierra-menu disabled={p.cancelling} onClick={() => setConfirmDialog({ open: true, action: 'cancelar', title: 'Cancelar compra', description: '¿Cancelar? Se revertirá la mercancía recibida y se borrarán los pagos. La operación se aplicará completa o no modificará nada.' })} className={cn(CLASE_ITEM_MENU, 'text-destructive')}>
+                  <Ban className="h-3.5 w-3.5" /> {p.cancelling ? 'Cancelando…' : 'Cancelar compra'}
+                </button>
+              )}
+              {form.status === 'borrador' && !p.isNew && (
+                <button data-cierra-menu onClick={p.handleDelete} className={cn(CLASE_ITEM_MENU, 'text-destructive')}><Trash2 className="h-3.5 w-3.5" /> Eliminar borrador</button>
+              )}
+            </MenuAcciones>
+          )}
+        </div>
+
+        {(p.isEditable || puedeConfirmar || puedeRecibir || puedePagar) && (
+          <div className="flex gap-2">
+            {p.isEditable && (
+              <button onClick={p.handleSave} disabled={p.saving || (!p.dirty && !p.isNew)} className={botonPrincipal}>
+                {p.saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {p.saving ? 'Guardando…' : 'Guardar'}
+              </button>
+            )}
+            {puedeConfirmar && !p.isEditable && (
+              <button onClick={() => setConfirmDialog({ open: true, action: 'confirmada', title: 'Confirmar compra', description: '¿Confirmar esta compra?' })} className={botonPrincipal}>
+                <CheckCircle2 className="h-4 w-4" /> Confirmar
+              </button>
+            )}
+            {puedeRecibir && (
+              <button onClick={() => setConfirmDialog({ open: true, action: 'recibir_todo', title: 'Recibir mercancía pendiente', description: 'Se sumará al almacén todo lo que aún no se ha recibido de esta compra. ¿Continuar?' })} className={botonPrincipal}>
+                <PackageCheck className="h-4 w-4" /> Recibir
+              </button>
+            )}
+            {puedePagar && (
+              <button onClick={p.onRegistrarPago} className={botonPrincipal}>
+                <DollarSign className="h-4 w-4" /> Pagar
+              </button>
+            )}
+          </div>
+        )}
+
+        {enCurso && hayPendienteRecibir && form.status !== 'borrador' && form.status !== 'cancelada' && (
+          <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Hay mercancía pendiente por recibir</p>
+        )}
+        {p.editingExisting && <p className="text-xs text-muted-foreground">Guarda o descarta la edición para continuar con recepción, pago o cancelación.</p>}
+      </div>
+      <ConfirmDialog {...p} />
+    </>
+  );
+}
 
 function StatusBar(p: Props) {
   const { fmt } = useCurrency();
@@ -138,10 +246,10 @@ function StatusBar(p: Props) {
         {form.status === 'cancelada' && <Ban className="h-3 w-3" />}{form.status === 'pagada' && <CheckCircle2 className="h-3 w-3" />}{form.status === 'recibida' && <PackageCheck className="h-3 w-3" />}{form.status}
       </span>
       {!p.editingExisting && form.status === 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'confirmada', title: 'Confirmar compra', description: '¿Confirmar esta compra?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-95"><CheckCircle2 className="h-4 w-4" />Confirmar</button>}
-      {!p.editingExisting && puedeRecibir && <button onClick={() => setConfirmDialog({ open: true, action: 'recibir_todo', title: 'Recibir mercancía pendiente', description: 'Se sumará al almacén todo lo que aún no se ha recibido de esta compra. ¿Continuar?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95"><PackageCheck className="h-4 w-4" />Recibir todo lo pendiente</button>}
+      {!p.editingExisting && puedeRecibir && <button onClick={() => setConfirmDialog({ open: true, action: 'recibir_todo', title: 'Recibir mercancía pendiente', description: 'Se sumará al almacén todo lo que aún no se ha recibido de esta compra. ¿Continuar?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"><PackageCheck className="h-4 w-4" />Recibir todo lo pendiente</button>}
       {!p.editingExisting && form.status === 'recibida' && saldoActual === 0 && totals.total > 0 && <button onClick={() => setConfirmDialog({ open: true, action: 'pagada', title: 'Marcar como pagada', description: '¿Marcar esta compra como pagada?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"><CheckCircle2 className="h-4 w-4" />Marcar pagada</button>}
-      {!p.editingExisting && form.status !== 'cancelada' && form.status !== 'borrador' && <button disabled={p.cancelling} onClick={() => setConfirmDialog({ open: true, action: 'cancelar', title: 'Cancelar compra', description: '¿Cancelar? Se revertirá la mercancía recibida y se borrarán los pagos. La operación se aplicará completa o no modificará nada.' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">{p.cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}{p.cancelling ? 'Cancelando…' : 'Cancelar compra'}</button>}
-      {!p.editingExisting && saldoActual > 0 && !['borrador', 'pagada', 'cancelada'].includes(form.status) && p.onRegistrarPago && <button onClick={p.onRegistrarPago} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-bold bg-success text-white hover:bg-success/90 active:scale-95 shadow-md"><DollarSign className="h-4 w-4" />Registrar pago · {fmt(saldoActual)}</button>}
+      {!p.editingExisting && form.status !== 'cancelada' && form.status !== 'borrador' && <button disabled={p.cancelling} onClick={() => setConfirmDialog({ open: true, action: 'cancelar', title: 'Cancelar compra', description: '¿Cancelar? Se revertirá la mercancía recibida y se borrarán los pagos. La operación se aplicará completa o no modificará nada.' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border border-destructive/50 bg-card text-destructive hover:bg-destructive/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">{p.cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}{p.cancelling ? 'Cancelando…' : 'Cancelar compra'}</button>}
+      {!p.editingExisting && saldoActual > 0 && !['borrador', 'pagada', 'cancelada'].includes(form.status) && p.onRegistrarPago && <button onClick={p.onRegistrarPago} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 shadow-md"><DollarSign className="h-4 w-4" />Registrar pago · {fmt(saldoActual)}</button>}
       {!p.editingExisting && hayPendienteRecibir && form.status !== 'borrador' && form.status !== 'cancelada' && <span className="text-xs text-amber-600 dark:text-amber-400 italic flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Hay mercancía pendiente por recibir</span>}
       {p.editingExisting && <span className="text-xs text-muted-foreground">Guarda o descarta la edición para continuar con recepción, pago o cancelación.</span>}
     </div>
