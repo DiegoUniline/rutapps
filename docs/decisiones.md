@@ -223,3 +223,8 @@
   4. Encabezados de tabla y totales en gris muy claro **dentro** de la misma hoja.
 - **Implementación:** tokens en `src/index.css` (`--app-bg`, `--foreground`, `--muted-foreground`, `--border`), `ListPage` como hoja única, `TABLE_CARD`/`GroupedTableWrapper` sin marco propio dentro de la hoja, detalle de Venta en una hoja.
 - **Forma de preguntar (preferencia del dueño):** en preguntas de selección múltiple el título dice explícitamente «MARCA SOLO LO QUE QUIERES QUITAR» (o «…DEJAR») y cada opción empieza con «Quitar:» / «Dejar:».
+
+## D-038
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO (mockup https://claude.ai/artifact/UJToieXWdZfJquwHXw8QwP; quitó «buscador sigue abierto»)
+- **Decisión (solo teléfono, módulo administrativo):** en **compras, traspasos, ventas y pedidos** los productos se agregan así: botón «Buscar producto» → buscador a pantalla completa (con existencias por producto) → al tocar un producto se despliegan **debajo** cantidad (− / +), presentación, precio/costo editable y subtotal, con botón **Agregar** → al agregar **regresa al documento**.
+- **Variantes:** ventas/pedidos: precio de la lista del cliente, editable solo con permiso; compras: costo; traspasos: sin precio, muestra existencia del almacén origen. Escritorio sin cambios.

@@ -176,3 +176,4 @@
 2026-11-20 · ui-movil · CxC/CxP/Liquidar ruta/Solicitudes de traspaso/Mermas/Promociones: tarjeta estándar en teléfono (Cobrar y eliminar saldo inicial, cancelar merma, editar/eliminar promoción en «⋯») con renglón de totales; tabla de mermas con scroll horizontal en tablet
 2026-11-20 · desarrollador · D-037: fondo gris, hoja blanca única (ListPage y detalle de Venta), mayor contraste de texto y bordes
 2026-11-20 · desarrollador · Compra (teléfono): solo Recibir y Pagar (sin monto) a la vista, en azul (D-029); PDF, Excel, editar, marcar pagada, cancelar y eliminar en menú «⋯»; escritorio: Recibir/Registrar pago en azul y Cancelar en rojo contorno (D-029)
+2026-11-20 · arquitecto · D-038 aprobado: agregar productos en teléfono con buscador y editor desplegable (compras, traspasos, ventas, pedidos)
