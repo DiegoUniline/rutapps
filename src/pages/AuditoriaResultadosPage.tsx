@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn, fmtDate , todayLocal } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generarAuditoriaPdf } from '@/lib/auditoriaPdf';
@@ -166,92 +166,20 @@ export default function AuditoriaResultadosPage() {
 
   const aprobarAuditoria = useMutation({
     mutationFn: async () => {
-      const today = todayLocal();
-      const batchId = crypto.randomUUID();
-      const almacenIdAuditoria = auditoria?.almacen_id ?? null;
-      const adjustedProductIds: string[] = [];
-
-      for (const [lineaId, config] of Object.entries(ajustes)) {
-        if (!config.ajustar) continue;
-        const linea = (lineas ?? []).find((l: any) => l.id === lineaId) as any;
-        if (!linea || linea.cantidad_real === null) continue;
-
-        const diff = linea.cantidad_real - linea.cantidad_esperada;
-        const motivo = config.motivo || motivoGlobal || 'Ajuste por auditoría';
-
-        // Read actual current stock before adjusting
-        let stockAnterior = 0;
-        if (almacenIdAuditoria) {
-          const { data: currentStock } = await supabase
-            .from('stock_almacen')
-            .select('cantidad')
-            .eq('almacen_id', almacenIdAuditoria)
-            .eq('producto_id', linea.producto_id)
-            .maybeSingle();
-          stockAnterior = currentStock?.cantidad ?? 0;
-
-          await supabase.from('stock_almacen').upsert({
-            empresa_id: empresa!.id,
-            almacen_id: almacenIdAuditoria,
-            producto_id: linea.producto_id,
-            cantidad: linea.cantidad_real,
-          } as any, { onConflict: 'almacen_id,producto_id' });
-          adjustedProductIds.push(linea.producto_id);
-        } else {
-          // productos.cantidad is auto-recalculated by trigger when stock_almacen changes
-        }
-
-        const diffReal = (linea.cantidad_real ?? 0) - stockAnterior;
-
-        await supabase.from('movimientos_inventario').insert({
-          empresa_id: empresa!.id,
-          tipo: diffReal > 0 ? 'entrada' : 'salida',
-          producto_id: linea.producto_id,
-          cantidad: Math.abs(diffReal),
-          referencia_tipo: 'auditoria',
-          referencia_id: id,
-          user_id: user?.id,
-          fecha: today,
-          ...(diffReal > 0
-            ? { almacen_destino_id: almacenIdAuditoria }
-            : { almacen_origen_id: almacenIdAuditoria }),
-          notas: motivo,
-        } as any);
-
-        await supabase.from('ajustes_inventario').insert({
-          empresa_id: empresa!.id,
-          producto_id: linea.producto_id,
-          cantidad_anterior: stockAnterior,
-          cantidad_nueva: linea.cantidad_real,
-          diferencia: diff,
-          motivo,
-          user_id: user!.id,
-          fecha: today,
-          almacen_id: almacenIdAuditoria,
-          batch_id: batchId,
-        } as any);
-
-        await supabase.from('auditoria_lineas').update({ ajustado: true } as any).eq('id', lineaId);
-      }
-
-      // Sync global totals from stock_almacen
-      if (almacenIdAuditoria && adjustedProductIds.length > 0) {
-        // productos.cantidad is auto-recalculated by trigger when stock_almacen changes
-      }
-
-      for (const [lineaId, config] of Object.entries(ajustes)) {
-        if (config.ajustar) continue;
-        await supabase.from('auditoria_lineas').update({
-          notas: config.motivo || motivoGlobal || 'No se ajustó',
-        } as any).eq('id', lineaId);
-      }
-
-      await supabase.from('auditorias').update({
-        status: 'aprobada',
-        aprobado_por: profile?.id,
-        fecha_aprobacion: new Date().toISOString(),
-        notas_supervisor: motivoGlobal || null,
-      } as any).eq('id', id!);
+      // Una sola operación en la BD: ajusta existencias (solo la diferencia, con kardex), marca los
+      // renglones y aprueba la auditoría, o no hace nada.
+      const payload = Object.entries(ajustes).map(([lineaId, config]) => ({
+        linea_id: lineaId,
+        ajustar: !!config.ajustar,
+        motivo: config.motivo || null,
+      }));
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      const { error } = await rpc('aprobar_auditoria', {
+        p_auditoria_id: id!,
+        p_ajustes: payload,
+        p_motivo_global: motivoGlobal || null,
+      });
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       toast.success('Auditoría aprobada — stock ajustado');

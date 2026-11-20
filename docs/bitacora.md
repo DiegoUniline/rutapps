@@ -148,3 +148,4 @@
 2026-11-20 · desarrollador · Detalle de venta: saldo de pedido por lo entregado desde la BD (D-034); el tope de pago sigue siendo el total (pago anticipado)
 2026-11-20 · desarrollador · Reportes personalizados: listas de ids en trozos de 200 (no desbordan la URL); loadMap con errores visibles
 2026-11-20 · desarrollador · surtir_entrega: surtir todos los renglones + estado en una transacción (asignar/cargar masivo y crear entrega desde pedido)
+2026-11-20 · desarrollador · aprobar_auditoria: ajuste de existencias en una transacción vía aplicar_ajuste_inventario (antes lectura+sobrescritura de stock desde el navegador)
