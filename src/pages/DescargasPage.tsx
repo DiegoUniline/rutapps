@@ -2421,7 +2421,7 @@ export default function DescargasPage() {
   const filtradasMovil = useMemo(() => {
     const q = busquedaMovil.trim().toLowerCase();
     if (!q) return filtered;
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(filtered.filter((d: any) => `${d.vendedores?.nombre ?? ''} ${d.fecha ?? ''} ${d.notas ?? ''}`.toLowerCase().includes(q)),
       busquedaMovil, () => [], (d: any) => [d.vendedores?.nombre, d.fecha, d.notas]);
   }, [filtered, busquedaMovil]);

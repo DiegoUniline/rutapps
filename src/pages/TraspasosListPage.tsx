@@ -189,7 +189,7 @@ export default function TraspasosListPage() {
     }
     if (desde) list = list.filter((t: any) => (t.fecha ?? '').slice(0, 10) >= desde);
     if (hasta) list = list.filter((t: any) => (t.fecha ?? '').slice(0, 10) <= hasta);
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(list, search, (t: any) => [t.folio], (t: any) => [getOrigenLabel(t), getDestinoLabel(t)]);
   }, [traspasos, search, filters.status, filters.tipo, desde, hasta]);
 
@@ -265,7 +265,7 @@ export default function TraspasosListPage() {
     }
     if (desdeD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) >= desdeD);
     if (hastaD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) <= hastaD);
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(list, searchD, l => [l.folio, l.codigo], l => [l.producto, l.origen, l.destino]);
   }, [lineasRaw, searchD, filtersD.status, filtersD.tipo, desdeD, hastaD]);
 

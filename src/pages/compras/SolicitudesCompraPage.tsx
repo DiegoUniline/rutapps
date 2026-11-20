@@ -86,7 +86,7 @@ export default function SolicitudesCompraPage() {
     if (estadoMovil && s.status !== estadoMovil) return false;
     const q = buscarMovil.trim().toLowerCase();
     return !q || `${s.folio ?? ''} ${s.proveedores?.nombre ?? s.proveedor_nombre ?? ''}`.toLowerCase().includes(q);
-  }), buscarMovil, (s: any) => [s.folio], (s: any) => [s.proveedores?.nombre ?? s.proveedor_nombre]); // D-046
+  }), buscarMovil, (s: any) => [s.folio], (s: any) => [s.proveedores?.nombre ?? s.proveedor_nombre]); // D-047
   const movil = useCargarMasMovil(itemsMovil, `${buscarMovil}|${estadoMovil}`);
 
   const detailQuery = useQuery({

@@ -346,7 +346,7 @@ export default function CobranzaPage() {
     }
     if (dateFrom) list = list.filter(c => (c.fecha ?? '').slice(0, 10) >= dateFrom);
     if (dateTo) list = list.filter(c => (c.fecha ?? '').slice(0, 10) <= dateTo);
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(list, search, c => [c.referencia], c => [(c.clientes as any)?.nombre]);
   }, [cobros, filters, search, dateFrom, dateTo]);
 

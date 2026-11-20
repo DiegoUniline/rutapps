@@ -101,7 +101,7 @@ export default function PagosProveedoresPage() {
       }
       return true;
     });
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(lista, search, p => [p.compra_folio, p.referencia], p => [p.proveedor]);
   }, [pagos, desde, hasta, filtroMetodo, filtroProveedor, search]);
 

@@ -42,7 +42,7 @@ export default function SolicitudTraspasoListPage() {
       return [s.folio, s.almacen_origen?.nombre, s.almacen_destino?.nombre, s.solicitante?.nombre]
         .some(v => (v ?? '').toLowerCase().includes(q));
     });
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(lista, search, s => [s.folio], s => [s.almacen_origen?.nombre, s.almacen_destino?.nombre, s.solicitante?.nombre]);
   }, [solicitudes, tab, search]);
 

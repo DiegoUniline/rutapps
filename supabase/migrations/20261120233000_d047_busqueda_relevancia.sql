@@ -1,4 +1,4 @@
--- D-046 · Búsqueda por relevancia antes que por fecha.
+-- D-047 · Búsqueda por relevancia antes que por fecha.
 -- Con texto de búsqueda, las listas ordenan primero:
 --   0) folio/código idéntico (sin importar mayúsculas) o mismo número de folio
 --      («2000», «ent-2000» o «ENT-002000» encuentran ENT-2000),
@@ -45,7 +45,7 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION public.fn_busqueda_relevancia(text, text, boolean) IS
-  'D-046: relevancia de búsqueda (0 folio/código exacto o mismo número de folio, 1 empieza con, 2 contiene, 3 no coincide). Espejo: src/lib/busquedaRelevancia.ts.';
+  'D-047: relevancia de búsqueda (0 folio/código exacto o mismo número de folio, 1 empieza con, 2 contiene, 3 no coincide). Espejo: src/lib/busquedaRelevancia.ts.';
 
 REVOKE ALL ON FUNCTION public.fn_busqueda_relevancia(text, text, boolean) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.fn_busqueda_relevancia(text, text, boolean) TO authenticated, service_role;
@@ -66,7 +66,7 @@ DECLARE
   END;
   v_result jsonb;
   v_search text := NULLIF(BTRIM(p_search), '');
-  -- D-046: número buscado si el texto tiene forma de folio («2000», «ENT-002000»); NULL si no.
+  -- D-047: número buscado si el texto tiene forma de folio («2000», «ENT-002000»); NULL si no.
   v_num text := CASE WHEN BTRIM(p_search) ~ '^[A-Za-z]*[^0-9A-Za-z]*0*[1-9][0-9]*$' THEN ltrim(substring(BTRIM(p_search), '([0-9]+)$'), '0') END;
 BEGIN
   IF auth.uid() IS NULL THEN
@@ -137,7 +137,7 @@ BEGIN
       e.created_at,
       v.folio AS pedido_folio,
       v.fecha AS pedido_fecha,
-      -- D-046: relevancia de la búsqueda (0 folio exacto, 1 empieza con, 2 contiene, 3 otro).
+      -- D-047: relevancia de la búsqueda (0 folio exacto, 1 empieza con, 2 contiene, 3 otro).
       CASE WHEN v_search IS NULL THEN 0 ELSE (
         SELECT CASE WHEN x.r <= 1 THEN x.r ELSE LEAST(x.r, COALESCE((
           SELECT MIN(LEAST(public.fn_busqueda_relevancia(prs.codigo, v_search, false), public.fn_busqueda_relevancia(prs.nombre, v_search, false)))
@@ -332,7 +332,7 @@ CREATE OR REPLACE FUNCTION public.fn_logistica_pedidos_page_v4(p_empresa_id uuid
     AS $$
 DECLARE
   v_started_at timestamptz := clock_timestamp();
-  -- D-046: número buscado si el texto tiene forma de folio («2000», «PED-002000»); NULL si no.
+  -- D-047: número buscado si el texto tiene forma de folio («2000», «PED-002000»); NULL si no.
   v_num text := CASE WHEN BTRIM(p_search) ~ '^[A-Za-z]*[^0-9A-Za-z]*0*[1-9][0-9]*$' THEN ltrim(substring(BTRIM(p_search), '([0-9]+)$'), '0') END;
   v_page_size integer := CASE
     WHEN COALESCE(p_page_size, 50) <= 0 THEN NULL
@@ -388,7 +388,7 @@ BEGIN
         ELSE v.fecha
       END AS sort_date,
       v.created_at,
-      -- D-046: relevancia de la búsqueda (0 folio exacto, 1 empieza con, 2 contiene, 3 otro).
+      -- D-047: relevancia de la búsqueda (0 folio exacto, 1 empieza con, 2 contiene, 3 otro).
       CASE WHEN NULLIF(BTRIM(p_search), '') IS NULL THEN 0 ELSE (
         SELECT CASE WHEN x.r <= 1 THEN x.r ELSE LEAST(x.r, COALESCE((
           SELECT MIN(LEAST(public.fn_busqueda_relevancia(pr.codigo, p_search, false), public.fn_busqueda_relevancia(pr.nombre, p_search, false)))
@@ -511,7 +511,7 @@ CREATE OR REPLACE FUNCTION public.fn_logistica_pedidos_counts_v4(p_empresa_id uu
     AS $$
 DECLARE
   v_started_at timestamptz := clock_timestamp();
-  -- D-046: número buscado si el texto tiene forma de folio («2000», «PED-002000»); NULL si no.
+  -- D-047: número buscado si el texto tiene forma de folio («2000», «PED-002000»); NULL si no.
   v_num text := CASE WHEN BTRIM(p_search) ~ '^[A-Za-z]*[^0-9A-Za-z]*0*[1-9][0-9]*$' THEN ltrim(substring(BTRIM(p_search), '([0-9]+)$'), '0') END;
   v_result jsonb;
 BEGIN

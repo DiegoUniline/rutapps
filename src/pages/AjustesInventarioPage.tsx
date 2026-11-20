@@ -287,7 +287,7 @@ export default function AjustesInventarioPage() {
       const s = search.toLowerCase();
       result = result.filter(r => r.nombre.toLowerCase().includes(s) || r.codigo.toLowerCase().includes(s));
     }
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(result, search, r => [r.codigo], r => [r.nombre]);
   }, [modeRows, search, selectedCats]);
 
@@ -702,7 +702,7 @@ export default function AjustesInventarioPage() {
     }
     if (desdeH) list = list.filter(l => (l.fecha ?? '') >= desdeH);
     if (hastaH) list = list.filter(l => (l.fecha ?? '') <= hastaH);
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(list, searchH, l => [l.codigo], l => [l.producto, l.almacen, l.usuario, l.motivo]);
   }, [allItems, searchH, filtersH.almacen, desdeH, hastaH]);
 

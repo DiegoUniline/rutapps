@@ -188,7 +188,7 @@ export default function DevolucionesListPage() {
       }
       return true;
     });
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(lista, search,
       d => [d.ventas?.folio, ...(d.devolucion_lineas ?? []).map((l: any) => l.productos?.codigo)],
       d => [d.clientes?.nombre, d.ventas?.vendedor?.nombre, d.vendedores?.nombre, d.registradoPor, ...(d.devolucion_lineas ?? []).map((l: any) => l.productos?.nombre)]);

@@ -60,7 +60,7 @@ export default function MermasPage() {
   const mermasMovil = ordenarPorRelevancia((mermas ?? []).filter((m: any) => {
     const q = busquedaMovil.trim().toLowerCase();
     return !q || `${m.folio ?? ''} ${m.merma_motivos?.nombre ?? ''} ${m.almacenes?.nombre ?? ''} ${m.profiles?.nombre ?? ''}`.toLowerCase().includes(q);
-  }), busquedaMovil, (m: any) => [m.folio], (m: any) => [m.merma_motivos?.nombre, m.almacenes?.nombre, m.profiles?.nombre]); // D-046
+  }), busquedaMovil, (m: any) => [m.folio], (m: any) => [m.merma_motivos?.nombre, m.almacenes?.nombre, m.profiles?.nombre]); // D-047
   const movil = useCargarMasMovil(mermasMovil, `${busquedaMovil}|${desde}|${hasta}`);
   const registrar = useRegistrarMerma();
   const cancelar = useCancelarMerma();

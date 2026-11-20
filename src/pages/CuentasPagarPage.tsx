@@ -53,7 +53,7 @@ function useCuentasPagar(search: string, empresaId?: string) {
           ((c.proveedores as any)?.nombre ?? '').toLowerCase().includes(s)
         );
       }
-      // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+      // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
       return ordenarPorRelevancia(filtered, search, (c: any) => [c.folio], (c: any) => [(c.proveedores as any)?.nombre]);
     },
   });

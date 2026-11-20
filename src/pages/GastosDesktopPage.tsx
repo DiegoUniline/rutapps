@@ -179,7 +179,7 @@ export default function GastosDesktopPage() {
       if (hasta && g.fecha > hasta) return false;
       return true;
     });
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(lista, search, () => [], (g: any) => [g.concepto, g.notas]);
   }, [gastos, search, vendedorFilter, desde, hasta]);
 

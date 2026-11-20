@@ -12,7 +12,7 @@ import { filtroCoincidenciaExacta, listaIdsPostgrest, MAX_EXACTOS, paginaConExac
 
 
 /**
- * D-046: ids de ventas con folio exacto (o mismo número) y de productos con código exacto,
+ * D-047: ids de ventas con folio exacto (o mismo número) y de productos con código exacto,
  * para la vista por producto. `filtro` sirve para anteponer esos renglones en la página 1.
  */
 async function idsExactosLineas(empresaId: string, search: string) {
@@ -68,7 +68,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         const vendedorIds = (vendedoresRes.data ?? []).map((r: any) => r.id);
         const almacenIds = (almacenesRes.data ?? []).map((r: any) => r.id);
         const orParts: string[] = [`folio.ilike.%${s}%`];
-        // D-046: «VTA-002000» también encuentra VTA-2000 (mismo número de folio).
+        // D-047: «VTA-002000» también encuentra VTA-2000 (mismo número de folio).
         const exacto = filtroCoincidenciaExacta(['folio'], search);
         if (exacto) orParts.push(exacto);
         if (clienteIds.length) orParts.push(`cliente_id.in.(${clienteIds.join(',')})`);
@@ -125,7 +125,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         return { rows: (rows ?? []) as unknown as Venta[], total: rows?.length ?? 0 };
       }
 
-      // D-046: con búsqueda, el folio exacto va primero (página 1) sin repetirse en otras páginas.
+      // D-047: con búsqueda, el folio exacto va primero (página 1) sin repetirse en otras páginas.
       return paginaConExactosPrimero<Venta>({
         busqueda: search,
         columnas: ['folio'],
@@ -179,7 +179,7 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
         const vendedorIds = (vendedoresRes.data ?? []).map((r: any) => r.id);
         const almacenIds = (almacenesRes.data ?? []).map((r: any) => r.id);
         const orParts: string[] = [`folio.ilike.%${s}%`];
-        // D-046: «VTA-002000» también encuentra VTA-2000 (mismo número de folio).
+        // D-047: «VTA-002000» también encuentra VTA-2000 (mismo número de folio).
         const exacto = filtroCoincidenciaExacta(['folio'], search);
         if (exacto) orParts.push(exacto);
         if (clienteIds.length) orParts.push(`cliente_id.in.(${clienteIds.join(',')})`);
@@ -255,7 +255,7 @@ export function useVentaLineasResumen(search?: string, statusFilter?: string, ti
           supabase.from('productos').select('id').eq('empresa_id', empresa!.id).or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%`).limit(500),
           supabase.from('ventas').select('id').eq('empresa_id', empresa!.id).ilike('folio', `%${s}%`).limit(500),
         ]);
-        // D-046: el folio/código exacto siempre entra aunque haya más de 500 parecidos.
+        // D-047: el folio/código exacto siempre entra aunque haya más de 500 parecidos.
         const productoIds = [...new Set([...exactas.productoIds, ...(productosRes.data ?? []).map((r: any) => r.id)])];
         const ventaIds = [...new Set([...exactas.ventaIds, ...(ventasRes.data ?? []).map((r: any) => r.id)])];
         const orParts: string[] = [];
@@ -334,7 +334,7 @@ export function useVentaLineasPaginated(
           supabase.from('productos').select('id').eq('empresa_id', empresa!.id).or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%`).limit(500),
           supabase.from('ventas').select('id').eq('empresa_id', empresa!.id).ilike('folio', `%${s}%`).limit(500),
         ]);
-        // D-046: el folio/código exacto siempre entra aunque haya más de 500 parecidos.
+        // D-047: el folio/código exacto siempre entra aunque haya más de 500 parecidos.
         const productoIds = [...new Set([...exactas.productoIds, ...(productosRes.data ?? []).map((r: any) => r.id)])];
         const ventaIds = [...new Set([...exactas.ventaIds, ...(ventasRes.data ?? []).map((r: any) => r.id)])];
         const orParts: string[] = [];
@@ -413,7 +413,7 @@ export function useVentaLineasPaginated(
         return { rows, total: rows.length };
       }
 
-      // D-046: renglones de la venta con folio exacto (o del producto con código exacto) primero.
+      // D-047: renglones de la venta con folio exacto (o del producto con código exacto) primero.
       const pagina = await paginaConExactosPrimero<any>({
         busqueda: search,
         filtro: filtroExactas,

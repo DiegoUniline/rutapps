@@ -193,7 +193,7 @@ export default function FacturacionCfdiPage() {
 
   const cancelStatuses = ['cancelado', 'cancelacion_pendiente', 'cancelacion_rechazada'];
 
-  // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+  // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
   const filtered = ordenarPorRelevancia((cfdis || []).filter((c: any) => {
     const q = search.toLowerCase();
     const matchSearch =

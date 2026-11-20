@@ -102,7 +102,7 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
       const applyFilters = (q: any) => {
         q = q.eq('empresa_id', empresa!.id).order('nombre', { ascending: true });
         if (search) {
-          // D-046: código o código de barras (clave alterna) exacto también entra.
+          // D-047: código o código de barras (clave alterna) exacto también entra.
           const exacto = filtroCoincidenciaExacta(['codigo', 'clave_alterna'], search);
           q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%,formula.ilike.%${search}%${exacto ? `,${exacto}` : ''}`);
         }
@@ -136,7 +136,7 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
         return { rows: marcarCatalogosInactivos(rows ?? []) as unknown as Producto[], total: rows?.length ?? 0 };
       }
 
-      // D-046: con búsqueda, el producto con código/código de barras exacto va primero (página 1).
+      // D-047: con búsqueda, el producto con código/código de barras exacto va primero (página 1).
       const pagina = await paginaConExactosPrimero<any>({
         busqueda: search,
         columnas: ['codigo', 'clave_alterna'],

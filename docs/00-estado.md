@@ -10,7 +10,7 @@
 - **Siguiente paso exacto:** decidir datos históricos (cobros sin aplicar, pagado > total, saldos negativos); luego orden de trabajo por fases: F0 seguridad RPC → F1 saldo único + saldo a favor (D-008, D-020, D-021) → F2 pedido↔entrega → F3 inventario (D-022). Corte a Supabase propio: `docs/migracion-corte.md`.
 
 ## Decisiones recientes (últimas 10)
-- [D-046](./decisiones.md#d-046) 2026-11-20 · Con búsqueda, relevancia antes que fecha: folio/código exacto (o mismo número) → empieza con → contiene; la página 1 trae la coincidencia exacta.
+- [D-047](./decisiones.md#d-047) 2026-11-20 · Con búsqueda, relevancia antes que fecha: folio/código exacto (o mismo número) → empieza con → contiene; la página 1 trae la coincidencia exacta.
 - [D-044](./decisiones.md#d-044) 2026-11-20 · Lo inactivo no se ofrece para elegir (se conserva marcado «(inactivo)» donde ya estaba); un maestro en uso no se elimina, se desactiva.
 - [D-043](./decisiones.md#d-043) 2026-11-20 · «−/+» por caja en renglones por presentación (POS y ruta); teclado con decimales en devoluciones a granel.
 - [D-022](./decisiones.md#d-022) 2026-11-19 · Reasignar entrega o cambiar camión siempre mueve stock.

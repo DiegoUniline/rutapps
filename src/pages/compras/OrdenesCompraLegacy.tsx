@@ -197,7 +197,7 @@ function useCompras(search: string, statusFilter: string[], empresaId?: string, 
           ((c.proveedores as any)?.nombre ?? '').toLowerCase().includes(s)
         );
       }
-      // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+      // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
       return ordenarPorRelevancia(filtered, search, (c: any) => [c.folio, c.numero_factura], (c: any) => [(c.proveedores as any)?.nombre]);
     },
   });
@@ -426,7 +426,7 @@ export default function ComprasPage() {
     }
     if (desdeD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) >= desdeD);
     if (hastaD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) <= hastaD);
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(list, searchD, l => [l.folio, l.numero_factura, l.codigo], l => [l.producto, l.proveedor]);
   }, [lineasRaw, searchD, filtersD.status, desdeD, hastaD]);
 

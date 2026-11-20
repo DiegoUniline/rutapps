@@ -1,5 +1,5 @@
 /**
- * D-046 · Búsqueda por relevancia antes que por fecha.
+ * D-047 · Búsqueda por relevancia antes que por fecha.
  *
  * Con texto de búsqueda, las listas ordenan primero:
  *   0) folio/código idéntico (sin importar mayúsculas) o el mismo número de folio
@@ -9,7 +9,7 @@
  * y dentro de cada grupo se respeta el orden normal de la lista.
  *
  * Espejo exacto de `public.fn_busqueda_relevancia` (migración
- * 20261120230000_d046_busqueda_relevancia.sql). Mantener ambos en sincronía.
+ * 20261120233000_d047_busqueda_relevancia.sql). Mantener ambos en sincronía.
  */
 
 export type Relevancia = 0 | 1 | 2 | 3;
@@ -130,7 +130,7 @@ export const MAX_EXACTOS = 50;
 
 /**
  * Página de una lista paginada en servidor que pone primero las coincidencias
- * exactas de folio/código (grupo 0 de D-046) sin duplicarlas en otras páginas.
+ * exactas de folio/código (grupo 0 de D-047) sin duplicarlas en otras páginas.
  *
  * Orden global = [exactos (orden normal)] + [resto (orden normal, sin los exactos)].
  * El total sigue siendo exacto: total = exactos + resto. Sin búsqueda (o sin

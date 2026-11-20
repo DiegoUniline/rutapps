@@ -42,7 +42,7 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
         if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
         if (search) {
           const s = search.replace(/'/g, "''");
-          // D-046: el código exacto (o mismo número: «C-002000» → C-2000) también entra.
+          // D-047: el código exacto (o mismo número: «C-002000» → C-2000) también entra.
           const exacto = filtroCoincidenciaExacta(['codigo'], search);
           q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%,telefono.ilike.%${s}%,contacto.ilike.%${s}%,email.ilike.%${s}%,direccion.ilike.%${s}%,colonia.ilike.%${s}%${exacto ? `,${exacto}` : ''}`);
         }
@@ -74,7 +74,7 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
         return { rows: enriched as unknown as Cliente[], total: enriched.length };
       }
 
-      // D-046: con búsqueda, el cliente con código exacto va primero (página 1) sin repetirse.
+      // D-047: con búsqueda, el cliente con código exacto va primero (página 1) sin repetirse.
       const pagina = await paginaConExactosPrimero<any>({
         busqueda: search,
         columnas: ['codigo'],

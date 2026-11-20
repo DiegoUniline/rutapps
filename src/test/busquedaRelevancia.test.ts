@@ -8,7 +8,7 @@ import {
   relevanciaBusqueda,
 } from '@/lib/busquedaRelevancia';
 
-// Mismos casos que se probaron contra public.fn_busqueda_relevancia (D-046).
+// Mismos casos que se probaron contra public.fn_busqueda_relevancia (D-047).
 describe('relevanciaBusqueda (espejo de fn_busqueda_relevancia)', () => {
   it.each([
     ['ENT-2000', '2000', true, 0],

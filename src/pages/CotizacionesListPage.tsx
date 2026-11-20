@@ -64,7 +64,7 @@ export default function CotizacionesListPage() {
         (c.clientes?.nombre || '').toLowerCase().includes(q)
       );
     });
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(lista, search, c => [c.folio], c => [c.clientes?.nombre]);
   }, [data, search, estadoFilter, dateFrom, dateTo]);
 

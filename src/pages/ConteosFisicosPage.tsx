@@ -80,7 +80,7 @@ export default function ConteosFisicosPage() {
         (c.almacenes as any)?.nombre?.toLowerCase().includes(s)
       );
     }
-    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(list, search, (c: any) => [c.folio], (c: any) => [(c.almacenes as any)?.nombre]);
   }, [conteos, statusFilter, search, fechaDesde, fechaHasta]);
 
