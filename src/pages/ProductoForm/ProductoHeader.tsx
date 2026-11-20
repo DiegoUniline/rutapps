@@ -47,7 +47,7 @@ export function ProductoHeader({ form, set, isNew, isDirty, starred, setStarred,
                 placeholder="Nombre del producto" autoFocus
                 className="text-[22px] font-bold text-foreground leading-tight bg-transparent border-b border-primary/40 focus:border-primary outline-none flex-1 min-w-[180px] max-w-md placeholder:text-muted-foreground/50" />
             ) : (
-              <h1 className="text-[22px] font-bold text-foreground leading-tight cursor-pointer hover:text-primary transition-colors truncate" onClick={() => setEditingName(true)}>
+              <h1 className="text-lg sm:text-[22px] font-bold text-foreground leading-tight cursor-pointer hover:text-primary transition-colors truncate min-w-0" onClick={() => setEditingName(true)}>
                 {form.nombre || 'Producto'}
               </h1>
             )}

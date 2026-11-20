@@ -17,7 +17,7 @@ export default function ProductoFormPage() {
   const fromPath = (location.state as { from?: string } | null)?.from || '/productos';
 
   return (
-    <div className="p-4 min-h-full">
+    <div className="p-3 sm:p-4 min-h-full">
       <ProductoHeader
         form={h.form} set={h.set} setForm={h.setForm as any} isNew={h.isNew} isDirty={h.isDirty}
         starred={h.starred} setStarred={h.setStarred} editingName={h.editingName} setEditingName={h.setEditingName}
@@ -25,7 +25,7 @@ export default function ProductoFormPage() {
         handleImageUpload={h.handleImageUpload} handleSave={h.handleSave} handleDelete={h.handleDelete}
         onDiscard={() => h.navigate(fromPath)} saving={h.saveMutation.isPending}
       />
-      <div className="bg-card border border-border rounded px-4 pb-4 pt-3">
+      <div className="bg-card border border-border rounded px-3 sm:px-4 pb-4 pt-3">
         <ProductoGeneralFields
           form={h.form} set={h.set} setForm={h.setForm as any}
           marcas={h.marcas} clasificaciones={h.clasificaciones} listas={h.listas}

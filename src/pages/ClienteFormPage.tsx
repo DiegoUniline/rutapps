@@ -485,19 +485,19 @@ export default function ClienteFormPage() {
   ).filter(p => !pedidoItems.find(i => i.producto_id === p.id));
 
   return (
-    <div className="p-4 min-h-full">
+    <div className="p-3 sm:p-4 min-h-full">
       <div className="mb-0.5">
         <Link to={backPath} className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">← Volver</Link>
       </div>
 
       {/* Title + Photos */}
       <div className="flex items-start gap-4 mb-2">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <button onClick={() => setStarred(!starred)} className="text-warning hover:scale-110 transition-transform">
+            <button onClick={() => setStarred(!starred)} className="text-warning hover:scale-110 transition-transform shrink-0">
               <Star className={`h-5 w-5 ${starred ? 'fill-warning' : ''}`} />
             </button>
-            <h1 className="text-[22px] font-bold text-foreground leading-tight">
+            <h1 className="text-lg sm:text-[22px] font-bold text-foreground leading-tight break-words min-w-0">
               {isNew ? 'Nuevo Cliente' : form.nombre || 'Cliente'}
             </h1>
           </div>
@@ -531,7 +531,7 @@ export default function ClienteFormPage() {
       </div>
 
       {/* Action buttons + statusbar */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         {!readOnly && (
           <button onClick={handleSave} disabled={saveMutation.isPending || (!isDirty && !pedidoDirty)} className={(isDirty || pedidoDirty) ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
             <Save className="h-3.5 w-3.5" /> Guardar
@@ -551,7 +551,7 @@ export default function ClienteFormPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-card border border-border rounded px-4 pb-4 pt-1">
+      <div className="bg-card border border-border rounded px-3 sm:px-4 pb-4 pt-1">
       <OdooTabs tabs={[
         {
           key: 'general', label: 'Información General',
@@ -576,7 +576,7 @@ export default function ClienteFormPage() {
                       />
                     </div>
                     <input
-                      className="input-odoo flex-1 text-[13px]"
+                      className="input-odoo flex-1 min-w-0 text-[13px]"
                       value={form.telefono ?? ''}
                       onChange={e => set('telefono', e.target.value.replace(/\D/g, ''))}
                       placeholder="10 dígitos"
@@ -594,7 +594,7 @@ export default function ClienteFormPage() {
                   <span className="odoo-field-label">Ubicación GPS</span>
                   <div className="flex flex-col gap-2 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 w-full sm:w-auto min-w-0">
                         <label className="text-[11px] text-muted-foreground font-medium">Coords</label>
                         <input
                           type="text"
@@ -616,7 +616,7 @@ export default function ClienteFormPage() {
                             }
                           }}
                           placeholder="19.763610, -104.355636"
-                          className="w-[240px] h-8 px-2 rounded-md border border-input bg-background text-[12px] focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="w-full min-w-0 sm:w-[240px] h-8 px-2 rounded-md border border-input bg-background text-[12px] focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                       </div>
                       <button
