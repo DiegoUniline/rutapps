@@ -19,6 +19,8 @@ import CrearConteoDialog from '@/components/conteos/CrearConteoDialog';
 import ConteoDetailModal from '@/components/conteos/ConteoDetailModal';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -32,6 +34,7 @@ export default function ConteosFisicosPage() {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
@@ -138,14 +141,42 @@ export default function ConteosFisicosPage() {
           </button>
         ))}
         <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }} />
-        <div className="relative ml-auto">
+        <div className="relative w-full sm:w-auto sm:ml-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar..." className="pl-9 h-8 w-48" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Buscar..." className="pl-9 h-9 sm:h-8 w-full sm:w-48" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
 
 
       {/* Table */}
+      {isMobile ? (
+        isLoading ? <div className="text-center py-12 text-muted-foreground text-sm">Cargando...</div> : (
+        <ListaTarjetasMovil vacia={filtered.length === 0} mensajeVacio="Sin conteos">
+          {filtered.map((c: any) => {
+            const st = STATUS_MAP[c.status] ?? STATUS_MAP.abierto;
+            const abierto = c.status === 'abierto' || c.status === 'en_progreso';
+            return (
+              <ListaTarjetaMovil
+                key={c.id}
+                titulo={(c.almacenes as any)?.nombre ?? '—'}
+                subtitulo={c.folio}
+                estado={<span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap", st.color)}>{st.label}</span>}
+                onClick={() => setSelectedId(c.id)}
+                acciones={[
+                  { key: 'ver', label: 'Ver detalle', icon: Eye, onClick: () => setSelectedId(c.id) },
+                  ...(abierto ? [{ key: 'contar', label: 'Ir a contar', icon: Smartphone, onClick: () => navigate(`/conteo/${c.id}`) }] : []),
+                ]}
+                campos={[
+                  { label: 'Apertura', value: format(new Date(c.abierto_en), 'dd/MM/yy HH:mm', { locale: es }) },
+                  { label: 'Progreso', value: `${c.productos_contados}/${c.total_productos}` },
+                  ...(c.status === 'cerrado' ? [{ label: 'Diferencia', value: <span className={c.diferencia_total_valor >= 0 ? "text-green-600" : "text-red-600"}>{fmt(c.diferencia_total_valor ?? 0)}</span> }] : []),
+                ]}
+              />
+            );
+          })}
+        </ListaTarjetasMovil>
+        )
+      ) : (
       <div className="bg-card border border-border rounded overflow-x-auto">
         <Table>
           <TableHeader>
@@ -217,6 +248,7 @@ export default function ConteosFisicosPage() {
           </TableBody>
         </Table>
       </div>
+      )}
 
       {showCreate && (
         <CrearConteoDialog

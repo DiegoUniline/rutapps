@@ -456,7 +456,7 @@ export default function ComprasPage() {
   }, groupByLevelsD), [pageDataD, groupByD, groupByLevelsD]);
 
   const renderTable = (items: any[]) => isMobile ? (
-    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay compras.">
+    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay compras." className={cn(!groupBy && 'flex-1 min-h-0 overflow-auto')}>
       {items.map((c: any) => (
         <ListaTarjetaMovil
           key={c.id}
@@ -584,7 +584,7 @@ export default function ComprasPage() {
   );
 
   const renderDetalleTable = (items: any[]) => isMobile ? (
-    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay líneas de detalle.">
+    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay líneas de detalle." className={cn(!groupByD && 'flex-1 min-h-0 overflow-auto')}>
       {items.map((l: any, i: number) => (
         <ListaTarjetaMovil
           key={`${l.compra_id}-${l.linea_id}-${i}`}
@@ -751,6 +751,7 @@ export default function ComprasPage() {
           ) : (
             <>
               <GroupedTableWrapper
+                sinMarcoMovil
                 groupBy={groupBy}
                 groups={groups}
                 renderTable={renderTable}
@@ -816,7 +817,7 @@ export default function ComprasPage() {
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={9} /></div>
           ) : (
             <>
-              <GroupedTableWrapper groupBy={groupByD} groups={groupsD} renderTable={renderDetalleTable} />
+              <GroupedTableWrapper sinMarcoMovil groupBy={groupByD} groups={groupsD} renderTable={renderDetalleTable} />
               {!groupByD && totalD > 0 && (
                 <OdooPagination from={fromD} to={toD} total={totalD}
                   onPrev={() => setPageD(p => Math.max(1, p - 1))}

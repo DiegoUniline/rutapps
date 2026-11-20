@@ -11,16 +11,18 @@ interface GroupedTableWrapperProps {
   renderSummary?: (items: any[]) => React.ReactNode;
   /** Cuando es true, la tabla sin agrupar ocupa la altura disponible y hace scroll interna */
   fill?: boolean;
+  /** En teléfono (< md) no dibuja el marco: el contenido son tarjetas con su propio borde. */
+  sinMarcoMovil?: boolean;
 }
 
-export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummary, fill: fillProp }: GroupedTableWrapperProps) {
+export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummary, fill: fillProp, sinMarcoMovil }: GroupedTableWrapperProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   // Dentro de <ListPage> el modo "fill" es el comportamiento por defecto.
   const inListPage = useInListPage();
   const fill = fillProp ?? inListPage;
 
   if (!groupBy) {
-    return <div className={cn("bg-card border border-border rounded overflow-hidden", fill && "flex-1 min-h-0 flex flex-col")}>{renderTable(groups[0]?.items ?? [])}</div>;
+    return <div className={cn(sinMarcoMovil ? "md:bg-card md:border md:border-border md:rounded overflow-hidden" : "bg-card border border-border rounded overflow-hidden", fill && "flex-1 min-h-0 flex flex-col")}>{renderTable(groups[0]?.items ?? [])}</div>;
   }
 
   const toggleGroup = (label: string) => {
