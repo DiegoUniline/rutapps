@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Archive, X } from 'lucide-react';
+import { Archive } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type { ProfileUser, Almacen } from '@/hooks/useUsuarios';
@@ -93,62 +95,46 @@ export default function ArchiveUserWizard({
   };
 
   return (
-    <div className="fixed inset-0 z-[80] bg-foreground/40 flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
+    // D-040: modal estándar. Clic fuera no cierra (como antes); mientras archiva tampoco Escape ni cerrar.
+    <Dialog open onOpenChange={(o) => { if (!o && !archiving) onClose(); }}>
+      <DialogContent
+        className="max-w-md gap-5"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => { if (archiving) e.preventDefault(); }}
+      >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <Archive className="h-4 w-4 text-destructive" />
-            <h2 className="text-base font-semibold text-foreground">Archivar usuario</h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={archiving}
-            className="p-1.5 rounded-md hover:bg-accent disabled:opacity-50"
-            aria-label="Cerrar"
-          >
-            <X className="h-4 w-4" />
-          </button>
+            Archivar usuario
+          </DialogTitle>
+        </DialogHeader>
+
+        <div>
+          <p className="text-sm text-muted-foreground">Vas a archivar a:</p>
+          <p className="mt-1 font-semibold text-foreground">{user.nombre || 'Sin nombre'}</p>
+          {emailLabel && <p className="text-sm text-muted-foreground">{emailLabel}</p>}
         </div>
 
-        <div className="p-5 space-y-5">
-          <div>
-            <p className="text-sm text-muted-foreground">Vas a archivar a:</p>
-            <p className="mt-1 font-semibold text-foreground">{user.nombre || 'Sin nombre'}</p>
-            {emailLabel && <p className="text-sm text-muted-foreground">{emailLabel}</p>}
-          </div>
-
-          <div className="rounded-lg border border-border bg-muted/30 p-4">
-            <p className="text-sm text-foreground">
-              El usuario perderá el acceso al sistema y dejará de contar como usuario activo.
-              Su historial permanecerá guardado.
-            </p>
-          </div>
-
-          <p className="text-sm text-muted-foreground">
-            Puedes archivarlo aunque tenga ventas, rutas, entregas, inventario o cualquier otro pendiente.
+        <div className="rounded-lg border border-border bg-muted/30 p-4">
+          <p className="text-sm text-foreground">
+            El usuario perderá el acceso al sistema y dejará de contar como usuario activo.
+            Su historial permanecerá guardado.
           </p>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={archiving}
-              className="px-4 py-2 text-sm rounded-md border border-border hover:bg-accent disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleArchive}
-              disabled={archiving}
-              className="px-4 py-2 text-sm font-semibold rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
-            >
-              {archiving ? 'Archivando…' : 'Archivar usuario'}
-            </button>
-          </div>
         </div>
-      </div>
-    </div>
+
+        <p className="text-sm text-muted-foreground">
+          Puedes archivarlo aunque tenga ventas, rutas, entregas, inventario o cualquier otro pendiente.
+        </p>
+
+        <DialogFooter className="gap-2 sm:space-x-0">
+          <Button type="button" variant="cancelar" onClick={onClose} disabled={archiving}>
+            Cancelar
+          </Button>
+          <Button type="button" variant="destructive" onClick={handleArchive} disabled={archiving}>
+            {archiving ? 'Archivando…' : 'Archivar usuario'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

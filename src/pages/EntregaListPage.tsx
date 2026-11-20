@@ -405,15 +405,32 @@ export default function EntregaListPage() {
       ? 'Sin ruta asignada'
       : (vendedores ?? []).find(v => v.id === rutaFilter)?.nombre ?? 'Ruta';
 
+  const tabsEstado = [
+    { key: 'borrador', label: 'Por surtir', count: counts.borrador },
+    { key: 'surtido', label: 'Surtidos', count: counts.surtido },
+    { key: 'asignado', label: 'Asignados', count: counts.asignado },
+    { key: 'cargado', label: 'Cargados', count: counts.cargado },
+    { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
+    { key: 'hecho', label: 'Entregadas', count: counts.hecho },
+    { key: 'no_entregado', label: 'No entregadas', count: counts.no_entregado },
+    { key: 'todos', label: 'Todos', count: counts.total },
+  ];
   return (
     <ListPage scroll>
+      {/* D-040: modal estándar (chico). Bloquea a propósito: sin cerrar, Escape ni clic fuera mientras avanza. */}
       {cargarProgress && (
-        <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <Truck className="h-4 w-4 text-primary animate-pulse" />
-              <h3 className="text-[14px] font-semibold text-foreground">{cargarProgress.title || 'Procesando entregas…'}</h3>
-            </div>
+        <Dialog open onOpenChange={() => { /* no se cierra hasta terminar */ }}>
+          <DialogContent
+            className="max-w-sm gap-3 [&_[data-dialog-header-close]]:hidden [&>[data-dialog-close-default]]:hidden"
+            onInteractOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
+          >
+            <DialogHeader className="pr-0">
+              <DialogTitle className="flex items-center gap-2 text-[14px] sm:text-[14px]">
+                <Truck className="h-4 w-4 text-primary animate-pulse" />
+                {cargarProgress.title || 'Procesando entregas…'}
+              </DialogTitle>
+            </DialogHeader>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[12px]">
                 <span className="text-muted-foreground">
@@ -434,8 +451,8 @@ export default function EntregaListPage() {
             <p className="text-[11px] text-destructive font-medium leading-snug">
               ⚠️ No recargues ni salgas de esta pantalla hasta que termine.
             </p>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
       <PedidosTabs
         fechas={{
@@ -463,18 +480,9 @@ export default function EntregaListPage() {
         </h1>
       </div>
 
-      {/* Status Tabs */}
-      <div className="flex border-b border-border gap-0 overflow-x-auto">
-        {[
-          { key: 'borrador', label: 'Por surtir', count: counts.borrador },
-          { key: 'surtido', label: 'Surtidos', count: counts.surtido },
-          { key: 'asignado', label: 'Asignados', count: counts.asignado },
-          { key: 'cargado', label: 'Cargados', count: counts.cargado },
-          { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
-          { key: 'hecho', label: 'Entregadas', count: counts.hecho },
-          { key: 'no_entregado', label: 'No entregadas', count: counts.no_entregado },
-          { key: 'todos', label: 'Todos', count: counts.total },
-        ].map(tab => (
+      {/* Status Tabs (en teléfono el estado va dentro de Filtros) */}
+      <div className="flex border-b border-border gap-0 overflow-x-auto max-md:hidden">
+        {tabsEstado.map(tab => (
           <button
             key={tab.key}
             onClick={() => setStatusFilter(tab.key)}
@@ -493,6 +501,17 @@ export default function EntregaListPage() {
 
       {/* Filters + Bulk action */}
       <div className="flex flex-wrap items-end gap-3">
+        {isMobile && (
+          <div className="min-w-[180px]">
+            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Estado</label>
+            <SearchableSelect
+              options={tabsEstado.map(t => ({ value: t.key, label: `${t.label} (${t.count})` }))}
+              value={statusFilter}
+              onChange={v => setStatusFilter(v || 'todos')}
+              placeholder="Estado"
+            />
+          </div>
+        )}
         <div className="min-w-[180px]">
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Vendedor</label>
           <SearchableSelect

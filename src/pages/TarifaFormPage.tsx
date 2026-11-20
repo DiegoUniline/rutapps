@@ -20,6 +20,7 @@ import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } f
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { confirmDialog } from '@/lib/confirm';
+import { puedeReemplazarFormulario } from '@/lib/formSync';
 
 const APLICA_LABELS: Record<AplicaATarifa, string> = {
   todos: 'Todos los productos',
@@ -633,7 +634,12 @@ export default function TarifaFormPage() {
   const [editingCol, setEditingCol] = useState<string | null>(null);
   const [editLinea, setEditLinea] = useState({ ...EMPTY_LINEA });
 
-  useEffect(() => { if (existing) { setForm(existing); setOriginalForm(existing); } }, [existing]);
+  // Un refresco del registro (guardar algo relacionado aquí o en otra pantalla) se refleja,
+  // pero nunca pisa cambios sin guardar del usuario.
+  useEffect(() => {
+    if (existing && puedeReemplazarFormulario(form, originalForm, existing)) { setForm(existing); setOriginalForm(existing); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al llegar una versión nueva del registro
+  }, [existing]);
 
   const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(originalForm);
 

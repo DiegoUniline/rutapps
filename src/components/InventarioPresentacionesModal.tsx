@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { X, Search, Package, Warehouse, Truck } from 'lucide-react';
+import { Search, Package, Warehouse, Truck } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn, fmtNum } from '@/lib/utils';
 import type { ProductoPresentacion } from '@/hooks/usePresentaciones';
@@ -76,27 +77,21 @@ export default function InventarioPresentacionesModal({ open, onClose, productos
       .sort((a, b) => a.producto.nombre.localeCompare(b.producto.nombre));
   }, [almacen, productos, stockMap, presByProd, search]);
 
-  if (!open) return null;
-
+  // D-040: modal estándar (grande: listado). El encabezado fijo incluye los filtros.
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-card rounded-lg shadow-2xl w-full max-w-5xl max-h-[90dvh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-5xl gap-3">
+        <DialogHeader className="space-y-3">
           <div className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
+            <Package className="h-5 w-5 text-primary shrink-0" />
             <div>
-              <h2 className="text-base font-semibold text-foreground">Stock por unidades de presentación</h2>
-              <p className="text-[11px] text-muted-foreground">Equivalencia del stock de cada producto en sus diferentes empaques.</p>
+              <DialogTitle>Stock por unidades de presentación</DialogTitle>
+              <DialogDescription className="text-[11px]">Equivalencia del stock de cada producto en sus diferentes empaques.</DialogDescription>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-accent">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
 
         {/* Toolbar */}
-        <div className="px-4 py-3 border-b border-border flex flex-col sm:flex-row gap-2 sm:items-center">
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
           <select
             value={almacenId}
             onChange={(e) => setAlmacenId(e.target.value)}
@@ -113,9 +108,10 @@ export default function InventarioPresentacionesModal({ open, onClose, productos
             <Input placeholder="Buscar producto..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
+        </DialogHeader>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-3">
+        <div>
           {!almacen && <p className="text-center text-muted-foreground py-8">Selecciona un almacén</p>}
           {almacen && rows.length === 0 && (
             <p className="text-center text-muted-foreground py-8">
@@ -168,7 +164,7 @@ export default function InventarioPresentacionesModal({ open, onClose, productos
             ))}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Wallet, Banknote, CreditCard, Package, Check, X, FileText, AlertTriangle, PiggyBank } from 'lucide-react';
+import { Wallet, Banknote, CreditCard, Package, Check, FileText, AlertTriangle, PiggyBank } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useSaldoFavor } from '@/hooks/useSaldoFavor';
 import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
@@ -140,26 +141,19 @@ export function VentaCheckoutModal({
     onConfirm(pagos, 'contado', cuentasAplicadas.length > 0 ? cuentasAplicadas : undefined);
   };
 
-  if (!open) return null;
-
+  // D-040: modal estándar (ancho, encabezado/pie fijos y cerrar homologados)
   return (
-    <div className="fixed inset-0 z-[60] bg-foreground/40 flex items-end sm:items-center justify-center" onClick={() => !saving && onClose()}>
-      <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-hidden border border-border max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="px-5 pt-5 pb-3 border-b border-border">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[16px] font-bold text-foreground">Cobrar venta</h3>
-            <button onClick={onClose} className="p-1 rounded-md hover:bg-accent">
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </div>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="text-[13px] text-muted-foreground">{clienteNombre}</span>
+    <Dialog open={open} onOpenChange={(o) => { if (!o && !saving) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Cobrar venta</DialogTitle>
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[13px] text-muted-foreground text-left">{clienteNombre}</span>
             <span className="text-[28px] font-black text-primary tabular-nums">{fmt(total)}</span>
           </div>
-        </div>
+        </DialogHeader>
 
-        <div className="px-5 py-4 space-y-4 overflow-auto flex-1">
+        <div className="space-y-4">
           {/* Condición de pago */}
           <div>
             <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Condición de pago</label>
@@ -439,7 +433,7 @@ export function VentaCheckoutModal({
         </div>
 
         {/* Confirm button */}
-        <div className="px-5 pb-5 pt-2">
+        <DialogFooter>
           <button
             onClick={handleConfirm}
             disabled={saving || excedeCredito || (condicion === 'contado' && faltante > 0 && payMode !== 'efectivo')}
@@ -448,8 +442,8 @@ export function VentaCheckoutModal({
             <Check className="h-5 w-5" />
             {saving ? 'Guardando...' : condicion === 'credito' ? 'Confirmar venta a crédito' : `Confirmar ${fmt(total)}`}
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

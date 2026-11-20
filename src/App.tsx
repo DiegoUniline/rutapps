@@ -24,6 +24,7 @@ import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
 import { showAppError } from "@/lib/globalError";
+import { instalarRefrescoTrasEscritura } from "@/lib/refresco/refrescoTrasEscritura";
 import { usePartner } from "@/hooks/usePartner";
 import { usePlatformTeam } from "@/hooks/usePlatformTeam";
 import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
@@ -237,6 +238,10 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Todo lo que se guarda/edita/borra refresca al instante las pantallas que muestran ese dato
+// (solo las consultas relacionadas; ver src/lib/refresco/refrescoTrasEscritura.ts).
+instalarRefrescoTrasEscritura(queryClient);
 
 function PageLoader() {
   return (

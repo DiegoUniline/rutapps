@@ -25,6 +25,7 @@ import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver
 import { todayLocal } from '@/lib/utils';
 import { confirmDialog } from '@/lib/confirm';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { puedeReemplazarFormulario } from '@/lib/formSync';
 
 const defaultCliente: Partial<Cliente> = {
   codigo: '', nombre: '', contacto: '', telefono: '', lada: '', email: '', direccion: '',
@@ -323,8 +324,11 @@ export default function ClienteFormPage() {
     }
   }, [isNew, empresa]);
 
+  // Un refresco del registro (guardar algo relacionado aquí o en otra pantalla) se refleja,
+  // pero nunca pisa cambios sin guardar del usuario.
   useEffect(() => {
-    if (existing) { setForm(existing); setOriginalForm(existing); }
+    if (existing && puedeReemplazarFormulario(form, originalForm, existing)) { setForm(existing); setOriginalForm(existing); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al llegar una versión nueva del registro
   }, [existing]);
 
   useEffect(() => {
@@ -343,6 +347,23 @@ export default function ClienteFormPage() {
   const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(originalForm);
 
   const set = (key: keyof Cliente, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+  // D-042: «Descartar» restaura el formulario y el pedido sugerido al último guardado.
+  const handleDescartar = () => {
+    if (isNew) { navigate(backPath); return; }
+    setForm(originalForm);
+    if (pedidoSugerido) {
+      const mapped = pedidoSugerido.map(ps => ({
+        producto_id: ps.producto_id,
+        nombre: ps.productos?.nombre ?? '',
+        codigo: ps.productos?.codigo ?? '',
+        cantidad: ps.cantidad,
+      }));
+      mapped.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+      setPedidoItems(mapped);
+    }
+    setPedidoDirty(false);
+  };
+  const hayCambios = !isNew && (isDirty || pedidoDirty);
 
   const handlePhotoUpload = async (file: File, field: 'foto_url' | 'foto_fachada_url') => {
     if (!file.type.startsWith('image/')) { toast.error('Solo se permiten imágenes'); return; }
@@ -501,7 +522,10 @@ export default function ClienteFormPage() {
           estado={!isNew ? { texto: estadoPildora(form.status ?? 'activo').pildora, tono: estadoPildora(form.status ?? 'activo').tono } : null}
           subtitulo={form.codigo || undefined}
           principales={!readOnly ? [{ key: 'guardar', label: 'Guardar', icon: Save, onClick: handleSave, disabled: !isDirty && !pedidoDirty, cargando: saveMutation.isPending }] : []}
-          menu={!isNew && canDelete ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, onClick: handleDelete }] : []}
+          menu={[
+            ...(hayCambios ? [{ key: 'descartar', label: 'Descartar', icon: X, onClick: handleDescartar }] : []),
+            ...(!isNew && canDelete ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, separar: hayCambios, onClick: handleDelete }] : []),
+          ]}
         />
       )}
       <div className="mb-0.5 max-md:hidden">
@@ -553,6 +577,11 @@ export default function ClienteFormPage() {
         {!readOnly && (
           <button onClick={handleSave} disabled={saveMutation.isPending || (!isDirty && !pedidoDirty)} className={cn((isDirty || pedidoDirty) ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed", "max-md:hidden")}>
             <Save className="h-3.5 w-3.5" /> Guardar
+          </button>
+        )}
+        {hayCambios && !readOnly && (
+          <button onClick={handleDescartar} className="btn-cancelar btn-odoo-secondary max-md:hidden">
+            <X className="h-3.5 w-3.5" /> Descartar
           </button>
         )}
         {!isNew && canDelete && (
