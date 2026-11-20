@@ -132,102 +132,30 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
 
     if (!empresaId) { setResults(menuMatches); setLoading(false); return; }
     if (q.length < 2) { setResults(menuMatches); setLoading(false); return; }
-    const term = `%${q}%`;
+    if (q.length < 3) { setResults(menuMatches); setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
 
-    // Wrap each query so a single field error (e.g. column doesn't exist) doesn't kill the whole search
-    const safe = <T,>(p: any): Promise<{ data: T[] | null }> =>
-      p.then((r: any) => (r?.error ? { data: [] } : r)).catch(() => ({ data: [] }));
-
-    // Ventas: folio, status, tipo, condicion_pago, notas + cliente + vendedor
-    const ventasByFolio = safe<any>(supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes(nombre),vendedores:profiles!vendedor_id(nombre)')
-      .eq('empresa_id', empresaId)
-      .or(`folio.ilike.${term},status.ilike.${term},tipo.ilike.${term},condicion_pago.ilike.${term},notas.ilike.${term}`)
-      .limit(8));
-    const ventasByCliente = safe<any>(supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes!inner(nombre),vendedores:profiles!vendedor_id(nombre)')
-      .eq('empresa_id', empresaId).ilike('clientes.nombre', term).limit(5));
-    const ventasByVendedor = safe<any>(supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes(nombre),vendedores:profiles!vendedor_id(nombre)')
-      .eq('empresa_id', empresaId).ilike('vendedores.nombre', term).limit(5).not('vendedor_id', 'is', null));
-
-    Promise.all([
-      ventasByFolio,
-      ventasByCliente,
-      ventasByVendedor,
-      // Clientes — todos los campos de texto
-      safe<any>(supabase.from('clientes').select('id,nombre,codigo,telefono,rfc')
-        .eq('empresa_id', empresaId)
-        .or(`nombre.ilike.${term},codigo.ilike.${term},telefono.ilike.${term},rfc.ilike.${term},email.ilike.${term},direccion.ilike.${term},colonia.ilike.${term},contacto.ilike.${term},notas.ilike.${term}`)
-        .limit(5)),
-      // Productos
-      safe<any>(supabase.from('productos').select('id,nombre,codigo,clave_alterna,precio_principal')
-        .eq('empresa_id', empresaId)
-        .or(`nombre.ilike.${term},codigo.ilike.${term},clave_alterna.ilike.${term},descripcion.ilike.${term},notas.ilike.${term}`)
-        .limit(5)),
-      // Proveedores
-      safe<any>(supabase.from('proveedores').select('id,nombre,rfc,telefono')
-        .eq('empresa_id', empresaId)
-        .or(`nombre.ilike.${term},rfc.ilike.${term},telefono.ilike.${term},email.ilike.${term},contacto.ilike.${term},direccion.ilike.${term}`)
-        .limit(5)),
-      // Compras: folio, status, notas, factura_num
-      safe<any>(supabase.from('compras').select('id,folio,total,fecha,proveedores(nombre)')
-        .eq('empresa_id', empresaId)
-        .or(`folio.ilike.${term},status.ilike.${term},notas.ilike.${term},factura_num.ilike.${term}`)
-        .limit(5)),
-      // Compras por proveedor
-      safe<any>(supabase.from('compras').select('id,folio,total,fecha,proveedores!inner(nombre)')
-        .eq('empresa_id', empresaId).ilike('proveedores.nombre', term).limit(5)),
-      // Traspasos
-      safe<any>(supabase.from('traspasos').select('id,folio,fecha,status')
-        .eq('empresa_id', empresaId)
-        .or(`folio.ilike.${term},status.ilike.${term},notas.ilike.${term}`)
-        .limit(5)),
-      // Ajustes por motivo
-      safe<any>(supabase.from('ajustes_inventario').select('id,fecha,motivo,productos(nombre,codigo)')
-        .eq('empresa_id', empresaId).ilike('motivo', term).limit(5)),
-      // Ajustes por producto
-      safe<any>(supabase.from('ajustes_inventario').select('id,fecha,motivo,productos!inner(nombre,codigo)')
-        .eq('empresa_id', empresaId)
-        .or(`nombre.ilike.${term},codigo.ilike.${term}`, { referencedTable: 'productos' })
-        .limit(5)),
-      // Gastos
-      safe<any>(supabase.from('gastos').select('id,concepto,monto,fecha').is('cancelado_at', null)
-        .eq('empresa_id', empresaId)
-        .or(`concepto.ilike.${term},notas.ilike.${term},categoria.ilike.${term}`)
-        .limit(5)),
-      // Cobros por metodo_pago / referencia / notas
-      safe<any>(supabase.from('cobros').select('id,metodo_pago,monto,fecha,referencia,clientes(nombre)')
-        .eq('empresa_id', empresaId)
-        .or(`metodo_pago.ilike.${term},referencia.ilike.${term},notas.ilike.${term}`)
-        .limit(5)),
-      // Cobros por cliente
-      safe<any>(supabase.from('cobros').select('id,metodo_pago,monto,fecha,referencia,clientes!inner(nombre)')
-        .eq('empresa_id', empresaId).ilike('clientes.nombre', term).limit(5)),
-      // CFDI
-      safe<any>(supabase.from('cfdis').select('id,folio,folio_fiscal,total,fecha_timbrado,receiver_name')
-        .eq('empresa_id', empresaId)
-        .or(`folio.ilike.${term},folio_fiscal.ilike.${term},receiver_name.ilike.${term},receiver_rfc.ilike.${term},status.ilike.${term}`)
-        .limit(5)),
-      // Almacenes
-      safe<any>(supabase.from('almacenes').select('id,nombre,tipo')
-        .eq('empresa_id', empresaId).or(`nombre.ilike.${term},tipo.ilike.${term}`).limit(5)),
-      // Listas de Precios
-      safe<any>(supabase.from('tarifas').select('id,nombre,tipo')
-        .eq('empresa_id', empresaId).or(`nombre.ilike.${term},tipo.ilike.${term}`).limit(5)),
-      // Empleados
-      safe<any>(supabase.from('profiles').select('id,nombre,telefono')
-        .eq('empresa_id', empresaId)
-        .or(`nombre.ilike.${term},telefono.ilike.${term},email.ilike.${term}`)
-        .limit(5)),
-      // Entregas
-      safe<any>(supabase.from('entregas').select('id,folio,fecha,status,clientes(nombre)')
-        .eq('empresa_id', empresaId)
-        .or(`folio.ilike.${term},status.ilike.${term},notas.ilike.${term}`)
-        .limit(5)),
-      // Entregas por cliente
-      safe<any>(supabase.from('entregas').select('id,folio,fecha,status,clientes!inner(nombre)')
-        .eq('empresa_id', empresaId).ilike('clientes.nombre', term).limit(5)),
-    ]).then((rows) => {
+    // Una sola llamada a la BD (buscar_global): busca en folio/nombre/código con índices de
+    // trigramas. Antes eran ~20 consultas por tecla sobre columnas sin índice.
+    type Bloques = Record<'ventas' | 'clientes' | 'productos' | 'proveedores' | 'compras' | 'traspasos' | 'ajustes' | 'gastos' | 'cobros' | 'cfdis' | 'almacenes' | 'tarifas' | 'empleados' | 'entregas', unknown[]>;
+    const vacio = { data: [] as unknown[] };
+    const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: Partial<Bloques> | null; error: unknown }>;
+    rpc('buscar_global', { p_q: q }).then(({ data, error }) => {
+      const b = (error ? {} : (data ?? {})) as Partial<Bloques>;
+      const d = (k: keyof Bloques) => ({ data: b[k] ?? [] });
+      return [
+        d('ventas'), vacio, vacio,
+        d('clientes'), d('productos'), d('proveedores'),
+        d('compras'), vacio,
+        d('traspasos'),
+        d('ajustes'), vacio,
+        d('gastos'),
+        d('cobros'), vacio,
+        d('cfdis'), d('almacenes'), d('tarifas'), d('empleados'),
+        d('entregas'), vacio,
+      ];
+    }).then((rows) => {
       if (cancelled) return;
       const out: ResultItem[] = [];
       const [

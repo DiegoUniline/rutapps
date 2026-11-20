@@ -139,3 +139,4 @@
 2026-11-20 · desarrollador · Rendimiento: índices (devoluciones sin índices, FKs de cliente/vendedor/repartidor, trigramas para búsqueda), buscador de Ventas con retardo 300 ms, conteo de pestañas con HEAD
 2026-11-20 · desarrollador · D-034 / F2b pedido entregado y saldo por cantidades realmente entregadas (H4, H5, H8)
 2026-11-20 · desarrollador · Rendimiento 2ª pasada: 38 índices (compras, traspasos, cfdis, comisiones, ruta, caja…), sync de ruta con orden estable, pendientes en docs/auditoria/2026-11-20-rendimiento.md
+2026-11-20 · desarrollador · Buscador ⌘K: una sola RPC buscar_global con trigramas (antes ~20 consultas por tecla), mínimo 3 letras
