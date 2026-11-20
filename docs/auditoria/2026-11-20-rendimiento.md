@@ -25,7 +25,7 @@ Revisión de 1 378 consultas `.from()` y 124 `.rpc()` del front contra los índi
 - Código muerto quitado (`CONFIRMO quitar código muerto`): `EntregasPage.tsx`, `lib/safe_sweep*.ts`, `lib/temp_sweep_tampico.ts`, `useVentas`, `useEntregasList`, `useCargas`, `useDevoluciones`.
 - Comisiones generadas y CxC de ruta ya tenían ventana / columnas mínimas: sin cambio.
 
-## Hallazgo de seguridad (no corregido, requiere CONFIRMO)
+## Hallazgo de seguridad (CORREGIDO 2026-11-20, «CONFIRMO corregir acceso público a cotizaciones»; migración 20261120180000)
 - `cotizaciones` y `cotizacion_lineas` tienen políticas `SELECT … TO anon, authenticated USING (true)`: cualquiera con la llave pública lee las cotizaciones de TODAS las empresas. Arreglo propuesto: quitar esas políticas y servir la cotización pública por RPC con su token.
 
 ## Pendiente
