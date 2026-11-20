@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, json, verifyPassword, hashPassword, verifyToken } from "../_shared/tiendaAuth.ts";
+import { corsHeaders, json, verifyPassword, hashPassword, sesionVencida, verifyToken } from "../_shared/tiendaAuth.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
     if (String(password_nuevo).length < 6) return json({ error: "La nueva contraseña debe tener al menos 6 caracteres" }, 400);
 
     const payload = await verifyToken(token, Deno.env.get("TIENDA_JWT_SECRET")!);
-    if (!payload) return json({ error: "Sesión expirada" }, 401);
+    if (!payload) return sesionVencida();
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,

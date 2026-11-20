@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, json, verifyToken } from "../_shared/tiendaAuth.ts";
-import { resolvePrice, type Rule, type Prod } from "../_shared/tiendaPricing.ts";
+import { resolvePrice, type Prod } from "../_shared/tiendaPricing.ts";
+import { contextoPreciosTienda } from "../_shared/tiendaPreciosContexto.ts";
 import { handleSellerRequest } from "./seller.ts";
 
 type ExtractedItem = { query: string; cantidad: number };
@@ -97,7 +98,7 @@ async function pageProducts(admin: any, empresaId: string): Promise<ProductRow[]
   const out: ProductRow[] = [];
   for (let page = 0; page < 50; page++) {
     const { data, error } = await admin.from("productos")
-      .select("id,nombre,codigo,notas,costo,precio_principal,clasificacion_id,imagen_url,unidad_venta_id,tiene_iva,iva_pct,tiene_ieps,ieps_pct,usa_listas_precio,vender_sin_stock")
+      .select("id,nombre,codigo,notas,costo,precio_principal,clasificacion_id,lista_id,grupo_precio,costo_incluye_impuestos,imagen_url,unidad_venta_id,tiene_iva,iva_pct,tiene_ieps,ieps_pct,usa_listas_precio,vender_sin_stock")
       .eq("empresa_id", empresaId).eq("status", "activo").eq("se_puede_vender", true)
       .range(page * 1000, page * 1000 + 999);
     if (error) throw error;
@@ -108,23 +109,18 @@ async function pageProducts(admin: any, empresaId: string): Promise<ProductRow[]
 }
 
 async function pricingContext(admin: any, cfg: any, clienteId?: string | null) {
-  let listaId = cfg.lista_precios_default_id ?? null;
-  if (clienteId && cfg.usar_lista_cliente !== false) {
-    const { data: cli } = await admin.from("clientes").select("lista_precio_id").eq("id", clienteId).maybeSingle();
-    if (cli?.lista_precio_id) listaId = cli.lista_precio_id;
+  // Misma lista y reglas que el catálogo de la tienda (y que la app).
+  let cliente: { lista_precio_id: string | null; tarifa_id: string | null } | null = null;
+  if (clienteId) {
+    const { data: cli, error } = await admin.from("clientes")
+      .select("lista_precio_id, tarifa_id")
+      .eq("id", clienteId)
+      .eq("empresa_id", cfg.empresa_id)
+      .maybeSingle();
+    if (error) throw error;
+    cliente = cli ?? null;
   }
-  let tarifaId: string | null = null;
-  if (listaId) {
-    const { data: lp } = await admin.from("lista_precios").select("tarifa_id").eq("id", listaId).maybeSingle();
-    tarifaId = lp?.tarifa_id ?? null;
-  }
-  let rules: Rule[] = [];
-  if (tarifaId && listaId) {
-    const { data } = await admin.from("tarifa_lineas")
-      .select("aplica_a,producto_ids,clasificacion_ids,tipo_calculo,precio,precio_minimo,margen_pct,descuento_pct,redondeo,base_precio,lista_precio_id")
-      .eq("tarifa_id", tarifaId).or(`lista_precio_id.eq.${listaId},lista_precio_id.is.null`);
-    rules = (data ?? []) as Rule[];
-  }
+  const { listaPrecioId: listaId, rules } = await contextoPreciosTienda(admin, cfg, cliente);
   return { listaId, rules };
 }
 

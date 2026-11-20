@@ -1,10 +1,22 @@
-// Mirror of src/lib/priceResolver.ts — returns the customer-facing DISPLAY price
-// (net + IVA/IEPS + redondeo). Matches what the app shows in "Lista de precios".
+// Copia FIEL del motor de precios de la app (src/lib/priceResolver.ts) para las
+// edge functions de la tienda en línea. Deno no puede importar src/, así que la
+// lógica se replica aquí y la prueba src/test/tiendaPricingParidad.test.ts
+// verifica que dé EXACTAMENTE lo mismo que la app. Si cambias priceResolver.ts,
+// cambia este archivo igual (la prueba falla si se desalinean).
+//
+// Reglas (iguales a la app):
+// - Prioridad de regla: producto > categoría > grupo/lista del producto > todos.
+// - Sin regla (o producto con precio directo): precio_principal ES el precio
+//   final con impuestos; el neto se obtiene quitándole los impuestos.
+// - margen_costo respeta costo_incluye_impuestos.
+// - El redondeo se aplica sobre el precio final (con impuestos).
+
 export interface Rule {
-  aplica_a: string;
+  aplica_a: string; // 'todos' | 'producto' | 'categoria' | 'grupo'
   producto_ids: string[];
   clasificacion_ids: string[];
-  tipo_calculo: string;
+  grupos?: string[] | null;
+  tipo_calculo: string; // 'precio_fijo' | 'margen_costo' | 'descuento_precio'
   precio: number;
   precio_minimo: number | null;
   margen_pct: number | null;
@@ -17,13 +29,24 @@ export interface Rule {
 export interface Prod {
   id: string;
   precio_principal: number;
-  costo: number;
-  clasificacion_id: string | null;
-  tiene_iva: boolean;
-  iva_pct: number;
-  tiene_ieps: boolean;
-  ieps_pct: number;
-  usa_listas_precio: boolean;
+  costo?: number;
+  clasificacion_id?: string | null;
+  grupo_precio?: string | null;
+  /** Lista del producto (productos.lista_id) usada por reglas `aplica_a = 'grupo'`. */
+  lista_id?: string | null;
+  tiene_iva?: boolean;
+  iva_pct?: number;
+  tiene_ieps?: boolean;
+  ieps_pct?: number;
+  usa_listas_precio?: boolean;
+  costo_incluye_impuestos?: boolean;
+}
+
+export interface PrecioResuelto {
+  /** Precio unitario NETO (sin impuestos) que se guarda en venta_lineas. */
+  unitPrice: number;
+  /** Precio FINAL que ve el cliente (con impuestos y redondeo). */
+  displayPrice: number;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -42,19 +65,25 @@ function taxMultiplier(p: Prod): number {
 }
 
 function findRule(rules: Rule[], prod: Prod, listaId: string | null): Rule | null {
-  // Include rules with matching lista_precio_id OR null (applies to all lists)
   const filtered = listaId
     ? rules.filter((r) => r.lista_precio_id === listaId || !r.lista_precio_id)
     : rules.filter((r) => !r.lista_precio_id);
 
-  return (
-    filtered.find((r) => r.aplica_a === "producto" && (r.producto_ids ?? []).includes(prod.id)) ??
-    (prod.clasificacion_id
-      ? filtered.find((r) => r.aplica_a === "categoria" && (r.clasificacion_ids ?? []).includes(prod.clasificacion_id!))
-      : null) ??
-    filtered.find((r) => r.aplica_a === "todos") ??
-    null
-  );
+  const prodRule = filtered.find((r) => r.aplica_a === "producto" && (r.producto_ids ?? []).includes(prod.id));
+  if (prodRule) return prodRule;
+
+  if (prod.clasificacion_id) {
+    const catRule = filtered.find((r) => r.aplica_a === "categoria" && (r.clasificacion_ids ?? []).includes(prod.clasificacion_id!));
+    if (catRule) return catRule;
+  }
+
+  const grupoKeys = [prod.lista_id, prod.grupo_precio].filter(Boolean) as string[];
+  if (grupoKeys.length) {
+    const grupoRule = filtered.find((r) => r.aplica_a === "grupo" && (r.grupos ?? []).some((g) => grupoKeys.includes(g)));
+    if (grupoRule) return grupoRule;
+  }
+
+  return filtered.find((r) => r.aplica_a === "todos") ?? null;
 }
 
 function rawRulePrice(rule: Rule, prod: Prod): number | null {
@@ -63,65 +92,85 @@ function rawRulePrice(rule: Rule, prod: Prod): number | null {
     precio = rule.precio ?? 0;
     if (precio <= 0 && (rule.precio_minimo ?? 0) <= 0) return null;
   } else if (rule.tipo_calculo === "margen_costo") {
-    precio = (prod.costo ?? 0) * (1 + (rule.margen_pct ?? 0) / 100);
+    let baseCosto = prod.costo ?? 0;
+    if (prod.costo_incluye_impuestos) {
+      const divisor = taxMultiplier(prod);
+      if (divisor > 0) baseCosto = baseCosto / divisor;
+    }
+    precio = baseCosto * (1 + (rule.margen_pct ?? 0) / 100);
   } else if (rule.tipo_calculo === "descuento_precio") {
     precio = prod.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100);
   }
   return Math.max(precio, rule.precio_minimo ?? 0);
 }
 
-/**
- * Returns the customer-facing DISPLAY price (gross, with taxes and redondeo).
- */
-export function resolvePrice(rules: Rule[], prod: Prod, listaId: string | null): number {
-  if (prod.usa_listas_precio === false) {
-    return round2(prod.precio_principal * taxMultiplier(prod));
-  }
+/** Sin regla: precio_principal es el precio FINAL; el neto se deriva. */
+function precioPrincipalFallback(prod: Prod): PrecioResuelto {
+  const divisor = taxMultiplier(prod);
+  const finalGross = round2(prod.precio_principal ?? 0);
+  const net = divisor > 0 ? round2(finalGross / divisor) : finalGross;
+  return { unitPrice: net, displayPrice: finalGross };
+}
+
+/** Igual a resolveProductPricing() de la app (unitPrice y displayPrice). */
+export function resolverPrecio(rules: Rule[], prod: Prod, listaId: string | null): PrecioResuelto {
+  if (prod.usa_listas_precio === false) return precioPrincipalFallback(prod);
 
   const rule = findRule(rules, prod, listaId);
-  if (!rule) {
-    return round2(prod.precio_principal * taxMultiplier(prod));
-  }
+  if (!rule) return precioPrincipalFallback(prod);
 
   const raw = rawRulePrice(rule, prod);
-  if (raw == null) {
-    return round2(prod.precio_principal * taxMultiplier(prod));
-  }
+  if (raw == null) return precioPrincipalFallback(prod);
 
-  // Convert to net first if rule is expressed con_impuestos
-  let neto = raw;
-  if (rule.base_precio === "con_impuestos") {
-    const div = taxMultiplier(prod);
-    neto = div > 0 ? raw / div : raw;
-  }
-  neto = round2(neto);
+  const mult = taxMultiplier(prod);
+  const rawUnitPrice = rule.base_precio === "con_impuestos" ? (mult > 0 ? raw / mult : raw) : raw;
+  const unitPrice = round2(rawUnitPrice);
+  // Precio final desde el neto de alta precisión (sin doble redondeo).
+  const displayPrice = round2(applyRedondeo(round2(rawUnitPrice * mult), rule.redondeo ?? "ninguno"));
+  return { unitPrice, displayPrice };
+}
 
-  // Apply taxes back, then redondeo on the gross
-  const gross = round2(neto * taxMultiplier(prod));
-  return round2(applyRedondeo(gross, rule.redondeo ?? "ninguno"));
+/** Precio FINAL que ve el cliente (con impuestos y redondeo). */
+export function resolvePrice(rules: Rule[], prod: Prod, listaId: string | null): number {
+  return resolverPrecio(rules, prod, listaId).displayPrice;
+}
+
+/** Precio unitario NETO (sin impuestos) para guardar en venta_lineas: igual que
+ *  la app (getStoredNetUnitPriceFromGross), sale del precio FINAL mostrado. */
+export function resolveNetPrice(rules: Rule[], prod: Prod, listaId: string | null): number {
+  const mult = taxMultiplier(prod);
+  const final = resolverPrecio(rules, prod, listaId).displayPrice;
+  return mult > 0 ? final / mult : final;
+}
+
+export interface MontosLinea {
+  precio_unitario: number;
+  subtotal: number;
+  ieps_monto: number;
+  iva_monto: number;
+  total: number;
 }
 
 /**
- * Returns the NET (pre-tax) unit price — used when persisting venta_lineas
- * so the existing tax math (subtotal + IEPS + IVA) lines up with what the
- * customer saw on the storefront.
+ * Montos de una línea a partir del precio FINAL por unidad base que vio el
+ * cliente. Mismo cálculo que calculateSaleLineAmounts() de la app (neto ×
+ * cantidad, IEPS, IVA sobre base + IEPS) y el total se cuadra a
+ * precio final × cantidad, ajustando el centavo en el impuesto, para que el
+ * pedido sume exactamente lo que el cliente vio en la tienda.
  */
-export function resolveNetPrice(rules: Rule[], prod: Prod, listaId: string | null): number {
-  if (prod.usa_listas_precio === false) return round2(prod.precio_principal);
-
-  const rule = findRule(rules, prod, listaId);
-  if (!rule) return round2(prod.precio_principal);
-
-  const raw = rawRulePrice(rule, prod);
-  if (raw == null) return round2(prod.precio_principal);
-
-  let neto = raw;
-  if (rule.base_precio === "con_impuestos") {
-    const div = taxMultiplier(prod);
-    neto = div > 0 ? raw / div : raw;
+export function montosLinea(precioFinalUnitario: number, cantidad: number, prod: Prod): MontosLinea {
+  const ivaPct = prod.tiene_iva ? Number(prod.iva_pct) || 0 : 0;
+  const iepsPct = prod.tiene_ieps ? Number(prod.ieps_pct) || 0 : 0;
+  const mult = (1 + iepsPct / 100) * (1 + ivaPct / 100);
+  const neto = mult > 0 ? precioFinalUnitario / mult : precioFinalUnitario;
+  const subtotal = round2(neto * cantidad);
+  let ieps = iepsPct > 0 ? round2(subtotal * (iepsPct / 100)) : 0;
+  let iva = ivaPct > 0 ? round2((subtotal + ieps) * (ivaPct / 100)) : 0;
+  const objetivo = round2(precioFinalUnitario * cantidad);
+  const diff = round2(objetivo - round2(subtotal + ieps + iva));
+  if (diff !== 0) {
+    if (ivaPct > 0 && iva + diff >= 0) iva = round2(iva + diff);
+    else if (iepsPct > 0 && ieps + diff >= 0) ieps = round2(ieps + diff);
   }
-  // Apply redondeo on gross, then back-out to net so that the gross matches what was shown
-  const grossRounded = applyRedondeo(round2(neto * taxMultiplier(prod)), rule.redondeo ?? "ninguno");
-  const div = taxMultiplier(prod);
-  return round2(div > 0 ? grossRounded / div : grossRounded);
+  return { precio_unitario: neto, subtotal, ieps_monto: ieps, iva_monto: iva, total: round2(subtotal + ieps + iva) };
 }

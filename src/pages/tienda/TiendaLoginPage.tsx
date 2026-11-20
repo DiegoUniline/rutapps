@@ -64,7 +64,7 @@ function Inner() {
         <p className="sub">{mode === "login" ? "Accede para ver tus precios personalizados." : "Envíanos tus datos. La empresa revisará tu solicitud antes de activar la cuenta."}</p>
         {mode === "login" && t.sesionExpirada && (
           <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", borderRadius: 10, padding: 10, marginBottom: 12, fontSize: 13 }}>
-            Tu sesión expiró. Inicia sesión de nuevo para continuar.
+            Tu sesión se cerró. Inicia sesión de nuevo para continuar.
           </div>
         )}
 
@@ -95,11 +95,17 @@ function Inner() {
           )}
           <div className="tienda-field">
             <label>Correo *</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            {/* type="text": el servidor limpia espacios/mayúsculas/comillas; type="email" del
+                navegador bloqueaba el envío con mensajes confusos en el celular. */}
+            <input type="text" inputMode="email" autoComplete={mode === "login" ? "username" : "email"}
+              autoCapitalize="none" autoCorrect="off" spellCheck={false}
+              value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div className="tienda-field">
             <label>{mode === "login" ? "Contraseña" : "Contraseña para cuando tu cuenta sea aprobada"} *</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+            <input type="password" autoComplete={mode === "login" ? "current-password" : "new-password"}
+              autoCapitalize="none" autoCorrect="off" spellCheck={false}
+              value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === "signup" ? 6 : undefined} />
           </div>
 
           {err && <div className="tienda-error">{err}</div>}
