@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { X, CalendarClock, History } from 'lucide-react';
+import { CalendarClock, History } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export type ModoGuardado = 'adelante' | 'historico';
 
@@ -18,15 +19,14 @@ export default function EsquemaVigenciaDialog({ nombre, onCancel, onConfirm, sav
   const [modo, setModo] = useState<ModoGuardado>('adelante');
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4" onClick={onCancel}>
-      <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-lg max-h-[90dvh] overflow-y-auto p-4 space-y-3" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold">¿Cómo aplicamos el cambio?</h3>
-          <button onClick={onCancel} className="p-1 hover:bg-muted rounded"><X className="h-4 w-4" /></button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Estás modificando el esquema <span className="font-medium">{nombre}</span>. Los recibos ya generados nunca se modifican.
-        </p>
+    <Dialog open onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <DialogContent className="max-w-lg gap-3">
+        <DialogHeader>
+          <DialogTitle>¿Cómo aplicamos el cambio?</DialogTitle>
+          <DialogDescription className="text-xs">
+            Estás modificando el esquema <span className="font-medium">{nombre}</span>. Los recibos ya generados nunca se modifican.
+          </DialogDescription>
+        </DialogHeader>
 
         <label className={`flex gap-3 items-start border rounded p-3 cursor-pointer ${modo === 'adelante' ? 'border-primary bg-primary/5' : 'border-border'}`}>
           <input type="radio" className="mt-1" checked={modo === 'adelante'} onChange={() => setModo('adelante')} />
@@ -49,13 +49,13 @@ export default function EsquemaVigenciaDialog({ nombre, onCancel, onConfirm, sav
           </div>
         </label>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <DialogFooter className="gap-2 sm:space-x-0">
           <button onClick={onCancel} className="btn-cancelar btn-odoo-secondary">Cancelar</button>
           <button onClick={() => onConfirm(modo)} disabled={saving} className="btn-odoo-primary">
             {saving ? 'Guardando...' : 'Aplicar'}
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

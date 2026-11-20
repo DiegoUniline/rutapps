@@ -6,6 +6,8 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { cn, todayLocal, fmtDate } from '@/lib/utils';
 import { Check, DollarSign } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useCurrency } from '@/hooks/useCurrency';
 
 export default function ComisionesRecibosPage() {
@@ -152,11 +154,14 @@ export default function ComisionesRecibosPage() {
         </div>
       )}
 
+      {/* D-040: modales estándar (chicos) */}
       {payingRecibo && (
-        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4" onClick={() => setPayingRecibo(null)}>
-          <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md p-4 space-y-3" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold flex items-center gap-2"><DollarSign className="h-4 w-4 text-primary" /> Pagar recibo</h3>
-            <div className="text-xs text-muted-foreground">{payingRecibo.vendedores?.nombre ?? 'Vendedor'} · Corte {fmtDate(payingRecibo.fecha_corte)}</div>
+        <Dialog open onOpenChange={(o) => { if (!o) setPayingRecibo(null); }}>
+          <DialogContent className="max-w-md gap-3">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-primary" /> Pagar recibo</DialogTitle>
+              <DialogDescription className="text-xs">{payingRecibo.vendedores?.nombre ?? 'Vendedor'} · Corte {fmtDate(payingRecibo.fecha_corte)}</DialogDescription>
+            </DialogHeader>
             <div className="text-2xl font-bold text-odoo-teal font-mono">{fmt(payingRecibo.total_comisiones)}</div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha de pago</label>
@@ -179,35 +184,36 @@ export default function ComisionesRecibosPage() {
             <div className="bg-muted/40 border border-border rounded p-2 text-xs text-muted-foreground">
               Se registrará un gasto en <span className="font-semibold">Gastos</span> a nombre de este vendedor.
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <DialogFooter className="gap-2 sm:space-x-0">
               <button onClick={() => setPayingRecibo(null)} className="btn-cancelar btn-odoo-secondary">Cancelar</button>
               <button onClick={() => marcarPagadoMut.mutate()} disabled={marcarPagadoMut.isPending} className="btn-odoo-primary">
                 <Check className="h-4 w-4" /> Confirmar pago
               </button>
-            </div>
-          </div>
-        </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {cancelingRecibo && (
-        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4" onClick={() => !cancelarReciboMut.isPending && setCancelingRecibo(null)}>
-          <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md p-4 space-y-3" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold">Cancelar recibo</h3>
+        <Dialog open onOpenChange={(o) => { if (!o && !cancelarReciboMut.isPending) setCancelingRecibo(null); }}>
+          <DialogContent className="max-w-md gap-3">
+            <DialogHeader>
+              <DialogTitle>Cancelar recibo</DialogTitle>
+            </DialogHeader>
             <div className="text-sm text-foreground">¿Cancelar este recibo y liberar las comisiones para volver a pagarlas?</div>
             <div className="bg-muted/40 border border-border rounded p-2 text-xs space-y-1">
               <div><span className="text-muted-foreground">Vendedor:</span> <span className="font-medium">{cancelingRecibo.vendedores?.nombre ?? (cancelingRecibo.vendedor_id ? 'Vendedor' : 'Varios vendedores')}</span></div>
               <div><span className="text-muted-foreground">Corte:</span> <span className="font-medium">{fmtDate(cancelingRecibo.fecha_corte)}</span></div>
               <div><span className="text-muted-foreground">Total:</span> <span className="font-mono font-bold text-odoo-teal">{fmt(cancelingRecibo.total_comisiones)}</span></div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setCancelingRecibo(null)} disabled={cancelarReciboMut.isPending} className="btn-odoo-secondary">Volver</button>
-              <button onClick={() => cancelarReciboMut.mutate(cancelingRecibo.id)} disabled={cancelarReciboMut.isPending}
-                className="px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50">
+            <DialogFooter className="gap-2 sm:space-x-0">
+              <Button variant="outline" onClick={() => setCancelingRecibo(null)} disabled={cancelarReciboMut.isPending}>Volver</Button>
+              <Button variant="destructive" onClick={() => cancelarReciboMut.mutate(cancelingRecibo.id)} disabled={cancelarReciboMut.isPending}>
                 {cancelarReciboMut.isPending ? 'Cancelando...' : 'Sí, cancelar y liberar'}
-              </button>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

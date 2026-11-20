@@ -407,13 +407,20 @@ export default function EntregaListPage() {
 
   return (
     <ListPage scroll>
+      {/* D-040: modal estándar (chico). Bloquea a propósito: sin cerrar, Escape ni clic fuera mientras avanza. */}
       {cargarProgress && (
-        <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <Truck className="h-4 w-4 text-primary animate-pulse" />
-              <h3 className="text-[14px] font-semibold text-foreground">{cargarProgress.title || 'Procesando entregas…'}</h3>
-            </div>
+        <Dialog open onOpenChange={() => { /* no se cierra hasta terminar */ }}>
+          <DialogContent
+            className="max-w-sm gap-3 [&_[data-dialog-header-close]]:hidden [&>[data-dialog-close-default]]:hidden"
+            onInteractOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
+          >
+            <DialogHeader className="pr-0">
+              <DialogTitle className="flex items-center gap-2 text-[14px] sm:text-[14px]">
+                <Truck className="h-4 w-4 text-primary animate-pulse" />
+                {cargarProgress.title || 'Procesando entregas…'}
+              </DialogTitle>
+            </DialogHeader>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[12px]">
                 <span className="text-muted-foreground">
@@ -434,8 +441,8 @@ export default function EntregaListPage() {
             <p className="text-[11px] text-destructive font-medium leading-snug">
               ⚠️ No recargues ni salgas de esta pantalla hasta que termine.
             </p>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
       <PedidosTabs
         fechas={{

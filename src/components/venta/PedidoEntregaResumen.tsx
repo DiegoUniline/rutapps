@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Lock, Truck, Package, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { usePermisos } from '@/hooks/usePermisos';
@@ -235,15 +237,15 @@ function CerrarDialog({
   const saldoFinal = Math.max(0, totalEntregado - cobrado);
   const faltantes = pzasPedidas - pzasEntregadas;
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center px-4" onClick={onClose}>
-      <div className="bg-card rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
-        <div className="flex flex-col items-center text-center gap-2">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader className="items-center text-center sm:text-center gap-2 space-y-0">
           <div className="h-11 w-11 rounded-full bg-warning/15 flex items-center justify-center">
             <AlertTriangle className="h-5 w-5 text-warning" />
           </div>
-          <h3 className="text-[15px] font-bold text-foreground">Cerrar pedido {venta.folio}</h3>
-          <p className="text-[12px] text-muted-foreground">Se entregaron {pzasEntregadas} de {pzasPedidas} pza.</p>
-        </div>
+          <DialogTitle>Cerrar pedido {venta.folio}</DialogTitle>
+          <DialogDescription className="text-[12px]">Se entregaron {pzasEntregadas} de {pzasPedidas} pza.</DialogDescription>
+        </DialogHeader>
 
         <div className="bg-accent/40 rounded-xl p-3.5 space-y-2 text-[12px]">
           <Row label="Pedido original" value={fmt(totalPedido)} muted />
@@ -264,20 +266,16 @@ function CerrarDialog({
           <span>Entiendo, cerrar este pedido a lo entregado</span>
         </label>
 
-        <div className="flex gap-2">
-          <button onClick={onClose} disabled={busy} className="btn-cancelar flex-1 bg-accent/60 text-foreground rounded-xl py-2.5 text-[13px] font-semibold active:scale-[0.98] disabled:opacity-40">
+        <DialogFooter className="gap-2 sm:space-x-0">
+          <Button variant="cancelar" onClick={onClose} disabled={busy}>
             Cancelar
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={!ack || busy}
-            className="flex-1 bg-warning text-warning-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-1.5"
-          >
+          </Button>
+          <Button onClick={onConfirm} disabled={!ack || busy}>
             <Lock className="h-4 w-4" /> {busy ? 'Cerrando…' : 'Confirmar cierre'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
