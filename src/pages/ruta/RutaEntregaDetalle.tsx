@@ -16,6 +16,7 @@ import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 import { fetchEntregaWithFallback, fetchVentaForEntregaWithFallback, fetchOtrasPendientesWithFallback } from '@/lib/offlineEntrega';
 import { queueOperation } from '@/lib/syncQueue';
+import { getOfflineTable } from '@/lib/offlineDb';
 import { leerCantidad } from '@/lib/ventaPresentacion';
 import {
   ArrowLeft, Check, User, Package, MapPin, Calendar,
@@ -129,6 +130,35 @@ export default function RutaEntregaDetalle() {
   });
 
 
+
+  // Pagos REALES aplicados al pedido (para el ticket). Sin ellos el ticket no
+  // muestra «Total pagado»: ya no se supone pagado lo de contado.
+  const { data: pagosVenta } = useQuery({
+    queryKey: ['ruta-entrega-pagos', ventaId],
+    enabled: !!ventaId,
+    networkMode: 'always',
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('cobro_aplicaciones')
+          .select('monto_aplicado, cobro_id, cobros(fecha, metodo_pago, referencia, status)')
+          .eq('venta_id', ventaId!);
+        if (error) throw error;
+        return (data ?? []) as Array<{ monto_aplicado: number | null; cobros: { fecha: string | null; metodo_pago: string | null; referencia: string | null; status: string | null } | null }>;
+      } catch (err) {
+        // Sin red: lo que haya en el dispositivo (mismo criterio que el detalle de venta).
+        console.warn('[Entrega] pagos sin conexión, se usan los locales:', err);
+        const appsTable = getOfflineTable('cobro_aplicaciones');
+        const cobrosTable = getOfflineTable('cobros');
+        const apps = appsTable ? ((await appsTable.toArray().catch(() => [])) as Array<Record<string, unknown>>) : [];
+        const cobros = cobrosTable ? ((await cobrosTable.toArray().catch(() => [])) as Array<Record<string, unknown>>) : [];
+        const cobrosById = new Map(cobros.map(c => [c.id, c]));
+        return apps
+          .filter(a => a.venta_id === ventaId)
+          .map(a => ({ monto_aplicado: Number(a.monto_aplicado) || 0, cobros: (cobrosById.get(a.cobro_id) ?? null) as { fecha: string | null; metodo_pago: string | null; referencia: string | null; status: string | null } | null }));
+      }
+    },
+  });
 
   // Auto-marcar como entregado si la venta ya fue cobrada totalmente
   const autoMarkedRef = useRef(false);
@@ -419,6 +449,7 @@ export default function RutaEntregaDetalle() {
             ieps_monto: Number(l.ieps_monto ?? 0) * ratio,
             descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
             producto_id: l.producto_id,
+            codigo: l.productos?.codigo ?? null,
           };
         });
       return {
@@ -436,7 +467,16 @@ export default function RutaEntregaDetalle() {
         ieps: entregaTotals.ieps, total: entregaTotal,
         condicionPago: venta.condicion_pago,
         metodoPago: (venta as any).metodo_pago ?? undefined,
-        saldoNuevo: ventaSaldo > 0 ? ventaSaldo : undefined,
+        // Saldo real del pedido (también 0 = pagado) y pagos reales aplicados.
+        saldoNuevo: Math.max(Number(ventaSaldo) || 0, 0),
+        pagos: (pagosVenta ?? [])
+          .filter(p => (p.cobros?.status ?? 'activo') !== 'cancelado')
+          .map(p => ({
+            metodo: p.cobros?.metodo_pago ?? '',
+            monto: Number(p.monto_aplicado) || 0,
+            fecha: p.cobros?.fecha ? fmtDate(p.cobros.fecha) : null,
+            referencia: p.cobros?.referencia ?? null,
+          })),
         promociones: ((venta as any).venta_promociones ?? []).filter((p: any) => (p.descuento ?? 0) > 0).map((p: any) => ({
           descripcion: p.descripcion ?? p.nombre ?? '', descuento: p.descuento ?? 0, producto_id: p.producto_id, tipo: p.tipo, cantidad_gratis: p.cantidad_gratis,
         })),

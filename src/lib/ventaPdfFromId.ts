@@ -7,6 +7,7 @@ import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
 import { getCurrencyConfig } from '@/lib/currency';
 import { generateDifasurVentaPdf } from '@/lib/difasurNotaVentaPdf';
+import { leerTicketCampos } from '@/lib/ticketModelo';
 
 // Empresas con plantilla de nota de venta personalizada
 const CUSTOM_TEMPLATE_LICENCIAS = new Set(['53021303']); // DIFASUR
@@ -38,6 +39,20 @@ export async function generateVentaPdfById(ventaId: string, empresaId?: string):
     .select('monto_aplicado, cobros(fecha, metodo_pago, referencia, status)')
     .eq('venta_id', ventaId);
   const pagos = (pagosRaw ?? []).filter((p: any) => (p.cobros?.status ?? 'activo') !== 'cancelado');
+
+  // Devoluciones de la venta (la nota obedece la opción «Devoluciones» del ticket)
+  const { data: devHeads, error: devErr } = await supabase.from('devoluciones').select('id').eq('venta_id', ventaId);
+  if (devErr) throw new Error(`No se pudieron cargar las devoluciones: ${devErr.message}`);
+  const devIds = (devHeads ?? []).map(d => d.id);
+  let devLineas: Array<{ cantidad: number | null; motivo: string; accion: string; monto_credito: number | null; producto: { nombre: string | null } | null }> = [];
+  if (devIds.length > 0) {
+    const { data, error: devLinErr } = await supabase
+      .from('devolucion_lineas')
+      .select('cantidad, motivo, accion, monto_credito, producto:productos!devolucion_lineas_producto_id_fkey(nombre)')
+      .in('devolucion_id', devIds);
+    if (devLinErr) throw new Error(`No se pudieron cargar las devoluciones: ${devLinErr.message}`);
+    devLineas = (data ?? []) as unknown as typeof devLineas;
+  }
 
   const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
 
@@ -101,6 +116,16 @@ export async function generateVentaPdfById(ventaId: string, empresaId?: string):
       monto: Number(p.monto_aplicado) || 0,
       referencia: p.cobros?.referencia,
     })),
+    devoluciones: devLineas.map(d => ({
+      nombre: d.producto?.nombre ?? 'Producto',
+      cantidad: Number(d.cantidad) || 0,
+      motivo: d.motivo,
+      accion: d.accion,
+      monto: Number(d.monto_credito ?? 0) || 0,
+    })),
+    // Mismas opciones que el ticket (Configuración → Ticket).
+    ticketCampos: leerTicketCampos(empresa?.ticket_campos),
+    notasTicket: empresa?.notas_ticket ?? null,
   });
 
   const folio = venta.folio || ventaId.slice(0, 8);

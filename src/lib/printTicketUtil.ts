@@ -134,6 +134,7 @@ export function buildTicketDataFromVenta(params: {
   vendedorTelefono?: string | null;
   lineas: Array<{
     nombre: string;
+    codigo?: string | null;
     cantidad: number;
     precio_unitario: number;
     total: number;
@@ -185,6 +186,7 @@ export function buildTicketDataFromVenta(params: {
     vendedorTelefono: params.vendedorTelefono ?? null,
     lineas: lineas.map(l => ({
       nombre: l.nombre,
+      codigo: l.codigo ?? null,
       cantidad: l.cantidad,
       precio: l.precio_unitario,
       total: l.total,
@@ -210,7 +212,9 @@ export function buildTicketDataFromVenta(params: {
     cambio: params.cambio,
     saldoAnterior: params.saldoAnterior,
     pagoAplicado: params.pagoAplicado,
-    saldoNuevo: params.saldoNuevo ?? ((venta.saldo_pendiente ?? 0) > 0 ? venta.saldo_pendiente : undefined),
+    // Saldo de la venta tal como está en la BD (también 0 = pagada): el ticket ya
+    // no supone pagado lo de contado sin pagos registrados.
+    saldoNuevo: params.saldoNuevo ?? (venta.saldo_pendiente != null ? Math.max(Number(venta.saldo_pendiente) || 0, 0) : undefined),
     promociones: params.promociones,
     pagos: params.pagos,
     devoluciones: params.devoluciones,

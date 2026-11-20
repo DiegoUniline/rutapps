@@ -1,12 +1,12 @@
 import { RutaOperacionGate } from '@/components/ruta/RutaOperacionGate';
 import { ArrowLeft, X } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
 import { printTicket } from '@/lib/printTicketUtil';
-import type { TicketData } from '@/lib/ticketHtml';
+import { ticketVentaADatos, type TicketVentaDatos } from '@/lib/ticketVentaData';
 import { fmtDate } from '@/lib/utils';
 import { StepTipo } from './StepTipo';
 import { StepSinCompra } from './StepSinCompra';
@@ -26,23 +26,33 @@ function RutaNuevaVentaInner() {
   const h = useRutaVenta({ onAlmacenMissing: () => checkAlmacen() });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-  if (!hasPermisoMovil('ruta.vender')) {
-    return <MobileNoAccess titulo="Sin permiso para vender" mensaje="Tu rol no permite crear ventas desde la ruta." />;
-  }
-
   const ticketAncho = (h.empresa as any)?.ticket_ancho ?? '58';
 
-  const handlePrintTicket = useCallback(async () => {
-    if (!h.ticketInfo) return;
+  // Un solo objeto de ticket para la pantalla y la impresión (salen iguales).
+  const ticketDatos = useMemo((): TicketVentaDatos | null => {
+    if (!h.ticketInfo) return null;
+    const e = h.empresa as (typeof h.empresa & Record<string, unknown>) | null;
     const totalPagadoAhora = h.pagos.reduce((a, p) => a + Number(p.monto || 0), 0);
-    const saldoRestanteEstaVenta = h.condicionPago !== 'contado' ? Math.max(0, h.totals.total - totalPagadoAhora) : 0;
+    // Lo que queda por pagar de ESTA venta. En contado los pagos cubren primero
+    // esta venta (useRutaVenta): un pedido de contado sin cobro (pago contra
+    // entrega) queda con saldo = total; ya no se supone pagado. En crédito se
+    // conserva el cálculo de siempre (total − pagos).
+    const saldoRestanteEstaVenta = Math.max(0, h.totals.total - totalPagadoAhora);
     const saldoAnteriorRestante = Math.max(0, h.saldoPendienteTotal - h.totalAplicarCuentas);
     const saldoNuevoCalc = saldoAnteriorRestante + saldoRestanteEstaVenta;
-    const td: TicketData = {
-      empresa: { nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion, logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc, razon_social: (h.empresa as any)?.razon_social, colonia: (h.empresa as any)?.colonia, ciudad: (h.empresa as any)?.ciudad, estado: (h.empresa as any)?.estado, cp: (h.empresa as any)?.cp, email: (h.empresa as any)?.email, moneda: (h.empresa as any)?.moneda, notas_ticket: (h.empresa as any)?.notas_ticket, ticket_campos: (h.empresa as any)?.ticket_campos },
+    const str = (v: unknown) => (typeof v === 'string' ? v : null);
+    const profileTel = (h.profile as { telefono?: string | null } | null)?.telefono ?? null;
+    return {
+      empresa: {
+        nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion,
+        logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc, razon_social: str(e?.razon_social),
+        colonia: str(e?.colonia), ciudad: str(e?.ciudad), estado: str(e?.estado), cp: str(e?.cp),
+        email: str(e?.email), moneda: str(e?.moneda), notas_ticket: str(e?.notas_ticket),
+        ticket_campos: (e?.ticket_campos ?? null) as TicketVentaDatos['empresa']['ticket_campos'],
+      },
       folio: h.ticketInfo.folio, fecha: fmtDate(h.ticketInfo.fecha), clienteNombre: h.clienteNombre,
       vendedorNombre: h.profile?.nombre ?? '',
-      vendedorTelefono: (h.profile as any)?.telefono ?? null,
+      vendedorTelefono: profileTel,
       lineas: h.ticketLineas,
       subtotal: h.totals.subtotal,
       // Descuentos totales del ticket: devolución aplicada como descuento +
@@ -52,39 +62,39 @@ function RutaNuevaVentaInner() {
       descuento: (h.totals.descuentoDevolucion ?? 0)
         + (h.totals.descuentoExtra ?? 0)
         + h.promoResults.reduce((s, r) => s + (Number(r.descuento) || 0), 0),
+      descuentoDevolucion: h.totals.descuentoDevolucion ?? 0,
       iva: h.totals.iva,
       ieps: h.totals.ieps,
       total: h.totals.total,
       condicionPago: h.condicionPago, metodoPago: h.pagos.map(p => p.metodo_pago).join(', '),
       montoRecibido: h.montoRecibidoNum, cambio: h.cambio,
       saldoAnterior: h.saldoPendienteTotal,
-      pagoAplicado: h.totalAplicarCuentas + totalPagadoAhora,
-      saldoNuevo: saldoNuevoCalc > 0 ? saldoNuevoCalc : undefined,
+      // Solo lo aplicado a cuentas anteriores: el pago de esta venta ya está en
+      // «Total pagado» y en el saldo (así Saldo ant − Pago + venta = Saldo).
+      pagoAplicado: h.totalAplicarCuentas,
+      saldoNuevo: saldoNuevoCalc,
       promociones: h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id, tipo: r.tipo, cantidad_gratis: r.cantidad_gratis })),
-      pagos: h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: fmtDate(h.ticketInfo.fecha), referencia: (p as any).referencia ?? undefined })),
+      pagos: h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: fmtDate(h.ticketInfo!.fecha), referencia: (p as { referencia?: string | null }).referencia ?? undefined })),
       devoluciones: h.devoluciones.map(d => ({ nombre: d.nombre, cantidad: Number(d.cantidad) || 0, motivo: d.motivo, accion: d.accion, monto: (d.precio_unitario ?? 0) * (Number(d.cantidad) || 0) })),
+      productosList: h.productos as TicketVentaDatos['productosList'],
     };
-    await printTicket(td, { ticketAncho });
-  }, [h.ticketInfo, h.ticketLineas, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, h.devoluciones, h.profile, ticketAncho]);
+  }, [h.ticketInfo, h.ticketLineas, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, h.devoluciones, h.profile, h.productos]);
+
+  const handlePrintTicket = useCallback(async () => {
+    if (!ticketDatos) return;
+    await printTicket(ticketVentaADatos(ticketDatos), { ticketAncho });
+  }, [ticketDatos, ticketAncho]);
 
 
-  if (h.ticketInfo) {
+  // Después de los hooks (reglas de hooks): sin permiso no se muestra nada más.
+  if (!hasPermisoMovil('ruta.vender')) {
+    return <MobileNoAccess titulo="Sin permiso para vender" mensaje="Tu rol no permite crear ventas desde la ruta." />;
+  }
+
+  if (h.ticketInfo && ticketDatos) {
     return (
       <TicketVenta
-        empresa={{ nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion, logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc, moneda: (h.empresa as any)?.moneda, razon_social: (h.empresa as any)?.razon_social, colonia: (h.empresa as any)?.colonia, ciudad: (h.empresa as any)?.ciudad, estado: (h.empresa as any)?.estado, cp: (h.empresa as any)?.cp, email: (h.empresa as any)?.email, notas_ticket: (h.empresa as any)?.notas_ticket, ticket_campos: (h.empresa as any)?.ticket_campos }}
-        folio={h.ticketInfo.folio} fecha={h.ticketInfo.fecha} clienteNombre={h.clienteNombre}
-        vendedorNombre={h.profile?.nombre ?? ''}
-        vendedorTelefono={(h.profile as any)?.telefono ?? null}
-        lineas={h.ticketLineas}
-        subtotal={h.totals.subtotal} iva={h.totals.iva} ieps={h.totals.ieps} total={h.totals.total}
-        descuentoDevolucion={h.totals.descuentoDevolucion ?? 0}
-        devoluciones={h.devoluciones.map(d => ({ nombre: d.nombre, cantidad: d.cantidad, motivo: d.motivo, accion: d.accion, monto: d.precio_unitario * d.cantidad }))}
-        condicionPago={h.condicionPago} metodoPago={h.pagos.map(p => p.metodo_pago).join(', ')} montoRecibido={h.montoRecibidoNum} cambio={h.cambio}
-        saldoAnterior={h.saldoPendienteTotal} pagoAplicado={h.totalAplicarCuentas}
-        saldoNuevo={h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago !== 'contado' ? Math.max(0, h.totals.total - (h.pagos.reduce((a, p) => a + Number(p.monto || 0), 0))) : 0)}
-        promociones={h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id, tipo: r.tipo, cantidad_gratis: r.cantidad_gratis }))}
-        pagos={h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: h.ticketInfo.fecha }))}
-        productosList={h.productos as any}
+        {...ticketDatos}
         onPrintTicket={handlePrintTicket}
         onClose={() => h.navigate('/ruta')}
       />

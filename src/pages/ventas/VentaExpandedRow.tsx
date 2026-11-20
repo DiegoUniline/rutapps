@@ -76,7 +76,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
       const [lRes, pRes, tRes, cRes, plRes, vlRes, paRes] = await Promise.all([
         supabase
           .from('venta_lineas')
-          .select('id, presentacion_id, presentacion_nombre, presentacion_factor, paquetes, cantidad, precio_unitario, precio_lista_unitario, descuento_pct, descuento_promocion_monto, descuento_manual_monto, subtotal, iva_pct, iva_monto, ieps_pct, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, almacen_id, lote_id, promocion_id, promocion_nombre, cantidad_bonificada, lotes:lotes!lote_id(codigo, fecha_caducidad), productos(nombre, es_granel, unidad_granel, maneja_lote, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
+          .select('id, presentacion_id, presentacion_nombre, presentacion_factor, paquetes, cantidad, precio_unitario, precio_lista_unitario, descuento_pct, descuento_promocion_monto, descuento_manual_monto, subtotal, iva_pct, iva_monto, ieps_pct, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, almacen_id, lote_id, promocion_id, promocion_nombre, cantidad_bonificada, lotes:lotes!lote_id(codigo, fecha_caducidad), productos(nombre, codigo, es_granel, unidad_granel, maneja_lote, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
           .eq('venta_id', venta.id)
           .order('created_at'),
         supabase
@@ -303,6 +303,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
         vendedorTelefono: (venta.vendedores as any)?.telefono ?? null,
         lineas: lineas.map((l: any) => ({
           nombre: (l.productos as any)?.nombre ?? '—',
+          codigo: (l.productos as any)?.codigo ?? null,
           cantidad: l.cantidad,
           precio_unitario: l.precio_unitario,
           total: l.total,

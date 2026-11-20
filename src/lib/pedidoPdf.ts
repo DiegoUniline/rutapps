@@ -9,6 +9,10 @@ import {
   type EmpresaInfo,
 } from './pdfStyleOdoo';
 import { getCurrencyConfig } from '@/lib/currency';
+import {
+  resolverOpcionesTicket, MOTIVO_DEVOLUCION_LABELS, ACCION_DEVOLUCION_LABELS,
+  type TicketCampos,
+} from '@/lib/ticketModelo';
 
 interface PedidoPdfPromo {
   descripcion: string;
@@ -16,7 +20,7 @@ interface PedidoPdfPromo {
   producto_id?: string;
 }
 
-interface PedidoPdfParams {
+export interface PedidoPdfParams {
   empresa: EmpresaInfo;
   logoBase64?: string | null;
   pedido: {
@@ -71,6 +75,14 @@ interface PedidoPdfParams {
     referencia?: string;
   }[];
   promociones?: PedidoPdfPromo[];
+  devoluciones?: { nombre: string; cantidad: number; motivo: string; accion: string; monto?: number }[];
+  /**
+   * Opciones del diseñador de ticket (`empresas.ticket_campos`): la nota carta
+   * obedece las mismas que el ticket. Sin valor = todo encendido.
+   */
+  ticketCampos?: TicketCampos | null;
+  /** `empresas.notas_ticket` (se muestra si `notas_ticket` está encendido). */
+  notasTicket?: string | null;
 }
 
 const STATUS_MAP: Record<string, { label: string; color: 'green' | 'red' | 'neutral' }> = {
@@ -88,7 +100,27 @@ const ENTREGA_STATUS: Record<string, string> = {
 };
 
 export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
-  const { empresa, logoBase64, pedido, cliente, vendedor, almacen, lineas, entregas, pagos, promociones } = params;
+  const { empresa, pedido, cliente, almacen, lineas, entregas, devoluciones } = params;
+  // Mismas opciones que el ticket (Configuración → Ticket); el diseño carta no cambia.
+  const o = resolverOpcionesTicket(params.ticketCampos ?? null);
+  const logoBase64 = o.logo ? params.logoBase64 : null;
+  const vendedor = o.vendedorNombre ? params.vendedor : undefined;
+  const pagos = o.pagosRecibidos ? params.pagos : [];
+  const promociones = o.promociones ? params.promociones : undefined;
+  const promosEnRenglon = o.promociones && o.lineaPromo ? params.promociones : undefined;
+  const empresaEnc: EmpresaInfo = {
+    ...empresa,
+    nombre: o.nombre ? empresa.nombre : '',
+    razon_social: o.razonSocial || !o.nombre ? empresa.razon_social : null,
+    rfc: o.rfc ? empresa.rfc : null,
+    email: o.email ? empresa.email : null,
+    telefono: o.telefono ? empresa.telefono : null,
+    direccion: o.direccion ? empresa.direccion : null,
+    colonia: o.direccion ? empresa.colonia : null,
+    ciudad: o.direccion ? empresa.ciudad : null,
+    estado: o.direccion ? empresa.estado : null,
+    cp: o.direccion ? empresa.cp : null,
+  };
   const doc = await createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
@@ -99,21 +131,25 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
   const pagoLabel = pedido.condicion_pago === 'credito' ? 'Crédito' : pedido.condicion_pago === 'contado' ? 'Contado' : 'Por definir';
 
   // ── HEADER with status chip ──
-  let y = drawDocHeader(doc, empresa, 'ORDEN DE VENTA', pedido.folio, logoBase64, statusInfo.label, statusInfo.color);
+  let y = drawDocHeader(doc, empresaEnc, 'ORDEN DE VENTA', o.folio ? pedido.folio : '', logoBase64, statusInfo.label, statusInfo.color);
+
+  // ── TEXTO LIBRE DEL ENCABEZADO (diseñador de ticket) ──
+  if (o.textoEncabezado) y = drawNotes(doc, y, o.textoEncabezado, 'Aviso');
 
   // ── INFO GRID — Client left, Document info right ──
+  const contactoCliente = [cliente.email, o.clienteTelefono ? cliente.telefono : null].filter(Boolean).join(' · ');
   const leftRows: [string, string][] = [
-    ['_name', cliente.nombre],
-    ...(cliente.rfc ? [['RFC:', cliente.rfc] as [string, string]] : []),
-    ...(cliente.direccion ? [['', cliente.direccion] as [string, string]] : []),
-    ...(cliente.colonia ? [['', cliente.colonia] as [string, string]] : []),
-    ...(cliente.cp ? [['C.P.', cliente.cp] as [string, string]] : []),
-    ...(cliente.email || cliente.telefono ? [['', [cliente.email, cliente.telefono].filter(Boolean).join(' · ')] as [string, string]] : []),
+    ...(o.clienteNombre ? [['_name', cliente.nombre] as [string, string]] : []),
+    ...(o.clienteRfc && cliente.rfc ? [['RFC:', cliente.rfc] as [string, string]] : []),
+    ...(o.clienteDireccion && cliente.direccion ? [['', cliente.direccion] as [string, string]] : []),
+    ...(o.clienteDireccion && cliente.colonia ? [['', cliente.colonia] as [string, string]] : []),
+    ...(o.clienteDireccion && cliente.cp ? [['C.P.', cliente.cp] as [string, string]] : []),
+    ...(contactoCliente ? [['', contactoCliente] as [string, string]] : []),
   ];
 
   const rightRows: [string, string][] = [
-    ['Fecha de venta:', fmtDate(pedido.fecha)],
-    ['Condiciones de pago:', pagoLabel],
+    ...(o.fecha ? [['Fecha de venta:', fmtDate(pedido.fecha)] as [string, string]] : []),
+    ...(o.condicionPago ? [['Condiciones de pago:', pagoLabel] as [string, string]] : []),
     ...(vendedor ? [['Vendedor:', vendedor] as [string, string]] : []),
     ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
     ['Moneda:', `${cc.code} - ${cc.name}`],
@@ -122,52 +158,49 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
   y = drawInfoGrid(doc, y, 'Cliente', leftRows, 'Información de la venta', rightRows);
 
   // ── PRODUCTS TABLE (with inline promo rows) ──
-  const showSugerido = lineas.some(l => (l.precio_sugerido_publico ?? 0) > 0);
-  const tableRows: any[][] = [];
+  // Columnas según las opciones del ticket (código, P. unitario, descuento,
+  // impuestos y sugerido). «Producto», «Cant», «Unidad» e «Importe» siempre van.
+  type Celda = string | { content: string; colSpan?: number; styles?: Record<string, unknown> };
+  type Columna = { titulo: string; ancho?: number; halign?: 'left' | 'center' | 'right'; celda: (l: PedidoPdfParams['lineas'][number]) => Celda };
+  const guion = { content: '—', styles: { halign: 'center', textColor: C.sublabel } };
+  const showSugerido = o.lineaPrecioSugerido && lineas.some(l => (l.precio_sugerido_publico ?? 0) > 0);
+  const columnas: Columna[] = [
+    ...(o.lineaCodigo ? [{ titulo: 'Código', ancho: 18, celda: l => ({ content: l.codigo, styles: { textColor: C.sublabel, fontStyle: 'normal', fontSize: 7 } }) } as Columna] : []),
+    { titulo: 'Producto', celda: l => l.nombre },
+    { titulo: 'Cant', ancho: 12, halign: 'center', celda: l => ({ content: String(l.cantidad), styles: { halign: 'center' } }) },
+    { titulo: 'Unidad', ancho: 15, celda: l => l.unidad || 'Pieza' },
+    ...(o.lineaPrecioUnitario ? [{ titulo: 'P. Unit.', ancho: 20, halign: 'right', celda: l => ({ content: `${s}${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } }) } as Columna] : []),
+    ...(o.lineaDescuento ? [{ titulo: 'Desc', ancho: 12, halign: 'center', celda: l => (l.descuento_pct > 0
+      ? { content: `${l.descuento_pct}%`, styles: { halign: 'center', textColor: C.red } }
+      : guion) } as Columna] : []),
+    ...(o.impuestos ? [
+      { titulo: 'IVA', ancho: 12, halign: 'center', celda: l => ({ content: l.iva_pct > 0 ? `${l.iva_pct}%` : '—', styles: { halign: 'center', textColor: l.iva_pct > 0 ? C.text : C.sublabel } }) } as Columna,
+      { titulo: 'IEPS', ancho: 12, halign: 'center', celda: l => ({ content: l.ieps_pct > 0 ? `${l.ieps_pct}%` : '—', styles: { halign: 'center', textColor: l.ieps_pct > 0 ? C.text : C.sublabel } }) } as Columna,
+    ] : []),
+    ...(showSugerido ? [{ titulo: 'Sug. púb.', ancho: 20, halign: 'right', celda: l => ((l.precio_sugerido_publico ?? 0) > 0
+      ? { content: `${s}${fmtCurrency(l.precio_sugerido_publico!)}`, styles: { halign: 'right', fontStyle: 'bold' } }
+      : guion) } as Columna] : []),
+    { titulo: 'Importe', ancho: showSugerido ? 22 : 24, halign: 'right', celda: l => ({ content: `${s}${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } }) },
+  ];
+  const idxProducto = columnas.findIndex(c => c.titulo === 'Producto');
+  const tableRows: Celda[][] = [];
   for (const l of lineas) {
-    tableRows.push([
-      { content: l.codigo, styles: { textColor: C.sublabel, fontStyle: 'normal', fontSize: 7 } },
-      l.nombre,
-      { content: String(l.cantidad), styles: { halign: 'center' } },
-      l.unidad || 'Pieza',
-      { content: `${s}${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
-      l.descuento_pct > 0
-        ? { content: `${l.descuento_pct}%`, styles: { halign: 'center', textColor: C.red } }
-        : { content: '—', styles: { halign: 'center', textColor: C.sublabel } },
-      { content: l.iva_pct > 0 ? `${l.iva_pct}%` : '—', styles: { halign: 'center', textColor: l.iva_pct > 0 ? C.text : C.sublabel } },
-      { content: l.ieps_pct > 0 ? `${l.ieps_pct}%` : '—', styles: { halign: 'center', textColor: l.ieps_pct > 0 ? C.text : C.sublabel } },
-      ...(showSugerido ? [
-        (l.precio_sugerido_publico ?? 0) > 0
-          ? { content: `${s}${fmtCurrency(l.precio_sugerido_publico!)}`, styles: { halign: 'right', fontStyle: 'bold' as const } }
-          : { content: '—', styles: { halign: 'center', textColor: C.sublabel } },
-      ] : []),
-      { content: `${s}${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
-    ]);
-    // Insert promo sub-rows for this product
-    const linePromos = (promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
+    tableRows.push(columnas.map(c => c.celda(l)));
+    // Renglón de promoción bajo su producto (opción «Renglón de promoción»)
+    const linePromos = (promosEnRenglon ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
     for (const lp of linePromos) {
       tableRows.push([
-        '',
-        { content: `Promo: ${lp.descripcion}`, colSpan: showSugerido ? 7 : 6, styles: { textColor: C.muted, fontStyle: 'italic', fontSize: 7.5 } },
-        '',
+        ...Array.from({ length: idxProducto }, () => ''),
+        { content: `Promo: ${lp.descripcion}`, colSpan: columnas.length - idxProducto - 1, styles: { textColor: C.muted, fontStyle: 'italic', fontSize: 7.5 } },
         { content: `-${s}${fmtCurrency(lp.descuento)}`, styles: { halign: 'right', textColor: C.text, fontStyle: 'bold', fontSize: 7.5 } },
       ]);
     }
   }
-  y = await drawCleanTable(doc, y,
-    ['Código', 'Producto', 'Cant', 'Unidad', 'P. Unit.', 'Desc', 'IVA', 'IEPS', ...(showSugerido ? ['Sug. púb.'] : []), 'Importe'],
-    tableRows,
-    {
-      0: { cellWidth: 18 },
-      2: { cellWidth: 12, halign: 'center' },
-      3: { cellWidth: 15 },
-      4: { cellWidth: 20, halign: 'right' },
-      5: { cellWidth: 12, halign: 'center' },
-      6: { cellWidth: 12, halign: 'center' },
-      7: { cellWidth: 12, halign: 'center' },
-      ...(showSugerido ? { 8: { cellWidth: 20, halign: 'right' as const }, 9: { cellWidth: 22, halign: 'right' as const } } : { 8: { cellWidth: 24, halign: 'right' as const } }),
-    },
-  );
+  const columnStyles: Record<number, { cellWidth?: number; halign?: 'left' | 'center' | 'right' }> = {};
+  columnas.forEach((c, i) => {
+    if (c.ancho || c.halign) columnStyles[i] = { ...(c.ancho ? { cellWidth: c.ancho } : {}), ...(c.halign ? { halign: c.halign } : {}) };
+  });
+  y = await drawCleanTable(doc, y, columnas.map(c => c.titulo), tableRows, columnStyles);
 
   // ── AHORRO TOTAL PROMOS (inline per product above) ──
   if (promociones && promociones.length > 0) {
@@ -188,16 +221,23 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
   const subtotalBruto = lineas.reduce((s, l) => s + (l.precio_unitario * l.cantidad), 0);
   const totalRows: { label: string; value: string; bold?: boolean; red?: boolean; separator?: boolean }[] = [];
 
-  if (pedido.descuento_total > 0) {
-    totalRows.push({ label: 'Subtotal bruto:', value: `${s}${fmtCurrency(subtotalBruto)}` });
-    totalRows.push({ label: 'Descuentos:', value: `-${s}${fmtCurrency(pedido.descuento_total)}`, red: true });
-    totalRows.push({ label: 'Subtotal neto:', value: `${s}${fmtCurrency(pedido.subtotal)}`, separator: true });
-  } else {
-    totalRows.push({ label: 'Subtotal:', value: `${s}${fmtCurrency(pedido.subtotal)}` });
-  }
+  // Sin «Desglose de impuestos» solo va el Total (con impuestos incluidos).
+  if (o.impuestos) {
+    if (o.descuentos && pedido.descuento_total > 0) {
+      totalRows.push({ label: 'Subtotal bruto:', value: `${s}${fmtCurrency(subtotalBruto)}` });
+      totalRows.push({ label: 'Descuentos:', value: `-${s}${fmtCurrency(pedido.descuento_total)}`, red: true });
+      totalRows.push({ label: 'Subtotal neto:', value: `${s}${fmtCurrency(pedido.subtotal)}`, separator: true });
+    } else {
+      totalRows.push({ label: 'Subtotal:', value: `${s}${fmtCurrency(pedido.subtotal)}` });
+    }
 
-  if (pedido.ieps_total > 0) totalRows.push({ label: 'IEPS:', value: `${s}${fmtCurrency(pedido.ieps_total)}` });
-  if (pedido.iva_total > 0) totalRows.push({ label: 'IVA 16%:', value: `${s}${fmtCurrency(pedido.iva_total)}` });
+    if (o.impuestosDesglose) {
+      if (pedido.ieps_total > 0) totalRows.push({ label: 'IEPS:', value: `${s}${fmtCurrency(pedido.ieps_total)}` });
+      if (pedido.iva_total > 0) totalRows.push({ label: 'IVA 16%:', value: `${s}${fmtCurrency(pedido.iva_total)}` });
+    } else if (pedido.ieps_total + pedido.iva_total > 0) {
+      totalRows.push({ label: 'Impuestos:', value: `${s}${fmtCurrency(Math.round((pedido.ieps_total + pedido.iva_total) * 100) / 100)}` });
+    }
+  }
   totalRows.push({ label: 'Total:', value: `${s}${fmtCurrency(pedido.total)}`, bold: true });
   if ((pedido.saldo_pendiente ?? 0) > 0) {
     totalRows.push({ label: 'Saldo pendiente:', value: `${s}${fmtCurrency(pedido.saldo_pendiente!)}`, bold: true, red: true });
@@ -258,11 +298,34 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
     y += 7;
   }
 
+  // ── DEVOLUCIONES ──
+  if (o.devoluciones && devoluciones && devoluciones.length > 0) {
+    y = checkPageBreak(doc, y);
+    y = drawSectionTitle(doc, y, 'Devoluciones');
+    y = await drawCleanTable(doc, y,
+      ['Producto', 'Cant', 'Motivo', 'Acción', 'Monto'],
+      devoluciones.map(d => [
+        d.nombre,
+        { content: String(d.cantidad), styles: { halign: 'center' } },
+        MOTIVO_DEVOLUCION_LABELS[d.motivo] || d.motivo,
+        ACCION_DEVOLUCION_LABELS[d.accion] || d.accion,
+        { content: (d.monto ?? 0) > 0 ? `${s}${fmtCurrency(d.monto!)}` : '—', styles: { halign: 'right' } },
+      ]),
+      { 1: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 26, halign: 'right' } },
+    );
+  }
+
+  // ── NOTAS DEL TICKET Y TEXTO DEL PIE (diseñador de ticket) ──
+  if (o.notas && params.notasTicket) y = drawNotes(doc, y, params.notasTicket, 'Notas');
+  if (o.textoPie) y = drawNotes(doc, y, o.textoPie, 'Aviso');
+
   // ── SIGNATURES ──
-  y = drawSignatures(doc, y,
-    { title: 'Autorizado por', name: vendedor ? `${vendedor} — Ventas` : undefined },
-    { title: 'Recibido y aceptado por', name: cliente.nombre },
-  );
+  if (o.firmas) {
+    y = drawSignatures(doc, y,
+      { title: 'Autorizado por', name: vendedor ? `${vendedor} — Ventas` : undefined },
+      { title: 'Recibido y aceptado por', name: o.clienteNombre ? cliente.nombre : undefined },
+    );
+  }
 
   // ── FOOTER ──
   drawFooter(doc, empresa);

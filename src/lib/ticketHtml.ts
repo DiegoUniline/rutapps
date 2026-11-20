@@ -1,12 +1,21 @@
 /**
- * Unified ticket HTML builder — single source of truth for all ticket outputs:
- * on-screen display, PNG download, WhatsApp image, thermal print.
+ * Ticket en HTML: dibuja el modelo único (`ticketModelo`) para pantalla, PNG,
+ * imagen de WhatsApp e impresión por navegador. Qué lleva el ticket (secciones,
+ * renglones, montos y textos) lo decide `construirModeloTicket`; aquí solo se
+ * acomoda (`ticketLayout`) y se pinta.
  *
- * Uses monospace font + white-space:pre so toPng() renders perfectly aligned
- * columns without flexbox issues.
+ * Fuente monoespaciada + white-space:pre para que toPng() alinee las columnas
+ * sin problemas de flexbox.
  */
-import { getCurrencyConfig } from '@/lib/currency';
-import { computeResumenFromLineas } from '@/lib/ventaResumen';
+import { construirModeloTicket, type TicketCampos } from '@/lib/ticketModelo';
+import { maquetarTicket, centerText, type LineaTicket } from '@/lib/ticketLayout';
+
+export {
+  getTicketTotalsSummary,
+  MOTIVO_DEVOLUCION_LABELS,
+  ACCION_DEVOLUCION_LABELS,
+  type TicketTotalsSummary,
+} from '@/lib/ticketModelo';
 
 export interface TicketEmpresa {
   nombre: string;
@@ -22,11 +31,14 @@ export interface TicketEmpresa {
   logo_url?: string | null;
   moneda?: string | null;
   notas_ticket?: string | null;
-  ticket_campos?: Record<string, boolean> | null;
+  /** Interruptores (boolean) y textos libres (string) del diseñador de ticket. */
+  ticket_campos?: TicketCampos | null;
 }
 
 export interface TicketLinea {
   nombre: string;
+  /** Código del producto (solo se muestra si viene y `linea_codigo` está encendido). */
+  codigo?: string | null;
   cantidad: number;
   precio: number;
   total: number;
@@ -96,362 +108,41 @@ export interface TicketData {
   cancelado?: boolean;
 }
 
-export const MOTIVO_DEVOLUCION_LABELS: Record<string, string> = {
-  no_vendido: 'No vendido', vencido: 'Vencido', caducado: 'Caducado',
-  danado: 'Danado', cambio: 'Cambio', error_pedido: 'Error pedido', otro: 'Otro',
-};
-export const ACCION_DEVOLUCION_LABELS: Record<string, string> = {
-  reposicion: 'Reposicion', nota_credito: 'Nota credito',
-  devolucion_dinero: 'Dev. dinero', descuento_venta: 'Desc. venta',
-};
+const COLS_HTML = 32;
 
-export interface TicketTotalsSummary {
-  descuentoTotal: number;
-  impuestosTotal: number;
-  totalPagado: number;
-  saldo: number;
+const escapeHtml = (s: string) => s
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+function lineaHtml(l: LineaTicket, cols: number): string {
+  if (l.centro) return escapeHtml(centerText(l.partes.map(p => p.texto).join(''), cols));
+  // <s> = tachado (precio original de un producto gratis).
+  return l.partes.map(p => (p.tachado ? `<s>${escapeHtml(p.texto)}</s>` : escapeHtml(p.texto))).join('');
 }
 
-export function getTicketTotalsSummary(data: TicketData): TicketTotalsSummary {
-  const totalPromo = (data.promociones ?? []).reduce((s, p) => s + (Number(p.descuento) || 0), 0);
-  const descuentoTotal = Math.max(Number(data.descuento ?? 0), totalPromo, 0);
-  const impuestosTotal = Math.max((Number(data.iva) || 0) + (Number(data.ieps ?? 0) || 0), 0);
-  const pagosTotal = (data.pagos ?? []).reduce((s, p) => s + (Number(p.monto) || 0), 0);
-  const recibidoNeto = data.montoRecibido != null
-    ? Math.max((Number(data.montoRecibido) || 0) - (Number(data.cambio ?? 0) || 0), 0)
-    : 0;
-  const pagoAplicado = Math.max(Number(data.pagoAplicado ?? 0) || 0, 0);
-  const totalVenta = Math.max(Number(data.total) || 0, 0);
-  const totalPagado = pagosTotal > 0
-    ? pagosTotal
-    : pagoAplicado > 0
-      ? pagoAplicado
-      : recibidoNeto > 0
-        ? recibidoNeto
-        : data.condicionPago !== 'contado'
-          ? 0
-          : totalVenta;
-  const saldo = data.cancelado
-    ? 0
-    : data.saldoNuevo != null
-      ? Math.max(Number(data.saldoNuevo) || 0, 0)
-      : Math.max(totalVenta - Math.min(totalPagado, totalVenta), 0);
+/**
+ * @param opts.columnas Columnas del bloque monoespaciado. Por omisión 32 (la
+ *   imagen de siempre); la vista previa del diseñador usa 48 para 80 mm, igual
+ *   que la impresora térmica.
+ */
+export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean; columnas?: number }): string {
+  const cols = opts?.columnas ?? COLS_HTML;
+  const modelo = construirModeloTicket(data);
+  const enc = modelo.encabezado;
 
-  return { descuentoTotal, impuestosTotal, totalPagado, saldo };
-}
-
-const COLS = 32;
-
-function pad(left: string, right: string, cols = COLS): string {
-  const l = left.substring(0, cols - right.length - 1);
-  return l + ' '.repeat(cols - l.length - right.length) + right;
-}
-
-function centerText(s: string, cols = COLS): string {
-  s = s.substring(0, cols);
-  const sp = Math.floor((cols - s.length) / 2);
-  return ' '.repeat(sp) + s;
-}
-
-function wrapText(s: string, cols = COLS): string[] {
-  const words = s.split(' ');
-  const lines: string[] = [];
-  let cur = '';
-  for (const w of words) {
-    if ((cur + ' ' + w).trim().length <= cols) {
-      cur = (cur + ' ' + w).trim();
-    } else {
-      if (cur) lines.push(cur);
-      cur = w.substring(0, cols);
-    }
-  }
-  if (cur) lines.push(cur);
-  return lines;
-}
-
-const div = '-'.repeat(COLS);
-
-export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
-  const { empresa, folio, fecha, clienteNombre, clienteRfc, clienteTelefono, clienteDireccion, vendedorNombre, vendedorTelefono, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos, devoluciones } = data;
-  const sym = getCurrencyConfig(empresa.moneda).symbol;
-  // ASCII-only formatter — no multi-byte locale chars
-  const fmt = (n: number) => {
-    const [intPart, decPart] = Math.abs(n).toFixed(2).split('.');
-    const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return `${n < 0 ? '-' : ''}${sym}${formatted}.${decPart}`;
-  };
-
-  // ── Header (real HTML, text-align:center) ──
-  const tc = empresa.ticket_campos ?? {};
-  const showLogo = tc.logo !== false;
-  const showNombre = tc.nombre !== false;
-  const showRazon = tc.razon_social !== false;
-  const showRfc = tc.rfc !== false;
-  const showDir = tc.direccion !== false;
-  const showTel = tc.telefono !== false;
-  const showEmail = tc.email !== false;
-  const showNotas = tc.notas_ticket !== false;
-  // New toggles (default true to preserve current behavior)
-  const showFolio = tc.folio !== false;
-  const showFecha = tc.fecha !== false;
-  const showCondicionPago = tc.condicion_pago !== false;
-  const showClienteNombre = tc.cliente_nombre !== false;
-  const showClienteRfc = tc.cliente_rfc !== false;
-  const showClienteTelefono = tc.cliente_telefono !== false;
-  const showClienteDireccion = tc.cliente_direccion !== false;
-  const showVendedorNombre = tc.vendedor_nombre !== false;
-  const showVendedorTelefono = tc.vendedor_telefono !== false;
-  const showDescuentos = tc.descuentos !== false;
-  const showSaldoCuenta = tc.saldo_cuenta !== false;
-  const showRecibidoCambio = tc.recibido_cambio !== false;
-  const showPromociones = tc.promociones !== false;
-  const showPagosRecibidos = tc.pagos_recibidos !== false;
-  const showDevoluciones = tc.devoluciones !== false;
-  const showMensajeGracias = tc.mensaje_gracias !== false;
-  const showImpuestos = tc.impuestos !== false;
-  const showFirmas = tc.firmas !== false;
-  // Pie Rutapp: siempre visible, no configurable
-
+  // ── Encabezado (HTML real, centrado) ──
   const hLines: string[] = [];
-  if (showLogo && empresa.logo_url) {
-    hLines.push(`<div style="margin-bottom:6px"><img src="${empresa.logo_url}" alt="${empresa.nombre}" style="max-width:160px;max-height:80px;margin:0 auto;display:block" crossorigin="anonymous" /></div>`);
+  if (enc.logoUrl) {
+    hLines.push(`<div style="margin-bottom:6px"><img src="${escapeHtml(enc.logoUrl)}" alt="${escapeHtml(data.empresa.nombre)}" style="max-width:160px;max-height:80px;margin:0 auto;display:block" crossorigin="anonymous" /></div>`);
   }
-  if (showNombre) hLines.push(`<div style="font-weight:700;font-size:22px">${empresa.nombre.toUpperCase()}</div>`);
-  if (showRazon && empresa.razon_social) hLines.push(`<div style="font-size:14px">${empresa.razon_social}</div>`);
-  if (showRfc && empresa.rfc) hLines.push(`<div style="font-size:14px">RFC: ${empresa.rfc}</div>`);
-  const dir1 = [empresa.direccion, empresa.colonia].filter(Boolean).join(', ');
-  if (showDir && dir1) hLines.push(`<div style="font-size:13px">${dir1}</div>`);
-  const dir2 = [empresa.ciudad, empresa.estado, empresa.cp ? `CP ${empresa.cp}` : ''].filter(Boolean).join(', ');
-  if (showDir && dir2) hLines.push(`<div style="font-size:13px">${dir2}</div>`);
-  if (showTel && empresa.telefono) hLines.push(`<div style="font-size:13px">Tel: ${empresa.telefono}</div>`);
-  if (showEmail && empresa.email) hLines.push(`<div style="font-size:13px">${empresa.email}</div>`);
-  const headerHtml = hLines.join('');
+  if (enc.nombre) hLines.push(`<div style="font-weight:700;font-size:22px">${escapeHtml(enc.nombre.toUpperCase())}</div>`);
+  for (const l of enc.lineas) hLines.push(`<div style="font-size:${l.chico ? 13 : 14}px">${escapeHtml(l.texto)}</div>`);
+  if (enc.textoLibre) hLines.push(`<div style="font-size:13px;white-space:pre-wrap;margin-top:4px">${escapeHtml(enc.textoLibre)}</div>`);
 
-  // ── Body (monospace <pre> grid) ──
-  const rows: string[] = [];
-  const add = (s: string) => rows.push(s);
+  // ── Cuerpo (bloque monoespaciado) ──
+  const m = maquetarTicket(modelo, cols);
+  const bodyContent = [...m.cuerpo, ...m.pie, ...m.marca].map(l => lineaHtml(l, cols)).join('\n');
+  const width = Math.round((cols * 380) / COLS_HTML);
 
-  add(div);
-  if (showFolio) add(`Folio: ${folio}`);
-  if (showFecha) add(`Fecha: ${fecha}`);
-  if (showClienteNombre) add(`Cliente: ${clienteNombre}`.substring(0, COLS));
-  if (showClienteRfc && clienteRfc) add(`RFC: ${clienteRfc}`.substring(0, COLS));
-  if (showClienteTelefono && clienteTelefono) add(`Tel: ${clienteTelefono}`.substring(0, COLS));
-  if (showClienteDireccion && clienteDireccion) {
-    for (const l of wrapText(`Dir: ${clienteDireccion}`, COLS)) add(l);
-  }
-  if (showVendedorNombre && vendedorNombre) add(`Vendedor: ${vendedorNombre}`.substring(0, COLS));
-  if (showVendedorTelefono && vendedorTelefono) add(`Tel. vend: ${vendedorTelefono}`.substring(0, COLS));
-  if (showCondicionPago) {
-    const pagoLabel = condicionPago === 'credito' ? 'Credito' : condicionPago === 'contado' ? 'Contado' : 'P/definir';
-    add(`Pago: ${pagoLabel}${metodoPago ? ` (${metodoPago})` : ''}`);
-  }
-  add(div);
-
-  add(pad('Cant Producto', 'Importe'));
-  add(div);
-
-  // Promos que dejan una linea 100% gratis: se muestran GRATIS en la propia
-  // linea (no hay que cruzar el descuento con el producto). El producto_id de
-  // esas promos se marca como "consumido" para no repetirlo en el bloque de
-  // PROMOCIONES APLICADAS de abajo. Display-only: no altera totales.
-  const promosConDesc = (promociones ?? []).filter(p => (Number(p.descuento) || 0) > 0);
-  const descPorProducto = new Map<string, number>();
-  const gratisQtyPorProducto = new Map<string, number>();
-  for (const p of promosConDesc) {
-    if (!p.producto_id) continue;
-    descPorProducto.set(p.producto_id, (descPorProducto.get(p.producto_id) ?? 0) + (Number(p.descuento) || 0));
-    if (p.tipo === 'producto_gratis' || (Number(p.cantidad_gratis) || 0) > 0) {
-      gratisQtyPorProducto.set(p.producto_id, (gratisQtyPorProducto.get(p.producto_id) ?? 0) + (Number(p.cantidad_gratis) || 0));
-    }
-  }
-  const productosGratis = new Set<string>();
-
-  for (const l of lineas) {
-    // El importe de la linea SIEMPRE es el total con impuestos incluidos (bruto),
-    // igual que la columna Subtotal del sistema. El toggle de impuestos solo
-    // controla si se muestra el desglose abajo, no si se le quita IVA/IEPS a la
-    // linea (antes en "sin impuestos" mostraba el neto y no cuadraba con el saldo).
-    const lineAmt = Number(l.total) || 0;
-    // ¿La promo regala la linea completa? Preferimos la cantidad gratis (senal
-    // exacta); si no viene, caemos al monto (la promo cubre todo el importe).
-    const descLinea = (showPromociones && l.producto_id) ? (descPorProducto.get(l.producto_id) ?? 0) : 0;
-    const gratisQty = (showPromociones && l.producto_id) ? (gratisQtyPorProducto.get(l.producto_id) ?? 0) : 0;
-    const esGratis = (Number(l.total) || 0) > 0 && (
-      gratisQty > 0
-        ? gratisQty >= (Number(l.cantidad) || 0) - 0.001
-        : descLinea > 0 && descLinea >= (Number(l.total) || 0) - 0.01
-    );
-    const imp = esGratis ? 'GRATIS' : fmt(lineAmt);
-    const nombre = `${l.cantidad}x ${l.nombre}`;
-    const maxFirst = COLS - imp.length - 1;
-    if (nombre.length <= maxFirst) {
-      add(pad(nombre, imp));
-    } else {
-      // Wrap name across multiple lines; put importe on the first line only.
-      const wrapped = wrapText(nombre, maxFirst);
-      add(pad(wrapped[0], imp));
-      for (let i = 1; i < wrapped.length; i++) add(wrapped[i]);
-    }
-    if (esGratis) {
-      // Precio original tachado + promo, para que el cliente vea el ahorro.
-      if (l.producto_id) productosGratis.add(l.producto_id);
-      const promoLinea = promosConDesc.find(p => p.producto_id === l.producto_id);
-      const antes = `Antes ${fmt(lineAmt)}`;
-      const espacioPromo = COLS - antes.length - 3; // "  " sangria + 1 espacio
-      const etiqueta = promoLinea?.descripcion && espacioPromo > 3
-        ? ` ${promoLinea.descripcion.substring(0, espacioPromo)}`
-        : '';
-      // <s> = tachado; va en linea propia (sin pad) para no romper columnas.
-      add(`  <s>${antes}</s>${etiqueta}`);
-    } else {
-      // Precio unitario real de la venta. Si el precio guardado no cuadra con el
-      // importe bruto de la linea (impuestos incluidos), se deriva del importe
-      // para que SIEMPRE se cumpla Cantidad x P. Unitario = Importe.
-      const cant = Number(l.cantidad) || 0;
-      const pGuardado = Number(l.precio) || 0;
-      const pu = cant > 0 && Math.abs(pGuardado * cant - lineAmt) > 0.01 ? lineAmt / cant : pGuardado;
-      if (pu > 0) add(`  P.U. ${fmt(pu)}`);
-      if ((l.precio_sugerido_publico ?? 0) > 0) {
-        for (const line of wrapText(`  Sug ${fmt(l.precio_sugerido_publico!)}`, COLS)) add(line);
-      }
-    }
-
-  }
-  add(div);
-
-  const summary = getTicketTotalsSummary(data);
-  // Impuestos: se toman de los TOTALES del encabezado (data.iva/data.ieps), que
-  // llegan fiables en todos los flujos, y el gravable se deriva del total real
-  // para que SIEMPRE cuadre. El descuento se reconstruye desde las líneas (capta
-  // el "gratis" aunque no venga en el encabezado).
-  const resumen = computeResumenFromLineas(lineas.map(l => ({
-    subtotal: undefined,
-    descuento_pct: l.descuento_pct,
-    precio_unitario: l.precio,
-    cantidad: l.cantidad,
-    iva_monto: l.iva_monto,
-    ieps_monto: l.ieps_monto,
-    total: l.total,
-  })));
-  const ivaMonto = Number(iva) || 0;
-  const iepsMonto = Number(ieps) || 0;
-  const r2 = (n: number) => Math.round(n * 100) / 100;
-  const subtotalNetoGuardado = r2(lineas.reduce((s, l) => {
-    const lista = Number(l.precio_lista_unitario);
-    return s + (Number.isFinite(lista) ? r2(lista * (Number(l.cantidad) || 0)) : 0);
-  }, 0));
-  const descuentoNetoGuardado = r2(lineas.reduce((s, l) => {
-    const descuentoBruto = (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0);
-    if (descuentoBruto <= 0) return s;
-    const divisor = (1 + (Number(l.ieps_pct) || 0) / 100) * (1 + (Number(l.iva_pct) || 0) / 100);
-    return s + r2(divisor > 0 ? descuentoBruto / divisor : descuentoBruto);
-  }, 0));
-  const descTicket = subtotalNetoGuardado > 0
-    ? (descuentoNetoGuardado > 0 ? descuentoNetoGuardado : r2(subtotalNetoGuardado - ((Number(total) || 0) - ivaMonto - iepsMonto)))
-    : Math.max(resumen.descuento, summary.descuentoTotal, 0);
-  const sinImpTicket = subtotalNetoGuardado > 0
-    ? subtotalNetoGuardado
-    : Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto) + descTicket;
-  const gravableTicket = subtotalNetoGuardado > 0
-    ? Math.max(0, r2(sinImpTicket - descTicket))
-    : Math.max(0, (Number(total) || 0) - ivaMonto - iepsMonto);
-  // Descuento BRUTO (con impuestos), para el modo "sin desglose de impuestos":
-  // ahí el subtotal va en bruto, así que el descuento también debe ir en bruto
-  // para que Subtotal − Descuentos = Total.
-  const descuentoBrutoGuardado = r2(lineas.reduce((s, l) =>
-    s + (Number(l.descuento_promocion_monto) || 0) + (Number(l.descuento_manual_monto) || 0), 0));
-  add('');
-  if (showImpuestos) {
-    add(pad('Subtotal sin impuestos', fmt(sinImpTicket)));
-    if (showDescuentos && descTicket > 0.005) add(pad('Descuentos/promos', `-${fmt(descTicket)}`));
-    add(pad('Subtotal gravable', fmt(gravableTicket)));
-    if (iepsMonto > 0.005) add(pad('IEPS', fmt(iepsMonto)));
-    if (ivaMonto > 0.005) add(pad('IVA', fmt(ivaMonto)));
-    if (ivaMonto <= 0.005 && iepsMonto <= 0.005) add(pad('Impuestos', fmt(0)));
-  } else {
-    // Sin desglose: todo en bruto (impuestos incluidos), cuadra con el Total.
-    const descBruto = descuentoBrutoGuardado > 0.005 ? descuentoBrutoGuardado : r2(descTicket);
-    const subBruto = descBruto > 0.005
-      ? r2((Number(total) || 0) + descBruto)
-      : r2(sinImpTicket + ivaMonto + iepsMonto);
-    add(pad('Sub total', fmt(subBruto)));
-    if (showDescuentos && descBruto > 0.005) add(pad('Descuentos/promos', `-${fmt(descBruto)}`));
-  }
-  add(div);
-  add(pad('Total', fmt(total)));
-  add(pad('Total pagado', fmt(summary.totalPagado)));
-  add(pad('Saldo', fmt(summary.saldo)));
-
-  // ── PROMOCIONES APLICADAS (al final, como la foto) ──
-  // Excluye las promos ya mostradas como GRATIS en su linea (evita duplicar).
-  const promosAplicadas = promosConDesc.filter(p => !(p.producto_id && productosGratis.has(p.producto_id)));
-  const hayGratis = productosGratis.size > 0;
-  if (showPromociones && (promosAplicadas.length > 0 || productosGratis.size > 0)) {
-    add(div);
-    add('PROMOCIONES APLICADAS');
-    for (const p of promosConDesc) {
-      add(pad(`  ${p.descripcion}`.substring(0, COLS - fmt(p.descuento).length - 2), `-${fmt(p.descuento)}`));
-    }
-  }
-  if (showPromociones && hayGratis) {
-    for (const l of wrapText('(i) Los productos gratis se registran como descuento para mantener trazabilidad.', COLS)) add(l);
-  }
-
-  if (showRecibidoCambio && montoRecibido != null && montoRecibido > 0) {
-    add(pad('Recibido', fmt(montoRecibido)));
-    if ((cambio ?? 0) > 0) add(pad('Cambio', fmt(cambio!)));
-  }
-
-  if (showSaldoCuenta) {
-    add(div);
-    add('EDO. CUENTA');
-    add(pad('Saldo ant', fmt(saldoAnterior ?? 0)));
-    if (pagoAplicado != null && pagoAplicado > 0) add(pad('Pago', `-${fmt(pagoAplicado)}`));
-    if (condicionPago === 'credito') add(pad('+Venta', fmt(total)));
-    add(div);
-    add(pad('Saldo', fmt(saldoNuevo ?? 0)));
-  }
-
-  // ── Pagos recibidos ──
-  if (showPagosRecibidos && pagos && pagos.length > 0) {
-    add(div);
-    add('PAGOS RECIBIDOS');
-    for (const p of pagos) {
-      const fechaPart = p.fecha ? `${p.fecha} ` : '';
-      const label = fechaPart + p.metodo + (p.referencia ? ` (${p.referencia})` : '');
-      add(pad(label.substring(0, COLS - 12), fmt(p.monto)));
-    }
-  }
-
-  // ── Devoluciones ──
-  if (showDevoluciones && devoluciones && devoluciones.length > 0) {
-    add(div);
-    add('DEVOLUCIONES');
-    for (const d of devoluciones) {
-      const accion = ACCION_DEVOLUCION_LABELS[d.accion] || d.accion;
-      const motivo = MOTIVO_DEVOLUCION_LABELS[d.motivo] || d.motivo;
-      const nombre = `${d.cantidad}x ${d.nombre}`;
-      add(nombre.substring(0, COLS));
-      const right = (d.monto ?? 0) > 0 ? `${accion} ${fmt(d.monto!)}` : accion;
-      add(pad(`  ${motivo}`, right));
-    }
-  }
-
-
-  if (showFirmas) {
-    add('');
-    add(pad('_______________', '_______________'));
-    add(pad('    Entrego    ', '    Recibio    '));
-  }
-  add('');
-  if (showMensajeGracias) add(centerText('Gracias por su compra'));
-  if (showNotas && empresa.notas_ticket) add(centerText(empresa.notas_ticket));
-  add(centerText('Rutapp.mx'));
-  add(centerText('Sistema de Venta en ruta'));
-  add(centerText('Contrata al 317 104 5954'));
-
-  const bodyContent = rows.join('\n');
-
-  return `<div style="width:380px;padding:12px 16px;background:#fff;color:#000;font-family:'Courier New',Courier,monospace;font-size:20px;font-weight:600;line-height:1.2"><div style="text-align:center;margin-bottom:8px">${headerHtml}</div><pre style="margin:0;white-space:pre;font:inherit;line-height:1.4">${bodyContent}</pre></div>`;
+  return `<div style="box-sizing:content-box;width:${width}px;padding:12px 16px;background:#fff;color:#000;font-family:'Courier New',Courier,monospace;font-size:20px;font-weight:600;line-height:1.2"><div style="text-align:center;margin-bottom:8px">${hLines.join('')}</div><pre style="margin:0;white-space:pre;font:inherit;line-height:1.4">${bodyContent}</pre></div>`;
 }

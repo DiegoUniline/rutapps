@@ -22,6 +22,10 @@
     "src/lib/refresco/lectores.generated.ts",
     "src/lib/formSync.ts",
     "src/lib/refresco/refrescoRemoto.ts",
-    "src/pages/CompraForm/types.ts"
+    "src/pages/CompraForm/types.ts",
+    "src/lib/ticketModelo.ts",
+    "src/lib/ticketLayout.ts",
+    "src/lib/ticketVentaData.ts",
+    "src/lib/posTicketDatos.ts"
   ]
 }

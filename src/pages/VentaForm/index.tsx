@@ -322,6 +322,13 @@ export default function VentaFormPage() {
       form: formWithLiveTotals, empresa, profile, userEmail: user?.email, clienteData, almacenName,
       lineas, productosList: productosList ?? [], entregasExistentes: entregasExistentes ?? [], pagosData: pagosData ?? [],
       promociones: promos, vendedorNombre,
+      devoluciones: (devolucionesVenta ?? []).map((d: any) => ({
+        nombre: d.producto?.nombre ?? 'Producto',
+        cantidad: Number(d.cantidad) || 0,
+        motivo: d.motivo,
+        accion: d.accion,
+        monto: Number(d.monto_credito ?? 0) || 0,
+      })),
     });
     setPdfBlob(blob);
     setShowPdfModal(true);
@@ -360,6 +367,7 @@ export default function VentaFormPage() {
       vendedorTelefono: ((form as any).vendedores?.telefono) ?? profile?.telefono ?? null,
       lineas: lineas.filter(l => l.producto_id).map(l => ({
         nombre: productosList?.find(p => p.id === l.producto_id)?.nombre ?? l.descripcion ?? '—',
+        codigo: (productosList?.find(p => p.id === l.producto_id) as { codigo?: string | null } | undefined)?.codigo ?? null,
         cantidad: Number(l.cantidad),
         precio_unitario: Number(l.precio_unitario),
         total: Number(l.total ?? 0),

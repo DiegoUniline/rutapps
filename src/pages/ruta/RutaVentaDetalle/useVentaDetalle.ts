@@ -872,6 +872,7 @@ export function useVentaDetalle() {
       vendedorTelefono: (venta as any).vendedores?.telefono ?? null,
       lineas: lineasVenta.map((l: any) => ({
         nombre: l.productos?.nombre ?? l.descripcion ?? '—',
+        codigo: l.productos?.codigo ?? null,
         cantidad: l.cantidad,
         precio: l.precio_unitario ?? 0,
         subtotal: l.subtotal ?? undefined,
@@ -897,7 +898,8 @@ export function useVentaDetalle() {
       metodoPago: (venta as any).metodo_pago ?? (pagos.length ? pagos.map(p => p.metodo).join(', ') : undefined),
       saldoAnterior,
       pagoAplicado: totalPagado,
-      saldoNuevo: (saldoAnterior + saldoPendiente) > 0 ? (saldoAnterior + saldoPendiente) : undefined,
+      // Saldo real (también 0): el ticket ya no supone pagado lo de contado sin cobros.
+      saldoNuevo: Math.max(saldoAnterior + saldoPendiente, 0),
       pagos,
       // Promociones: se toman de lo YA PERSISTIDO en las líneas (promocion_nombre +
       // descuento_promocion_monto), agrupadas por promoción. No se reevalúa el motor,

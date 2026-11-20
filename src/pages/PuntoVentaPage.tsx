@@ -20,7 +20,9 @@ import { toast } from 'sonner';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver';
 import { buildPosLinePricing, getTaxMultiplier as posGetTaxMult, round2 as posR2, type BasePrecioMode } from '@/lib/posPricing';
-import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
+import { printTicket } from '@/lib/printTicketUtil';
+import { ticketVentaADatos } from '@/lib/ticketVentaData';
+import { posTicketDatos } from '@/lib/posTicketDatos';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePromocionesActivas, evaluatePromociones, getPendingProductoGratis, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
@@ -883,22 +885,7 @@ export default function PuntoVentaPage() {
   useEffect(() => {
     if (!showTicket || !lastVentaData) return;
     const timer = setTimeout(() => {
-      const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
-      const td = buildTicketDataFromVenta({
-        empresa,
-        venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, saldo_pendiente: lastVentaData.saldoPendiente, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
-        clienteNombre: lastVentaData.clienteNombre,
-        clienteRfc: lastVentaData.clienteRfc,
-        clienteTelefono: lastVentaData.clienteTelefono,
-        clienteDireccion: lastVentaData.clienteDireccion,
-        vendedorNombre: profile?.nombre ?? '',
-        vendedorTelefono: lastVentaData.vendedorTelefono ?? profile?.telefono ?? null,
-        lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id, precio_sugerido_publico: l.precio_sugerido_publico })),
-        montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
-        saldoAnterior: lastVentaData.saldoAnterior,
-        saldoNuevo: lastVentaData.saldoNuevoCalc,
-        pagos: lastVentaData.pagos,
-      });
+      const td = ticketVentaADatos(posTicketDatos(lastVentaData, empresa, profile, productos));
       printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
     }, 400);
     return () => clearTimeout(timer);
@@ -2205,79 +2192,10 @@ export default function PuntoVentaPage() {
             </DialogHeader>
             <div>
               <TicketVenta
-                empresa={{
-                  nombre: empresa?.nombre ?? '',
-                  telefono: empresa?.telefono,
-                  direccion: empresa?.direccion,
-                  logo_url: empresa?.logo_url,
-                  rfc: empresa?.rfc,
-                  moneda: empresa?.moneda,
-                  razon_social: (empresa as any)?.razon_social,
-                  colonia: (empresa as any)?.colonia,
-                  ciudad: (empresa as any)?.ciudad,
-                  estado: (empresa as any)?.estado,
-                  cp: (empresa as any)?.cp,
-                  email: (empresa as any)?.email,
-                  notas_ticket: (empresa as any)?.notas_ticket,
-                  ticket_campos: (empresa as any)?.ticket_campos,
-                }}
-                folio={lastVentaData.folio}
-                fecha={lastVentaData.fecha}
-                clienteNombre={lastVentaData.clienteNombre}
-                vendedorNombre={profile?.nombre ?? ''}
-                lineas={lastVentaData.lineas}
-                subtotal={lastVentaData.subtotal}
-                iva={lastVentaData.iva}
-                ieps={lastVentaData.ieps}
-                total={lastVentaData.total}
-                condicionPago={lastVentaData.condicionPago}
-                metodoPago={lastVentaData.metodoPago}
-                montoRecibido={lastVentaData.montoRecibido}
-                cambio={lastVentaData.cambio}
-                saldoAnterior={lastVentaData.saldoAnterior}
-                saldoNuevo={lastVentaData.saldoNuevoCalc}
-                promociones={lastVentaData.promoDetails ?? []}
-                pagos={lastVentaData.pagos ?? []}
-                productosList={productos as any}
+                {...posTicketDatos(lastVentaData, empresa, profile, productos)}
                 onPrintTicket={() => {
-                  const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
-                  const td = buildTicketDataFromVenta({
-                    empresa,
-                    venta: {
-                      folio: lastVentaData.folio,
-                      fecha: lastVentaData.fecha,
-                      subtotal: lastVentaData.subtotal,
-                      iva_total: lastVentaData.iva,
-                      ieps_total: lastVentaData.ieps,
-                      total: lastVentaData.total,
-                      condicion_pago: lastVentaData.condicionPago,
-                      metodo_pago: lastVentaData.metodoPago,
-                    },
-                    clienteNombre: lastVentaData.clienteNombre,
-                    clienteRfc: lastVentaData.clienteRfc,
-                    clienteTelefono: lastVentaData.clienteTelefono,
-                    clienteDireccion: lastVentaData.clienteDireccion,
-                    vendedorNombre: profile?.nombre ?? '',
-                    vendedorTelefono: lastVentaData.vendedorTelefono ?? profile?.telefono ?? null,
-                    lineas: lastVentaData.lineas.map((l: any) => ({
-                      nombre: l.nombre,
-                      cantidad: l.cantidad,
-                      precio_unitario: l.precio,
-                      total: l.total,
-                      iva_monto: l.iva_monto,
-                      ieps_monto: l.ieps_monto,
-                      producto_id: l.producto_id,
-                      precio_sugerido_publico: l.precio_sugerido_publico,
-                    })),
-                    montoRecibido: lastVentaData.montoRecibido,
-                    cambio: lastVentaData.cambio,
-                    promociones: promoTicket,
-                    saldoAnterior: lastVentaData.saldoAnterior,
-                    saldoNuevo: lastVentaData.saldoNuevoCalc,
-                    pagos: lastVentaData.pagos,
-                  });
                   const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
-                  printTicket(td, { ticketAncho });
+                  printTicket(ticketVentaADatos(posTicketDatos(lastVentaData, empresa, profile, productos)), { ticketAncho });
                 }}
                 onClose={() => {
                   setShowTicket(false);
@@ -2289,22 +2207,7 @@ export default function PuntoVentaPage() {
             <DialogFooter className="flex-row gap-2 sm:space-x-0">
               <button
                 onClick={() => {
-                  const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
-                  const td = buildTicketDataFromVenta({
-                    empresa,
-                    venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
-                    clienteNombre: lastVentaData.clienteNombre,
-                    clienteRfc: lastVentaData.clienteRfc,
-                    clienteTelefono: lastVentaData.clienteTelefono,
-                    clienteDireccion: lastVentaData.clienteDireccion,
-                    vendedorNombre: profile?.nombre ?? '',
-                    vendedorTelefono: lastVentaData.vendedorTelefono ?? profile?.telefono ?? null,
-                    lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id, precio_sugerido_publico: l.precio_sugerido_publico })),
-                    montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
-                    saldoAnterior: lastVentaData.saldoAnterior,
-                    saldoNuevo: lastVentaData.saldoNuevoCalc,
-                    pagos: lastVentaData.pagos,
-                  });
+                  const td = ticketVentaADatos(posTicketDatos(lastVentaData, empresa, profile, productos));
                   printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
                 }}
                 className="flex-1 bg-accent text-foreground rounded-xl py-3 text-[13px] font-semibold flex items-center justify-center gap-1.5 hover:bg-accent/80 transition-colors"

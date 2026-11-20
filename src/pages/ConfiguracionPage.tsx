@@ -16,49 +16,9 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
-
-const DEFAULT_CAMPOS: Record<string, boolean> = {
-  // Encabezado empresa
-  logo: true, nombre: true, razon_social: true, rfc: true,
-  direccion: true, telefono: true, email: true,
-  // Documento
-  folio: true, fecha: true, condicion_pago: true,
-  // Cliente
-  cliente_nombre: true, cliente_rfc: true, cliente_telefono: true, cliente_direccion: true,
-  // Vendedor
-  vendedor_nombre: true, vendedor_telefono: true,
-  // Totales y estado
-  impuestos: true, descuentos: true, saldo_cuenta: true, recibido_cambio: true,
-  // Bloques adicionales
-  promociones: true, pagos_recibidos: true, devoluciones: true,
-  // Pie
-  notas_ticket: true, firmas: true, mensaje_gracias: true,
-};
-
-const CAMPO_SECCIONES: { titulo: string; claves: string[] }[] = [
-  { titulo: 'Encabezado de la empresa', claves: ['logo', 'nombre', 'razon_social', 'rfc', 'direccion', 'telefono', 'email'] },
-  { titulo: 'Datos del documento', claves: ['folio', 'fecha', 'condicion_pago'] },
-  { titulo: 'Datos del cliente', claves: ['cliente_nombre', 'cliente_rfc', 'cliente_telefono', 'cliente_direccion'] },
-  { titulo: 'Datos del vendedor', claves: ['vendedor_nombre', 'vendedor_telefono'] },
-  { titulo: 'Totales y estado de cuenta', claves: ['impuestos', 'descuentos', 'saldo_cuenta', 'recibido_cambio'] },
-  { titulo: 'Bloques adicionales', claves: ['promociones', 'pagos_recibidos', 'devoluciones'] },
-  { titulo: 'Pie del ticket', claves: ['notas_ticket', 'firmas', 'mensaje_gracias'] },
-];
-
-const CAMPO_LABELS: Record<string, string> = {
-  logo: 'Logo', nombre: 'Nombre comercial', razon_social: 'Razón social',
-  rfc: 'RFC de la empresa', direccion: 'Dirección', telefono: 'Teléfono', email: 'Correo electrónico',
-  folio: 'Folio', fecha: 'Fecha', condicion_pago: 'Condición y método de pago',
-  cliente_nombre: 'Nombre del cliente', cliente_rfc: 'RFC del cliente',
-  cliente_telefono: 'Teléfono del cliente', cliente_direccion: 'Dirección del cliente',
-  vendedor_nombre: 'Nombre del vendedor', vendedor_telefono: 'Teléfono del vendedor',
-  impuestos: 'Desglose de impuestos (IVA/IEPS)', descuentos: 'Descuentos totales',
-  saldo_cuenta: 'Estado de cuenta (saldo anterior/nuevo)', recibido_cambio: 'Recibido y cambio',
-  promociones: 'Promociones aplicadas', pagos_recibidos: 'Historial de pagos recibidos',
-  devoluciones: 'Devoluciones',
-  notas_ticket: 'Notas de ticket', firmas: 'Firmas (nota de venta)',
-  mensaje_gracias: 'Mensaje "Gracias por su compra"',
-};
+import TicketDisenadorPreview from '@/components/configuracion/TicketDisenadorPreview';
+import { DEFAULT_CAMPOS, CAMPO_SECCIONES, CAMPO_LABELS, CAMPO_DEPENDE_DE, TICKET_TEXTOS, TICKET_TEXTO_MAX } from '@/lib/ticketCamposConfig';
+import { campoOn, campoTexto, leerTicketCampos, type TicketCampos } from '@/lib/ticketModelo';
 
 function useEmpresaConfig() {
   const { empresa } = useAuth();
@@ -71,240 +31,6 @@ function useEmpresaConfig() {
       return data;
     },
   });
-}
-
-/* ─── Live Preview Components ─── */
-
-interface PreviewProps {
-  form: Record<string, string>;
-  logoPreview: string | null;
-  campos: Record<string, boolean>;
-  ticketAncho?: '58' | '80';
-}
-
-function TicketPreview({ form, logoPreview, campos, ticketAncho = '80' }: PreviewProps) {
-  const { fmt } = useCurrency();
-  const nombre = form.nombre || 'Mi Empresa';
-  const dir = [form.direccion, form.colonia, form.ciudad].filter(Boolean).join(', ');
-  const width = ticketAncho === '58' ? '210px' : '280px';
-  const fontSize = ticketAncho === '58' ? '9px' : '10px';
-
-  return (
-    <div className="bg-white text-black rounded-lg shadow-lg border border-border overflow-hidden" style={{ width, fontFamily: "'Courier New', monospace", fontSize }}>
-      <div className="px-3 pt-3 pb-2 text-center">
-        {campos.logo && logoPreview && <img src={logoPreview} alt="Logo" className="h-10 mx-auto mb-2 object-contain" />}
-        {campos.nombre && <div className="font-bold text-[12px]">{nombre}</div>}
-        {campos.razon_social && form.razon_social && <div className="text-[9px] text-gray-500">{form.razon_social}</div>}
-        {campos.rfc && form.rfc && <div className="text-[9px] text-gray-500">RFC: {form.rfc}</div>}
-        {campos.direccion && dir && <div className="text-[9px] text-gray-500">{dir}</div>}
-        {campos.telefono && form.telefono && <div className="text-[9px] text-gray-500">Tel: {form.telefono}</div>}
-        {campos.email && form.email && <div className="text-[9px] text-gray-500">{form.email}</div>}
-      </div>
-      <div className="border-t border-dashed border-gray-300 mx-3" />
-      <div className="px-3 py-2 space-y-0.5">
-        <div className="flex justify-between text-[10px] text-gray-600">
-          {campos.folio && <span>Folio: VTA-0001</span>}
-          {campos.fecha && <span>14/03/2026</span>}
-        </div>
-        {campos.cliente_nombre && <div className="text-[10px]">Cliente: <span className="font-medium">Juan Pérez</span></div>}
-        {campos.cliente_rfc && <div className="text-[9px] text-gray-500">RFC: XAXX010101000</div>}
-        {campos.cliente_telefono && <div className="text-[9px] text-gray-500">Tel: 555-123-4567</div>}
-        {campos.cliente_direccion && <div className="text-[9px] text-gray-500">Calle Reforma 456, Centro</div>}
-        {campos.vendedor_nombre && <div className="text-[9px] text-gray-500">Vendedor: María López</div>}
-        {campos.vendedor_telefono && <div className="text-[9px] text-gray-500">Tel vend: 555-987-6543</div>}
-        {campos.condicion_pago && <div className="text-[9px] text-gray-500">Contado - Efectivo</div>}
-      </div>
-      <div className="border-t border-dashed border-gray-300 mx-3" />
-      <div className="px-3 py-2 space-y-1">
-        <div className="flex justify-between text-[9px] font-bold text-gray-500 uppercase">
-          <span className="flex-1">Producto</span>
-          <span className="w-8 text-center">Qty</span>
-          <span className="w-16 text-right">Total</span>
-        </div>
-        {[
-          { nombre: 'Producto A', qty: 10, total: 250 },
-          { nombre: 'Producto B', qty: 5, total: 175 },
-          { nombre: 'Producto C', qty: 3, total: 90 },
-        ].map((p, i) => (
-          <div key={i} className="flex justify-between text-[10px]">
-            <span className="flex-1 truncate">{p.nombre}</span>
-            <span className="w-8 text-center">{p.qty}</span>
-            <span className="w-16 text-right">{fmt(p.total)}</span>
-          </div>
-        ))}
-      </div>
-      <div className="border-t border-dashed border-gray-300 mx-3" />
-      <div className="px-3 py-2 space-y-0.5">
-        <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>{fmt(515)}</span></div>
-        {campos.descuentos && <div className="flex justify-between text-[10px] text-gray-600"><span>Descuento</span><span>-{fmt(15)}</span></div>}
-        {campos.impuestos && <div className="flex justify-between text-[10px]"><span>IVA 16%</span><span>{fmt(82.4)}</span></div>}
-        <div className="flex justify-between text-[12px] font-bold border-t border-gray-300 pt-1 mt-1"><span>Total</span><span>{fmt(597.4)}</span></div>
-        {campos.recibido_cambio && (
-          <>
-            <div className="flex justify-between text-[10px]"><span>Recibido</span><span>{fmt(600)}</span></div>
-            <div className="flex justify-between text-[10px]"><span>Cambio</span><span>{fmt(2.6)}</span></div>
-          </>
-        )}
-      </div>
-      {campos.promociones && (
-        <>
-          <div className="border-t border-dashed border-gray-300 mx-3" />
-          <div className="px-3 py-2">
-            <div className="text-[9px] font-bold text-gray-500 uppercase mb-0.5">Promociones aplicadas</div>
-            <div className="text-[9px] text-gray-600">2x1 Producto A · -{fmt(25)}</div>
-          </div>
-        </>
-      )}
-      {campos.saldo_cuenta && (
-        <>
-          <div className="border-t border-dashed border-gray-300 mx-3" />
-          <div className="px-3 py-2 space-y-0.5">
-            <div className="text-[9px] font-bold text-gray-500 uppercase mb-0.5">Estado de cuenta</div>
-            <div className="flex justify-between text-[10px]"><span>Saldo anterior</span><span>{fmt(1200)}</span></div>
-            <div className="flex justify-between text-[10px]"><span>Esta venta</span><span>{fmt(597.4)}</span></div>
-            <div className="flex justify-between text-[10px] font-bold"><span>Saldo nuevo</span><span>{fmt(1797.4)}</span></div>
-          </div>
-        </>
-      )}
-      {campos.pagos_recibidos && (
-        <>
-          <div className="border-t border-dashed border-gray-300 mx-3" />
-          <div className="px-3 py-2">
-            <div className="text-[9px] font-bold text-gray-500 uppercase mb-0.5">Pagos recibidos</div>
-            <div className="flex justify-between text-[10px]"><span>14/03/2026 Efectivo</span><span>{fmt(300)}</span></div>
-          </div>
-        </>
-      )}
-      {campos.devoluciones && (
-        <>
-          <div className="border-t border-dashed border-gray-300 mx-3" />
-          <div className="px-3 py-2">
-            <div className="text-[9px] font-bold text-gray-500 uppercase mb-0.5">Devoluciones</div>
-            <div className="flex justify-between text-[10px]"><span>1x Producto C</span><span>-{fmt(30)}</span></div>
-          </div>
-        </>
-      )}
-      {campos.notas_ticket && form.notas_ticket && (
-        <>
-          <div className="border-t border-dashed border-gray-300 mx-3" />
-          <div className="px-3 py-2 text-center text-[9px] text-gray-500">{form.notas_ticket}</div>
-        </>
-      )}
-      {campos.firmas && (
-        <div className="grid grid-cols-2 gap-4 px-4 pb-2 pt-4">
-          <div className="border-t border-gray-400 pt-1 text-center text-[8px] text-gray-400">Entregó</div>
-          <div className="border-t border-gray-400 pt-1 text-center text-[8px] text-gray-400">Recibió</div>
-        </div>
-      )}
-      {campos.mensaje_gracias && (
-        <div className="px-3 py-1 text-center text-[9px] text-gray-500">¡Gracias por su compra!</div>
-      )}
-      <div className="border-t border-dashed border-gray-300 mx-3">
-        <div className="px-3 py-2 text-center text-[8px] text-gray-500 leading-tight">
-          Rutapp.mx<br/>Sistema de Venta en ruta<br/>Contrata al 317 104 5954
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-function NotaVentaPreview({ form, logoPreview, campos }: PreviewProps) {
-  const { fmt } = useCurrency();
-  const nombre = form.nombre || 'Mi Empresa';
-  const dir = [form.direccion, form.colonia, form.ciudad, form.estado].filter(Boolean).join(', ');
-
-  return (
-    <div className="bg-white text-black rounded-lg shadow-lg border border-border overflow-hidden" style={{ width: '400px', fontSize: '11px', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
-      {/* Header */}
-      <div className="p-4 border-b-2 border-gray-200 flex justify-between items-start">
-        <div className="flex items-center gap-3">
-          {campos.logo && logoPreview && <img src={logoPreview} alt="Logo" className="h-10 object-contain" />}
-          <div>
-            {campos.nombre && <div className="font-bold text-[14px]">{nombre}</div>}
-            {campos.razon_social && form.razon_social && <div className="text-[9px] text-gray-500">{form.razon_social}</div>}
-            {campos.rfc && form.rfc && <div className="text-[9px] text-gray-500">RFC: {form.rfc}</div>}
-            {campos.direccion && dir && <div className="text-[9px] text-gray-500 max-w-[200px]">{dir} {form.cp ? `C.P. ${form.cp}` : ''}</div>}
-            {campos.telefono && form.telefono && <div className="text-[9px] text-gray-500">Tel: {form.telefono}</div>}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-[9px] text-gray-500 uppercase">Nota de venta</div>
-          <div className="font-bold font-mono text-[14px]">VTA-0001</div>
-          <div className="text-[10px] text-gray-500">14/03/2026</div>
-          <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[8px] font-semibold bg-amber-100 text-amber-700">Confirmado</span>
-        </div>
-      </div>
-
-      {/* Client */}
-      <div className="p-3 grid grid-cols-2 gap-3 bg-gray-50">
-        <div>
-          <div className="text-[8px] uppercase text-gray-400 tracking-wide">Cliente</div>
-          <div className="font-semibold text-[11px]">Juan Pérez</div>
-          <div className="text-[9px] text-gray-500">Calle Reforma 456, Centro</div>
-        </div>
-        <div>
-          <div className="text-[8px] uppercase text-gray-400 tracking-wide">Condición</div>
-          <div className="font-semibold text-[11px]">Crédito - 30 días</div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <table className="w-full">
-        <thead>
-          <tr className="bg-gray-100 text-[8px] uppercase text-gray-500 tracking-wide">
-            <th className="py-1.5 px-3 text-left">#</th>
-            <th className="py-1.5 px-2 text-left">Código</th>
-            <th className="py-1.5 px-2 text-left">Producto</th>
-            <th className="py-1.5 px-2 text-center">Cant</th>
-            <th className="py-1.5 px-2 text-right">P.U.</th>
-            <th className="py-1.5 px-3 text-right">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {[
-            { cod: 'PROD-001', nombre: 'Producto A', qty: 10, pu: 25, total: 250 },
-            { cod: 'PROD-002', nombre: 'Producto B', qty: 5, pu: 35, total: 175 },
-            { cod: 'PROD-003', nombre: 'Producto C', qty: 3, pu: 30, total: 90 },
-          ].map((p, i) => (
-            <tr key={i} className="border-t border-gray-100">
-              <td className="py-1 px-3 text-gray-400">{i + 1}</td>
-              <td className="py-1 px-2 font-mono text-[9px] text-gray-500">{p.cod}</td>
-              <td className="py-1 px-2 font-medium">{p.nombre}</td>
-              <td className="py-1 px-2 text-center">{p.qty}</td>
-              <td className="py-1 px-2 text-right">{fmt(p.pu)}</td>
-              <td className="py-1 px-3 text-right font-medium">{fmt(p.total)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* Totals */}
-      <div className="flex justify-end p-3">
-        <div className="w-48 space-y-0.5 text-[10px]">
-          {campos.impuestos && <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>$ 515.00</span></div>}
-          {campos.impuestos && <div className="flex justify-between"><span className="text-gray-500">IVA 16%</span><span>$ 82.40</span></div>}
-          <div className="flex justify-between font-bold text-[13px] border-t border-gray-300 pt-1 mt-1"><span>Total</span><span>$ 597.40</span></div>
-        </div>
-      </div>
-
-      {/* Signatures */}
-      {campos.firmas && (
-        <div className="grid grid-cols-2 gap-8 px-6 pb-2 pt-4">
-          <div className="border-t border-gray-400 pt-1 text-center text-[9px] text-gray-400">Entregó</div>
-          <div className="border-t border-gray-400 pt-1 text-center text-[9px] text-gray-400">Recibió</div>
-        </div>
-      )}
-
-      {campos.notas_ticket && form.notas_ticket && (
-        <div className="mx-3 my-2 p-2 bg-gray-50 rounded text-[9px] text-gray-500 text-center">{form.notas_ticket}</div>
-      )}
-
-      <div className="text-center py-2 text-[8px] text-gray-400 leading-tight">
-        Rutapp.mx · Sistema de Venta en ruta · Contrata al 317 104 5954
-      </div>
-    </div>
-  );
 }
 
 /* ─── Change Password Card ─── */
@@ -394,10 +120,9 @@ export default function ConfiguracionPage() {
   const qc = useQueryClient();
   const { data: config, isLoading } = useEmpresaConfig();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [previewTab, setPreviewTab] = useState<'ticket' | 'nota'>('ticket');
 
   const [form, setForm] = useState<Record<string, string>>({});
-  const [campos, setCampos] = useState<Record<string, boolean>>(DEFAULT_CAMPOS);
+  const [campos, setCampos] = useState<TicketCampos>(DEFAULT_CAMPOS);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -461,9 +186,7 @@ export default function ConfiguracionPage() {
     });
     if ((config as any).logo_url) setLogoPreview((config as any).logo_url);
     else setLogoPreview(null);
-    if ((config as any).ticket_campos) {
-      setCampos({ ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean>) });
-    }
+    setCampos({ ...DEFAULT_CAMPOS, ...(leerTicketCampos((config as any).ticket_campos) ?? {}) });
     setMoneda((config as any).moneda ?? 'MXN');
     setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
     setZonaHoraria((config as any).zona_horaria ?? 'America/Mexico_City');
@@ -492,9 +215,10 @@ export default function ConfiguracionPage() {
       lada: (config as any).lada ?? '52',
       email: (config as any).email ?? '', notas_ticket: (config as any).notas_ticket ?? '',
     };
-    const origCampos = { ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean> ?? {}) };
+    const origCampos = { ...DEFAULT_CAMPOS, ...(leerTicketCampos((config as any).ticket_campos) ?? {}) };
     return Object.keys(orig).some(k => (form[k] ?? '') !== orig[k]) ||
-      Object.keys(CAMPO_LABELS).some(k => (campos[k] ?? true) !== (origCampos[k] ?? true));
+      Object.keys(CAMPO_LABELS).some(k => campoOn(campos, k) !== campoOn(origCampos, k)) ||
+      TICKET_TEXTOS.some(k => campoTexto(campos, k) !== campoTexto(origCampos, k));
   })());
 
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -604,7 +328,7 @@ export default function ConfiguracionPage() {
       </h1>
 
       <Tabs value={configTab} onValueChange={setConfigTab} className="w-full">
-        <TabsList className="w-full justify-start">
+        <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden">
           <TabsTrigger value="empresa" className="gap-1.5"><Building2 className="h-3.5 w-3.5" /> Empresa</TabsTrigger>
           <TabsTrigger value="ticket" className="gap-1.5"><Receipt className="h-3.5 w-3.5" /> Ticket</TabsTrigger>
           <TabsTrigger value="visibilidad" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> Visibilidad</TabsTrigger>
@@ -662,8 +386,8 @@ export default function ConfiguracionPage() {
 
         {/* ── TAB: Ticket ── */}
         <TabsContent value="ticket" className="mt-4">
-          <div className="flex gap-6 items-start">
-            <div className="flex-1 min-w-0 space-y-5">
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
+            <div className="w-full lg:flex-1 min-w-0 space-y-5">
               {/* Ancho de impresora */}
               <div className="bg-card border border-border rounded-lg p-5">
                 <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -695,61 +419,66 @@ export default function ConfiguracionPage() {
                 <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                   <Eye className="h-4 w-4" /> Campos visibles en ticket / nota
                 </h3>
-                <p className="text-[11px] text-muted-foreground mb-4">Elige qué información aparece en tus documentos impresos.</p>
+                <p className="text-[11px] text-muted-foreground mb-4">Elige qué información aparece en el ticket (pantalla, impresora, WhatsApp) y en la nota de venta carta.</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-5">
                   {CAMPO_SECCIONES.map(sec => (
                     <div key={sec.titulo} className="min-w-0">
                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">{sec.titulo}</p>
                       <div className="flex flex-col gap-1">
-                        {sec.claves.map(key => (
-                          <label key={key} className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-secondary/50 cursor-pointer transition-colors">
-                            <Switch
-                              checked={campos[key] ?? true}
-                              onCheckedChange={(v) => setCampos(prev => ({ ...prev, [key]: v }))}
-                              className="scale-75 shrink-0"
-                            />
-                            <span className="text-[12px] text-foreground truncate">{CAMPO_LABELS[key] ?? key}</span>
-                          </label>
-                        ))}
+                        {sec.claves.map(key => {
+                          const padre = CAMPO_DEPENDE_DE[key];
+                          const deshabilitado = !!padre && !campoOn(campos, padre);
+                          return (
+                            <label key={key} className={cn("flex items-center gap-2 min-h-9 py-1 px-2 rounded-md transition-colors", deshabilitado ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary/50 cursor-pointer")}>
+                              <Switch
+                                checked={campoOn(campos, key)}
+                                disabled={deshabilitado}
+                                onCheckedChange={(v) => setCampos(prev => ({ ...prev, [key]: v }))}
+                                className="scale-75 shrink-0"
+                              />
+                              <span className="text-[12px] text-foreground min-w-0">{CAMPO_LABELS[key] ?? key}</span>
+                            </label>
+                          );
+                        })}
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Textos libres */}
+              <div className="bg-card border border-border rounded-lg p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-1">Textos del ticket</h3>
+                <p className="text-[11px] text-muted-foreground mb-4">Aparecen centrados en el ticket y como aviso en la nota de venta. Déjalos vacíos para no mostrarlos.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {([['texto_encabezado', 'Debajo de los datos de la empresa', 'Ej: Sucursal Centro · Lunes a sábado 8 a 18 h'], ['texto_pie', 'Al final del ticket', 'Ej: Síguenos en Facebook /miempresa']] as const).map(([key, label, ph]) => (
+                    <div key={key}>
+                      <label htmlFor={`ticket-${key}`} className="text-[12px] font-medium text-foreground">{label}</label>
+                      <textarea
+                        id={`ticket-${key}`}
+                        value={typeof campos[key] === 'string' ? (campos[key] as string) : ''}
+                        maxLength={TICKET_TEXTO_MAX}
+                        onChange={e => setCampos(prev => ({ ...prev, [key]: e.target.value }))}
+                        placeholder={ph}
+                        className="input-odoo min-h-[64px] text-[13px] w-full mt-1"
+                      />
+                      <p className="text-[10px] text-muted-foreground text-right">{(typeof campos[key] === 'string' ? (campos[key] as string) : '').length}/{TICKET_TEXTO_MAX}</p>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Live Preview */}
-            <div className="w-[360px] shrink-0 lg:sticky lg:top-4 ml-auto">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Vista previa en tiempo real</span>
-              </div>
-              <div className="flex gap-1 mb-4">
-                <button
-                  onClick={() => setPreviewTab('ticket')}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                    previewTab === 'ticket' ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Receipt className="h-3.5 w-3.5" /> Ticket
-                </button>
-                <button
-                  onClick={() => setPreviewTab('nota')}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                    previewTab === 'nota' ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <FileText className="h-3.5 w-3.5" /> Nota de venta
-                </button>
-              </div>
-              <div className="flex justify-center p-4 bg-card rounded-lg border border-border min-h-[500px]">
-                {previewTab === 'ticket' ? (
-                  <TicketPreview form={form} logoPreview={logoPreview} campos={campos} ticketAncho={ticketAncho} />
-                ) : (
-                  <NotaVentaPreview form={form} logoPreview={logoPreview} campos={campos} />
-                )}
-              </div>
+            {/* Vista previa con el ticket y la nota REALES */}
+            <div className="w-full lg:w-[420px] shrink-0 lg:sticky lg:top-4">
+              <TicketDisenadorPreview
+                form={form}
+                logoPreview={logoPreview}
+                campos={campos}
+                ticketAncho={ticketAncho}
+                moneda={moneda}
+                empresaId={empresa?.id ?? ''}
+              />
             </div>
           </div>
         </TabsContent>

@@ -3,6 +3,7 @@ import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
 import { getNombreVenta } from '@/lib/productoNombres';
 import type { Empresa, VentaLinea } from '@/types';
+import { leerTicketCampos } from '@/lib/ticketModelo';
 
 interface PdfParams {
   form: Record<string, any>;
@@ -17,10 +18,11 @@ interface PdfParams {
   pagosData: any[];
   promociones?: { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
   vendedorNombre?: string;
+  devoluciones?: { nombre: string; cantidad: number; motivo: string; accion: string; monto?: number }[];
 }
 
 export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
-  const { form, empresa, profile, userEmail, clienteData, almacenName, lineas, productosList, entregasExistentes, pagosData, promociones, vendedorNombre } = params;
+  const { form, empresa, profile, userEmail, clienteData, almacenName, lineas, productosList, entregasExistentes, pagosData, promociones, vendedorNombre, devoluciones } = params;
   const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
   const vendedorName = vendedorNombre || profile?.nombre || userEmail || '';
 
@@ -75,5 +77,9 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
       monto: Number(p.monto_aplicado) || 0, referencia: p.cobros?.referencia,
     })),
     promociones: promociones?.filter(p => p.descuento > 0),
+    devoluciones,
+    // Mismas opciones que el ticket (Configuración → Ticket).
+    ticketCampos: leerTicketCampos(empresa?.ticket_campos),
+    notasTicket: empresa?.notas_ticket ?? null,
   });
 }
