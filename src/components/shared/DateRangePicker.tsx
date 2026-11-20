@@ -147,7 +147,8 @@ export function DateRangePicker({
             className={cn(
               "gap-2 font-normal bg-primary text-primary-foreground hover:bg-primary/90",
               compact ? "h-7 px-2 text-[11px] gap-1" : "h-9",
-              segmento && "h-full rounded-none px-3 text-[12px] font-medium bg-primary text-primary-foreground hover:bg-white/10 shadow-none"
+              // Segmento de barra: el botón llena todo el bloque azul (sin espacio muerto a la derecha).
+              segmento && "h-full flex-1 min-w-0 justify-start rounded-none px-3 text-[12px] font-medium bg-primary text-primary-foreground hover:bg-white/10 shadow-none"
             )}
           >
             <CalendarIcon className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
