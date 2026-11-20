@@ -55,3 +55,9 @@ Buckets privados (`csf`, `cfdi-archivos`, `recibos-cobros`, `tienda-assets`, `em
 - Repo: **723** archivos; 700 hasta el 16-sep (≈99 sin registro equivalente) y **23** posteriores sin registro.
 - Los 23 posteriores (promociones, inventario fase 1, editar venta, ajustar entrega, facturación 0a–3, folios, rendimiento, cerrado total efectivo) **sí están aplicados**: sus objetos existen en la BD (22/22 verificados).
 - Conclusión: las 723 migraciones no reproducen la BD de forma confiable → **línea base desde la BD real** (723 movidas a `supabase/migrations_legacy/` con CONFIRMO del dueño 2026-11-19; falta `20261119000001_base_public.sql` desde pg_dump).
+
+## Verificación tras importar el histórico (2026-11-20)
+La BD de pruebas se vació a propósito; el histórico se importa completo en el corte. Los datos de Lovable se generaron con el código anterior, así que después de importarlos:
+1. **Entregas validadas con el mismo producto en 2+ renglones** (defecto corregido en `20261120200000_entrega_hecho_producto_repetido.sql`): correr la consulta de `docs/auditoria/2026-11-20-presentaciones-granel.md` (entregado vs `movimientos_inventario` `entrega_hecho`). Si hay faltantes, proponer ajuste al dueño antes de operar.
+2. **Kardex vs existencias** por ubicación (debe dar 0 descuadres; consulta usada en las pruebas de D-036).
+3. **Comisiones de productos de precio fijo** (D-041): las ventas históricas no tienen comisión de producto; no se recalculan (solo hacia adelante).
