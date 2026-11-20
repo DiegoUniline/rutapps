@@ -109,7 +109,7 @@ export function PedidosTabs() {
   return (
     <>
       <style>{`
-        body[data-pedidos-page="entregas"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > button:not([class*="gap-1.5"]) {
+        body[data-pedidos-page="entregas"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > button:not([class*="gap-1.5"]) {
           display: none !important;
         }
       `}</style>

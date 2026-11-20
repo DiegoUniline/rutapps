@@ -116,23 +116,23 @@ body[data-pedidos-page="concentrado"] :has(> [data-pedidos-tabs]) > * {
 }
 
 /* ───────────── Orden homogéneo: toolbar → chips/acciones → tabs de estado → tabla ───────────── */
-body[data-pedidos-page="pendientes"] [data-listpage] > *,
-body[data-pedidos-page="entregas"] [data-listpage] > * {
+body[data-pedidos-page="pendientes"] [data-listpage-sheet] > *,
+body[data-pedidos-page="entregas"] [data-listpage-sheet] > * {
   order: 20;
 }
 
-body[data-pedidos-page="pendientes"] [data-listpage] > [data-pedidos-tabs],
-body[data-pedidos-page="entregas"] [data-listpage] > [data-pedidos-tabs],
+body[data-pedidos-page="pendientes"] [data-listpage-sheet] > [data-pedidos-tabs],
+body[data-pedidos-page="entregas"] [data-listpage-sheet] > [data-pedidos-tabs],
 body[data-pedidos-page="concentrado"] :has(> [data-pedidos-tabs]) > [data-pedidos-tabs] {
   order: 0;
 }
 
 /* Fila de filtros original: sólo conserva el DateRange real y las acciones contextuales. */
-body[data-pedidos-page="pendientes"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border {
+body[data-pedidos-page="pendientes"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border {
   order: 1;
 }
 
-body[data-pedidos-page="entregas"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 {
+body[data-pedidos-page="entregas"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 {
   order: 1;
 }
 
@@ -140,27 +140,27 @@ body[data-pedidos-page="concentrado"] :has(> [data-pedidos-tabs]) > .bg-card.bor
   order: 1;
 }
 
-body[data-pedidos-page="pendientes"] [data-listpage] > .flex.items-center.justify-between.flex-wrap.gap-2,
-body[data-pedidos-page="entregas"] [data-listpage] > .flex.items-center.justify-between,
+body[data-pedidos-page="pendientes"] [data-listpage-sheet] > .flex.items-center.justify-between.flex-wrap.gap-2,
+body[data-pedidos-page="entregas"] [data-listpage-sheet] > .flex.items-center.justify-between,
 body[data-pedidos-page="concentrado"] :has(> [data-pedidos-tabs]) > .flex.items-center.justify-between.flex-wrap.gap-2 {
   order: 2;
 }
 
-body[data-pedidos-page="pendientes"] [data-listpage] > .grid.grid-cols-3.gap-3,
+body[data-pedidos-page="pendientes"] [data-listpage-sheet] > .grid.grid-cols-3.gap-3,
 body[data-pedidos-page="concentrado"] :has(> [data-pedidos-tabs]) > .grid.grid-cols-2.gap-2 {
   order: 3;
 }
 
-body[data-pedidos-page="entregas"] [data-listpage] > [data-pedidos-active-filters] {
+body[data-pedidos-page="entregas"] [data-listpage-sheet] > [data-pedidos-active-filters] {
   order: 3;
 }
 
-body[data-pedidos-page="pendientes"] [data-listpage] > p.text-sm.text-muted-foreground {
+body[data-pedidos-page="pendientes"] [data-listpage-sheet] > p.text-sm.text-muted-foreground {
   order: 4;
 }
 
-body[data-pedidos-page="pendientes"] [data-listpage] > .border-b.border-border,
-body[data-pedidos-page="entregas"] [data-listpage] > .flex.border-b.border-border.gap-0.overflow-x-auto {
+body[data-pedidos-page="pendientes"] [data-listpage-sheet] > .border-b.border-border,
+body[data-pedidos-page="entregas"] [data-listpage-sheet] > .flex.border-b.border-border.gap-0.overflow-x-auto {
   order: 5;
 }
 
@@ -173,19 +173,19 @@ body[data-pedidos-page="concentrado"] :has(> [data-pedidos-tabs]) > .flex.items-
   order: 5;
 }
 
-body[data-pedidos-page="pendientes"] [data-listpage] > p.text-muted-foreground:not(.text-sm) {
+body[data-pedidos-page="pendientes"] [data-listpage-sheet] > p.text-muted-foreground:not(.text-sm) {
   order: 6;
 }
 
-body[data-pedidos-page="pendientes"] [data-listpage] > .bg-card.border.border-border.rounded-lg.overflow-hidden,
-body[data-pedidos-page="entregas"] [data-listpage] > .bg-card.border.border-border.rounded-lg.overflow-hidden,
+body[data-pedidos-page="pendientes"] [data-listpage-sheet] > .bg-card.border.border-border.rounded-lg.overflow-hidden,
+body[data-pedidos-page="entregas"] [data-listpage-sheet] > .bg-card.border.border-border.rounded-lg.overflow-hidden,
 body[data-pedidos-page="concentrado"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.overflow-hidden {
   order: 7;
 }
 
 /* ───────────── DateRange real colocado encima del primer segmento azul ───────────── */
-body[data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border,
-body[data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3,
+body[data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border,
+body[data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3,
 body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
   position: relative !important;
   width: min(var(--pedidos-toolbar-width), calc(100% - 1rem)) !important;
@@ -199,11 +199,11 @@ body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [dat
 }
 
 /* Pendientes: fecha es el segundo bloque; búsqueda vieja se oculta porque ahora es universal. */
-body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border > * {
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > * {
   display: none !important;
 }
 
-body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) {
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) {
   display: block !important;
   position: absolute !important;
   z-index: 24;
@@ -213,13 +213,13 @@ body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpa
 }
 
 /* Entregas: fecha es el cuarto bloque; búsqueda/vendedor/ruta viejos quedan sólo en el popup. */
-body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(1),
-body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2),
-body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(3) {
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(1),
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2),
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(3) {
   display: none !important;
 }
 
-body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) {
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) {
   display: block !important;
   position: absolute !important;
   z-index: 24;
@@ -229,7 +229,7 @@ body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage
 }
 
 /* Acciones masivas de Entregas siguen disponibles debajo de la barra cuando aparecen. */
-body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > button {
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > button {
   display: inline-flex !important;
   margin-top: .25rem;
 }
@@ -256,22 +256,22 @@ body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [dat
 }
 
 /* Normaliza el DateRangePicker como primer segmento del control unido. */
-body[data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) > label,
-body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) > label,
+body[data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) > label,
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) > label,
 body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2) > label {
   display: none !important;
 }
 
-body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) > div,
-body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) > div,
+body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) > div,
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) > div,
 body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2) > div {
   width: var(--pedidos-date-width) !important;
   height: 38px;
   gap: 0 !important;
 }
 
-body[data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) > div > button:first-of-type,
-body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) > div > button:first-of-type,
+body[data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) > div > button:first-of-type,
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) > div > button:first-of-type,
 body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2) > div > button:first-of-type {
   flex: 1 1 auto !important;
   width: auto !important;
@@ -280,8 +280,8 @@ body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [dat
   box-shadow: none !important;
 }
 
-body[data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) > div > button:last-child:not(:first-child),
-body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) > div > button:last-child:not(:first-child),
+body[data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) > div > button:last-child:not(:first-child),
+body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) > div > button:last-child:not(:first-child),
 body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2) > div > button:last-child:not(:first-child) {
   width: 30px !important;
   height: 38px !important;
@@ -291,16 +291,16 @@ body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [dat
 }
 
 /* Dentro del popup no repetimos ni la fecha ni el buscador universal. */
-body[data-pedidos-page="pendientes"][data-pedidos-filters="open"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2),
-body[data-pedidos-page="pendientes"][data-pedidos-filters="open"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(4),
-body[data-pedidos-page="entregas"][data-pedidos-filters="open"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(1),
-body[data-pedidos-page="entregas"][data-pedidos-filters="open"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4),
+body[data-pedidos-page="pendientes"][data-pedidos-filters="open"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2),
+body[data-pedidos-page="pendientes"][data-pedidos-filters="open"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(4),
+body[data-pedidos-page="entregas"][data-pedidos-filters="open"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(1),
+body[data-pedidos-page="entregas"][data-pedidos-filters="open"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4),
 body[data-pedidos-page="concentrado"][data-pedidos-filters="open"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2) {
   display: none !important;
 }
 
 /* En operación las cards quedan fuera; Estadísticas conserva los KPIs existentes. */
-body[data-pedidos-page="pendientes"][data-pedidos-mode="list"] [data-listpage] > .grid.grid-cols-3.gap-3,
+body[data-pedidos-page="pendientes"][data-pedidos-mode="list"] [data-listpage-sheet] > .grid.grid-cols-3.gap-3,
 body[data-pedidos-page="concentrado"][data-pedidos-mode="list"] :has(> [data-pedidos-tabs]) > .grid.grid-cols-2.gap-2 {
   display: none !important;
 }
@@ -349,20 +349,20 @@ body[data-pedidos-mode="list"] .bg-card.border.border-border.rounded-lg.overflow
     font-size: .75rem;
   }
 
-  body[data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border,
-  body[data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3,
+  body[data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border,
+  body[data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3,
   body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 {
     width: 100% !important;
   }
 
-  body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2),
-  body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4),
+  body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2),
+  body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4),
   body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2) {
     width: var(--pedidos-date-width);
   }
 
-  body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) > div,
-  body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) > div,
+  body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2) > div,
+  body[data-pedidos-page="entregas"][data-pedidos-filters="closed"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4) > div,
   body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2) > div {
     width: 100% !important;
   }
@@ -389,5 +389,16 @@ body[data-pedidos-mode="list"] .bg-card.border.border-border.rounded-lg.overflow
 
   [data-pedidos-tabs] .pedidos-universal-search input::placeholder {
     font-size: .7rem;
+  }
+}
+
+/* D-037: los hijos de la hoja única no traen padding propio; en el espacio de trabajo
+   de Pedidos/Entregas/Concentrado se lo damos aquí (12 px teléfono, 16 px escritorio). */
+[data-listpage-sheet]:has(> [data-pedidos-tabs]) > * {
+  padding-inline: .75rem;
+}
+@media (min-width: 768px) {
+  [data-listpage-sheet]:has(> [data-pedidos-tabs]) > * {
+    padding-inline: 1rem;
   }
 }

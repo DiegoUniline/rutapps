@@ -20,7 +20,7 @@ import { fmtDate, fmtDateTime, cn , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, PASO_MOVIL, type TonoPildora } from '@/components/layout/ListaTarjetaMovil';
 import BulkEntregasActionsDialog, { type BulkAction } from '@/components/entregas/BulkEntregasActionsDialog';
 import PedidosTabs from '@/components/PedidosTabs';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
@@ -600,7 +600,7 @@ export default function EntregaListPage() {
       )}
 
 
-      {totalCount > 0 && (
+      {!isMobile && totalCount > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card rounded-lg px-3 py-2">
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">
@@ -635,37 +635,27 @@ export default function EntregaListPage() {
       )}
 
       {/* Table */}
-      <div className={cn("bg-card border border-border rounded-lg overflow-hidden", isMobile && "max-md:bg-transparent max-md:border-0 max-md:overflow-visible")}>
+      <div className={cn("bg-card border border-border rounded-lg overflow-hidden", isMobile && "max-md:bg-transparent max-md:border-0 max-md:overflow-visible max-md:px-3")}>
         {isMobile ? (
           isLoading ? <div className="text-center text-muted-foreground py-8 text-sm">Cargando...</div> : (
-          <ListaTarjetasMovil vacia={filtered.length === 0} mensajeVacio="No hay entregas">
+          <ListaTarjetasMovil
+            vacia={filtered.length === 0}
+            mensajeVacio="No hay entregas"
+            mostrados={filtered.length}
+            total={totalCount}
+            onCargarMas={() => { setPage(0); setPageSize(ps => (ps || PASO_MOVIL) + PASO_MOVIL); }}
+          >
             {filtered.map((e: any) => {
               const badge = STATUS_BADGE[e.status] ?? STATUS_BADGE.borrador;
-              const canSelect = selectableIds.has(e.id);
-              const origenes = Array.from(new Set((e.entrega_lineas ?? []).map((l: any) => l?.almacenes?.nombre).filter(Boolean))) as string[];
-              const origen = origenes.length === 0 ? (e.almacenes?.nombre ?? '—') : origenes.length === 1 ? origenes[0] : `${origenes[0]} +${origenes.length - 1}`;
-              const destinoNombre = e.vendedor_ruta?.almacen_destino?.nombre ?? e.vendedores?.almacen_destino?.nombre ?? null;
+              const tono: TonoPildora = e.status === 'hecho' || e.status === 'entregado' ? 'exito' : e.status === 'cancelado' ? 'peligro' : e.status === 'borrador' ? 'neutro' : 'primario';
               return (
                 <ListaTarjetaMovil
                   key={e.id}
                   titulo={e.clientes?.nombre ?? '—'}
-                  subtitulo={[e.folio, e.ventas?.folio ? `Pedido ${e.ventas.folio}` : null].filter(Boolean).join(' · ') || undefined}
-                  estado={<Badge variant={badge.variant} className={`text-[10px] whitespace-nowrap ${badge.className ?? ''}`}>{badge.label}</Badge>}
-                  className={selectedIds.has(e.id) ? 'bg-primary/5' : undefined}
-                  leading={canSelect ? (
-                    <span onClick={ev => ev.stopPropagation()} className="shrink-0 inline-flex">
-                      <Checkbox checked={selectedIds.has(e.id)} onCheckedChange={() => toggleSelect(e.id)} aria-label="Seleccionar entrega" />
-                    </span>
-                  ) : undefined}
+                  linea2={<>{fmtDate(e.fecha)}{e.vendedor_ruta?.nombre ? ` · ${e.vendedor_ruta.nombre}` : e.vendedores?.nombre ? ` · ${e.vendedores.nombre}` : ''}<span className="text-xs"> · {[e.folio, e.ventas?.folio].filter(Boolean).join(' · ')}</span></>}
+                  pildora={badge.label}
+                  tono={tono}
                   onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  campos={[
-                    { label: 'Programada', value: fmtDate(e.fecha) },
-                    { label: 'Entregada', value: e.fecha_entrega ? <span className="text-success">{fmtDate(e.fecha_entrega)}</span> : '—' },
-                    { label: 'Vendedor', value: e.vendedores?.nombre ?? '—' },
-                    { label: 'Ruta', value: e.vendedor_ruta?.nombre ?? '—' },
-                    { label: 'Origen', value: origen },
-                    { label: 'Destino', value: destinoNombre ?? '—' },
-                  ]}
                 />
               );
             })}
