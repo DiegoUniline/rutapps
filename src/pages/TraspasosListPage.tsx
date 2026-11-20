@@ -109,43 +109,46 @@ export default function TraspasosListPage() {
     empresaId: empresa?.id,
     queryKeys: [['traspasos'], ['traspaso-lineas-all']],
   });
-  const { filters, groupBy, groupByLevels, dateFrom: desde, dateTo: hasta, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('traspasos');
+  const { filters, groupBy, groupByLevels, dateFrom: desde, dateTo: hasta, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('traspasos', { defaultMesActual: true });
   const setDesde = (val: string) => setDates(val, hasta);
   const setHasta = (val: string) => setDates(desde, val);
 
   // Detalle filter state
   const [searchD, setSearchD] = useState('');
   const [pageD, setPageD] = useState(1);
-  const { filters: filtersD, groupBy: groupByD, groupByLevels: groupByLevelsD, dateFrom: desdeD, dateTo: hastaD, setFilter: setFilterD, toggleFilterValue: toggleFilterValueD, setGroupBy: setGroupByD, setGroupByLevel: setGroupByLevelD, clearFilters: clearFiltersD, setDates: setDatesD } = useListPreferences('traspasos-detalle');
+  const { filters: filtersD, groupBy: groupByD, groupByLevels: groupByLevelsD, dateFrom: desdeD, dateTo: hastaD, setFilter: setFilterD, toggleFilterValue: toggleFilterValueD, setGroupBy: setGroupByD, setGroupByLevel: setGroupByLevelD, clearFilters: clearFiltersD, setDates: setDatesD } = useListPreferences('traspasos-detalle', { defaultMesActual: true });
   const setDesdeD = (val: string) => setDatesD(val, hastaD);
   const setHastaD = (val: string) => setDatesD(desdeD, val);
 
   const { data: traspasos, isLoading } = useQuery({
-    queryKey: ['traspasos', empresa?.id],
+    // Abre en el mes actual y filtra fechas en la BD (no baja todo el historial).
+    queryKey: ['traspasos', empresa?.id, desde, hasta],
     enabled: !!empresa?.id,
-    queryFn: async () => fetchAllPages<any>((from, to) =>
-      supabase
+    queryFn: async () => fetchAllPages<any>((from, to) => {
+      let q = supabase
         .from('traspasos')
         .select('*, almacen_origen:almacenes!traspasos_almacen_origen_id_fkey(nombre), almacen_destino:almacenes!traspasos_almacen_destino_id_fkey(nombre), vendedor_origen:profiles!traspasos_vendedor_origen_id_profiles_fkey(nombre), vendedor_destino:profiles!traspasos_vendedor_destino_id_profiles_fkey(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false }).order('id', { ascending: true })
-        .range(from, to)
-    ),
+        .eq('empresa_id', empresa!.id);
+      if (desde) q = q.gte('fecha', desde);
+      if (hasta) q = q.lte('fecha', hasta);
+      return q.order('created_at', { ascending: false }).order('id', { ascending: true }).range(from, to);
+    }),
   });
 
   // Detalle: traspaso_lineas with traspaso + product info
   const { data: lineasRaw, isLoading: isLoadingLineas } = useQuery({
-    queryKey: ['traspaso-lineas-all', empresa?.id],
+    queryKey: ['traspaso-lineas-all', empresa?.id, desdeD, hastaD],
     enabled: !!empresa?.id && viewMode === 'detalle',
     queryFn: async () => {
-      const data = await fetchAllPages<any>((from, to) =>
-        supabase
+      const data = await fetchAllPages<any>((from, to) => {
+        let q = supabase
           .from('traspaso_lineas')
           .select('id, cantidad, producto_id, traspaso_id, productos(codigo, nombre), traspasos!inner(folio, tipo, status, fecha, almacen_origen_id, almacen_destino_id, almacenes_origen:almacenes!traspasos_almacen_origen_id_fkey(nombre), almacenes_destino:almacenes!traspasos_almacen_destino_id_fkey(nombre))')
-          .eq('traspasos.empresa_id', empresa!.id)
-          .order('created_at', { ascending: false })
-          .range(from, to)
-      );
+          .eq('traspasos.empresa_id', empresa!.id);
+        if (desdeD) q = q.gte('traspasos.fecha', desdeD);
+        if (hastaD) q = q.lte('traspasos.fecha', hastaD);
+        return q.order('created_at', { ascending: false }).order('id', { ascending: true }).range(from, to);
+      });
       return data.map((l: any) => ({
         linea_id: l.id,
         traspaso_id: l.traspaso_id,

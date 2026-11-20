@@ -166,9 +166,10 @@ const DETALLE_GROUP_BY_OPTIONS = [
   { value: 'fecha_anio_mes', label: 'Año-Mes' },
 ];
 
-function useCompras(search: string, statusFilter: string[], empresaId?: string) {
+function useCompras(search: string, statusFilter: string[], empresaId?: string, desde?: string, hasta?: string) {
   return useQuery({
-    queryKey: ['compras', search, statusFilter, empresaId],
+    // Abre en el mes actual y filtra fechas en la BD.
+    queryKey: ['compras', search, statusFilter, empresaId, desde, hasta],
     enabled: !!empresaId,
     queryFn: async () => {
       // Todas las páginas (antes se cortaba en 1 000 renglones).
@@ -179,6 +180,8 @@ function useCompras(search: string, statusFilter: string[], empresaId?: string) 
           .eq('empresa_id', empresaId!)
           .order('fecha', { ascending: false })
           .order('id', { ascending: true });
+        if (desde) q = q.gte('fecha', desde);
+        if (hasta) q = q.lte('fecha', hasta);
         if (statusFilter && statusFilter.length > 0) q = q.in('status', statusFilter);
         return q.range(from, to);
       });
@@ -227,19 +230,19 @@ export default function ComprasPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const qc = useQueryClient();
-  const { filters, groupBy, groupByLevels, dateFrom: desde, dateTo: hasta, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('compras');
+  const { filters, groupBy, groupByLevels, dateFrom: desde, dateTo: hasta, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters, setDates } = useListPreferences('compras', { defaultMesActual: true });
   const setDesde = (val: string) => setDates(val, hasta);
   const setHasta = (val: string) => setDates(desde, val);
 
   // Detalle state
   const [searchD, setSearchD] = useState('');
   const [pageD, setPageD] = useState(1);
-  const { filters: filtersD, groupBy: groupByD, groupByLevels: groupByLevelsD, dateFrom: desdeD, dateTo: hastaD, setFilter: setFilterD, toggleFilterValue: toggleFilterValueD, setGroupBy: setGroupByD, setGroupByLevel: setGroupByLevelD, clearFilters: clearFiltersD, setDates: setDatesD } = useListPreferences('compras-detalle');
+  const { filters: filtersD, groupBy: groupByD, groupByLevels: groupByLevelsD, dateFrom: desdeD, dateTo: hastaD, setFilter: setFilterD, toggleFilterValue: toggleFilterValueD, setGroupBy: setGroupByD, setGroupByLevel: setGroupByLevelD, clearFilters: clearFiltersD, setDates: setDatesD } = useListPreferences('compras-detalle', { defaultMesActual: true });
   const setDesdeD = (val: string) => setDatesD(val, hastaD);
   const setHastaD = (val: string) => setDatesD(desdeD, val);
 
   const statusFilter = filters.status ?? [];
-  const { data: compras, isLoading } = useCompras(search, statusFilter, empresa?.id);
+  const { data: compras, isLoading } = useCompras(search, statusFilter, empresa?.id, desde, hasta);
 
   const { data: almacenes } = useQuery({
     queryKey: ['almacenes', empresa?.id],
@@ -253,17 +256,18 @@ export default function ComprasPage() {
 
   // Detalle query
   const { data: lineasRaw, isLoading: isLoadingLineas } = useQuery({
-    queryKey: ['compra-lineas-all', empresa?.id],
+    queryKey: ['compra-lineas-all', empresa?.id, desdeD, hastaD],
     enabled: !!empresa?.id && viewMode === 'detalle',
     queryFn: async () => {
-      const data = await fetchAllPages<any>((from, to) =>
-        supabase
+      const data = await fetchAllPages<any>((from, to) => {
+        let q = supabase
           .from('compra_lineas')
           .select('id, cantidad, cantidad_recibida, factor_conversion, piezas_total, precio_unitario, subtotal, total, producto_id, compra_id, productos(codigo, nombre, nombre_compra), compras!inner(folio, numero_factura, status, fecha, fecha_vencimiento, condicion_pago, dias_credito, subtotal, iva_total, descuento_extra, descuento_extra_tipo, descuento_extra_motivo, descuento_total, ajuste_total, total, saldo_pendiente, notas, proveedor_id, almacen_id, proveedores(nombre, rfc), almacenes(nombre))')
-          .eq('compras.empresa_id', empresa!.id)
-          .order('created_at', { ascending: false })
-          .range(from, to)
-      );
+          .eq('compras.empresa_id', empresa!.id);
+        if (desdeD) q = q.gte('compras.fecha', desdeD);
+        if (hastaD) q = q.lte('compras.fecha', hastaD);
+        return q.order('created_at', { ascending: false }).order('id', { ascending: true }).range(from, to);
+      });
       const porCompra = new Map<string, any[]>();
       for (const linea of data) {
         const grupo = porCompra.get(linea.compra_id) ?? [];

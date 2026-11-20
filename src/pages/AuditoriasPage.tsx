@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { mesActualLocal } from '@/hooks/useListPreferences';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
@@ -40,8 +41,8 @@ export default function AuditoriasPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
+  const [fechaDesde, setFechaDesde] = useState(() => mesActualLocal().from);
+  const [fechaHasta, setFechaHasta] = useState(() => mesActualLocal().to);
 
   const [showDialog, setShowDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
@@ -89,17 +90,20 @@ export default function AuditoriasPage() {
   });
 
   const { data: auditorias, isLoading } = useQuery({
-    queryKey: ['auditorias', empresa?.id],
+    // Abre en el mes actual y filtra fechas en la BD.
+    queryKey: ['auditorias', empresa?.id, fechaDesde, fechaHasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
       // Todas las páginas (antes se cortaba en 1 000 renglones).
-      return fetchAllPages<any>((from, to) => supabase
-        .from('auditorias')
-        .select('*, auditoria_lineas(count)')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: true })
-        .range(from, to));
+      return fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('auditorias')
+          .select('*, auditoria_lineas(count)')
+          .eq('empresa_id', empresa!.id);
+        if (fechaDesde) q = q.gte('fecha', fechaDesde);
+        if (fechaHasta) q = q.lte('fecha', fechaHasta);
+        return q.order('created_at', { ascending: false }).order('id', { ascending: true }).range(from, to);
+      });
     },
   });
 

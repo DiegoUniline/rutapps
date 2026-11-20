@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { mesActualLocal } from '@/hooks/useListPreferences';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -28,20 +29,23 @@ const METODO_LABELS: Record<string, string> = {
 
 const PAGE_SIZE = 25;
 
-function usePagosProveedores() {
+function usePagosProveedores(desde: string, hasta: string) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['pagos-proveedores-list', empresa?.id],
+    // Filtra fechas en la BD (abre en el mes actual).
+    queryKey: ['pagos-proveedores-list', empresa?.id, desde, hasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
       // Todas las páginas (antes se cortaba en 1 000 renglones).
-      const data = await fetchAllPages<any>((from, to) => supabase
-        .from('pago_compras')
-        .select('*, proveedores(nombre), compras(folio)')
-        .eq('empresa_id', empresa!.id)
-        .order('fecha', { ascending: false })
-        .order('id', { ascending: true })
-        .range(from, to));
+      const data = await fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('pago_compras')
+          .select('*, proveedores(nombre), compras(folio)')
+          .eq('empresa_id', empresa!.id);
+        if (desde) q = q.gte('fecha', desde);
+        if (hasta) q = q.lte('fecha', hasta);
+        return q.order('fecha', { ascending: false }).order('id', { ascending: true }).range(from, to);
+      });
       return (data ?? []).map((p: any) => ({
         id: p.id,
         fecha: p.fecha,
@@ -60,7 +64,6 @@ function usePagosProveedores() {
 }
 
 export default function PagosProveedoresPage() {
-  const { data: pagos, isLoading } = usePagosProveedores();
   const { fmt } = useCurrency();
 
   const [search, setSearch] = useState('');
@@ -68,10 +71,10 @@ export default function PagosProveedoresPage() {
   const [filtroProveedor, setFiltroProveedor] = useState('todos');
   const [groupBy, setGroupBy] = useState<'ninguno' | 'proveedor' | 'metodo' | 'mes'>('ninguno');
   
-  const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-  const [desde, setDesde] = useState(firstDay.toISOString().slice(0, 10));
-  const [hasta, setHasta] = useState(today.toISOString().slice(0, 10));
+  // Mes actual en hora local (antes toISOString usaba UTC y de noche cambiaba de día).
+  const [desde, setDesde] = useState(() => mesActualLocal().from);
+  const [hasta, setHasta] = useState(() => mesActualLocal().to);
+  const { data: pagos, isLoading } = usePagosProveedores(desde, hasta);
   const [page, setPage] = useState(0);
 
   const proveedores = useMemo(() => {

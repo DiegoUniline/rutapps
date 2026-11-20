@@ -1,4 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { mesActualLocal } from '@/hooks/useListPreferences';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
 import { useState, useMemo, useEffect } from 'react';
@@ -18,20 +19,23 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { confirmDialog } from '@/lib/confirm';
 import { usePinAuth } from '@/hooks/usePinAuth';
 
-function useGastos() {
+function useGastos(desde: string, hasta: string) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['gastos-desktop', empresa?.id],
+    // Abre en el mes actual y filtra fechas en la BD.
+    queryKey: ['gastos-desktop', empresa?.id, desde, hasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
       // Todas las páginas (antes se cortaba en 1 000 renglones).
-      return fetchAllPages<any>((from, to) => supabase
-        .from('gastos')
-        .select('*, vendedores:profiles!vendedor_id(id,nombre)').is('cancelado_at', null)
-        .eq('empresa_id', empresa!.id)
-        .order('fecha', { ascending: false })
-        .order('id', { ascending: true })
-        .range(from, to));
+      return fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('gastos')
+          .select('*, vendedores:profiles!vendedor_id(id,nombre)').is('cancelado_at', null)
+          .eq('empresa_id', empresa!.id);
+        if (desde) q = q.gte('fecha', desde);
+        if (hasta) q = q.lte('fecha', hasta);
+        return q.order('fecha', { ascending: false }).order('id', { ascending: true }).range(from, to);
+      });
     },
   });
 }
@@ -63,10 +67,10 @@ export default function GastosDesktopPage() {
   // Filters
   const [search, setSearch] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState<string>('all');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
+  const [desde, setDesde] = useState(() => mesActualLocal().from);
+  const [hasta, setHasta] = useState(() => mesActualLocal().to);
 
-  const { data: gastos, isLoading } = useGastos();
+  const { data: gastos, isLoading } = useGastos(desde, hasta);
   const { data: vendedores } = useVendedores();
 
   // Form state

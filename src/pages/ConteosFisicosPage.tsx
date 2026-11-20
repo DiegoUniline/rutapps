@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { mesActualLocal } from '@/hooks/useListPreferences';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -34,8 +35,8 @@ export default function ConteosFisicosPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
+  const [fechaDesde, setFechaDesde] = useState(() => mesActualLocal().from);
+  const [fechaHasta, setFechaHasta] = useState(() => mesActualLocal().to);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -46,17 +47,20 @@ export default function ConteosFisicosPage() {
   });
 
   const { data: conteos, isLoading } = useQuery({
-    queryKey: ['conteos-fisicos', empresa?.id],
+    // Abre en el mes actual y filtra fechas en la BD.
+    queryKey: ['conteos-fisicos', empresa?.id, fechaDesde, fechaHasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
       // Todas las páginas (antes se cortaba en 1 000 renglones).
-      return fetchAllPages<any>((from, to) => supabase
-        .from('conteos_fisicos')
-        .select('*, almacenes(nombre), clasificaciones(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: true })
-        .range(from, to));
+      return fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('conteos_fisicos')
+          .select('*, almacenes(nombre), clasificaciones(nombre)')
+          .eq('empresa_id', empresa!.id);
+        if (fechaDesde) q = q.gte('created_at', fechaDesde);
+        if (fechaHasta) q = q.lt('created_at', `${fechaHasta}T23:59:59.999`);
+        return q.order('created_at', { ascending: false }).order('id', { ascending: true }).range(from, to);
+      });
     },
   });
 

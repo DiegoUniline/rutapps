@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { mesActualLocal } from '@/hooks/useListPreferences';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
@@ -119,8 +120,8 @@ export default function AjustesInventarioPage() {
   const [searchH, setSearchH] = useState('');
   const [pageH, setPageH] = useState(1);
   const { filters: filtersH, groupBy: groupByH, groupByLevels: groupByLevelsH, setFilter: setFilterH, toggleFilterValue: toggleFilterValueH, setGroupBy: setGroupByH, setGroupByLevel: setGroupByLevelH, clearFilters: clearFiltersH } = useListPreferences('ajustes-historial');
-  const [desdeH, setDesdeH] = useState('');
-  const [hastaH, setHastaH] = useState('');
+  const [desdeH, setDesdeH] = useState(() => mesActualLocal().from);
+  const [hastaH, setHastaH] = useState(() => mesActualLocal().to);
   const PAGE_SIZE_H = 80;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -194,17 +195,19 @@ export default function AjustesInventarioPage() {
 
   // Load history (grouped)
   const { data: historial, isLoading: loadingHistorial } = useQuery({
-    queryKey: ['ajustes-historial', empresa?.id],
+    // Abre en el mes actual y filtra fechas en la BD.
+    queryKey: ['ajustes-historial', empresa?.id, desdeH, hastaH],
     enabled: !!empresa?.id && tab === 'historial',
     queryFn: async () => {
-      const data = await fetchAllPages<any>((from, to) =>
-        supabase
+      const data = await fetchAllPages<any>((from, to) => {
+        let q = supabase
           .from('ajustes_inventario')
           .select('*, productos(codigo, nombre), almacenes(nombre)')
-          .eq('empresa_id', empresa!.id)
-          .order('created_at', { ascending: false })
-          .range(from, to)
-      );
+          .eq('empresa_id', empresa!.id);
+        if (desdeH) q = q.gte('fecha', desdeH);
+        if (hastaH) q = q.lte('fecha', hastaH);
+        return q.order('created_at', { ascending: false }).order('id', { ascending: true }).range(from, to);
+      });
 
       const userIds = [...new Set((data ?? []).map((a: any) => a.user_id))];
       const { data: profiles } = await supabase
