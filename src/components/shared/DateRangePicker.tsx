@@ -138,7 +138,7 @@ export function DateRangePicker({
   const hasValue = !!(from || to);
 
   return (
-    <div className={cn('inline-flex items-center', segmento ? 'h-full bg-primary text-primary-foreground' : 'gap-1', className)}>
+    <div className={cn('inline-flex items-center shrink-0 max-w-full', segmento ? 'h-full bg-primary text-primary-foreground' : 'gap-1', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button

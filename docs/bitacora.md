@@ -159,3 +159,4 @@
 2026-11-20 · ui-movil · Entregas/Logística: encabezado del detalle envuelve y agrupa secundarias en menú «⋯», padding compacto, el selector de fechas ya no tapa el buscador de Pedidos/Entregas en teléfono
 2026-11-20 · ui-movil · Clientes y Productos: campos con etiqueta de 108 px en teléfono (no se salen inputs ni botones), GPS del cliente sin desborde, título y padding compactos, botones de acción envuelven
 2026-11-20 · ui-movil · Cobranza/CxC/Saldos/Gastos: KPIs en 2 columnas compactas en teléfono, barra de selección envuelve, filtros de Gastos en 2 columnas con fecha a lo ancho
+2026-11-20 · ui-movil · Inventario/Kardex: pestañas en un renglón desplazable, KPIs y filtros compactos (3 columnas), selector de fechas que ya no se aplasta, insignias de saldo envuelven

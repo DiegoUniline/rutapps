@@ -374,7 +374,7 @@ export default function InventarioPage() {
   ];
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Warehouse className="h-5 w-5" /> Inventario
         <HelpButton title={HELP.inventario.title} sections={HELP.inventario.sections} />
@@ -383,7 +383,7 @@ export default function InventarioPage() {
 
       {/* Summary cards */}
       {data && view !== 'historico' && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           <SummaryCard icon={Warehouse} label="Almacenes" value={`${fmtNum(data.totales.stockTipoAlmacen)} uds`} sub={`Costo: ${fmt(data.totales.valorCostoTipoAlmacen)}`} color="text-primary" />
           <SummaryCard icon={Truck} label="Rutas" value={`${fmtNum(data.totales.stockTipoRuta)} uds`} sub={`Costo: ${fmt(data.totales.valorCostoTipoRuta)}`} color="text-warning" />
           <SummaryCard icon={DollarSign} label="Valor total (costo)" value={`${fmt(data.totales.valorCostoTotal)}`} sub={`${fmtNum(data.totales.stockTotal)} unidades totales`} color="text-success" />
@@ -392,14 +392,14 @@ export default function InventarioPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center justify-between border-b border-border">
-        <div className="flex gap-1">
+      <div className="flex flex-wrap items-end justify-between gap-x-2 border-b border-border">
+        <div className="flex gap-1 max-w-full overflow-x-auto no-scrollbar">
           {tabs.map(t => (
             <button
               key={t.key}
               onClick={() => setView(t.key)}
               className={cn(
-                "flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border-b-2 transition-colors",
+                "flex items-center gap-1.5 px-3 sm:px-4 py-2 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap shrink-0",
                 view === t.key
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -409,7 +409,7 @@ export default function InventarioPage() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex flex-wrap items-center gap-2 mb-1 ml-auto">
           {presentaciones.length > 0 && (
             <button
               onClick={() => setShowPresModal(true)}
@@ -438,7 +438,7 @@ export default function InventarioPage() {
       {view !== 'rutas' && view !== 'historico' && (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative max-w-sm flex-1 min-w-[200px]">
+            <div className="relative sm:max-w-sm flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar producto..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
             </div>
@@ -467,7 +467,7 @@ export default function InventarioPage() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <EntityMultiSelect
               label="Categoría"
               options={lookups?.categorias ?? []}
@@ -960,12 +960,12 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
 
 function SummaryCard({ icon: Icon, label, value, sub, color }: { icon: React.ElementType; label: string; value: string; sub: string; color: string }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-4">
+    <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
       <div className="flex items-center gap-2 mb-1">
-        <Icon className={cn("h-4 w-4", color)} />
-        <span className="text-[11px] text-muted-foreground uppercase tracking-wide">{label}</span>
+        <Icon className={cn("h-4 w-4 shrink-0", color)} />
+        <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase tracking-wide leading-tight">{label}</span>
       </div>
-      <p className="text-lg font-bold text-foreground">{value}</p>
+      <p className="text-base sm:text-lg font-bold text-foreground truncate">{value}</p>
       <p className="text-[11px] text-muted-foreground">{sub}</p>
     </div>
   );

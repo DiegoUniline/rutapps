@@ -440,7 +440,7 @@ export default function KardexPage() {
               <div className="text-base font-semibold truncate">{productoSel?.nombre}</div>
               <div className="text-xs text-muted-foreground">{productoSel?.codigo} · {almacenSel?.nombre}</div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="text-sm px-3 py-1">
                 Saldo kardex: {fmtNum(saldoFinal)}
               </Badge>
@@ -513,7 +513,7 @@ export default function KardexPage() {
 
           {/* Summary */}
           {rows.length > 0 && (
-            <div className="flex gap-4 text-[12px]">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
               <span className="text-muted-foreground">{rows.length} movimientos</span>
               <span className="text-green-600 font-medium">
                 + {rows.filter(r => r.delta > 0).reduce((s, r) => s + r.delta, 0).toLocaleString('es-MX')} entradas
