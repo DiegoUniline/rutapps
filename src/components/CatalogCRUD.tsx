@@ -26,6 +26,12 @@ interface CatalogCRUDProps {
 
 export default function CatalogCRUD({ title, tableName, columns, queryKey, imageColumn }: CatalogCRUDProps) {
   const qc = useQueryClient();
+  // Las listas de productos muestran el nombre de categoría/marca/unidad: se recargan al cambiarlo.
+  const invalidarProductos = () => {
+    for (const k of ['productos', 'productos-page', 'productos-select', 'pos-productos', 'precios-comisiones-matrix']) {
+      qc.invalidateQueries({ queryKey: [k] });
+    }
+  };
   const { empresa } = useAuth();
   const [newRow, setNewRow] = useState<Record<string, string | number>>({});
   const [showInactive, setShowInactive] = useState(false);
@@ -99,6 +105,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey, image
       const { error } = await (supabase.from as any)(tableName).update({ activo: newVal }).eq('id', id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: [queryKey] });
+      invalidarProductos();
       toast.success(newVal ? 'Activado' : 'Dado de baja');
     } catch (err: any) {
       qc.invalidateQueries({ queryKey: [queryKey] }); // revert
@@ -111,9 +118,13 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey, image
       const updateVal = type === 'number' ? Number(val) : val;
       const { error } = await (supabase.from as any)(tableName).update({ [field]: updateVal }).eq('id', id);
       if (error) throw error;
-      qc.setQueryData([queryKey, showInactive], (old: any[] | undefined) =>
-        old?.map(item => item.id === id ? { ...item, [field]: updateVal } : item)
+      // La lista visible usa la clave [queryKey, empresa, showInactive]: se actualizan todas las
+      // variantes (antes apuntaba a una clave que no existía y no se veía el cambio hasta recargar).
+      qc.setQueriesData<any[]>({ queryKey: [queryKey] }, (old) =>
+        Array.isArray(old) ? old.map(item => item.id === id ? { ...item, [field]: updateVal } : item) : old
       );
+      qc.invalidateQueries({ queryKey: [queryKey] });
+      invalidarProductos();
       toast.success('Actualizado');
     } catch (err: any) {
       toast.error(err.message);

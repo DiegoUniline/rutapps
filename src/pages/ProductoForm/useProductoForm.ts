@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useAllListasPrecios, useTarifaLineasForProducto, useSaveProductoProveedor, useDeleteProductoProveedor, useProductoProveedores } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -66,6 +66,39 @@ export function useProductoForm() {
   const { data: tarifasDisp } = useAllListasPrecios(empresa?.id);
   const [form, setForm] = useState<Partial<Producto>>(defaultProduct);
   const [originalForm, setOriginalForm] = useState<Partial<Producto>>(defaultProduct);
+
+  // Categoría/marca/unidad asignadas pero dadas de baja: se agregan a las opciones marcadas
+  // «(inactiva)» para que el detalle muestre lo mismo que la lista (antes el campo salía vacío).
+  const faltantes = useMemo(() => {
+    const falta = (lista: { id: string }[] | undefined, id?: string | null) => (id && lista && !lista.some(x => x.id === id) ? [id] : []);
+    return {
+      marcas: falta(marcas, form.marca_id),
+      clasificaciones: falta(clasificaciones, form.clasificacion_id),
+      unidades: Array.from(new Set([...falta(unidades, form.unidad_venta_id), ...falta(unidades, form.unidad_compra_id)])),
+    };
+  }, [marcas, clasificaciones, unidades, form.marca_id, form.clasificacion_id, form.unidad_venta_id, form.unidad_compra_id]);
+  const { data: inactivos } = useQuery({
+    queryKey: ['producto-catalogos-inactivos', faltantes],
+    enabled: faltantes.marcas.length + faltantes.clasificaciones.length + faltantes.unidades.length > 0,
+    queryFn: async () => {
+      const leer = async (tabla: string, ids: string[], cols: string) => {
+        if (!ids.length) return [] as any[];
+        const { data, error } = await (supabase.from as any)(tabla).select(cols).in('id', ids);
+        if (error) throw error;
+        return (data ?? []) as any[];
+      };
+      const [m, c, u] = await Promise.all([
+        leer('marcas', faltantes.marcas, 'id, nombre'),
+        leer('clasificaciones', faltantes.clasificaciones, 'id, nombre'),
+        leer('unidades', faltantes.unidades, 'id, nombre, abreviatura'),
+      ]);
+      const inact = (x: any) => ({ ...x, nombre: `${x.nombre} (inactiva)` });
+      return { marcas: m.map(inact), clasificaciones: c.map(inact), unidades: u.map(inact) };
+    },
+  });
+  const marcasOpc = useMemo(() => [...(marcas ?? []), ...(inactivos?.marcas ?? [])], [marcas, inactivos]);
+  const clasificacionesOpc = useMemo(() => [...(clasificaciones ?? []), ...(inactivos?.clasificaciones ?? [])], [clasificaciones, inactivos]);
+  const unidadesOpc = useMemo(() => [...(unidades ?? []), ...(inactivos?.unidades ?? [])], [unidades, inactivos]);
 
   const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id, (form as any).lista_id);
   const { data: prodProveedores } = useProductoProveedores(isNew ? undefined : id);
@@ -143,7 +176,7 @@ export function useProductoForm() {
     id, isNew, navigate, form, setForm, set, isDirty, starred, setStarred,
     editingName, setEditingName, nameInputRef, imageInputRef, uploadingImage,
     handleImageUpload, handleSave, handleDelete, saveMutation,
-    marcas, proveedores, clasificaciones, listas, unidades,
+    marcas: marcasOpc, proveedores, clasificaciones: clasificacionesOpc, listas, unidades: unidadesOpc,
     tasasIva, tasasIeps, almacenes, unidadesSat, tarifasDisp,
     tarifaLineas, prodProveedores, saveProvMut, deleteProvMut,
     createMarca, createClasificacion, createUnidad, createLista, createProveedor,

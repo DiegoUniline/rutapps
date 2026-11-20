@@ -136,7 +136,7 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
     placeholderData: (prev) => prev,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)';
+      const SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre)';
       const applyFilters = (q: any) => {
         q = q.eq('empresa_id', empresa!.id).order('nombre', { ascending: true });
         if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%,formula.ilike.%${search}%`);
@@ -167,16 +167,29 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
 
       if (fetchAll) {
         const rows = await fetchAllPages((from, to) => applyFilters(supabase.from('productos').select(SELECT).range(from, to)));
-        return { rows: (rows ?? []) as unknown as Producto[], total: rows?.length ?? 0 };
+        return { rows: marcarCatalogosInactivos(rows ?? []) as unknown as Producto[], total: rows?.length ?? 0 };
       }
 
       let q = supabase.from('productos').select(SELECT, { count: 'exact' }).range((page - 1) * pageSize, page * pageSize - 1);
       q = applyFilters(q);
       const { data, error, count } = await q;
       if (error) throw error;
-      return { rows: (data ?? []) as unknown as Producto[], total: count ?? 0 };
+      return { rows: marcarCatalogosInactivos(data ?? []) as unknown as Producto[], total: count ?? 0 };
     },
   });
+}
+
+/** Categoría/marca/unidad dada de baja que el producto conserva: se muestra marcada «(inactiva)». */
+function marcarCatalogosInactivos<T>(rows: T[]): T[] {
+  const marca = (o: any, campo: 'nombre' | 'abreviatura') =>
+    o && o.activo === false && o[campo] ? { ...o, [campo]: `${o[campo]} (inactiva)` } : o;
+  return rows.map((r: any) => ({
+    ...r,
+    marcas: marca(r.marcas, 'nombre'),
+    clasificaciones: marca(r.clasificaciones, 'nombre'),
+    unidades_venta: marca(r.unidades_venta, 'abreviatura'),
+    unidades_compra: marca(r.unidades_compra, 'abreviatura'),
+  }));
 }
 
 /** All products (for lookups — not for list pages) */
@@ -189,7 +202,7 @@ export function useProductos(search?: string, statusFilter?: string) {
     queryFn: async () => {
       return fetchAllPages((from, to) => {
         let q = supabase.from('productos')
-          .select('id, codigo, nombre, formula, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre), es_granel')
+          .select('id, codigo, nombre, formula, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre), es_granel')
           .eq('empresa_id', empresa!.id)
           .order('nombre', { ascending: true })
           .range(from, to);
@@ -200,7 +213,7 @@ export function useProductos(search?: string, statusFilter?: string) {
           else q = q.eq('status', statusFilter as Producto['status']);
         }
         return q;
-      }) as Promise<Producto[]>;
+      }).then(rows => marcarCatalogosInactivos(rows as any[])) as Promise<Producto[]>;
     },
   });
 }
