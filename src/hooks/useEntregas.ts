@@ -531,23 +531,15 @@ export function useEntregaExpress() {
         .select('id, producto_id, cantidad_pedida');
       if (lErr) throw lErr;
 
-      for (const l of (lineasInsertadas ?? [])) {
-        const { error } = await supabase.rpc('surtir_linea_entrega', {
-          p_linea_id: l.id,
-          p_producto_id: l.producto_id,
-          p_almacen_origen_id: almacenId,
-          p_cantidad_surtida: l.cantidad_pedida,
-          p_entrega_id: entrega.id,
-          p_empresa_id: empresa!.id,
-          p_user_id: user?.id,
-        });
-        if (error) throw new Error(error.message);
-      }
-
-      const update: any = vendedorRutaId
-        ? { status: 'asignado', vendedor_ruta_id: vendedorRutaId, fecha_asignacion: new Date().toISOString() }
-        : { status: 'surtido' };
-      await supabase.from('entregas').update(update).eq('id', entrega.id);
+      // Surtir todos los renglones y cambiar el estado en UNA operación de la BD.
+      const { error: surtirErr } = await (supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>)('surtir_entrega', {
+        p_entrega_id: entrega.id,
+        p_almacen_origen_id: almacenId,
+        p_lineas: (lineasInsertadas ?? []).map((l: any) => ({ id: l.id, cantidad: l.cantidad_pedida })),
+        p_vendedor_ruta_id: vendedorRutaId || null,
+        p_status_final: 'auto',
+      });
+      if (surtirErr) throw new Error(surtirErr.message);
 
       return entrega;
     },

@@ -174,30 +174,15 @@ export default function EntregaListPage() {
           //  • inserts movimiento in kardex
           //  • updates entrega_lineas (cantidad_entregada, almacen_origen_id, hecho)
           //  • validates stock against vender_sin_stock flag
-          for (const l of pendientes) {
-            const { error: rpcError } = await supabase.rpc('surtir_linea_entrega', {
-              p_linea_id: l.id,
-              p_producto_id: l.producto_id,
-              p_almacen_origen_id: almacenId,
-              p_cantidad_surtida: l.cantidad_pedida,
-              p_entrega_id: eid,
-              p_empresa_id: empresa!.id,
-              p_user_id: user?.id,
-            });
-            if (rpcError) throw new Error(rpcError.message);
-          }
-
-          // Update status
-          if (vendedorRutaId) {
-            await supabase.from('entregas').update({
-              status: 'asignado',
-              almacen_id: almacenId,
-              vendedor_ruta_id: vendedorRutaId,
-              fecha_asignacion: new Date().toISOString(),
-            } as any).eq('id', eid);
-          } else {
-            await supabase.from('entregas').update({ status: 'surtido', almacen_id: almacenId } as any).eq('id', eid);
-          }
+          // Una sola operación en la BD: surte todos los renglones y cambia el estado, o nada.
+          const { error: rpcError } = await (supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>)('surtir_entrega', {
+            p_entrega_id: eid,
+            p_almacen_origen_id: almacenId,
+            p_lineas: pendientes.map((l: any) => ({ id: l.id, cantidad: l.cantidad_pedida })),
+            p_vendedor_ruta_id: vendedorRutaId || null,
+            p_status_final: 'auto',
+          });
+          if (rpcError) throw new Error(rpcError.message);
         }
 
         // If already surtido and vendedor selected → assign
@@ -352,24 +337,19 @@ export default function EntregaListPage() {
               .map((l: any) => ({ id: l.id, producto_id: l.producto_id, cantidad_pedida: Number(l.cantidad_pedida) || 0 }));
           }
 
-          let surtirError: string | null = null;
-          for (const l of toSurtir) {
-            if (l.cantidad_pedida <= 0) continue;
-            const { error: rpcErr } = await supabase.rpc('surtir_linea_entrega', {
-              p_linea_id: l.id,
-              p_producto_id: l.producto_id,
-              p_almacen_origen_id: almOrigen,
-              p_cantidad_surtida: l.cantidad_pedida,
-              p_entrega_id: eid,
-              p_empresa_id: empresa!.id,
-              p_user_id: user?.id,
-            });
-            if (rpcErr) { surtirError = rpcErr.message; break; }
-          }
-          if (surtirError) { errores.push(`${folio}: ${surtirError}`); continue; }
+          // Surtir lo pendiente y pasar a «cargado» en UNA operación (el trigger aplica la entrada al
+          // camión del repartidor). Si algo falla no queda nada a medias.
+          const { error: cargaErr } = await (supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>)('surtir_entrega', {
+            p_entrega_id: eid,
+            p_almacen_origen_id: almOrigen,
+            p_lineas: toSurtir.map(l => ({ id: l.id, cantidad: l.cantidad_pedida })),
+            p_status_final: 'cargado',
+          });
+          if (cargaErr) { errores.push(`${folio}: ${cargaErr.message}`); continue; }
+          continue;
         }
 
-        // El trigger de BD aplica entrada al almacén destino del vendedor
+        // Ya surtida: solo pasa a «cargado» (el trigger de BD aplica la entrada al camión del repartidor).
         const { error: updErr } = await supabase
           .from('entregas')
           .update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any)
