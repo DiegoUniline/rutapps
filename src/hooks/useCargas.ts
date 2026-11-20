@@ -27,7 +27,7 @@ export function useCargaActiva(vendedorId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('id, fecha, status, vendedor_id, almacen_id, notas, carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad, unidades:unidad_venta_id(abreviatura)))')
+        .select('id, fecha, status, vendedor_id, almacen_id, notas, carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad, es_granel, unidades:unidad_venta_id(abreviatura)))')
         .eq('vendedor_id', vendedorId!)
         .in('status', ['pendiente', 'en_ruta'])
         .order('fecha', { ascending: false })

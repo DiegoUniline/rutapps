@@ -343,7 +343,7 @@ export function StepProductos(props: Props) {
                     )}
                     {inCart?.presentacion_nombre && (
                       <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary font-medium">
-                        {inCart.paquetes?.toLocaleString('es-MX')}× {inCart.presentacion_nombre} = {inCart.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })} {p.unidad_granel || 'kg'}
+                        {inCart.paquetes?.toLocaleString('es-MX')}× {inCart.presentacion_nombre} = {inCart.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })} {inCart.unidad || (p.es_granel ? (p.unidad_granel || 'kg') : 'pz')}
                       </span>
                     )}
                     {inCart && productoManejaLote?.(p.id) && (() => {

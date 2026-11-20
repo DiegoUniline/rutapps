@@ -31,6 +31,7 @@ import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { STEPS } from './types';
 import { nextVisitDate } from '@/lib/nextVisitDate';
 import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
+import { paquetesParaCantidad } from '@/lib/ventaPresentacion';
 import { isPublicGeneralClient, resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -689,7 +690,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     }
     const maxQty = esCambio ? Infinity : getMaxQty(productoId);
     const capped = Math.min(qty, maxQty);
-    setCart(prev => prev.map(c => c.producto_id === productoId && !!c.es_cambio === match ? { ...c, cantidad: capped } : c));
+    const granel = !!(productos ?? []).find((p: any) => p.id === productoId)?.es_granel;
+    setCart(prev => prev.map(c => c.producto_id === productoId && !!c.es_cambio === match ? { ...c, cantidad: capped, paquetes: paquetesParaCantidad(c, capped, granel) } : c));
   };
 
   // Default pedidoAlmacenId al primer almacén habilitado cuando aplica
@@ -779,7 +781,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     else setCart([...cart, lineBase]);
   };
 
-  const updateQty = (productoId: string, delta: number, esCambio?: boolean) => { const match = !!esCambio; setCart(prev => prev.map(c => { if (c.producto_id !== productoId || !!c.es_cambio !== match) return c; const newQty = c.cantidad + delta; const maxQty = esCambio ? Infinity : getMaxQty(productoId); if (newQty > maxQty) return c; return newQty > 0 ? { ...c, cantidad: newQty } : c; })); };
+  const updateQty = (productoId: string, delta: number, esCambio?: boolean) => { const match = !!esCambio; const granel = !!(productos ?? []).find((p: any) => p.id === productoId)?.es_granel; setCart(prev => prev.map(c => { if (c.producto_id !== productoId || !!c.es_cambio !== match) return c; const newQty = Math.round((c.cantidad + delta) * 1000) / 1000; const maxQty = esCambio ? Infinity : getMaxQty(productoId); if (newQty > maxQty) return c; return newQty > 0 ? { ...c, cantidad: newQty, paquetes: paquetesParaCantidad(c, newQty, granel) } : c; })); };
   const removeFromCart = (productoId: string, esCambio?: boolean) => { const match = !!esCambio; setCart(prev => prev.filter(c => !(c.producto_id === productoId && !!c.es_cambio === match))); };
   const getItemInCart = (productoId: string) => cart.find(c => c.producto_id === productoId && !c.es_cambio);
 

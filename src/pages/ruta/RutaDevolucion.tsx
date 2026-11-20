@@ -15,6 +15,7 @@ import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
 import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { fmtDate } from '@/lib/utils';
+import { leerCantidad } from '@/lib/ventaPresentacion';
 
 interface DevItem {
   producto_id: string;
@@ -23,6 +24,7 @@ interface DevItem {
   cantidad: number;
   motivo: 'no_vendido' | 'vencido' | 'danado' | 'cambio' | 'otro';
   max: number;
+  granel?: boolean;
 }
 
 const MOTIVOS = [
@@ -81,6 +83,7 @@ function RutaDevolucionInner() {
         codigo: l.productos?.codigo ?? '',
         nombre: l.productos?.nombre ?? '',
         max: Math.max(0, enMano),
+        granel: !!l.productos?.es_granel,
       };
     }).filter(p => p.max > 0);
   }, [carga]);
@@ -97,9 +100,10 @@ function RutaDevolucionInner() {
 
   const getItem = (pid: string) => items.find(i => i.producto_id === pid);
 
-  const addItem = (p: { producto_id: string; codigo: string; nombre: string; max: number }) => {
+  const addItem = (p: { producto_id: string; codigo: string; nombre: string; max: number; granel?: boolean }) => {
     if (getItem(p.producto_id)) return;
-    setItems(prev => [...prev, { ...p, cantidad: 1, motivo: 'no_vendido' }]);
+    // A granel puede quedar menos de 1 kg en mano: se propone lo que haya.
+    setItems(prev => [...prev, { ...p, cantidad: p.granel ? Math.min(1, p.max) : 1, motivo: 'no_vendido' }]);
   };
 
   const removeItem = (pid: string) => setItems(prev => prev.filter(i => i.producto_id !== pid));
@@ -107,7 +111,8 @@ function RutaDevolucionInner() {
   const updateQty = (pid: string, delta: number) => {
     setItems(prev => prev.map(item => {
       if (item.producto_id !== pid) return item;
-      const newQty = Math.min(Math.max(1, item.cantidad + delta), item.max);
+      const min = item.granel ? Math.min(1, item.max) : 1;
+      const newQty = Math.round(Math.min(Math.max(min, item.cantidad + delta), item.max) * 1000) / 1000;
       return { ...item, cantidad: newQty };
     }));
   };
@@ -115,7 +120,9 @@ function RutaDevolucionInner() {
   const setQty = (pid: string, val: number) => {
     setItems(prev => prev.map(item => {
       if (item.producto_id !== pid) return item;
-      return { ...item, cantidad: Math.min(Math.max(1, val), item.max) };
+      // A granel acepta fracciones (antes parseInt + mínimo 1: 0.5 kg no se podía devolver).
+      const min = item.granel ? 0.001 : 1;
+      return { ...item, cantidad: Math.min(Math.max(min, val), item.max) };
     }));
   };
 
@@ -331,10 +338,10 @@ function RutaDevolucionInner() {
                           className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform">
                           {inList.cantidad === 1 ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-foreground" />}
                         </button>
-                        <input type="number" inputMode="numeric"
+                        <input type="number" inputMode={p.granel ? 'decimal' : 'numeric'} step={p.granel ? '0.001' : '1'}
                           className="w-9 text-center text-[13px] font-bold bg-transparent focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
                           value={inList.cantidad}
-                          onChange={e => setQty(p.producto_id, parseInt(e.target.value) || 1)}
+                          onChange={e => setQty(p.producto_id, leerCantidad(e.target.value, !!p.granel) || 1)}
                         />
                         <button onClick={() => updateQty(p.producto_id, 1)}
                           disabled={inList.cantidad >= p.max}

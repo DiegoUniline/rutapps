@@ -22,7 +22,7 @@
 - [D-001](./decisiones.md#d-001) 2026-10-19 · Instalar Uniline Agents (kit completo adaptado) con AutoPrompter v2.
 
 ## Propuestas pendientes de aprobación 💡
-- (ninguna)
+- Presentaciones (auditoría 2026-11-20, `docs/auditoria/2026-11-20-presentaciones-granel.md` §5): «−/+» en un renglón por caja hoy resta/suma 1 pieza; decidir A) así, B) una caja, C) solo desde el selector. Devoluciones móviles: usar teclado numérico con decimales para kilos.
 
 ## Pendientes / bloqueos
 - Suscripciones, verificación puntual 2026-11-04 23:47 UTC: 48 reemplazos vinculados, activos y desbloqueados en RutApp; Stripe en `trialing` hasta cada corte original; 48 facturas iniciales de total/importe pagado $0, sin cargos desde la creación y sin duplicados activos. Planes, usuarios, descuentos y configuración manual/legacy sin diferencias. No se modificó código, esquema, funciones ni se publicó. Los cobros futuros dependen de la tarjeta y no están probados antes de su fecha.

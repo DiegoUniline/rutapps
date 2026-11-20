@@ -16,6 +16,7 @@ import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 import { fetchEntregaWithFallback, fetchVentaForEntregaWithFallback, fetchOtrasPendientesWithFallback } from '@/lib/offlineEntrega';
 import { queueOperation } from '@/lib/syncQueue';
+import { leerCantidad } from '@/lib/ventaPresentacion';
 import {
   ArrowLeft, Check, User, Package, MapPin, Calendar,
   Banknote, FileText, Download, Printer, Share2, MessageCircle,
@@ -336,13 +337,14 @@ export default function RutaEntregaDetalle() {
     if (!editLinea) return;
     const cargada = Number(editLinea.cantidad_entregada) || 0;
     const nueva = Math.max(0, Math.min(editCantidad, cargada));
-    const quitada = cargada - nueva;
+    // A granel se quitan fracciones (kg): redondeo a 3 decimales para no guardar 0.20000000000000018.
+    const quitada = Math.round((cargada - nueva) * 1000) / 1000;
     if (quitada <= 0) { setEditLinea(null); return; }
     const motivo = editMotivo.trim();
     if (!motivo) { toast.error('Indica el motivo por el que se quita el producto'); return; }
     if (!editCondicion) { toast.error('Indica si lo que regresa está bueno o es merma'); return; }
     const mermaPrevia = Number(editLinea.cantidad_merma) || 0;
-    const cantidadMerma = editCondicion === 'merma' ? mermaPrevia + quitada : mermaPrevia;
+    const cantidadMerma = editCondicion === 'merma' ? Math.round((mermaPrevia + quitada) * 1000) / 1000 : mermaPrevia;
     setSavingLinea(true);
     try {
       // Reducir cantidad_entregada deja el producto en el camión (no se descuenta
@@ -900,7 +902,8 @@ export default function RutaEntregaDetalle() {
       {editLinea && (() => {
         const cargada = Number(editLinea.cantidad_entregada) || 0;
         const nueva = Math.max(0, Math.min(editCantidad, cargada));
-        const quitada = cargada - nueva;
+        const quitada = Math.round((cargada - nueva) * 1000) / 1000;
+        const granel = !!editLinea.productos?.es_granel;
         return (
           <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center" onClick={() => !savingLinea && setEditLinea(null)}>
             <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
@@ -923,7 +926,8 @@ export default function RutaEntregaDetalle() {
                   </button>
                   <input
                     type="number"
-                    inputMode="numeric"
+                    inputMode={granel ? 'decimal' : 'numeric'}
+                    step={granel ? '0.001' : '1'}
                     value={nueva}
                     min={0}
                     max={cargada}
@@ -931,7 +935,8 @@ export default function RutaEntregaDetalle() {
                     onChange={e => {
                       const raw = e.target.value;
                       if (raw === '') { setEditCantidad(0); return; }
-                      const n = Math.floor(Number(raw));
+                      // Antes Math.floor: 7.25 kg se volvía 7 y el kardex no cuadraba con lo entregado.
+                      const n = leerCantidad(raw, granel);
                       if (Number.isNaN(n)) return;
                       setEditCantidad(Math.max(0, Math.min(n, cargada)));
                     }}

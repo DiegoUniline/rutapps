@@ -14,6 +14,7 @@ import { locationService } from '@/lib/locationService';
 import { queueOperation } from '@/lib/syncQueue';
 import { deterministicUuid } from '@/lib/deterministicId';
 import { todayInTimezone } from '@/lib/utils';
+import { leerCantidad } from '@/lib/ventaPresentacion';
 import { Switch } from '@/components/ui/switch';
 import {
   fetchMyProfileWithFallback,
@@ -141,7 +142,7 @@ export default function RutaDescarga() {
       if (!almId) return [];
       const { data } = await supabase
         .from('stock_almacen')
-        .select('producto_id, cantidad, productos(nombre, codigo)')
+        .select('producto_id, cantidad, productos(nombre, codigo, es_granel)')
         .eq('almacen_id', almId)
         .neq('cantidad', 0)
         .order('cantidad', { ascending: false });
@@ -231,7 +232,7 @@ export default function RutaDescarga() {
       const lineasConteo = (descargarCamion ? (camionStock ?? []) : []).map((it: any) => {
         const sistema = Number(it.cantidad) || 0;
         const real = conteoReal[it.producto_id] ?? sistema;
-        return { producto_id: it.producto_id, cantidad_esperada: sistema, cantidad_real: real, diferencia: real - sistema };
+        return { producto_id: it.producto_id, cantidad_esperada: sistema, cantidad_real: real, diferencia: Math.round((real - sistema) * 1000) / 1000 };
       });
 
       if (online) {
@@ -530,18 +531,21 @@ export default function RutaDescarga() {
                 {(camionStock ?? []).map((it: any) => {
                   const sistema = Number(it.cantidad) || 0;
                   const real = conteoReal[it.producto_id] ?? sistema;
-                  const dif = real - sistema;
+                  const dif = Math.round((real - sistema) * 1000) / 1000;
+                  const granel = !!it.productos?.es_granel;
                   return (
                     <div key={it.producto_id} className="flex items-center gap-1 border-b border-border/40 py-1">
                       <span className="flex-1 min-w-0 truncate text-[11px] text-foreground">{it.productos?.nombre ?? '—'}</span>
                       <span className="w-12 text-right text-[11px] text-muted-foreground tabular-nums">{sistema}</span>
                       <input
                         type="number"
-                        inputMode="numeric"
+                        inputMode={granel ? 'decimal' : 'numeric'}
+                        step={granel ? '0.001' : '1'}
                         className="w-14 text-center text-[12px] font-semibold bg-accent/40 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         value={real}
                         onChange={e => {
-                          const v = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0);
+                          // A granel se cuentan kilos con decimales (antes parseInt: 0.25 kg contaba 0).
+                          const v = e.target.value === '' ? 0 : Math.max(0, leerCantidad(e.target.value, granel) || 0);
                           setConteoReal(prev => ({ ...prev, [it.producto_id]: v }));
                         }}
                       />

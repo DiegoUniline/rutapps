@@ -31,7 +31,7 @@ import { VentasTurnoModal } from '@/components/pos/VentasTurnoModal';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import { getStockBreakdown } from '@/lib/stockPresentacion';
-import { buildPresentationPatch } from '@/lib/ventaPresentacion';
+import { buildPresentationPatch, paquetesParaCantidad } from '@/lib/ventaPresentacion';
 import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
@@ -731,7 +731,8 @@ export default function PuntoVentaPage() {
         toast.error(`Stock máximo: ${maxStock}`);
         return;
       }
-      setCart(prev => prev.map(c => c.producto_id === id ? { ...c, cantidad: qty } : c));
+      const cantidad = Math.round(qty * 1000) / 1000;
+      setCart(prev => prev.map(c => c.producto_id === id ? { ...c, cantidad, paquetes: paquetesParaCantidad(c as any, cantidad, !!prod?.es_granel) } : c));
     }
   };
 

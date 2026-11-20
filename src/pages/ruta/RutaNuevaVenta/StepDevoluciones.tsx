@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Search, Plus, Minus, Trash2, ChevronRight, Check, X } from 'lucide-react';
 import type { DevolucionItem, AccionDevolucion, MotivoDevolucion } from './types';
 import { MOTIVOS, ACCIONES } from './types';
+import { leerCantidad } from '@/lib/ventaPresentacion';
 
 interface Props {
   clienteNombre: string;
@@ -323,10 +324,10 @@ export function StepDevoluciones(props: Props) {
                       {qty === 1 ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-foreground" />}
                     </button>
                     <input
-                      type="number" inputMode="numeric"
+                      type="number" inputMode={p.es_granel ? 'decimal' : 'numeric'} step={p.es_granel ? '0.001' : '1'}
                       className="w-8 text-center text-[13px] font-bold bg-transparent focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
                       value={qty}
-                      onChange={e => { const val = parseInt(e.target.value); if (!isNaN(val)) updateDevQty(p.id, val); }}
+                      onChange={e => { const val = leerCantidad(e.target.value, !!p.es_granel); if (!isNaN(val)) updateDevQty(p.id, val); }}
                       onFocus={e => e.target.select()}
                     />
                     <button onClick={() => updateDevQty(p.id, qty + 1)} className="w-7 h-7 rounded-md bg-destructive/80 text-destructive-foreground flex items-center justify-center active:scale-90 transition-transform">

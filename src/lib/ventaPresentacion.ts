@@ -11,6 +11,34 @@ export function presentationSummary(line: Partial<VentaLinea>, unit = 'unidades'
   return `${name}${factor > 0 ? ` (${fmt(factor)} ${unit} c/u)` : ''} · ${fmt(Number(line.cantidad) || 0)} ${unit}`;
 }
 
+/**
+ * Lee una cantidad tecleada en unidad base. A granel (kg, lt…) conserva hasta
+ * 3 decimales (1.75 kg no se vuelve 1); por pieza se queda en enteros como antes.
+ * Regresa NaN si el texto no es un número.
+ */
+export function leerCantidad(raw: string | number, granel: boolean): number {
+  const n = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(',', '.'));
+  if (!Number.isFinite(n)) return NaN;
+  return granel ? Math.round(n * 1000) / 1000 : Math.trunc(n);
+}
+
+/**
+ * Paquetes que corresponden a una nueva cantidad en unidad base. Por pieza se
+ * recalculan (24 pz en caja de 12 = 2 cajas) para que el renglón no guarde
+ * "2 cajas" con 23 piezas. A granel se conservan: el peso real puede diferir
+ * de paquetes × factor (2 bolsas de 5 kg que pesan 9.7 kg).
+ */
+export function paquetesParaCantidad(
+  line: { presentacion_factor?: number | string | null; paquetes?: number | string | null },
+  cantidad: number,
+  granel: boolean,
+): number | null {
+  const factor = Number(line.presentacion_factor);
+  const actual = line.paquetes == null ? null : Number(line.paquetes);
+  if (!(factor > 0) || granel) return actual;
+  return Math.round((cantidad / factor) * 1000) / 1000;
+}
+
 /** Inventory and sale amounts always use base units, never package counts. */
 export function buildPresentationPatch(
   presentation: ProductoPresentacion | null,
