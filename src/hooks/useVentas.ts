@@ -8,7 +8,30 @@ import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist';
 import { createVentaLoadError } from '@/lib/ventaLoadGuard';
 import type { Venta, VentaLinea } from '@/types';
+import { filtroCoincidenciaExacta, listaIdsPostgrest, MAX_EXACTOS, paginaConExactosPrimero } from '@/lib/busquedaRelevancia';
 
+
+/**
+ * D-046: ids de ventas con folio exacto (o mismo número) y de productos con código exacto,
+ * para la vista por producto. `filtro` sirve para anteponer esos renglones en la página 1.
+ */
+async function idsExactosLineas(empresaId: string, search: string) {
+  const fVenta = filtroCoincidenciaExacta(['folio'], search);
+  const fProducto = filtroCoincidenciaExacta(['codigo'], search);
+  const vacio = { data: [] as { id: string }[], error: null };
+  const [v, p] = await Promise.all([
+    fVenta ? supabase.from('ventas').select('id').eq('empresa_id', empresaId).or(fVenta).limit(MAX_EXACTOS) : vacio,
+    fProducto ? supabase.from('productos').select('id').eq('empresa_id', empresaId).or(fProducto).limit(MAX_EXACTOS) : vacio,
+  ]);
+  if (v.error) throw v.error;
+  if (p.error) throw p.error;
+  const ventaIds = (v.data ?? []).map((r: { id: string }) => r.id);
+  const productoIds = (p.data ?? []).map((r: { id: string }) => r.id);
+  const partes: string[] = [];
+  if (ventaIds.length) partes.push(`venta_id.in.${listaIdsPostgrest(ventaIds)}`);
+  if (productoIds.length) partes.push(`producto_id.in.${listaIdsPostgrest(productoIds)}`);
+  return { ventaIds, productoIds, filtro: partes.length ? partes.join(',') : null };
+}
 
 /** Paginated ventas for list views. When fetchAll=true, returns all matching rows (used for grouping). */
 /** soloConteo=true: solo cuenta (HEAD, sin traer renglones) — para los números de las pestañas. */
@@ -45,6 +68,9 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         const vendedorIds = (vendedoresRes.data ?? []).map((r: any) => r.id);
         const almacenIds = (almacenesRes.data ?? []).map((r: any) => r.id);
         const orParts: string[] = [`folio.ilike.%${s}%`];
+        // D-046: «VTA-002000» también encuentra VTA-2000 (mismo número de folio).
+        const exacto = filtroCoincidenciaExacta(['folio'], search);
+        if (exacto) orParts.push(exacto);
         if (clienteIds.length) orParts.push(`cliente_id.in.(${clienteIds.join(',')})`);
         if (vendedorIds.length) orParts.push(`vendedor_id.in.(${vendedorIds.join(',')})`);
         if (almacenIds.length) orParts.push(`almacen_id.in.(${almacenIds.join(',')})`);
@@ -99,11 +125,19 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         return { rows: (rows ?? []) as unknown as Venta[], total: rows?.length ?? 0 };
       }
 
-      let q = supabase.from('ventas').select(SELECT, { count: 'exact' }).range((page - 1) * pageSize, page * pageSize - 1);
-      q = applyFilters(q);
-      const { data, error, count } = await q;
-      if (error) throw error;
-      return { rows: (data ?? []) as unknown as Venta[], total: count ?? 0 };
+      // D-046: con búsqueda, el folio exacto va primero (página 1) sin repetirse en otras páginas.
+      return paginaConExactosPrimero<Venta>({
+        busqueda: search,
+        columnas: ['folio'],
+        page,
+        pageSize,
+        consultarExactos: (filtro, limite) => applyFilters(supabase.from('ventas').select(SELECT)).or(filtro).limit(limite),
+        consultarPagina: (desde, hasta, excluir) => {
+          let q = applyFilters(supabase.from('ventas').select(SELECT, { count: 'exact' }).range(desde, hasta));
+          if (excluir.length) q = q.not('id', 'in', listaIdsPostgrest(excluir));
+          return q;
+        },
+      });
     },
   });
 }
@@ -145,6 +179,9 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
         const vendedorIds = (vendedoresRes.data ?? []).map((r: any) => r.id);
         const almacenIds = (almacenesRes.data ?? []).map((r: any) => r.id);
         const orParts: string[] = [`folio.ilike.%${s}%`];
+        // D-046: «VTA-002000» también encuentra VTA-2000 (mismo número de folio).
+        const exacto = filtroCoincidenciaExacta(['folio'], search);
+        if (exacto) orParts.push(exacto);
         if (clienteIds.length) orParts.push(`cliente_id.in.(${clienteIds.join(',')})`);
         if (vendedorIds.length) orParts.push(`vendedor_id.in.(${vendedorIds.join(',')})`);
         if (almacenIds.length) orParts.push(`almacen_id.in.(${almacenIds.join(',')})`);
@@ -213,12 +250,14 @@ export function useVentaLineasResumen(search?: string, statusFilter?: string, ti
       let searchEmpty = false;
       if (search) {
         const s = search.replace(/[%_,()]/g, '\\$&').replace(/'/g, "''");
+        const exactas = await idsExactosLineas(empresa!.id, search);
         const [productosRes, ventasRes] = await Promise.all([
           supabase.from('productos').select('id').eq('empresa_id', empresa!.id).or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%`).limit(500),
           supabase.from('ventas').select('id').eq('empresa_id', empresa!.id).ilike('folio', `%${s}%`).limit(500),
         ]);
-        const productoIds = (productosRes.data ?? []).map((r: any) => r.id);
-        const ventaIds = (ventasRes.data ?? []).map((r: any) => r.id);
+        // D-046: el folio/código exacto siempre entra aunque haya más de 500 parecidos.
+        const productoIds = [...new Set([...exactas.productoIds, ...(productosRes.data ?? []).map((r: any) => r.id)])];
+        const ventaIds = [...new Set([...exactas.ventaIds, ...(ventasRes.data ?? []).map((r: any) => r.id)])];
         const orParts: string[] = [];
         if (productoIds.length) orParts.push(`producto_id.in.(${productoIds.join(',')})`);
         if (ventaIds.length) orParts.push(`venta_id.in.(${ventaIds.join(',')})`);
@@ -286,14 +325,18 @@ export function useVentaLineasPaginated(
 
       let searchOr: string | null = null;
       let searchEmpty = false;
+      let filtroExactas: string | null = null;
       if (search) {
         const s = search.replace(/[%_,()]/g, '\\$&').replace(/'/g, "''");
+        const exactas = await idsExactosLineas(empresa!.id, search);
+        filtroExactas = exactas.filtro;
         const [productosRes, ventasRes] = await Promise.all([
           supabase.from('productos').select('id').eq('empresa_id', empresa!.id).or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%`).limit(500),
           supabase.from('ventas').select('id').eq('empresa_id', empresa!.id).ilike('folio', `%${s}%`).limit(500),
         ]);
-        const productoIds = (productosRes.data ?? []).map((r: any) => r.id);
-        const ventaIds = (ventasRes.data ?? []).map((r: any) => r.id);
+        // D-046: el folio/código exacto siempre entra aunque haya más de 500 parecidos.
+        const productoIds = [...new Set([...exactas.productoIds, ...(productosRes.data ?? []).map((r: any) => r.id)])];
+        const ventaIds = [...new Set([...exactas.ventaIds, ...(ventasRes.data ?? []).map((r: any) => r.id)])];
         const orParts: string[] = [];
         if (productoIds.length) orParts.push(`producto_id.in.(${productoIds.join(',')})`);
         if (ventaIds.length) orParts.push(`venta_id.in.(${ventaIds.join(',')})`);
@@ -370,12 +413,20 @@ export function useVentaLineasPaginated(
         return { rows, total: rows.length };
       }
 
-      let q = supabase.from('venta_lineas').select(SELECT, { count: 'exact' }).range((page - 1) * pageSize, page * pageSize - 1);
-      q = applyFilters(q);
-      const { data, error, count } = await q;
-      if (error) throw error;
-      const rows = (data ?? []).map(mapRow);
-      return { rows, total: count ?? 0 };
+      // D-046: renglones de la venta con folio exacto (o del producto con código exacto) primero.
+      const pagina = await paginaConExactosPrimero<any>({
+        busqueda: search,
+        filtro: filtroExactas,
+        page,
+        pageSize,
+        consultarExactos: (filtro, limite) => applyFilters(supabase.from('venta_lineas').select(SELECT)).or(filtro).limit(limite),
+        consultarPagina: (desde, hasta, excluir) => {
+          let q = applyFilters(supabase.from('venta_lineas').select(SELECT, { count: 'exact' }).range(desde, hasta));
+          if (excluir.length) q = q.not('id', 'in', listaIdsPostgrest(excluir));
+          return q;
+        },
+      });
+      return { rows: pagina.rows.map(mapRow), total: pagina.total };
     },
   });
 }

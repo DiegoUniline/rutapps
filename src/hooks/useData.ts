@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { filtroCoincidenciaExacta, listaIdsPostgrest, paginaConExactosPrimero } from '@/lib/busquedaRelevancia';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { programarRefrescoRemoto } from '@/lib/refresco/refrescoRemoto';
@@ -100,7 +101,11 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
       const SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre, status), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre)';
       const applyFilters = (q: any) => {
         q = q.eq('empresa_id', empresa!.id).order('nombre', { ascending: true });
-        if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%,formula.ilike.%${search}%`);
+        if (search) {
+          // D-046: código o código de barras (clave alterna) exacto también entra.
+          const exacto = filtroCoincidenciaExacta(['codigo', 'clave_alterna'], search);
+          q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%,formula.ilike.%${search}%${exacto ? `,${exacto}` : ''}`);
+        }
         if (statusFilter && statusFilter !== 'todos') {
           const arr = statusFilter.split(',');
           if (arr.length > 1) q = q.in('status', arr as any);
@@ -131,11 +136,20 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
         return { rows: marcarCatalogosInactivos(rows ?? []) as unknown as Producto[], total: rows?.length ?? 0 };
       }
 
-      let q = supabase.from('productos').select(SELECT, { count: 'exact' }).range((page - 1) * pageSize, page * pageSize - 1);
-      q = applyFilters(q);
-      const { data, error, count } = await q;
-      if (error) throw error;
-      return { rows: marcarCatalogosInactivos(data ?? []) as unknown as Producto[], total: count ?? 0 };
+      // D-046: con búsqueda, el producto con código/código de barras exacto va primero (página 1).
+      const pagina = await paginaConExactosPrimero<any>({
+        busqueda: search,
+        columnas: ['codigo', 'clave_alterna'],
+        page,
+        pageSize,
+        consultarExactos: (filtro, limite) => applyFilters(supabase.from('productos').select(SELECT)).or(filtro).limit(limite),
+        consultarPagina: (desde, hasta, excluir) => {
+          let q = applyFilters(supabase.from('productos').select(SELECT, { count: 'exact' }).range(desde, hasta));
+          if (excluir.length) q = q.not('id', 'in', listaIdsPostgrest(excluir));
+          return q;
+        },
+      });
+      return { rows: marcarCatalogosInactivos(pagina.rows) as unknown as Producto[], total: pagina.total };
     },
   });
 }

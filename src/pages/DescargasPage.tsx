@@ -28,6 +28,7 @@ import { toPng } from 'html-to-image';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useTablePagination } from '@/hooks/useTablePagination';
 import { TablePagination } from '@/components/TablePagination';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 
 const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; color: string }> = {
@@ -2420,7 +2421,9 @@ export default function DescargasPage() {
   const filtradasMovil = useMemo(() => {
     const q = busquedaMovil.trim().toLowerCase();
     if (!q) return filtered;
-    return filtered.filter((d: any) => `${d.vendedores?.nombre ?? ''} ${d.fecha ?? ''} ${d.notas ?? ''}`.toLowerCase().includes(q));
+    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(filtered.filter((d: any) => `${d.vendedores?.nombre ?? ''} ${d.fecha ?? ''} ${d.notas ?? ''}`.toLowerCase().includes(q)),
+      busquedaMovil, () => [], (d: any) => [d.vendedores?.nombre, d.fecha, d.notas]);
   }, [filtered, busquedaMovil]);
   const movil = useCargarMasMovil(filtradasMovil, `${busquedaMovil}|${filterStatus}|${filterVendedor}|${filterTipo}|${filterDiferencia}|${fechaDesdeFiltro}|${fechaHastaFiltro}`);
   // Reset a página 1 al cambiar filtros

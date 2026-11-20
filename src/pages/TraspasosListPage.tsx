@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -188,7 +189,8 @@ export default function TraspasosListPage() {
     }
     if (desde) list = list.filter((t: any) => (t.fecha ?? '').slice(0, 10) >= desde);
     if (hasta) list = list.filter((t: any) => (t.fecha ?? '').slice(0, 10) <= hasta);
-    return list;
+    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(list, search, (t: any) => [t.folio], (t: any) => [getOrigenLabel(t), getDestinoLabel(t)]);
   }, [traspasos, search, filters.status, filters.tipo, desde, hasta]);
 
   const total = filtered.length;
@@ -263,7 +265,8 @@ export default function TraspasosListPage() {
     }
     if (desdeD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) >= desdeD);
     if (hastaD) list = list.filter(l => (l.fecha ?? '').slice(0, 10) <= hastaD);
-    return list;
+    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(list, searchD, l => [l.folio, l.codigo], l => [l.producto, l.origen, l.destino]);
   }, [lineasRaw, searchD, filtersD.status, filtersD.tipo, desdeD, hastaD]);
 
   const totalD = filteredLineas.length;

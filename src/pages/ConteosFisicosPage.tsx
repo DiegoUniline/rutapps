@@ -21,6 +21,7 @@ import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -79,7 +80,8 @@ export default function ConteosFisicosPage() {
         (c.almacenes as any)?.nombre?.toLowerCase().includes(s)
       );
     }
-    return list;
+    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(list, search, (c: any) => [c.folio], (c: any) => [(c.almacenes as any)?.nombre]);
   }, [conteos, statusFilter, search, fechaDesde, fechaHasta]);
 
 

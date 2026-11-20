@@ -19,6 +19,7 @@ import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage'
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 const ESTADO_STYLES: Record<CotizacionEstado, string> = {
   borrador: 'bg-muted text-foreground',
@@ -54,7 +55,7 @@ export default function CotizacionesListPage() {
 
   const list = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (data ?? []).filter(c => {
+    const lista = (data ?? []).filter(c => {
       if (estadoFilter !== 'todas' && c.estado !== estadoFilter) return false;
       if ((dateFrom || dateTo) && !isDateInRangeISO((c.fecha || '').slice(0, 10), dateFrom, dateTo)) return false;
       if (!q) return true;
@@ -63,6 +64,8 @@ export default function CotizacionesListPage() {
         (c.clientes?.nombre || '').toLowerCase().includes(q)
       );
     });
+    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(lista, search, c => [c.folio], c => [c.clientes?.nombre]);
   }, [data, search, estadoFilter, dateFrom, dateTo]);
 
   const ESTADOS_COT = ['borrador', 'enviada', 'aprobada', 'convertida', 'vencida', 'cancelada'] as const;

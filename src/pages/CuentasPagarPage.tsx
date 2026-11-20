@@ -18,6 +18,7 @@ import { CxPTabs } from '@/components/CxPTabs';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -52,7 +53,8 @@ function useCuentasPagar(search: string, empresaId?: string) {
           ((c.proveedores as any)?.nombre ?? '').toLowerCase().includes(s)
         );
       }
-      return filtered;
+      // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+      return ordenarPorRelevancia(filtered, search, (c: any) => [c.folio], (c: any) => [(c.proveedores as any)?.nombre]);
     },
   });
 }

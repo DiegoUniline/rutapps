@@ -21,6 +21,7 @@ import { usePinAuth } from '@/hooks/usePinAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 function useGastos(desde: string, hasta: string) {
   const { empresa } = useAuth();
@@ -170,7 +171,7 @@ export default function GastosDesktopPage() {
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    return (gastos ?? []).filter((g: any) => {
+    const lista = (gastos ?? []).filter((g: any) => {
       if (s && !((g.concepto ?? '').toLowerCase().includes(s) || (g.notas ?? '').toLowerCase().includes(s))) return false;
       if (vendedorFilter === 'none' && g.vendedor_id) return false;
       if (vendedorFilter !== 'all' && vendedorFilter !== 'none' && g.vendedor_id !== vendedorFilter) return false;
@@ -178,6 +179,8 @@ export default function GastosDesktopPage() {
       if (hasta && g.fecha > hasta) return false;
       return true;
     });
+    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(lista, search, () => [], (g: any) => [g.concepto, g.notas]);
   }, [gastos, search, vendedorFilter, desde, hasta]);
 
   const totalGastos = filtered.reduce((s, g: any) => s + Number(g.monto ?? 0), 0);

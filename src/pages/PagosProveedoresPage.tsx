@@ -18,6 +18,7 @@ import { CxPTabs } from '@/components/CxPTabs';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 const METODO_ICONS: Record<string, typeof Banknote> = {
   efectivo: Banknote,
@@ -89,7 +90,7 @@ export default function PagosProveedoresPage() {
 
   const filtered = useMemo(() => {
     if (!pagos) return [];
-    return pagos.filter(p => {
+    const lista = pagos.filter(p => {
       if (desde && p.fecha < desde) return false;
       if (hasta && p.fecha > hasta) return false;
       if (filtroMetodo !== 'todos' && p.metodo_pago !== filtroMetodo) return false;
@@ -100,6 +101,8 @@ export default function PagosProveedoresPage() {
       }
       return true;
     });
+    // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+    return ordenarPorRelevancia(lista, search, p => [p.compra_folio, p.referencia], p => [p.proveedor]);
   }, [pagos, desde, hasta, filtroMetodo, filtroProveedor, search]);
 
   const totalMonto = useMemo(() => filtered.reduce((s, p) => s + p.monto, 0), [filtered]);

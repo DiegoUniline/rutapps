@@ -31,6 +31,7 @@ import { ConfigEmisorCard } from '@/components/facturacion/ConfigEmisorCard';
 import { usePermisos } from '@/hooks/usePermisos';
 import ClientesListPage from '@/pages/ClientesListPage';
 import ProductosListPage from '@/pages/ProductosListPage';
+import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 const STATUS_COLORS: Record<string, string> = {
   timbrado: 'default',
@@ -192,7 +193,8 @@ export default function FacturacionCfdiPage() {
 
   const cancelStatuses = ['cancelado', 'cancelacion_pendiente', 'cancelacion_rechazada'];
 
-  const filtered = (cfdis || []).filter((c: any) => {
+  // D-046: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
+  const filtered = ordenarPorRelevancia((cfdis || []).filter((c: any) => {
     const q = search.toLowerCase();
     const matchSearch =
       (c.folio_fiscal || '').toLowerCase().includes(q) ||
@@ -213,7 +215,7 @@ export default function FacturacionCfdiPage() {
       default:
         return true;
     }
-  });
+  }), search, (c: any) => [c.folio, c.folio_fiscal, c.receiver_rfc], (c: any) => [c.receiver_name]);
   const movilCfdi = useCargarMasMovil(filtered, search);
 
   const counts = (cfdis || []).reduce(
