@@ -631,50 +631,12 @@ export function useDeleteVenta() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // Validate no cobros applied before deleting
-      const { count, error: checkErr } = await supabase
-        .from('cobro_aplicaciones')
-        .select('id', { count: 'exact', head: true })
-        .eq('venta_id', id);
-      if (checkErr) throw checkErr;
-      if (count && count > 0) throw new Error('No puedes eliminar una venta con pagos aplicados. Cancélala primero.');
-
-      // Block deletion if a non-cancelled CFDI exists for this venta (header link or line link)
-      const [{ count: cfdiCount, error: cfdiErr }, { count: cfdiLineaCount, error: cfdiLineaErr }] = await Promise.all([
-        supabase
-          .from('cfdis')
-          .select('id', { count: 'exact', head: true })
-          .eq('venta_id', id)
-          .neq('status', 'cancelado'),
-        supabase
-          .from('cfdi_lineas')
-          .select('id, cfdis!inner(status), venta_lineas!inner(venta_id)', { count: 'exact', head: true })
-          .eq('venta_lineas.venta_id', id)
-          .neq('cfdis.status', 'cancelado'),
-      ]);
-      if (cfdiErr) throw cfdiErr;
-      if (cfdiLineaErr) throw cfdiLineaErr;
-      if ((cfdiCount ?? 0) + (cfdiLineaCount ?? 0) > 0) {
-        throw new Error('No puedes eliminar una venta facturada. Cancela primero el CFDI.');
-      }
-
-      // Clean dependent rows so the FK constraints don't block the delete
-      const { data: ents } = await (supabase as any).from('entregas').select('id').eq('pedido_id', id);
-      const eIds = ((ents ?? []) as any[]).map((e: any) => e.id);
-      if (eIds.length) {
-        const { error: eLin } = await supabase.from('entrega_lineas').delete().in('entrega_id', eIds);
-        if (eLin) throw eLin;
-        const { error: eEnt } = await supabase.from('entregas').delete().in('id', eIds);
-        if (eEnt) throw eEnt;
-      }
-      await supabase.from('cobro_aplicaciones').delete().eq('venta_id', id);
-      await supabase.from('venta_comisiones').delete().eq('venta_id', id);
-      await supabase.from('venta_historial').delete().eq('venta_id', id);
-      await supabase.from('promocion_aplicada').delete().eq('venta_id', id);
-      await supabase.from('venta_lineas').delete().eq('venta_id', id);
-
-      const { error } = await supabase.from('ventas').delete().eq('id', id);
-      if (error) throw error;
+      // D-035: la BD decide y borra todo en una operación (solo borrador o cancelada sin pagos,
+      // sin facturas ni comisiones pagadas).
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: { eliminadas: number; rechazadas: { motivo: string }[] } | null; error: { message: string } | null }>;
+      const { data, error } = await rpc('eliminar_ventas', { p_ids: [id] });
+      if (error) throw new Error(error.message);
+      if (!data || data.eliminadas < 1) throw new Error(data?.rechazadas?.[0]?.motivo ?? 'No se pudo eliminar la venta');
     },
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ['ventas'] });

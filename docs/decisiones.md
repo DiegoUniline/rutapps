@@ -197,3 +197,8 @@
 - **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** el **pedido** dice qué se pidió; las **entregas** dicen qué se entregó de verdad. Solo cuenta lo de entregas **validadas (hecho)** —no surtido, cargado ni en ruta—. El pedido queda **Entregado** cuando todas sus cantidades están entregadas; si falta algo queda/regresa a **Confirmado** (parcial), también al cancelar o reabrir una entrega. El **saldo de todo pedido (contado o crédito) es por lo entregado** (antes contado debía el total).
 - **Implementación:** `fn_venta_cobrable`, `fn_pedido_entregado_completo`, `fn_sync_status_pedido`, triggers `auto_venta_entregado` y `ajustar_pedido_por_entregado`; en pantalla el saldo de esos pedidos se toma de la BD (migración 20261120030000). Cierra H4, H5 y H8 de la auditoría.
+
+## D-035
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** eliminar una venta (una o varias) es **una sola operación de la BD** y solo se permite para **borradores** o **canceladas sin pagos activos aplicados, sin facturas (CFDI, aun canceladas) y sin comisiones pagadas**; todo lo demás se cancela, no se borra. Las rechazadas regresan con su motivo.
+- **Implementación:** `eliminar_ventas(uuid[])` (migración 20261120080000). Antes «Eliminar varias» borraba pagos aplicados e historial sin revisar (auditoría C5).

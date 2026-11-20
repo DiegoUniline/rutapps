@@ -266,56 +266,26 @@ export default function VentasListPage() {
   const handleBulkDelete = async () => {
     if (selectedVentas.length === 0) return;
     setBulkDeleting(true);
-    let ok = 0, fail = 0;
-    const errors: string[] = [];
     try {
-      const ids = selectedVentas.map(v => v.id);
-      // 1) Cancelar entregas activas → triggers DB devuelven stock
-      try {
-        const restored = await cancelEntregasAndReturnStock(ids);
-        if (restored > 0) toast.info(`${restored} entrega(s) cancelada(s).`);
-      } catch (e: any) {
-        errors.push(`Reversión stock: ${e.message}`);
-      }
-      // 2) Borrar dependencias y luego ventas (una a una para tolerar fallos parciales)
-      for (const id of ids) {
-        try {
-          // entregas (ya canceladas) + sus líneas
-          const { data: ents } = await (supabase as any).from('entregas').select('id').eq('pedido_id', id);
-          const eIds = (ents ?? []).map((e: any) => e.id);
-          if (eIds.length) {
-            const { error: eLin } = await supabase.from('entrega_lineas').delete().in('entrega_id', eIds);
-            if (eLin) throw eLin;
-            const { error: eEnt } = await supabase.from('entregas').delete().in('id', eIds);
-            if (eEnt) throw eEnt;
-          }
-          await supabase.from('cobro_aplicaciones').delete().eq('venta_id', id);
-          await supabase.from('venta_comisiones').delete().eq('venta_id', id);
-          await supabase.from('venta_historial').delete().eq('venta_id', id);
-          await supabase.from('promocion_aplicada').delete().eq('venta_id', id);
-          await supabase.from('venta_lineas').delete().eq('venta_id', id);
-          const { error: delErr } = await supabase.from('ventas').delete().eq('id', id);
-          if (delErr) throw delErr;
-          ok++;
-        } catch (e: any) {
-          fail++;
-          errors.push(`Venta ${id.slice(0, 8)}: ${e.message}`);
-        }
-      }
+      // D-035: una operación en la BD; solo borra borradores o canceladas sin pagos, facturas ni
+      // comisiones pagadas. Las demás regresan con su motivo.
+      type Res = { eliminadas: number; rechazadas: { folio: string | null; motivo: string }[] };
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: Res | null; error: { message: string } | null }>;
+      const { data, error } = await rpc('eliminar_ventas', { p_ids: selectedVentas.map(v => v.id) });
+      if (error) throw new Error(error.message);
+      const ok = data?.eliminadas ?? 0;
+      const rech = data?.rechazadas ?? [];
+      if (ok > 0) toast.success(`${ok} venta${ok !== 1 ? 's' : ''} eliminada${ok !== 1 ? 's' : ''}`);
+      if (rech.length > 0) toast.error(`${rech.length} no se eliminaron. ${rech[0].folio ?? ''}: ${rech[0].motivo}`);
+    } catch (e: any) {
+      toast.error(e.message || 'Error al eliminar');
     } finally {
       qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['entregas'] });
-      qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
-      qc.invalidateQueries({ queryKey: ['cxc'] });
-      qc.invalidateQueries({ queryKey: ['saldos'] });
-      qc.invalidateQueries({ queryKey: ['stock_almacen'] });
-      qc.invalidateQueries({ queryKey: ['productos'] });
       setBulkDeleting(false);
       setBulkDeleteOpen(false);
       setSelected(new Set());
     }
-    if (ok > 0) toast.success(`${ok} venta${ok !== 1 ? 's' : ''} eliminada${ok !== 1 ? 's' : ''}`);
-    if (fail > 0) toast.error(`${fail} no se pudieron eliminar. ${errors[0] ?? ''}`);
   };
 
   const handleBulkCancel = async () => {
