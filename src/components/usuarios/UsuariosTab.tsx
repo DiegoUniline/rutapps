@@ -80,8 +80,8 @@ export default function UsuariosTab({
           </button>
         )}
       </div>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-xs text-muted-foreground">
             <Users className="h-3.5 w-3.5 inline mr-1" />
             {activeUsers} / {maxUsuarios} usuarios activos
@@ -98,14 +98,14 @@ export default function UsuariosTab({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-pointer">
+        <div className="flex items-center gap-2 ml-auto">
+          <label className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
             <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="h-3.5 w-3.5" />
             Mostrar archivados
           </label>
           <button
             onClick={onNewUser}
-            className="btn-odoo-primary text-xs"
+            className="btn-odoo-primary text-xs whitespace-nowrap"
           >
             <UserPlus className="h-3.5 w-3.5 mr-1" /> Nuevo usuario
           </button>

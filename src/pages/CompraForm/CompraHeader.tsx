@@ -60,18 +60,18 @@ export function CompraHeader(p: Props) {
   return (
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button onClick={p.onBack} className="btn-odoo-icon"><ArrowLeft className="h-4 w-4" /></button>
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={p.onBack} className="btn-odoo-secondary !h-9 !w-9 !p-0 shrink-0" aria-label="Regresar"><ArrowLeft className="h-4 w-4" /></button>
           <div>
-            <h1 className="text-xl font-semibold text-foreground">{p.isNew ? 'Nueva compra' : `Compra ${p.form.folio ?? ''}`}</h1>
+            <h1 className="text-lg sm:text-xl font-semibold text-foreground">{p.isNew ? 'Nueva compra' : `Compra ${p.form.folio ?? ''}`}</h1>
             {!p.isNew && <p className="text-xs text-muted-foreground">Pagado: {fmt(p.totalPagado)} / Saldo: {fmt(Math.max(0, p.totals.total - p.totalPagado))}</p>}
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {!p.isNew && p.form.id && <ExportarOrdenCompra compraId={p.form.id} />}
-          {p.form.status === 'borrador' && !p.isNew && <button onClick={p.handleDelete} className="btn-odoo-icon text-destructive"><Trash2 className="h-4 w-4" /></button>}
+          {p.form.status === 'borrador' && !p.isNew && <button onClick={p.handleDelete} className="btn-odoo-danger !h-9 !w-9 !p-0" aria-label="Eliminar borrador" title="Eliminar borrador"><Trash2 className="h-4 w-4" /></button>}
           {!p.isNew && !p.isEditable && p.form.status !== 'cancelada' && (
-            <button onClick={p.beginEditing} className="btn-odoo-primary gap-1">
+            <button onClick={p.beginEditing} className="btn-odoo-editar gap-1">
               <Pencil className="h-3.5 w-3.5" /> Editar factura
             </button>
           )}
