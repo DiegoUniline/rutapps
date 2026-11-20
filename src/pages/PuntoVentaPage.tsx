@@ -1,3 +1,4 @@
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { clienteCoincide } from '@/lib/buscarCliente';
 import { todayInTimezone, addDaysToDate, cn } from '@/lib/utils';
@@ -1861,11 +1862,13 @@ export default function PuntoVentaPage() {
       </div>
 
       {/* ─── Client picker modal ─── */}
-      {showClientes && (
-        <div className="fixed inset-0 z-50 bg-foreground/40 flex items-start justify-center pt-20" onClick={() => setShowClientes(false)}>
-          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border" onClick={e => e.stopPropagation()}>
-            <div className="px-4 pt-4 pb-2">
-              <h3 className="text-[14px] font-bold text-foreground mb-2">Seleccionar cliente</h3>
+      {/* D-040: modal estándar (tamaño, encabezado fijo y cerrar homologados) */}
+      <Dialog open={showClientes} onOpenChange={(o) => { setShowClientes(o); if (!o) setClienteSearch(''); }}>
+        <DialogContent className="max-w-xl gap-3">
+            <DialogHeader>
+              <DialogTitle>Seleccionar cliente</DialogTitle>
+            </DialogHeader>
+            <div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
@@ -1878,7 +1881,7 @@ export default function PuntoVentaPage() {
                 />
               </div>
             </div>
-            <div className="max-h-72 overflow-auto px-2 pb-2">
+            <div className="max-h-[60vh] overflow-auto -mx-2 px-2 divide-y divide-border">
               <button
                 onClick={() => { setClienteId(null); setClienteNombre('Público general'); setClienteTarifaId(null); setClienteListaPrecioId(null); setClienteListaNombre(null); setClienteCredito(false); setClienteDiasCredito(0); setClienteLimiteCredito(0); setShowClientes(false); setClienteSearch(''); if (condicion === 'credito') setCondicion('contado'); }}
                 className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-accent text-[13px] text-foreground font-medium"
@@ -1911,9 +1914,8 @@ export default function PuntoVentaPage() {
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Payment modal ─── */}
       {showPago && (
