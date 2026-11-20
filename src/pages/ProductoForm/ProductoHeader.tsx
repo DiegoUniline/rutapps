@@ -1,4 +1,7 @@
 import { Save, X, Trash2, Star, Camera } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
+import { estadoPildora } from '@/components/layout/ListaTarjetaMovil';
 import type { Producto } from '@/types';
 
 interface Props {
@@ -22,9 +25,27 @@ interface Props {
 }
 
 export function ProductoHeader({ form, set, isNew, isDirty, starred, setStarred, editingName, setEditingName, nameInputRef, imageInputRef, uploadingImage, handleImageUpload, handleSave, handleDelete, onDiscard, saving }: Props) {
+  const isMobile = useIsMobile();
+  const ESTADOS_PROD = [['activo', 'Activo'], ['inactivo', 'Inactivo'], ['borrador', 'Borrador']] as const;
   return (
     <>
-      <div className="flex items-center justify-between mb-0.5">
+      {isMobile && (
+        <EncabezadoDetalleMovil
+          className="-mx-3 px-3 pb-2.5 mb-3 border-b border-border"
+          onBack={onDiscard}
+          titulo={isNew ? 'Nuevo producto' : form.nombre || 'Producto'}
+          estado={{ texto: estadoPildora(form.status ?? 'activo').pildora, tono: estadoPildora(form.status ?? 'activo').tono }}
+          subtitulo={(form as any).codigo || undefined}
+          principales={[{ key: 'guardar', label: 'Guardar', icon: Save, onClick: handleSave, disabled: !isDirty, cargando: saving }]}
+          menu={[
+            ...(!isNew ? [{ key: 'nombre', label: 'Editar nombre', onClick: () => setEditingName(true) }] : []),
+            ...ESTADOS_PROD.filter(([v]) => v !== form.status).map(([v, l]) => ({ key: `st-${v}`, label: `Marcar ${l.toLowerCase()}`, onClick: () => set('status', v) })),
+            { key: 'descartar', label: 'Descartar', icon: X, onClick: onDiscard, separar: true },
+            ...(!isNew ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, onClick: handleDelete }] : []),
+          ]}
+        />
+      )}
+      <div className="flex items-center justify-between mb-0.5 max-md:hidden">
         <span className="text-[12px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors" onClick={onDiscard}>Producto</span>
         <div className="flex items-center gap-1">
           {['activo', 'inactivo', 'borrador'].map(s => (
@@ -38,7 +59,7 @@ export function ProductoHeader({ form, set, isNew, isDirty, starred, setStarred,
       <div className="flex items-start gap-4 mb-1">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => setStarred(!starred)} className="text-warning hover:scale-110 transition-transform shrink-0">
+            <button onClick={() => setStarred(!starred)} className="text-warning hover:scale-110 transition-transform shrink-0 max-md:hidden">
               <Star className={`h-5 w-5 ${starred ? 'fill-warning' : ''}`} />
             </button>
             {isNew || editingName ? (
@@ -47,16 +68,16 @@ export function ProductoHeader({ form, set, isNew, isDirty, starred, setStarred,
                 placeholder="Nombre del producto" autoFocus
                 className="text-[22px] font-bold text-foreground leading-tight bg-transparent border-b border-primary/40 focus:border-primary outline-none flex-1 min-w-[180px] max-w-md placeholder:text-muted-foreground/50" />
             ) : (
-              <h1 className="text-lg sm:text-[22px] font-bold text-foreground leading-tight cursor-pointer hover:text-primary transition-colors truncate min-w-0" onClick={() => setEditingName(true)}>
+              <h1 className="text-lg sm:text-[22px] font-bold text-foreground leading-tight cursor-pointer hover:text-primary transition-colors truncate min-w-0 max-md:hidden" onClick={() => setEditingName(true)}>
                 {form.nombre || 'Producto'}
               </h1>
             )}
-            <div className="flex items-center gap-1.5 ml-auto shrink-0">
+            <div className="flex items-center gap-1.5 ml-auto shrink-0 max-md:hidden">
               <button onClick={handleSave} disabled={saving || !isDirty} className={isDirty ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
                 <Save className="h-3.5 w-3.5" /> Guardar
               </button>
               <button onClick={onDiscard} className="btn-odoo-secondary"><X className="h-3.5 w-3.5" /> Descartar</button>
-              {!isNew && <button onClick={handleDelete} className="btn-odoo-secondary text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>}
+              {!isNew && <button onClick={handleDelete} className="btn-odoo-danger" aria-label="Eliminar producto"><Trash2 className="h-3.5 w-3.5" /></button>}
             </div>
           </div>
           <div className="odoo-module-checks mt-1.5 mb-1">

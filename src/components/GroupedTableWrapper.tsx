@@ -11,7 +11,7 @@ interface GroupedTableWrapperProps {
   renderSummary?: (items: any[]) => React.ReactNode;
   /** Cuando es true, la tabla sin agrupar ocupa la altura disponible y hace scroll interna */
   fill?: boolean;
-  /** En teléfono (< md) no dibuja el marco: el contenido son tarjetas con su propio borde. */
+  /** Dentro de una hoja propia (D-037, padding px-3 md:px-4): sin recuadro, solo línea arriba a todo lo ancho. */
   sinMarcoMovil?: boolean;
 }
 
@@ -25,7 +25,7 @@ export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummar
     // D-037: dentro de <ListPage> (hoja única) la tabla no lleva cuadro propio, solo una línea arriba.
     const marco = inListPage
       ? "border-t border-border overflow-hidden"
-      : sinMarcoMovil ? "md:bg-card md:border md:border-border md:rounded overflow-hidden" : "bg-card border border-border rounded overflow-hidden";
+      : sinMarcoMovil ? "border-t border-border -mx-3 md:-mx-4" : "bg-card border border-border rounded overflow-hidden";
     return <div className={cn(marco, fill && "flex-1 min-h-0 flex flex-col")}>{renderTable(groups[0]?.items ?? [])}</div>;
   }
 

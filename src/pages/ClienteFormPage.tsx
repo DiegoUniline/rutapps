@@ -3,6 +3,10 @@ import { useParams, useNavigate, Link, useSearchParams, useLocation } from 'reac
 import { usePermisos } from '@/hooks/usePermisos';
 import { compressPhoto } from '@/lib/imageCompressor';
 import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2, Upload, FileText } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
+import { estadoPildora } from '@/components/layout/ListaTarjetaMovil';
 import GpsMapPicker, { GpsMapPreview } from '@/components/GpsMapPicker';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
@@ -215,6 +219,7 @@ export default function ClienteFormPage() {
   const backPath = fromState || (fromRuta ? '/ruta/clientes' : '/clientes');
   const vendedorIdParam = searchParams.get('vendedorId');
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { empresa } = useAuth();
   const { fmt: currFmt } = useCurrency();
   const qc = useQueryClient();
@@ -485,13 +490,26 @@ export default function ClienteFormPage() {
   ).filter(p => !pedidoItems.find(i => i.producto_id === p.id));
 
   return (
-    <div className="p-3 sm:p-4 min-h-full">
-      <div className="mb-0.5">
+    <div className="p-2 md:p-4 min-h-full">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip p-3 sm:p-4">
+      {isMobile && (
+        <EncabezadoDetalleMovil
+          className="-mx-3 px-3 pb-2.5 mb-3 border-b border-border"
+          onBack={() => navigate(backPath)}
+          titulo={isNew ? 'Nuevo cliente' : form.nombre || 'Cliente'}
+          estado={!isNew ? { texto: estadoPildora(form.status ?? 'activo').pildora, tono: estadoPildora(form.status ?? 'activo').tono } : null}
+          subtitulo={form.codigo || undefined}
+          principales={!readOnly ? [{ key: 'guardar', label: 'Guardar', icon: Save, onClick: handleSave, disabled: !isDirty && !pedidoDirty, cargando: saveMutation.isPending }] : []}
+          menu={!isNew && canDelete ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, onClick: handleDelete }] : []}
+        />
+      )}
+      <div className="mb-0.5 max-md:hidden">
         <Link to={backPath} className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">← Volver</Link>
       </div>
 
       {/* Title + Photos */}
-      <div className="flex items-start gap-4 mb-2">
+      <div className="flex items-start gap-4 mb-2 max-md:hidden">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <button onClick={() => setStarred(!starred)} className="text-warning hover:scale-110 transition-transform shrink-0">
@@ -533,12 +551,12 @@ export default function ClienteFormPage() {
       {/* Action buttons + statusbar */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
         {!readOnly && (
-          <button onClick={handleSave} disabled={saveMutation.isPending || (!isDirty && !pedidoDirty)} className={(isDirty || pedidoDirty) ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
+          <button onClick={handleSave} disabled={saveMutation.isPending || (!isDirty && !pedidoDirty)} className={cn((isDirty || pedidoDirty) ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed", "max-md:hidden")}>
             <Save className="h-3.5 w-3.5" /> Guardar
           </button>
         )}
         {!isNew && canDelete && (
-          <button onClick={handleDelete} className="btn-odoo-secondary text-destructive">
+          <button onClick={handleDelete} className="btn-odoo-danger max-md:hidden">
             <Trash2 className="h-3.5 w-3.5" /> Eliminar
           </button>
         )}
@@ -551,7 +569,7 @@ export default function ClienteFormPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-card border border-border rounded px-3 sm:px-4 pb-4 pt-1">
+      <div className="border-t border-border -mx-3 sm:-mx-4 px-3 sm:px-4 pb-1 pt-1">
       <OdooTabs tabs={[
         {
           key: 'general', label: 'Información General',
@@ -1006,6 +1024,7 @@ export default function ClienteFormPage() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

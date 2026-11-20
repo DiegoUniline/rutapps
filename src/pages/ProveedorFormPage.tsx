@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, Trash2 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
+import { estadoPildora } from '@/components/layout/ListaTarjetaMovil';
 import { usePermisos } from '@/hooks/usePermisos';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
@@ -53,6 +56,7 @@ const ESTADOS_MX = [
 export default function ProveedorFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const isNew = id === 'nuevo';
@@ -140,9 +144,24 @@ export default function ProveedorFormPage() {
   };
 
   return (
-    <div className="p-4 min-h-full">
+    <div className="p-2 md:p-4 min-h-full">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip p-3 sm:p-4">
+      {isMobile && (
+        <EncabezadoDetalleMovil
+          className="-mx-3 px-3 pb-2.5 mb-3 border-b border-border"
+          onBack={() => navigate('/proveedores')}
+          titulo={isNew ? 'Nuevo proveedor' : form.nombre || 'Proveedor'}
+          estado={!isNew ? { texto: estadoPildora(form.status ?? 'activo').pildora, tono: estadoPildora(form.status ?? 'activo').tono } : null}
+          principales={!formReadOnly ? [{ key: 'guardar', label: 'Guardar', icon: Save, onClick: handleSave, disabled: !isDirty, cargando: saveMutation.isPending }] : []}
+          menu={[
+            ...(form.status !== 'activo' ? [{ key: 'activar', label: 'Marcar activo', onClick: () => set('status', 'activo') }] : [{ key: 'inactivar', label: 'Marcar inactivo', onClick: () => set('status', 'inactivo') }]),
+            ...(!isNew && canDeletePerm ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, separar: true, onClick: handleDelete }] : []),
+          ]}
+        />
+      )}
       {/* Breadcrumb + Status */}
-      <div className="flex items-center justify-between mb-0.5">
+      <div className="flex items-center justify-between mb-0.5 max-md:hidden">
         <Link to="/proveedores" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
           Proveedores
         </Link>
@@ -165,13 +184,13 @@ export default function ProveedorFormPage() {
       </div>
 
       {/* Title + Actions */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 max-md:hidden">
         <h1 className="text-xl font-semibold text-foreground">
           {isNew ? 'Nuevo proveedor' : form.nombre || 'Proveedor'}
         </h1>
         <div className="flex items-center gap-2">
           {!isNew && canDeletePerm && (
-            <button onClick={handleDelete} className="btn-odoo-secondary text-destructive flex items-center gap-1.5">
+            <button onClick={handleDelete} className="btn-odoo-danger flex items-center gap-1.5">
               <Trash2 className="h-4 w-4" /> Eliminar
             </button>
           )}
@@ -188,7 +207,7 @@ export default function ProveedorFormPage() {
       </div>
 
       {/* Form */}
-      <div className="bg-card border border-border rounded p-5">
+      <div className="border-t border-border -mx-3 sm:-mx-4 px-3 sm:px-4 pt-1">
         <OdooTabs
           tabs={[
             {
@@ -286,6 +305,7 @@ export default function ProveedorFormPage() {
           ]}
         />
       </div>
+    </div>
     </div>
   );
 }
