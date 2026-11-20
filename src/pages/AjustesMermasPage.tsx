@@ -6,16 +6,16 @@ import MermasPage from './MermasPage';
 export default function AjustesMermasPage() {
   const [tab, setTab] = useState<'ajustes' | 'mermas'>('ajustes');
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-[100dvh]">
+    <div className="pt-3 sm:p-4 lg:p-6 bg-background min-h-[100dvh]">
       <Tabs value={tab} onValueChange={(v) => setTab(v as 'ajustes' | 'mermas')}>
-        <TabsList>
+        <TabsList className="mx-3 sm:mx-0">
           <TabsTrigger value="ajustes">Ajustes</TabsTrigger>
           <TabsTrigger value="mermas">Mermas</TabsTrigger>
         </TabsList>
-        <TabsContent value="ajustes" className="mt-4">
+        <TabsContent value="ajustes" className="mt-1 sm:mt-4">
           <AjustesInventarioPage />
         </TabsContent>
-        <TabsContent value="mermas" className="mt-4">
+        <TabsContent value="mermas" className="mt-1 sm:mt-4">
           <MermasPage />
         </TabsContent>
       </Tabs>

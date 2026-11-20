@@ -277,15 +277,15 @@ export default function AuditoriaConteoPage() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/almacen/auditorias')}>
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate('/almacen/auditorias')} aria-label="Regresar">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-semibold truncate">{auditoria?.nombre ?? 'Conteo'}</h1>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span>Apertura: {fmtDt(auditoria?.created_at)}</span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+              <span className="whitespace-nowrap">Apertura: {fmtDt(auditoria?.created_at)}</span>
               <span>•</span>
-              <span>{contadas}/{totalLineas} contados</span>
+              <span className="whitespace-nowrap">{contadas}/{totalLineas} contados</span>
               {auditoria?.status && (
                 <>
                   <span>•</span>
@@ -519,16 +519,16 @@ export default function AuditoriaConteoPage() {
       </div>
 
       {/* Bottom action bar */}
-      <div className="sticky bottom-0 bg-background border-t border-border p-3 flex gap-2">
-        <Button variant="outline" className="flex-1" onClick={() => navigate('/almacen/auditorias')}>
+      <div className="sticky bottom-0 bg-background border-t border-border p-3 flex flex-wrap gap-2">
+        <Button variant="outline" className="flex-1 min-w-[140px]" onClick={() => navigate('/almacen/auditorias')}>
           Volver al listado
         </Button>
         {!isCerrada && (
           <>
-            <Button className="flex-1" onClick={handleFinalizarConteo} disabled={saving || contadas === 0}>
+            <Button className="flex-1 min-w-[140px]" onClick={handleFinalizarConteo} disabled={saving || contadas === 0}>
               Finalizar conteo
             </Button>
-            <Button variant="destructive" onClick={() => setShowCloseDialog(true)} disabled={closing}>
+            <Button variant="destructive" className="max-sm:w-full" onClick={() => setShowCloseDialog(true)} disabled={closing}>
               <Lock className="h-4 w-4 mr-1" /> Cerrar Auditoría
             </Button>
           </>

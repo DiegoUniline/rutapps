@@ -734,8 +734,8 @@ export default function AjustesInventarioPage() {
         <TabsContent value="ajuste" className="space-y-4 mt-4">
           {/* Controls */}
           <div className="flex flex-wrap gap-3 items-end">
-            <div className="space-y-1 min-w-[200px]">
-              <Label className="text-xs text-muted-foreground">Almacén</Label>
+            <div className="space-y-1 w-full sm:w-auto sm:min-w-[200px]">
+              <Label className="text-xs text-muted-foreground block">Almacén</Label>
               <Select
                 value={almacenId}
                 onValueChange={(next) => {
@@ -748,7 +748,7 @@ export default function AjustesInventarioPage() {
                   setAlmacenId(next);
                 }}
               >
-                <SelectTrigger className="w-[220px]">
+                <SelectTrigger className="w-full sm:w-[220px]">
                   <SelectValue placeholder="Selecciona almacén" />
                 </SelectTrigger>
                 <SelectContent>
@@ -769,11 +769,11 @@ export default function AjustesInventarioPage() {
               <Label className="text-xs text-muted-foreground">Motivo del ajuste</Label>
               <Input value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ej: Conteo físico..." />
             </div>
-            <div className="space-y-1 min-w-[200px]">
-              <Label className="text-xs text-muted-foreground">Categorías</Label>
+            <div className="space-y-1 w-full sm:w-auto sm:min-w-[200px]">
+              <Label className="text-xs text-muted-foreground block">Categorías</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-[220px] justify-between font-normal">
+                  <Button variant="outline" className="w-full sm:w-[220px] justify-between font-normal">
                     {selectedCats.length === 0
                       ? <span className="text-muted-foreground">Todas</span>
                       : selectedCats.length <= 3

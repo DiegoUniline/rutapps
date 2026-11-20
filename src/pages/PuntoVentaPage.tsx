@@ -1679,7 +1679,7 @@ export default function PuntoVentaPage() {
                       )}
                     </div>
                     <button onClick={() => removeItem(item.producto_id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
+                      className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
                       <X className="h-3 w-3 text-destructive" />
                     </button>
                   </div>
