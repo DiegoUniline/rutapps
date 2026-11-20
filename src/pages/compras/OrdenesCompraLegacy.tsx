@@ -459,7 +459,7 @@ export default function ComprasPage() {
   }, groupByLevelsD), [pageDataD, groupByD, groupByLevelsD]);
 
   const renderTable = (items: any[]) => (
-    <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+    <div className={cn(!groupBy && "overflow-x-auto")}>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-table-border">
@@ -557,7 +557,7 @@ export default function ComprasPage() {
   );
 
   const renderDetalleTable = (items: any[]) => (
-    <div className={cn(!groupByD && "bg-card border border-border rounded overflow-x-auto")}>
+    <div className={cn(!groupByD && "overflow-x-auto")}>
       <table className="w-full text-[13px]">
         <thead>
           <tr className="border-b border-table-border text-left">

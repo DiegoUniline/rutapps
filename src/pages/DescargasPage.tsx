@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn, fmtDate , todayLocal } from '@/lib/utils';
+import { MenuAcciones } from '@/components/shared/MenuAcciones';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidacionPdf';
@@ -136,6 +137,7 @@ type LiqSectionKey = 'resumen' | 'ventas' | 'productos' | 'cobros' | 'entregas' 
 /* ─── Detail / Approve workspace ─── */
 
 function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => void }) {
+  const isMobile = useIsMobile();
   const { user, empresa, profile } = useAuth();
   const { symbol: cs, fmt } = useCurrency();
   const qc = useQueryClient();
@@ -652,10 +654,10 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   };
 
   return (
-    <div className="min-h-full bg-background">
-      {/* Header integrado al shell */}
-      <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
-        <div className="px-4 py-4 border-b border-border/70 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="min-h-full p-2 md:p-4">
+      {/* Header integrado al shell (D-037: hoja blanca; overflow-clip no crea área de scroll) */}
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-clip">
+        <div className="relative px-3 md:px-4 py-3 md:py-4 border-b border-border/70 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between max-md:pr-14">
           <div className="flex min-w-0 items-start gap-3">
             <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0" onClick={onClose} title="Volver a descargas">
               <ArrowLeft className="h-4 w-4" />
@@ -687,7 +689,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+          {(() => { const accionesLiq = (<>
             {activeTab === 'inventario' && (
               <label className="inline-flex h-8 items-center gap-2 rounded-md border border-border px-2.5 text-xs text-muted-foreground cursor-pointer hover:bg-muted/40">
                 <input type="checkbox" checked={incluirStock} onChange={e => setIncluirStock(e.target.checked)} className="accent-primary" />
@@ -834,11 +836,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             >
               <Trash2 className="h-4 w-4" />
             </Button>
-          </div>
+          </>); return isMobile ? <MenuAcciones className="shrink-0 self-start absolute right-3 top-4"><div className="flex flex-col items-stretch gap-1 [&>*]:justify-start">{accionesLiq}</div></MenuAcciones> : <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">{accionesLiq}</div>; })()}
         </div>
 
         {/* Tabs */}
-        <div className="px-4 border-b border-border/70 bg-background/95 overflow-x-auto">
+        <div className="px-4 border-b border-border/70 bg-card overflow-x-auto">
           <div className="flex items-center gap-1 py-2.5 w-max min-w-full">
             {tabDefs.map(tab => {
               const Icon = tab.icon;
@@ -919,7 +921,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                         "mt-0.5 text-sm font-bold tabular-nums",
                         diferenciaCuadre < -0.005 ? "text-destructive" : diferenciaCuadre > 0.005 ? "text-green-700" : "text-foreground"
                       )}>
-                        {diferenciaCuadre > 0 ? '+' : ''}${fmt(diferenciaCuadre)}
+                        {diferenciaCuadre > 0 ? '+' : ''}{fmt(diferenciaCuadre)}
                       </div>
                     </div>
                   </div>
@@ -1116,7 +1118,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                         "text-2xl font-black tabular-nums",
                         diferenciaCuadre > 0.005 ? "text-green-700" : diferenciaCuadre < -0.005 ? "text-destructive" : "text-foreground"
                       )}>
-                        {diferenciaCuadre > 0 ? '+' : ''}${fmt(diferenciaCuadre)}
+                        {diferenciaCuadre > 0 ? '+' : ''}{fmt(diferenciaCuadre)}
                       </div>
                     </div>
                   </div>
@@ -1503,7 +1505,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                           <DollarSign className="h-4 w-4 text-destructive shrink-0" />
                           <div><div className="text-sm font-semibold">Diferencia de efectivo</div><div className="text-xs text-muted-foreground">El monto entregado no coincide con el efectivo esperado.</div></div>
                         </div>
-                        <span className="font-bold tabular-nums text-destructive">{diferenciaCuadre > 0 ? '+' : ''}${fmt(diferenciaCuadre)}</span>
+                        <span className="font-bold tabular-nums text-destructive">{diferenciaCuadre > 0 ? '+' : ''}{fmt(diferenciaCuadre)}</span>
                       </div>
                     )}
                     {conDiferencias.length > 0 && (
@@ -1671,7 +1673,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     "text-xl font-black tabular-nums",
                     diferenciaCuadre < -0.005 ? "text-destructive" : diferenciaCuadre > 0.005 ? "text-green-700" : "text-foreground"
                   )}>
-                    {diferenciaCuadre > 0 ? '+' : ''}${fmt(diferenciaCuadre)}
+                    {diferenciaCuadre > 0 ? '+' : ''}{fmt(diferenciaCuadre)}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
@@ -2102,7 +2104,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
               diferenciaEfectivo > 0 ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400" : "bg-destructive/10 text-destructive"
             )}>
               <AlertTriangle className="h-3.5 w-3.5" />
-              Diferencia: {diferenciaEfectivo > 0 ? '+' : ''}${fmt(diferenciaEfectivo)}
+              Diferencia: {diferenciaEfectivo > 0 ? '+' : ''}{fmt(diferenciaEfectivo)}
             </div>
           )}
         </div>
@@ -2615,7 +2617,7 @@ export default function DescargasPage() {
                       "py-2.5 px-4 text-right font-bold",
                       dif > 0 ? "text-green-600" : dif < 0 ? "text-destructive" : ""
                     )}>
-                      {dif > 0 ? '+' : ''}${fmt(dif)}
+                      {dif > 0 ? '+' : ''}{fmt(dif)}
                     </td>
                     <td className="py-2.5 px-4 text-center">
                       <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold", s.color)}>
@@ -2642,7 +2644,7 @@ export default function DescargasPage() {
                   "py-2.5 px-4 text-right",
                   totalDiferencia > 0 ? "text-green-600" : totalDiferencia < 0 ? "text-destructive" : ""
                 )}>
-                  {totalDiferencia > 0 ? '+' : ''}${fmt(totalDiferencia)}
+                  {totalDiferencia > 0 ? '+' : ''}{fmt(totalDiferencia)}
                 </td>
                 <td colSpan={2}></td>
               </tr>
