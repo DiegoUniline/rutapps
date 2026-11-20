@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -94,13 +95,14 @@ export default function FacturacionCfdiPage() {
     queryKey: ['cfdis', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Todas las páginas (antes se cortaba en 1 000 renglones).
+      return fetchAllPages<any>((from, to) => supabase
         .from('cfdis')
         .select('*, ventas(folio)')
         .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to));
     },
   });
 

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -33,12 +34,14 @@ function usePagosProveedores() {
     queryKey: ['pagos-proveedores-list', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Todas las páginas (antes se cortaba en 1 000 renglones).
+      const data = await fetchAllPages<any>((from, to) => supabase
         .from('pago_compras')
         .select('*, proveedores(nombre), compras(folio)')
         .eq('empresa_id', empresa!.id)
-        .order('fecha', { ascending: false });
-      if (error) throw error;
+        .order('fecha', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to));
       return (data ?? []).map((p: any) => ({
         id: p.id,
         fecha: p.fecha,

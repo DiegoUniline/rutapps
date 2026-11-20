@@ -92,13 +92,14 @@ export default function AuditoriasPage() {
     queryKey: ['auditorias', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Todas las páginas (antes se cortaba en 1 000 renglones).
+      return fetchAllPages<any>((from, to) => supabase
         .from('auditorias')
         .select('*, auditoria_lineas(count)')
         .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to));
     },
   });
 

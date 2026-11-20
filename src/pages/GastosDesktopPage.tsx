@@ -1,4 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
 import { useState, useMemo, useEffect } from 'react';
 import HelpButton from '@/components/HelpButton';
@@ -23,13 +24,14 @@ function useGastos() {
     queryKey: ['gastos-desktop', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Todas las páginas (antes se cortaba en 1 000 renglones).
+      return fetchAllPages<any>((from, to) => supabase
         .from('gastos')
         .select('*, vendedores:profiles!vendedor_id(id,nombre)').is('cancelado_at', null)
         .eq('empresa_id', empresa!.id)
-        .order('fecha', { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+        .order('fecha', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to));
     },
   });
 }

@@ -171,14 +171,17 @@ function useCompras(search: string, statusFilter: string[], empresaId?: string) 
     queryKey: ['compras', search, statusFilter, empresaId],
     enabled: !!empresaId,
     queryFn: async () => {
-      let q = supabase
-        .from('compras')
-        .select('*, proveedores(nombre, rfc), almacenes(nombre), pago_compras(monto), compra_lineas(cantidad, factor_conversion, piezas_loteadas, productos(maneja_lote))')
-        .eq('empresa_id', empresaId!)
-        .order('fecha', { ascending: false });
-      if (statusFilter && statusFilter.length > 0) q = q.in('status', statusFilter);
-      const { data, error } = await q;
-      if (error) throw error;
+      // Todas las páginas (antes se cortaba en 1 000 renglones).
+      const data = await fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('compras')
+          .select('*, proveedores(nombre, rfc), almacenes(nombre), pago_compras(monto), compra_lineas(cantidad, factor_conversion, piezas_loteadas, productos(maneja_lote))')
+          .eq('empresa_id', empresaId!)
+          .order('fecha', { ascending: false })
+          .order('id', { ascending: true });
+        if (statusFilter && statusFilter.length > 0) q = q.in('status', statusFilter);
+        return q.range(from, to);
+      });
       let filtered = data ?? [];
       if (search) {
         const s = search.toLowerCase();

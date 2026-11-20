@@ -117,7 +117,7 @@ export function useCotizaciones() {
         const rows = await fetchAllPages((from, to) =>
           supabase.from('cotizaciones').select(SELECT_LIST)
             .eq('empresa_id', empresa!.id)
-            .order('created_at', { ascending: false })
+            .order('created_at', { ascending: false }).order('id', { ascending: true })
             .range(from, to)
         );
         try {
