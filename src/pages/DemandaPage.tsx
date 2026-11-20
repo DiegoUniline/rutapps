@@ -282,7 +282,7 @@ export default function DemandaPage() {
   const [vendedorRutaId, setVendedorRutaId] = useState('');
   const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[]; errors: any[] }>(null);
   // Avance de «Surtir disponible»: un pedido por llamada (surtir_pedido_disponible).
-  const [surtirProgreso, setSurtirProgreso] = useState<null | { hecho: number; total: number; folio?: string }>(null);
+  const [surtirProgreso, setSurtirProgreso] = useState<null | { hecho: number; total: number; hasta?: number; folio?: string }>(null);
   const [vendedoresOpen, setVendedoresOpen] = useState(false);
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [asignarRepartidorId, setAsignarRepartidorId] = useState('');
@@ -481,29 +481,35 @@ export default function DemandaPage() {
     mutationFn: async () => {
       if (!almacenId) throw new Error('Selecciona un almacén');
       if (selectedPedidos.length === 0) throw new Error('Selecciona al menos un pedido');
-      type RespSurtir = { resultado: 'completo' | 'parcial' | 'sin_stock' | 'sin_pendiente'; entrega_id?: string; folio?: string; faltantes: { producto_id: string; faltante: number }[] };
+      type RespSurtir = { resultado: 'completo' | 'parcial' | 'sin_stock' | 'sin_pendiente' | 'error'; entrega_id?: string; folio?: string; faltantes: { producto_id: string; faltante: number }[] };
       const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
 
-      // Una llamada por pedido: la BD confirma el borrador, crea/reusa la entrega, surte lo que
-      // haya en existencia y (si hay repartidor) la deja cargada, todo en una transacción.
-      // Antes eran ~10–15 llamadas por pedido desde el navegador.
+      // Una llamada por grupo de hasta 25 pedidos (surtir_pedidos_disponible): la BD confirma el
+      // borrador, crea/reusa la entrega, surte lo que haya y (si hay repartidor) la deja cargada.
+      // Cada pedido se guarda completo o no se modifica; un error no detiene a los demás.
       const fully: any[] = [], partial: any[] = [], none: any[] = [], errors: any[] = [];
       const pedidos = [...selectedPedidos];
+      const porId = new Map(pedidos.map(p => [p.id, p]));
+      const LOTE = 25;
       setSurtirProgreso({ hecho: 0, total: pedidos.length });
-      for (let i = 0; i < pedidos.length; i++) {
-        const pedido = pedidos[i];
-        setSurtirProgreso({ hecho: i, total: pedidos.length, folio: pedido.folio });
-        const { data, error } = await rpc('surtir_pedido_disponible', {
-          p_pedido_id: pedido.id,
+      for (let i = 0; i < pedidos.length; i += LOTE) {
+        const grupo = pedidos.slice(i, i + LOTE);
+        setSurtirProgreso({ hecho: i, hasta: i + grupo.length, total: pedidos.length, folio: grupo.length > 1 ? `${grupo[0].folio} … ${grupo[grupo.length - 1].folio}` : grupo[0].folio });
+        const { data, error } = await rpc('surtir_pedidos_disponible', {
+          p_pedido_ids: grupo.map(p => p.id),
           p_almacen_id: almacenId,
           p_vendedor_ruta_id: vendedorRutaId || null,
         });
-        if (error) { errors.push({ pedido, message: error.message }); continue; }
-        const r = data as RespSurtir;
-        const entrega = r.entrega_id ? { id: r.entrega_id, folio: r.folio } : null;
-        if (r.resultado === 'completo') fully.push({ pedido, entrega });
-        else if (r.resultado === 'parcial') partial.push({ pedido, entrega, faltantes: r.faltantes });
-        else if (r.resultado === 'sin_stock') none.push({ pedido, faltantes: r.faltantes });
+        if (error) { for (const pedido of grupo) errors.push({ pedido, message: error.message }); continue; }
+        for (const r of (data as (RespSurtir & { pedido_id: string; error?: string })[]) ?? []) {
+          const pedido = porId.get(r.pedido_id);
+          if (!pedido) continue;
+          const entrega = r.entrega_id ? { id: r.entrega_id, folio: r.folio } : null;
+          if (r.resultado === 'completo') fully.push({ pedido, entrega });
+          else if (r.resultado === 'parcial') partial.push({ pedido, entrega, faltantes: r.faltantes });
+          else if (r.resultado === 'sin_stock') none.push({ pedido, faltantes: r.faltantes });
+          else if (r.resultado === 'error') errors.push({ pedido, message: r.error ?? 'Error desconocido' });
+        }
       }
       setSurtirProgreso({ hecho: pedidos.length, total: pedidos.length });
 
@@ -1285,7 +1291,7 @@ export default function DemandaPage() {
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="flex items-center gap-2 font-medium text-foreground">
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    Surtiendo {Math.min(surtirProgreso.hecho + 1, surtirProgreso.total)} de {surtirProgreso.total}
+                    Surtiendo {surtirProgreso.hasta && surtirProgreso.hasta - surtirProgreso.hecho > 1 ? `${surtirProgreso.hecho + 1}–${surtirProgreso.hasta}` : Math.min(surtirProgreso.hecho + 1, surtirProgreso.total)} de {surtirProgreso.total}
                     {surtirProgreso.folio ? <span className="font-mono text-muted-foreground">· {surtirProgreso.folio}</span> : null}
                   </span>
                   <span className="tabular-nums text-muted-foreground">{Math.round((surtirProgreso.hecho / Math.max(1, surtirProgreso.total)) * 100)}%</span>
