@@ -255,7 +255,8 @@ export function useVentaLineasResumen(search?: string, statusFilter?: string, ti
       }
 
       const applyFilters = (q: any) => {
-        q = q.eq('ventas.empresa_id', empresa!.id);
+        // Filtro también sobre venta_lineas.empresa_id: usa su índice en vez de recorrer líneas de otras empresas.
+        q = q.eq('empresa_id', empresa!.id).eq('ventas.empresa_id', empresa!.id);
         if (filterOwn) q = q.eq('ventas.vendedor_id', profileId!);
         if (statusFilter && statusFilter !== 'todos') {
           const arr = statusFilter.split(',');
@@ -335,7 +336,7 @@ export function useVentaLineasPaginated(
       }
 
       const applyFilters = (q: any) => {
-        q = q.eq('ventas.empresa_id', empresa!.id).order('created_at', { ascending: false, referencedTable: undefined });
+        q = q.eq('empresa_id', empresa!.id).eq('ventas.empresa_id', empresa!.id).order('created_at', { ascending: false, referencedTable: undefined });
         if (filterOwn) q = q.eq('ventas.vendedor_id', profileId!);
         if (statusFilter && statusFilter !== 'todos') {
           const arr = statusFilter.split(',');

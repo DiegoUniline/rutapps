@@ -840,7 +840,8 @@ async function downloadAllDataInternal(
             let hasMore = true;
             while (hasMore) {
               const { data, error } = await withTimeout<any>(
-                build(parentChunk).range(from, from + pageSize - 1),
+                // Orden estable: sin ORDER BY las páginas de 1000 pueden saltar o repetir renglones.
+                build(parentChunk).order('id', { ascending: true }).range(from, from + pageSize - 1),
                 `${table} ${from + 1}-${from + pageSize}`,
               );
               if (error) {
