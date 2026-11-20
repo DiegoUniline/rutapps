@@ -13,6 +13,15 @@ const comisionLabels: Record<string, string> = { porcentaje: 'Porcentaje', monto
 
 export function ProductoComisionesTab({ form, set, tarifaLineas }: Props) {
   const { symbol: s, fmt } = useCurrency();
+  // D-041: con listas de precio la comisión la da la lista (se cambia en la lista); el producto no
+  // muestra casilla propia. Con precio fijo, la comisión es la del producto.
+  if ((form as any).usa_listas_precio) {
+    return (
+      <div className="space-y-3">
+        <ComisionFromListas form={form} tarifaLineas={tarifaLineas} />
+      </div>
+    );
+  }
   return (
     <div className="space-y-3">
       <div className="odoo-field-row">
@@ -22,19 +31,15 @@ export function ProductoComisionesTab({ form, set, tarifaLineas }: Props) {
         </label>
       </div>
       {form.tiene_comision && (
-        (form as any).usa_listas_precio ? (
-          <ComisionFromListas form={form} tarifaLineas={tarifaLineas} />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
-            <div>
-              <OdooField label="Tipo comisión" value={form.tipo_comision} type="select"
-                options={[{ value: 'porcentaje', label: 'Porcentaje' }, { value: 'monto_fijo', label: 'Monto Fijo' }]}
-                onChange={v => set('tipo_comision', v)} format={() => comisionLabels[form.tipo_comision ?? 'porcentaje'] ?? ''} />
-              <OdooField label={`Valor (${form.tipo_comision === 'porcentaje' ? '%' : s})`}
-                value={form.pct_comision} type="number" teal onChange={v => set('pct_comision', +v)} format={v => (v ?? 0).toString()} />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
+          <div>
+            <OdooField label="Tipo comisión" value={form.tipo_comision} type="select"
+              options={[{ value: 'porcentaje', label: 'Porcentaje' }, { value: 'monto_fijo', label: 'Monto Fijo' }]}
+              onChange={v => set('tipo_comision', v)} format={() => comisionLabels[form.tipo_comision ?? 'porcentaje'] ?? ''} />
+            <OdooField label={`Valor (${form.tipo_comision === 'porcentaje' ? '%' : s})`}
+              value={form.pct_comision} type="number" teal onChange={v => set('pct_comision', +v)} format={v => (v ?? 0).toString()} />
           </div>
-        )
+        </div>
       )}
     </div>
   );
@@ -45,13 +50,13 @@ function ComisionFromListas({ form, tarifaLineas }: { form: Partial<Producto>; t
   const lineasConComision = (tarifaLineas ?? []).filter((l: any) => (l as any).comision_pct > 0);
   if (lineasConComision.length === 0) return (
     <>
-      <div className="text-[12px] text-muted-foreground bg-accent/30 border border-accent/50 rounded px-3 py-2">💡 La comisión se calcula automáticamente desde las reglas de las listas de precios.</div>
+      <div className="text-[12px] text-muted-foreground bg-accent/30 border border-accent/50 rounded px-3 py-2">💡 Este producto usa listas de precio: la comisión la da cada lista. Para quitarla o cambiarla, edita la regla en la lista de precios.</div>
       <p className="text-[12px] text-muted-foreground">No hay reglas con comisión configurada para este producto.</p>
     </>
   );
   return (
     <>
-      <div className="text-[12px] text-muted-foreground bg-accent/30 border border-accent/50 rounded px-3 py-2">💡 La comisión se calcula automáticamente desde las reglas de las listas de precios.</div>
+      <div className="text-[12px] text-muted-foreground bg-accent/30 border border-accent/50 rounded px-3 py-2">💡 Este producto usa listas de precio: la comisión la da cada lista. Para quitarla o cambiarla, edita la regla en la lista de precios.</div>
       <div className="overflow-x-auto border border-border rounded">
         <table className="w-full text-sm">
           <thead><tr className="border-b border-table-border">

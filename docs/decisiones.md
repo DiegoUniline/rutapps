@@ -238,3 +238,10 @@
 - **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO (no quitó ninguna opción)
 - **Decisión (modales en web):** 3 anchos estándar — **chico 560 px** (confirmar, asignar, motivos), **mediano 760 px** (formularios, reportes), **grande 1100 px** (tablas, detalles); **encabezado y pie fijos** al hacer scroll (con línea), el botón cerrar viaja con el encabezado; **listas internas más altas** (usan el alto de pantalla, no una caja de 4 renglones); mismo estilo (fondo, esquinas, botones D-029).
 - **Implementación:** central en `src/components/ui/dialog.tsx` (traduce los `max-w-*` existentes a la talla estándar; respeta anchos especiales) y `src/index.css` (sección D-040, con `:where()` para no romper modales con acomodo propio).
+
+## D-041
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Origen:** reporte de usuario — apagó la comisión en «BOLSA Limpiador de lente 70ml» y «Jugo naranja 50ml» y seguía saliendo (venía de la lista «Precio 2 mayoristas», 10%).
+- **Decisión:** la comisión sigue el **modo de precio** del producto. **Listas de precio** → la da la regla de la lista (el producto no muestra casilla propia; se cambia en la lista). **Precio fijo** → la da el producto (porcentaje o monto fijo por pieza) y las listas no aplican.
+- **Implementación:** `fn_fill_venta_linea_comision` (migración `20261120190000`), pestaña Comisiones del producto, matriz Precios y Comisiones. Solo renglones nuevos o editados.
+- **Corrige además:** la comisión de productos de precio fijo nunca se cobraba en ventas (la BD solo miraba listas).
