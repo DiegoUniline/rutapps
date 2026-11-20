@@ -40,7 +40,7 @@ function useProductosCargados(empresaId: string | undefined, desde: string, hast
       const devoluciones = await fetchAllPages<any>((from, to) => {
         let q = supabase
           .from('devoluciones')
-          .select('id, fecha, vendedor_id, devolucion_lineas(producto_id, cantidad, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
+          .select('id, fecha, vendedor_id, devolucion_lineas(producto_id, cantidad, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))').is('cancelado_at', null)
           .eq('empresa_id', empresaId!)
           .gte('fecha', desde)
           .lte('fecha', hasta)

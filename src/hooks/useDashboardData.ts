@@ -189,6 +189,7 @@ export function useDashboardCompras(range: DateRange) {
           .from('compras')
           .select('id, fecha, total, saldo_pendiente, status, proveedor_id, proveedores(nombre)')
           .eq('empresa_id', empresa!.id)
+          .not('status', 'in', '(cancelada,cancelado)')
           .gte('fecha', fmt(range.from))
           .lte('fecha', fmt(range.to))
           .range(from, to)
@@ -523,6 +524,7 @@ export function useDashboardDevoluciones(range: DateRange, vendedorId?: string) 
           .from('devoluciones')
           .select('id, fecha, tipo, vendedor_id, vendedores:profiles!vendedor_id(nombre), clientes(nombre), devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
           .eq('empresa_id', empresa!.id)
+          .is('cancelado_at', null)
           .gte('fecha', fmt(range.from))
           .lte('fecha', fmt(range.to))
           .range(from, to);
@@ -644,7 +646,8 @@ export function useDashboardHoy(vendedorId?: string, enabled = true) {
         .from('entregas')
         .select('id, status, vendedor_id')
         .eq('empresa_id', eid)
-        .eq('fecha', today);
+        .eq('fecha', today)
+        .neq('status', 'cancelado');
       const entregasQ = vendedorId ? baseEntregas.eq('vendedor_id', vendedorId) : baseEntregas;
 
       const baseVentas = supabase

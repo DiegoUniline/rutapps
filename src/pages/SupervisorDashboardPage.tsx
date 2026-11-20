@@ -277,7 +277,7 @@ export default function SupervisorDashboardPage() {
     queryKey: ['supervisor-devoluciones-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
     queryFn: async () => fetchAllPages<any>((from, to) =>
       (supabase as any).from('devoluciones')
-        .select('id, vendedor_id, tipo, cliente_id, clientes(nombre), created_at, devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre))')
+        .select('id, vendedor_id, tipo, cliente_id, clientes(nombre), created_at, devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre))').is('cancelado_at', null)
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false }).range(from, to)),
   });
 

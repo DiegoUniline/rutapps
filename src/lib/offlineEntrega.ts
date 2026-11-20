@@ -155,7 +155,7 @@ export async function fetchDescargaFinancialsWithFallback(args: {
         supabase.from('ventas').select('total').eq('vendedor_id', vendedorId).eq('fecha', today).eq('condicion_pago', 'contado').neq('status', 'cancelado'),
         supabase.from('cobros').select('monto, metodo_pago').eq('empresa_id', empresaId).eq('user_id', userId).eq('fecha', today).neq('status', 'cancelado'),
         supabase.from('gastos').select('monto').is('cancelado_at', null).eq('vendedor_id', vendedorId).eq('fecha', today),
-        supabase.from('devoluciones').select('id, tipo, clientes(nombre), devolucion_lineas(cantidad, motivo, accion, monto_credito, productos(nombre))').eq('empresa_id', empresaId).eq('vendedor_id', vendedorId).eq('fecha', today),
+        supabase.from('devoluciones').select('id, tipo, clientes(nombre), devolucion_lineas(cantidad, motivo, accion, monto_credito, productos(nombre))').is('cancelado_at', null).eq('empresa_id', empresaId).eq('vendedor_id', vendedorId).eq('fecha', today),
       ]);
       const ventasContado = (ventasRes.data || []).reduce((s, v: any) => s + (Number(v.total) || 0), 0);
       const cobrosEfectivo = (cobrosRes.data || []).filter((c: any) => c.metodo_pago === 'efectivo').reduce((s, c: any) => s + (Number(c.monto) || 0), 0);

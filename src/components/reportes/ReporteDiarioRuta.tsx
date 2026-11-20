@@ -136,7 +136,7 @@ export default function ReporteDiarioRuta() {
     enabled,
     queryFn: async () => {
       let q = (supabase as any).from('devoluciones')
-        .select('id, tipo, vendedor_id, profiles:vendedor_id(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
+        .select('id, tipo, vendedor_id, profiles:vendedor_id(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))').is('cancelado_at', null)
         .eq('empresa_id', empresa!.id)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin);
       if (!isAll) q = q.eq('vendedor_id', selectedVendedorId);

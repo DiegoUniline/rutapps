@@ -213,7 +213,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
       if (!descarga.vendedor_id) return [];
       let q = supabase
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
+        .select('id, fecha, tipo, notas, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))').is('cancelado_at', null)
         .eq('empresa_id', descarga.empresa_id)
         .gte('fecha', fInicio)
         .lte('fecha', fFin)

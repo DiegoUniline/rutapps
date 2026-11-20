@@ -121,7 +121,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
 
       const devolucionesPromise = needsDevoluciones
         ? fetchAllPages<any>((from, to) => {
-            let q = supabase.from('devoluciones').select('id, fecha, tipo, notas, vendedor_id, cliente_id, vendedores:profiles!vendedor_id(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
+            let q = supabase.from('devoluciones').select('id, fecha, tipo, notas, vendedor_id, cliente_id, vendedores:profiles!vendedor_id(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))').is('cancelado_at', null).eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
             if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
             return q.abortSignal(signal);
           })
