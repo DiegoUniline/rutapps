@@ -202,3 +202,14 @@
 - **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
 - **Decisión:** eliminar una venta (una o varias) es **una sola operación de la BD** y solo se permite para **borradores** o **canceladas sin pagos activos aplicados, sin facturas (CFDI, aun canceladas) y sin comisiones pagadas**; todo lo demás se cancela, no se borra. Las rechazadas regresan con su motivo.
 - **Implementación:** `eliminar_ventas(uuid[])` (migración 20261120080000). Antes «Eliminar varias» borraba pagos aplicados e historial sin revisar (auditoría C5).
+
+## D-036
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Sí, hazlo»)
+- **Caso:** entrega asignada a Juan → no entregado → reasignada a Pedro → el cliente rechaza 5 de 10 → Pedro las trae en ruta pero son merma.
+- **Decisión:**
+  1. **Reasignar** una entrega cargada, en ruta o **no entregada** mueve la mercancía del camión anterior al nuevo y la deja **cargada** para el nuevo repartidor (también `reasignar_pendientes_usuario`, D-022).
+  2. Al entregar parcial o no entregar, por producto rechazado se elige **Bueno** (queda vendible en el camión) o **Merma** (pasa a «Merma en camión»: viaja con el repartidor, no se puede vender, kardex propio).
+  3. **Descarga aprobada:** lo vendible entra a bodega (como hoy) y la merma del camión pasa al almacén **Mermas** central.
+  4. Cada acción en una sola transacción en la BD.
+- **🧭 Criterio:** «Merma en camión» = almacén propio por camión (`almacenes.merma_de_almacen_id`), creado solo; así stock y kardex cuadran sin cambiar los cálculos existentes.
+- **Implementación:** migración `20261120140000_d036_reasignar_y_merma_camion.sql` (`entrega_lineas.cantidad_merma`, `fn_sync_entrega_merma` por diferencia).
