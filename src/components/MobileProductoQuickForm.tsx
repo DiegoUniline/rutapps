@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Save, Loader2, Camera, Lock } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Save, Loader2, Camera, Lock } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -33,16 +34,9 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
+// Interruptor estándar del sistema (antes uno hecho a mano con la bolita sin anclar).
 function Toggle({ value, onChange }: { value: boolean; onChange: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onChange}
-      className={cn("h-7 w-12 rounded-full transition-colors relative shrink-0", value ? "bg-primary" : "bg-input")}
-    >
-      <span className={cn("absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform", value ? "translate-x-5" : "translate-x-0.5")} />
-    </button>
-  );
+  return <Switch checked={value} onCheckedChange={() => onChange()} />;
 }
 
 function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: () => void }) {
@@ -200,13 +194,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
         onOpenAutoFocus={e => e.preventDefault()}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background shrink-0">
-          <button
-            onClick={handleClose}
-            className="h-9 w-9 rounded-lg bg-card border border-border flex items-center justify-center active:scale-90 transition-transform"
-          >
-            <X className="h-4 w-4 text-foreground" />
-          </button>
+        <div className="flex items-center gap-3 pl-4 pr-14 py-3 border-b border-border bg-background shrink-0">
           <h2 className="text-base font-bold text-foreground flex-1 truncate">
             {savedId ? form.nombre || 'Producto' : 'Nuevo producto'}
           </h2>
@@ -495,9 +483,9 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
         <div className="border-t border-border bg-background px-3 py-3 shrink-0 flex gap-2">
           <button
             onClick={handleClose}
-            className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm font-semibold active:scale-95 transition-transform"
+            className="btn-cancelar h-11 px-4 rounded-lg text-sm font-semibold active:scale-95 transition-transform"
           >
-            Cerrar
+            Cancelar
           </button>
           <button
             onClick={handleSave}

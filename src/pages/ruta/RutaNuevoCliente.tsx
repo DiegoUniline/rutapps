@@ -309,7 +309,7 @@ export default function RutaNuevoCliente() {
                     form.credito ? "bg-primary border-primary" : "bg-muted border-border"
                   )}>
                     <span className={cn(
-                      "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                      "absolute left-0 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
                       form.credito ? "translate-x-[22px]" : "translate-x-0.5"
                     )} />
                   </div>

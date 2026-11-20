@@ -139,7 +139,7 @@ export function VentaTotals({
                   Sin impuestos
                 </span>
                 <span className={cn("relative h-4 w-8 rounded-full transition-colors", sinImpuestos ? "bg-amber-500" : "bg-border")}>
-                  <span className={cn("absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform", sinImpuestos ? "translate-x-4" : "translate-x-0.5")} />
+                  <span className={cn("absolute left-0 top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform", sinImpuestos ? "translate-x-4" : "translate-x-0.5")} />
                 </span>
               </button>
             )}

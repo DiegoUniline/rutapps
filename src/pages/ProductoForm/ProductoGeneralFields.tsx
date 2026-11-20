@@ -1,4 +1,5 @@
 import { OdooField } from '@/components/OdooFormField';
+import { Switch } from '@/components/ui/switch';
 import SearchableSelect from '@/components/SearchableSelect';
 import type { Producto, Marca, Proveedor, Clasificacion, Lista, Unidad, UnidadSat } from '@/types';
 
@@ -61,10 +62,7 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
         <div className="odoo-field-row">
           <span className="odoo-field-label">Producto a granel</span>
           <div className="flex items-center gap-3">
-            <button type="button" onClick={() => set('es_granel', !form.es_granel)}
-              className={`relative w-9 h-5 rounded-full transition-colors ${form.es_granel ? 'bg-primary' : 'bg-border'}`}>
-              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${form.es_granel ? 'translate-x-4' : 'translate-x-0.5'}`} />
-            </button>
+            <Switch checked={!!form.es_granel} onCheckedChange={v => set('es_granel', v)} />
             {form.es_granel && (
               <select value={form.unidad_granel ?? 'kg'} onChange={e => set('unidad_granel', e.target.value)}
                 className="text-[12px] border border-border rounded px-2 py-0.5 bg-card text-foreground">
@@ -80,10 +78,7 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
         <div className="odoo-field-row">
           <span className="odoo-field-label">Vender por presentaciones</span>
           <div className="flex items-center gap-3">
-            <button type="button" onClick={() => set('usa_presentaciones' as any, !(form as any).usa_presentaciones)}
-              className={`relative w-9 h-5 rounded-full transition-colors ${(form as any).usa_presentaciones ? 'bg-primary' : 'bg-border'}`}>
-              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${(form as any).usa_presentaciones ? 'translate-x-4' : 'translate-x-0.5'}`} />
-            </button>
+            <Switch checked={!!(form as any).usa_presentaciones} onCheckedChange={v => set('usa_presentaciones' as any, v)} />
             <span className="text-[11px] text-muted-foreground">Activa precios distintos por caja, six-pack, etc.</span>
           </div>
         </div>
@@ -91,10 +86,7 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
           <div className="odoo-field-row">
             <span className="odoo-field-label">Maneja por lote</span>
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => set('maneja_lote' as any, !(form as any).maneja_lote)}
-                className={`relative w-9 h-5 rounded-full transition-colors ${(form as any).maneja_lote ? 'bg-primary' : 'bg-border'}`}>
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${(form as any).maneja_lote ? 'translate-x-4' : 'translate-x-0.5'}`} />
-              </button>
+              <Switch checked={!!(form as any).maneja_lote} onCheckedChange={v => set('maneja_lote' as any, v)} />
               <span className="text-[11px] text-muted-foreground">Controla caducidad y trazabilidad por lote (compras, surtido, etc.)</span>
             </div>
           </div>
