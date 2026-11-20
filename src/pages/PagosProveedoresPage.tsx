@@ -15,6 +15,8 @@ import { OdooPagination } from '@/components/OdooPagination';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
 import { useTablePagination } from '@/hooks/useTablePagination';
 import { CxPTabs } from '@/components/CxPTabs';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil } from '@/components/layout/ListaTarjetaMovil';
 
 const METODO_ICONS: Record<string, typeof Banknote> = {
   efectivo: Banknote,
@@ -129,32 +131,32 @@ export default function PagosProveedoresPage() {
     <div className="space-y-4">
       <CxPTabs />
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="bg-card border border-border rounded-xl p-2.5 sm:p-4 flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 hidden sm:flex items-center justify-center shrink-0">
             <Banknote className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Total pagado</p>
-            <p className="text-lg font-bold text-foreground">{fmt(totalMonto)}</p>
+          <div className="min-w-0">
+            <p className="text-[11px] sm:text-xs text-muted-foreground truncate">Total pagado</p>
+            <p className="text-sm sm:text-lg font-bold text-foreground truncate">{fmt(totalMonto)}</p>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
+        <div className="bg-card border border-border rounded-xl p-2.5 sm:p-4 flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-lg bg-accent hidden sm:flex items-center justify-center shrink-0">
             <Layers className="h-5 w-5 text-muted-foreground" />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Pagos realizados</p>
-            <p className="text-lg font-bold text-foreground">{filtered.length}</p>
+          <div className="min-w-0">
+            <p className="text-[11px] sm:text-xs text-muted-foreground truncate">Pagos realizados</p>
+            <p className="text-sm sm:text-lg font-bold text-foreground truncate">{filtered.length}</p>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
+        <div className="bg-card border border-border rounded-xl p-2.5 sm:p-4 flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-lg bg-accent hidden sm:flex items-center justify-center shrink-0">
             <Building2 className="h-5 w-5 text-muted-foreground" />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Proveedores</p>
-            <p className="text-lg font-bold text-foreground">{new Set(filtered.map(p => p.proveedor_id)).size}</p>
+          <div className="min-w-0">
+            <p className="text-[11px] sm:text-xs text-muted-foreground truncate">Proveedores</p>
+            <p className="text-sm sm:text-lg font-bold text-foreground truncate">{new Set(filtered.map(p => p.proveedor_id)).size}</p>
           </div>
         </div>
       </div>
@@ -170,7 +172,7 @@ export default function PagosProveedoresPage() {
         <div className="flex flex-wrap items-center gap-2">
           <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={v => { setDesde(v); setPage(0); }} onHastaChange={v => { setHasta(v); setPage(0); }} />
           <Select value={filtroMetodo} onValueChange={v => { setFiltroMetodo(v); setPage(0); }}>
-            <SelectTrigger className="w-[150px] h-9 text-xs"><Filter className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectTrigger className="flex-1 min-w-[140px] sm:flex-none sm:w-[150px] h-9 text-xs"><Filter className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los métodos</SelectItem>
               <SelectItem value="efectivo">Efectivo</SelectItem>
@@ -179,14 +181,14 @@ export default function PagosProveedoresPage() {
             </SelectContent>
           </Select>
           <Select value={filtroProveedor} onValueChange={v => { setFiltroProveedor(v); setPage(0); }}>
-            <SelectTrigger className="w-[180px] h-9 text-xs"><Building2 className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectTrigger className="flex-1 min-w-[140px] sm:flex-none sm:w-[180px] h-9 text-xs"><Building2 className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los proveedores</SelectItem>
               {proveedores.map(p => <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={groupBy} onValueChange={v => { setGroupBy(v as any); setPage(0); }}>
-            <SelectTrigger className="w-[150px] h-9 text-xs"><Layers className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectTrigger className="flex-1 min-w-[140px] sm:flex-none sm:w-[150px] h-9 text-xs"><Layers className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ninguno">Sin agrupar</SelectItem>
               <SelectItem value="proveedor">Por proveedor</SelectItem>
@@ -220,8 +222,8 @@ export default function PagosProveedoresPage() {
         </div>
       ) : (
         <>
-          <div className="border border-border rounded-xl overflow-hidden">
-            <PagosTable rows={paged ?? []} fmt={fmt} />
+          <div className="md:border md:border-border md:rounded-xl overflow-hidden">
+            <PagosTable rows={paged ?? []} fmt={fmt} sinMarco />
           </div>
           {totalPages > 1 && (
             <OdooPagination
@@ -238,7 +240,35 @@ export default function PagosProveedoresPage() {
   );
 }
 
-function PagosTable({ rows, fmt }: { rows: any[]; fmt: (n: number) => string }) {
+function PagosTable({ rows, fmt, sinMarco }: { rows: any[]; fmt: (n: number) => string; sinMarco?: boolean }) {
+  const isMobile = useIsMobile();
+  if (isMobile) {
+    return (
+      <div className={cn('space-y-2', !sinMarco && 'p-2')}>
+        {rows.map(p => {
+          const Icon = METODO_ICONS[p.metodo_pago] ?? Banknote;
+          return (
+            <ListaTarjetaMovil
+              key={p.id}
+              titulo={p.proveedor}
+              subtitulo={p.compra_folio}
+              estado={
+                <Badge variant="outline" className="text-[11px] gap-1">
+                  <Icon className="h-3 w-3" />
+                  {METODO_LABELS[p.metodo_pago] ?? p.metodo_pago}
+                </Badge>
+              }
+              campos={[
+                { label: 'Fecha', value: fmtDate(p.fecha) },
+                { label: 'Monto', value: <span className="text-primary font-bold">{fmt(p.monto)}</span> },
+                ...(p.referencia ? [{ label: 'Referencia', value: p.referencia, className: 'col-span-2' }] : []),
+              ]}
+            />
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <table className="w-full text-sm">
       <thead>

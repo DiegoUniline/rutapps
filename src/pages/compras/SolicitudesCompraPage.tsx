@@ -6,6 +6,8 @@ import {
   Plus, RefreshCw, Send, ShoppingCart, Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil } from '@/components/layout/ListaTarjetaMovil';
 import { useAuth } from '@/contexts/AuthContext';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -57,6 +59,7 @@ export default function SolicitudesCompraPage() {
   const db = supabase as any;
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [sp, setSp] = useSearchParams();
   const sid = sp.get('sid');
   const isDetail = !!sid;
@@ -361,13 +364,24 @@ export default function SolicitudesCompraPage() {
           <Kpi label="Por revisar" value={answered} icon={<PackageCheck className="h-4 w-4" />} />
           <Kpi label="Convertidas" value={items.filter((s: any) => s.status === 'convertida').length} icon={<ShoppingCart className="h-4 w-4" />} />
         </div>
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className={isMobile ? 'space-y-2' : 'bg-card border border-border rounded-xl overflow-hidden'}>
+          {isMobile ? items.map((s: any) => (
+            <ListaTarjetaMovil
+              key={s.id}
+              titulo={s.proveedores?.nombre || s.proveedor_nombre || '—'}
+              subtitulo={s.folio}
+              estado={<Status value={s.status} />}
+              onClick={() => setSid(s.id)}
+              campos={[{ label: 'Enviada', value: s.enviado_at ? new Date(s.enviado_at).toLocaleString('es-MX') : '—' }]}
+            />
+          )) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/35 text-left text-xs text-muted-foreground"><th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Proveedor</th><th className="px-4 py-2.5">Estado</th><th className="px-4 py-2.5">Enviada</th><th className="px-4 py-2.5"></th></tr></thead>
               <tbody>{items.map((s: any) => <tr key={s.id} className="border-b last:border-0 hover:bg-muted/20 cursor-pointer" onClick={() => setSid(s.id)}><td className="px-4 py-3 font-semibold">{s.folio}</td><td className="px-4 py-3">{s.proveedores?.nombre || s.proveedor_nombre}</td><td className="px-4 py-3"><Status value={s.status} /></td><td className="px-4 py-3 text-muted-foreground">{s.enviado_at ? new Date(s.enviado_at).toLocaleString('es-MX') : '—'}</td><td className="px-4 py-3 text-right text-primary font-medium">Abrir</td></tr>)}</tbody>
             </table>
           </div>
+          )}
           {!listQuery.isLoading && items.length === 0 && <div className="py-14 text-center text-muted-foreground"><ClipboardList className="h-9 w-9 mx-auto mb-2 opacity-40" /><p className="font-medium text-foreground">Aún no hay solicitudes</p><p className="text-xs mt-1">Crea la primera y envíala al proveedor por correo.</p></div>}
           {listQuery.isLoading && <div className="py-12 text-center text-muted-foreground">Cargando solicitudes…</div>}
         </div>
