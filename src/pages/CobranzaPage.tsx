@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MobileListCard } from '@/components/MobileListCard';
+import { ListaTarjetaMovil } from '@/components/layout/ListaTarjetaMovil';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OdooFilterBar, type FilterOption, type GroupByOption } from '@/components/OdooFilterBar';
@@ -674,38 +674,28 @@ export default function CobranzaPage() {
       {isMobile ? (
         <div className="space-y-2">
           {pagination.paginatedItems.map(c => (
-            <MobileListCard
+            <ListaTarjetaMovil
               key={c.id}
-              title={(c.clientes as any)?.nombre ?? '—'}
-              subtitle={fmtDate(c.fecha)}
+              titulo={(c.clientes as any)?.nombre ?? '—'}
+              subtitulo={fmtDate(c.fecha)}
               leading={
                 <input
                   type="checkbox"
-                  className="rounded border-input h-4 w-4"
+                  aria-label="Seleccionar cobro"
+                  className="rounded border-input h-4 w-4 shrink-0"
                   checked={selectedIds.has(c.id)}
                   onChange={() => toggleSelectOne(c.id)}
                 />
               }
-              badge={
-                <div className="flex items-center gap-1">
-                  <Badge variant="outline" className="text-[10px]">{c.metodo_pago}</Badge>
-                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366]" onClick={e => { e.stopPropagation(); openWaCobro(c); }}>
-                    <MessageCircle className="h-4 w-4" />
-                  </Button>
-                  {(c as any).status !== 'cancelado' && (
-                    <>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground" onClick={e => { e.stopPropagation(); setEditCobro(c); }}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={e => { e.stopPropagation(); setCancelCobro(c); }}>
-                        <Ban className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              }
-
-              fields={[
+              estado={<Badge variant="outline" className="text-[10px] capitalize">{c.metodo_pago}</Badge>}
+              acciones={[
+                { key: 'wa', label: 'WhatsApp', icon: MessageCircle, onClick: () => openWaCobro(c) },
+                ...((c as any).status !== 'cancelado' ? [
+                  { key: 'editar', label: 'Editar', icon: Pencil, onClick: () => setEditCobro(c) },
+                  { key: 'cancelar', label: 'Cancelar', icon: Ban, destructiva: true, separar: true, onClick: () => setCancelCobro(c) },
+                ] : []),
+              ]}
+              campos={[
                 ...(c.referencia ? [{ label: 'Ref', value: c.referencia }] : []),
                 { label: 'Monto', value: <span className="text-success font-bold">{fmtC(c.monto)}</span> },
               ]}
