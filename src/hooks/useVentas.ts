@@ -24,6 +24,8 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   return useQuery({
     queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas', soloConteo ? 'conteo' : 'filas'],
     enabled: !!empresa?.id && enabled,
+    // Conserva los renglones mientras llega la siguiente página / «Cargar más» en teléfono (sin parpadeo).
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       const SELECT = 'id, folio, fecha, created_at, total, subtotal, iva_total, ieps_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, politica_cobro, cerrado_at, cerrado_por, total_efectivo, cerrado_snapshot, vendedor_id, cliente_id, almacen_id, es_saldo_inicial, origen, clientes(nombre, rfc, telefono, direccion, colonia, requiere_factura), vendedores:profiles!vendedor_id(nombre, telefono), almacenes(nombre), entregas(status, entrega_lineas(cantidad_pedida, cantidad_entregada)), cobro_aplicaciones(monto_aplicado, cobros!inner(status)), venta_lineas(subtotal, descuento_pct, precio_unitario, cantidad, iva_monto, ieps_monto, total), promocion_aplicada(descuento_aplicado), devoluciones(devolucion_lineas(cantidad))';
 

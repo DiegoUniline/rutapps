@@ -6,7 +6,7 @@ import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { Plus, List, Package, ChevronDown, FileSpreadsheet, Trash2, FileText } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { StatusChip } from '@/components/StatusChip';
 import { CompraExpandedRow } from './CompraExpandedRow';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -431,6 +431,9 @@ export default function ComprasPage() {
   const fromD = Math.min((pageD - 1) * PAGE_SIZE + 1, totalD);
   const toD = Math.min(pageD * PAGE_SIZE, totalD);
   const pageDataD = filteredLineas.slice(fromD - 1, toD);
+  // Teléfono: lista continua con «Cargar más» (de 50 en 50).
+  const movilCompras = useCargarMasMovil(filteredCompras, `${search}|${desde}|${hasta}|${JSON.stringify(filters)}`);
+  const movilLineas = useCargarMasMovil(filteredLineas, `${searchD}|${JSON.stringify(filtersD)}`);
   const totalCantidadD = filteredLineas.reduce((s, l) => s + (l.cantidad ?? 0), 0);
   const totalSubtotalD = filteredLineas.reduce((s, l) => s + (l.total_neto_linea ?? 0), 0);
 
@@ -455,37 +458,7 @@ export default function ComprasPage() {
     return '';
   }, groupByLevelsD), [pageDataD, groupByD, groupByLevelsD]);
 
-  const renderTable = (items: any[]) => isMobile ? (
-    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay compras." className={cn(!groupBy && 'flex-1 min-h-0 overflow-auto')}>
-      {items.map((c: any) => (
-        <ListaTarjetaMovil
-          key={c.id}
-          titulo={c.proveedores?.nombre ?? '—'}
-          subtitulo={[c.folio ?? c.id.slice(0, 8), c.almacenes?.nombre].filter(Boolean).join(' · ')}
-          estado={<StatusChip status={c.status} />}
-          leading={
-            <input
-              type="checkbox"
-              aria-label="Seleccionar compra"
-              checked={selected.has(c.id)}
-              onClick={e => e.stopPropagation()}
-              onChange={() => toggleOne(c.id)}
-              className="h-4 w-4 rounded border-input shrink-0"
-            />
-          }
-          onClick={() => navigate(`/almacen/compras/${c.id}`)}
-          acciones={[{ key: 'ver', label: 'Ver detalle', icon: FileText, onClick: () => navigate(`/almacen/compras/${c.id}`) }]}
-          campos={[
-            { label: 'Fecha', value: fmtDate(c.fecha) },
-            { label: 'Total', value: fmt(c.total ?? 0) },
-            { label: 'Condición', value: c.condicion_pago === 'credito' ? 'Crédito' : 'Contado' },
-            ...((c.saldo_pendiente ?? 0) > 0 ? [{ label: 'Saldo', value: <span className="text-destructive">{fmt(c.saldo_pendiente)}</span> }] : []),
-            ...(c.numero_factura ? [{ label: 'Factura', value: c.numero_factura }] : []),
-          ]}
-        />
-      ))}
-    </ListaTarjetasMovil>
-  ) : (
+  const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
       <table className="w-full text-sm">
         <thead>
@@ -583,25 +556,7 @@ export default function ComprasPage() {
     </div>
   );
 
-  const renderDetalleTable = (items: any[]) => isMobile ? (
-    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay líneas de detalle." className={cn(!groupByD && 'flex-1 min-h-0 overflow-auto')}>
-      {items.map((l: any, i: number) => (
-        <ListaTarjetaMovil
-          key={`${l.compra_id}-${l.linea_id}-${i}`}
-          titulo={l.producto}
-          subtitulo={[l.codigo, l.folio, l.proveedor].filter(Boolean).join(' · ')}
-          estado={<StatusChip status={l.status} />}
-          onClick={() => navigate(`/almacen/compras/${l.compra_id}`)}
-          campos={[
-            { label: 'Fecha', value: fmtDate(l.fecha) },
-            { label: 'Cantidad', value: fmtNum(l.cantidad) },
-            { label: 'P. unit.', value: fmt(l.precio_unitario) },
-            { label: 'Total', value: fmt(l.total_neto_linea) },
-          ]}
-        />
-      ))}
-    </ListaTarjetasMovil>
-  ) : (
+  const renderDetalleTable = (items: any[]) => (
     <div className={cn(!groupByD && "bg-card border border-border rounded overflow-x-auto")}>
       <table className="w-full text-[13px]">
         <thead>
@@ -657,20 +612,25 @@ export default function ComprasPage() {
   );
 
   return (
-    <div className="p-3 sm:p-4 space-y-3 min-h-full max-w-full overflow-x-hidden">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Compras <HelpButton title={HELP.compras.title} sections={HELP.compras.sections} /> <VideoHelpButton module="compras" /></h1>
+    <div className="p-2 md:p-4 min-h-full max-w-full overflow-x-hidden">
+    {/* D-037: todo el contenido en una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
+      {isMobile && (
+        <EncabezadoListaMovil titulo="Compras" onNuevo={() => navigate('/almacen/compras/nueva')} nuevoLabel="Nueva compra" />
+      )}
+      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 max-md:hidden">Compras <HelpButton title={HELP.compras.title} sections={HELP.compras.sections} /> <VideoHelpButton module="compras" /></h1>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+      {/* KPIs (franja dentro de la hoja; en teléfono no se muestran) */}
+      <div className="grid grid-cols-3 divide-x divide-border border-y border-border -mx-3 md:-mx-4 max-md:hidden">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Total compras</p>
           <p className="text-base sm:text-2xl font-bold text-foreground truncate">{fmt(totalCompras)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Saldo por pagar</p>
           <p className="text-base sm:text-2xl font-bold text-destructive truncate">{fmt(totalSaldo)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Registros</p>
           <p className="text-base sm:text-2xl font-bold text-foreground truncate">{total}</p>
         </div>
@@ -706,7 +666,7 @@ export default function ComprasPage() {
             <OdooFilterBar
               search={search}
               onSearchChange={val => { setSearch(val); setPage(1); }}
-              placeholder="Buscar por folio, factura o proveedor..."
+              placeholder={isMobile ? 'Buscar compras' : 'Buscar por folio, factura o proveedor...'}
               filterOptions={FILTER_OPTIONS}
               activeFilters={filters}
               onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
@@ -723,7 +683,7 @@ export default function ComprasPage() {
               onDateFromChange={val => { setDesde(val); setPage(1); }}
               onDateToChange={val => { setHasta(val); setPage(1); }}
             />
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:shrink-0">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:shrink-0 max-md:hidden">
               <ExportButton
                 onExcel={() => exportToExcel({
                   fileName: 'Compras', title: 'Reporte de Compras',
@@ -748,6 +708,23 @@ export default function ComprasPage() {
 
           {isLoading ? (
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={8} /></div>
+          ) : isMobile ? (
+            <ListaTarjetasMovil aLoAncho vacia={movilCompras.total === 0} mensajeVacio="No hay compras." {...movilCompras}>
+              {movilCompras.visibles.map((c: any) => {
+                const saldo = Number(c.saldo_pendiente ?? 0);
+                return (
+                  <ListaTarjetaMovil
+                    key={c.id}
+                    titulo={c.proveedores?.nombre ?? '—'}
+                    linea2={<>{fmt(c.total ?? 0)} · {fmtDate(c.fecha)}<span className="text-xs"> · {c.folio ?? c.id.slice(0, 8)}</span></>}
+                    {...(saldo > 0 && c.status !== 'cancelada' && c.status !== 'cancelado'
+                      ? { pildora: `Saldo ${fmt(saldo)}`, tono: 'peligro' as const }
+                      : estadoPildora(c.status, STATUS_MAP[c.status]?.label))}
+                    onClick={() => navigate(`/almacen/compras/${c.id}`)}
+                  />
+                );
+              })}
+            </ListaTarjetasMovil>
           ) : (
             <>
               <GroupedTableWrapper
@@ -815,6 +792,19 @@ export default function ComprasPage() {
 
           {isLoadingLineas ? (
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={9} /></div>
+          ) : isMobile ? (
+            <ListaTarjetasMovil aLoAncho vacia={movilLineas.total === 0} mensajeVacio="No hay líneas de detalle." {...movilLineas}>
+              {movilLineas.visibles.map((l: any, i: number) => (
+                <ListaTarjetaMovil
+                  key={`${l.compra_id}-${l.linea_id}-${i}`}
+                  titulo={l.producto}
+                  linea2={<>{fmt(l.total_neto_linea)} · {l.proveedor}<span className="text-xs"> · {l.folio}</span></>}
+                  pildora={`${fmtNum(l.cantidad)} uds.`}
+                  tono="primario"
+                  onClick={() => navigate(`/almacen/compras/${l.compra_id}`)}
+                />
+              ))}
+            </ListaTarjetasMovil>
           ) : (
             <>
               <GroupedTableWrapper sinMarcoMovil groupBy={groupByD} groups={groupsD} renderTable={renderDetalleTable} />
@@ -854,6 +844,7 @@ export default function ComprasPage() {
           { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => setBulkDeleteOpen(true) },
         ]}
       />
+    </div>
     </div>
   );
 }
