@@ -57,7 +57,9 @@ export function useProductosRealtime() {
     const stockCh = supabase
       .channel(`data-stock_almacen-${empresaId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_almacen', filter }, () => {
-        invalidateCatalogo(['stock-almacen', 'stock-almacen-origen', 'productos', 'productos-page', 'inventario-dashboard']);
+        // productos.cantidad lo actualiza la BD (trg_recalc_stock_total_almacen) y ese cambio ya llega por
+        // el canal de `productos`: aquí no se vuelve a bajar el catálogo completo en cada venta.
+        invalidateCatalogo(['stock-almacen', 'stock-almacen-origen', 'inventario-dashboard']);
       })
       .subscribe();
 
