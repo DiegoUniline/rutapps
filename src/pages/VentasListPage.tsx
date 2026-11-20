@@ -6,6 +6,7 @@ import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { Plus, List, Package, FileSpreadsheet, FileText, Printer, Trash2, Ban, Lock, Loader2 } from 'lucide-react';
 import { cantidadNetaVenta } from '@/lib/ventaCantidad';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useCancelarPagoPrompt } from '@/components/venta/CancelarPagoDialog';
 import { cancelarVenta, type DestinoPagoCancelacion } from '@/lib/cancelarVenta';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -79,7 +80,9 @@ export default function VentasListPage() {
   const canDelete = hasPermiso('ventas', 'eliminar');
   const deleteVenta = useDeleteVenta();
   const qc = useQueryClient();
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearch] = useState('');
+  // Las consultas esperan 300 ms después de la última tecla (no una por letra).
+  const search = useDebounce(searchInput, 300);
   const [viewMode, setViewMode] = useState<'ventas' | 'productos'>('ventas');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -136,8 +139,8 @@ export default function VentasListPage() {
   // Conteo por pestaña (mismos filtros, sin la pestaña): una consulta de 1 renglón con count exacto.
   const elegidosEstado = filters.status ?? [];
   const esVentas = viewMode === 'ventas';
-  const useCuentaV = (t: TabEstado) => useVentasPaginated(search, statusFilterPorTab(t, elegidosEstado), tipoFilter, 1, 1, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, false, promocionFilter, clienteFilter, esVentas);
-  const useCuentaL = (t: TabEstado) => useVentaLineasPaginated(search, statusFilterPorTab(t, elegidosEstado), tipoFilter, 1, 1, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, false, clienteFilter, promocionFilter, !esVentas);
+  const useCuentaV = (t: TabEstado) => useVentasPaginated(search, statusFilterPorTab(t, elegidosEstado), tipoFilter, 1, 1, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, false, promocionFilter, clienteFilter, esVentas, true);
+  const useCuentaL = (t: TabEstado) => useVentaLineasPaginated(search, statusFilterPorTab(t, elegidosEstado), tipoFilter, 1, 1, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, false, clienteFilter, promocionFilter, !esVentas, true);
   const cvActivas = useCuentaV('activas'), cvCanceladas = useCuentaV('canceladas'), cvTodas = useCuentaV('todas');
   const clActivas = useCuentaL('activas'), clCanceladas = useCuentaL('canceladas'), clTodas = useCuentaL('todas');
   const conteoTab: Record<TabEstado, number | undefined> = esVentas
@@ -553,7 +556,7 @@ export default function VentasListPage() {
       <OdooFilterBar
 
         compact
-        search={search} onSearchChange={val => { setSearch(val); setPage(1); }}
+        search={searchInput} onSearchChange={val => { setSearch(val); setPage(1); }}
         placeholder={isProductView ? "Buscar producto, código o folio..." : "Buscar folio o cliente..."}
         filterOptions={FILTER_OPTIONS} activeFilters={filters}
         onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}

@@ -136,3 +136,4 @@
 2026-11-19 · desarrollador · D-032 + F1b: cobro_excedentes, retiro de caja en devoluciones, estado de cuenta con saldo a favor y devoluciones de dinero
 2026-11-20 · desarrollador · D-033 cancelar venta cancela devoluciones y gasto de reembolso; VTA-0001 corregida (gasto $325.50 cancelado)
 2026-11-20 · desarrollador · Dashboard/reportes: no cuentan compras, devoluciones ni entregas canceladas (gastos cancelados ya excluidos)
+2026-11-20 · desarrollador · Rendimiento: índices (devoluciones sin índices, FKs de cliente/vendedor/repartidor, trigramas para búsqueda), buscador de Ventas con retardo 300 ms, conteo de pestañas con HEAD
