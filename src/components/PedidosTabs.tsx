@@ -2,6 +2,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, List, Search, SlidersHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { Loader2 } from 'lucide-react';
 import '@/styles/pedidos-workspace.css';
 import '@/styles/pedidos-workspace-compact.css';
 
@@ -27,11 +29,20 @@ const normalizeSearchText = (value: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
-export function PedidosTabs() {
+interface PedidosTabsProps {
+  /** Rango de fechas de la página: se dibuja dentro de la barra, a la izquierda del buscador. */
+  fechas?: { desde: string; hasta: string; onChange: (desde: string, hasta: string) => void; headerContent?: React.ReactNode };
+  /** Búsqueda real de la página (en el servidor). Sin ella, la barra filtra lo ya cargado. */
+  busqueda?: { value: string; onChange: (v: string) => void; pendiente?: boolean; placeholder?: string };
+}
+
+export function PedidosTabs({ fechas, busqueda }: PedidosTabsProps = {}) {
   const { pathname } = useLocation();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mode, setMode] = useState<WorkspaceMode>('list');
-  const [universalSearch, setUniversalSearch] = useState('');
+  const [universalSearchLocal, setUniversalSearchLocal] = useState('');
+  const universalSearch = busqueda ? '' : universalSearchLocal;
+  const setUniversalSearch = setUniversalSearchLocal;
 
   const page = useMemo<WorkspacePage>(() => {
     if (pathname.startsWith('/logistica/entregas')) return 'entregas';
@@ -168,21 +179,28 @@ export function PedidosTabs() {
         </div>
 
         <div className="pedidos-toolbar-shell" aria-label="Herramientas de pedidos">
-          <div className="pedidos-date-reserved" aria-hidden="true" />
+          {fechas ? (
+            <div className="pedidos-date-reserved flex items-stretch min-w-0">
+              <DateRangePicker segmento from={fechas.desde} to={fechas.hasta} onChange={fechas.onChange} headerContent={fechas.headerContent} className="w-full" />
+            </div>
+          ) : (
+            <div className="pedidos-date-reserved" aria-hidden="true" />
+          )}
           <div className="pedidos-universal-search">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Input
-              value={universalSearch}
-              onChange={(event) => setUniversalSearch(event.target.value)}
-              placeholder="Buscar por folio, cliente, vendedor, producto..."
+              value={busqueda ? busqueda.value : universalSearch}
+              onChange={(event) => (busqueda ? busqueda.onChange(event.target.value) : setUniversalSearch(event.target.value))}
+              placeholder={busqueda?.placeholder ?? 'Buscar por folio, cliente, vendedor, producto...'}
               className="h-full border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-              aria-label="Buscar en todos los datos visibles"
+              aria-label="Buscar"
             />
-            {universalSearch && (
+            {busqueda?.pendiente && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-label="Buscando" />}
+            {(busqueda ? busqueda.value : universalSearch) && (
               <button
                 type="button"
                 className="pedidos-search-clear"
-                onClick={() => setUniversalSearch('')}
+                onClick={() => (busqueda ? busqueda.onChange('') : setUniversalSearch(''))}
                 aria-label="Limpiar búsqueda"
               >
                 ×

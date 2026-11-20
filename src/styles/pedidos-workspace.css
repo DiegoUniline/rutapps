@@ -112,22 +112,10 @@ body[data-pedidos-page="pendientes"][data-pedidos-mode="stats"] [data-pedidos-ta
   gap: .625rem !important;
 }
 
-/* Cerrado: fecha + búsqueda siempre visibles. El resto vive en la ventana Filtros. */
+/* Cerrado: la fecha y la búsqueda viven en la barra superior (PedidosTabs); el resto
+   («Filtrar por», vendedor) solo aparece en la ventana Filtros. */
 body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border {
-  padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
-  gap: .5rem !important;
-  align-items: end !important;
-}
-
-body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(3) {
   display: none !important;
-}
-
-body[data-pedidos-page="pendientes"][data-pedidos-filters="closed"] [data-pedidos-tabs] ~ .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(4) {
-  max-width: 520px;
-  min-width: min(100%, 260px);
 }
 
 /* Abierto: el bloque existente se convierte en popover modal tipo ERP/Odoo. */

@@ -1,8 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Package, AlertTriangle, ShoppingCart, Calendar as CalendarIcon, CheckCircle2, Loader2, FileDown, FileSpreadsheet } from 'lucide-react';
+import { Package, AlertTriangle, ShoppingCart, Calendar as CheckCircle2, Loader2, FileDown, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,7 +12,6 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils
 import PedidosTabs from '@/components/PedidosTabs';
 import ConcentradoReportDialog from '@/components/logistica/ConcentradoReportDialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { EntityMultiSelect } from '@/components/reportes/EntityMultiSelect';
@@ -344,7 +342,7 @@ export default function ConcentradoSurtidoPage() {
 
   return (
     <div className="p-4 min-h-full space-y-4">
-      <PedidosTabs />
+      <PedidosTabs fechas={{ desde, hasta, onChange: (f, t) => { setDesde(f); setHasta(t); } }} />
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
@@ -389,10 +387,6 @@ export default function ConcentradoSurtidoPage() {
               Fecha entrega
             </button>
           </div>
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> Rango de fechas</Label>
-          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         </div>
         <div className="flex gap-1">
           <Button size="sm" variant="outline" onClick={() => { const t = todayLocal(); setDesde(t); setHasta(t); }}>Hoy</Button>

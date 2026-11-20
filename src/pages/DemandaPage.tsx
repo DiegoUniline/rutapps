@@ -1,13 +1,11 @@
-import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import React, { useState, useMemo, Fragment, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink, Zap, AlertTriangle, UserPlus, XCircle, Lock, Loader2 } from 'lucide-react';
+import { Truck, Check, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink, Zap, AlertTriangle, UserPlus, XCircle, Lock, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -739,7 +737,10 @@ export default function DemandaPage() {
 
   return (
     <ListPage scroll>
-      <PedidosTabs />
+      <PedidosTabs
+        fechas={{ desde, hasta, onChange: (f, t) => { setDesde(f); setHasta(t); } }}
+        busqueda={{ value: search, onChange: (v) => { setSearch(v); setPage(0); }, pendiente: isSearchPending, placeholder: 'Buscar por folio, cliente, vendedor o producto…' }}
+      />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <ClipboardList className="h-5 w-5" /> Pedidos pendientes
@@ -859,10 +860,6 @@ export default function DemandaPage() {
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-[11px] text-muted-foreground">Rango de fechas</Label>
-          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
-        </div>
-        <div className="flex flex-col gap-1">
           <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
           <Popover open={vendedoresOpen} onOpenChange={setVendedoresOpen}>
             <PopoverTrigger asChild>
@@ -902,16 +899,6 @@ export default function DemandaPage() {
               </div>
             </PopoverContent>
           </Popover>
-        </div>
-        <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
-          <Label className="text-[11px] text-muted-foreground">Buscar</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Folio, cliente, vendedor o producto..." className="pl-9 pr-9 h-9" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} />
-            {isSearchPending && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" aria-label="Buscando" />
-            )}
-          </div>
         </div>
         {(vendedorFilter.length > 0 || search || desde || hasta || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
           <Button variant="ghost" size="sm" className="h-9" onClick={() => {

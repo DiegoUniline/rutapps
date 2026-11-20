@@ -239,14 +239,7 @@ body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [dat
   display: none !important;
 }
 
-body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2) {
-  display: block !important;
-  position: absolute !important;
-  z-index: 24;
-  top: -50px;
-  left: 0;
-  width: var(--pedidos-date-width);
-}
+
 
 body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > .ml-auto {
   display: flex !important;
@@ -291,13 +284,7 @@ body[data-pedidos-page="concentrado"][data-pedidos-filters="closed"] :has(> [dat
 }
 
 /* Dentro del popup no repetimos ni la fecha ni el buscador universal. */
-body[data-pedidos-page="pendientes"][data-pedidos-filters="open"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(2),
-body[data-pedidos-page="pendientes"][data-pedidos-filters="open"] [data-listpage-sheet] > .flex.flex-wrap.gap-2.items-end.bg-card.border > div:nth-of-type(4),
-body[data-pedidos-page="entregas"][data-pedidos-filters="open"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(1),
-body[data-pedidos-page="entregas"][data-pedidos-filters="open"] [data-listpage-sheet] > .flex.flex-wrap.items-end.gap-3 > div:nth-of-type(4),
-body[data-pedidos-page="concentrado"][data-pedidos-filters="open"] :has(> [data-pedidos-tabs]) > .bg-card.border.border-border.rounded-lg.p-3.flex.flex-wrap.items-end.gap-3 > div:nth-of-type(2) {
-  display: none !important;
-}
+/* (Concentrado: la fecha ya vive en la barra superior.) */
 
 /* En operación las cards quedan fuera; Estadísticas conserva los KPIs existentes. */
 body[data-pedidos-page="pendientes"][data-pedidos-mode="list"] [data-listpage-sheet] > .grid.grid-cols-3.gap-3,
