@@ -25,6 +25,7 @@ import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver
 import { todayLocal } from '@/lib/utils';
 import { confirmDialog } from '@/lib/confirm';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { puedeReemplazarFormulario } from '@/lib/formSync';
 
 const defaultCliente: Partial<Cliente> = {
   codigo: '', nombre: '', contacto: '', telefono: '', lada: '', email: '', direccion: '',
@@ -323,8 +324,11 @@ export default function ClienteFormPage() {
     }
   }, [isNew, empresa]);
 
+  // Un refresco del registro (guardar algo relacionado aquí o en otra pantalla) se refleja,
+  // pero nunca pisa cambios sin guardar del usuario.
   useEffect(() => {
-    if (existing) { setForm(existing); setOriginalForm(existing); }
+    if (existing && puedeReemplazarFormulario(form, originalForm, existing)) { setForm(existing); setOriginalForm(existing); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al llegar una versión nueva del registro
   }, [existing]);
 
   useEffect(() => {

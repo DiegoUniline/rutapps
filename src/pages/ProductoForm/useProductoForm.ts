@@ -8,6 +8,7 @@ import { compressPhoto } from '@/lib/imageCompressor';
 import { toast } from 'sonner';
 import type { Producto } from '@/types';
 import { confirmDialog } from '@/lib/confirm';
+import { puedeReemplazarFormulario } from '@/lib/formSync';
 
 async function quickCreateCatalog(
   tableName: string, nombre: string, queryKey: string,
@@ -129,7 +130,12 @@ export function useProductoForm() {
     });
   }, [isNew, almacenes, unidades, listas]);
 
-  useEffect(() => { if (existing) { setForm(existing); setOriginalForm(existing); } }, [existing]);
+  // Un refresco del registro (guardar algo relacionado aquí o en otra pantalla) se refleja,
+  // pero nunca pisa cambios sin guardar del usuario.
+  useEffect(() => {
+    if (existing && puedeReemplazarFormulario(form, originalForm, existing)) { setForm(existing); setOriginalForm(existing); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al llegar una versión nueva del registro
+  }, [existing]);
 
   const set = (key: keyof Producto, value: any) => setForm(prev => ({ ...prev, [key]: value }));
   const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(originalForm);

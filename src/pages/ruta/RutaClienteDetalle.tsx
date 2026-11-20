@@ -67,7 +67,8 @@ export default function RutaClienteDetalle() {
   const fotoInputRef = useRef<HTMLInputElement>(null);
   const fachadaInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { if (cliente) setForm(cliente as any); }, [cliente]);
+  // Muestra la versión más reciente del cliente, pero no pisa lo que se está editando.
+  useEffect(() => { if (cliente && !editMode) setForm(cliente as any); }, [cliente, editMode]);
 
   const set = (k: keyof Cliente, v: any) => setForm(prev => ({ ...prev, [k]: v }));
 

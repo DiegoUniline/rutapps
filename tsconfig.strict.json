@@ -18,6 +18,9 @@
     "src/lib/saldoFavor.ts",
     "src/lib/syncErrorClassify.ts",
     "src/lib/ventaLoadGuard.ts",
+    "src/lib/refresco/refrescoTrasEscritura.ts",
+    "src/lib/refresco/lectores.generated.ts",
+    "src/lib/formSync.ts",
     "src/pages/CompraForm/types.ts"
   ]
 }

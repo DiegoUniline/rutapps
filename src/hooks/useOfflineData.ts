@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { getOfflineTable, offlineDb } from '@/lib/offlineDb';
 import { supabase } from '@/lib/supabase';
 import { queueOperation } from '@/lib/syncQueue';
+import { EVENTO_DATOS_LOCALES, type DetalleDatosLocales } from '@/lib/refresco/eventos';
 import { getSyncConfig } from '@/lib/dataSaver';
 import { hasRealConnection } from '@/lib/connectivity';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -303,6 +304,17 @@ export function useOfflineQuery<T = any>(
     window.addEventListener('uniline:sync-complete', handler);
     return () => window.removeEventListener('uniline:sync-complete', handler);
   }, [loadData]);
+
+  // Escritura local en esta tabla (venta, cobro… guardados en el teléfono): se re-lee
+  // IndexedDB para que la pantalla lo muestre al momento, aun sin conexión.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tablas = (e as CustomEvent<DetalleDatosLocales>).detail?.tablas;
+      if (!tablas || tablas.includes(table)) loadData({ localOnly: true });
+    };
+    window.addEventListener(EVENTO_DATOS_LOCALES, handler);
+    return () => window.removeEventListener(EVENTO_DATOS_LOCALES, handler);
+  }, [loadData, table]);
 
   // refetch() explícito siempre fuerza descarga del servidor (ignora el throttle).
   const refetch = useCallback(() => loadData({ force: true }), [loadData]);

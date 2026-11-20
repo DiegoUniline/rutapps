@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/lib/confirm';
+import { puedeReemplazarFormulario } from '@/lib/formSync';
 
 interface Proveedor {
   id?: string;
@@ -80,12 +81,15 @@ export default function ProveedorFormPage() {
   const [form, setForm] = useState<Proveedor>(defaultProv);
   const [original, setOriginal] = useState<Proveedor>(defaultProv);
 
+  // Un refresco del registro (guardar algo relacionado aquí o en otra pantalla) se refleja,
+  // pero nunca pisa cambios sin guardar del usuario.
   useEffect(() => {
-    if (existing) {
+    if (existing && puedeReemplazarFormulario(form, original, existing)) {
       const mapped = { ...defaultProv, ...existing };
       setForm(mapped);
       setOriginal(mapped);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al llegar una versión nueva del registro
   }, [existing]);
 
   const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(original);

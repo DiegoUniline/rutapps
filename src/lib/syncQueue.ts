@@ -6,6 +6,7 @@ import { backupSyncQueueToStorage, clearStorageBackup } from './offlineBackup';
 import { hasRealConnection } from './connectivity';
 import { classifySyncError } from './syncErrorClassify';
 import { mergeLocalRow } from './localRowMerge';
+import { EVENTO_DATOS_LOCALES } from './refresco/eventos';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -100,6 +101,12 @@ export async function queueOperations(operations: QueuedOperation[]) {
       }
     }
   });
+
+  // Las pantallas que leen estas tablas de IndexedDB (useOfflineQuery) re-leen la copia local
+  // al instante: lo recién guardado se ve sin esperar a sincronizar (útil sin señal).
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(EVENTO_DATOS_LOCALES, { detail: { tablas: [...new Set(operations.map(o => o.table))] } }));
+  }
 
   // Try to sync immediately if online AND auto-sync is enabled AND data saver is off
   const autoSync = localStorage.getItem('uniline_auto_sync');
