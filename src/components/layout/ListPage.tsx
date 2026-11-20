@@ -68,12 +68,15 @@ function ListPageRoot({ children, className, flush, scroll }: ListPageProps) {
   }
   return (
     <ListPageContext.Provider value={true}>
-      <div data-listpage="" className="flex flex-col h-full min-h-0 p-2 md:p-4 md:pb-3">
+      {/* El recorte (overflow-hidden) va en este contenedor SIN esquinas redondeadas: si la hoja
+          redondeada recorta a la tabla que hace scroll, Chrome deja de desplazarla en la GPU y
+          los renglones se dibujan a saltos. */}
+      <div data-listpage="" className={cn('flex flex-col h-full min-h-0 p-2 md:p-4 md:pb-3', scroll ? 'overflow-y-auto' : 'overflow-hidden')}>
         <div
           data-listpage-sheet=""
           className={cn(
             'flex flex-col flex-1 min-h-0 gap-3 [&>*]:shrink-0 bg-card text-card-foreground border border-border rounded-xl shadow-sm py-3',
-            scroll ? 'overflow-y-auto' : 'overflow-hidden',
+            scroll && 'flex-none',
             className,
           )}
         >
@@ -127,7 +130,7 @@ function Body({ children, className, card = true, stickyHead = true }: BodyProps
       className={cn(
         'flex-1 min-h-0 overflow-auto',
         // Dentro de la hoja: la tabla va a todo lo ancho, separada por una línea (sin otro cuadro).
-        card ? 'border-t border-border -mb-3' : 'px-3 md:px-4',
+        card ? 'border-t border-border' : 'px-3 md:px-4',
         stickyHead && '[&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead]:bg-card',
         className,
       )}
