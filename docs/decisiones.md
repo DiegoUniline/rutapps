@@ -299,7 +299,7 @@
 - **Liquidación aprobada:** al aprobar se congela el efectivo esperado con su desglose; **reabrir solo con permiso**, registrando quién y por qué; el inventario se reajusta por diferencia.
 - **«Al almacén» en ruta:** se **quita**; el sobrante regresa con la descarga de la liquidación.
 - **«Descuento en venta» al devolver:** se **quita**; la devolución genera nota de crédito aplicada a la venta en ese momento (queda en estado de cuenta, como escritorio).
-- **💡 PROPUESTO (pendiente de confirmar):** como la devolución no depende de la venta de origen, cancelar la venta del día donde se registró no cancela la devolución (es un documento propio que se cancela por separado, D-026).
+- **Cancelar la venta del día** donde se registró una devolución **no** la cancela: la devolución es un documento propio (producto donde se eligió, nota de crédito vigente) y se cancela por separado (D-026). Confirmado por el dueño 2026-11-20; modifica D-033 solo para devoluciones.
 
 ## D-050
 - **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO (orden de trabajo «F0 devoluciones y liquidación», aprobada vía coordinador; respeta D-049)
