@@ -2381,10 +2381,10 @@ export default function DescargasPage() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-lg sm:text-xl font-semibold text-foreground flex items-center gap-2">
             <PackageCheck className="h-5 w-5" /> Liquidar Ruta
             <HelpButton title={HELP.descargas.title} sections={HELP.descargas.sections} />
           </h1>
@@ -2403,7 +2403,7 @@ export default function DescargasPage() {
             />
           </div>
 
-          <div className="min-w-[200px] max-w-[260px]">
+          <div className="w-full sm:w-auto sm:min-w-[200px] sm:max-w-[260px]">
             <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Vendedor</label>
             <SearchableSelect
               options={[{ value: 'all', label: 'Todos' }, ...(vendedores || []).map((v: any) => ({ value: v.id, label: v.nombre }))]}
@@ -2415,7 +2415,7 @@ export default function DescargasPage() {
 
           <div>
             <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Tipo</label>
-            <div className="flex gap-1">
+            <div className="flex flex-wrap gap-1">
               {['all', 'carga', 'periodo', 'efectivo'].map(t => (
                 <button
                   key={t}
@@ -2433,7 +2433,7 @@ export default function DescargasPage() {
 
           <div>
             <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Status</label>
-            <div className="flex gap-1">
+            <div className="flex flex-wrap gap-1">
               {['all', 'pendiente', 'aprobada', 'rechazada'].map(s => (
                 <button
                   key={s}
@@ -2451,7 +2451,7 @@ export default function DescargasPage() {
 
           <div>
             <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Diferencia</label>
-            <div className="flex gap-1">
+            <div className="flex flex-wrap gap-1">
               {['all', 'con', 'sin'].map(d => (
                 <button
                   key={d}
@@ -2495,7 +2495,8 @@ export default function DescargasPage() {
         </div>
       ) : (
         <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-[13px]">
+          <div className="overflow-x-auto">
+          <table className="w-full text-[13px] min-w-[760px]">
             <thead>
               <tr className="bg-card text-[11px] text-muted-foreground uppercase border-b border-border">
                 <th className="text-left py-2.5 px-4">Fecha / Periodo</th>
@@ -2538,7 +2539,7 @@ export default function DescargasPage() {
                       </span>
                     </td>
                     <td className="py-2.5 px-4 text-center">
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedId(d.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedId(d.id)} aria-label="Ver liquidación">
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
                     </td>
@@ -2563,6 +2564,7 @@ export default function DescargasPage() {
               </tr>
             </tfoot>
           </table>
+          </div>
           <TablePagination
             from={pag.from}
             to={pag.to}
