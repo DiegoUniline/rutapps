@@ -233,3 +233,8 @@
 - **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Excepción Excel/PDF»)
 - **Decisión:** única excepción a «solo colores RutApp» (D-029): los botones de **Excel** van en **verde suave** y los de **PDF** en **rojo suave**, en todo el sistema, para reconocerlos de un vistazo. Todo lo demás sigue con colores RutApp.
 - **Implementación:** clases `btn-excel` / `btn-pdf` en `src/index.css` (con modo oscuro); se aplican con `className` a cada botón de exportar. Los nuevos botones de Excel/PDF deben usarlas.
+
+## D-040
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO (no quitó ninguna opción)
+- **Decisión (modales en web):** 3 anchos estándar — **chico 560 px** (confirmar, asignar, motivos), **mediano 760 px** (formularios, reportes), **grande 1100 px** (tablas, detalles); **encabezado y pie fijos** al hacer scroll (con línea), el botón cerrar viaja con el encabezado; **listas internas más altas** (usan el alto de pantalla, no una caja de 4 renglones); mismo estilo (fondo, esquinas, botones D-029).
+- **Implementación:** central en `src/components/ui/dialog.tsx` (traduce los `max-w-*` existentes a la talla estándar; respeta anchos especiales) y `src/index.css` (sección D-040, con `:where()` para no romper modales con acomodo propio).

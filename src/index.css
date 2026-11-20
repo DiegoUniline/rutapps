@@ -682,3 +682,31 @@ table[data-no-odoo] tbody td {
   border-color: hsl(0 35% 30%) !important;
 }
 .dark .btn-pdf:hover:not(:disabled) { background-color: hsl(0 40% 20%) !important; }
+
+/* D-040: modales homologados. Encabezado y pie fijos al hacer scroll; :where() deja la prioridad en 0
+   para que los modales con acomodo propio (p-0, paddings propios) conserven el suyo. */
+:where([data-dialog-content]) { --dlg-pad: 1rem; }
+@media (min-width: 640px) { :where([data-dialog-content]) { --dlg-pad: 1.5rem; } }
+:where([data-dialog-content].p-0) { --dlg-pad: 0px; }
+:where([data-dialog-content]) > :where([data-dialog-header]) {
+  position: sticky;
+  top: calc(-1 * var(--dlg-pad));
+  z-index: 10;
+  background: hsl(var(--background));
+  margin: calc(-1 * var(--dlg-pad)) calc(-1 * var(--dlg-pad)) 0;
+  padding: var(--dlg-pad) 3.5rem .875rem var(--dlg-pad);
+  border-bottom: 1px solid hsl(var(--border));
+}
+:where([data-dialog-content]) > :where([data-dialog-footer]) {
+  position: sticky;
+  bottom: calc(-1 * var(--dlg-pad));
+  z-index: 10;
+  background: hsl(var(--background));
+  margin: 0 calc(-1 * var(--dlg-pad)) calc(-1 * var(--dlg-pad));
+  padding: .875rem var(--dlg-pad) var(--dlg-pad);
+  border-top: 1px solid hsl(var(--border));
+}
+/* El cerrar viaja con el encabezado fijo solo cuando el encabezado es hijo directo del modal. */
+[data-dialog-header-close] { display: none; }
+:where([data-dialog-content]) > :where([data-dialog-header]) > [data-dialog-header-close] { display: inline-flex; }
+:where([data-dialog-content]:has(> [data-dialog-header])) > [data-dialog-close-default] { display: none; }

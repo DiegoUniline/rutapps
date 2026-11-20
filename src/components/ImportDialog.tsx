@@ -280,7 +280,7 @@ export function ImportDialog({ open, onOpenChange, type }: ImportDialogProps) {
             </div>
 
             {result.errors.length > 0 && (
-              <div className="bg-destructive/10 rounded-lg p-3 max-h-40 overflow-y-auto">
+              <div className="bg-destructive/10 rounded-lg p-3 max-h-[40vh] overflow-y-auto">
                 <p className="text-xs font-medium text-destructive mb-2">
                   {result.errors.length} errores:
                 </p>
@@ -293,7 +293,7 @@ export function ImportDialog({ open, onOpenChange, type }: ImportDialogProps) {
             )}
 
             {result.warnings && result.warnings.length > 0 && (
-              <div className="bg-warning/10 rounded-lg p-3 max-h-40 overflow-y-auto">
+              <div className="bg-warning/10 rounded-lg p-3 max-h-[40vh] overflow-y-auto">
                 <p className="text-xs font-medium text-warning mb-1">Avisos:</p>
                 {result.warnings.map((w, i) => (
                   <p key={i} className="text-xs text-warning/90">{w}</p>
