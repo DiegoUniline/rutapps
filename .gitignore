@@ -29,3 +29,6 @@ dist-ssr
 # Migración fuera de Lovable (scripts/migracion)
 copiar-storage.manifest.json
 copiar-storage.errores.txt
+
+# Copias de trabajo de agentes (no se versionan)
+.claude/worktrees/
