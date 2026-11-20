@@ -77,6 +77,7 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
         .from('lista_precios')
         .select('id, nombre, es_principal, tarifa_id')
         .eq('empresa_id', empresa!.id)
+        .eq('activa', true) // D-044: listas inactivas no se ofrecen
         .order('es_principal', { ascending: false });
       return (data ?? []) as { id: string; nombre: string; es_principal: boolean; tarifa_id: string }[];
     },

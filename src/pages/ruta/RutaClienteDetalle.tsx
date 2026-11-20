@@ -384,7 +384,7 @@ export default function RutaClienteDetalle() {
                   setForm(prev => ({ ...prev, lista_precio_id: v || null, tarifa_id: lista?.tarifa_id || null } as any));
                 }}>
                   <option value="">— Seleccionar —</option>
-                  {listas?.filter(l => l.activa).map(l => <option key={l.id} value={l.id}>{l.nombre}{l.es_principal ? ' ★' : ''}</option>)}
+                  {listas?.filter(l => l.activa || l.id === (form as any).lista_precio_id).map(l => <option key={l.id} value={l.id}>{l.nombre}{l.es_principal ? ' ★' : ''}{l.activa ? '' : ' (inactiva)'}</option>)}
                 </select>
               </div>
               <div>

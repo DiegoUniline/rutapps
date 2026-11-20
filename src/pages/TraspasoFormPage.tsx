@@ -29,6 +29,7 @@ import { Wand2 } from 'lucide-react';
 import { useSugerenciasResurtido } from '@/hooks/useProductoAlmacenConfig';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { BuscadorProductoMovil, RenglonCompactoMovil, type AgregarProductoDatos } from '@/components/productos/BuscadorProductoMovil';
+import { opcionesConAsignado } from '@/lib/registrosInactivos';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -143,10 +144,11 @@ export default function TraspasoFormPage() {
 
   // Fetch almacenes & vendedores
   const { data: almacenes } = useQuery({
-    queryKey: ['almacenes', empresa?.id],
+    // Solo activos (D-044); el almacén ya guardado en el traspaso se agrega abajo marcado «(inactivo)».
+    queryKey: ['almacenes', empresa?.id, 'traspaso-activos'],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
       return data ?? [];
     },
   });
@@ -305,8 +307,12 @@ export default function TraspasoFormPage() {
     return map;
   }, [allProductos, stockVendedorAlmacen, stockAlmacenOrigen, tipo, almacenOrigenId]);
 
-  const almacenOpts = (almacenes ?? []).map(a => ({ value: a.id, label: a.nombre }));
-  const vendedorOpts = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
+  const almacenOpts = opcionesConAsignado(
+    opcionesConAsignado((almacenes ?? []).map(a => ({ value: a.id, label: a.nombre })), existing?.almacen_origen_id, (existing as any)?.almacen_origen?.nombre),
+    existing?.almacen_destino_id, (existing as any)?.almacen_destino?.nombre);
+  const vendedorOpts = opcionesConAsignado(
+    opcionesConAsignado((vendedores ?? []).map(v => ({ value: v.id, label: v.nombre })), existing?.vendedor_origen_id, (existing as any)?.vendedor_origen?.nombre, '(baja)'),
+    existing?.vendedor_destino_id, (existing as any)?.vendedor_destino?.nombre, '(baja)');
 
   // Load existing data
   useEffect(() => {

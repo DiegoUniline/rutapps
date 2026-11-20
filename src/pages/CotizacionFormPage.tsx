@@ -32,6 +32,7 @@ import { VentaLineasTab } from './VentaForm/VentaLineasTab';
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildSalePricingSnapshot, calculateSaleLineAmounts } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
+import { opcionesConAsignado } from '@/lib/registrosInactivos';
 
 type Linea = Partial<VentaLinea> & { unidad_label?: string; impuestos_label?: string; lista_precio_id?: string | null; precio_manual?: boolean; display_unit_price?: number };
 
@@ -56,7 +57,8 @@ export default function CotizacionFormPage() {
   const qc = useQueryClient();
   const { empresa, user, profile } = useAuth();
   const { data: existing, isLoading, isFetching, isError, error } = useCotizacion(isNew ? undefined : id);
-  const { data: clientes } = useClientes();
+  // Solo clientes activos para elegir (D-044); el ya guardado en la cotización se conserva marcado.
+  const { data: clientes } = useClientes('', 'activo');
   const { data: productosList } = useProductosForSelect();
   const { data: tarifasList } = useTarifasForSelect();
   const { data: almacenes } = useAlmacenes();
@@ -468,9 +470,10 @@ export default function CotizacionFormPage() {
   if (!isNew && isError) return <div className="p-6 text-destructive">Error al cargar la cotización: {(error as any)?.message || 'desconocido'}</div>;
   if (!isNew && !existing && (isLoading || isFetching)) return <div className="p-6 text-muted-foreground">Cargando…</div>;
 
-  const clienteOptions = (clientes ?? []).map((c: any) => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}`, searchText: clienteTextoBusqueda(c) }));
-  const tarifaOptions = (tarifasList ?? []).map((t: any) => ({ value: t.id, label: t.nombre }));
-  const almacenOptions = (almacenes ?? []).map((a: any) => ({ value: a.id, label: a.nombre }));
+  const clienteOptions = opcionesConAsignado((clientes ?? []).map((c: any) => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}`, searchText: clienteTextoBusqueda(c) })),
+    form.cliente_id, (existing as any)?.cliente_id === form.cliente_id ? (existing as any)?.clientes?.nombre : null);
+  const tarifaOptions = opcionesConAsignado((tarifasList ?? []).map((t: any) => ({ value: t.id, label: t.nombre })), (existing as any)?.tarifa_id, 'Tarifa');
+  const almacenOptions = opcionesConAsignado((almacenes ?? []).map((a: any) => ({ value: a.id, label: a.nombre })), (existing as any)?.almacen_id, 'Almacén');
 
   return (
     <div className="p-2 md:p-4 max-w-[1200px]">

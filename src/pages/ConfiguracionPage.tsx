@@ -432,7 +432,7 @@ export default function ConfiguracionPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('almacenes')
-        .select('id, nombre')
+        .select('id, nombre, activo')
         .eq('empresa_id', empresaId!)
         .order('nombre');
       if (error) throw error;
@@ -1021,7 +1021,8 @@ export default function ConfiguracionPage() {
                   <p className="text-[12px] text-muted-foreground italic">No tienes almacenes registrados.</p>
                 ) : (
                   <div className="space-y-1.5 max-h-64 overflow-auto">
-                    {(almacenesEmpresa ?? []).map((a: any) => {
+                    {/* D-044: inactivos solo si ya estaban marcados (para poder desmarcarlos). */}
+                    {(almacenesEmpresa ?? []).filter((a: any) => a.activo !== false || apartadoAlmacenesIds.includes(a.id)).map((a: any) => {
                       const checked = apartadoAlmacenesIds.includes(a.id);
                       return (
                         <label key={a.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent/50 cursor-pointer">

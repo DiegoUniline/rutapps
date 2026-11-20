@@ -63,10 +63,11 @@ export default function PedidoPendienteDetailPage() {
 
   // Almacenes + vendedores for create dialog
   const { data: almacenesList } = useQuery({
-    queryKey: ['almacenes', empresa?.id],
+    // Para crear la entrega: solo almacenes activos (D-044).
+    queryKey: ['almacenes', empresa?.id, 'activos-entrega'],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
       return data ?? [];
     },
   });

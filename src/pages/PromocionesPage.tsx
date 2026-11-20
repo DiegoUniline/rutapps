@@ -82,10 +82,11 @@ export default function PromocionesPage() {
     queryKey: ['promo-productos', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      return await fetchAllPages<{ id: string; nombre: string; codigo: string | null }>(
-        (from, to) => (supabase.from('productos').select('id, nombre, codigo') as any)
+      const rows = await fetchAllPages<{ id: string; nombre: string; codigo: string | null; status: string }>(
+        (from, to) => (supabase.from('productos').select('id, nombre, codigo, status') as any)
           .eq('empresa_id', empresa!.id).order('nombre').range(from, to),
       );
+      return rows.map(r => ({ ...r, activo: r.status === 'activo' }));
     },
   });
 
@@ -93,8 +94,8 @@ export default function PromocionesPage() {
     queryKey: ['promo-clasificaciones', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from('clasificaciones').select('id, nombre') as any).eq('empresa_id', empresa!.id).order('nombre');
-      return (data ?? []) as { id: string; nombre: string }[];
+      const { data } = await (supabase.from('clasificaciones').select('id, nombre, activo') as any).eq('empresa_id', empresa!.id).order('nombre');
+      return ((data ?? []) as { id: string; nombre: string; activo: boolean | null }[]).map(r => ({ ...r, activo: r.activo !== false }));
     },
   });
 
@@ -102,10 +103,11 @@ export default function PromocionesPage() {
     queryKey: ['promo-clientes', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      return await fetchAllPages<{ id: string; nombre: string; codigo: string | null }>(
-        (from, to) => (supabase.from('clientes').select('id, nombre, codigo') as any)
+      const rows = await fetchAllPages<{ id: string; nombre: string; codigo: string | null; status: string }>(
+        (from, to) => (supabase.from('clientes').select('id, nombre, codigo, status') as any)
           .eq('empresa_id', empresa!.id).order('nombre').range(from, to),
       );
+      return rows.map(r => ({ ...r, activo: r.status === 'activo' }));
     },
   });
 
@@ -113,8 +115,8 @@ export default function PromocionesPage() {
     queryKey: ['promo-zonas', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from('zonas').select('id, nombre') as any).eq('empresa_id', empresa!.id).order('nombre');
-      return (data ?? []) as { id: string; nombre: string }[];
+      const { data } = await (supabase.from('zonas').select('id, nombre, activo') as any).eq('empresa_id', empresa!.id).order('nombre');
+      return ((data ?? []) as { id: string; nombre: string; activo: boolean | null }[]).map(r => ({ ...r, activo: r.activo !== false }));
     },
   });
 
@@ -172,10 +174,15 @@ export default function PromocionesPage() {
   };
 
   // Name lookup maps
-  const productoMap = useMemo(() => new Map((productos ?? []).map(p => [p.id, `${p.codigo ? p.codigo + ' — ' : ''}${p.nombre}`])), [productos]);
-  const clasificacionMap = useMemo(() => new Map((clasificaciones ?? []).map(c => [c.id, c.nombre])), [clasificaciones]);
-  const clienteMap = useMemo(() => new Map((clientes ?? []).map(c => [c.id, `${c.codigo ? c.codigo + ' — ' : ''}${c.nombre}`])), [clientes]);
-  const zonaMap = useMemo(() => new Map((zonas ?? []).map(z => [z.id, z.nombre])), [zonas]);
+  // Los mapas muestran todo (promos ya guardadas); lo inactivo va marcado.
+  const inact = (r: { activo: boolean }) => (r.activo ? '' : ' (inactivo)');
+  const productoMap = useMemo(() => new Map((productos ?? []).map(p => [p.id, `${p.codigo ? p.codigo + ' — ' : ''}${p.nombre}${inact(p)}`])), [productos]);
+  const clasificacionMap = useMemo(() => new Map((clasificaciones ?? []).map(c => [c.id, `${c.nombre}${inact(c)}`])), [clasificaciones]);
+  const clienteMap = useMemo(() => new Map((clientes ?? []).map(c => [c.id, `${c.codigo ? c.codigo + ' — ' : ''}${c.nombre}${inact(c)}`])), [clientes]);
+  const zonaMap = useMemo(() => new Map((zonas ?? []).map(z => [z.id, `${z.nombre}${inact(z)}`])), [zonas]);
+  // D-044: para elegir solo se ofrecen activos, más los que la promo ya tenía (marcados «(inactivo)»).
+  const elegibles = <T extends { id: string; activo: boolean }>(rows: T[] | undefined, sel?: (string | null | undefined)[] | null) =>
+    (rows ?? []).filter(r => r.activo || (sel ?? []).includes(r.id));
   const listaMap = useMemo(() => new Map((listasPrecios ?? []).map(l => [l.id, l.nombre])), [listasPrecios]);
   const movil = useCargarMasMovil(filtered, search);
 
@@ -357,7 +364,7 @@ export default function PromocionesPage() {
                     <SelectContent>
                       <SelectItem value="_todas">Todas las listas</SelectItem>
                       {editing.alcance_lista === 'especifica' && !editing.lista_precio_id && <SelectItem value="_elegir">Selecciona una lista…</SelectItem>}
-                      {(listasPrecios ?? []).map(l => (
+                      {(listasPrecios ?? []).filter(l => l.activa || l.id === editing.lista_precio_id).map(l => (
                         <SelectItem key={l.id} value={l.id}>{l.nombre}{l.activa ? '' : ' (inactiva)'}</SelectItem>
                       ))}
                     </SelectContent>
@@ -380,7 +387,7 @@ export default function PromocionesPage() {
               {editing.modo_minimo === 'acumulado' && (
                 <MultiChipSelector
                   label="Productos participantes"
-                  items={(productos ?? []).map(p => ({ id: p.id, label: `${p.codigo ? p.codigo + ' — ' : ''}${p.nombre}` }))}
+                  items={elegibles(productos, editing.participantes_ids).map(p => ({ id: p.id, label: productoMap.get(p.id) ?? p.nombre }))}
                   selected={editing.participantes_ids ?? []}
                   onToggle={(id) => toggleArrayItem('participantes_ids', id)}
                   nameMap={productoMap}
@@ -391,7 +398,7 @@ export default function PromocionesPage() {
               {editing.aplica_a === 'producto' && editing.modo_minimo !== 'acumulado' && (
                 <MultiChipSelector
                   label="Productos"
-                  items={(productos ?? []).map(p => ({ id: p.id, label: `${p.codigo ? p.codigo + ' — ' : ''}${p.nombre}` }))}
+                  items={elegibles(productos, editing.producto_ids).map(p => ({ id: p.id, label: productoMap.get(p.id) ?? p.nombre }))}
                   selected={editing.producto_ids ?? []}
                   onToggle={(id) => toggleArrayItem('producto_ids', id)}
                   nameMap={productoMap}
@@ -400,7 +407,7 @@ export default function PromocionesPage() {
               {editing.aplica_a === 'clasificacion' && (
                 <MultiChipSelector
                   label="Clasificaciones"
-                  items={(clasificaciones ?? []).map(c => ({ id: c.id, label: c.nombre }))}
+                  items={elegibles(clasificaciones, editing.clasificacion_ids).map(c => ({ id: c.id, label: clasificacionMap.get(c.id) ?? c.nombre }))}
                   selected={editing.clasificacion_ids ?? []}
                   onToggle={(id) => toggleArrayItem('clasificacion_ids', id)}
                   nameMap={clasificacionMap}
@@ -409,7 +416,7 @@ export default function PromocionesPage() {
               {editing.aplica_a === 'cliente' && (
                 <MultiChipSelector
                   label="Clientes"
-                  items={(clientes ?? []).map(c => ({ id: c.id, label: `${c.codigo ? c.codigo + ' — ' : ''}${c.nombre}` }))}
+                  items={elegibles(clientes, editing.cliente_ids).map(c => ({ id: c.id, label: clienteMap.get(c.id) ?? c.nombre }))}
                   selected={editing.cliente_ids ?? []}
                   onToggle={(id) => toggleArrayItem('cliente_ids', id)}
                   nameMap={clienteMap}
@@ -418,7 +425,7 @@ export default function PromocionesPage() {
               {editing.aplica_a === 'zona' && (
                 <MultiChipSelector
                   label="Zonas"
-                  items={(zonas ?? []).map(z => ({ id: z.id, label: z.nombre }))}
+                  items={elegibles(zonas, editing.zona_ids).map(z => ({ id: z.id, label: zonaMap.get(z.id) ?? z.nombre }))}
                   selected={editing.zona_ids ?? []}
                   onToggle={(id) => toggleArrayItem('zona_ids', id)}
                   nameMap={zonaMap}
@@ -463,8 +470,8 @@ export default function PromocionesPage() {
                       <SelectTrigger><SelectValue placeholder="El mismo producto" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_mismo">{editing.modo_minimo === 'acumulado' ? 'Selecciona el producto…' : 'El mismo producto'}</SelectItem>
-                        {(productos ?? []).map(p => (
-                          <SelectItem key={p.id} value={p.id}>{p.codigo ? `${p.codigo} — ` : ''}{p.nombre}</SelectItem>
+                        {elegibles(productos, [editing.producto_gratis_id]).map(p => (
+                          <SelectItem key={p.id} value={p.id}>{productoMap.get(p.id) ?? p.nombre}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

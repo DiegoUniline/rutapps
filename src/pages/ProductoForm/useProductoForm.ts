@@ -76,11 +76,12 @@ export function useProductoForm() {
       marcas: falta(marcas, form.marca_id),
       clasificaciones: falta(clasificaciones, form.clasificacion_id),
       unidades: Array.from(new Set([...falta(unidades, form.unidad_venta_id), ...falta(unidades, form.unidad_compra_id)])),
+      proveedores: falta(proveedores, (form as any).proveedor_preferido_id),
     };
-  }, [marcas, clasificaciones, unidades, form.marca_id, form.clasificacion_id, form.unidad_venta_id, form.unidad_compra_id]);
+  }, [marcas, clasificaciones, unidades, proveedores, form.marca_id, form.clasificacion_id, form.unidad_venta_id, form.unidad_compra_id, (form as any).proveedor_preferido_id]);
   const { data: inactivos } = useQuery({
     queryKey: ['producto-catalogos-inactivos', faltantes],
-    enabled: faltantes.marcas.length + faltantes.clasificaciones.length + faltantes.unidades.length > 0,
+    enabled: faltantes.marcas.length + faltantes.clasificaciones.length + faltantes.unidades.length + faltantes.proveedores.length > 0,
     queryFn: async () => {
       const leer = async (tabla: string, ids: string[], cols: string) => {
         if (!ids.length) return [] as any[];
@@ -88,18 +89,22 @@ export function useProductoForm() {
         if (error) throw error;
         return (data ?? []) as any[];
       };
-      const [m, c, u] = await Promise.all([
+      const [m, c, u, p] = await Promise.all([
         leer('marcas', faltantes.marcas, 'id, nombre'),
         leer('clasificaciones', faltantes.clasificaciones, 'id, nombre'),
         leer('unidades', faltantes.unidades, 'id, nombre, abreviatura'),
+        leer('proveedores', faltantes.proveedores, 'id, nombre'),
       ]);
       const inact = (x: any) => ({ ...x, nombre: `${x.nombre} (inactiva)` });
-      return { marcas: m.map(inact), clasificaciones: c.map(inact), unidades: u.map(inact) };
+      return { marcas: m.map(inact), clasificaciones: c.map(inact), unidades: u.map(inact), proveedores: p.map((x: any) => ({ ...x, nombre: `${x.nombre} (inactivo)` })) };
     },
   });
   const marcasOpc = useMemo(() => [...(marcas ?? []), ...(inactivos?.marcas ?? [])], [marcas, inactivos]);
   const clasificacionesOpc = useMemo(() => [...(clasificaciones ?? []), ...(inactivos?.clasificaciones ?? [])], [clasificaciones, inactivos]);
   const unidadesOpc = useMemo(() => [...(unidades ?? []), ...(inactivos?.unidades ?? [])], [unidades, inactivos]);
+  // Proveedor preferido dado de baja: se conserva marcado «(inactivo)»; para agregar proveedores
+  // nuevos (pestaña Proveedores) solo se ofrecen los activos.
+  const proveedoresOpc = useMemo(() => [...(proveedores ?? []), ...(inactivos?.proveedores ?? [])], [proveedores, inactivos]);
 
   const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id, (form as any).lista_id);
   const { data: prodProveedores } = useProductoProveedores(isNew ? undefined : id);
@@ -182,7 +187,7 @@ export function useProductoForm() {
     id, isNew, navigate, form, setForm, set, isDirty, starred, setStarred,
     editingName, setEditingName, nameInputRef, imageInputRef, uploadingImage,
     handleImageUpload, handleSave, handleDelete, saveMutation,
-    marcas: marcasOpc, proveedores, clasificaciones: clasificacionesOpc, listas, unidades: unidadesOpc,
+    marcas: marcasOpc, proveedores, proveedoresOpc, clasificaciones: clasificacionesOpc, listas, unidades: unidadesOpc,
     tasasIva, tasasIeps, almacenes, unidadesSat, tarifasDisp,
     tarifaLineas, prodProveedores, saveProvMut, deleteProvMut,
     createMarca, createClasificacion, createUnidad, createLista, createProveedor,

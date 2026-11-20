@@ -11,6 +11,7 @@ import { CompraPagosTab } from './CompraPagosTab';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
 import { todayInTimezone } from '@/lib/utils';
+import { opcionesConAsignado } from '@/lib/registrosInactivos';
 
 export default function CompraFormPage() {
   const h = useCompraForm();
@@ -50,8 +51,8 @@ export default function CompraFormPage() {
 
       <div className="bg-card border border-border rounded-lg p-4 space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div><label className="label-odoo label-required">Proveedor</label>{h.isEditable ? <SearchableSelect options={(h.proveedoresList ?? []).map(p => ({ value: p.id, label: p.nombre }))} value={h.form.proveedor_id ?? ''} onChange={val => h.updateField('proveedor_id', val || null)} placeholder="Buscar proveedor..." onCreateNew={async (name) => { setProvName(name); setProvOpen(true); return undefined; }} /> : <div className="text-[13px] py-1.5 px-1 text-foreground">{h.form.proveedores?.nombre || h.proveedoresList?.find(p => p.id === h.form.proveedor_id)?.nombre || '—'}</div>}</div>
-          <div><label className="label-odoo label-required">Almacén destino</label>{h.isEditable ? <SearchableSelect options={(h.almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }))} value={h.form.almacen_id ?? ''} onChange={val => h.updateField('almacen_id', val || null)} placeholder="Buscar almacén..." /> : <div className="text-[13px] py-1.5 px-1 text-foreground">{h.form.almacenes?.nombre || h.almacenesList?.find(a => a.id === h.form.almacen_id)?.nombre || '—'}</div>}</div>
+          <div><label className="label-odoo label-required">Proveedor</label>{h.isEditable ? <SearchableSelect options={opcionesConAsignado((h.proveedoresList ?? []).map(p => ({ value: p.id, label: p.nombre })), h.form.proveedor_id, h.form.proveedores?.nombre)} value={h.form.proveedor_id ?? ''} onChange={val => h.updateField('proveedor_id', val || null)} placeholder="Buscar proveedor..." onCreateNew={async (name) => { setProvName(name); setProvOpen(true); return undefined; }} /> : <div className="text-[13px] py-1.5 px-1 text-foreground">{h.form.proveedores?.nombre || h.proveedoresList?.find(p => p.id === h.form.proveedor_id)?.nombre || '—'}</div>}</div>
+          <div><label className="label-odoo label-required">Almacén destino</label>{h.isEditable ? <SearchableSelect options={opcionesConAsignado((h.almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre })), h.form.almacen_id, h.form.almacenes?.nombre)} value={h.form.almacen_id ?? ''} onChange={val => h.updateField('almacen_id', val || null)} placeholder="Buscar almacén..." /> : <div className="text-[13px] py-1.5 px-1 text-foreground">{h.form.almacenes?.nombre || h.almacenesList?.find(a => a.id === h.form.almacen_id)?.nombre || '—'}</div>}</div>
           <div><label className="label-odoo">Fecha</label><OdooDatePicker value={h.form.fecha ?? ''} onChange={val => h.updateField('fecha', val)} disabled={!h.isEditable} /></div>
           <div><label className="label-odoo">Condición de pago</label>{h.isEditable ? <SearchableSelect options={[{ value: 'contado', label: 'Contado' }, { value: 'credito', label: 'Crédito' }]} value={h.form.condicion_pago ?? 'contado'} onChange={val => h.updateField('condicion_pago', val)} placeholder="Seleccionar..." /> : <div className="text-[13px] py-1.5 px-1 text-foreground capitalize">{h.form.condicion_pago}</div>}</div>
         </div>

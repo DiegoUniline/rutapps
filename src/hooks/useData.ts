@@ -9,6 +9,7 @@ import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import { enrichProductos, ensureCatalogsForEnrich } from '@/lib/catalogEnrich';
 import { pickColumns, PRODUCTO_COLUMNS, TARIFA_COLUMNS, TARIFA_LINEA_COLUMNS, PRODUCTO_PROVEEDOR_COLUMNS } from '@/lib/allowlist';
 import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Lista, Unidad, TasaIva, TasaIeps, Almacen, UnidadSat } from '@/types';
+import { validarSinUsos, usosDeRegistros } from '@/lib/registrosInactivos';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
 
@@ -96,7 +97,7 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
     placeholderData: (prev) => prev,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre)';
+      const SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre, status), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre)';
       const applyFilters = (q: any) => {
         q = q.eq('empresa_id', empresa!.id).order('nombre', { ascending: true });
         if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%,formula.ilike.%${search}%`);
@@ -139,16 +140,19 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
   });
 }
 
-/** Categoría/marca/unidad dada de baja que el producto conserva: se muestra marcada «(inactiva)». */
+/** Categoría/marca/unidad/proveedor dado de baja que el producto conserva: se muestra marcado «(inactiva/o)». */
 function marcarCatalogosInactivos<T>(rows: T[]): T[] {
   const marca = (o: any, campo: 'nombre' | 'abreviatura') =>
     o && o.activo === false && o[campo] ? { ...o, [campo]: `${o[campo]} (inactiva)` } : o;
+  const proveedor = (o: any) =>
+    o && o.status && o.status !== 'activo' && o.nombre ? { ...o, nombre: `${o.nombre} (inactivo)` } : o;
   return rows.map((r: any) => ({
     ...r,
     marcas: marca(r.marcas, 'nombre'),
     clasificaciones: marca(r.clasificaciones, 'nombre'),
     unidades_venta: marca(r.unidades_venta, 'abreviatura'),
     unidades_compra: marca(r.unidades_compra, 'abreviatura'),
+    proveedores: proveedor(r.proveedores),
   }));
 }
 
@@ -162,7 +166,7 @@ export function useProductos(search?: string, statusFilter?: string) {
     queryFn: async () => {
       return fetchAllPages((from, to) => {
         let q = supabase.from('productos')
-          .select('id, codigo, nombre, formula, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre), es_granel')
+          .select('id, codigo, nombre, formula, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre, status), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre), es_granel')
           .eq('empresa_id', empresa!.id)
           .order('nombre', { ascending: true })
           .range(from, to);
@@ -401,7 +405,24 @@ export function useMarcas() {
 }
 export function useProveedores() {
   const { empresa } = useAuth();
-  return useQuery({ queryKey: ['proveedores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('proveedores').select('id, nombre, dias_credito, condicion_pago').eq('empresa_id', empresa!.id).neq('status', 'baja').order('nombre'); return data as (Proveedor & { dias_credito?: number; condicion_pago?: string })[]; }});
+  // Solo activos: es la lista para elegir/asignar. Un inactivo ya asignado se muestra aparte, marcado «(inactivo)».
+  return useQuery({ queryKey: ['proveedores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('proveedores').select('id, nombre, dias_credito, condicion_pago').eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre'); return data as (Proveedor & { dias_credito?: number; condicion_pago?: string })[]; }});
+}
+
+/** Todos los proveedores (también inactivos/baja) para mostrar el nombre en registros ya existentes;
+ *  los no activos llevan «(inactivo)» en el nombre. Para elegir/asignar usa useProveedores(). */
+export function useProveedoresTodos() {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['proveedores', empresa?.id, 'todos'],
+    staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('proveedores').select('id, nombre, status').eq('empresa_id', empresa!.id).order('nombre');
+      if (error) throw error;
+      return (data ?? []).map(p => ({ id: p.id, nombre: p.status === 'activo' ? p.nombre : `${p.nombre} (inactivo)`, activo: p.status === 'activo' }));
+    },
+  });
 }
 export function useClasificaciones() {
   const { empresa } = useAuth();
@@ -544,11 +565,14 @@ export function useProductoProveedores(productoId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('producto_proveedores')
-        .select('id, producto_id, proveedor_id, es_principal, precio_compra, tiempo_entrega_dias, notas, proveedores(nombre)')
+        .select('id, producto_id, proveedor_id, es_principal, precio_compra, tiempo_entrega_dias, notas, proveedores(nombre, status)')
         .eq('producto_id', productoId!)
         .order('es_principal', { ascending: false });
       if (error) throw error;
-      return data as any[];
+      // Proveedor dado de baja que el producto conserva: el registro se queda (histórico) y se marca «(inactivo)».
+      return (data ?? []).map((pp: any) => pp.proveedores && pp.proveedores.status !== 'activo'
+        ? { ...pp, proveedor_inactivo: true, proveedores: { ...pp.proveedores, nombre: `${pp.proveedores.nombre} (inactivo)` } }
+        : pp) as any[];
     },
     enabled: !!productoId,
   });
@@ -747,20 +771,24 @@ export function useDeleteListaPrecio() {
         .maybeSingle();
       if (errLista) throw errLista;
 
+      // D-044: una lista con clientes, ventas, promociones o tarifas que la usan no se borra
+      // (el FK dejaría esas ventas/promociones sin lista); se desactiva.
+      const enUso = await validarSinUsos('lista_precios', [id], 'Desactívala en su lugar.');
+      if (enUso) throw new Error(enUso);
+
       const { error } = await supabase.from('lista_precios').delete().eq('id', id);
       if (error) throw error;
 
-      // Intentar borrar la tarifa huérfana asociada. Si está referenciada por
-      // ventas / cotizaciones / clientes / productos, el FK lanzará error y
-      // simplemente la dejamos (no rompemos el flujo).
+      // Borrar la tarifa huérfana asociada solo si nadie la usa: ventas/clientes la bloquean por FK,
+      // pero cotizaciones y productos quedarían en NULL (se perdería el dato), así que se valida antes.
       if (lista?.tarifa_id) {
         const { count } = await supabase
           .from('lista_precios')
           .select('id', { count: 'exact', head: true })
           .eq('tarifa_id', lista.tarifa_id);
-        if ((count ?? 0) === 0) {
-          await supabase.from('tarifas').delete().eq('id', lista.tarifa_id);
-          // ignoramos error de FK a propósito
+        if ((count ?? 0) === 0 && !(await usosDeRegistros('tarifas', [lista.tarifa_id])).length) {
+          const { error: errTarifa } = await supabase.from('tarifas').delete().eq('id', lista.tarifa_id);
+          if (errTarifa) console.warn('No se borró la tarifa sin listas:', errTarifa.message);
         }
       }
     },
