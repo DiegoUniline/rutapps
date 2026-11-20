@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
@@ -219,9 +219,40 @@ export default function CuentasCobrarPage() {
     else aging.masD90 += saldo;
   });
 
+  const movil = useCargarMasMovil(filtered, `${search}|${desde}|${hasta}|${JSON.stringify(filters)}`);
+  const btnRedondo = 'h-10 w-10 rounded-full border border-border bg-card text-muted-foreground flex items-center justify-center active:bg-accent';
   return (
-    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
+    <div className="p-2 md:p-4 min-h-full">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
       <CobranzaTabs />
+      {isMobile && (
+        <EncabezadoListaMovil
+          titulo="Cuentas por cobrar"
+          onNuevo={() => setShowModal(true)}
+          nuevoLabel="Saldo inicial"
+          extra={<>
+            <button type="button" onClick={() => setShowImport(true)} aria-label="Importar saldos" title="Importar saldos" className={btnRedondo}><Upload className="h-4 w-4" /></button>
+            <button type="button" onClick={() => navigate('/finanzas/aplicar-pagos')} aria-label="Aplicar pagos" title="Aplicar pagos" className={btnRedondo}><Banknote className="h-4 w-4" /></button>
+          </>}
+        >
+          <OdooFilterBar
+            search={search}
+            onSearchChange={setSearch}
+            placeholder="Buscar cuentas"
+            filterOptions={filterOptions}
+            activeFilters={filters}
+            onToggleFilter={toggleFilterValue}
+            onSetFilter={setFilter}
+            dateFrom={desde}
+            dateTo={hasta}
+            onDateFromChange={setDesde}
+            onDateToChange={setHasta}
+            onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); }}
+          />
+        </EncabezadoListaMovil>
+      )}
+      <div className="max-md:hidden space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <CreditCard className="h-5 w-5" /> Cuentas por cobrar
@@ -241,27 +272,27 @@ export default function CuentasCobrarPage() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
+      <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-border border-y border-border -mx-3 md:-mx-4">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Total pendiente</p>
           <p className="text-lg sm:text-2xl font-bold truncate text-destructive">{fmt(totalPendiente)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Documentos</p>
           <p className="text-lg sm:text-2xl font-bold truncate text-foreground">{filtered.length}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Venta total</p>
           <p className="text-lg sm:text-2xl font-bold truncate text-foreground">{fmt(totalVentas)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">% Cobrado</p>
           <p className="text-lg sm:text-2xl font-bold truncate text-success">{totalVentas > 0 ? Math.round(((totalVentas - totalPendiente) / totalVentas) * 100) : 0}%</p>
         </div>
       </div>
 
       {/* Aging */}
-      <div className="bg-card border border-border rounded-lg p-4">
+      <div className="border-b border-border -mx-3 md:-mx-4 px-3 md:px-4 pb-3">
         <h3 className="text-sm font-semibold mb-3">Antigüedad de saldos</h3>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-center">
           {[
@@ -293,46 +324,30 @@ export default function CuentasCobrarPage() {
         onDateToChange={setHasta}
         onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); }}
       />
+      </div>
 
       {isMobile ? (
         isLoading ? <div className="text-center py-8 text-muted-foreground text-sm">Cargando...</div> : (
-        <>
-          {!!filtered.length && (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
-              <span className="text-muted-foreground">Pendiente ({filtered.length})</span>
-              <span className="text-destructive tabular-nums">{fmt(filtered.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0))}</span>
-            </div>
-          )}
-          <ListaTarjetasMovil vacia={filtered.length === 0} mensajeVacio="Sin cuentas pendientes 🎉">
-            {filtered.map(v => {
-              const esSaldo = v.es_saldo_inicial === true;
-              const canDelete = esSaldo && (v.saldo_pendiente ?? 0) === (v.total ?? 0);
-              return (
-                <ListaTarjetaMovil
-                  key={v.id}
-                  titulo={(v.clientes as any)?.nombre ?? '—'}
-                  subtitulo={[v.folio ?? v.id.slice(0, 8), (v.vendedores as any)?.nombre].filter(Boolean).join(' · ')}
-                  estado={
-                    <Badge variant={esSaldo ? 'secondary' : 'outline'} className="text-[10px] whitespace-nowrap">
-                      {esSaldo ? 'Saldo inicial' : v.condicion_pago}
-                    </Badge>
-                  }
-                  onClick={() => setCobrarVenta(v)}
-                  acciones={[
-                    { key: 'cobrar', label: 'Cobrar', icon: Banknote, onClick: () => setCobrarVenta(v) },
-                    ...(canDelete ? [{ key: 'eliminar', label: 'Eliminar saldo inicial', icon: Trash2, destructiva: true, separar: true, onClick: () => setDeleteId(v.id) }] : []),
-                  ]}
-                  campos={[
-                    { label: 'Fecha', value: fmtDate(v.fecha) },
-                    { label: 'Total', value: fmt(totalEfectivoVenta(v as any)) },
-                    { label: 'Pagado', value: <span className="text-success">{fmt(pagadoRealVenta(v))}</span> },
-                    { label: 'Pendiente', value: <span className="text-destructive font-bold">{fmt(v.saldo_pendiente ?? 0)}</span> },
-                  ]}
-                />
-              );
-            })}
-          </ListaTarjetasMovil>
-        </>
+        <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio="Sin cuentas pendientes 🎉" {...movil}>
+          {movil.visibles.map(v => {
+            const esSaldo = v.es_saldo_inicial === true;
+            const canDelete = esSaldo && (v.saldo_pendiente ?? 0) === (v.total ?? 0);
+            return (
+              <ListaTarjetaMovil
+                key={v.id}
+                titulo={(v.clientes as any)?.nombre ?? '—'}
+                linea2={<>{fmtDate(v.fecha)} · {fmt(totalEfectivoVenta(v as any))}<span className="text-xs"> · {esSaldo ? 'Saldo inicial' : (v.folio ?? v.id.slice(0, 8))}</span></>}
+                pildora={fmt(v.saldo_pendiente ?? 0)}
+                tono="peligro"
+                onClick={() => setCobrarVenta(v)}
+                acciones={[
+                  { key: 'cobrar', label: 'Cobrar', icon: Banknote, onClick: () => setCobrarVenta(v) },
+                  ...(canDelete ? [{ key: 'eliminar', label: 'Eliminar saldo inicial', icon: Trash2, destructiva: true, separar: true, onClick: () => setDeleteId(v.id) }] : []),
+                ]}
+              />
+            );
+          })}
+        </ListaTarjetasMovil>
         )
       ) : (
       <div className="bg-card border border-border rounded overflow-x-auto">
@@ -474,6 +489,7 @@ export default function CuentasCobrarPage() {
           }}
         />
       )}
+    </div>
     </div>
   );
 }

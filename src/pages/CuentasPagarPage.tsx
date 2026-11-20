@@ -17,7 +17,7 @@ import { useListPreferences } from '@/hooks/useListPreferences';
 import { CxPTabs } from '@/components/CxPTabs';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -110,6 +110,7 @@ export default function CuentasPagarPage() {
   const hasFilters = (filters.status?.length > 0) || (filters.proveedor?.length > 0) || desde || hasta;
 
   const total = filteredCuentas.length;
+  const movil = useCargarMasMovil(filteredCuentas, `${search}|${desde}|${hasta}|${JSON.stringify(filters)}`);
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
   const pageData = filteredCuentas.slice(from - 1, to);
@@ -130,22 +131,43 @@ export default function CuentasPagarPage() {
 
   return (
     <ListPage>
-      <CxPTabs />
+      <div className="-mt-3"><CxPTabs /></div>
+      {isMobile && (
+        <ListPage.Toolbar>
+          <EncabezadoListaMovil titulo="Cuentas por pagar">
+            <OdooFilterBar
+              search={search}
+              onSearchChange={val => { setSearch(val); setPage(1); }}
+              placeholder="Buscar cuentas"
+              filterOptions={FILTER_OPTIONS}
+              activeFilters={filters}
+              onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
+              onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
+              onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); setPage(1); }}
+              dateFrom={desde}
+              dateTo={hasta}
+              onDateFromChange={val => { setDesde(val); setPage(1); }}
+              onDateToChange={val => { setHasta(val); setPage(1); }}
+            />
+          </EncabezadoListaMovil>
+        </ListPage.Toolbar>
+      )}
+      <ListPage.Toolbar className="max-md:hidden">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <TrendingDown className="h-5 w-5" /> Cuentas por pagar
         <HelpButton title={HELP.cuentasPagar.title} sections={HELP.cuentasPagar.sections} />
       </h1>
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+      <div className="grid grid-cols-3 divide-x divide-border border-y border-border -mx-3 md:-mx-4">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Total por pagar</p>
           <p className="text-base sm:text-2xl font-bold text-destructive truncate">{fmt(totalPorPagar)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Total crédito</p>
           <p className="text-base sm:text-2xl font-bold text-foreground truncate">{fmt(totalCompras)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Con saldo</p>
           <p className="text-base sm:text-2xl font-bold text-warning truncate">{conSaldo}</p>
         </div>
@@ -179,41 +201,27 @@ export default function CuentasPagarPage() {
           })}
         />
       </div>
+      </ListPage.Toolbar>
 
       {isMobile ? (
-        <div className="flex-1 min-h-0 overflow-auto space-y-2">
-          {!isLoading && pageData.length > 0 && (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
-              <span className="text-muted-foreground">{total} cuentas</span>
-              <span className="text-destructive tabular-nums">{fmt(totalPorPagar)}</span>
-            </div>
-          )}
+        <ListPage.Body card={false}>
           {isLoading ? <div className="text-center py-12 text-muted-foreground text-sm">Cargando...</div> : (
-          <ListaTarjetasMovil vacia={pageData.length === 0} mensajeVacio={hasFilters ? 'Sin cuentas con los filtros aplicados' : 'Sin cuentas por pagar'}>
-            {pageData.map((c: any) => (
-              <ListaTarjetaMovil
-                key={c.id}
-                titulo={c.proveedores?.nombre ?? '—'}
-                subtitulo={c.folio ?? c.id.slice(0, 8)}
-                estado={<StatusChip status={c.status} />}
-                onClick={() => navigate(`/almacen/compras/${c.id}`)}
-                campos={[
-                  { label: 'Fecha', value: fmtDate(c.fecha) },
-                  { label: 'Crédito', value: `${c.dias_credito ?? 0} días` },
-                  { label: 'Total', value: fmt(c.total ?? 0) },
-                  { label: 'Saldo', value: (c.saldo_pendiente ?? 0) > 0 ? <span className="text-destructive font-bold">{fmt(c.saldo_pendiente)}</span> : <span className="text-success">{fmt(0)}</span> },
-                ]}
-              />
-            ))}
+          <ListaTarjetasMovil vacia={movil.total === 0} mensajeVacio={hasFilters ? 'Sin cuentas con los filtros aplicados' : 'Sin cuentas por pagar'} {...movil}>
+            {movil.visibles.map((c: any) => {
+              const saldo = Number(c.saldo_pendiente ?? 0);
+              return (
+                <ListaTarjetaMovil
+                  key={c.id}
+                  titulo={c.proveedores?.nombre ?? '—'}
+                  linea2={<>{fmtDate(c.fecha)} · {fmt(c.total ?? 0)} · {c.dias_credito ?? 0} días<span className="text-xs"> · {c.folio ?? c.id.slice(0, 8)}</span></>}
+                  {...(saldo > 0 ? { pildora: fmt(saldo), tono: 'peligro' as const } : estadoPildora(c.status))}
+                  onClick={() => navigate(`/almacen/compras/${c.id}`)}
+                />
+              );
+            })}
           </ListaTarjetasMovil>
           )}
-          {total > 0 && (
-            <OdooPagination from={from} to={to} total={total}
-              onPrev={() => setPage(p => Math.max(1, p - 1))}
-              onNext={() => setPage(p => p + 1)}
-            />
-          )}
-        </div>
+        </ListPage.Body>
       ) : (
       <div className={TABLE_CARD}>
         <table className="w-full text-sm">
