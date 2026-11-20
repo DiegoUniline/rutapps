@@ -17,6 +17,7 @@ import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { fmtDate } from '@/lib/utils';
 import { leerCantidad } from '@/lib/ventaPresentacion';
 import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
+import { esCantidadDevolucionValida } from '@/lib/devolucionGuardado';
 
 interface DevItem {
   producto_id: string;
@@ -120,6 +121,7 @@ function RutaDevolucionInner() {
   };
 
   const setQty = (pid: string, val: number) => {
+    if (!Number.isFinite(val)) return; // texto inválido: se conserva la cantidad anterior
     setItems(prev => prev.map(item => {
       if (item.producto_id !== pid) return item;
       // A granel acepta fracciones (antes parseInt + mínimo 1: 0.5 kg no se podía devolver).
@@ -137,6 +139,7 @@ function RutaDevolucionInner() {
   const handleSave = async () => {
     if (items.length === 0) { toast.error('Agrega productos'); return; }
     if (tipo === 'tienda' && !clienteId) { toast.error('Selecciona un cliente'); return; }
+    if (items.some(i => !esCantidadDevolucionValida(i.cantidad))) { toast.error('La cantidad a devolver debe ser mayor a cero'); return; }
     setSaving(true);
     try {
       await saveDevolucion.mutateAsync({

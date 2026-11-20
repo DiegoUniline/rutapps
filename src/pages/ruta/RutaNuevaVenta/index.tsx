@@ -7,6 +7,7 @@ import { STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
 import { printTicket } from '@/lib/printTicketUtil';
 import { ticketVentaADatos, type TicketVentaDatos } from '@/lib/ticketVentaData';
+import { saldosTicketRuta } from '@/lib/ticketSaldoRuta';
 import { fmtDate } from '@/lib/utils';
 import { StepTipo } from './StepTipo';
 import { StepSinCompra } from './StepSinCompra';
@@ -33,13 +34,14 @@ function RutaNuevaVentaInner() {
     if (!h.ticketInfo) return null;
     const e = h.empresa as (typeof h.empresa & Record<string, unknown>) | null;
     const totalPagadoAhora = h.pagos.reduce((a, p) => a + Number(p.monto || 0), 0);
-    // Lo que queda por pagar de ESTA venta. En contado los pagos cubren primero
-    // esta venta (useRutaVenta): un pedido de contado sin cobro (pago contra
-    // entrega) queda con saldo = total; ya no se supone pagado. En crédito se
-    // conserva el cálculo de siempre (total − pagos).
-    const saldoRestanteEstaVenta = Math.max(0, h.totals.total - totalPagadoAhora);
-    const saldoAnteriorRestante = Math.max(0, h.saldoPendienteTotal - h.totalAplicarCuentas);
-    const saldoNuevoCalc = saldoAnteriorRestante + saldoRestanteEstaVenta;
+    // H10: misma regla que useRutaVenta al aplicar los cobros.
+    const { pagadoEstaVenta, saldoNuevo: saldoNuevoCalc } = saldosTicketRuta({
+      condicionPago: h.condicionPago,
+      total: h.totals.total,
+      pagos: totalPagadoAhora,
+      aplicadoACuentas: h.totalAplicarCuentas,
+      saldoAnterior: h.saldoPendienteTotal,
+    });
     const str = (v: unknown) => (typeof v === 'string' ? v : null);
     const profileTel = (h.profile as { telefono?: string | null } | null)?.telefono ?? null;
     return {
@@ -72,6 +74,7 @@ function RutaNuevaVentaInner() {
       // Solo lo aplicado a cuentas anteriores: el pago de esta venta ya está en
       // «Total pagado» y en el saldo (así Saldo ant − Pago + venta = Saldo).
       pagoAplicado: h.totalAplicarCuentas,
+      pagadoEstaVenta,
       saldoNuevo: saldoNuevoCalc,
       promociones: h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id, tipo: r.tipo, cantidad_gratis: r.cantidad_gratis })),
       pagos: h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: fmtDate(h.ticketInfo!.fecha), referencia: (p as { referencia?: string | null }).referencia ?? undefined })),

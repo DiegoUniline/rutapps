@@ -4,6 +4,7 @@
  */
 import { supabase } from './supabase';
 import { getOfflineTable } from './offlineDb';
+import { calcularEfectivoEsperado, fetchLiquidacionEsperado } from './liquidacion';
 
 const isOnline = () => typeof navigator === 'undefined' || navigator.onLine;
 
@@ -151,15 +152,15 @@ export async function fetchDescargaFinancialsWithFallback(args: {
   const { empresaId, userId, vendedorId, today } = args;
   if (isOnline()) {
     try {
-      const [ventasRes, cobrosRes, gastosRes, devsRes] = await Promise.all([
-        supabase.from('ventas').select('total').eq('vendedor_id', vendedorId).eq('fecha', today).eq('condicion_pago', 'contado').neq('status', 'cancelado'),
-        supabase.from('cobros').select('monto, metodo_pago').eq('empresa_id', empresaId).eq('user_id', userId).eq('fecha', today).neq('status', 'cancelado'),
-        supabase.from('gastos').select('monto').is('cancelado_at', null).eq('vendedor_id', vendedorId).eq('fecha', today),
+      // Montos: la MISMA función SQL que usa el escritorio (fn_liquidacion_esperado).
+      const [ventasRes, devsRes, liq] = await Promise.all([
+        supabase.from('ventas').select('total').eq('empresa_id', empresaId).eq('vendedor_id', vendedorId).eq('fecha', today).eq('condicion_pago', 'contado').neq('status', 'cancelado'),
         supabase.from('devoluciones').select('id, tipo, clientes(nombre), devolucion_lineas(cantidad, motivo, accion, monto_credito, productos(nombre))').is('cancelado_at', null).eq('empresa_id', empresaId).eq('vendedor_id', vendedorId).eq('fecha', today),
+        fetchLiquidacionEsperado({ empresaId, vendedorId, desde: today, hasta: today, userId }),
       ]);
+      if (ventasRes.error) throw ventasRes.error;
+      if (devsRes.error) throw devsRes.error;
       const ventasContado = (ventasRes.data || []).reduce((s, v: any) => s + (Number(v.total) || 0), 0);
-      const cobrosEfectivo = (cobrosRes.data || []).filter((c: any) => c.metodo_pago === 'efectivo').reduce((s, c: any) => s + (Number(c.monto) || 0), 0);
-      const gastosTotal = (gastosRes.data || []).reduce((s, g: any) => s + (Number(g.monto) || 0), 0);
       const devItems: DevFinItem[] = [];
       (devsRes.data || []).forEach((d: any) => {
         (d.devolucion_lineas || []).forEach((l: any) => {
@@ -173,7 +174,15 @@ export async function fetchDescargaFinancialsWithFallback(args: {
           });
         });
       });
-      return { ventasContado, cobrosEfectivo, gastosTotal, devItems, devolucionesDinero: sumDevolucionesDinero(devItems) };
+      return {
+        ventasContado,
+        cobrosEfectivo: liq.cobrosEfectivo,
+        gastosTotal: liq.gastos,
+        devItems,
+        devolucionesDinero: liq.devolucionesDinero,
+        reembolsos: liq.reembolsos,
+        efectivoEsperado: liq.esperado,
+      };
     } catch (err) {
       console.warn('[fetchDescargaFinancialsWithFallback] server failed, using cache:', err);
     }
@@ -194,27 +203,38 @@ export async function fetchDescargaFinancialsWithFallback(args: {
   const cobrosEfectivo = cobros
     .filter((c: any) => c.empresa_id === empresaId && c.user_id === userId && c.fecha === today && c.status !== 'cancelado' && c.metodo_pago === 'efectivo')
     .reduce((s, c: any) => s + (Number(c.monto) || 0), 0);
-  const gastosTotal = gastos
+  const gastosActivos = gastos.filter((g: any) => !g.cancelado_at);
+  const gastosTotal = gastosActivos
     .filter((g: any) => g.vendedor_id === vendedorId && g.fecha === today)
     .reduce((s, g: any) => s + (Number(g.monto) || 0), 0);
   const prodMap = new Map(productos.map((p: any) => [p.id, p]));
   const cliMap = new Map(clientes.map((c: any) => [c.id, c]));
-  const devsDelDia = devoluciones.filter((d: any) => d.empresa_id === empresaId && d.vendedor_id === vendedorId && d.fecha === today);
+  const devsDelDia = devoluciones.filter((d: any) => d.empresa_id === empresaId && d.vendedor_id === vendedorId && d.fecha === today && !d.cancelado_at);
+  // Igual que la función SQL: lo ya reembolsado con un gasto no se cuenta dos veces.
+  const devConGasto = new Set(gastosActivos.map((g: any) => g.devolucion_id).filter(Boolean));
   const devIds = new Set(devsDelDia.map((d: any) => d.id));
   const devItems: DevFinItem[] = [];
+  const devItemsDinero: DevFinItem[] = [];
   for (const l of devLineas) {
     if (!devIds.has(l.devolucion_id)) continue;
     const dev = devsDelDia.find((d: any) => d.id === l.devolucion_id);
-    devItems.push({
+    const item: DevFinItem = {
       nombre: prodMap.get(l.producto_id)?.nombre ?? '—',
       cantidad: Number(l.cantidad),
       motivo: l.motivo || '—',
       accion: l.accion || 'reposicion',
       monto_credito: Number(l.monto_credito) || 0,
       cliente: dev?.cliente_id ? (cliMap.get(dev.cliente_id)?.nombre ?? '—') : '—',
-    });
+    };
+    devItems.push(item);
+    if (!devConGasto.has(l.devolucion_id)) devItemsDinero.push(item);
   }
-  return { ventasContado, cobrosEfectivo, gastosTotal, devItems, devolucionesDinero: sumDevolucionesDinero(devItems) };
+  const devolucionesDinero = sumDevolucionesDinero(devItemsDinero);
+  // Sin conexión no hay cobro_excedentes en el teléfono: reembolsos = 0 hasta sincronizar.
+  return {
+    ventasContado, cobrosEfectivo, gastosTotal, devItems, devolucionesDinero, reembolsos: 0,
+    efectivoEsperado: calcularEfectivoEsperado({ cobrosEfectivo, gastos: gastosTotal, devolucionesDinero, reembolsos: 0 }),
+  };
 }
 
 /** Verifica si ya existe una liquidación enviada hoy (por carga, vendedor o user). */
@@ -228,7 +248,10 @@ export async function fetchExistingDescargaWithFallback(args: {
   if (isOnline()) {
     try {
       if (cargaId) {
-        const { data } = await supabase.from('descarga_ruta').select('id, status').eq('carga_id', cargaId).limit(1).maybeSingle();
+        // Solo la liquidación de ESTE vendedor (H16: antes cualquiera de la carga).
+        let q = supabase.from('descarga_ruta').select('id, status').eq('carga_id', cargaId);
+        if (vendedorId) q = q.eq('vendedor_id', vendedorId);
+        const { data } = await q.limit(1).maybeSingle();
         if (data) return data;
       }
       if (vendedorId) {
@@ -243,7 +266,7 @@ export async function fetchExistingDescargaWithFallback(args: {
   }
   const all = await localTableToArray<any>('descarga_ruta');
   const hit = all.find((d: any) => {
-    if (cargaId && d.carga_id === cargaId) return true;
+    if (cargaId && d.carga_id === cargaId && (!vendedorId || d.vendedor_id === vendedorId)) return true;
     if (vendedorId && d.vendedor_id === vendedorId && d.fecha_inicio <= today && d.fecha_fin >= today) return true;
     if (d.user_id === userId && d.fecha === today) return true;
     return false;
@@ -251,13 +274,17 @@ export async function fetchExistingDescargaWithFallback(args: {
   return hit ? { id: hit.id, status: hit.status } : null;
 }
 
-/** Carga activa del vendedor (en_ruta/completada más reciente). */
-export async function fetchCargaActivaWithFallback(empresaId: string) {
+/**
+ * Carga activa DEL VENDEDOR (en_ruta/completada más reciente). H16: antes se buscaba
+ * por empresa y un vendedor veía la carga (y la liquidación) de otro.
+ */
+export async function fetchCargaActivaWithFallback(empresaId: string, vendedorId: string) {
   if (isOnline()) {
     try {
       const { data } = await supabase
         .from('cargas').select('id, fecha, vendedor_id')
         .eq('empresa_id', empresaId)
+        .eq('vendedor_id', vendedorId)
         .in('status', ['en_ruta', 'completada'])
         .order('fecha', { ascending: false }).limit(1).maybeSingle();
       if (data !== undefined) return data;
@@ -267,7 +294,7 @@ export async function fetchCargaActivaWithFallback(empresaId: string) {
   }
   const all = await localTableToArray<any>('cargas');
   const candidates = all
-    .filter((c: any) => c.empresa_id === empresaId && ['en_ruta', 'completada'].includes(c.status))
+    .filter((c: any) => c.empresa_id === empresaId && c.vendedor_id === vendedorId && ['en_ruta', 'completada'].includes(c.status))
     .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
   const first = candidates[0];
   return first ? { id: first.id, fecha: first.fecha, vendedor_id: first.vendedor_id } : null;

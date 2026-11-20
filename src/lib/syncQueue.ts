@@ -7,6 +7,7 @@ import { hasRealConnection } from './connectivity';
 import { classifySyncError } from './syncErrorClassify';
 import { mergeLocalRow } from './localRowMerge';
 import { EVENTO_DATOS_LOCALES } from './refresco/eventos';
+import { esCantidadDevolucionValida, sanearDevolucionLinea } from './devolucionGuardado';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -303,6 +304,7 @@ function sanitizeRow(table: string, row: any): any {
     const validTipos = ['almacen', 'tienda'];
     if (!validTipos.includes(clean.tipo)) clean.tipo = clean.cliente_id ? 'tienda' : 'almacen';
   }
+  if (table === 'devolucion_lineas') return sanearDevolucionLinea(clean);
   return clean;
 }
 
@@ -348,6 +350,11 @@ async function processItem(item: SyncQueueItem) {
     if (!validTipos.includes(cleanData.tipo)) {
       cleanData.tipo = cleanData.cliente_id ? 'tienda' : 'almacen';
     }
+  }
+  // H1: versiones anteriores encolaban renglones con accion = null (NOT NULL en la BD)
+  // → nunca subían. Se reparan al reintentar con el default sin efecto en dinero.
+  if (table === 'devolucion_lineas' && operation === 'insert') {
+    Object.assign(cleanData, sanearDevolucionLinea(cleanData));
   }
 
 
@@ -420,7 +427,10 @@ export async function retryDeadLetters(): Promise<number> {
 // invalid enum values that we now sanitize on each retry).
 export async function resurrectDeadLetters(tables: string[]): Promise<number> {
   const items = await offlineDb.syncQueue.toArray();
-  const targets = items.filter(i => (i.retries ?? 0) > MAX_RETRIES && tables.includes(i.table));
+  // Un renglón de devolución con cantidad <= 0 nunca va a subir (CHECK en la BD):
+  // no se resucita para no reintentarlo para siempre en cada reconexión.
+  const targets = items.filter(i => (i.retries ?? 0) > MAX_RETRIES && tables.includes(i.table)
+    && !(i.table === 'devolucion_lineas' && !esCantidadDevolucionValida(i.data?.cantidad)));
   for (const it of targets) {
     await offlineDb.syncQueue.update(it.id!, { retries: 0, createdAt: Date.now() - 60_000 });
   }

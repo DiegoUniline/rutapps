@@ -111,7 +111,11 @@ export function getTicketTotalsSummary(data: TicketData): TicketTotalsSummary {
   const totalVenta = Math.max(Number(data.total) || 0, 0);
   // Antes, sin pagos y con condición «contado» se suponía pagado el total:
   // un pedido de contado (pago contra entrega) sin cobro salía como pagado.
-  const totalPagado = pagosTotal > 0
+  // Si el llamador sabe cuánto se pagó de ESTA venta (ruta), eso manda: lo abonado
+  // a cuentas anteriores no es pago de esta venta (H10).
+  const totalPagado = data.pagadoEstaVenta != null
+    ? Math.max(Number(data.pagadoEstaVenta) || 0, 0)
+    : pagosTotal > 0
     ? pagosTotal
     : pagoAplicado > 0
       ? pagoAplicado

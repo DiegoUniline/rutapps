@@ -33,6 +33,7 @@ import { nextVisitDate } from '@/lib/nextVisitDate';
 import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
 import { paquetesParaCantidad } from '@/lib/ventaPresentacion';
 import { isPublicGeneralClient, resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
+import { esCantidadDevolucionValida } from '@/lib/devolucionGuardado';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -793,7 +794,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   };
 
   const addDevolucion = (p: any, defaults?: { motivo?: DevolucionItem['motivo']; accion?: DevolucionItem['accion'] }) => { if (!requireDevolucionesPermiso()) return; if (devoluciones.find(d => d.producto_id === p.id)) { updateDevQty(p.id, (devoluciones.find(d => d.producto_id === p.id)?.cantidad ?? 0) + 1); return; } setDevoluciones(prev => [...prev, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, cantidad: 1, motivo: defaults?.motivo ?? 'no_vendido', accion: defaults?.accion ?? 'reposicion', precio_unitario: p.precio_principal ?? 0 }]); };
-  const updateDevQty = (productoId: string, qty: number) => { if (!requireDevolucionesPermiso()) return; if (qty <= 0) setDevoluciones(prev => prev.filter(d => d.producto_id !== productoId)); else setDevoluciones(prev => prev.map(d => d.producto_id === productoId ? { ...d, cantidad: qty } : d)); };
+  const updateDevQty = (productoId: string, qty: number) => { if (!requireDevolucionesPermiso()) return; if (!esCantidadDevolucionValida(qty)) setDevoluciones(prev => prev.filter(d => d.producto_id !== productoId)); else setDevoluciones(prev => prev.map(d => d.producto_id === productoId ? { ...d, cantidad: qty } : d)); };
   const updateDevMotivo = (productoId: string, motivo: DevolucionItem['motivo']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, motivo }; if (updated.accion === 'reposicion' && motivo !== 'cambio' && motivo !== 'danado' && motivo !== 'caducado' && motivo !== 'error_pedido') { /* keep accion */ } return updated; })); };
   const updateDevAccion = (productoId: string, accion: DevolucionItem['accion']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, accion }; if (accion !== 'reposicion') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };
   const batchUpdateDevDefaults = (motivo: DevolucionItem['motivo'], accion: DevolucionItem['accion']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { const updated = { ...d, motivo, accion }; if (accion !== 'reposicion') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };

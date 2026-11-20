@@ -51,6 +51,8 @@ export interface TicketVentaDatos {
   cambio?: number;
   saldoAnterior?: number;
   pagoAplicado?: number;
+  /** Lo pagado de ESTA venta (sin lo abonado a cuentas anteriores). Ver TicketData. */
+  pagadoEstaVenta?: number;
   saldoNuevo?: number;
   promociones?: { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
   pagos?: { metodo: string; monto: number; fecha?: string | null; referencia?: string | null }[];
@@ -103,6 +105,7 @@ export function ticketVentaADatos(p: TicketVentaDatos): TicketData {
     cambio: p.cambio,
     saldoAnterior: p.saldoAnterior,
     pagoAplicado: p.pagoAplicado,
+    pagadoEstaVenta: p.pagadoEstaVenta,
     saldoNuevo: p.saldoNuevo,
     promociones,
     pagos: p.pagos ?? [],

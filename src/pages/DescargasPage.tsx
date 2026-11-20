@@ -8,7 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { esCobroSinDinero } from '@/lib/saldoFavor';
-import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, useDescargasLiveCuadre, DescargaLinea } from '@/hooks/useDescargaRuta';
+import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargasLiveCuadre, useLiquidacionEsperado, DescargaLinea } from '@/hooks/useDescargaRuta';
+import { calcularEfectivoEsperado } from '@/lib/liquidacion';
 import { useVendedores } from '@/hooks/useClientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw, Trash2, Boxes, LayoutDashboard, ChevronDown } from 'lucide-react';
@@ -481,8 +482,17 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const currentStatus = statusOverride ?? descarga.status;
   const isPendiente = currentStatus === 'pendiente';
 
-  // Effective cash expected: cobros efectivo - gastos (NOT ventas contado — a cash sale may be paid via transfer)
-  const efectivoSistema = (cobrosPorMetodo['efectivo'] || 0) - totalGastos;
+  // Efectivo esperado: la MISMA fórmula que el teléfono (fn_liquidacion_esperado):
+  // cobros efectivo − gastos − dinero devuelto a clientes (devoluciones de dinero y
+  // reembolsos de cancelación sin turno de caja). No ventas de contado: una venta de
+  // contado puede pagarse por transferencia. Mientras carga, lo que ya se ve en pantalla.
+  const { data: liqCalc } = useLiquidacionEsperado({
+    empresaId: descarga.empresa_id, vendedorId: descarga.vendedor_id, desde: fInicio, hasta: fFin, userId: descarga.user_id,
+  });
+  const dineroDevuelto = (liqCalc?.devolucionesDinero ?? 0) + (liqCalc?.reembolsos ?? 0);
+  const efectivoSistema = liqCalc
+    ? liqCalc.esperado
+    : calcularEfectivoEsperado({ cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0, gastos: totalGastos });
   const diferenciaCuadre = Number(descarga.efectivo_entregado) - efectivoSistema;
   const entregasConIncidencia = entregasList.filter((e: any) =>
     (e.entrega_lineas || []).some((l: any) => !l.hecho)
@@ -1115,6 +1125,9 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                             </div>
                           ))}
                         </div>
+                      )}
+                      {dineroDevuelto > 0.005 && (
+                        <div className="flex justify-between"><span className="text-muted-foreground">− Dinero devuelto a clientes</span><span className="font-semibold text-destructive tabular-nums">-{fmt(dineroDevuelto)}</span></div>
                       )}
                       <div className="border-t border-border pt-2 flex justify-between font-bold">
                         <span>Efectivo esperado</span>
@@ -1959,7 +1972,13 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const cobrosTransferenciaTotal = (cobrosPreview || []).filter((c: any) => c.metodo_pago === 'transferencia').reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const cobrosTarjetaTotal = (cobrosPreview || []).filter((c: any) => c.metodo_pago === 'tarjeta').reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const totalGastos = (gastosPreview || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
-  const efectivoEsperado = cobrosEfectivoTotal - totalGastos;
+  // Misma fórmula que el teléfono y el detalle (fn_liquidacion_esperado).
+  const { data: liqCalcNueva } = useLiquidacionEsperado({
+    empresaId: canCalc ? empresa?.id : null, vendedorId: vendedorRealId, desde: fechaInicio, hasta: fechaFin, userId: selectedUserId,
+  });
+  const efectivoEsperado = liqCalcNueva
+    ? liqCalcNueva.esperado
+    : calcularEfectivoEsperado({ cobrosEfectivo: cobrosEfectivoTotal, gastos: totalGastos });
 
   // Aggregate products
   const productosSold: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
@@ -2104,6 +2123,12 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
               <div className="text-muted-foreground">Gastos</div>
               <div className="font-bold text-destructive">-{fmt(totalGastos)}</div>
             </div>
+            {((liqCalcNueva?.devolucionesDinero ?? 0) + (liqCalcNueva?.reembolsos ?? 0)) > 0.005 && (
+              <div className="bg-card rounded-md p-3 text-center">
+                <div className="text-muted-foreground">Dinero devuelto a clientes</div>
+                <div className="font-bold text-destructive">-{fmt((liqCalcNueva?.devolucionesDinero ?? 0) + (liqCalcNueva?.reembolsos ?? 0))}</div>
+              </div>
+            )}
             <div className="bg-primary/5 rounded-md p-3 text-center">
               <div className="text-muted-foreground">Efectivo esperado</div>
               <div className="font-bold text-primary">{fmt(efectivoEsperado)}</div>

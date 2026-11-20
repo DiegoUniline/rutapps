@@ -100,6 +100,12 @@ export interface TicketData {
   cambio?: number;
   saldoAnterior?: number;
   pagoAplicado?: number;
+  /**
+   * Lo pagado de ESTA venta, cuando el llamador lo sabe (venta de ruta). Si viene,
+   * manda sobre `pagos`/`pagoAplicado` para «Total pagado»: lo abonado a cuentas
+   * anteriores no es pago de esta venta (H10).
+   */
+  pagadoEstaVenta?: number;
   saldoNuevo?: number;
   promociones?: TicketPromo[];
   pagos?: TicketPago[];

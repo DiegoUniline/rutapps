@@ -16,6 +16,7 @@ import { deterministicUuid } from '@/lib/deterministicId';
 import { todayInTimezone } from '@/lib/utils';
 import { leerCantidad } from '@/lib/ventaPresentacion';
 import { Switch } from '@/components/ui/switch';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import {
   fetchMyProfileWithFallback,
   fetchCargaActivaWithFallback,
@@ -84,17 +85,16 @@ export default function RutaDescarga() {
     enabled: !!user?.id,
   });
 
-  // Get active carga
+  // Carga activa DEL VENDEDOR logueado (H16: antes era la de cualquiera de la empresa).
   const { data: cargaActiva } = useQuery({
-    queryKey: ['mi-carga-activa-descarga', empresa?.id],
+    queryKey: ['mi-carga-activa-descarga', empresa?.id, myProfile?.id],
     networkMode: 'always',
-    queryFn: () => fetchCargaActivaWithFallback(empresa!.id),
-    enabled: !!empresa?.id,
+    queryFn: () => fetchCargaActivaWithFallback(empresa!.id, myProfile!.id),
+    enabled: !!empresa?.id && !!myProfile?.id,
   });
 
-  // El vendedor de la liquidación es el USUARIO LOGUEADO (su perfil). La carga
-  // activa es solo respaldo — se consulta a nivel empresa y podría ser de otro.
-  const vendedorId = myProfile?.id || cargaActiva?.vendedor_id;
+  // El vendedor de la liquidación es el USUARIO LOGUEADO (su perfil).
+  const vendedorId = myProfile?.id;
 
   // Fecha de HOY en la zona horaria de la empresa (no la del dispositivo).
   // Importante para liquidaciones offline y cerca de medianoche: el reloj/uso
@@ -113,25 +113,26 @@ export default function RutaDescarga() {
     }),
   });
 
-  // El efectivo entregado al cliente por devoluciones de dinero SALE de la caja
-  // del vendedor, así que se resta de lo que se le exige liquidar.
-  const efectivoEsperado = (financials?.cobrosEfectivo ?? 0) - (financials?.gastosTotal ?? 0) - (financials?.devolucionesDinero ?? 0);
+  // Misma fórmula que el escritorio (fn_liquidacion_esperado; sin conexión, su espejo
+  // calcularEfectivoEsperado): cobros efectivo − gastos − dinero devuelto a clientes.
+  const efectivoEsperado = financials?.efectivoEsperado ?? 0;
+  const [confirmarSinEfectivo, setConfirmarSinEfectivo] = useState(false);
 
   // Check if already submitted for this carga OR for today's date
   const { data: existingDescarga } = useQuery({
-    queryKey: ['mi-descarga-hoy', cargaActiva?.id, user?.id, today],
+    queryKey: ['mi-descarga-hoy', cargaActiva?.id, user?.id, myProfile?.id, today],
     networkMode: 'always',
     enabled: !!user?.id,
     queryFn: () => fetchExistingDescargaWithFallback({
       cargaId: cargaActiva?.id ?? null,
-      vendedorId: myProfile?.id ?? cargaActiva?.vendedor_id ?? null,
+      vendedorId: myProfile?.id ?? null,
       userId: user!.id,
       today,
     }),
   });
 
   // Stock del camión del vendedor (para el conteo físico al descargar).
-  const vendedorProfileId = myProfile?.id ?? cargaActiva?.vendedor_id ?? null;
+  const vendedorProfileId = myProfile?.id ?? null;
   const { data: camionStock } = useQuery({
     queryKey: ['ruta-camion-stock', empresa?.id, vendedorProfileId, descargarCamion],
     networkMode: 'always',
@@ -174,8 +175,8 @@ export default function RutaDescarga() {
   const submitMutation = useMutation({
     networkMode: 'always',
     mutationFn: async () => {
-      if (totalEfectivo <= 0) throw new Error('Ingresa el efectivo que entregas');
-
+      // H20: liquidar con $0 en efectivo (solo transferencias/crédito) se permite;
+      // la confirmación se pide antes de enviar (ver botón).
       const online = typeof navigator === 'undefined' || navigator.onLine;
 
       // Validate route session closing if active.
@@ -577,14 +578,44 @@ export default function RutaDescarga() {
       {/* Submit */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
         <button
-          onClick={() => { if (savingRef.current || submitMutation.isPending) return; if (!checkAlmacen()) return; savingRef.current = true; submitMutation.mutate(); }}
-          disabled={!hasConteo || submitMutation.isPending || uploading || (!!sesionActiva && !kmFin) || (!!sesionActiva && navigator.onLine && !fotoFin)}
+          onClick={() => {
+            if (savingRef.current || submitMutation.isPending) return;
+            if (!checkAlmacen()) return;
+            // H20: sin efectivo (solo transferencias/crédito) se confirma en vez de bloquear.
+            if (!hasConteo) { setConfirmarSinEfectivo(true); return; }
+            savingRef.current = true; submitMutation.mutate();
+          }}
+          disabled={submitMutation.isPending || uploading || (!!sesionActiva && !kmFin) || (!!sesionActiva && navigator.onLine && !fotoFin)}
           className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
         >
           <Send className="h-4 w-4" />
           {uploading ? 'Subiendo foto...' : submitMutation.isPending ? 'Enviando...' : `Enviar liquidación — ${fmt(totalEfectivo)}`}
         </button>
       </div>
+
+      <AlertDialog open={confirmarSinEfectivo} onOpenChange={setConfirmarSinEfectivo}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Liquidar sin efectivo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a entregar {fmt(0)} en efectivo. El sistema espera {fmt(efectivoEsperado)}.
+              Úsalo solo si hoy cobraste por transferencia o vendiste a crédito.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Contar efectivo</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmarSinEfectivo(false);
+                if (savingRef.current || submitMutation.isPending) return;
+                savingRef.current = true; submitMutation.mutate();
+              }}
+            >
+              Sí, liquidar con {fmt(0)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
