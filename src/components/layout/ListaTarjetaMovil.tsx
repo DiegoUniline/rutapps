@@ -22,7 +22,7 @@ export const PASO_MOVIL = 50;
 
 export type TonoPildora = 'exito' | 'peligro' | 'aviso' | 'neutro' | 'primario';
 
-const TONOS: Record<TonoPildora, string> = {
+export const TONOS: Record<TonoPildora, string> = {
   exito: 'bg-success/10 text-success',
   peligro: 'bg-destructive/10 text-destructive',
   aviso: 'bg-warning/10 text-warning',

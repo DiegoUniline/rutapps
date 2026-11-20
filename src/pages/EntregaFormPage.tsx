@@ -7,6 +7,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText, Boxes, RotateCcw } from 'lucide-react';
 import { MasAccionesMovil } from '@/components/shared/MasAccionesMovil';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoDetalleMovil, type AccionPrincipalMovil } from '@/components/layout/EncabezadoDetalleMovil';
+import { estadoPildora } from '@/components/layout/ListaTarjetaMovil';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { Badge } from '@/components/ui/badge';
 import { LoteSurtidoModal } from '@/components/lotes/LoteSurtidoModal';
@@ -55,6 +58,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const params = useParams();
   const id = entregaIdProp ?? params.id;
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { empresa, user } = useAuth();
   const qc = useQueryClient();
   const isNew = !embedded && id === 'nuevo';
@@ -504,10 +508,53 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
     };
   });
 
+  const principalesMovil: AccionPrincipalMovil[] = isNew ? [] : [
+    ...(isBorrador && lineas.length > 0 && !allLinesDone ? [{ key: 'surtir', label: 'Surtir todo', icon: PackageCheck, onClick: openSurtirTodoDialog, cargando: surtirTodoMut.isPending }] : []),
+    ...(isBorrador && allLinesDone ? [{ key: 'surtido', label: 'Marcar surtido', icon: Check, onClick: handleMarcarSurtido }] : []),
+    ...(isSurtido ? [{ key: 'asignar', label: 'Asignar', icon: Package, onClick: () => setShowAsignarDialog(true) }, { key: 'cargar', label: 'Asignar y cargar', icon: Zap, onClick: () => setShowExpressDialog(true) }] : []),
+    ...(isAsignado ? [{ key: 'cargar', label: 'Cargar', icon: Truck, onClick: handleCargar, cargando: cargarMut.isPending }] : []),
+  ];
+
   return (
-    <div className={embedded ? '' : 'min-h-full'}>
+    <div className={embedded ? '' : 'min-h-full p-2 md:p-4'}>
+    {/* D-037: una sola hoja blanca (overflow-clip no crea área de scroll) */}
+    <div className={embedded ? '' : 'bg-card border border-border rounded-xl shadow-sm overflow-clip'}>
       {/* Header */}
-      {!embedded && (
+      {!embedded && isMobile && (
+        <div className="bg-card border-b border-border px-3 py-2.5 sticky top-0 z-10">
+          <EncabezadoDetalleMovil
+            onBack={() => navigate('/logistica/entregas')}
+            titulo={isNew ? 'Nueva entrega' : (form.folio || 'Entrega')}
+            estado={!isNew && form.status ? { texto: STEPS.find((st: any) => st.key === form.status)?.label ?? estadoPildora(form.status).pildora, tono: estadoPildora(form.status).tono } : null}
+            subtitulo={form.clientes?.nombre}
+            principales={principalesMovil}
+            menu={[
+              ...(!isNew && isBorrador && lineasSinStock.length > 0 ? [{ key: 'nosurtir', label: `No surtir sin stock (${lineasSinStock.length})`, icon: X, onClick: () => setShowNoSurtirSinStockDialog(true) }] : []),
+              ...(!isNew ? [{ key: 'doc', label: 'Documento', icon: FileText, onClick: handleGenerarEntregaPdf }] : []),
+              ...(!isNew && form.status === 'hecho' && isSuperAdmin ? [{ key: 'reabrir', label: 'Reabrir (admin)', icon: RotateCcw, onClick: () => setShowReabrirDialog(true), disabled: reabrirMut.isPending }] : []),
+              ...(!isNew && !readOnly && !enCamion ? [{ key: 'cancelar', label: 'Cancelar entrega', onClick: handleCancelar, destructiva: true, separar: true }] : []),
+            ]}
+            menuExtra={(enCamion && puedeAjustarEntrega && id) || (!isNew && form.status === 'hecho' && puedeAjustarEntrega && id) ? (
+              <div className="flex flex-col gap-1 p-1 border-t border-border mt-1">
+                {enCamion && puedeAjustarEntrega && id && (
+                  <EntregaCargadaAcciones
+                    entregaId={id}
+                    folio={form.folio}
+                    version={form.updated_at}
+                    vendedorActualId={form.vendedor_ruta_id ?? form.vendedor_id}
+                    lineas={lineasCargadas}
+                    vendedores={(vendedores ?? []).map((v: any) => ({ id: v.id, nombre: v.nombre }))}
+                  />
+                )}
+                {!isNew && form.status === 'hecho' && puedeAjustarEntrega && id && (
+                  <AjustarEntregaDialog entregaId={id} className="text-xs h-8 gap-1.5" />
+                )}
+              </div>
+            ) : undefined}
+          />
+        </div>
+      )}
+      {!embedded && !isMobile && (
       <div className="bg-card border-b border-border px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={() => navigate('/logistica/entregas')} className="btn-odoo-secondary !px-2.5 shrink-0" aria-label="Regresar">
@@ -614,7 +661,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
 
       <div className="p-3 sm:p-5 space-y-3 sm:space-y-4 max-w-[1200px]">
         {/* Header card */}
-        <div className="bg-card border border-border rounded-md p-3 sm:p-5">
+        <div>
           {readOnly && !enCamion && (
             <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />
@@ -715,7 +762,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
         </div>
 
         {/* Lines table */}
-        <div className="bg-card border border-border rounded-md">
+        <div className="border-t border-border -mx-3 sm:-mx-5">
           <div className="p-2 sm:p-4 overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
@@ -1140,6 +1187,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
     </div>
   );
 }

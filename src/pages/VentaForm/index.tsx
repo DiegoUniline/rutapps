@@ -457,6 +457,11 @@ export default function VentaFormPage() {
         onPrintTicket={!isNew ? handlePrintTicket : undefined}
         onFacturar={() => setShowFacturaDrawer(true)}
         onDevolucion={!isNew ? () => setShowDevolucion(true) : undefined}
+        movil={!isNew ? {
+          cobrar: !h.editandoConfirmada && form.status !== 'borrador' && form.status !== 'cancelado' && saldoPendiente > 0.005 ? () => setShowPago(true) : undefined,
+          editar: h.puedeEditarConfirmada ? h.iniciarEdicionConfirmada : undefined,
+          cancelarEdicion: h.editandoConfirmada ? h.cancelarEdicionConfirmada : undefined,
+        } : undefined}
         accionesFinales={!isNew ? (
           <>
             {!h.editandoConfirmada && form.status !== 'borrador' && form.status !== 'cancelado' && saldoPendiente > 0.005 && (
