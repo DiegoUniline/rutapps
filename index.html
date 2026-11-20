@@ -9,13 +9,15 @@
       (function () {
         var KEY = 'rutapp:stale-assets-reload';
         var done = false;
+        // Devuelve true solo si de verdad va a recargar (o ya está recargando).
         function recover() {
-          if (done) return; done = true;
+          if (done) return true;
           try {
             var last = Number(sessionStorage.getItem(KEY) || 0);
-            if (Date.now() - last < 60000) return; // evita bucle
+            if (Date.now() - last < 60000) return false; // evita bucle
             sessionStorage.setItem(KEY, String(Date.now()));
           } catch (e) {}
+          done = true;
           var jobs = [];
           try {
             if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
@@ -30,6 +32,7 @@
             u.searchParams.set('_r', Date.now().toString(36));
             location.replace(u.toString());
           });
+          return true;
         }
         window.addEventListener('error', function (ev) {
           var t = ev.target;
@@ -37,7 +40,9 @@
           var src = (t.tagName === 'SCRIPT' && t.src) || (t.tagName === 'LINK' && t.rel === 'stylesheet' && t.href) || '';
           if (src.indexOf('/assets/') !== -1) recover();
         }, true);
-        window.addEventListener('vite:preloadError', function (ev) { ev.preventDefault(); recover(); });
+        // Solo se silencia el error si se va a recargar; si no, el import falla normal y la
+        // pantalla de error ofrece «Actualizar» (antes quedaba «reading 'default'»).
+        window.addEventListener('vite:preloadError', function (ev) { if (recover()) ev.preventDefault(); });
         // CSS servido como text/plain no dispara 'error': revisa al cargar.
         window.addEventListener('DOMContentLoaded', function () {
           setTimeout(function () {

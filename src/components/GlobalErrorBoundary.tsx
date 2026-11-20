@@ -20,7 +20,10 @@ function isChunkLoadError(error: Error | null): boolean {
     msg.includes('failed to fetch dynamically imported module') ||
     msg.includes('loading chunk') ||
     msg.includes('loading css chunk') ||
-    msg.includes('dynamically imported module')
+    msg.includes('dynamically imported module') ||
+    // React.lazy recibe undefined cuando el chunk de una versión anterior ya no existe
+    // y la recuperación del index.html silenció el error de carga.
+    msg.includes("reading 'default'")
   );
 }
 
