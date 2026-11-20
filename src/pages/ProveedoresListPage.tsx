@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 const PAGE_SIZE = 50;
 
@@ -50,9 +50,27 @@ export default function ProveedoresListPage() {
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
   const pageData = proveedores?.slice(from - 1, to) ?? [];
+  const movil = useCargarMasMovil(proveedores, search);
 
   return (
     <ListPage>
+      {isMobile ? (
+        <ListPage.Toolbar>
+          <EncabezadoListaMovil titulo="Proveedores" onNuevo={canCreate ? () => navigate('/proveedores/nuevo') : undefined} nuevoLabel="Nuevo proveedor">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Buscar proveedores"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                className="input-odoo pl-9 w-full h-10"
+              />
+            </div>
+          </EncabezadoListaMovil>
+        </ListPage.Toolbar>
+      ) : (
+      <ListPage.Toolbar>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-foreground">Proveedores</h1>
         {canCreate && (
@@ -74,27 +92,25 @@ export default function ProveedoresListPage() {
           />
         </div>
       </div>
+      </ListPage.Toolbar>
+      )}
 
-      {isMobile && !isLoading ? (
-        <div className={`${SCROLL_AREA} -mx-1 px-1`}>
-          <ListaTarjetasMovil vacia={pageData.length === 0} mensajeVacio="Sin proveedores">
-            {pageData.map(p => (
+      {isMobile ? (
+        <ListPage.Body card={false}>
+          {isLoading ? <div className="py-8 text-center text-sm text-muted-foreground">Cargando...</div> : (
+          <ListaTarjetasMovil vacia={movil.total === 0} mensajeVacio="Sin proveedores" {...movil}>
+            {movil.visibles.map((p: any) => (
               <ListaTarjetaMovil
                 key={p.id}
                 titulo={p.nombre}
-                subtitulo={p.contacto ?? undefined}
-                estado={<StatusChip status={p.status ?? 'activo'} />}
+                linea2={[p.telefono, p.contacto, [p.ciudad, p.estado].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || '—'}
+                {...estadoPildora(p.status ?? 'activo')}
                 onClick={() => navigate(`/proveedores/${p.id}`)}
-                campos={[
-                  { label: 'Teléfono', value: p.telefono ?? '—' },
-                  { label: 'Pago', value: <span className="capitalize">{p.condicion_pago ?? 'contado'}</span> },
-                  { label: 'Ciudad', value: [p.ciudad, p.estado].filter(Boolean).join(', ') || '—' },
-                  ...(p.email ? [{ label: 'Email', value: <span className="break-all">{p.email}</span>, className: 'col-span-2' }] : []),
-                ]}
               />
             ))}
           </ListaTarjetasMovil>
-        </div>
+          )}
+        </ListPage.Body>
       ) : (
       <div className={TABLE_CARD}>
         {isLoading ? (
@@ -141,10 +157,12 @@ export default function ProveedoresListPage() {
       </div>
       )}
 
-      {total > PAGE_SIZE && (
+      {!isMobile && total > PAGE_SIZE && (
+        <ListPage.Footer>
         <OdooPagination from={from} to={to} total={total}
           onPrev={() => setPage(p => Math.max(1, p - 1))}
           onNext={() => setPage(p => p + 1)} />
+        </ListPage.Footer>
       )}
     </ListPage>
   );

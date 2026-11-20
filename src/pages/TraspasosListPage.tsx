@@ -24,7 +24,7 @@ import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { toast } from 'sonner';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -270,6 +270,9 @@ export default function TraspasosListPage() {
   const fromD = Math.min((pageD - 1) * PAGE_SIZE + 1, totalD);
   const toD = Math.min(pageD * PAGE_SIZE, totalD);
   const pageDataD = filteredLineas.slice(fromD - 1, toD);
+  // Teléfono: lista continua con «Cargar más» (de 50 en 50).
+  const movilTraspasos = useCargarMasMovil(filtered, `${search}|${desde}|${hasta}|${JSON.stringify(filters)}`);
+  const movilLineas = useCargarMasMovil(filteredLineas, `${searchD}|${JSON.stringify(filtersD)}`);
   const totalCantidad = filteredLineas.reduce((s, l) => s + (l.cantidad ?? 0), 0);
 
   const groupsD = useMemo(() => groupData(pageDataD, groupByD, (item: any, key) => {
@@ -305,30 +308,7 @@ export default function TraspasosListPage() {
   }));
 
   // ─── RENDER TABLES ───────────────────────────────────────
-  const renderTable = (items: any[]) => isMobile ? (
-    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay traspasos. Crea el primero." className={cn(!groupBy && 'flex-1 min-h-0 overflow-auto')}>
-      {items.map((t: any) => (
-        <ListaTarjetaMovil
-          key={t.id}
-          titulo={`${getOrigenLabel(t)} → ${getDestinoLabel(t)}`}
-          subtitulo={`${t.folio || t.id.slice(0, 8)} · ${TIPO_LABELS[t.tipo] || t.tipo}`}
-          estado={<StatusChip status={t.status} />}
-          leading={
-            <input
-              type="checkbox"
-              aria-label="Seleccionar traspaso"
-              checked={selected.has(t.id)}
-              onClick={e => e.stopPropagation()}
-              onChange={() => toggleOne(t.id)}
-              className="h-4 w-4 rounded border-input shrink-0"
-            />
-          }
-          onClick={() => navigate(`/almacen/traspasos/${t.id}`)}
-          campos={[{ label: 'Fecha', value: fmtDate(t.fecha) }]}
-        />
-      ))}
-    </ListaTarjetasMovil>
-  ) : (
+  const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
       <table className="w-full text-[13px]">
         <thead>
@@ -410,25 +390,7 @@ export default function TraspasosListPage() {
     </div>
   );
 
-  const renderDetalleTable = (items: any[]) => isMobile ? (
-    <ListaTarjetasMovil vacia={items.length === 0} mensajeVacio="No hay líneas de detalle." className={cn(!groupByD && 'flex-1 min-h-0 overflow-auto')}>
-      {items.map((l: any, i: number) => (
-        <ListaTarjetaMovil
-          key={`${l.traspaso_id}-${l.linea_id}-${i}`}
-          titulo={l.producto}
-          subtitulo={[l.codigo, l.folio, TIPO_LABELS[l.tipo] || l.tipo].filter(Boolean).join(' · ')}
-          estado={<StatusChip status={l.status} />}
-          onClick={() => navigate(`/almacen/traspasos/${l.traspaso_id}`)}
-          campos={[
-            { label: 'Origen', value: l.origen },
-            { label: 'Destino', value: l.destino },
-            { label: 'Fecha', value: fmtDate(l.fecha) },
-            { label: 'Cantidad', value: fmtNum(l.cantidad) },
-          ]}
-        />
-      ))}
-    </ListaTarjetasMovil>
-  ) : (
+  const renderDetalleTable = (items: any[]) => (
     <div className={cn(!groupByD && "bg-card border border-border rounded overflow-x-auto")}>
       <table className="w-full text-[13px]">
         <thead>
@@ -487,19 +449,23 @@ export default function TraspasosListPage() {
 
   return (
     <ListPage scroll>
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Traspasos <HelpButton title={HELP.traspasos.title} sections={HELP.traspasos.sections} /> <VideoHelpButton module="traspasos" /></h1>
+      <div className="px-3 md:px-4 space-y-3">
+      {isMobile && (
+        <EncabezadoListaMovil titulo="Traspasos" onNuevo={() => navigate('/almacen/traspasos/nuevo')} nuevoLabel="Nuevo traspaso" />
+      )}
+      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 max-md:hidden">Traspasos <HelpButton title={HELP.traspasos.title} sections={HELP.traspasos.sections} /> <VideoHelpButton module="traspasos" /></h1>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+      {/* KPIs (franja dentro de la hoja; en teléfono no se muestran) */}
+      <div className="grid grid-cols-3 divide-x divide-border border-y border-border -mx-3 md:-mx-4 max-md:hidden">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Total</p>
           <p className="text-base sm:text-2xl font-bold text-foreground truncate">{filtered.length}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Confirmados</p>
           <p className="text-base sm:text-2xl font-bold text-success truncate">{filtered.filter(t => t.status === 'confirmado').length}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Borradores</p>
           <p className="text-base sm:text-2xl font-bold text-warning truncate">{filtered.filter(t => t.status === 'borrador').length}</p>
         </div>
@@ -534,7 +500,7 @@ export default function TraspasosListPage() {
             <OdooFilterBar
               search={search}
               onSearchChange={val => { setSearch(val); setPage(1); }}
-              placeholder="Buscar por folio, origen o destino..."
+              placeholder={isMobile ? 'Buscar traspasos' : 'Buscar por folio, origen o destino...'}
               filterOptions={FILTER_OPTIONS}
               activeFilters={filters}
               onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
@@ -551,7 +517,7 @@ export default function TraspasosListPage() {
               onDateFromChange={setDesde}
               onDateToChange={setHasta}
             />
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 max-md:hidden">
               <ExportButton
                 onExcel={() => exportToExcel({ fileName: 'Traspasos', title: 'Reporte de Traspasos', columns: TRASPASOS_COLUMNS, data: exportTraspasos })}
                 onPDF={() => exportToPDF({ fileName: 'Traspasos', title: 'Reporte de Traspasos', columns: TRASPASOS_COLUMNS, data: exportTraspasos })}
@@ -564,6 +530,18 @@ export default function TraspasosListPage() {
 
           {isLoading ? (
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={7} /></div>
+          ) : isMobile ? (
+            <ListaTarjetasMovil vacia={movilTraspasos.total === 0} mensajeVacio="No hay traspasos. Crea el primero." {...movilTraspasos}>
+              {movilTraspasos.visibles.map((t: any) => (
+                <ListaTarjetaMovil
+                  key={t.id}
+                  titulo={`${getOrigenLabel(t)} → ${getDestinoLabel(t)}`}
+                  linea2={<>{fmtDate(t.fecha)} · {TIPO_LABELS[t.tipo] || t.tipo}<span className="text-xs"> · {t.folio || t.id.slice(0, 8)}</span></>}
+                  {...estadoPildora(t.status)}
+                  onClick={() => navigate(`/almacen/traspasos/${t.id}`)}
+                />
+              ))}
+            </ListaTarjetasMovil>
           ) : (
             <>
               <GroupedTableWrapper sinMarcoMovil groupBy={groupBy} groups={groups} renderTable={renderTable} />
@@ -619,6 +597,19 @@ export default function TraspasosListPage() {
 
           {isLoadingLineas ? (
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={9} /></div>
+          ) : isMobile ? (
+            <ListaTarjetasMovil vacia={movilLineas.total === 0} mensajeVacio="No hay líneas de detalle." {...movilLineas}>
+              {movilLineas.visibles.map((l: any, i: number) => (
+                <ListaTarjetaMovil
+                  key={`${l.traspaso_id}-${l.linea_id}-${i}`}
+                  titulo={l.producto}
+                  linea2={<>{l.origen} → {l.destino}<span className="text-xs"> · {l.folio}</span></>}
+                  pildora={fmtNum(l.cantidad)}
+                  tono="primario"
+                  onClick={() => navigate(`/almacen/traspasos/${l.traspaso_id}`)}
+                />
+              ))}
+            </ListaTarjetasMovil>
           ) : (
             <>
               <GroupedTableWrapper sinMarcoMovil groupBy={groupByD} groups={groupsD} renderTable={renderDetalleTable} />
@@ -657,6 +648,7 @@ export default function TraspasosListPage() {
           { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => setBulkDeleteOpen(true) },
         ]}
       />
+      </div>
     </ListPage>
   );
 }
