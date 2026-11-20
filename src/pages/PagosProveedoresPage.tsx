@@ -16,7 +16,8 @@ import DateFilterBar from '@/components/ruta/DateFilterBar';
 import { useTablePagination } from '@/hooks/useTablePagination';
 import { CxPTabs } from '@/components/CxPTabs';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
 
 const METODO_ICONS: Record<string, typeof Banknote> = {
   efectivo: Banknote,
@@ -124,12 +125,63 @@ export default function PagosProveedoresPage() {
   }, [filtered, page, grouped]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const isMobile = useIsMobile();
+  const movil = useCargarMasMovil(filtered, `${search}|${filtroMetodo}|${filtroProveedor}|${desde}|${hasta}`);
 
   if (isLoading) return <TableSkeleton />;
 
   return (
-    <div className="space-y-4">
-      <CxPTabs />
+    <div className="p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 pb-3 space-y-3">
+      <div className="-mx-3 md:-mx-4"><CxPTabs /></div>
+      {isMobile ? (
+        <>
+          <EncabezadoListaMovil titulo="Pagos a proveedores">
+            <OdooFilterBar
+              search={search}
+              onSearchChange={v => { setSearch(v); setPage(0); }}
+              placeholder="Buscar pagos"
+              filterOptions={[
+                { key: 'metodo', label: 'Método', options: Object.entries(METODO_LABELS).map(([value, label]) => ({ value, label })) },
+                { key: 'proveedor', label: 'Proveedor', options: proveedores.map(p => ({ value: p.id, label: p.nombre })) },
+              ]}
+              activeFilters={{
+                ...(filtroMetodo !== 'todos' ? { metodo: [filtroMetodo] } : {}),
+                ...(filtroProveedor !== 'todos' ? { proveedor: [filtroProveedor] } : {}),
+              }}
+              onToggleFilter={(key, val) => {
+                if (key === 'metodo') setFiltroMetodo(prev => prev === val ? 'todos' : val);
+                if (key === 'proveedor') setFiltroProveedor(prev => prev === val ? 'todos' : val);
+                setPage(0);
+              }}
+              onSetFilter={(key, vals) => {
+                const v = vals[vals.length - 1] ?? 'todos';
+                if (key === 'metodo') setFiltroMetodo(v);
+                if (key === 'proveedor') setFiltroProveedor(v);
+                setPage(0);
+              }}
+              onClearFilters={() => { setFiltroMetodo('todos'); setFiltroProveedor('todos'); setPage(0); }}
+              dateFrom={desde}
+              dateTo={hasta}
+              onDateRangeChange={(f, t) => { setDesde(f); setHasta(t); setPage(0); }}
+              onDateFromChange={v => { setDesde(v); setPage(0); }}
+              onDateToChange={v => { setHasta(v); setPage(0); }}
+            />
+          </EncabezadoListaMovil>
+          <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio="No se encontraron pagos en el período seleccionado" {...movil}>
+            {movil.visibles.map(p => (
+              <ListaTarjetaMovil
+                key={p.id}
+                titulo={p.proveedor}
+                linea2={<>{fmtDate(p.fecha)} · {METODO_LABELS[p.metodo_pago] ?? p.metodo_pago}<span className="text-xs"> · {[p.compra_folio, p.referencia].filter(Boolean).join(' · ')}</span></>}
+                pildora={fmt(p.monto)}
+                tono="exito"
+              />
+            ))}
+          </ListaTarjetasMovil>
+        </>
+      ) : (<>
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="bg-card border border-border rounded-xl p-2.5 sm:p-4 flex items-center gap-3 min-w-0">
@@ -236,6 +288,8 @@ export default function PagosProveedoresPage() {
           )}
         </>
       )}
+      </>)}
+    </div>
     </div>
   );
 }
