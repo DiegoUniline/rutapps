@@ -3,6 +3,9 @@ import { ArrowLeft, Save, Trash2, Check, Truck, FileText, Receipt, Printer, Undo
 import { cn } from '@/lib/utils';
 import type { StatusVenta } from '@/types';
 import { MasAccionesMovil, type AccionMovil } from '@/components/shared/MasAccionesMovil';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoDetalleMovil, type AccionPrincipalMovil } from '@/components/layout/EncabezadoDetalleMovil';
+import { estadoPildora } from '@/components/layout/ListaTarjetaMovil';
 
 interface Entrega {
   id: string;
@@ -39,6 +42,8 @@ interface VentaFormHeaderProps {
   onDevolucion?: () => void;
   /** Botones al final del renglón (Cobrar, Editar venta). */
   accionesFinales?: React.ReactNode;
+  /** Teléfono: las mismas acciones finales como callbacks (Cobrar a la vista; Editar en «⋯»). */
+  movil?: { cobrar?: () => void; editar?: () => void; cancelarEdicion?: () => void };
 }
 
 export function VentaFormHeader({
@@ -46,8 +51,9 @@ export function VentaFormHeader({
   requiereFactura, readOnly, canCreateEntrega, canDeleteCancelada, hayEntregas,
   entregasExistentes, lineasPendientesFactura, isSaving, isCreatingEntrega,
   onBack, onSave, onDelete, onStatusChange, onCreateEntrega,
-  onNavigateEntrega, onGenerarPdf, onPrintTicket, onFacturar, onDevolucion, accionesFinales,
+  onNavigateEntrega, onGenerarPdf, onPrintTicket, onFacturar, onDevolucion, accionesFinales, movil,
 }: VentaFormHeaderProps) {
+  const isMobile = useIsMobile();
   // En teléfono las acciones secundarias (consulta, impresión, devolución,
   // cancelar, eliminar) van al menú «⋯»; los botones principales quedan a la vista.
   const accionesMovil: AccionMovil[] = isNew ? [] : [
@@ -58,6 +64,42 @@ export function VentaFormHeader({
     ...(status !== 'cancelado' ? [{ key: 'cancelar', label: 'Cancelar venta', onClick: () => onStatusChange('cancelado'), destructiva: true, separar: !onDevolucion }] : []),
     ...((status === 'borrador' || (status === 'cancelado' && canDeleteCancelada)) ? [{ key: 'eliminar', label: status === 'cancelado' ? 'Eliminar venta cancelada' : 'Eliminar borrador', icon: Trash2, onClick: onDelete, destructiva: true }] : []),
   ];
+  if (isMobile) {
+    const puedeEntregar = !isNew && status === 'confirmado' && !entregaInmediata && tipo !== 'pedido';
+    const puedeFacturar = !isNew && lineasPendientesFactura > 0 && (requiereFactura || (status === 'confirmado' && entregaInmediata) || status === 'entregado');
+    const editando = !readOnly && !isNew;
+    let principal: AccionPrincipalMovil | null = null;
+    if (isNew) principal = { key: 'confirmar', label: 'Confirmar', icon: Check, onClick: () => onSave(true), cargando: isSaving };
+    else if (movil?.cancelarEdicion || editando) principal = { key: 'guardar', label: 'Guardar', icon: Save, onClick: () => onSave(), cargando: isSaving };
+    else if (movil?.cobrar) principal = { key: 'cobrar', label: 'Cobrar', onClick: movil.cobrar };
+    else if (status === 'borrador') principal = { key: 'confirmar', label: 'Confirmar', icon: Check, onClick: () => onStatusChange('confirmado') };
+    else if (canCreateEntrega) principal = { key: 'entrega', label: 'Crear entrega', icon: Truck, onClick: onCreateEntrega, cargando: isCreatingEntrega };
+    else if (puedeEntregar) principal = { key: 'entregar', label: 'Entregar', onClick: () => onStatusChange('entregado') };
+    else if (puedeFacturar) principal = { key: 'facturar', label: 'Facturar', icon: Receipt, onClick: onFacturar };
+    const menu: AccionMovil[] = [
+      ...(isNew ? [{ key: 'borrador', label: 'Guardar borrador', icon: Save, onClick: () => onSave(), disabled: isSaving }] : []),
+      ...(movil?.editar ? [{ key: 'editar', label: 'Editar venta', onClick: movil.editar }] : []),
+      ...(movil?.cancelarEdicion ? [{ key: 'cancelar-ed', label: 'Cancelar edición', onClick: movil.cancelarEdicion }] : []),
+      ...(!isNew && status === 'borrador' && principal?.key !== 'confirmar' && principal?.key !== 'guardar' ? [{ key: 'confirmar', label: 'Confirmar', icon: Check, onClick: () => onStatusChange('confirmado') }] : []),
+      ...(canCreateEntrega && principal?.key !== 'entrega' ? [{ key: 'entrega', label: hayEntregas ? 'Crear entrega parcial' : 'Crear entrega', icon: Truck, onClick: onCreateEntrega, disabled: isCreatingEntrega }] : []),
+      ...(puedeEntregar && principal?.key !== 'entregar' ? [{ key: 'entregar', label: 'Entregar', onClick: () => onStatusChange('entregado') }] : []),
+      ...(puedeFacturar && principal?.key !== 'facturar' ? [{ key: 'facturar', label: `Facturar (${lineasPendientesFactura} pendientes)`, icon: Receipt, onClick: onFacturar }] : []),
+      ...accionesMovil,
+    ];
+    return (
+      <div className="bg-card border-b border-border px-3 py-2.5 sticky top-0 z-10">
+        <EncabezadoDetalleMovil
+          onBack={onBack}
+          titulo={isNew ? 'Nueva venta' : (folio || 'Venta')}
+          estado={!isNew && status ? { texto: estadoPildora(status).pildora, tono: estadoPildora(status).tono } : null}
+          subtitulo={[clienteNombre, registradoPorNombre ? `Registrado por ${registradoPorNombre}` : null].filter(Boolean).join(' · ')}
+          principales={principal ? (principal.key === 'guardar' && status === 'borrador' ? [principal, { key: 'confirmar', label: 'Confirmar', icon: Check, onClick: () => onStatusChange('confirmado') }] : [principal]) : []}
+          menu={menu}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-card border-b border-border px-3 sm:px-4 py-2.5 sm:py-1.5 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-10">
       <div className="flex items-center gap-3 sm:gap-2.5 min-w-0">

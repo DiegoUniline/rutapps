@@ -1,4 +1,6 @@
 import { MasAccionesMovil } from '@/components/shared/MasAccionesMovil';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
+import { estadoPildora } from '@/components/layout/ListaTarjetaMovil';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -571,9 +573,43 @@ export default function TraspasoFormPage() {
   const destinoLabel = almacenOpts.find(a => a.value === almacenDestinoId)?.label
     || vendedorOpts.find(v => v.value === vendedorDestinoId)?.label || '';
 
+  const pedirCancelar = () => setConfirmDialog({
+    open: true, action: 'cancelar',
+    title: 'Cancelar traspaso',
+    description: status === 'confirmado'
+      ? '¿Cancelar este traspaso? Se revertirá todo el stock movido.'
+      : '¿Cancelar este traspaso?',
+  });
+  const pedirConfirmar = () => setConfirmDialog({
+    open: true, action: 'confirmar',
+    title: 'Confirmar traspaso',
+    description: '¿Confirmar este traspaso? Se moverá el stock del origen al destino.',
+  });
+
   return (
-    <div className="min-h-full">
+    <div className="min-h-full p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip">
       {/* Header bar */}
+      {isMobile ? (
+        <div className="bg-card border-b border-border px-3 py-2.5 sticky top-0 z-10">
+          <EncabezadoDetalleMovil
+            onBack={() => navigate('/almacen/traspasos')}
+            titulo={isNew ? 'Nuevo traspaso' : (folio || 'Traspaso')}
+            estado={!isNew ? { texto: STATUS_LABELS[status]?.label ?? estadoPildora(status).pildora, tono: estadoPildora(status).tono } : null}
+            subtitulo={!isNew ? TIPO_LABELS[tipo] : undefined}
+            principales={[
+              ...(!readOnly ? [{ key: 'guardar', label: 'Guardar', icon: Save, onClick: () => saveMut.mutate(), cargando: saveMut.isPending }] : []),
+              ...(!isNew && status === 'borrador' ? [{ key: 'confirmar', label: 'Confirmar', icon: Check, onClick: pedirConfirmar, disabled: confirmarMut.isPending }] : []),
+            ]}
+            menu={[
+              ...(!isNew ? [{ key: 'pdf', label: 'PDF', icon: FileText, onClick: handleGenerarPdf }] : []),
+              ...(!isNew && status !== 'cancelado' ? [{ key: 'cancelar', label: 'Cancelar traspaso', icon: Ban, destructiva: true, separar: true, disabled: cancelarMut.isPending, onClick: pedirCancelar }] : []),
+              ...(!isNew && status === 'borrador' ? [{ key: 'eliminar', label: 'Eliminar borrador', icon: Trash2, destructiva: true, onClick: handleDelete }] : []),
+            ]}
+          />
+        </div>
+      ) : (
       <div className="bg-card border-b border-border px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={() => navigate('/almacen/traspasos')} className="btn-odoo-secondary !px-2.5 shrink-0" aria-label="Regresar">
@@ -645,6 +681,7 @@ export default function TraspasoFormPage() {
           )}
         </div>
       </div>
+      )}
 
       {/* Status chips */}
       {!isNew && (
@@ -665,7 +702,7 @@ export default function TraspasoFormPage() {
 
       {/* Form body */}
       <div className="p-3 sm:p-5 space-y-3 sm:space-y-4 max-w-[1200px]">
-        <div className="bg-card border border-border rounded-md p-3 sm:p-5">
+        <div>
           {readOnly && (
             <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />
@@ -751,7 +788,7 @@ export default function TraspasoFormPage() {
         </div>
 
         {/* Tabs: Líneas + Notas */}
-        <div className="bg-card border border-border rounded-md">
+        <div className="border-t border-border -mx-3 sm:-mx-5">
           <OdooTabs tabs={[
             {
               key: 'lineas',
@@ -1068,6 +1105,7 @@ export default function TraspasoFormPage() {
         </AlertDialogContent>
       </AlertDialog>
       <PinDialog />
+    </div>
     </div>
   );
 }

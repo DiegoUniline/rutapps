@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEntregasByPedido, useCrearEntrega, useEntregaExpress, calcRemainingQty } from '@/hooks/useEntregas';
 import { ArrowLeft, Truck, Package, Check, ExternalLink, ClipboardList, Zap, Lock, Unlock } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -26,6 +28,7 @@ const EntregaFormPage = lazy(() => import('./EntregaFormPage'));
 export default function PedidoPendienteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { empresa, profile } = useAuth();
   const qc = useQueryClient();
   const { pedirDestino, excedenteDialog } = useExcedentePrompt();
@@ -251,9 +254,29 @@ export default function PedidoPendienteDetailPage() {
   };
 
   return (
-    <div className="min-h-full">
+    <div className="min-h-full p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip">
       {excedenteDialog}
       {/* Header */}
+      {isMobile ? (
+        <div className="bg-card border-b border-border px-3 py-2.5 sticky top-0 z-10">
+          <EncabezadoDetalleMovil
+            onBack={() => navigate('/logistica/pedidos')}
+            titulo={pedido.folio ?? 'Pedido'}
+            estado={isCerrado && cerradoLabel ? { texto: cerradoLabel, tono: 'aviso' } : null}
+            subtitulo={pedido.clientes?.nombre ?? '—'}
+            principales={!fullyDelivered && !isCerrado ? [
+              { key: 'parcial', label: 'Surtir parcial', icon: Package, onClick: handleCrearEntrega, disabled: crearEntrega.isPending || entregaExpress.isPending },
+              { key: 'despachar', label: 'Despachar', icon: Zap, onClick: handleEntregaExpress, disabled: crearEntrega.isPending, cargando: entregaExpress.isPending },
+            ] : []}
+            menu={[
+              ...(puedeCerrar ? [{ key: 'cerrar', label: 'Cerrar pedido', icon: Lock, onClick: () => setCerrarOpen(true) }] : []),
+              ...(puedeReabrir ? [{ key: 'reabrir', label: 'Reabrir pedido', icon: Unlock, onClick: handleReabrir }] : []),
+            ]}
+          />
+        </div>
+      ) : (
       <div className="bg-card border-b border-border px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={() => navigate('/logistica/pedidos')} className="btn-odoo-secondary !px-2.5 shrink-0" aria-label="Regresar">
@@ -295,11 +318,12 @@ export default function PedidoPendienteDetailPage() {
           )}
         </div>
       </div>
+      )}
 
 
       <div className="p-3 sm:p-5 space-y-4 sm:space-y-5 max-w-[1200px]">
         {/* Info card */}
-        <div className="bg-card border border-border rounded-md p-3 sm:p-5">
+        <div className="">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px]">
             <div>
               <span className="text-muted-foreground text-[11px]">Cliente</span>
@@ -340,7 +364,7 @@ export default function PedidoPendienteDetailPage() {
         </div>
 
         {/* Lines with delivery progress */}
-        <div className="bg-card border border-border rounded-md overflow-hidden">
+        <div className="border-t border-border -mx-3 sm:-mx-5">
           <div className="px-4 py-2.5 border-b border-border bg-card">
             <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Líneas del pedido</h3>
           </div>
@@ -384,7 +408,7 @@ export default function PedidoPendienteDetailPage() {
 
         {/* Create entrega options */}
         {!fullyDelivered && !isCerrado && (
-          <div id="opciones-entrega" className="bg-card border border-border rounded-md p-4 space-y-3">
+          <div id="opciones-entrega" className="border-t border-border -mx-3 sm:-mx-5 px-3 sm:px-5 py-4 space-y-3">
             <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Almacén y repartidor para la entrega</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
@@ -410,7 +434,7 @@ export default function PedidoPendienteDetailPage() {
         )}
 
         {/* Entregas list */}
-        <div className="bg-card border border-border rounded-md overflow-hidden">
+        <div className="border-t border-border -mx-3 sm:-mx-5">
           <div className="px-4 py-2.5 border-b border-border bg-card flex items-center justify-between">
             <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">
               Entregas creadas ({entregasActivas.length})
@@ -464,7 +488,7 @@ export default function PedidoPendienteDetailPage() {
 
         {/* Embedded entrega detail(s) — same controls as /logistica/entregas/:id */}
         {entregasActivas.map((e: any) => (
-          <div key={`embed-${e.id}`} className="bg-card border border-border rounded-md overflow-hidden">
+          <div key={`embed-${e.id}`} className="border-t border-border -mx-3 sm:-mx-5">
             <div className="px-4 py-2.5 border-b border-border bg-accent/30 flex items-center justify-between">
               <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                 <Truck className="h-3.5 w-3.5" /> Detalle de entrega {e.folio ?? e.id.slice(0,8)}
@@ -516,6 +540,7 @@ export default function PedidoPendienteDetailPage() {
       </AlertDialog>
 
       <PinDialog />
+    </div>
     </div>
   );
 }
