@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn, fmtDate , todayLocal } from '@/lib/utils';
-import { MenuAcciones } from '@/components/shared/MenuAcciones';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil, type TonoPildora } from '@/components/layout/ListaTarjetaMovil';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -101,14 +101,14 @@ function SectionCard({ title, icon: Icon, children, className }: { title: string
   const [isOpen, setIsOpen] = useState(!startsCollapsed);
 
   return (
-    <section className={cn("bg-card border border-border/70 rounded-xl", className)}>
+    <section className={cn("border-t border-border/70", className)}>
       <button
         type="button"
         onClick={() => setIsOpen(v => !v)}
         aria-expanded={isOpen}
         className={cn(
-          "w-full px-5 py-3 bg-muted/20 flex items-center gap-2 text-left transition-colors hover:bg-muted/35 rounded-t-xl",
-          isOpen ? "border-b border-border/70" : "rounded-b-xl"
+          "w-full px-3 md:px-5 py-3 flex items-center gap-2 text-left transition-colors hover:bg-muted/35",
+          isOpen && "border-b border-border/70"
         )}
       >
         <Icon className="h-4 w-4 text-primary shrink-0" />
@@ -117,7 +117,7 @@ function SectionCard({ title, icon: Icon, children, className }: { title: string
         <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
       </button>
       {isOpen && (
-        <div className="p-5 min-w-0 [&_table]:w-full [&_th]:whitespace-normal [&_td]:break-words [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-20 [&_thead_th]:bg-muted [&_tfoot_tr]:sticky [&_tfoot_tr]:bottom-0 [&_tfoot_tr]:z-10 [&_tfoot_tr]:shadow-sm xl:[&_.overflow-x-auto]:overflow-visible">
+        <div className="p-3 md:p-5 min-w-0 [&_table]:w-full [&_th]:whitespace-normal [&_td]:break-words [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-20 [&_thead_th]:bg-muted [&_tfoot_tr]:sticky [&_tfoot_tr]:bottom-0 [&_tfoot_tr]:z-10 [&_tfoot_tr]:shadow-sm xl:[&_.overflow-x-auto]:overflow-visible">
           {children}
         </div>
       )}
@@ -659,8 +659,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     <div className="min-h-full p-2 md:p-4">
       {/* Header integrado al shell (D-037: hoja blanca; overflow-clip no crea área de scroll) */}
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-clip">
-        <div className="relative px-3 md:px-4 py-3 md:py-4 border-b border-border/70 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between max-md:pr-14">
-          <div className="flex min-w-0 items-start gap-3">
+        <div className="px-3 md:px-4 py-3 md:py-4 border-b border-border/70 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3 max-md:hidden">
             <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0" onClick={onClose} title="Volver a descargas">
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -838,7 +838,24 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             >
               <Trash2 className="h-4 w-4" />
             </Button>
-          </>); return isMobile ? <MenuAcciones className="shrink-0 self-start absolute right-3 top-4"><div className="flex flex-col items-stretch gap-1 [&>*]:justify-start">{accionesLiq}</div></MenuAcciones> : <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">{accionesLiq}</div>; })()}
+          </>); return isMobile ? (
+            <EncabezadoDetalleMovil
+              onBack={onClose}
+              titulo="Liquidación de ruta"
+              estado={{ texto: (STATUS_MAP[currentStatus] || STATUS_MAP.pendiente).label, tono: currentStatus === 'aprobada' ? 'exito' : currentStatus === 'rechazada' ? 'peligro' : 'aviso' }}
+              subtitulo={`${(descarga as any).vendedores?.nombre ?? 'Sin vendedor'} · ${descarga.fecha_inicio && descarga.fecha_fin && descarga.fecha_inicio !== descarga.fecha_fin ? `${fmtDate(descarga.fecha_inicio)} al ${fmtDate(descarga.fecha_fin)}` : fmtDate(descarga.fecha)}`}
+              principales={isPendiente ? [
+                { key: 'aprobar', label: 'Aprobar', icon: CheckCircle2, onClick: () => aprobarMutation.mutate('aprobada'), disabled: !!descarga.descargo_camion && !destinoAlmacenId, cargando: aprobarMutation.isPending },
+                { key: 'rechazar', label: 'Rechazar', icon: XCircle, onClick: () => aprobarMutation.mutate('rechazada'), disabled: aprobarMutation.isPending, destructiva: true },
+              ] : []}
+              menuExtra={<div className="flex flex-col items-stretch gap-1 [&>*]:justify-start">{accionesLiq}</div>}
+            />
+          ) : <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">{accionesLiq}</div>; })()}
+          {isMobile && !descarga.vendedor_id && (
+            <p className="text-xs font-semibold text-destructive">
+              Liquidación sin vendedor: el corte no es confiable porque no puede filtrarse correctamente por vendedor.
+            </p>
+          )}
         </div>
 
         {/* Tabs */}
@@ -874,10 +891,9 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             })}
           </div>
         </div>
-      </div>
 
-      {/* Workspace 70/30 */}
-      <div className="max-w-[1600px] mx-auto w-full py-5">
+      {/* Workspace 70/30 (dentro de la misma hoja, D-037) */}
+      <div className="max-w-[1600px] mx-auto w-full p-3 md:p-4">
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">
           <main className="min-w-0 space-y-4">
             {activeTab === 'resumen' && (
@@ -933,7 +949,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
 
             {/* ═══ RESUMEN GENERAL ═══ */}
             {show('resumen') && (
-              <div className="bg-card border border-border/70 rounded-xl p-5">
+              <div className="border-t border-border/70 pt-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-x-4 gap-y-4">
                   <div>
                     <div className="text-[11px] text-muted-foreground">Ventas contado</div>
@@ -1652,8 +1668,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
 
           {/* Panel de decisión persistente */}
           <aside className="xl:sticky xl:top-4 space-y-4">
-            <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
-              <div className="border-b border-border/70 px-5 py-4">
+            <div className="border-t border-border/70">
+              <div className="border-b border-border/70 px-3 md:px-5 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-[11px] font-semibold text-muted-foreground tracking-wide">DECISIÓN</div>
@@ -1718,7 +1734,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             </div>
 
             {isPendiente && (
-              <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4">
+              <div className="border-t border-border/70 py-4 space-y-4">
                 {descarga.descargo_camion && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900 dark:bg-amber-950/20">
                     <label className="text-xs font-semibold text-amber-800 dark:text-amber-300 block mb-2 flex items-center gap-1.5">
@@ -1778,13 +1794,13 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             )}
 
             {descarga.notas_supervisor && !isPendiente && (
-              <div className="rounded-xl border border-border/70 bg-card px-5 py-4">
+              <div className="border-t border-border/70 py-4">
                 <div className="text-xs text-muted-foreground font-semibold mb-1.5">Notas del administrador</div>
                 <p className="text-sm text-foreground leading-relaxed">{descarga.notas_supervisor}</p>
               </div>
             )}
 
-            <div className="rounded-xl border border-border/70 bg-card p-4">
+            <div className="border-t border-border/70 py-4">
               <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
                 <div><div className="text-muted-foreground">Ventas</div><div className="font-bold mt-0.5">{ventasActivas.length}</div></div>
                 <div><div className="text-muted-foreground">Cobros</div><div className="font-bold mt-0.5">{(cobros || []).length}</div></div>
@@ -1794,6 +1810,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             </div>
           </aside>
         </div>
+      </div>
       </div>
     </div>
   );

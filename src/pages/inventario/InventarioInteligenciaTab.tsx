@@ -26,6 +26,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ProductoLink } from '@/components/links/EntityLinks';
+import { useKardexReferencias } from '@/hooks/useKardexReferencias';
+import { origenDestinoMovimiento } from '@/lib/kardexOrigenDestino';
 
 export type IntelligenceProduct = {
   id: string;
@@ -444,6 +446,9 @@ export default function InventarioInteligenciaTab({
     if (!movement.producto_id) return !hasProductFilters;
     return filteredProductIds.has(movement.producto_id);
   }), [history.data, hasProductFilters, filteredProductIds]);
+  const movimientosVisibles = useMemo(() => recentMovements.slice(0, 500), [recentMovements]);
+  // Cliente/proveedor/otro almacén del documento, solo cuando se abre la pestaña.
+  const { data: refMovimientos } = useKardexReferencias(tab === 'movimientos' ? movimientosVisibles : undefined);
 
   const topStopped = useMemo(() => filtered.filter(product => product.stockTotal > 0 && ['detenido', 'lento'].includes(product.health)).sort((a, b) => b.inventoryValue - a.inventoryValue), [filtered]);
   const restock = useMemo(() => filtered.filter(product => ['agotado', 'critico', 'reorden'].includes(product.health)).sort((a, b) => (a.coverageDays ?? -1) - (b.coverageDays ?? -1)), [filtered]);
@@ -685,10 +690,11 @@ export default function InventarioInteligenciaTab({
             { label: 'Fecha', align: 'center' }, { label: 'Tipo', align: 'center' }, { label: 'Producto' },
             { label: 'Cantidad', align: 'right' }, { label: 'Origen', align: 'center' }, { label: 'Destino', align: 'center' }, { label: 'Referencia / nota' },
           ]} empty="No hay movimientos en este periodo.">
-            {recentMovements.slice(0, 500).map(movement => {
+            {movimientosVisibles.map(movement => {
+              const od = origenDestinoMovimiento(movement, refMovimientos, id => warehouseMap.get(id)?.nombre);
               const product = movement.producto_id ? productMap.get(movement.producto_id) : null;
               const referenceRoute = getMovementReferenceRoute(movement.referencia_tipo, movement.referencia_id);
-              return <TableRow key={movement.id}><TableCell className="text-center tabular-nums">{formatDate(movement.fecha)}<div className="text-[10px] text-muted-foreground">{new Date(movement.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div></TableCell><TableCell className="text-center"><MovementBadge type={movement.tipo}/></TableCell><TableCell>{product ? <ProductoCell product={product}/> : 'Sin producto'}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmtNum(Math.abs(Number(movement.cantidad || 0)))}</TableCell><TableCell className="text-center">{movement.almacen_origen_id ? warehouseMap.get(movement.almacen_origen_id)?.nombre || 'Almacén' : 'Externo'}</TableCell><TableCell className="text-center">{movement.almacen_destino_id ? warehouseMap.get(movement.almacen_destino_id)?.nombre || 'Almacén' : 'Externo'}</TableCell><TableCell>{referenceRoute ? <Link to={referenceRoute} className="text-xs font-medium text-primary hover:underline">{movement.referencia_tipo}</Link> : <span className="text-xs font-medium">{movement.referencia_tipo || 'Movimiento manual'}</span>}{movement.notas && <div className="max-w-xs truncate text-[10px] text-muted-foreground">{movement.notas}</div>}</TableCell></TableRow>;
+              return <TableRow key={movement.id}><TableCell className="text-center tabular-nums">{formatDate(movement.fecha)}<div className="text-[10px] text-muted-foreground">{new Date(movement.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div></TableCell><TableCell className="text-center"><MovementBadge type={movement.tipo}/></TableCell><TableCell>{product ? <ProductoCell product={product}/> : 'Sin producto'}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmtNum(Math.abs(Number(movement.cantidad || 0)))}</TableCell><TableCell className="text-center">{od.origen}</TableCell><TableCell className="text-center">{od.destino}</TableCell><TableCell>{referenceRoute ? <Link to={referenceRoute} className="text-xs font-medium text-primary hover:underline">{movement.referencia_tipo}</Link> : <span className="text-xs font-medium">{movement.referencia_tipo || 'Movimiento manual'}</span>}{movement.notas && <div className="max-w-xs truncate text-[10px] text-muted-foreground">{movement.notas}</div>}</TableCell></TableRow>;
             })}
           </DataTable>
           {(history.data?.movementCount || 0) > 500 && <p className="text-center text-xs text-muted-foreground">Se muestran los 500 movimientos más recientes de {fmtNum(history.data?.movementCount || 0)}. Usa la exportación o el Kardex para el detalle completo.</p>}

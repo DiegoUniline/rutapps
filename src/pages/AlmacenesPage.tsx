@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Warehouse, Truck, Plus, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
+import { Warehouse, Truck, Plus, ToggleLeft, ToggleRight, AlertTriangle, Pencil } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { InlineEditCell } from '@/components/InlineEditCell';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +45,7 @@ export default function AlmacenesPage() {
   const activeItems = items?.filter(i => i.activo !== false) ?? [];
   const inactiveItems = items?.filter(i => i.activo === false) ?? [];
   const displayItems = showInactive ? inactiveItems : activeItems;
+  const isMobile = useIsMobile();
 
   const handleAdd = async () => {
     if (!newNombre.trim()) { toast.error('El nombre es obligatorio'); return; }
@@ -178,6 +181,46 @@ export default function AlmacenesPage() {
       </div>
       </ListPage.Toolbar>
 
+      {isMobile ? (
+        <ListPage.Body card={false} className="space-y-3">
+          <ListaTarjetasMovil vacia={!isLoading && displayItems.length === 0} mensajeVacio={showInactive ? 'No hay registros inactivos' : 'No hay registros activos'}>
+            {displayItems.map(item => {
+              const tipo = (item as any).tipo ?? 'almacen';
+              const activo = item.activo !== false;
+              return (
+                <ListaTarjetaMovil
+                  key={item.id}
+                  titulo={item.nombre}
+                  className={!activo ? 'opacity-60' : undefined}
+                  pildora={tipo === 'ruta' ? 'Ruta' : 'Almacén'}
+                  tono={tipo === 'ruta' ? 'aviso' : 'primario'}
+                  acciones={[
+                    { key: 'renombrar', label: 'Renombrar', icon: Pencil, onClick: () => { const v = window.prompt('Nombre del almacén', item.nombre ?? ''); if (v && v.trim() && v.trim() !== item.nombre) handleInlineSave(item.id, 'nombre', v.trim()); } },
+                    { key: 'tipo', label: tipo === 'ruta' ? 'Cambiar a almacén' : 'Cambiar a ruta', icon: tipo === 'ruta' ? Warehouse : Truck, onClick: () => handleTipoToggle(item.id, tipo) },
+                    activo
+                      ? { key: 'baja', label: 'Dar de baja', icon: ToggleLeft, destructiva: true, separar: true, onClick: () => handleToggleActivo(item.id, true) }
+                      : { key: 'reactivar', label: 'Reactivar', icon: ToggleRight, separar: true, onClick: () => handleToggleActivo(item.id, false) },
+                  ]}
+                />
+              );
+            })}
+          </ListaTarjetasMovil>
+          {!showInactive && (
+            <div className="flex items-center gap-2">
+              <input
+                type="text" placeholder="Nombre del nuevo almacén" value={newNombre}
+                onChange={e => setNewNombre(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
+                className="input-odoo flex-1 min-w-0 h-10"
+              />
+              <button type="button" onClick={() => setNewTipo(prev => prev === 'almacen' ? 'ruta' : 'almacen')} className="btn-odoo-secondary h-10 shrink-0" aria-label="Cambiar tipo">
+                {newTipo === 'ruta' ? <Truck className="h-4 w-4" /> : <Warehouse className="h-4 w-4" />} {newTipo === 'ruta' ? 'Ruta' : 'Almacén'}
+              </button>
+              <button type="button" onClick={handleAdd} className="btn-odoo-primary h-10 shrink-0" aria-label="Agregar almacén"><Plus className="h-4 w-4" /></button>
+            </div>
+          )}
+        </ListPage.Body>
+      ) : (
       <div className={TABLE_CARD}>
         {isLoading ? (
           <div className="p-4"><TableSkeleton rows={4} cols={3} /></div>
@@ -262,6 +305,8 @@ export default function AlmacenesPage() {
           </table>
         )}
       </div>
+
+      )}
 
       {/* Reasign Modal */}
       {reasign && (

@@ -14,6 +14,17 @@ export interface KardexRefInfo {
   lotes?: Record<string, { codigo: string; fecha_caducidad: string | null }>; // lote_id -> lote
 }
 
+/** `.in('id', ids)` en tandas de 150 para no rebasar el largo de la URL con listas grandes. */
+async function enTandas(ids: string[], consulta: (lote: string[]) => PromiseLike<{ data: any[] | null; error: any }>): Promise<any[]> {
+  const out: any[] = [];
+  for (let i = 0; i < ids.length; i += 150) {
+    const { data, error } = await consulta(ids.slice(i, i + 150));
+    if (error) throw error;
+    out.push(...(data ?? []));
+  }
+  return out;
+}
+
 /**
  * Fetches contextual info (cliente/proveedor/almacen/producto/usuario names)
  * for kardex rows so we can show origen/destino, producto and usuario.
@@ -45,7 +56,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
             ventaIds.add(r.referencia_id);
           } else if (r.referencia_tipo === 'compra') {
             compraIds.add(r.referencia_id);
-          } else if (r.referencia_tipo === 'entrega') {
+          } else if (r.referencia_tipo === 'entrega' || r.referencia_tipo === 'entrega_cargado') {
             entregaIds.add(r.referencia_id);
           } else if (r.referencia_tipo === 'traspaso') {
             traspasoIds.add(r.referencia_id);
@@ -74,11 +85,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       if (ventaIds.size) {
         tasks.push(
           (async () => {
-            const { data } = await supabase
-              .from('ventas')
-              .select('id, folio, cliente:clientes(nombre)')
-              .eq('empresa_id', empresa!.id)
-              .in('id', Array.from(ventaIds));
+            const data = await enTandas(Array.from(ventaIds), lote => supabase.from('ventas').select('id, folio, cliente:clientes(nombre)').eq('empresa_id', empresa!.id).in('id', lote));
             (data ?? []).forEach((v: any) => {
               result.ventaCliente![v.id] = {
                 nombre: v.cliente?.nombre ?? '—',
@@ -92,11 +99,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       if (compraIds.size) {
         tasks.push(
           (async () => {
-            const { data } = await supabase
-              .from('compras')
-              .select('id, folio, proveedor:proveedores(nombre)')
-              .eq('empresa_id', empresa!.id)
-              .in('id', Array.from(compraIds));
+            const data = await enTandas(Array.from(compraIds), lote => supabase.from('compras').select('id, folio, proveedor:proveedores(nombre)').eq('empresa_id', empresa!.id).in('id', lote));
             (data ?? []).forEach((c: any) => {
               result.compraProveedor![c.id] = {
                 nombre: c.proveedor?.nombre ?? '—',
@@ -110,11 +113,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       if (entregaIds.size) {
         tasks.push(
           (async () => {
-            const { data } = await supabase
-              .from('entregas')
-              .select('id, cliente:clientes(nombre)')
-              .eq('empresa_id', empresa!.id)
-              .in('id', Array.from(entregaIds));
+            const data = await enTandas(Array.from(entregaIds), lote => supabase.from('entregas').select('id, cliente:clientes(nombre)').eq('empresa_id', empresa!.id).in('id', lote));
             (data ?? []).forEach((e: any) => {
               result.entregaCliente![e.id] = { nombre: e.cliente?.nombre ?? '—' };
             });
@@ -123,11 +122,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       }
 
       if (traspasoIds.size) {
-        const { data } = await supabase
-          .from('traspasos')
-          .select('id, folio, almacen_origen_id, almacen_destino_id')
-          .eq('empresa_id', empresa!.id)
-          .in('id', Array.from(traspasoIds));
+        const data = await enTandas(Array.from(traspasoIds), lote => supabase.from('traspasos').select('id, folio, almacen_origen_id, almacen_destino_id').eq('empresa_id', empresa!.id).in('id', lote));
         (data ?? []).forEach((t: any) => {
           result.traspasoAlmacenes![t.id] = {
             origen_id: t.almacen_origen_id ?? null,
@@ -143,11 +138,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       if (almacenIds.size) {
         tasks.push(
           (async () => {
-            const { data } = await supabase
-              .from('almacenes')
-              .select('id, nombre')
-              .eq('empresa_id', empresa!.id)
-              .in('id', Array.from(almacenIds));
+            const data = await enTandas(Array.from(almacenIds), lote => supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).in('id', lote));
             (data ?? []).forEach((a: any) => {
               result.almacenes![a.id] = a.nombre;
             });
@@ -158,11 +149,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       if (productoIds.size) {
         tasks.push(
           (async () => {
-            const { data } = await supabase
-              .from('productos')
-              .select('id, nombre, codigo')
-              .eq('empresa_id', empresa!.id)
-              .in('id', Array.from(productoIds));
+            const data = await enTandas(Array.from(productoIds), lote => supabase.from('productos').select('id, nombre, codigo').eq('empresa_id', empresa!.id).in('id', lote));
             (data ?? []).forEach((p: any) => {
               result.productos![p.id] = { nombre: p.nombre, codigo: p.codigo };
             });
@@ -173,11 +160,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       if (loteIds.size) {
         tasks.push(
           (async () => {
-            const { data } = await supabase
-              .from('lotes')
-              .select('id, codigo, fecha_caducidad')
-              .eq('empresa_id', empresa!.id)
-              .in('id', Array.from(loteIds));
+            const data = await enTandas(Array.from(loteIds), lote => supabase.from('lotes').select('id, codigo, fecha_caducidad').eq('empresa_id', empresa!.id).in('id', lote));
             (data ?? []).forEach((l: any) => {
               result.lotes![l.id] = { codigo: l.codigo, fecha_caducidad: l.fecha_caducidad ?? null };
             });
