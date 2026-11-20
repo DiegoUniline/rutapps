@@ -11,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { OdooPagination } from '@/components/OdooPagination';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
-import { fmtDate } from '@/lib/utils';
+import { fmtDate, cn } from '@/lib/utils';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { MermaConfigDialog } from '@/components/devoluciones/MermaConfigDialog';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 const ACCION_LABELS: Record<string, string> = { reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero' };
@@ -43,18 +44,21 @@ export default function DevolucionesListPage() {
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [page, setPage] = useState(1);
+  const [tabEstado, setTabEstado] = useState<'activas' | 'canceladas' | 'todas'>('activas');
   const pageSize = 25;
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['devoluciones-list-all', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      // Todas las páginas (antes se cortaba en 1000 renglones).
+      const data = await fetchAllPages<any>((from, to) => (supabase as any)
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, venta_id, vendedor_id, user_id, cliente_id, clientes(id,nombre), vendedores:profiles!devoluciones_vendedor_id_profiles_fkey(id,nombre), ventas(folio, vendedor_id, vendedor:profiles!ventas_vendedor_id_profiles_fkey(id,nombre)), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
+        .select('id, fecha, tipo, notas, cancelado_at, cancelado_motivo, venta_id, vendedor_id, user_id, cliente_id, clientes(id,nombre), vendedores:profiles!devoluciones_vendedor_id_profiles_fkey(id,nombre), ventas(folio, vendedor_id, vendedor:profiles!ventas_vendedor_id_profiles_fkey(id,nombre)), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
         .eq('empresa_id', empresa!.id)
-        .order('fecha', { ascending: false });
-      if (error) console.error('[devoluciones] query error', error);
+        .order('fecha', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to));
       const list = data ?? [];
       const userIds = Array.from(new Set(list.map((r: any) => r.user_id).filter(Boolean)));
       let userMap: Record<string, string> = {};
@@ -144,6 +148,8 @@ export default function DevolucionesListPage() {
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     return (rows as any[]).filter(d => {
+      if (tabEstado === 'activas' && d.cancelado_at) return false;
+      if (tabEstado === 'canceladas' && !d.cancelado_at) return false;
       const lineas = d.devolucion_lineas ?? [];
       const vId = d.ventas?.vendedor_id ?? d.vendedor_id;
       if (clienteFilter !== 'all' && d.cliente_id !== clienteFilter) return false;
@@ -167,7 +173,12 @@ export default function DevolucionesListPage() {
       }
       return true;
     });
-  }, [rows, search, clienteFilter, vendedorFilter, motivoFilter, accionFilter, desde, hasta]);
+  }, [rows, tabEstado, search, clienteFilter, vendedorFilter, motivoFilter, accionFilter, desde, hasta]);
+  const conteoTab = useMemo(() => ({
+    activas: (rows as any[]).filter(d => !d.cancelado_at).length,
+    canceladas: (rows as any[]).filter(d => d.cancelado_at).length,
+    todas: (rows as any[]).length,
+  }), [rows]);
 
   const total = filtered.length;
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -200,6 +211,24 @@ export default function DevolucionesListPage() {
       </div>
 
       <MermaConfigDialog open={mermaConfigOpen} onOpenChange={setMermaConfigOpen} />
+
+      <nav className="flex gap-5 border-b border-border" role="tablist" aria-label="Estado de las devoluciones">
+        {(['activas', 'canceladas', 'todas'] as const).map(t => (
+          <button
+            key={t}
+            role="tab"
+            aria-selected={tabEstado === t}
+            onClick={() => { setTabEstado(t); setPage(1); }}
+            className={cn(
+              'px-1 pb-2 pt-1 text-[13px] font-medium border-b-2 -mb-px transition-colors capitalize',
+              tabEstado === t ? 'text-primary border-primary' : 'text-muted-foreground border-transparent hover:text-foreground',
+            )}
+          >
+            {t === 'activas' ? 'Activas' : t === 'canceladas' ? 'Canceladas' : 'Todas'}
+            <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">· {conteoTab[t]}</span>
+          </button>
+        ))}
+      </nav>
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-lg p-3 space-y-2">
@@ -295,8 +324,13 @@ export default function DevolucionesListPage() {
               }).join(', ');
 
               return (
-                <tr key={d.id} className="border-b border-border/50 hover:bg-card/50 cursor-pointer" onClick={() => d.venta_id && navigate(`/ventas/${d.venta_id}`)}>
-                  <td className="py-2 px-3 font-mono text-muted-foreground">{fmtDate(d.fecha)}</td>
+                <tr key={d.id} className={cn('border-b border-border/50 hover:bg-card/50 cursor-pointer', d.cancelado_at && 'opacity-60')} onClick={() => d.venta_id && navigate(`/ventas/${d.venta_id}`)}>
+                  <td className="py-2 px-3 font-mono text-muted-foreground">
+                    {fmtDate(d.fecha)}
+                    {d.cancelado_at && (
+                      <span className="ml-1.5 font-sans text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive" title={d.cancelado_motivo ?? undefined}>Cancelada</span>
+                    )}
+                  </td>
                   <td className="py-2 px-3 font-medium">{d.clientes?.nombre ?? '—'}</td>
                   <td className="py-2 px-3 text-muted-foreground">{d.ventas?.vendedor?.nombre ?? d.vendedores?.nombre ?? '—'}</td>
                   <td className="py-2 px-3 text-muted-foreground">{d.registradoPor ?? '—'}</td>
