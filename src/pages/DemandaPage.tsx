@@ -281,6 +281,8 @@ export default function DemandaPage() {
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
   const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[]; errors: any[] }>(null);
+  // Avance de «Surtir disponible»: un pedido por llamada (surtir_pedido_disponible).
+  const [surtirProgreso, setSurtirProgreso] = useState<null | { hecho: number; total: number; folio?: string }>(null);
   const [vendedoresOpen, setVendedoresOpen] = useState(false);
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [asignarRepartidorId, setAsignarRepartidorId] = useState('');
@@ -479,200 +481,42 @@ export default function DemandaPage() {
     mutationFn: async () => {
       if (!almacenId) throw new Error('Selecciona un almacén');
       if (selectedPedidos.length === 0) throw new Error('Selecciona al menos un pedido');
-      const pedidosConLineas = await hydrateSelectedPedidos();
+      type RespSurtir = { resultado: 'completo' | 'parcial' | 'sin_stock' | 'sin_pendiente'; entrega_id?: string; folio?: string; faltantes: { producto_id: string; faltante: number }[] };
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
 
-      // Si se eligió repartidor en este diálogo, validar que tenga almacén
-      // para poder transicionar a 'cargado' y disparar el trigger de BD que
-      // mueve stock origen → almacén del repartidor.
-      let repartidorAlmacenOk = false;
-      if (vendedorRutaId) {
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('almacen_id, nombre')
-          .eq('id', vendedorRutaId)
-          .maybeSingle();
-        if (!prof?.almacen_id) {
-          throw new Error(`El repartidor ${prof?.nombre ?? ''} no tiene almacén asignado en su perfil. Configúralo antes de cargar.`);
-        }
-        repartidorAlmacenOk = true;
-      }
-
-      // 1) Auto-confirm borradores
-      const borradorIds = pedidosConLineas.filter(p => p.status === 'borrador').map(p => p.id);
-      if (borradorIds.length > 0) {
-        await supabase.from('ventas').update({ status: 'confirmado' }).in('id', borradorIds).eq('status', 'borrador');
-      }
-
-
-      // 2) Get current stock for all needed products in this almacen
-      const productoIds = Array.from(new Set<string>(
-        pedidosConLineas.flatMap(p => p.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0).map((l: any) => String(l.producto_id)))
-      ));
-      const stockMap: Record<string, number> = {};
-      if (productoIds.length > 0) {
-        const chunkSize = 200;
-        for (let i = 0; i < productoIds.length; i += chunkSize) {
-          const chunk = productoIds.slice(i, i + chunkSize);
-          const { data } = await supabase.from('stock_almacen')
-            .select('producto_id, cantidad')
-            .eq('almacen_id', almacenId)
-            .in('producto_id', chunk);
-          for (const r of (data ?? []) as any[]) {
-            stockMap[r.producto_id] = (stockMap[r.producto_id] ?? 0) + Number(r.cantidad ?? 0);
-          }
-        }
-      }
-
+      // Una llamada por pedido: la BD confirma el borrador, crea/reusa la entrega, surte lo que
+      // haya en existencia y (si hay repartidor) la deja cargada, todo en una transacción.
+      // Antes eran ~10–15 llamadas por pedido desde el navegador.
       const fully: any[] = [], partial: any[] = [], none: any[] = [], errors: any[] = [];
+      const pedidos = [...selectedPedidos];
+      setSurtirProgreso({ hecho: 0, total: pedidos.length });
+      for (let i = 0; i < pedidos.length; i++) {
+        const pedido = pedidos[i];
+        setSurtirProgreso({ hecho: i, total: pedidos.length, folio: pedido.folio });
+        const { data, error } = await rpc('surtir_pedido_disponible', {
+          p_pedido_id: pedido.id,
+          p_almacen_id: almacenId,
+          p_vendedor_ruta_id: vendedorRutaId || null,
+        });
+        if (error) { errors.push({ pedido, message: error.message }); continue; }
+        const r = data as RespSurtir;
+        const entrega = r.entrega_id ? { id: r.entrega_id, folio: r.folio } : null;
+        if (r.resultado === 'completo') fully.push({ pedido, entrega });
+        else if (r.resultado === 'parcial') partial.push({ pedido, entrega, faltantes: r.faltantes });
+        else if (r.resultado === 'sin_stock') none.push({ pedido, faltantes: r.faltantes });
+      }
+      setSurtirProgreso({ hecho: pedidos.length, total: pedidos.length });
 
-      for (const pedido of pedidosConLineas) {
-        try {
-          const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
-          if (pendientes.length === 0) continue;
-
-          // Decide what to surtir per line based on remaining stock
-          const planLineas = pendientes.map((l: any) => {
-            const need = Math.max(0, l.cantidad_pendiente);
-            const avail = stockMap[l.producto_id] ?? 0;
-            const give = Math.min(need, Math.max(0, avail));
-            stockMap[l.producto_id] = avail - give;
-            return { ...l, give, faltante: need - give };
-          });
-
-          const totalGive = planLineas.reduce((s, l) => s + l.give, 0);
-          const totalFaltante = planLineas.reduce((s, l) => s + l.faltante, 0);
-
-          if (totalGive === 0) {
-            none.push({ pedido, faltantes: planLineas.filter(l => l.faltante > 0) });
-            continue;
-          }
-
-          // Get orden_entrega
-          let ordenEntrega = 0;
-          if (pedido.cliente_id) {
-            const { data: cli } = await supabase.from('clientes').select('orden').eq('id', pedido.cliente_id).single();
-            ordenEntrega = cli?.orden ?? 0;
-          }
-
-          // 1) Reuse existing active entrega or create a new one
-          let entrega: { id: string; folio: string } | null = null;
-          const { data: existing } = await supabase
-            .from('entregas')
-            .select('id, folio, status')
-            .eq('pedido_id', pedido.id)
-            .neq('status', 'cancelado')
-            .neq('status', 'hecho')
-            .limit(1)
-            .maybeSingle();
-
-          if (existing) {
-            entrega = { id: existing.id, folio: existing.folio };
-            // Make sure default almacen is set on the entrega for stock deduction
-            await supabase.from('entregas').update({ almacen_id: almacenId } as any).eq('id', existing.id);
-          } else {
-            const { data: created, error: eErr } = await supabase.from('entregas').insert({
-              empresa_id: empresa!.id,
-              pedido_id: pedido.id,
-              vendedor_id: pedido.vendedor_id ?? null,
-              cliente_id: pedido.cliente_id,
-              almacen_id: almacenId,
-              vendedor_ruta_id: vendedorRutaId || null,
-              status: 'borrador',
-              fecha: today,
-              orden_entrega: ordenEntrega,
-            } as any).select('id, folio').single();
-            if (eErr) throw eErr;
-            entrega = created;
-          }
-
-          // 2) Get existing lines so we don't duplicate; only insert missing ones
-          const { data: existingLines } = await supabase
-            .from('entrega_lineas')
-            .select('id, producto_id, cantidad_pedida, cantidad_entregada, hecho')
-            .eq('entrega_id', entrega!.id);
-
-          const existingByProd: Record<string, any> = {};
-          for (const el of (existingLines ?? []) as any[]) existingByProd[el.producto_id] = el;
-
-          const linesToInsert = planLineas
-            .filter(l => !existingByProd[l.producto_id])
-            .map(l => ({
-              entrega_id: entrega!.id,
-              producto_id: l.producto_id,
-              unidad_id: l.unidad_id ?? null,
-              cantidad_pedida: Math.max(0, l.cantidad_pendiente),
-              cantidad_entregada: 0,
-              hecho: false,
-              almacen_origen_id: almacenId,
-              lote_id: (l as any).lote_id ?? null,
-            }));
-
-          let createdLines: any[] = (existingLines ?? []).map((el: any) => ({ id: el.id, producto_id: el.producto_id }));
-          if (linesToInsert.length > 0) {
-            const { data: inserted, error: lErr } = await supabase.from('entrega_lineas').insert(linesToInsert).select('id, producto_id');
-            if (lErr) throw lErr;
-            createdLines = createdLines.concat(inserted ?? []);
-          }
-
-
-          // 3) Surtir each line with stock via RPC
-          const lineIdByProd: Record<string, string> = {};
-          for (const cl of (createdLines ?? []) as any[]) lineIdByProd[cl.producto_id] = cl.id;
-
-          let surtidasOk = 0;
-          for (const l of planLineas) {
-            if (l.give <= 0) continue;
-            const lineId = lineIdByProd[l.producto_id];
-            if (!lineId) continue;
-            const { error } = await supabase.rpc('surtir_linea_entrega', {
-              p_linea_id: lineId,
-              p_producto_id: l.producto_id,
-              p_almacen_origen_id: almacenId,
-              p_cantidad_surtida: l.give,
-              p_entrega_id: entrega.id,
-              p_empresa_id: empresa!.id,
-              p_user_id: user?.id,
-            } as any);
-            if (error) {
-              // Stock changed between read and write — re-read and skip this line
-              console.warn(`Línea ${l.producto_id} no se pudo surtir:`, error.message);
-              l.give = 0;
-              l.faltante = l.cantidad_pendiente;
-            } else {
-              surtidasOk++;
-            }
-          }
-
-          // 4) Recompute faltantes after RPC outcomes
-          const recompFaltante = planLineas.reduce((s, l) => s + l.faltante, 0);
-
-          if (recompFaltante === 0 && surtidasOk > 0) {
-            await supabase.from('entregas').update({ status: 'surtido' } as any).eq('id', entrega.id);
-            // Si se seleccionó repartidor, transicionar asignado → cargado para
-            // que el trigger mueva el stock al almacén del repartidor.
-            if (repartidorAlmacenOk && vendedorRutaId) {
-              const nowIso = new Date().toISOString();
-              await supabase.from('entregas').update({
-                vendedor_ruta_id: vendedorRutaId,
-                status: 'asignado',
-                fecha_asignacion: nowIso,
-              } as any).eq('id', entrega.id);
-              await supabase.from('entregas').update({
-                status: 'cargado',
-                fecha_carga: nowIso,
-              } as any).eq('id', entrega.id);
-            }
-            fully.push({ pedido, entrega });
-          } else if (surtidasOk > 0) {
-            partial.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
-          } else {
-            // entrega exists but nothing got surtido (race condition with stock)
-            none.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
-          }
-
-        } catch (err: any) {
-          console.error(`Error procesando pedido ${pedido.folio}:`, err);
-          errors.push({ pedido, message: err?.message ?? 'Error desconocido' });
+      // Nombres de los productos que faltaron (una sola consulta) para el resumen.
+      const faltIds = Array.from(new Set([...partial, ...none].flatMap(x => (x.faltantes ?? []).map((f: any) => f.producto_id))));
+      if (faltIds.length > 0) {
+        const nombres: Record<string, { codigo: string; nombre: string }> = {};
+        for (let i = 0; i < faltIds.length; i += 200) {
+          const { data } = await supabase.from('productos').select('id, codigo, nombre').in('id', faltIds.slice(i, i + 200));
+          for (const p of (data ?? []) as any[]) nombres[p.id] = { codigo: p.codigo, nombre: p.nombre };
+        }
+        for (const x of [...partial, ...none]) {
+          x.faltantes = (x.faltantes ?? []).map((f: any) => ({ ...f, productos: nombres[f.producto_id] ?? null }));
         }
       }
 
@@ -690,6 +534,7 @@ export default function DemandaPage() {
       setSurtirResult(res);
     },
     onError: (err: any) => toast.error(err.message),
+    onSettled: () => setSurtirProgreso(null),
   });
 
   const borradorSelectedIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
@@ -1428,7 +1273,7 @@ export default function DemandaPage() {
       </Dialog>
 
       {/* Surtir masivo dialog */}
-      <Dialog open={showSurtirDialog} onOpenChange={setShowSurtirDialog}>
+      <Dialog open={showSurtirDialog} onOpenChange={(o) => { if (!surtirMasivoMut.isPending) setShowSurtirDialog(o); }}>
         <DialogContent
           className="w-[min(94vw,920px)] sm:max-w-3xl min-h-[520px] max-h-[90dvh] overflow-visible flex flex-col gap-4"
           onPointerDownOutside={e => e.preventDefault()}
@@ -1464,16 +1309,31 @@ export default function DemandaPage() {
               />
             </div>
             </div>
+            {surtirProgreso && (
+              <div className="rounded-lg border border-border bg-accent/40 p-4 space-y-2" role="status" aria-live="polite">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex items-center gap-2 font-medium text-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    Surtiendo {Math.min(surtirProgreso.hecho + 1, surtirProgreso.total)} de {surtirProgreso.total}
+                    {surtirProgreso.folio ? <span className="font-mono text-muted-foreground">· {surtirProgreso.folio}</span> : null}
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">{Math.round((surtirProgreso.hecho / Math.max(1, surtirProgreso.total)) * 100)}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-primary transition-all duration-300" style={{ width: `${(surtirProgreso.hecho / Math.max(1, surtirProgreso.total)) * 100}%` }} />
+                </div>
+                <p className="text-xs text-muted-foreground">No cierres esta ventana; cada pedido se guarda completo o no se modifica.</p>
+              </div>
+            )}
           </div>
           <DialogFooter className="shrink-0 border-t border-border pt-4 bg-background">
-            <Button variant="outline" onClick={() => setShowSurtirDialog(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setShowSurtirDialog(false)} disabled={surtirMasivoMut.isPending}>Cancelar</Button>
             <Button
               onClick={() => surtirMasivoMut.mutate()}
               disabled={surtirMasivoMut.isPending || !almacenId}
-              className="bg-green-600 hover:bg-green-700 text-white"
             >
-              <Zap className="h-3.5 w-3.5" />
-              {surtirMasivoMut.isPending ? 'Surtiendo...' : 'Surtir ahora'}
+              {surtirMasivoMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+              {surtirMasivoMut.isPending ? 'Surtiendo…' : 'Surtir ahora'}
             </Button>
           </DialogFooter>
         </DialogContent>

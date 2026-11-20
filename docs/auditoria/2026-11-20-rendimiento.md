@@ -15,7 +15,7 @@ Revisión de 1 378 consultas `.from()` y 124 `.rpc()` del front contra los índi
 - Cambio de stock ya no recarga el catálogo completo.
 - Operaciones atómicas: cobro de venta + cuentas, `eliminar_ventas` (D-035), `surtir_entrega`, `aprobar_auditoria`, `aplicar_pago_proveedor`.
 - Reportes personalizados con ids en trozos de 200; Devoluciones consulta destinos/lotes solo de sus ids.
-- Demanda (surtir lo disponible por renglón) y Saldos iniciales (RPC por cliente con reporte de errores) se dejan así a propósito: cada renglón ya es atómico y el resultado parcial es el comportamiento deseado.
+- Demanda «Surtir disponible»: ahora `surtir_pedido_disponible` (una llamada por pedido, 12 pedidos ≈ 0.36 s en BD; antes ~150 llamadas en serie) con barra de avance. Saldos iniciales (RPC por cliente con reporte de errores) se dejan así a propósito: cada renglón ya es atómico y el resultado parcial es el comportamiento deseado.
 
 ## Aplicado (4ª pasada)
 - Facturas (CFDI) y Cotizaciones: mes actual por omisión, filtrado en el servidor (índice `cotizaciones (empresa_id, fecha)`).
