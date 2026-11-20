@@ -140,3 +140,4 @@
 2026-11-20 · desarrollador · D-034 / F2b pedido entregado y saldo por cantidades realmente entregadas (H4, H5, H8)
 2026-11-20 · desarrollador · Rendimiento 2ª pasada: 38 índices (compras, traspasos, cfdis, comisiones, ruta, caja…), sync de ruta con orden estable, pendientes en docs/auditoria/2026-11-20-rendimiento.md
 2026-11-20 · desarrollador · Buscador ⌘K: una sola RPC buscar_global con trigramas (antes ~20 consultas por tecla), mínimo 3 letras
+2026-11-20 · desarrollador · ventas.tiene_promocion (trigger) reemplaza listas de 10 000 ids en el filtro de promoción

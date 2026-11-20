@@ -9,22 +9,6 @@ import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist
 import { createVentaLoadError } from '@/lib/ventaLoadGuard';
 import type { Venta, VentaLinea } from '@/types';
 
-/**
- * IDs de ventas de la empresa que traen promoción.
- * Señales (unión): registro en `promocion_aplicada` (promo persistida) o línea
- * regalada (precio 0 con cantidad > 0), que es como quedan las promos cuando el
- * descuento se aplica neto en la línea y no deja registro aparte.
- */
-async function fetchVentaIdsConPromo(empresaId: string): Promise<string[]> {
-  const [aplicadas, gratis] = await Promise.all([
-    supabase.from('promocion_aplicada').select('venta_id, ventas!inner(empresa_id)').eq('ventas.empresa_id', empresaId).limit(5000),
-    supabase.from('venta_lineas').select('venta_id').eq('empresa_id', empresaId).eq('precio_unitario', 0).gt('cantidad', 0).limit(5000),
-  ]);
-  const ids = new Set<string>();
-  for (const r of (aplicadas.data ?? []) as any[]) if (r.venta_id) ids.add(r.venta_id);
-  for (const r of (gratis.data ?? []) as any[]) if (r.venta_id) ids.add(r.venta_id);
-  return [...ids];
-}
 
 /** Paginated ventas for list views. When fetchAll=true, returns all matching rows (used for grouping). */
 /** soloConteo=true: solo cuenta (HEAD, sin traer renglones) — para los números de las pestañas. */
@@ -44,8 +28,6 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
       const SELECT = 'id, folio, fecha, created_at, total, subtotal, iva_total, ieps_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, politica_cobro, cerrado_at, cerrado_por, total_efectivo, cerrado_snapshot, vendedor_id, cliente_id, almacen_id, es_saldo_inicial, origen, clientes(nombre, rfc, telefono, direccion, colonia, requiere_factura), vendedores:profiles!vendedor_id(nombre, telefono), almacenes(nombre), entregas(status, entrega_lineas(cantidad_pedida, cantidad_entregada)), cobro_aplicaciones(monto_aplicado, cobros!inner(status)), venta_lineas(subtotal, descuento_pct, precio_unitario, cantidad, iva_monto, ieps_monto, total), promocion_aplicada(descuento_aplicado), devoluciones(devolucion_lineas(cantidad))';
 
       // Filtro de promoción resuelto en servidor sobre TODA la empresa (no solo la página).
-      let promoIds: string[] | null = null;
-      if (promoFilter) promoIds = await fetchVentaIdsConPromo(empresa!.id);
 
 
       // Resolve search-derived id filters once (shared by both branches)
@@ -98,14 +80,8 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         }
         if (dateFrom) q = q.gte('fecha', dateFrom);
         if (dateTo) q = q.lte('fecha', dateTo);
-        if (promoIds) {
-          if (promoFilter === 'si') {
-            // Sin coincidencias: forzamos resultado vacío con un id imposible.
-            q = q.in('id', promoIds.length ? promoIds : ['00000000-0000-0000-0000-000000000000']);
-          } else if (promoIds.length) {
-            q = q.not('id', 'in', `(${promoIds.join(',')})`);
-          }
-        }
+        // Marca mantenida por la BD (ventas.tiene_promocion): un filtro indexado, sin listas de ids.
+        if (promoFilter) q = q.eq('tiene_promocion', promoFilter === 'si');
         return q;
       };
 
@@ -154,8 +130,6 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
       // la consulta que más CPU consumía.
       const SELECT = 'id, total, iva_total, ieps_total, descuento_total, status, total_efectivo, cerrado_at, snapshot_total_efectivo, cliente_id, lineas_descuento, promo_descuento, cobrado_activo, cantidad_neta';
 
-      let promoIds: string[] | null = null;
-      if (promoFilter) promoIds = await fetchVentaIdsConPromo(empresa!.id);
 
       let searchOr: string | null = null;
       if (search) {
@@ -201,10 +175,7 @@ export function useVentasResumen(search?: string, statusFilter?: string, tipoFil
         }
         if (dateFrom) q = q.gte('fecha', dateFrom);
         if (dateTo) q = q.lte('fecha', dateTo);
-        if (promoIds) {
-          if (promoFilter === 'si') q = q.in('id', promoIds.length ? promoIds : ['00000000-0000-0000-0000-000000000000']);
-          else if (promoIds.length) q = q.not('id', 'in', `(${promoIds.join(',')})`);
-        }
+        if (promoFilter) q = q.eq('tiene_promocion', promoFilter === 'si');
         return q;
       };
 
@@ -235,8 +206,6 @@ export function useVentaLineasResumen(search?: string, statusFilter?: string, ti
     queryFn: async () => {
       const SELECT = 'cantidad, total, ventas!inner(empresa_id, status, tipo, condicion_pago, vendedor_id, fecha, folio)';
 
-      let promoIds: string[] | null = null;
-      if (promoFilter) promoIds = await fetchVentaIdsConPromo(empresa!.id);
 
       let searchOr: string | null = null;
       let searchEmpty = false;
@@ -280,10 +249,7 @@ export function useVentaLineasResumen(search?: string, statusFilter?: string, ti
         }
         if (dateFrom) q = q.gte('ventas.fecha', dateFrom);
         if (dateTo) q = q.lte('ventas.fecha', dateTo);
-        if (promoIds) {
-          if (promoFilter === 'si') q = q.in('venta_id', promoIds.length ? promoIds : ['00000000-0000-0000-0000-000000000000']);
-          else if (promoIds.length) q = q.not('venta_id', 'in', `(${promoIds.join(',')})`);
-        }
+        if (promoFilter) q = q.eq('ventas.tiene_promocion', promoFilter === 'si');
         if (searchEmpty) q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
         else if (searchOr) q = q.or(searchOr);
         return q;
@@ -315,8 +281,6 @@ export function useVentaLineasPaginated(
     queryFn: async () => {
       const SELECT = 'id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, tarifa_id, clientes(id, nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre))';
 
-      let promoIds: string[] | null = null;
-      if (promoFilter) promoIds = await fetchVentaIdsConPromo(empresa!.id);
 
       let searchOr: string | null = null;
       let searchEmpty = false;
@@ -365,10 +329,7 @@ export function useVentaLineasPaginated(
         }
         if (dateFrom) q = q.gte('ventas.fecha', dateFrom);
         if (dateTo) q = q.lte('ventas.fecha', dateTo);
-        if (promoIds) {
-          if (promoFilter === 'si') q = q.in('venta_id', promoIds.length ? promoIds : ['00000000-0000-0000-0000-000000000000']);
-          else if (promoIds.length) q = q.not('venta_id', 'in', `(${promoIds.join(',')})`);
-        }
+        if (promoFilter) q = q.eq('ventas.tiene_promocion', promoFilter === 'si');
         if (searchEmpty) q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
         else if (searchOr) q = q.or(searchOr);
         return q;
