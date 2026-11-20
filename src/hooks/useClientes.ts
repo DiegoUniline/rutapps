@@ -26,6 +26,8 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
     // FAIL-CLOSED: si no se puede comprobar qué clientes tiene permitido ver el
     // usuario, no se consulta la lista (antes se mostraba la cartera completa).
     enabled: !!empresa?.id && !blocked,
+    // Conserva los renglones mientras llega «Cargar más» en teléfono (sin parpadeo).
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       // Se removieron los LEFT JOIN LATERAL (zonas(nombre), listas(nombre),
       // vendedores(nombre), cobradores(nombre), tarifas(nombre)) porque

@@ -19,7 +19,7 @@ import { StatusCountCards } from '@/components/StatusCountCards';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
-import { MobileListCard } from '@/components/MobileListCard';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, PASO_MOVIL } from '@/components/layout/ListaTarjetaMovil';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useClientesPaginated } from '@/hooks/useClientes';
@@ -288,7 +288,9 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
     },
   });
 
-  const numericPageSize = getNumericPageSize(pageSize);
+  // Teléfono: lista continua con «Cargar más» (de 50 en 50) en lugar de paginación.
+  const [mobileLimit, setMobileLimit] = useState(PASO_MOVIL);
+  const numericPageSize = isMobile ? mobileLimit : getNumericPageSize(pageSize);
 
   const handlePageSizeChange = (size: PageSizeOption) => {
     setPageSizeState(size);
@@ -306,7 +308,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
   const zonaFilter = filters.zona?.length ? filters.zona.join(',') : 'todos';
   const debouncedSearch = useDebounce(search, 300);
-  const { data: clientesData, isLoading } = useClientesPaginated(debouncedSearch, statusFilter, page, numericPageSize, vendedorFilter, zonaFilter, !!groupBy);
+  const { data: clientesData, isLoading } = useClientesPaginated(debouncedSearch, statusFilter, isMobile ? 1 : page, numericPageSize, vendedorFilter, zonaFilter, !!groupBy);
 
   // Client-side filters: credito + dia_visita
   const creditoFilter = filters.credito;
@@ -415,6 +417,25 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   return (
     <ListPage flush className="gap-3">
       <ListPage.Toolbar>
+      {isMobile && (
+        <EncabezadoListaMovil
+          titulo="Clientes"
+          estado={forcedStatus === 'inactivo' ? 'Bajas' : undefined}
+          onNuevo={canCreate ? () => navigate('/clientes/nuevo') : undefined}
+          nuevoLabel="Nuevo cliente"
+        >
+          <OdooFilterBar
+            search={search}
+            onSearchChange={val => { setSearch(val); setPage(1); setMobileLimit(PASO_MOVIL); }}
+            placeholder="Buscar clientes"
+            filterOptions={FILTER_OPTIONS}
+            activeFilters={filters}
+            onToggleFilter={(key, val) => { toggleFilterValue(key, val); setMobileLimit(PASO_MOVIL); }}
+            onSetFilter={(key, vals) => { setFilter(key, vals); setMobileLimit(PASO_MOVIL); }}
+            onClearFilters={() => { clearFilters(); setMobileLimit(PASO_MOVIL); }}
+          />
+        </EncabezadoListaMovil>
+      )}
       {(sinVendedorCount ?? 0) > 0 && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -426,7 +447,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           </span>
         </div>
       )}
-      <StickyListToolbar
+      {!isMobile && <StickyListToolbar
         left={
           <OdooFilterBar
             search={search}
@@ -491,7 +512,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
             )}
           </>
         }
-      />
+      />}
       </ListPage.Toolbar>
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="clientes" />
@@ -544,28 +565,24 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
       {isLoading ? (
         <div className="bg-card border border-border rounded p-4 shrink-0"><TableSkeleton rows={8} cols={isMobile ? 3 : 7} /></div>
       ) : isMobile ? (
-        <ListPage.Body card={false} className="space-y-2">
-          {pageData.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</div>
-          )}
-          {pageData.map(c => (
-            <MobileListCard
-              key={c.id}
-              title={c.nombre}
-              subtitle={c.codigo ?? undefined}
-              badge={<StatusChip status={c.status ?? 'activo'} />}
-              onClick={() => navigate(`/clientes/${c.id}`)}
-              fields={[
-                ...(c.telefono ? [{ label: 'Tel', value: c.telefono }] : []),
-                ...(c.contacto ? [{ label: 'Contacto', value: c.contacto }] : []),
-                ...((c as any).zonas?.nombre ? [{ label: 'Zona', value: (c as any).zonas.nombre }] : []),
-                ...((c as any).vendedores?.nombre ? [{ label: 'Vendedor', value: (c as any).vendedores.nombre }] : []),
-                ...((c as any).dia_visita?.length ? [{ label: 'Días de visita', value: ((c as any).dia_visita as string[]).map(d => DIAS_LABEL[d.toLowerCase()] ?? d).join(', ') }] : []),
-                ...((c as any).tarifas?.nombre ? [{ label: 'Lista de precios', value: (c as any).tarifas.nombre }] : []),
-
-              ]}
-            />
-          ))}
+        <ListPage.Body card={false}>
+          <ListaTarjetasMovil
+            vacia={pageData.length === 0}
+            mensajeVacio="No hay clientes. Crea el primero."
+            mostrados={pageData.length}
+            total={total}
+            onCargarMas={() => setMobileLimit(l => l + PASO_MOVIL)}
+          >
+            {pageData.map(c => (
+              <ListaTarjetaMovil
+                key={c.id}
+                titulo={c.nombre}
+                linea2={[c.telefono, (c as any).zonas?.nombre, (c as any).vendedores?.nombre, c.codigo].filter(Boolean).join(' · ') || '—'}
+                {...estadoPildora(c.status ?? 'activo')}
+                onClick={() => navigate(`/clientes/${c.id}`)}
+              />
+            ))}
+          </ListaTarjetasMovil>
         </ListPage.Body>
       ) : (
         <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
@@ -600,8 +617,8 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
 export default function ClientesListPage() {
   return (
     <ListPage>
-      <ListPage.Header title={<>Clientes <HelpButton title={HELP.clientes.title} sections={HELP.clientes.sections} /> <VideoHelpButton module="clientes" /></>} />
-      <div className="px-4 pt-1"><StatusCountCards tabla="clientes" /></div>
+      <ListPage.Header className="max-md:hidden" title={<>Clientes <HelpButton title={HELP.clientes.title} sections={HELP.clientes.sections} /> <VideoHelpButton module="clientes" /></>} />
+      <div className="px-4 pt-1 max-md:hidden"><StatusCountCards tabla="clientes" /></div>
       <OdooTabs
         tabs={[
           { key: 'activos', label: 'Activos', content: <ClientesTable forcedStatus="activo" prefsKey="clientes-activos" /> },
