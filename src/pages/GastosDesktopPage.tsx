@@ -18,6 +18,8 @@ import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { confirmDialog } from '@/lib/confirm';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 function useGastos(desde: string, hasta: string) {
   const { empresa } = useAuth();
@@ -63,6 +65,7 @@ export default function GastosDesktopPage() {
   const { empresa, user, profile } = useAuth();
   const qc = useQueryClient();
   const { requestPin, PinDialog } = usePinAuth();
+  const isMobile = useIsMobile();
 
   // Filters
   const [search, setSearch] = useState('');
@@ -261,6 +264,37 @@ export default function GastosDesktopPage() {
         )}
       </div>
 
+      {isMobile ? (
+        isLoading ? <div className="text-center py-8 text-muted-foreground text-sm">Cargando...</div> : (
+        <>
+          {!!filtered.length && (
+            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs">
+              <span className="text-muted-foreground font-semibold">Totales ({filtered.length})</span>
+              <span className="font-bold text-destructive tabular-nums">{fmt(totalGastos)}</span>
+            </div>
+          )}
+          <ListaTarjetasMovil vacia={filtered.length === 0} mensajeVacio={hasFilters ? 'No hay gastos que coincidan con los filtros' : 'Sin gastos registrados'}>
+            {filtered.map((g: any) => (
+              <ListaTarjetaMovil
+                key={g.id}
+                titulo={g.concepto || '—'}
+                subtitulo={(g.vendedores as any)?.nombre ?? undefined}
+                className={highlightId === g.id ? 'bg-primary/15' : editId === g.id ? 'bg-primary/5' : undefined}
+                acciones={[
+                  { key: 'editar', label: 'Editar', icon: Pencil, onClick: () => startEdit(g) },
+                  { key: 'eliminar', label: 'Eliminar (requiere PIN)', icon: Trash2, destructiva: true, separar: true, onClick: () => handleDelete(g) },
+                ]}
+                campos={[
+                  { label: 'Fecha', value: fmtDate(g.fecha) },
+                  { label: 'Monto', value: <span className="text-destructive font-bold">{fmt(g.monto)}</span> },
+                  ...(g.notas ? [{ label: 'Notas', value: g.notas, className: 'col-span-2' }] : []),
+                ]}
+              />
+            ))}
+          </ListaTarjetasMovil>
+        </>
+        )
+      ) : (
       <div className="bg-card border border-border rounded overflow-x-auto">
         <Table>
           <TableHeader>
@@ -317,6 +351,7 @@ export default function GastosDesktopPage() {
           )}
         </Table>
       </div>
+      )}
       <PinDialog />
     </div>
   );

@@ -16,6 +16,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 const ESTADO_STYLES: Record<CotizacionEstado, string> = {
   borrador: 'bg-muted text-foreground',
@@ -37,6 +39,7 @@ function fmtDate(d?: string | null) {
 
 export default function CotizacionesListPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { dateFrom, dateTo, setDates } = useListPreferences('cotizaciones', { defaultMesActual: true });
   // Mes actual por omisión, filtrado en el servidor (antes traía todo el historial).
   const { data, isLoading } = useCotizaciones(dateFrom, dateTo);
@@ -100,6 +103,33 @@ export default function CotizacionesListPage() {
         </div>
       </div>
 
+      {isMobile ? (
+        <div className={SCROLL_AREA}>
+          {isLoading ? <div className="py-6 text-center text-muted-foreground text-sm">Cargando…</div> : (
+          <ListaTarjetasMovil vacia={list.length === 0} mensajeVacio="Sin cotizaciones">
+            {list.map(c => (
+              <ListaTarjetaMovil
+                key={c.id}
+                titulo={c.clientes?.nombre || 'Sin cliente'}
+                subtitulo={c.folio}
+                estado={<Badge className={cn('capitalize', ESTADO_STYLES[c.estado] || 'bg-muted')}>{c.estado}</Badge>}
+                onClick={() => navigate(`/cotizaciones/${c.id}`)}
+                acciones={[
+                  { key: 'ver', label: 'Ver detalle', icon: FileText, onClick: () => navigate(`/cotizaciones/${c.id}`) },
+                  ...(c.estado !== 'convertida' ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, separar: true, onClick: () => setToDelete(c) }] : []),
+                ]}
+                campos={[
+                  { label: 'Fecha', value: fmtDate(c.fecha) },
+                  { label: 'Total', value: formatCurrency(c.total, c.moneda) },
+                  { label: 'Vence', value: fmtDate(c.vence_at) },
+                  ...(c.enviada_wa_at || c.venta_id ? [{ label: 'Seguimiento', value: [c.enviada_wa_at ? 'Enviada' : null, c.venta_id ? 'Convertida' : null].filter(Boolean).join(' · ') }] : []),
+                ]}
+              />
+            ))}
+          </ListaTarjetasMovil>
+          )}
+        </div>
+      ) : (
       <div className={TABLE_CARD}>
         <div>
           <table className="w-full text-sm">
@@ -175,6 +205,7 @@ export default function CotizacionesListPage() {
           </table>
         </div>
       </div>
+      )}
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
