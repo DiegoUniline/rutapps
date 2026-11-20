@@ -272,7 +272,21 @@ export function useVentaForm() {
   const totalReferencia = (form as any).cerrado_at
     ? Number((form as any).total_efectivo ?? form.total ?? 0)
     : Number(form.total ?? 0);
-  const saldoPendiente = Math.max(0, totalReferencia - totalPagado);
+  // Lo que aún se puede pagar (tope de un pago: hasta el total, permite pago anticipado).
+  const porPagarTotal = Math.max(0, totalReferencia - totalPagado);
+  // D-034: un pedido que se cobra a lo entregado debe solo lo entregado; ese saldo lo calcula la BD.
+  const esPedidoPorEntregado = form.tipo === 'pedido' && (form as any).politica_cobro === 'entregado'
+    && !(form as any).cerrado_at && form.status !== 'borrador' && !!form.id;
+  const { data: saldoBd } = useQuery({
+    queryKey: ['venta', form.id, 'saldo'],
+    enabled: esPedidoPorEntregado,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('ventas').select('saldo_pendiente').eq('id', form.id!).single();
+      if (error) throw error;
+      return Number((data as { saldo_pendiente: number | null }).saldo_pendiente ?? 0);
+    },
+  });
+  const saldoPendiente = esPedidoPorEntregado && saldoBd != null ? Math.max(0, saldoBd) : porPagarTotal;
 
 
   // Load existing venta — only once per venta id
@@ -1248,7 +1262,7 @@ export function useVentaForm() {
 
   const handleAddPago = async (monto: number, metodo: string, referencia: string) => {
     if (!form.id || !form.cliente_id || !user?.id || !empresa?.id) return;
-    if (monto > saldoPendiente + 0.01) { toast.error('El monto excede el saldo pendiente'); return; }
+    if (monto > porPagarTotal + 0.01) { toast.error('El monto excede lo que falta por pagar'); return; }
     // Cobro + aplicación atómico (aplicar_cobro): o entran los dos, o ninguno.
     const { data: cobroId, error: cobroErr } = await (supabase as any).rpc('aplicar_cobro', {
       p_empresa_id: empresa.id,
