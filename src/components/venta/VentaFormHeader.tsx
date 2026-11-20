@@ -150,7 +150,7 @@ export function VentaFormHeader({
         )}
         {/* D-021: una venta confirmada ya no regresa a borrador; se corrige con Editar. */}
         {!isNew && status !== 'cancelado' && (
-          <button onClick={() => onStatusChange('cancelado')} className="btn-odoo-danger text-xs max-sm:hidden">Cancelar</button>
+          <button onClick={() => onStatusChange('cancelado')} className="btn-cancelar btn-odoo-danger text-xs max-sm:hidden">Cancelar</button>
         )}
         {!isNew && (status === 'borrador' || (status === 'cancelado' && canDeleteCancelada)) && (
           <button onClick={onDelete} className="btn-odoo-danger text-xs !px-2 max-sm:hidden" title={status === 'cancelado' ? 'Eliminar venta cancelada' : 'Eliminar borrador'}>

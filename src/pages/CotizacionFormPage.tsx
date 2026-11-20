@@ -637,7 +637,7 @@ export default function CotizacionFormPage() {
             </tbody>
           </table>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setStockDialog({ open: false, rows: [], ok: true })}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setStockDialog({ open: false, rows: [], ok: true })}>Cancelar</Button>
             <Button onClick={confirmConvertToSale} className={stockDialog.ok ? '' : 'bg-amber-600 hover:bg-amber-700'}>
               {stockDialog.ok ? 'Convertir a venta' : 'Convertir de todos modos'}
             </Button>

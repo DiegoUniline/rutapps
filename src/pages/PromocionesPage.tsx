@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { useCurrency } from '@/hooks/useCurrency';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
@@ -177,23 +177,30 @@ export default function PromocionesPage() {
   const clienteMap = useMemo(() => new Map((clientes ?? []).map(c => [c.id, `${c.codigo ? c.codigo + ' — ' : ''}${c.nombre}`])), [clientes]);
   const zonaMap = useMemo(() => new Map((zonas ?? []).map(z => [z.id, z.nombre])), [zonas]);
   const listaMap = useMemo(() => new Map((listasPrecios ?? []).map(l => [l.id, l.nombre])), [listasPrecios]);
+  const movil = useCargarMasMovil(filtered, search);
 
   return (
-    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
+      {isMobile && (
+        <EncabezadoListaMovil titulo="Promociones" onNuevo={() => setEditing({ ...emptyPromo })} nuevoLabel="Nueva promoción">
+          <OdooFilterBar search={search} onSearchChange={setSearch} placeholder="Buscar promociones" />
+        </EncabezadoListaMovil>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-2 max-md:hidden">
         <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">Promociones <HelpButton title={HELP.promociones.title} sections={HELP.promociones.sections} /></h1>
         <Button onClick={() => setEditing({ ...emptyPromo })} size="sm">
           <Plus className="h-4 w-4 mr-1.5" /> Nueva promoción
         </Button>
       </div>
 
-      <OdooFilterBar search={search} onSearchChange={setSearch} placeholder="Buscar promociones..." />
+      <div className="max-md:hidden"><OdooFilterBar search={search} onSearchChange={setSearch} placeholder="Buscar promociones..." /></div>
 
       {isLoading ? <TableSkeleton /> : isMobile ? (
-        <ListaTarjetasMovil vacia={paged.length === 0} mensajeVacio="No hay promociones">
-          {paged.map(p => {
+        <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio="No hay promociones" {...movil}>
+          {movil.visibles.map(p => {
             const tipoInfo = TIPO_LABELS[p.tipo];
-            const dias = (p.dias_semana ?? []);
             const valor = p.tipo === 'producto_gratis'
               ? `${p.cantidad_minima} → +${p.cantidad_gratis}`
               : p.tipo === 'descuento_porcentaje' || p.tipo === 'volumen'
@@ -203,20 +210,11 @@ export default function PromocionesPage() {
               <ListaTarjetaMovil
                 key={p.id}
                 titulo={p.nombre}
-                subtitulo={p.descripcion || tipoInfo?.label}
-                estado={<Badge variant={p.activa ? 'default' : 'secondary'}>{p.activa ? 'Activa' : 'Inactiva'}</Badge>}
+                linea2={`${tipoInfo?.label ?? p.tipo} · ${valor} · ${APLICA_LABELS[p.aplica_a] ?? ''}`}
+                pildora={p.activa ? 'Activa' : 'Inactiva'}
+                tono={p.activa ? 'exito' : 'neutro'}
                 onClick={() => setEditing({ ...p })}
-                acciones={[
-                  { key: 'editar', label: 'Editar', icon: Pencil, onClick: () => setEditing({ ...p }) },
-                  { key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, separar: true, onClick: () => setDeleteTarget(p.id) },
-                ]}
-                campos={[
-                  { label: 'Tipo', value: tipoInfo?.label ?? p.tipo },
-                  { label: 'Valor', value: <>{valor}{p.cantidad_minima > 0 && p.tipo !== 'producto_gratis' && <span className="text-muted-foreground"> (min {p.cantidad_minima})</span>}</> },
-                  { label: 'Aplica a', value: APLICA_LABELS[p.aplica_a] },
-                  { label: 'Días', value: dias.length === 0 ? 'Todos' : dias.map(d => d.slice(0, 3)).join(', ') },
-                  ...(p.alcance_lista === 'especifica' ? [{ label: 'Lista', value: listaMap.get(p.lista_precio_id ?? '') ?? 'sin lista', className: 'col-span-2' }] : []),
-                ]}
+                acciones={[{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, onClick: () => setDeleteTarget(p.id) }]}
               />
             );
           })}
@@ -290,7 +288,7 @@ export default function PromocionesPage() {
         </div>
       )}
 
-      <OdooPagination from={(page - 1) * pageSize + 1} to={Math.min(page * pageSize, filtered.length)} total={filtered.length} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} />
+      {!isMobile && <OdooPagination from={(page - 1) * pageSize + 1} to={Math.min(page * pageSize, filtered.length)} total={filtered.length} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} />}
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
@@ -301,7 +299,7 @@ export default function PromocionesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDelete}>Eliminar</AlertDialogAction>
+            <AlertDialogAction className="border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10" onClick={handleDelete}>Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -544,7 +542,7 @@ export default function PromocionesPage() {
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
+                <Button variant="cancelar" onClick={() => setEditing(null)}>Cancelar</Button>
                 <Button onClick={handleSave} disabled={savePromo.isPending}>
                   {savePromo.isPending ? 'Guardando...' : 'Guardar'}
                 </Button>
@@ -553,6 +551,7 @@ export default function PromocionesPage() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }

@@ -266,7 +266,7 @@ export default function AdminInactivosTab() {
             <Input value={confirmText} onChange={e => setConfirmText(e.target.value)} placeholder="ELIMINAR" />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setConfirmOpen(false); setConfirmText(''); }}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => { setConfirmOpen(false); setConfirmText(''); }}>Cancelar</Button>
             <Button variant="destructive" onClick={handleBulkDelete} disabled={deleting || confirmText !== 'ELIMINAR'}>
               {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
               Eliminar {selected.size} empresa(s)

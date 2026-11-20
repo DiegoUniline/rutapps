@@ -402,6 +402,7 @@ export default function LotesPage() {
 
   return (
     <ListPage>
+      <ListPage.Toolbar>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Boxes className="h-5 w-5" /> Lotes
@@ -561,6 +562,7 @@ export default function LotesPage() {
           Por almacén / ruta
         </button>
       </div>
+      </ListPage.Toolbar>
 
       {vista === 'matriz' && (
         <div className={TABLE_CARD}>
@@ -757,7 +759,7 @@ export default function LotesPage() {
       )}
 
       {vista === 'almacen' && (
-        <div className="space-y-3">
+        <div className="space-y-3 px-3 md:px-4">
           {porAlmacenVisible.length === 0 ? (
             <div className="bg-card border border-border rounded p-8 text-center text-muted-foreground text-sm">
               {porAlmacen.length === 0 ? 'Todavía no hay stock por lote en ningún almacén. Entrará al recibir compras o al asignar lotes.' : 'Ningún lote coincide con los filtros.'}
@@ -855,7 +857,7 @@ export default function LotesPage() {
               </div>
             </div>
             <div className="p-5 border-t border-border flex gap-2 justify-end">
-              <button onClick={() => setEdit(null)} className="btn-odoo text-sm" disabled={saving}>Cancelar</button>
+              <button onClick={() => setEdit(null)} className="btn-cancelar btn-odoo text-sm" disabled={saving}>Cancelar</button>
               <button onClick={handleSave} className="btn-odoo-primary text-sm" disabled={saving}>
                 {saving ? 'Guardando…' : 'Guardar'}
               </button>

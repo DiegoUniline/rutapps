@@ -387,7 +387,7 @@ export default function PartnersInlineTab() {
                 <option value="inactivo">Inactivo</option>
               </select>
             </div>
-            <Button onClick={saveEdit} className="w-full">Guardar cambios</Button>
+            <Button onClick={saveEdit} className="w-full">Guardar</Button>
           </div>
         </DialogContent>
       </Dialog>

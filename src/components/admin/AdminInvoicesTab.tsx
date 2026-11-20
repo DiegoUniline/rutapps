@@ -1235,7 +1235,7 @@ export default function AdminInvoicesTab() {
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => { resetForm(); setShowCreate(false); }}>Cancelar</Button>
+              <Button variant="cancelar" onClick={() => { resetForm(); setShowCreate(false); }}>Cancelar</Button>
               <Button disabled={creating || !form.empresa_id} onClick={handleCreateInvoice}>
                 <Send className="h-4 w-4 mr-1.5" />
                 {creating ? 'Creando...' : 'Crear y enviar factura'}

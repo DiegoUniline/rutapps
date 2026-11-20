@@ -26,7 +26,8 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { confirmDialog } from '@/lib/confirm';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
@@ -53,6 +54,13 @@ export default function MermasPage() {
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const { data: mermas, isLoading } = useMermas({ desde: desde || undefined, hasta: hasta || undefined });
+  // Teléfono: búsqueda local (solo presentación) y «Cargar más».
+  const [busquedaMovil, setBusquedaMovil] = useState('');
+  const mermasMovil = (mermas ?? []).filter((m: any) => {
+    const q = busquedaMovil.trim().toLowerCase();
+    return !q || `${m.folio ?? ''} ${m.merma_motivos?.nombre ?? ''} ${m.almacenes?.nombre ?? ''} ${m.profiles?.nombre ?? ''}`.toLowerCase().includes(q);
+  });
+  const movil = useCargarMasMovil(mermasMovil, `${busquedaMovil}|${desde}|${hasta}`);
   const registrar = useRegistrarMerma();
   const cancelar = useCancelarMerma();
 
@@ -172,8 +180,35 @@ export default function MermasPage() {
   }
 
   return (
-    <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 bg-background min-h-[100dvh]">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="p-2 md:p-4 lg:p-6 min-h-[100dvh]">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
+      {isMobile && (
+        <EncabezadoListaMovil
+          titulo="Mermas"
+          onNuevo={canCreateMermas ? () => setOpen(true) : undefined}
+          nuevoLabel="Registrar merma"
+          extra={
+            <Link to="/almacen/mermas/motivos" aria-label="Motivos" title="Motivos"
+              className="h-10 w-10 rounded-full border border-border bg-card text-muted-foreground flex items-center justify-center active:bg-accent">
+              <Settings className="h-4 w-4" />
+            </Link>
+          }
+        >
+          <OdooFilterBar
+            search={busquedaMovil}
+            onSearchChange={setBusquedaMovil}
+            placeholder="Buscar mermas"
+            onClearFilters={() => { setDesde(''); setHasta(''); }}
+            dateFrom={desde}
+            dateTo={hasta}
+            onDateRangeChange={(f, t) => { setDesde(f); setHasta(t); }}
+            onDateFromChange={setDesde}
+            onDateToChange={setHasta}
+          />
+        </EncabezadoListaMovil>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-2 max-md:hidden">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
@@ -195,7 +230,7 @@ export default function MermasPage() {
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-wrap gap-2 items-end bg-card border rounded-lg p-3">
+      <div className="flex flex-wrap gap-2 items-end border-y border-border -mx-3 md:-mx-4 px-3 md:px-4 py-3 max-md:hidden">
         <div>
           <Label className="text-xs block mb-1">Rango de fechas</Label>
           <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
@@ -210,14 +245,15 @@ export default function MermasPage() {
       {/* Lista */}
       {isMobile ? (
         isLoading ? <div className="text-center py-8 text-sm">Cargando…</div> : (
-        <ListaTarjetasMovil vacia={(mermas ?? []).length === 0} mensajeVacio="Sin mermas registradas">
-          {(mermas ?? []).map((m: any) => (
+        <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio="Sin mermas registradas" {...movil}>
+          {movil.visibles.map((m: any) => (
             <ListaTarjetaMovil
               key={m.id}
               titulo={m.merma_motivos?.nombre ?? '—'}
-              subtitulo={[m.folio, m.almacenes?.nombre].filter(Boolean).join(' · ')}
-              className={m.cancelada ? 'opacity-50' : undefined}
-              estado={m.cancelada ? <Badge variant="outline">Cancelada</Badge> : <Badge>Activa</Badge>}
+              linea2={<>{fmtDate(m.fecha)} · {m.almacenes?.nombre ?? '—'}<span className="text-xs"> · {m.folio}</span></>}
+              pildora={m.cancelada ? 'Cancelada' : fmtMoney(m.total_costo)}
+              tono={m.cancelada ? 'neutro' : 'peligro'}
+              className={m.cancelada ? 'opacity-60' : undefined}
               onClick={() => setDetalleId(m.id)}
               acciones={!m.cancelada && canCancelMermas ? [{
                 key: 'cancelar', label: 'Cancelar merma', icon: Trash2, destructiva: true,
@@ -227,12 +263,6 @@ export default function MermasPage() {
                   }
                 },
               }] : undefined}
-              campos={[
-                { label: 'Fecha', value: fmtDate(m.fecha) },
-                { label: 'Usuario', value: m.profiles?.nombre ?? '—' },
-                { label: 'Costo', value: <span className="text-destructive">{fmtMoney(m.total_costo)}</span> },
-                { label: 'Venta', value: fmtMoney(m.total_venta) },
-              ]}
             />
           ))}
         </ListaTarjetasMovil>
@@ -468,7 +498,7 @@ export default function MermasPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={registrar.isPending}>
               {registrar.isPending ? 'Guardando…' : 'Registrar merma'}
             </Button>
@@ -538,6 +568,7 @@ export default function MermasPage() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }

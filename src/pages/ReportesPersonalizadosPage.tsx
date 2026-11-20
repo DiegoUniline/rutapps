@@ -822,7 +822,7 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="cancelar" onClick={onClose}>Cancelar</Button>
           <Button onClick={onSave} disabled={saving || !config.nombre.trim() || config.columnas.length === 0}>
             {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
             Guardar

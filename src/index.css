@@ -710,3 +710,11 @@ table[data-no-odoo] tbody td {
 [data-dialog-header-close] { display: none; }
 :where([data-dialog-content]) > :where([data-dialog-header]) > [data-dialog-header-close] { display: inline-flex; }
 :where([data-dialog-content]:has(> [data-dialog-header])) > [data-dialog-close-default] { display: none; }
+
+/* D-042: «Cancelar»/«Descartar» en botones HTML sueltos: rojo suave (mismo estilo que variant="cancelar"). */
+.btn-cancelar {
+  border: 1px solid hsl(var(--destructive) / .4) !important;
+  background-color: hsl(var(--destructive) / .05) !important;
+  color: hsl(var(--destructive)) !important;
+}
+.btn-cancelar:hover:not(:disabled) { background-color: hsl(var(--destructive) / .1) !important; }

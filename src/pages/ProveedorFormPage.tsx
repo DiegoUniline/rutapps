@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, Trash2 } from 'lucide-react';
+import { Save, Trash2, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
 import { estadoPildora } from '@/components/layout/ListaTarjetaMovil';
@@ -94,6 +94,9 @@ export default function ProveedorFormPage() {
 
   const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(original);
   const set = (key: keyof Proveedor, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+  // D-042: «Descartar» restaura el formulario al último guardado (nuevo: regresa a la lista).
+  const handleDescartar = () => { if (isNew) navigate('/proveedores'); else setForm(original); };
+  const hayCambios = !isNew && isDirty;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -160,7 +163,8 @@ export default function ProveedorFormPage() {
           principales={!formReadOnly ? [{ key: 'guardar', label: 'Guardar', icon: Save, onClick: handleSave, disabled: !isDirty, cargando: saveMutation.isPending }] : []}
           menu={[
             ...(form.status !== 'activo' ? [{ key: 'activar', label: 'Marcar activo', onClick: () => set('status', 'activo') }] : [{ key: 'inactivar', label: 'Marcar inactivo', onClick: () => set('status', 'inactivo') }]),
-            ...(!isNew && canDeletePerm ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, separar: true, onClick: handleDelete }] : []),
+            ...(hayCambios ? [{ key: 'descartar', label: 'Descartar', icon: X, onClick: handleDescartar, separar: true }] : []),
+            ...(!isNew && canDeletePerm ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, separar: !hayCambios, onClick: handleDelete }] : []),
           ]}
         />
       )}
@@ -196,6 +200,11 @@ export default function ProveedorFormPage() {
           {!isNew && canDeletePerm && (
             <button onClick={handleDelete} className="btn-odoo-danger flex items-center gap-1.5">
               <Trash2 className="h-4 w-4" /> Eliminar
+            </button>
+          )}
+          {hayCambios && !formReadOnly && (
+            <button onClick={handleDescartar} className="btn-cancelar btn-odoo-secondary flex items-center gap-1.5">
+              <X className="h-4 w-4" /> Descartar
             </button>
           )}
           {!formReadOnly && (

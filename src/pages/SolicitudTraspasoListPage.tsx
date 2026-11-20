@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
 import { ListPage } from '@/components/layout/ListPage';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { StatusChip } from '@/components/StatusChip';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { fmtDate } from '@/lib/utils';
@@ -42,12 +43,36 @@ export default function SolicitudTraspasoListPage() {
     });
   }, [solicitudes, tab, search]);
 
+  const movil = useCargarMasMovil(filtradas, `${search}|${tab}`);
+
   const conteo = (value: 'todas' | StatusSolicitudTraspaso) =>
     value === 'todas' ? solicitudes.length : solicitudes.filter(s => s.status === value).length;
 
   return (
     <ListPage>
+      {isMobile && (
+        <ListPage.Toolbar>
+          <EncabezadoListaMovil
+            titulo="Solicitudes de traspaso"
+            estado={tab !== 'todas' ? STATUS_TABS.find(t => t.value === tab)?.label : undefined}
+            onNuevo={() => navigate('/almacen/solicitudes-traspaso/nueva')}
+            nuevoLabel="Nueva solicitud"
+          >
+            <OdooFilterBar
+              search={search}
+              onSearchChange={setSearch}
+              placeholder="Buscar solicitudes"
+              filterOptions={[{ key: 'estado', label: 'Estado', options: STATUS_TABS.filter(t => t.value !== 'todas').map(t => ({ value: t.value, label: t.label })) }]}
+              activeFilters={tab !== 'todas' ? { estado: [tab] } : {}}
+              onToggleFilter={(_k, val) => setTab(prev => prev === val ? 'todas' : val as StatusSolicitudTraspaso)}
+              onSetFilter={(_k, vals) => setTab((vals[vals.length - 1] as StatusSolicitudTraspaso) ?? 'todas')}
+              onClearFilters={() => setTab('todas')}
+            />
+          </EncabezadoListaMovil>
+        </ListPage.Toolbar>
+      )}
       <ListPage.Header
+        className="max-md:hidden"
         title="Solicitudes de traspaso"
         actions={
           <button
@@ -59,7 +84,7 @@ export default function SolicitudTraspasoListPage() {
         }
       />
 
-      <ListPage.Toolbar>
+      <ListPage.Toolbar className="max-md:hidden">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -88,7 +113,7 @@ export default function SolicitudTraspasoListPage() {
         </div>
       </ListPage.Toolbar>
 
-      <ListPage.Body card={!isMobile} className={isMobile ? 'space-y-2' : undefined}>
+      <ListPage.Body card={!isMobile}>
           {isLoading ? (
             <TableSkeleton rows={8} cols={7} />
           ) : filtradas.length === 0 ? (
@@ -96,18 +121,14 @@ export default function SolicitudTraspasoListPage() {
               No hay solicitudes con este filtro.
             </p>
           ) : isMobile ? (
-            <ListaTarjetasMovil>
-              {filtradas.map(s => (
+            <ListaTarjetasMovil {...movil}>
+              {movil.visibles.map(s => (
                 <ListaTarjetaMovil
                   key={s.id}
                   titulo={`${s.almacen_origen?.nombre || '—'} → ${s.almacen_destino?.nombre || '—'}`}
-                  subtitulo={[s.folio, s.solicitante?.nombre].filter(Boolean).join(' · ') || undefined}
-                  estado={<StatusChip status={s.status} label={SOLICITUD_STATUS_LABELS[s.status]} />}
+                  linea2={<>{fmtDate(s.fecha)}{s.solicitante?.nombre ? ` · ${s.solicitante.nombre}` : ''}<span className="text-xs"> · {s.folio || '—'}</span></>}
+                  {...estadoPildora(s.status, SOLICITUD_STATUS_LABELS[s.status])}
                   onClick={() => navigate(`/almacen/solicitudes-traspaso/${s.id}`)}
-                  campos={[
-                    { label: 'Fecha', value: fmtDate(s.fecha) },
-                    { label: 'Creada', value: new Date(s.created_at).toLocaleString('es-MX') },
-                  ]}
                 />
               ))}
             </ListaTarjetasMovil>

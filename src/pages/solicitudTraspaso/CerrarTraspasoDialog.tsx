@@ -29,7 +29,7 @@ export function CerrarTraspasoDialog({ open, onOpenChange, pendiente, ejecutando
           </label>
         </div>
         <DialogFooter>
-          <button className="btn-odoo" onClick={() => onOpenChange(false)}>Cancelar</button>
+          <button className="btn-cancelar btn-odoo" onClick={() => onOpenChange(false)}>Cancelar</button>
           <button className="btn-odoo-primary" disabled={ejecutando} onClick={() => onConfirm(motivo.trim() || null)}>
             {ejecutando ? 'Cerrando...' : 'Cerrar traspaso'}
           </button>

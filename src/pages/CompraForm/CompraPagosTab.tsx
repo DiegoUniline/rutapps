@@ -91,7 +91,7 @@ export function CompraPagosTab({ pagos, form, totals, totalPagado, saldoActual, 
             <div><label className="text-[10px] uppercase text-muted-foreground block">Monto</label><input type="number" className="input-odoo w-full text-sm text-right font-bold" value={newPago.monto} onChange={e => setNewPago(p => ({ ...p, monto: Number(e.target.value) }))} max={saldoActual} step="0.01" /></div>
             <div className="flex gap-2">
               <button onClick={handleSavePago} className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-success text-white text-sm font-semibold"><Save className="h-4 w-4" /> Guardar</button>
-              <button onClick={() => setAddingPago(false)} className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border text-sm"><X className="h-4 w-4" /> Cancelar</button>
+              <button onClick={() => setAddingPago(false)} className="btn-cancelar flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border text-sm"><X className="h-4 w-4" /> Cancelar</button>
             </div>
           </div>
         )}

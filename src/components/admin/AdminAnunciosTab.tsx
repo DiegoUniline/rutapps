@@ -654,7 +654,7 @@ export default function AdminAnunciosTab() {
 
           {/* ─── Sticky Footer ─── */}
           <div className="border-t border-border px-6 py-4 flex gap-2 justify-end shrink-0 bg-card">
-            <button onClick={() => setSheetOpen(false)} className="btn-odoo text-sm">Cancelar</button>
+            <button onClick={() => setSheetOpen(false)} className="btn-cancelar btn-odoo text-sm">Cancelar</button>
             <button onClick={handleSave} disabled={saving} className="btn-odoo-primary text-sm px-6">
               {saving ? 'Guardando...' : 'Guardar'}
             </button>

@@ -683,7 +683,7 @@ export default function CobranzaPage() {
           <Button size="sm" variant="ghost" className="h-8 gap-1 text-[#25D366] hover:text-[#25D366]/80" onClick={handleWaMany}>
             <MessageCircle className="h-4 w-4" /> WhatsApp
           </Button>
-          <Button size="sm" variant="ghost" className="h-8 gap-1 text-destructive hover:text-destructive" onClick={() => setCancelManyOpen(true)}>
+          <Button size="sm" variant="cancelar" className="h-8 gap-1 text-destructive hover:text-destructive" onClick={() => setCancelManyOpen(true)}>
             <Ban className="h-4 w-4" /> Cancelar
           </Button>
           <Button size="sm" variant="ghost" className="h-8 gap-1 text-destructive hover:text-destructive" onClick={handleDeleteCancelledMany} title="Solo cobros cancelados — requiere PIN admin">
@@ -764,7 +764,7 @@ export default function CobranzaPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={cancelling}>No</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancelCobro} disabled={cancelling} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleCancelCobro} disabled={cancelling} className="border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10">
               {cancelling ? 'Cancelando...' : 'Sí, cancelar'}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -781,7 +781,7 @@ export default function CobranzaPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={cancellingMany}>No</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancelMany} disabled={cancellingMany} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleCancelMany} disabled={cancellingMany} className="border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10">
               {cancellingMany ? 'Cancelando...' : 'Sí, cancelar'}
             </AlertDialogAction>
           </AlertDialogFooter>

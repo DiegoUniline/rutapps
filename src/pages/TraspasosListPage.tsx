@@ -632,7 +632,7 @@ export default function TraspasosListPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={bulkDeleting} onClick={(e) => { e.preventDefault(); handleBulkDeleteTraspasos(); }}>
+            <AlertDialogAction className="border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10" disabled={bulkDeleting} onClick={(e) => { e.preventDefault(); handleBulkDeleteTraspasos(); }}>
               {bulkDeleting ? 'Eliminando...' : `Eliminar ${selected.size}`}
             </AlertDialogAction>
           </AlertDialogFooter>

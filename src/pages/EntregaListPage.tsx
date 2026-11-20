@@ -405,6 +405,16 @@ export default function EntregaListPage() {
       ? 'Sin ruta asignada'
       : (vendedores ?? []).find(v => v.id === rutaFilter)?.nombre ?? 'Ruta';
 
+  const tabsEstado = [
+    { key: 'borrador', label: 'Por surtir', count: counts.borrador },
+    { key: 'surtido', label: 'Surtidos', count: counts.surtido },
+    { key: 'asignado', label: 'Asignados', count: counts.asignado },
+    { key: 'cargado', label: 'Cargados', count: counts.cargado },
+    { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
+    { key: 'hecho', label: 'Entregadas', count: counts.hecho },
+    { key: 'no_entregado', label: 'No entregadas', count: counts.no_entregado },
+    { key: 'todos', label: 'Todos', count: counts.total },
+  ];
   return (
     <ListPage scroll>
       {cargarProgress && (
@@ -463,18 +473,9 @@ export default function EntregaListPage() {
         </h1>
       </div>
 
-      {/* Status Tabs */}
-      <div className="flex border-b border-border gap-0 overflow-x-auto">
-        {[
-          { key: 'borrador', label: 'Por surtir', count: counts.borrador },
-          { key: 'surtido', label: 'Surtidos', count: counts.surtido },
-          { key: 'asignado', label: 'Asignados', count: counts.asignado },
-          { key: 'cargado', label: 'Cargados', count: counts.cargado },
-          { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
-          { key: 'hecho', label: 'Entregadas', count: counts.hecho },
-          { key: 'no_entregado', label: 'No entregadas', count: counts.no_entregado },
-          { key: 'todos', label: 'Todos', count: counts.total },
-        ].map(tab => (
+      {/* Status Tabs (en teléfono el estado va dentro de Filtros) */}
+      <div className="flex border-b border-border gap-0 overflow-x-auto max-md:hidden">
+        {tabsEstado.map(tab => (
           <button
             key={tab.key}
             onClick={() => setStatusFilter(tab.key)}
@@ -493,6 +494,17 @@ export default function EntregaListPage() {
 
       {/* Filters + Bulk action */}
       <div className="flex flex-wrap items-end gap-3">
+        {isMobile && (
+          <div className="min-w-[180px]">
+            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Estado</label>
+            <SearchableSelect
+              options={tabsEstado.map(t => ({ value: t.key, label: `${t.label} (${t.count})` }))}
+              value={statusFilter}
+              onChange={v => setStatusFilter(v || 'todos')}
+              placeholder="Estado"
+            />
+          </div>
+        )}
         <div className="min-w-[180px]">
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Vendedor</label>
           <SearchableSelect
@@ -879,7 +891,7 @@ export default function EntregaListPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSurtirDialog(false)}>
+            <Button variant="cancelar" onClick={() => setShowSurtirDialog(false)}>
               Cancelar
             </Button>
             <Button
@@ -926,7 +938,7 @@ export default function EntregaListPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t">
-            <Button variant="ghost" onClick={() => setShowAsignarDialog(false)} disabled={bulkAsignarMut.isPending} className="text-destructive mr-auto">
+            <Button variant="cancelar" onClick={() => setShowAsignarDialog(false)} disabled={bulkAsignarMut.isPending} className="text-destructive mr-auto">
               Cancelar
             </Button>
             <Button

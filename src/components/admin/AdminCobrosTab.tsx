@@ -657,7 +657,7 @@ function OpenPayPlansSection() {
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
+              <Button variant="cancelar" onClick={() => setShowCreate(false)}>Cancelar</Button>
               <Button onClick={handleCreate} disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Crear
               </Button>

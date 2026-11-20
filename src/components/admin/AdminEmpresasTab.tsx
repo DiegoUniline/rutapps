@@ -801,7 +801,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
               />
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowAddTimbres(false)}>Cancelar</Button>
+              <Button variant="cancelar" className="flex-1" onClick={() => setShowAddTimbres(false)}>Cancelar</Button>
               <Button className="flex-1" disabled={addingTimbres} onClick={handleAddTimbres}>
                 {addingTimbres ? 'Agregando...' : `Agregar ${cantidadTimbres || 0} timbres`}
               </Button>
@@ -853,7 +853,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
               <Input value={newEmpresa.password} onChange={e => setNewEmpresa(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowCreateEmpresa(false)}>Cancelar</Button>
+              <Button variant="cancelar" className="flex-1" onClick={() => setShowCreateEmpresa(false)}>Cancelar</Button>
               <Button className="flex-1" disabled={creating} onClick={handleCreateEmpresa}>
                 {creating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
                 Crear empresa

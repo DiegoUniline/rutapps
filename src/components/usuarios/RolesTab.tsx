@@ -144,7 +144,7 @@ export default function RolesTab({
               )}
             </div>
             <div className="p-5 border-t border-border flex gap-2 justify-end">
-              <button onClick={onCloseRoleForm} className="btn-odoo text-sm">Cancelar</button>
+              <button onClick={onCloseRoleForm} className="btn-cancelar btn-odoo text-sm">Cancelar</button>
               <button onClick={onSaveRole} className="btn-odoo-primary text-sm">Guardar</button>
             </div>
           </div>

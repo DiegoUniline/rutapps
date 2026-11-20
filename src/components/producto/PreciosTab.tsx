@@ -265,7 +265,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
           </div>
           <div className="flex items-center gap-2 px-4 py-3 border-t border-border">
             <button onClick={handleSaveRule} disabled={saveLinea.isPending} className="btn-odoo-primary">Guardar y cerrar</button>
-            <button onClick={() => setShowModal(false)} className="btn-odoo-secondary">Descartar</button>
+            <button onClick={() => setShowModal(false)} className="btn-cancelar btn-odoo-secondary">Descartar</button>
           </div>
         </div>
       </div>

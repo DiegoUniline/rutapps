@@ -376,7 +376,7 @@ function ChangePasswordCard() {
               {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
               Guardar
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => { setOpen(false); setNewPass(''); setConfirmPass(''); }}>
+            <Button size="sm" variant="cancelar" onClick={() => { setOpen(false); setNewPass(''); setConfirmPass(''); }}>
               Cancelar
             </Button>
           </div>

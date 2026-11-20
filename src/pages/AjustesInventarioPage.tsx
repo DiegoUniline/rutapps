@@ -720,9 +720,10 @@ export default function AjustesInventarioPage() {
 
   return (
     <ListPage scroll>
+      <div className="px-3 md:px-4 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+        <h1 className="text-lg md:text-xl font-semibold text-foreground flex items-center gap-2">
           <Settings2 className="h-5 w-5" /> Ajustes de inventario
           <HelpButton title={HELP.ajustesInventario.title} sections={HELP.ajustesInventario.sections} />
         </h1>
@@ -982,7 +983,7 @@ export default function AjustesInventarioPage() {
 
           {/* ─── AGRUPADO VIEW ─── */}
           {historialView === 'agrupado' && (
-            <div className="space-y-2">
+            <div className="-mx-3 md:-mx-4 border-t border-border">
               {loadingHistorial && <div className="text-center text-muted-foreground py-8">Cargando...</div>}
               {!loadingHistorial && (historial ?? []).length === 0 && (
                 <div className="text-center text-muted-foreground py-12">
@@ -995,7 +996,7 @@ export default function AjustesInventarioPage() {
                 const totalItems = items.length;
                 const totalDiff = items.reduce((sum: number, i: any) => sum + (i.diferencia ?? 0), 0);
                 return (
-                  <div key={group.key} className="border border-border rounded-lg overflow-hidden">
+                  <div key={group.key} className="border-b border-border">
                     <button
                       className="w-full flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 sm:px-4 py-3 text-left hover:bg-card transition-colors"
                       onClick={() => setExpandedGroup(isOpen ? null : group.key)}
@@ -1038,7 +1039,7 @@ export default function AjustesInventarioPage() {
                             <>
                               <Input value={editMotivo} onChange={e => setEditMotivo(e.target.value)} placeholder="Motivo" className="h-8 max-w-xs text-xs" />
                               <Button size="sm" className="h-8 text-xs gap-1" disabled={histBusy} onClick={() => guardarEdicion(group)}>
-                                <Save className="h-3.5 w-3.5" /> {histBusy ? 'Guardando…' : 'Guardar cambios'}
+                                <Save className="h-3.5 w-3.5" /> {histBusy ? 'Guardando…' : 'Guardar'}
                               </Button>
                               <Button size="sm" variant="outline" className="h-8 text-xs" disabled={histBusy} onClick={() => setEditGroupKey(null)}>Descartar</Button>
                             </>
@@ -1280,7 +1281,7 @@ export default function AjustesInventarioPage() {
               </p>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowResetDialog(false)}>Cancelar</Button>
+              <Button variant="cancelar" onClick={() => setShowResetDialog(false)}>Cancelar</Button>
               <Button variant="destructive" onClick={resetStock} disabled={resetting}>
                 <RotateCcw className="h-4 w-4 mr-1.5" />
                 {resetting ? 'Reiniciando...' : 'Confirmar reinicio'}
@@ -1311,7 +1312,7 @@ export default function AjustesInventarioPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowLoteConfirm(false)} disabled={applying}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowLoteConfirm(false)} disabled={applying}>Cancelar</Button>
             <Button onClick={() => { setShowLoteConfirm(false); applyAdjustments(); }} disabled={applying}>
               {applying ? 'Aplicando…' : 'Sí, asignar'}
             </Button>
@@ -1350,6 +1351,7 @@ export default function AjustesInventarioPage() {
         caption="Ajuste de inventario"
         tipo="ajuste"
       />
+      </div>
     </ListPage>
   );
 }

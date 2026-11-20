@@ -19,7 +19,8 @@ import { toast } from 'sonner';
 import { cn, fmtDate , todayLocal } from '@/lib/utils';
 import { MenuAcciones } from '@/components/shared/MenuAcciones';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil, type TonoPildora } from '@/components/layout/ListaTarjetaMovil';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidacionPdf';
 import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
 import { buildLiquidacionTicketHTML } from '@/lib/liquidacionTicketHtml';
@@ -1016,7 +1017,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                           >
                             Guardar
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setEditingEfectivo(false)} className="h-9 text-xs">
+                          <Button size="sm" variant="cancelar" onClick={() => setEditingEfectivo(false)} className="h-9 text-xs">
                             Cancelar
                           </Button>
                         </div>
@@ -1062,7 +1063,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                             >
                               Guardar
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setEditingFecha(false)} className="h-9 text-xs">
+                            <Button size="sm" variant="cancelar" onClick={() => setEditingFecha(false)} className="h-9 text-xs">
                               Cancelar
                             </Button>
                           </div>
@@ -2396,6 +2397,14 @@ export default function DescargasPage() {
   const totalDiferencia = filtered.reduce((s, d: any) => s + cuadreDe(d).diferencia, 0);
 
   const pag = useTablePagination(filtered);
+  // Teléfono: búsqueda local (solo presentación) sobre las liquidaciones ya filtradas.
+  const [busquedaMovil, setBusquedaMovil] = useState('');
+  const filtradasMovil = useMemo(() => {
+    const q = busquedaMovil.trim().toLowerCase();
+    if (!q) return filtered;
+    return filtered.filter((d: any) => `${d.vendedores?.nombre ?? ''} ${d.fecha ?? ''} ${d.notas ?? ''}`.toLowerCase().includes(q));
+  }, [filtered, busquedaMovil]);
+  const movil = useCargarMasMovil(filtradasMovil, `${busquedaMovil}|${filterStatus}|${filterVendedor}|${filterTipo}|${filterDiferencia}|${fechaDesdeFiltro}|${fechaHastaFiltro}`);
   // Reset a página 1 al cambiar filtros
   useEffect(() => { pag.resetPage(); }, [filterStatus, filterVendedor, filterTipo, filterDiferencia, fechaDesdeFiltro, fechaHastaFiltro]);
 
@@ -2411,15 +2420,54 @@ export default function DescargasPage() {
 
   if (selectedDescarga) {
     return (
-      <div className="p-4">
+      <div>
         <DescargaDetalle descarga={selectedDescarga} onClose={() => setSelectedId(null)} />
       </div>
     );
   }
 
   return (
-    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
-      <div className="flex flex-col gap-3">
+    <div className="p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
+      {isMobile && (() => {
+        const TIPOS = [['carga', 'Carga'], ['periodo', 'Periodo'], ['efectivo', 'Efectivo']];
+        const DIFS = [['con', 'Con diferencia'], ['sin', 'Sin diferencia']];
+        const unico: Record<string, [string, (v: string) => void]> = {
+          status: [filterStatus, setFilterStatus], tipo: [filterTipo, setFilterTipo],
+          diferencia: [filterDiferencia, setFilterDiferencia], vendedor: [filterVendedor, setFilterVendedor],
+        };
+        return (
+          <EncabezadoListaMovil
+            titulo="Liquidar ruta"
+            estado={filterStatus !== 'all' ? STATUS_MAP[filterStatus]?.label : undefined}
+            onNuevo={() => setShowNew(true)}
+            nuevoLabel="Nueva liquidación"
+          >
+            <OdooFilterBar
+              search={busquedaMovil}
+              onSearchChange={setBusquedaMovil}
+              placeholder="Buscar liquidaciones"
+              filterOptions={[
+                { key: 'status', label: 'Estado', options: ['pendiente', 'aprobada', 'rechazada'].map(v => ({ value: v, label: STATUS_MAP[v]?.label ?? v })) },
+                { key: 'tipo', label: 'Tipo', options: TIPOS.map(([value, label]) => ({ value, label })) },
+                { key: 'diferencia', label: 'Diferencia', options: DIFS.map(([value, label]) => ({ value, label })) },
+                { key: 'vendedor', label: 'Vendedor', options: (vendedores || []).map((v: any) => ({ value: v.id, label: v.nombre })) },
+              ]}
+              activeFilters={Object.fromEntries(Object.entries(unico).filter(([, [v]]) => v !== 'all').map(([k, [v]]) => [k, [v]]))}
+              onToggleFilter={(key, val) => { const f = unico[key]; if (f) f[1](f[0] === val ? 'all' : val); }}
+              onSetFilter={(key, vals) => { const f = unico[key]; if (f) f[1](vals[vals.length - 1] ?? 'all'); }}
+              onClearFilters={clearFilters}
+              dateFrom={fechaDesdeFiltro}
+              dateTo={fechaHastaFiltro}
+              onDateRangeChange={(f, t) => { setFechaDesdeFiltro(f); setFechaHastaFiltro(t); }}
+              onDateFromChange={setFechaDesdeFiltro}
+              onDateToChange={setFechaHastaFiltro}
+            />
+          </EncabezadoListaMovil>
+        );
+      })()}
+      <div className="flex flex-col gap-3 max-md:hidden">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-lg sm:text-xl font-semibold text-foreground flex items-center gap-2">
             <PackageCheck className="h-5 w-5" /> Liquidar Ruta
@@ -2531,54 +2579,26 @@ export default function DescargasPage() {
           )}
         </div>
       ) : isMobile ? (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
-            <span className="text-muted-foreground">Totales {hasFilters && <span className="font-normal">(filtrado)</span>}</span>
-            <span className={cn("tabular-nums", totalDiferencia > 0 ? "text-green-600" : totalDiferencia < 0 ? "text-destructive" : "")}>
-              Dif. {totalDiferencia > 0 ? '+' : ''}{fmt(totalDiferencia)}
-            </span>
-          </div>
-          <ListaTarjetasMovil>
-            {pag.paginatedItems.map((d: any) => {
-              const s = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
-              const cv = cuadreDe(d);
-              const dif = cv.diferencia;
-              const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
-              const tipoLabel = d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
-              return (
-                <ListaTarjetaMovil
-                  key={d.id}
-                  titulo={(d as any).vendedores?.nombre ?? '—'}
-                  subtitulo={`${hasRange ? `${fmtDate(d.fecha_inicio)} → ${fmtDate(d.fecha_fin)}` : fmtDate(d.fecha)} · ${tipoLabel}`}
-                  estado={
-                    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap", s.color)}>
-                      <s.icon className="h-3 w-3" /> {s.label}
-                    </span>
-                  }
-                  onClick={() => setSelectedId(d.id)}
-                  campos={[
-                    { label: 'Esperado', value: fmt(cv.esperado) },
-                    { label: 'Entregado', value: fmt(Number(d.efectivo_entregado)) },
-                    { label: 'Diferencia', value: <span className={cn("font-bold", dif > 0 ? "text-green-600" : dif < 0 ? "text-destructive" : "")}>{dif > 0 ? '+' : ''}{fmt(dif)}</span> },
-                  ]}
-                />
-              );
-            })}
-          </ListaTarjetasMovil>
-          <TablePagination
-            from={pag.from}
-            to={pag.to}
-            total={pag.total}
-            page={pag.page}
-            totalPages={pag.totalPages}
-            pageSize={pag.pageSize}
-            onPageSizeChange={pag.setPageSize}
-            onFirst={pag.goFirst}
-            onPrev={pag.goPrev}
-            onNext={pag.goNext}
-            onLast={pag.goLast}
-          />
-        </div>
+        <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio="No hay liquidaciones con los filtros aplicados" {...movil}>
+          {movil.visibles.map((d: any) => {
+            const st = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
+            const cv = cuadreDe(d);
+            const dif = cv.diferencia;
+            const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
+            const tipoLabel = d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
+            const tono: TonoPildora = d.status === 'aprobada' ? 'exito' : d.status === 'rechazada' ? 'peligro' : 'aviso';
+            return (
+              <ListaTarjetaMovil
+                key={d.id}
+                titulo={(d as any).vendedores?.nombre ?? '—'}
+                linea2={<>{hasRange ? `${fmtDate(d.fecha_inicio)} → ${fmtDate(d.fecha_fin)}` : fmtDate(d.fecha)} · {tipoLabel} · <span className={cn(dif > 0 ? "text-green-600" : dif < 0 ? "text-destructive" : "")}>Dif. {dif > 0 ? '+' : ''}{fmt(dif)}</span></>}
+                pildora={st.label}
+                tono={tono}
+                onClick={() => setSelectedId(d.id)}
+              />
+            );
+          })}
+        </ListaTarjetasMovil>
       ) : (
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
@@ -2666,6 +2686,7 @@ export default function DescargasPage() {
           />
         </div>
       )}
+    </div>
     </div>
   );
 }

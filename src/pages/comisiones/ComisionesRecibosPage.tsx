@@ -139,7 +139,7 @@ export default function ComisionesRecibosPage() {
                         <button onClick={() => openPagar(r)} className="px-2 py-1 text-[11px] bg-primary text-primary-foreground rounded hover:bg-primary/90 inline-flex items-center gap-1">
                           <Check className="h-3 w-3" /> Pagar
                         </button>
-                        <button onClick={() => setCancelingRecibo(r)} disabled={cancelarReciboMut.isPending} className="px-2 py-1 text-[11px] bg-muted text-foreground rounded hover:bg-muted/70">Cancelar</button>
+                        <button onClick={() => setCancelingRecibo(r)} disabled={cancelarReciboMut.isPending} className="btn-cancelar px-2 py-1 text-[11px] bg-muted text-foreground rounded hover:bg-muted/70">Cancelar</button>
                       </div>
                     ) : r.gasto_id ? (
                       <a href={`/finanzas/gastos`} className="text-[11px] text-primary hover:underline">Ver gasto</a>
@@ -180,7 +180,7 @@ export default function ComisionesRecibosPage() {
               Se registrará un gasto en <span className="font-semibold">Gastos</span> a nombre de este vendedor.
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setPayingRecibo(null)} className="btn-odoo-secondary">Cancelar</button>
+              <button onClick={() => setPayingRecibo(null)} className="btn-cancelar btn-odoo-secondary">Cancelar</button>
               <button onClick={() => marcarPagadoMut.mutate()} disabled={marcarPagadoMut.isPending} className="btn-odoo-primary">
                 <Check className="h-4 w-4" /> Confirmar pago
               </button>

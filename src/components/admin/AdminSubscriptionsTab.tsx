@@ -470,7 +470,7 @@ export default function AdminSubscriptionsTab() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setEditingSub(null)}>Cancelar</Button>
+              <Button variant="cancelar" onClick={() => setEditingSub(null)}>Cancelar</Button>
               <Button onClick={saveSubscription}>Guardar</Button>
             </div>
           </div>
@@ -531,7 +531,7 @@ export default function AdminSubscriptionsTab() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
+              <Button variant="cancelar" onClick={() => setShowCreate(false)}>Cancelar</Button>
               <Button onClick={createSubscription} disabled={!createForm.empresa_id}>Crear suscripción</Button>
             </div>
           </div>
@@ -557,7 +557,7 @@ export default function AdminSubscriptionsTab() {
               <Input type="number" min="1" value={timbresCantidad} onChange={e => setTimbresCantidad(e.target.value)} className="font-mono h-9" />
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowTimbres(false)}>Cancelar</Button>
+              <Button variant="cancelar" className="flex-1" onClick={() => setShowTimbres(false)}>Cancelar</Button>
               <Button className="flex-1" disabled={timbresLoading} onClick={handleAddTimbres}>
                 {timbresLoading ? 'Agregando...' : `+${timbresCantidad || 0} timbres`}
               </Button>

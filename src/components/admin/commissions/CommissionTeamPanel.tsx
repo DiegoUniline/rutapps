@@ -238,7 +238,7 @@ export default function CommissionTeamPanel({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeDialog} disabled={saving}>Cancelar</Button>
+            <Button variant="cancelar" onClick={closeDialog} disabled={saving}>Cancelar</Button>
             <Button onClick={save} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</Button>
           </DialogFooter>
         </DialogContent>

@@ -158,6 +158,7 @@ export default function AlmacenesPage() {
 
   return (
     <ListPage>
+      <ListPage.Toolbar>
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Warehouse className="h-5 w-5" /> Almacenes
       </h1>
@@ -173,6 +174,7 @@ export default function AlmacenesPage() {
           Inactivos ({inactiveItems.length})
         </button>
       </div>
+      </ListPage.Toolbar>
 
       <div className={TABLE_CARD}>
         {isLoading ? (
@@ -299,7 +301,7 @@ export default function AlmacenesPage() {
               </div>
             </div>
             <div className="p-5 border-t border-border flex gap-2 justify-end">
-              <button onClick={() => setReasign(null)} className="btn-odoo text-sm">Cancelar</button>
+              <button onClick={() => setReasign(null)} className="btn-cancelar btn-odoo text-sm">Cancelar</button>
               <button
                 onClick={handleReasignAndDeactivate}
                 disabled={reasigning || !reasign.targetAlmacenId}

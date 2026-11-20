@@ -396,7 +396,7 @@ export default function SubscriptionCard() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUsers(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowUsers(false)}>Cancelar</Button>
             <Button
               onClick={handleUpdateUsers}
               disabled={savingUsers || newQty === (subData?.max_usuarios || 3) || (preview?.can_apply === false)}
@@ -441,7 +441,7 @@ export default function SubscriptionCard() {
             })}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPlan(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowPlan(false)}>Cancelar</Button>
             <Button
               onClick={() => { if (selectedPlan) openPayMethodDialog('plan'); }}
               disabled={!selectedPlan}
@@ -478,7 +478,7 @@ export default function SubscriptionCard() {
             <p className="text-xs text-muted-foreground mt-1">Saldo actual: {timbresBalance ?? 0} timbres</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTimbres(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowTimbres(false)}>Cancelar</Button>
             <Button onClick={() => openPayMethodDialog('timbres')}>
               Continuar al pago
             </Button>
@@ -581,7 +581,7 @@ export default function SubscriptionCard() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTransferInfo(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowTransferInfo(false)}>Cancelar</Button>
             <Button onClick={handleSubmitTransfer} disabled={sendingTransfer}>
               {sendingTransfer && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               <BanknoteIcon className="h-4 w-4 mr-1" /> Ya transferí, enviar solicitud

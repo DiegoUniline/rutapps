@@ -1343,7 +1343,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
             ))}
           </div>
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setEditDatosOpen(false)} disabled={savingEmpresa}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setEditDatosOpen(false)} disabled={savingEmpresa}>Cancelar</Button>
             <Button onClick={saveEmpresa} disabled={savingEmpresa}>
               {savingEmpresa && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />} Guardar
             </Button>
@@ -1431,9 +1431,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
             </div>
           )}
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setEditPlanOpen(false)} disabled={savingSub}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setEditPlanOpen(false)} disabled={savingSub}>Cancelar</Button>
             <Button onClick={saveSub} disabled={savingSub}>
-              {savingSub && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />} Guardar cambios
+              {savingSub && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />} Guardar
             </Button>
           </div>
         </DialogContent>
@@ -1588,7 +1588,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setShowSubInvoice(false)} disabled={creatingSubInvoice}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowSubInvoice(false)} disabled={creatingSubInvoice}>Cancelar</Button>
             <Button onClick={handleCreateSubInvoice} disabled={creatingSubInvoice}>
               {creatingSubInvoice ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Receipt className="h-4 w-4 mr-1.5" />}
               {subInvoiceForm.tipo_factura === 'additional_charge'
@@ -1620,7 +1620,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
               </label>
             </div>
             <div className="flex gap-3 justify-end pt-2">
-              <Button variant="outline" onClick={() => setResetDialog(null)}>Cancelar</Button>
+              <Button variant="cancelar" onClick={() => setResetDialog(null)}>Cancelar</Button>
               <Button disabled={resettingPw || resetPassword.length < 6} onClick={handleResetPassword}>
                 {resettingPw ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}
                 Restablecer
@@ -1688,7 +1688,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
               </div>
             )}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setMarkPaidFactura(null)} disabled={markingPaid}>Cancelar</Button>
+              <Button variant="cancelar" onClick={() => setMarkPaidFactura(null)} disabled={markingPaid}>Cancelar</Button>
               <Button onClick={handleMarkPaid} disabled={markingPaid}>
                 {markingPaid ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : '✓ '} Registrar pago
               </Button>
@@ -1797,9 +1797,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
             )}
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setEditFactura(null)} disabled={savingFactura}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setEditFactura(null)} disabled={savingFactura}>Cancelar</Button>
             <Button onClick={handleSaveFactura} disabled={savingFactura}>
-              {savingFactura && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar cambios
+              {savingFactura && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
             </Button>
           </div>
         </DialogContent>

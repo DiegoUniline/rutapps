@@ -265,7 +265,7 @@ function CerrarDialog({
         </label>
 
         <div className="flex gap-2">
-          <button onClick={onClose} disabled={busy} className="flex-1 bg-accent/60 text-foreground rounded-xl py-2.5 text-[13px] font-semibold active:scale-[0.98] disabled:opacity-40">
+          <button onClick={onClose} disabled={busy} className="btn-cancelar flex-1 bg-accent/60 text-foreground rounded-xl py-2.5 text-[13px] font-semibold active:scale-[0.98] disabled:opacity-40">
             Cancelar
           </button>
           <button

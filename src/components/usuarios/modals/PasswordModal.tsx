@@ -18,7 +18,7 @@ export default function PasswordModal({ nombre, newPassword, setNewPassword, set
           <input className="input-odoo" type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" autoFocus />
         </div>
         <div className="flex gap-2 justify-end">
-          <button onClick={onClose} className="btn-odoo text-xs">Cancelar</button>
+          <button onClick={onClose} className="btn-cancelar btn-odoo text-xs">Cancelar</button>
           <button onClick={onSave} disabled={settingPassword} className="btn-odoo-primary text-xs">{settingPassword ? 'Guardando...' : 'Guardar contraseña'}</button>
         </div>
       </div>

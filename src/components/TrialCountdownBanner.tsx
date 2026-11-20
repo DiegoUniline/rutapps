@@ -145,7 +145,7 @@ export default function TrialCountdownBanner() {
                 <Link to="/mi-suscripcion">Ver detalles</Link>
               </Button>
               {hasCard && (
-                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setShowCancel(true)}>
+                <Button size="sm" variant="cancelar" className="text-destructive hover:text-destructive" onClick={() => setShowCancel(true)}>
                   <X className="h-4 w-4 mr-1" /> Cancelar
                 </Button>
               )}

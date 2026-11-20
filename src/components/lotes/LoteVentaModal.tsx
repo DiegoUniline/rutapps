@@ -83,7 +83,7 @@ export function LoteVentaModal({ empresaId, almacenId, producto, loteSeleccionad
           })}
         </div>
         <div className="p-5 border-t border-border flex gap-2 justify-end">
-          <button onClick={onClose} className="btn-odoo text-sm">Cancelar</button>
+          <button onClick={onClose} className="btn-cancelar btn-odoo text-sm">Cancelar</button>
           <button onClick={confirmar} className="btn-odoo-primary text-sm" disabled={!sel}>Usar este lote</button>
         </div>
       </div>

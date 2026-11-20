@@ -82,6 +82,7 @@ export default function ListasPrecioListPage() {
 
   return (
     <ListPage>
+      <ListPage.Toolbar>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Listas de Precios <VideoHelpButton module="tarifas" /></h1>
         <button onClick={() => navigate('/tarifas/nueva')} className="btn-odoo-primary shrink-0">
@@ -90,12 +91,13 @@ export default function ListasPrecioListPage() {
       </div>
 
       <OdooFilterBar search={search} onSearchChange={setSearch} placeholder="Buscar lista..." />
+      </ListPage.Toolbar>
 
       {isLoading ? (
         <div className="p-4"><TableSkeleton rows={5} cols={4} /></div>
       ) : isMobile ? (
         /* ─── Mobile: card layout ─── */
-        <div className="space-y-2">
+        <div className="space-y-2 px-3 md:px-4">
           {filtered.length === 0 && (
             <p className="text-center py-12 text-muted-foreground text-sm">No hay listas de precios.</p>
           )}
@@ -263,7 +265,7 @@ export default function ListasPrecioListPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={confirmDelete} className="border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10">
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
