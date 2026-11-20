@@ -21,7 +21,6 @@ import { StatusCountCards } from '@/components/StatusCountCards';
 import { readStoredPageSizeFor, writeStoredPageSizeFor, type PageSizeOption } from '@/hooks/useTablePagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
-import { MobileListCard } from '@/components/MobileListCard';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { MobileProductoQuickForm } from '@/components/MobileProductoQuickForm';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
@@ -102,6 +101,13 @@ function useProductoFilterOptions() {
   return { clasificaciones, marcas, proveedores };
 }
 
+const MOBILE_STEP = 50;
+const ESTADOS_PRODUCTO = [
+  { value: 'activo', label: 'Activos' },
+  { value: 'inactivo', label: 'Inactivos' },
+  { value: 'borrador', label: 'Borradores' },
+];
+
 export default function ProductosListPage() {
   const navigate = useNavigate();
   const thumb = useThumb();
@@ -111,7 +117,9 @@ export default function ProductosListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSizeState] = useState<PageSizeOption>(() => readStoredPageSizeFor('productos') ?? DEFAULT_PAGE_SIZE);
-  const effectivePageSize = pageSize === 'all' ? ALL_PAGE_SIZE : pageSize;
+  // Teléfono: lista continua con «Cargar más» (de 50 en 50) en lugar de paginación.
+  const [mobileLimit, setMobileLimit] = useState(MOBILE_STEP);
+  const effectivePageSize = isMobile ? mobileLimit : (pageSize === 'all' ? ALL_PAGE_SIZE : pageSize);
   const handlePageSizeChange = (size: PageSizeOption) => {
     setPageSizeState(size);
     setPage(1);
@@ -255,7 +263,7 @@ export default function ProductosListPage() {
   const proveedorFilter = filters.proveedor?.length ? filters.proveedor.join(',') : 'todos';
   const manejaLoteFilter = filters.maneja_lote?.[0] ?? '';
   const debouncedSearch = useDebounce(search, 300);
-  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, page, effectivePageSize, clasificacionFilter, marcaFilter, !!groupBy, proveedorFilter, manejaLoteFilter);
+  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, isMobile ? 1 : page, effectivePageSize, clasificacionFilter, marcaFilter, !!groupBy, proveedorFilter, manejaLoteFilter);
 
   const productos = productosData?.rows ?? [];
   const { data: allPresentaciones } = useAllPresentaciones();
@@ -410,8 +418,47 @@ export default function ProductosListPage() {
     </div>
   );
 
+  const mobileFilterOptions = [{ key: 'status', label: 'Estado', options: ESTADOS_PRODUCTO }, ...FILTER_OPTIONS];
+  const resetMobile = () => { setPage(1); setMobileLimit(MOBILE_STEP); };
+
   return (
     <ListPage>
+      {isMobile ? (
+        // Teléfono: título + «+» arriba y buscador a todo lo ancho; sin tarjetas de resumen ni pestañas
+        // (el estado se elige en Filtros) para que la lista use la pantalla completa.
+        <div className="shrink-0 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-lg font-semibold text-foreground">
+              Productos
+              {statusFilter !== 'activo' && (
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                  · {statusFilter.split(',').map(s => ESTADOS_PRODUCTO.find(e => e.value === s)?.label ?? s).join(', ')}
+                </span>
+              )}
+            </h1>
+            <button
+              onClick={() => setMobileNewOpen(true)}
+              aria-label="Nuevo producto"
+              className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95 shrink-0"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </div>
+          <OdooFilterBar
+            search={search}
+            onSearchChange={val => { setSearch(val); resetMobile(); }}
+            placeholder="Buscar productos"
+            filterOptions={mobileFilterOptions}
+            activeFilters={filters}
+            onToggleFilter={(key, val) => {
+              if (key === 'status') setFilter('status', [val]); else toggleFilterValue(key, val);
+              resetMobile();
+            }}
+            onSetFilter={(key, vals) => { setFilter(key, vals); resetMobile(); }}
+            onClearFilters={() => { clearFilters(); resetMobile(); }}
+          />
+        </div>
+      ) : (<>
       <ListPage.Header title={<>Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /> <VideoHelpButton module="productos" /></>} />
 
       <ListPage.Toolbar>
@@ -499,6 +546,7 @@ export default function ProductosListPage() {
         }
       />
       </ListPage.Toolbar>
+      </>)}
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="productos" />
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
@@ -572,34 +620,54 @@ export default function ProductosListPage() {
       {isLoading ? (
         <ListPage.Body className="p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 12} /></ListPage.Body>
       ) : isMobile ? (
-        <ListPage.Body card={false} className="space-y-2">
-          {pageData.length === 0 && (
+        <ListPage.Body card={false}>
+          {pageData.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground text-sm">No hay productos. Crea el primero.</div>
+          ) : (
+            <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
+              {pageData.map((p: any) => {
+                const stock = Number(p.cantidad ?? 0);
+                const unidad = p.unidades_venta?.abreviatura || 'unidades';
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => navigate(`/productos/${p.id}`)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left active:bg-accent"
+                  >
+                    {p.imagen_url ? (
+                      <img src={thumb(p.imagen_url, 96)} alt="" className="h-12 w-12 rounded-lg border border-border object-cover shrink-0" />
+                    ) : (
+                      <div className="h-12 w-12 rounded-lg border border-border bg-secondary flex items-center justify-center text-[10px] text-muted-foreground shrink-0">
+                        {(p.nombre ?? '?').slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-medium text-primary truncate">{p.nombre}</p>
+                      <p className="text-sm text-muted-foreground tabular-nums truncate">
+                        {fmt(p.precio_principal)}{p.codigo ? <span className="text-xs"> · {p.codigo}</span> : null}
+                      </p>
+                    </div>
+                    <span className={cn(
+                      'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium tabular-nums',
+                      stock <= 0 ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success',
+                    )}>
+                      {fmtNum(stock)} {unidad}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           )}
-          {pageData.map((p: any) => (
-            <MobileListCard
-              key={p.id}
-              title={p.nombre}
-              subtitle={p.codigo}
-              badge={<StatusChip status={p.status} />}
-              onClick={() => navigate(`/productos/${p.id}`)}
-              leading={p.imagen_url ? (
-                <img src={thumb(p.imagen_url, 96)} alt="" className="h-10 w-10 rounded object-cover shrink-0" />
-              ) : (
-                <div className="h-10 w-10 rounded bg-secondary flex items-center justify-center text-xs text-muted-foreground shrink-0">—</div>
-              )}
-              fields={[
-                { label: 'Precio', value: fmt(p.precio_principal) },
-                { label: 'Stock', value: <span className={cn(
-                  "font-medium",
-                  (p.cantidad ?? 0) <= 0 ? "text-destructive" : "text-foreground"
-                )}>{fmtNum(p.cantidad ?? 0)}</span> },
-                ...(p.clasificaciones?.nombre ? [{ label: 'Cat', value: p.clasificaciones.nombre }] : []),
-                ...(p.costo ? [{ label: 'Costo', value: fmt((p.costo ?? 0) * (p.factor_conversion || 1)) }] : []),
-                ...(p.costo && (p.factor_conversion || 1) > 1 ? [{ label: 'C/U', value: fmt(p.costo) }] : []),
-              ]}
-            />
-          ))}
+          {pageData.length < total && (
+            <button
+              type="button"
+              onClick={() => setMobileLimit(l => l + MOBILE_STEP)}
+              className="w-full mt-2 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground active:bg-accent"
+            >
+              Cargar más ({pageData.length} de {total})
+            </button>
+          )}
         </ListPage.Body>
       ) : (
         <>
