@@ -8,6 +8,7 @@ import PedidoSugeridoBanner from '@/components/ruta/PedidoSugeridoBanner';
 import SaldoPendienteBanner from '@/components/ruta/SaldoPendienteBanner';
 import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
 import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
+import { pasoCantidad } from '@/lib/ventaPresentacion';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 
 // El lector de códigos (@zxing, ~1.4 MB) se descarga solo al abrir el escáner.
@@ -377,10 +378,24 @@ export function StepProductos(props: Props) {
                     <Eye className="h-4 w-4" />
                   </button>
                 )}
-                {inCart ? (
+                {inCart ? (() => {
+                  // D-043: en renglón por caja/paquete los botones mueven una presentación
+                  // completa (factor piezas); por pieza o a granel siguen como antes.
+                  const paso = pasoCantidad(inCart, !!p.es_granel);
+                  const porPresentacion = !p.es_granel && Number(inCart.presentacion_factor) > 0;
+                  const quitaRenglon = porPresentacion ? inCart.cantidad <= paso : inCart.cantidad === 1;
+                  const sumar = () => {
+                    if (!porPresentacion) { handleAdd(p); return; }
+                    if (maxQty !== Infinity && inCart.cantidad + paso > maxQty) {
+                      toast.error(`No alcanza para otra ${inCart.presentacion_nombre ?? 'presentación'}: disponibles ${maxQty.toLocaleString('es-MX', { maximumFractionDigits: 3 })}`);
+                      return;
+                    }
+                    updateQty(p.id, paso);
+                  };
+                  return (
                   <div className="flex items-center gap-0.5 shrink-0">
-                    <button onClick={() => inCart.cantidad === 1 ? removeFromCart(p.id) : updateQty(p.id, -1)} className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform">
-                      {inCart.cantidad === 1 ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-foreground" />}
+                    <button onClick={() => quitaRenglon ? removeFromCart(p.id) : updateQty(p.id, -paso)} className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform">
+                      {quitaRenglon ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-foreground" />}
                     </button>
                     <button
                       onClick={() => setKeypadFor({ producto_id: p.id, nombre: p.nombre, cantidad: inCart.cantidad, max: maxQty === Infinity ? Number.MAX_SAFE_INTEGER : maxQty, granel: !!p.es_granel })}
@@ -389,9 +404,10 @@ export function StepProductos(props: Props) {
                     >
                       {inCart.cantidad}
                     </button>
-                    <button onClick={() => handleAdd(p)} disabled={!!atMax} className={`w-7 h-7 rounded-md flex items-center justify-center active:scale-90 transition-transform ${atMax ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'}`}><Plus className="h-3 w-3" /></button>
+                    <button onClick={sumar} disabled={!!atMax} className={`w-7 h-7 rounded-md flex items-center justify-center active:scale-90 transition-transform ${atMax ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'}`}><Plus className="h-3 w-3" /></button>
                   </div>
-                ) : (
+                  );
+                })() : (
                   <button onClick={() => handleAdd(p)} disabled={!stockOk} className={`w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-all shrink-0 ${stockOk ? 'bg-accent hover:bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}><Plus className="h-4 w-4" /></button>
                 )}
               </div>

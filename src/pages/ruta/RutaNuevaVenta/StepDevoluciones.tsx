@@ -3,6 +3,7 @@ import { Search, Plus, Minus, Trash2, ChevronRight, Check, X } from 'lucide-reac
 import type { DevolucionItem, AccionDevolucion, MotivoDevolucion } from './types';
 import { MOTIVOS, ACCIONES } from './types';
 import { leerCantidad } from '@/lib/ventaPresentacion';
+import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
 
 interface Props {
   clienteNombre: string;
@@ -139,6 +140,8 @@ export function StepDevoluciones(props: Props) {
   // Sheet state: 'motivo' | 'accion' | null — and target ('global' | producto_id)
   const [sheetType, setSheetType] = useState<'motivo' | 'accion' | null>(null);
   const [sheetTarget, setSheetTarget] = useState<string>('global');
+  // Teclado numérico para cantidades a granel (D-043).
+  const [keypadDev, setKeypadDev] = useState<{ id: string; nombre: string; cantidad: number } | null>(null);
 
   const openSheet = (type: 'motivo' | 'accion', target: string) => {
     setSheetType(type);
@@ -323,13 +326,26 @@ export function StepDevoluciones(props: Props) {
                     <button onClick={() => updateDevQty(p.id, qty - 1)} className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform">
                       {qty === 1 ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-foreground" />}
                     </button>
+                    {p.es_granel ? (
+                      // D-043: a granel se captura con el teclado numérico con decimales (como la venta),
+                      // así se puede devolver menos de 1 kg directamente.
+                      <button
+                        type="button"
+                        onClick={() => setKeypadDev({ id: p.id, nombre: p.nombre, cantidad: qty })}
+                        className="min-w-[32px] px-1 h-7 text-center text-[13px] font-bold text-foreground active:bg-accent/40 rounded-md"
+                        aria-label="Editar cantidad"
+                      >
+                        {qty.toLocaleString('es-MX', { maximumFractionDigits: 3 })}
+                      </button>
+                    ) : (
                     <input
-                      type="number" inputMode={p.es_granel ? 'decimal' : 'numeric'} step={p.es_granel ? '0.001' : '1'}
+                      type="number" inputMode="numeric"
                       className="w-8 text-center text-[13px] font-bold bg-transparent focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
                       value={qty}
-                      onChange={e => { const val = leerCantidad(e.target.value, !!p.es_granel); if (!isNaN(val)) updateDevQty(p.id, val); }}
+                      onChange={e => { const val = leerCantidad(e.target.value, false); if (!isNaN(val)) updateDevQty(p.id, val); }}
                       onFocus={e => e.target.select()}
                     />
+                    )}
                     <button onClick={() => updateDevQty(p.id, qty + 1)} className="w-7 h-7 rounded-md bg-destructive/80 text-destructive-foreground flex items-center justify-center active:scale-90 transition-transform">
                       <Plus className="h-3 w-3" />
                     </button>
@@ -467,6 +483,16 @@ export function StepDevoluciones(props: Props) {
           </button>
         )}
       </div>
+
+      <NumericKeypadModal
+        open={!!keypadDev}
+        title="Cantidad a devolver"
+        subtitle={keypadDev?.nombre}
+        initialValue={keypadDev?.cantidad ?? 0}
+        allowDecimal
+        onClose={() => setKeypadDev(null)}
+        onConfirm={v => { if (keypadDev) updateDevQty(keypadDev.id, leerCantidad(v, true) || 0); }}
+      />
     </div>
   );
 }

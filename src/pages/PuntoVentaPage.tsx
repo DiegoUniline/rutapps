@@ -35,7 +35,7 @@ import { VentasTurnoModal } from '@/components/pos/VentasTurnoModal';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import { getStockBreakdown } from '@/lib/stockPresentacion';
-import { buildPresentationPatch, paquetesParaCantidad } from '@/lib/ventaPresentacion';
+import { buildPresentationPatch, paquetesParaCantidad, pasoCantidad } from '@/lib/ventaPresentacion';
 import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
@@ -1710,7 +1710,7 @@ export default function PuntoVentaPage() {
                   </div>
                   <div className="flex items-center gap-2 mt-1.5">
                     <div className="flex items-center bg-background rounded-md border border-border">
-                      <button onClick={() => updateQty(item.producto_id, item.cantidad - 1)}
+                      <button onClick={() => updateQty(item.producto_id, item.cantidad - pasoCantidad(item as any, !!(item as any)._es_granel))}
                         className="px-2 py-1 hover:bg-accent rounded-l-md transition-colors">
                         <Minus className="h-3 w-3 text-foreground" />
                       </button>
@@ -1724,7 +1724,7 @@ export default function PuntoVentaPage() {
                         onFocus={e => e.target.select()}
                       />
                       {(item as any)._es_granel && <span className="text-[9px] text-muted-foreground px-1">{item.unidad}</span>}
-                      <button onClick={() => updateQty(item.producto_id, item.cantidad + 1)}
+                      <button onClick={() => updateQty(item.producto_id, item.cantidad + pasoCantidad(item as any, !!(item as any)._es_granel))}
                         className="px-2 py-1 hover:bg-accent rounded-r-md transition-colors">
                         <Plus className="h-3 w-3 text-foreground" />
                       </button>

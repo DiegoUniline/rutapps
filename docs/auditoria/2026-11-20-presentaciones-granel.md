@@ -44,9 +44,10 @@ Bloques `DO … RAISE EXCEPTION 'RESULTADO …'` (todo se revierte). Stock = `st
 
 - `src/test/cantidadPresentacionGranel.test.ts` (nuevo): 2 cajas × 12 = 24, 3 × 6 = 18, 1.75 kg sin redondeo, lectura de kilos con decimales/coma, piezas en enteros, recálculo de paquetes por pieza y conservación a granel.
 - `npm run typecheck:strict`, `npm test` (67 archivos / 407 pruebas) y `npm run build` en verde.
+- D-043: `pasoCantidad` (paso de una caja, factor guardado como texto, pieza/granel = 1) en el mismo archivo de pruebas; `typecheck:strict`, `tsc -p tsconfig.app.json` (0 errores), `npm test` y `build` en verde.
 
-## 5. Necesita decisión del dueño (no se cambió)
+## 5. Decisiones del dueño
 
-1. **Botón «−» en un renglón con caja** (POS y app móvil) resta **1 pieza** (24 → 23 pz = 1.917 cajas), no una caja. El inventario queda bien; es cuestión de cómo quiere que se use. Opciones: A) dejarlo así; B) que «−/+» sumen o resten **una caja** cuando el renglón es por caja; C) bloquear «−/+» y editar solo desde el selector de presentación.
-2. **Teclear menos de 1 kg en devoluciones** (inputs pequeños): se puede escribir «.5»; si se teclea «0» primero, el renglón se quita (comportamiento previo). Propuesta: usar el mismo teclado numérico con decimales de la venta móvil.
+1. ~~**Botón «−» en un renglón con caja**~~ → **Resuelto con D-043** (el dueño eligió B): en el Punto de venta y en la app de ruta «−/+» restan o suman una caja completa (factor de piezas) y recalculan paquetes; por pieza o a granel siguen con paso 1. «−» quita el renglón si ya no queda una caja completa.
+2. ~~**Teclear menos de 1 kg en devoluciones**~~ → **Resuelto con D-043**: en devoluciones de la venta en ruta (`StepDevoluciones.tsx`) y en la devolución de carga (`RutaDevolucion.tsx`) los productos a granel se capturan con el teclado numérico con decimales de la venta móvil (`NumericKeypadModal`, tope = lo que hay en mano).
 3. **Entregas ya validadas con producto repetido** (si existieran en producción): la corrección no las recalcula sola. Si alguien vuelve a tocar su estado estando en «hecho», el trigger completará lo que faltó descontar. En la BD de pruebas no hay ninguna; en producción falta revisarlo (lectura que requiere autorización).

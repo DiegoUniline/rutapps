@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPresentationPatch, leerCantidad, paquetesParaCantidad } from '@/lib/ventaPresentacion';
+import { buildPresentationPatch, leerCantidad, paquetesParaCantidad, pasoCantidad } from '@/lib/ventaPresentacion';
 import type { ProductoPresentacion } from '@/hooks/usePresentaciones';
 
 // Auditoría 2026-11-20 (presentaciones y granel): el inventario siempre se mueve
@@ -53,5 +53,25 @@ describe('paquetesParaCantidad', () => {
 
   it('sin presentación no inventa paquetes', () => {
     expect(paquetesParaCantidad({ presentacion_factor: null, paquetes: null }, 5, false)).toBeNull();
+  });
+});
+
+describe('pasoCantidad (D-043: − / + por caja)', () => {
+  it('en renglón por caja el paso es una caja completa y recalcula paquetes', () => {
+    const caja = { presentacion_factor: 12, paquetes: 2 };
+    const paso = pasoCantidad(caja, false);
+    expect(paso).toBe(12);
+    expect(paquetesParaCantidad(caja, 24 + paso, false)).toBe(3);
+    expect(paquetesParaCantidad(caja, 24 - paso, false)).toBe(1);
+  });
+
+  it('acepta el factor guardado como texto (numeric de la BD)', () => {
+    expect(pasoCantidad({ presentacion_factor: '6.000' }, false)).toBe(6);
+  });
+
+  it('por pieza o a granel el paso sigue siendo 1', () => {
+    expect(pasoCantidad({ presentacion_factor: null }, false)).toBe(1);
+    expect(pasoCantidad({ presentacion_factor: 5 }, true)).toBe(1);
+    expect(pasoCantidad({}, false)).toBe(1);
   });
 });

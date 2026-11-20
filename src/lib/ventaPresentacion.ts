@@ -39,6 +39,19 @@ export function paquetesParaCantidad(
   return Math.round((cantidad / factor) * 1000) / 1000;
 }
 
+/**
+ * D-043: paso de los botones − / + de un renglón, en unidad base. Si el renglón
+ * se vendió por presentación (caja de 12) el paso es una caja (12 piezas); por
+ * pieza o a granel sigue siendo 1 como siempre.
+ */
+export function pasoCantidad(
+  line: { presentacion_factor?: number | string | null },
+  granel: boolean,
+): number {
+  const factor = Number(line.presentacion_factor);
+  return !granel && factor > 0 ? factor : 1;
+}
+
 /** Inventory and sale amounts always use base units, never package counts. */
 export function buildPresentationPatch(
   presentation: ProductoPresentacion | null,

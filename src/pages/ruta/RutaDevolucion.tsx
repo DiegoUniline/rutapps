@@ -16,6 +16,7 @@ import DateFilterBar from '@/components/ruta/DateFilterBar';
 import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { fmtDate } from '@/lib/utils';
 import { leerCantidad } from '@/lib/ventaPresentacion';
+import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
 
 interface DevItem {
   producto_id: string;
@@ -44,6 +45,7 @@ function RutaDevolucionInner() {
   const { hasPermisoMovil } = usePermisos();
   const [tipo, setTipo] = useState<Tipo>('almacen');
   const [items, setItems] = useState<DevItem[]>([]);
+  const [keypadItem, setKeypadItem] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number } | null>(null);
   const [notas, setNotas] = useState('');
   const [saving, setSaving] = useState(false);
   const [clienteId, setClienteId] = useState<string | null>(null);
@@ -338,11 +340,20 @@ function RutaDevolucionInner() {
                           className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform">
                           {inList.cantidad === 1 ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-foreground" />}
                         </button>
-                        <input type="number" inputMode={p.granel ? 'decimal' : 'numeric'} step={p.granel ? '0.001' : '1'}
+                        {p.granel ? (
+                          // D-043: a granel, teclado numérico con decimales (como la venta móvil).
+                          <button type="button" onClick={() => setKeypadItem({ producto_id: p.producto_id, nombre: p.nombre, cantidad: inList.cantidad, max: p.max })}
+                            className="min-w-[36px] px-1 h-7 text-center text-[13px] font-bold text-foreground active:bg-accent/40 rounded-md"
+                            aria-label="Editar cantidad">
+                            {inList.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })}
+                          </button>
+                        ) : (
+                        <input type="number" inputMode="numeric"
                           className="w-9 text-center text-[13px] font-bold bg-transparent focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
                           value={inList.cantidad}
-                          onChange={e => setQty(p.producto_id, leerCantidad(e.target.value, !!p.granel) || 1)}
+                          onChange={e => setQty(p.producto_id, leerCantidad(e.target.value, false) || 1)}
                         />
+                        )}
                         <button onClick={() => updateQty(p.producto_id, 1)}
                           disabled={inList.cantidad >= p.max}
                           className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30">
@@ -402,6 +413,17 @@ function RutaDevolucionInner() {
           )}
         </div>
       )}
+
+      <NumericKeypadModal
+        open={!!keypadItem}
+        title="Cantidad a devolver"
+        subtitle={keypadItem?.nombre}
+        initialValue={keypadItem?.cantidad ?? 0}
+        allowDecimal
+        maxValue={keypadItem?.max}
+        onClose={() => setKeypadItem(null)}
+        onConfirm={v => { if (keypadItem) setQty(keypadItem.producto_id, leerCantidad(v, true)); }}
+      />
     </div>
   );
 }

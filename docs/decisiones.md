@@ -251,3 +251,10 @@
 - **Decisión (botones en todo el sistema):** (1) formularios: «Guardar» azul RutApp y «Descartar» rojo suave; se eliminan «Guardar cambios», «Salir» o «Cancelar» para no guardar. (2) Modales/confirmaciones: «Cancelar» rojo suave (texto y borde rojos, fondo casi blanco); «No, volver» → «Cancelar». (3) Destructivos (Eliminar, Dar de baja, Cancelar venta/compra) también rojo suave, nunca rojo sólido; la confirmación dice la acción concreta. (4) Ventanas solo de consulta: «Cerrar» gris contorno; regresar = flecha ← gris.
 - **Implementación:** `Button` variante `cancelar` y `destructive` suave; `AlertDialogCancel` usa `cancelar`; clase `btn-cancelar` para botones HTML; barrido de 128 «Cancelar», 11 rojos sólidos y 15 textos.
 - **Forma de preguntar:** el dueño marcó las 4 opciones de «MARCA LO QUE QUIERES QUITAR» queriendo aplicarlas; en adelante preguntar en positivo («marca lo que SÍ quieres»).
+
+## D-043
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Que sumen/resten 1 caja»)
+- **Origen:** auditoría de presentaciones y granel (`docs/auditoria/2026-11-20-presentaciones-granel.md` §5).
+- **Decisión:** en el Punto de venta y en la app de ruta, en un renglón vendido por presentación (caja/paquete) los botones «−» y «+» restan o suman **una presentación completa** (1 caja = factor de piezas) y recalculan los paquetes; por pieza o a granel siguen como antes (paso 1). «−» quita el renglón cuando ya no queda una presentación completa (igual que hoy con 1 pieza). En devoluciones de la app de ruta, los productos a granel se capturan con el **teclado numérico con decimales** de la venta móvil (se puede devolver menos de 1 kg).
+- **Consecuencias:** el inventario sigue en unidad base (`venta_lineas.cantidad`); solo cambia cómo se captura. Sin cambios de BD.
+- **Implementación:** `pasoCantidad` en `src/lib/ventaPresentacion.ts`; `PuntoVentaPage.tsx`, `RutaNuevaVenta/StepProductos.tsx`, `RutaNuevaVenta/StepDevoluciones.tsx`, `RutaDevolucion.tsx`.
