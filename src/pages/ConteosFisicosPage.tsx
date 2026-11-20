@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -20,7 +19,8 @@ import ConteoDetailModal from '@/components/conteos/ConteoDetailModal';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
 
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -94,10 +94,37 @@ export default function ConteosFisicosPage() {
     { key: 'cerrado', label: 'Cerrado' },
     { key: 'cancelado', label: 'Cancelado' },
   ];
+  const movil = useCargarMasMovil(filtered, `${search}|${statusFilter}|${fechaDesde}|${fechaHasta}`);
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
-      <div className="flex items-center justify-between">
+    <div className="p-2 md:p-4 min-h-full">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
+      {isMobile && (
+        <EncabezadoListaMovil
+          titulo="Conteos físicos"
+          estado={statusFilter !== 'todos' ? filters.find(f => f.key === statusFilter)?.label : undefined}
+          onNuevo={() => setShowCreate(true)}
+          nuevoLabel="Nuevo conteo"
+        >
+          <OdooFilterBar
+            search={search}
+            onSearchChange={setSearch}
+            placeholder="Buscar conteos"
+            filterOptions={[{ key: 'status', label: 'Estado', options: filters.filter(f => f.key !== 'todos').map(f => ({ value: f.key, label: f.label })) }]}
+            activeFilters={statusFilter !== 'todos' ? { status: [statusFilter] } : {}}
+            onToggleFilter={(_k, val) => setStatusFilter(prev => prev === val ? 'todos' : val)}
+            onSetFilter={(_k, vals) => setStatusFilter(vals[vals.length - 1] ?? 'todos')}
+            onClearFilters={() => setStatusFilter('todos')}
+            dateFrom={fechaDesde}
+            dateTo={fechaHasta}
+            onDateRangeChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }}
+            onDateFromChange={setFechaDesde}
+            onDateToChange={setFechaHasta}
+          />
+        </EncabezadoListaMovil>
+      )}
+      <div className="flex items-center justify-between max-md:hidden">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <ClipboardList className="h-5 w-5" /> Conteos Físicos
         </h1>
@@ -107,25 +134,25 @@ export default function ConteosFisicosPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <Card className="p-2.5 sm:p-3 min-w-0">
+      <div className="grid grid-cols-3 divide-x divide-border border-y border-border -mx-3 md:-mx-4 max-md:hidden">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Activos</p>
           <p className="text-base sm:text-2xl font-bold truncate">{activos}</p>
-        </Card>
-        <Card className="p-2.5 sm:p-3 min-w-0">
+        </div>
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Total</p>
           <p className="text-base sm:text-2xl font-bold truncate">{total}</p>
-        </Card>
-        <Card className="p-2.5 sm:p-3 min-w-0">
+        </div>
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Diferencia</p>
           <p className={cn("text-base sm:text-2xl font-bold truncate", difTotal >= 0 ? "text-green-600" : "text-red-600")}>
             {fmt(difTotal)}
           </p>
-        </Card>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap max-md:hidden">
         {filters.map(f => (
           <button
             key={f.key}
@@ -151,26 +178,23 @@ export default function ConteosFisicosPage() {
       {/* Table */}
       {isMobile ? (
         isLoading ? <div className="text-center py-12 text-muted-foreground text-sm">Cargando...</div> : (
-        <ListaTarjetasMovil vacia={filtered.length === 0} mensajeVacio="Sin conteos">
-          {filtered.map((c: any) => {
+        <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio="Sin conteos" {...movil}>
+          {movil.visibles.map((c: any) => {
             const st = STATUS_MAP[c.status] ?? STATUS_MAP.abierto;
             const abierto = c.status === 'abierto' || c.status === 'en_progreso';
             return (
               <ListaTarjetaMovil
                 key={c.id}
                 titulo={(c.almacenes as any)?.nombre ?? '—'}
-                subtitulo={c.folio}
-                estado={<span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap", st.color)}>{st.label}</span>}
+                linea2={<>{format(new Date(c.abierto_en), 'dd/MM/yy HH:mm', { locale: es })} · {c.productos_contados ?? 0}/{c.total_productos ?? 0} contados<span className="text-xs"> · {c.folio}</span></>}
+                {...(c.status === 'cerrado'
+                  ? { pildora: fmt(c.diferencia_total_valor ?? 0), tono: (c.diferencia_total_valor ?? 0) >= 0 ? 'exito' as const : 'peligro' as const }
+                  : estadoPildora(c.status, st.label))}
                 onClick={() => setSelectedId(c.id)}
-                acciones={[
+                acciones={abierto ? [
                   { key: 'ver', label: 'Ver detalle', icon: Eye, onClick: () => setSelectedId(c.id) },
-                  ...(abierto ? [{ key: 'contar', label: 'Ir a contar', icon: Smartphone, onClick: () => navigate(`/conteo/${c.id}`) }] : []),
-                ]}
-                campos={[
-                  { label: 'Apertura', value: format(new Date(c.abierto_en), 'dd/MM/yy HH:mm', { locale: es }) },
-                  { label: 'Progreso', value: `${c.productos_contados}/${c.total_productos}` },
-                  ...(c.status === 'cerrado' ? [{ label: 'Diferencia', value: <span className={c.diferencia_total_valor >= 0 ? "text-green-600" : "text-red-600"}>{fmt(c.diferencia_total_valor ?? 0)}</span> }] : []),
-                ]}
+                  { key: 'contar', label: 'Ir a contar', icon: Smartphone, onClick: () => navigate(`/conteo/${c.id}`) },
+                ] : undefined}
               />
             );
           })}
@@ -268,6 +292,7 @@ export default function ConteosFisicosPage() {
           onClose={() => setSelectedId(null)}
         />
       )}
+    </div>
     </div>
   );
 }

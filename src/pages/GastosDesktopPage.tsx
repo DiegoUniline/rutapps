@@ -19,7 +19,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { confirmDialog } from '@/lib/confirm';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
 
 function useGastos(desde: string, hasta: string) {
   const { empresa } = useAuth();
@@ -182,8 +183,31 @@ export default function GastosDesktopPage() {
   const totalGastos = filtered.reduce((s, g: any) => s + Number(g.monto ?? 0), 0);
   const hasFilters = !!search || vendedorFilter !== 'all' || !!desde || !!hasta;
 
+  const movil = useCargarMasMovil(filtered, `${search}|${vendedorFilter}|${desde}|${hasta}`);
   return (
-    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
+    <div className="p-2 md:p-4 min-h-full">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
+      {isMobile && (
+        <EncabezadoListaMovil titulo="Gastos" onNuevo={() => { if (showForm) { setShowForm(false); resetForm(); } else { setShowForm(true); } }} nuevoLabel="Nuevo gasto">
+          <OdooFilterBar
+            search={search}
+            onSearchChange={setSearch}
+            placeholder="Buscar gastos"
+            filterOptions={[{ key: 'vendedor', label: 'Vendedor', options: [{ value: 'none', label: 'Sin vendedor' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))] }]}
+            activeFilters={vendedorFilter !== 'all' ? { vendedor: [vendedorFilter] } : {}}
+            onToggleFilter={(_k, val) => setVendedorFilter(prev => prev === val ? 'all' : val)}
+            onSetFilter={(_k, vals) => setVendedorFilter(vals[vals.length - 1] ?? 'all')}
+            onClearFilters={() => { setSearch(''); setVendedorFilter('all'); setDesde(''); setHasta(''); }}
+            dateFrom={desde}
+            dateTo={hasta}
+            onDateRangeChange={(f, t) => { setDesde(f); setHasta(t); }}
+            onDateFromChange={setDesde}
+            onDateToChange={setHasta}
+          />
+        </EncabezadoListaMovil>
+      )}
+      <div className="max-md:hidden space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Receipt className="h-5 w-5" /> Gastos
@@ -194,19 +218,20 @@ export default function GastosDesktopPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
-        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
+      <div className="grid grid-cols-2 divide-x divide-border border-y border-border -mx-3 md:-mx-4">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Total gastos {hasFilters && '(filtrado)'}</p>
           <p className="text-lg sm:text-2xl font-bold text-destructive truncate">{fmt(totalGastos)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Registros</p>
           <p className="text-lg sm:text-2xl font-bold text-foreground">{filtered.length}</p>
         </div>
       </div>
+      </div>
 
       {showForm && (
-        <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+        <div className="border-y border-border -mx-3 md:-mx-4 px-3 md:px-4 py-3 space-y-3 bg-accent/40">
           <h3 className="text-sm font-semibold">{editId ? 'Editar gasto' : 'Nuevo gasto'}</h3>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <Input placeholder="Concepto *" value={concepto} onChange={e => setConcepto(e.target.value)} />
@@ -234,7 +259,7 @@ export default function GastosDesktopPage() {
       )}
 
       {/* Filters bar */}
-      <div className="bg-card border border-border rounded-lg p-3 space-y-2">
+      <div className="space-y-2 max-md:hidden">
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-semibold uppercase">
           <Filter className="h-3 w-3" /> Filtros
         </div>
@@ -266,33 +291,23 @@ export default function GastosDesktopPage() {
 
       {isMobile ? (
         isLoading ? <div className="text-center py-8 text-muted-foreground text-sm">Cargando...</div> : (
-        <>
-          {!!filtered.length && (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs">
-              <span className="text-muted-foreground font-semibold">Totales ({filtered.length})</span>
-              <span className="font-bold text-destructive tabular-nums">{fmt(totalGastos)}</span>
-            </div>
-          )}
-          <ListaTarjetasMovil vacia={filtered.length === 0} mensajeVacio={hasFilters ? 'No hay gastos que coincidan con los filtros' : 'Sin gastos registrados'}>
-            {filtered.map((g: any) => (
-              <ListaTarjetaMovil
-                key={g.id}
-                titulo={g.concepto || '—'}
-                subtitulo={(g.vendedores as any)?.nombre ?? undefined}
-                className={highlightId === g.id ? 'bg-primary/15' : editId === g.id ? 'bg-primary/5' : undefined}
-                acciones={[
-                  { key: 'editar', label: 'Editar', icon: Pencil, onClick: () => startEdit(g) },
-                  { key: 'eliminar', label: 'Eliminar (requiere PIN)', icon: Trash2, destructiva: true, separar: true, onClick: () => handleDelete(g) },
-                ]}
-                campos={[
-                  { label: 'Fecha', value: fmtDate(g.fecha) },
-                  { label: 'Monto', value: <span className="text-destructive font-bold">{fmt(g.monto)}</span> },
-                  ...(g.notas ? [{ label: 'Notas', value: g.notas, className: 'col-span-2' }] : []),
-                ]}
-              />
-            ))}
-          </ListaTarjetasMovil>
-        </>
+        <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio={hasFilters ? 'No hay gastos que coincidan con los filtros' : 'Sin gastos registrados'} {...movil}>
+          {movil.visibles.map((g: any) => (
+            <ListaTarjetaMovil
+              key={g.id}
+              titulo={g.concepto || '—'}
+              linea2={[fmtDate(g.fecha), (g.vendedores as any)?.nombre, g.notas].filter(Boolean).join(' · ')}
+              pildora={fmt(g.monto)}
+              tono="peligro"
+              className={highlightId === g.id ? 'bg-primary/15' : editId === g.id ? 'bg-primary/5' : undefined}
+              onClick={() => startEdit(g)}
+              acciones={[
+                { key: 'editar', label: 'Editar', icon: Pencil, onClick: () => startEdit(g) },
+                { key: 'eliminar', label: 'Eliminar (requiere PIN)', icon: Trash2, destructiva: true, separar: true, onClick: () => handleDelete(g) },
+              ]}
+            />
+          ))}
+        </ListaTarjetasMovil>
         )
       ) : (
       <div className="bg-card border border-border rounded overflow-x-auto">
@@ -353,6 +368,7 @@ export default function GastosDesktopPage() {
       </div>
       )}
       <PinDialog />
+    </div>
     </div>
   );
 }
