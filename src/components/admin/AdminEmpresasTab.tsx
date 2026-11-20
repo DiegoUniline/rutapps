@@ -325,9 +325,10 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
   }
 
   async function deleteEmpresa(id: string, nombre: string) {
+    if (!user) return;
     if (!await confirmDialog(`¿Eliminar empresa "${nombre}" y TODOS sus datos? Esta acción es irreversible.`)) return;
-    await supabase.from('subscriptions').delete().eq('empresa_id', id);
-    const { error } = await supabase.from('empresas').delete().eq('id', id);
+    // Una sola transacción en la BD: borra todos los datos de la empresa (suscripción incluida) o nada.
+    const { error } = await supabase.rpc('delete_empresa_cascade', { p_empresa_id: id, p_deleted_by: user.id });
     if (error) toast.error('Error: ' + error.message);
     else { toast.success('Empresa eliminada'); load(); }
   }
