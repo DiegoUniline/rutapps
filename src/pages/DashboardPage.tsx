@@ -66,16 +66,16 @@ function KpiCard({ title, value, subtitle, icon: Icon, trend, color }: {
   title: string; value: string; subtitle?: string; icon: React.ElementType; trend?: number; color: string;
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</span>
-        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", color)}>
-          <Icon className="h-4.5 w-4.5 text-white" />
+    <div className="bg-card border border-border rounded-xl p-3 sm:p-4 flex flex-col gap-1 sm:gap-2 min-w-0 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide leading-tight min-w-0">{title}</span>
+        <div className={cn("w-7 h-7 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0", color)}>
+          <Icon className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5 text-white" />
         </div>
       </div>
-      <div className="text-2xl font-bold text-foreground tracking-tight">{value}</div>
+      <div className="text-lg sm:text-2xl font-bold text-foreground tracking-tight truncate">{value}</div>
       {(subtitle || trend !== undefined) && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-x-2 gap-y-0.5 flex-wrap leading-tight">
           {trend !== undefined && (
             <span className={cn("flex items-center gap-0.5 text-xs font-semibold",
               trend >= 0 ? "text-emerald-600" : "text-red-500"
@@ -955,7 +955,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-5 space-y-0 max-w-[1400px] mx-auto">
+    <div className="p-3 sm:p-5 space-y-0 max-w-[1400px] mx-auto">
       <TrialCountdownBanner />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
@@ -970,8 +970,8 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
-          <div className="flex bg-accent rounded-lg p-[4px] gap-0 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap md:flex-nowrap md:overflow-x-auto w-full md:w-auto">
+          <div className="flex bg-accent rounded-lg p-[4px] gap-0 max-w-full overflow-x-auto no-scrollbar md:shrink-0">
             {PRESETS.map((p, i) => (
               <button key={i} onClick={() => handlePreset(i)}
                 className={cn(
@@ -984,7 +984,7 @@ export default function DashboardPage() {
           </div>
           <div className="shrink-0"><OdooDatePicker value={format(dateRange.from, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, from: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} /></div>
           <div className="shrink-0"><OdooDatePicker value={format(dateRange.to, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, to: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} /></div>
-          <div className="w-[180px] shrink-0">
+          <div className="w-full sm:w-[180px] sm:shrink-0">
             <SearchableSelect
               options={[{ value: '', label: 'Todos los vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
               value={vendedorId}
@@ -1020,7 +1020,7 @@ export default function DashboardPage() {
 
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 mt-3">
             <KpiCard title="Ventas" value={money(kpis.totalVentas)} subtitle={`${kpis.numVentas} ops · ant. ${money(prevKpis.ventas)}`} icon={ShoppingCart} color="bg-[hsl(var(--chart-1))]" trend={calcTrend(kpis.totalVentas, prevKpis.ventas)} />
             <KpiCard title="Ticket promedio" value={money(kpis.ticketPromedio)} subtitle={`${kpis.pedidos} pedidos · ${kpis.ventasDirectas} directas`} icon={TrendingUp} color="bg-[hsl(var(--chart-2))]" trend={calcTrend(kpis.ticketPromedio, prevKpis.ticket)} />
             <KpiCard title="Cobrado" value={money(kpis.totalCobrado)} subtitle={`${(cobros ?? []).length} cobros · ant. ${money(prevKpis.cobros)}`} icon={Wallet} color="bg-[hsl(var(--success))]" trend={calcTrend(kpis.totalCobrado, prevKpis.cobros)} />
@@ -1065,7 +1065,7 @@ export default function DashboardPage() {
 
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-5">
-        <TabsList className="flex flex-wrap h-auto w-full bg-accent/50 p-1 rounded-lg gap-1 justify-start">
+        <TabsList className="flex flex-nowrap overflow-x-auto no-scrollbar sm:flex-wrap h-auto w-full bg-accent/50 p-1 rounded-lg gap-1 justify-start">
           <TabsTrigger value="resumen" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <BarChart3 className="h-3.5 w-3.5 mr-2" /> Resumen
           </TabsTrigger>

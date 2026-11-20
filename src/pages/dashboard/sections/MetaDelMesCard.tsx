@@ -34,9 +34,9 @@ export default function MetaDelMesCard({ ventasMes, cobradoMes, gastosMes, marge
   if (isLoading) return <div className="mt-3 h-32 rounded-xl bg-accent/40 animate-pulse" />;
 
   return (
-    <div className="mt-3 bg-card border border-border rounded-xl p-4">
+    <div className="mt-3 bg-card border border-border rounded-xl p-3 sm:p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="flex-1 min-w-[280px]">
+        <div className="flex-1 min-w-0 basis-[280px]">
           <div className="flex items-center gap-2 mb-2">
             <Target className="h-4 w-4 text-primary" />
             <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Meta del mes</span>
@@ -70,7 +70,7 @@ export default function MetaDelMesCard({ ventasMes, cobradoMes, gastosMes, marge
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-3 min-w-[260px]">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto sm:min-w-[260px]">
           <MiniStat icon={TrendingUp} label="Margen" value={money(margenMonto)} sub={`${margenPct.toFixed(0)}%`} />
           <MiniStat icon={Wallet} label="Recuperación" value={`${pctRecuperacion.toFixed(0)}%`} sub={`${money(cobradoMes)}`} />
           <MiniStat icon={DollarSign} label="Flujo neto" value={money(flujoNeto)} tone={flujoNeto >= 0 ? 'success' : 'danger'} />

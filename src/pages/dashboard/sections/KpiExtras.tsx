@@ -22,16 +22,16 @@ function Tile({ title, icon: Icon, value, subtitle, color, onClick }: {
   return (
     <div
       onClick={onClick}
-      className={cn('bg-card border border-border rounded-xl p-4 flex flex-col gap-2 hover:shadow-md transition-shadow', onClick && 'cursor-pointer')}
+      className={cn('bg-card border border-border rounded-xl p-3 sm:p-4 flex flex-col gap-1 sm:gap-2 min-w-0 hover:shadow-md transition-shadow', onClick && 'cursor-pointer')}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</span>
-        <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center', color)}>
-          <Icon className="h-4 w-4 text-white" />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide leading-tight min-w-0">{title}</span>
+        <div className={cn('w-7 h-7 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0', color)}>
+          <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
         </div>
       </div>
-      <div className="text-2xl font-bold text-foreground tracking-tight">{value}</div>
-      {subtitle && <div className="text-[11px] text-muted-foreground">{subtitle}</div>}
+      <div className="text-lg sm:text-2xl font-bold text-foreground tracking-tight truncate">{value}</div>
+      {subtitle && <div className="text-[11px] text-muted-foreground leading-tight">{subtitle}</div>}
     </div>
   );
 }
