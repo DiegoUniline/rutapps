@@ -83,6 +83,11 @@ export function saldoRealVenta(v: any): number {
   // Una venta/pedido CANCELADO no debe nada: su saldo es 0 aunque el
   // saldo_pendiente guardado no se haya reseteado.
   if (v?.status === 'cancelado') return 0;
+  // D-034: un pedido que se cobra a lo entregado debe solo lo realmente entregado. Ese cálculo
+  // vive en la BD (fn_venta_cobrable → saldo_pendiente); aquí solo se muestra.
+  if (v?.tipo === 'pedido' && v?.politica_cobro === 'entregado' && !isCerradaParcial(v) && v?.saldo_pendiente != null) {
+    return Math.max(0, Math.round((Number(v.saldo_pendiente) || 0) * 100) / 100);
+  }
   const totalReal = totalEfectivoVenta(v);
   const cobrado = sumCobrosActivos(v);
   const saldo = totalReal - cobrado;

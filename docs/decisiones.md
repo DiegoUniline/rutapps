@@ -192,3 +192,8 @@
 - **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («cancela todo»)
 - **Decisión:** cancelar una venta **cancela todo lo que cuelga de ella**: sus devoluciones quedan canceladas (ya no dan nota de crédito) y el **gasto** con que se reembolsó una devolución en efectivo se cancela (deja de contar en Gastos y Dashboard); ese dinero queda como «devolución de dinero» del cliente. La pregunta de qué hacer con el pago se hace **solo por lo que falta** (pagado − ya devuelto).
 - **Implementación:** `gastos.cancelado_at`, `devoluciones.cancelado_at` (no se borran), `_cancelar_devoluciones_venta`, `cancelar_venta` actualizada; todas las consultas de gastos excluyen cancelados (migración 20261120010000).
+
+## D-034
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Decisión:** el **pedido** dice qué se pidió; las **entregas** dicen qué se entregó de verdad. Solo cuenta lo de entregas **validadas (hecho)** —no surtido, cargado ni en ruta—. El pedido queda **Entregado** cuando todas sus cantidades están entregadas; si falta algo queda/regresa a **Confirmado** (parcial), también al cancelar o reabrir una entrega. El **saldo de todo pedido (contado o crédito) es por lo entregado** (antes contado debía el total).
+- **Implementación:** `fn_venta_cobrable`, `fn_pedido_entregado_completo`, `fn_sync_status_pedido`, triggers `auto_venta_entregado` y `ajustar_pedido_por_entregado`; en pantalla el saldo de esos pedidos se toma de la BD (migración 20261120030000). Cierra H4, H5 y H8 de la auditoría.
