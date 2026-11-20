@@ -6,6 +6,7 @@ import { usePermisos } from '@/hooks/usePermisos';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText, Boxes, RotateCcw } from 'lucide-react';
+import { MasAccionesMovil } from '@/components/shared/MasAccionesMovil';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { Badge } from '@/components/ui/badge';
 import { LoteSurtidoModal } from '@/components/lotes/LoteSurtidoModal';
@@ -506,9 +507,9 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
     <div className={embedded ? '' : 'min-h-full'}>
       {/* Header */}
       {!embedded && (
-      <div className="bg-card border-b border-border px-5 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-10">
+      <div className="bg-card border-b border-border px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate('/logistica/entregas')} className="btn-odoo-secondary !px-2.5">
+          <button onClick={() => navigate('/logistica/entregas')} className="btn-odoo-secondary !px-2.5 shrink-0" aria-label="Regresar">
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
           <div className="min-w-0">
@@ -519,7 +520,14 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
             {form.clientes?.nombre && <p className="text-xs text-muted-foreground truncate">{form.clientes.nombre}</p>}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0 max-w-full flex-wrap justify-end ml-auto">
+          {/* Teléfono: acciones secundarias en menú «⋯» (Documento, Cancelar, etc.) */}
+          <MasAccionesMovil acciones={[
+            ...(!isNew && isBorrador && lineasSinStock.length > 0 ? [{ key: 'nosurtir', label: `No surtir sin stock (${lineasSinStock.length})`, icon: X, onClick: () => setShowNoSurtirSinStockDialog(true) }] : []),
+            ...(!isNew ? [{ key: 'doc', label: 'Documento', icon: FileText, onClick: handleGenerarEntregaPdf }] : []),
+            ...(!isNew && form.status === 'hecho' && isSuperAdmin ? [{ key: 'reabrir', label: 'Reabrir (admin)', icon: RotateCcw, onClick: () => setShowReabrirDialog(true), disabled: reabrirMut.isPending }] : []),
+            ...(!isNew && !readOnly && !enCamion ? [{ key: 'cancelar', label: 'Cancelar entrega', onClick: handleCancelar, destructiva: true, separar: true }] : []),
+          ]} />
           {/* Surtir todo — only in borrador when lines exist */}
           {!isNew && isBorrador && lineas.length > 0 && !allLinesDone && (
             <Button onClick={openSurtirTodoDialog} size="sm" variant="default" disabled={surtirTodoMut.isPending}>
@@ -528,7 +536,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           )}
           {/* No surtir sin stock — masivo, solo en borrador cuando hay pendientes sin stock */}
           {!isNew && isBorrador && lineasSinStock.length > 0 && (
-            <Button onClick={() => setShowNoSurtirSinStockDialog(true)} size="sm" variant="outline" className="text-muted-foreground text-xs">
+            <Button onClick={() => setShowNoSurtirSinStockDialog(true)} size="sm" variant="outline" className="text-muted-foreground text-xs max-sm:hidden">
               <X className="h-3.5 w-3.5" /> No surtir sin stock ({lineasSinStock.length})
             </Button>
           )}
@@ -557,13 +565,13 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           )}
           {/* Document */}
           {!isNew && (
-            <Button onClick={handleGenerarEntregaPdf} size="sm" variant="outline" className="text-xs">
+            <Button onClick={handleGenerarEntregaPdf} size="sm" variant="outline" className="text-xs max-sm:hidden">
               <FileText className="h-3.5 w-3.5" /> Documento
             </Button>
           )}
           {/* Cancel */}
           {!isNew && !readOnly && !enCamion && (
-            <Button onClick={handleCancelar} size="sm" variant="destructive" className="text-xs">Cancelar</Button>
+            <Button onClick={handleCancelar} size="sm" variant="destructive" className="text-xs max-sm:hidden">Cancelar</Button>
           )}
           {enCamion && puedeAjustarEntrega && id && (
             <EntregaCargadaAcciones
@@ -585,7 +593,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
               onClick={() => setShowReabrirDialog(true)}
               size="sm"
               variant="outline"
-              className="text-amber-600 border-amber-500/40 hover:text-amber-700 text-xs"
+              className="text-amber-600 border-amber-500/40 hover:text-amber-700 text-xs max-sm:hidden"
               disabled={reabrirMut.isPending}
             >
               <RotateCcw className="h-3.5 w-3.5" /> Reabrir (admin)
@@ -598,14 +606,14 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
 
       {/* Statusbar */}
       {!isNew && (
-        <div className="px-5 pt-3">
+        <div className="px-3 sm:px-5 pt-3">
           <OdooStatusbar steps={STEPS} current={form.status ?? 'borrador'} />
         </div>
       )}
 
-      <div className="p-5 space-y-4 max-w-[1200px]">
+      <div className="p-3 sm:p-5 space-y-3 sm:space-y-4 max-w-[1200px]">
         {/* Header card */}
-        <div className="bg-card border border-border rounded-md p-5">
+        <div className="bg-card border border-border rounded-md p-3 sm:p-5">
           {readOnly && !enCamion && (
             <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />
@@ -707,7 +715,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
 
         {/* Lines table */}
         <div className="bg-card border border-border rounded-md">
-          <div className="p-4 overflow-x-auto">
+          <div className="p-2 sm:p-4 overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-table-border text-left">

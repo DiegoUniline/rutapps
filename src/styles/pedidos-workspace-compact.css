@@ -369,6 +369,12 @@ body[data-pedidos-mode="list"] .bg-card.border.border-border.rounded-lg.overflow
 }
 
 @media (max-width: 560px) {
+  /* El rango de fechas (dd/mm/aa → dd/mm/aa + borrar) necesita ~190 px: si la
+     columna reservada es más angosta, el selector tapa el inicio del buscador. */
+  :root {
+    --pedidos-date-width: 54%;
+  }
+
   [data-pedidos-tabs] .pedidos-view-button span {
     display: none;
   }
