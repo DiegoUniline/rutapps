@@ -13,6 +13,8 @@ export interface AccionPrincipalMovil {
   onClick: () => void;
   disabled?: boolean;
   cargando?: boolean;
+  /** Rechazar/cancelar: rojo suave (D-042) en lugar de azul. */
+  destructiva?: boolean;
 }
 
 interface Props {
@@ -79,7 +81,7 @@ export function EncabezadoDetalleMovil({ onBack, titulo, estado, subtitulo, prin
       {visibles.length > 0 && (
         <div className="flex gap-2">
           {visibles.map(b => (
-            <button key={b.key} type="button" onClick={b.onClick} disabled={b.disabled || b.cargando} className={BOTON_PRINCIPAL}>
+            <button key={b.key} type="button" onClick={b.onClick} disabled={b.disabled || b.cargando} className={b.destructiva ? cn(BOTON_PRINCIPAL, 'btn-cancelar') : BOTON_PRINCIPAL}>
               {b.cargando ? <Loader2 className="h-4 w-4 animate-spin" /> : b.icon ? <b.icon className="h-4 w-4" /> : null}
               {b.label}
             </button>
