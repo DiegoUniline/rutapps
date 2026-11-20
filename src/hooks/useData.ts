@@ -132,6 +132,8 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
   return useQuery({
     queryKey: ['productos-page', empresa?.id, search, statusFilter, page, pageSize, clasificacionFilter, marcaFilter, fetchAll, proveedorFilter, manejaLoteFilter],
     staleTime: CATALOG_STALE,
+    // Conserva los renglones mientras llega la siguiente página / «Cargar más» (sin parpadeo).
+    placeholderData: (prev) => prev,
     enabled: !!empresa?.id,
     queryFn: async () => {
       const SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)';
