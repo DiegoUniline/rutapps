@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, X, AlertTriangle, TrendingUp, TrendingDown, Equal, FileText, Eye, ChevronDown, ChevronRight, Link2, Copy, Share2, Lock, User } from 'lucide-react';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
+import { estadoPildora } from '@/components/layout/ListaTarjetaMovil';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -224,10 +226,30 @@ export default function AuditoriaResultadosPage() {
   };
 
   return (
-    <div className="min-h-full flex flex-col">
+    <div className="min-h-full p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip flex flex-col">
       {/* Header */}
-      <div className="bg-background border-b border-border p-3 sm:p-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="bg-card border-b border-border p-3 sm:p-4 space-y-3">
+        {isMobile && (
+          <EncabezadoDetalleMovil
+            onBack={() => navigate('/almacen/auditorias')}
+            titulo={auditoria?.nombre ?? 'Resultados'}
+            estado={badge?.label ? { texto: badge.label, tono: estadoPildora(auditoria?.status).tono } : null}
+            subtitulo={`Almacén: ${almacenNombre}`}
+            principales={canApprove ? [
+              { key: 'aprobar', label: 'Aprobar y ajustar', icon: Check, onClick: initAjustes },
+            ] : canEdit ? [
+              { key: 'continuar', label: 'Continuar conteo', onClick: () => navigate(`/almacen/auditorias/${id}/conteo`) },
+            ] : []}
+            menu={[
+              { key: 'pdf', label: 'PDF', icon: FileText, onClick: handleGenerarPdf },
+              ...(canApprove && canEdit ? [{ key: 'continuar', label: 'Continuar conteo', onClick: () => navigate(`/almacen/auditorias/${id}/conteo`) }] : []),
+              ...(canApprove ? [{ key: 'rechazar', label: 'Rechazar', icon: X, destructiva: true, separar: true, onClick: () => rechazarAuditoria.mutate() }] : []),
+            ]}
+          />
+        )}
+        <div className="flex flex-wrap items-center gap-2 max-md:hidden">
           <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate('/almacen/auditorias')} aria-label="Regresar">
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -517,7 +539,7 @@ export default function AuditoriaResultadosPage() {
 
       {/* Bottom actions */}
       {(canApprove || canEdit) && (
-        <div className="sticky bottom-0 bg-background border-t border-border p-3 flex gap-2">
+        <div className="sticky bottom-0 bg-card border-t border-border p-3 flex gap-2 max-md:hidden">
           {canEdit && (
             <Button className="flex-1" onClick={() => navigate(`/almacen/auditorias/${id}/conteo`)}>
               Continuar conteo
@@ -642,6 +664,7 @@ export default function AuditoriaResultadosPage() {
           cierre={(auditoria as any)?.cerrada_at ?? auditoria?.fecha_aprobacion ?? null}
         />
       )}
+    </div>
     </div>
   );
 }

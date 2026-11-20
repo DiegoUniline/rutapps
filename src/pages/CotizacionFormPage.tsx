@@ -14,6 +14,9 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save, FileDown, Send, CheckCircle2, ShoppingCart, AlertTriangle } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoDetalleMovil } from '@/components/layout/EncabezadoDetalleMovil';
+import { estadoPildora } from '@/components/layout/ListaTarjetaMovil';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,6 +52,7 @@ export default function CotizacionFormPage() {
   const { id } = useParams();
   const isNew = !id || id === 'nuevo';
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const qc = useQueryClient();
   const { empresa, user, profile } = useAuth();
   const { data: existing, isLoading, isFetching, isError, error } = useCotizacion(isNew ? undefined : id);
@@ -469,8 +473,28 @@ export default function CotizacionFormPage() {
   const almacenOptions = (almacenes ?? []).map((a: any) => ({ value: a.id, label: a.nombre }));
 
   return (
-    <div className="p-3 sm:p-5 max-w-[1200px] space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="p-2 md:p-4 max-w-[1200px]">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip">
+      {isMobile ? (
+        <div className="px-3 py-2.5 border-b border-border">
+          <EncabezadoDetalleMovil
+            onBack={() => navigate('/cotizaciones')}
+            titulo={isNew ? 'Nueva cotización' : (form.folio || 'Cotización')}
+            estado={!isNew && form.estado ? { texto: estadoPildora(form.estado).pildora, tono: estadoPildora(form.estado).tono } : null}
+            principales={[
+              ...(!readOnly ? [{ key: 'guardar', label: 'Guardar', icon: Save, onClick: () => handleSave(), cargando: save.isPending }] : []),
+              ...(!isNew && form.estado !== 'convertida' ? [{ key: 'convertir', label: 'Convertir a venta', icon: ShoppingCart, onClick: handleConvertToSale, cargando: converting }] : []),
+            ]}
+            menu={!isNew ? [
+              { key: 'pdf', label: 'PDF', icon: FileDown, onClick: handleDownloadPdf },
+              { key: 'wa', label: 'Enviar por WhatsApp', icon: Send, onClick: handleSendWhatsApp },
+              ...(form.estado !== 'aprobada' && form.estado !== 'convertida' ? [{ key: 'aprobar', label: 'Aprobar', icon: CheckCircle2, onClick: handleApprove }] : []),
+            ] : []}
+          />
+        </div>
+      ) : (
+      <div className="flex items-center justify-between flex-wrap gap-3 px-3 sm:px-5 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate('/cotizaciones')}><ArrowLeft className="h-4 w-4" /></Button>
           <div>
@@ -498,9 +522,10 @@ export default function CotizacionFormPage() {
           )}
         </div>
       </div>
+      )}
 
       {/* Header */}
-      <div className="bg-card border border-border rounded-md p-5 grid gap-4 md:grid-cols-3">
+      <div className="p-3 sm:p-5 grid gap-4 md:grid-cols-3">
         <div className="space-y-3">
           <div>
             <Label className="label-odoo label-required">Cliente</Label>
@@ -543,7 +568,7 @@ export default function CotizacionFormPage() {
       </div>
 
       {/* Lineas: mismo componente que ventas */}
-      <div className="bg-card border border-border rounded-md">
+      <div className="border-t border-border">
         <VentaLineasTab
           lineas={lineas as any}
           productosList={productosList ?? []}
@@ -565,7 +590,7 @@ export default function CotizacionFormPage() {
       </div>
 
       {/* Notas */}
-      <div className="bg-card border border-border rounded-md p-4">
+      <div className="border-t border-border p-3 sm:p-5">
         <Label className="label-odoo">Notas</Label>
         <Textarea rows={3} placeholder="Condiciones, observaciones…" disabled={readOnly}
           value={form.notas ?? ''}
@@ -619,6 +644,7 @@ export default function CotizacionFormPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }
