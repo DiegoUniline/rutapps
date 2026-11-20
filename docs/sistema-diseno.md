@@ -22,3 +22,8 @@ Reglas de presentación vigentes para todo lo que NO está en `src/pages/ruta/`.
 - Diálogos: `w-[calc(100vw-1rem)]`, `max-h` con scroll interno.
 - Sin scroll horizontal de página: tablas que deban quedarse con `overflow-x-auto` contenido.
 - Gutter 12–16 px; objetivos táctiles ≥ 36–40 px; acciones que en escritorio aparecen al pasar el mouse se muestran siempre en pantallas táctiles (`[@media(hover:none)]:opacity-100`).
+
+## Ticket y nota de venta (D-048)
+- Un solo ticket: `construirModeloTicket` (`src/lib/ticketModelo.ts`) decide qué lleva; `buildTicketHTML`, `buildEscPosBytes`, `TicketVenta` y el texto para compartir solo dibujan. Nada de maquetas propias: toda vista previa usa `buildTicketHTML` (en pantalla con `TicketHtmlVista`, que escala sin scroll horizontal).
+- El ticket es un documento: blanco y negro, monoespaciado; no usa tokens de color de la app. La nota carta sigue el estándar PDF B/N (`.lovable/memory/design/pdf-bn-standard.md`) y obedece las mismas opciones (`resolverOpcionesTicket`).
+- Opciones nuevas del ticket: se agregan a `src/lib/ticketCamposConfig.ts` (clave, etiqueta, sección), encendidas por omisión (`campoOn`), y se respetan en `ticketModelo` y `pedidoPdf`.
