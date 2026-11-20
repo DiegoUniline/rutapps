@@ -60,12 +60,12 @@ export function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores
           </thead>
           <tbody>
             {prodProveedores.map((pp: any) => (
-              <tr key={pp.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+              <tr key={pp.id} className={`border-b border-table-border last:border-0 hover:bg-table-hover${pp.proveedor_inactivo ? ' text-muted-foreground' : ''}`}>
                 <td className="py-1.5 px-3 font-medium">{pp.proveedores?.nombre ?? '—'}{pp.es_principal && <Crown className="inline h-3.5 w-3.5 ml-1.5 text-warning fill-warning" />}</td>
                 <td className="py-1.5 px-3 text-right font-mono">{fmt((pp.precio_compra ?? 0))}</td>
                 <td className="py-1.5 px-3 text-right">{pp.tiempo_entrega_dias ?? 0}</td>
                 <td className="py-1.5 px-3 text-center">
-                  {pp.es_principal ? <span className="text-[11px] text-primary font-medium">✓ Principal</span> : <button onClick={() => handleSetPrincipal(pp)} className="text-[11px] text-muted-foreground hover:text-primary transition-colors">Hacer principal</button>}
+                  {pp.es_principal ? <span className="text-[11px] text-primary font-medium">✓ Principal</span> : pp.proveedor_inactivo ? <span className="text-[11px]">Inactivo</span> : <button onClick={() => handleSetPrincipal(pp)} className="text-[11px] text-muted-foreground hover:text-primary transition-colors">Hacer principal</button>}
                 </td>
                 <td className="py-1.5 px-3 text-center"><button onClick={() => handleRemove(pp)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-3.5 w-3.5" /></button></td>
               </tr>

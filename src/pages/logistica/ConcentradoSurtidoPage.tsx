@@ -5,7 +5,7 @@ import { AlertTriangle, ShoppingCart, Calendar as CheckCircle2, Loader2, FileDow
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProveedores, useAlmacenes } from '@/hooks/useData';
+import { useProveedoresTodos, useAlmacenes } from '@/hooks/useData';
 import { fmtMoney } from '@/lib/currency';
 import { cn, todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
@@ -31,7 +31,7 @@ function addDays(iso: string, n: number) {
 export default function ConcentradoSurtidoPage() {
   const { empresa } = useAuth();
   const navigate = useNavigate();
-  const { data: proveedores } = useProveedores();
+  const { data: proveedores } = useProveedoresTodos();
 
   const today = todayLocal();
   const [desde, setDesde] = useState(weekStartLocal());

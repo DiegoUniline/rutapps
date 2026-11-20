@@ -79,9 +79,9 @@ export default function TiendaConfigPage() {
       setLoading(true);
       const [{ data: existing }, { data: lp }, { data: emp }, { data: al }] = await Promise.all([
         supabase.from("tienda_config").select("*").eq("empresa_id", empresaId).maybeSingle(),
-        supabase.from("lista_precios").select("id, nombre").eq("empresa_id", empresaId).order("nombre"),
+        supabase.from("lista_precios").select("id, nombre, activa").eq("empresa_id", empresaId).order("nombre"),
         supabase.from("empresas").select("nombre, logo_url").eq("id", empresaId).maybeSingle(),
-        supabase.from("almacenes").select("id, nombre").eq("empresa_id", empresaId).order("nombre"),
+        supabase.from("almacenes").select("id, nombre, activo").eq("empresa_id", empresaId).order("nombre"),
       ]);
       setListas(lp ?? []);
       setAlmacenes(al ?? []);
@@ -316,7 +316,8 @@ export default function TiendaConfigPage() {
           <Field label="Lista de precios por defecto (clientes nuevos / invitados)">
             <select className="input" value={cfg.lista_precios_default_id ?? ""} onChange={(e) => setCfg({ ...cfg, lista_precios_default_id: e.target.value || null })}>
               <option value="">— Precio principal —</option>
-              {listas.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+              {/* D-044: inactivas solo si ya es la elegida (marcada). */}
+              {listas.filter((l: any) => l.activa !== false || l.id === cfg.lista_precios_default_id).map((l: any) => <option key={l.id} value={l.id}>{l.nombre}{l.activa === false ? " (inactiva)" : ""}</option>)}
             </select>
             <div className="text-xs text-gray-500 mt-1">
               Esta lista se usa para invitados y clientes sin lista asignada en su ficha.
@@ -325,7 +326,7 @@ export default function TiendaConfigPage() {
           <Field label="Almacén que alimenta la tienda *">
             <select className="input" value={cfg.almacen_id ?? ""} onChange={(e) => setCfg({ ...cfg, almacen_id: e.target.value || null })}>
               <option value="">— Selecciona un almacén —</option>
-              {almacenes.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+              {almacenes.filter((a: any) => a.activo !== false || a.id === cfg.almacen_id).map((a: any) => <option key={a.id} value={a.id}>{a.nombre}{a.activo === false ? " (inactivo)" : ""}</option>)}
             </select>
             <div className="text-xs text-gray-500 mt-1">
               El stock mostrado en la tienda se toma de este almacén, y los pedidos recibidos se crean asignados a él.

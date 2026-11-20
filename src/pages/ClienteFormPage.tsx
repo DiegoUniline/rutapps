@@ -26,6 +26,7 @@ import { todayLocal } from '@/lib/utils';
 import { confirmDialog } from '@/lib/confirm';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { puedeReemplazarFormulario } from '@/lib/formSync';
+import { opcionesConAsignado } from '@/lib/registrosInactivos';
 
 const defaultCliente: Partial<Cliente> = {
   codigo: '', nombre: '', contacto: '', telefono: '', lada: '', email: '', direccion: '',
@@ -301,8 +302,9 @@ export default function ClienteFormPage() {
 
   // Auto-assign default lista de precios for new clients
   useEffect(() => {
-    if (isNew && allListasPrecios && allListasPrecios.length > 0 && !(form as any).lista_precio_id) {
-      const principal = allListasPrecios.find(l => l.es_principal) ?? allListasPrecios[0];
+    const activas = (allListasPrecios ?? []).filter(l => l.activa);
+    if (isNew && activas.length > 0 && !(form as any).lista_precio_id) {
+      const principal = activas.find(l => l.es_principal) ?? activas[0];
       if (principal) {
         set('lista_precio_id' as any, principal.id);
         set('tarifa_id', principal.tarifa_id);
@@ -703,7 +705,7 @@ export default function ClienteFormPage() {
                   if (v === '__new__') { setShowNewZona(true); return; }
                   set('zona_id', v || null);
                 }} type="select"
-                  options={[{ value: '', label: 'Sin zona' }, ...(zonas?.map(z => ({ value: z.id, label: z.nombre })) ?? []), { value: '__new__', label: '＋ Crear nueva zona' }]} />
+                  options={[{ value: '', label: 'Sin zona' }, ...opcionesConAsignado(zonas?.map(z => ({ value: z.id, label: z.nombre })) ?? [], form.zona_id, 'Zona'), { value: '__new__', label: '＋ Crear nueva zona' }]} />
                 <OdooField label="Orden" value={form.orden} onChange={v => set('orden', +v)} type="number" />
                 <div className="odoo-field-row">
                   <span className="odoo-field-label">Fecha de alta</span>
@@ -786,7 +788,8 @@ export default function ClienteFormPage() {
                     const lista = allListasPrecios?.find(l => l.id === v);
                     set('tarifa_id', lista?.tarifa_id || null);
                   }} type="select"
-                    options={allListasPrecios?.filter(l => l.activa).map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` })) ?? []}
+                    options={opcionesConAsignado(allListasPrecios?.filter(l => l.activa).map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` })) ?? [],
+                      (form as any).lista_precio_id, allListasPrecios?.find(l => l.id === (form as any).lista_precio_id)?.nombre, '(inactiva)')}
                     placeholder="Seleccionar lista de precios..." />
                 </OdooSection>
                 <OdooSection title="Visitas">

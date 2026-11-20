@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/lib/confirm';
 import { puedeReemplazarFormulario } from '@/lib/formSync';
+import { validarSinUsos } from '@/lib/registrosInactivos';
 
 interface Proveedor {
   id?: string;
@@ -146,6 +147,14 @@ export default function ProveedorFormPage() {
 
   const handleDelete = async () => {
     if (!id || isNew) return;
+    // D-044: un proveedor con productos, compras, pagos o solicitudes no se elimina; se inactiva.
+    try {
+      const enUso = await validarSinUsos('proveedores', [id], 'Márcalo «Inactivo» en su lugar: deja de aparecer para comprar y asignar, y su historial se conserva.');
+      if (enUso) { toast.error(enUso, { duration: 8000 }); return; }
+    } catch (err: any) {
+      toast.error(err?.message || 'No se pudo comprobar si el proveedor está en uso');
+      return;
+    }
     if (!await confirmDialog('¿Eliminar este proveedor?')) return;
     deleteMutation.mutate();
   };

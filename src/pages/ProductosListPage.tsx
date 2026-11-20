@@ -34,6 +34,7 @@ import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { getStockBreakdown } from '@/lib/stockPresentacion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { validarSinUsos } from '@/lib/registrosInactivos';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 12 },
@@ -152,6 +153,9 @@ export default function ProductosListPage() {
     setBulkDeleting(true);
     try {
       if (statusFilter === 'inactivo') {
+        // D-044: no se borra físicamente un producto con ventas, compras, movimientos, etc.
+        const enUso = await validarSinUsos('productos', ids, 'Déjalos inactivos (ya no aparecen para vender ni comprar).');
+        if (enUso) { toast.error(enUso, { duration: 8000 }); return; }
         const { error } = await supabase.from('productos').delete().in('id', ids).eq('empresa_id', empresa.id);
         if (error) throw error;
       } else {

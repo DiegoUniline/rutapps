@@ -69,8 +69,9 @@ export default function RutaNuevoCliente() {
 
   // Auto-assign default lista de precios
   useEffect(() => {
-    if (allListasPrecios && allListasPrecios.length > 0 && !(form as any).lista_precio_id) {
-      const principal = allListasPrecios.find(l => l.es_principal) ?? allListasPrecios[0];
+    const activas = (allListasPrecios ?? []).filter(l => l.activa);
+    if (activas.length > 0 && !(form as any).lista_precio_id) {
+      const principal = activas.find(l => l.es_principal) ?? activas[0];
       if (principal) {
         setForm(prev => ({ ...prev, lista_precio_id: principal.id, tarifa_id: principal.tarifa_id }));
       }

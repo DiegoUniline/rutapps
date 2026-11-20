@@ -3,7 +3,7 @@
 > Generado con `scripts/gen-docs-schema.ts` a partir de `src/integrations/supabase/types.ts`.
 > No editar a mano: regenerar tras cada migración.
 
-**Totales:** 179 tablas · 1 vistas · 149 funciones RPC · 17 enums.
+**Totales:** 184 tablas · 2 vistas · 156 funciones RPC · 17 enums.
 
 ## Índice de tablas
 
@@ -33,12 +33,14 @@
 - [cat_regimen_fiscal](#catregimenfiscal) (6 campos)
 - [cat_tipo_comprobante](#cattipocomprobante) (4 campos)
 - [cat_uso_cfdi](#catusocfdi) (6 campos)
-- [cfdi_lineas](#cfdilineas) (17 campos)
-- [cfdi_pago_documentos](#cfdipagodocumentos) (18 campos)
-- [cfdi_pagos](#cfdipagos) (37 campos)
-- [cfdis](#cfdis) (40 campos)
+- [cfdi_lineas](#cfdilineas) (18 campos)
+- [cfdi_pago_documentos](#cfdipagodocumentos) (19 campos)
+- [cfdi_pagos](#cfdipagos) (44 campos)
+- [cfdi_series](#cfdiseries) (6 campos)
+- [cfdis](#cfdis) (51 campos)
 - [clasificaciones](#clasificaciones) (6 campos)
 - [cliente_orden_ruta](#clienteordenruta) (11 campos)
+- [cliente_orden_ruta_dia_respaldo](#clienteordenrutadiarespaldo) (12 campos)
 - [cliente_pedido_sugerido](#clientepedidosugerido) (5 campos)
 - [clientes](#clientes) (52 campos)
 - [cobradores](#cobradores) (6 campos)
@@ -76,6 +78,7 @@
 - [entregas](#entregas) (20 campos)
 - [facturas](#facturas) (23 campos)
 - [feature_flags](#featureflags) (9 campos)
+- [folios_renumeracion](#foliosrenumeracion) (6 campos)
 - [gastos](#gastos) (13 campos)
 - [import_job_lineas](#importjoblineas) (13 campos)
 - [import_jobs](#importjobs) (15 campos)
@@ -84,6 +87,7 @@
 - [internal_crm_call_pitch_config](#internalcrmcallpitchconfig) (4 campos)
 - [internal_notification_reads](#internalnotificationreads) (3 campos)
 - [internal_notifications](#internalnotifications) (12 campos)
+- [liquidacion_saldos_respaldo](#liquidacionsaldosrespaldo) (7 campos)
 - [lista_precios](#listaprecios) (9 campos)
 - [lista_precios_lineas](#listaprecioslineas) (5 campos)
 - [listas](#listas) (5 campos)
@@ -118,7 +122,7 @@
 - [producto_equivalencias](#productoequivalencias) (9 campos)
 - [producto_presentaciones](#productopresentaciones) (12 campos)
 - [producto_proveedores](#productoproveedores) (8 campos)
-- [productos](#productos) (58 campos)
+- [productos](#productos) (59 campos)
 - [profiles](#profiles) (17 campos)
 - [promocion_aplicada](#promocionaplicada) (10 campos)
 - [promociones](#promociones) (25 campos)
@@ -155,7 +159,7 @@
 - [tienda_clientes](#tiendaclientes) (10 campos)
 - [tienda_config](#tiendaconfig) (19 campos)
 - [tienda_solicitudes_cliente](#tiendasolicitudescliente) (27 campos)
-- [timbres_movimientos](#timbresmovimientos) (10 campos)
+- [timbres_movimientos](#timbresmovimientos) (11 campos)
 - [timbres_saldo](#timbressaldo) (4 campos)
 - [traspaso_linea_lotes](#traspasolinealotes) (9 campos)
 - [traspaso_lineas](#traspasolineas) (5 campos)
@@ -176,6 +180,7 @@
 - [venta_lineas](#ventalineas) (49 campos)
 - [ventas](#ventas) (39 campos)
 - [ventas_descuadre_auditoria](#ventasdescuadreauditoria) (11 campos)
+- [ventas_folio_renumeracion](#ventasfoliorenumeracion) (5 campos)
 - [visitas](#visitas) (12 campos)
 - [wa_bot_authorized_numbers](#wabotauthorizednumbers) (21 campos)
 - [wa_bot_logs](#wabotlogs) (10 campos)
@@ -513,7 +518,7 @@
 | `carga_id` | string | no | **sí** | → `cargas.id` |
 | `created_at` | string | no |  |  |
 | `id` | string | no |  |  |
-| `venta_id` | string | no | **sí** | → `ventas.id` |
+| `venta_id` | string | no | **sí** | → `ventas.id` → `ventas_resumen_v.id` |
 
 ---
 
@@ -614,6 +619,7 @@
 | `cfdi_id` | string | no | **sí** | → `cfdis.id` |
 | `created_at` | string | no |  |  |
 | `descripcion` | string | no |  |  |
+| `descuento` | number | no |  |  |
 | `id` | string | no |  |  |
 | `ieps_monto` | number | no |  |  |
 | `ieps_pct` | number | no |  |  |
@@ -644,6 +650,7 @@
 | `imp_pagado` | number | no |  |  |
 | `imp_saldo_ant` | number | no |  |  |
 | `imp_saldo_insoluto` | number | no |  |  |
+| `impuestos_dr` | Json | sí |  |  |
 | `iva_trasladado_dr` | number | no |  |  |
 | `metodo_pago_dr` | string | sí |  |  |
 | `moneda_dr` | string | no |  |  |
@@ -651,7 +658,7 @@
 | `objeto_imp_dr` | string | sí |  |  |
 | `serie_dr` | string | sí |  |  |
 | `tipo_cambio_dr` | number | no |  |  |
-| `venta_id` | string | sí |  | → `ventas.id` |
+| `venta_id` | string | sí |  | → `ventas.id` → `ventas_resumen_v.id` |
 
 ---
 
@@ -661,6 +668,7 @@
 |---|---|---|---|---|
 | `cadena_original` | string | sí |  |  |
 | `cancel_date` | string | sí |  |  |
+| `cancel_motivo` | string | sí |  |  |
 | `cancel_status` | string | sí |  |  |
 | `cobro_id` | string | sí |  | → `cobros.id` |
 | `created_at` | string | no |  |  |
@@ -686,12 +694,18 @@
 | `nom_banco_ord_ext` | string | sí |  |  |
 | `num_operacion` | string | sí |  |  |
 | `pdf_url` | string | sí |  |  |
+| `receiver_fiscal_regime` | string | sí |  |  |
+| `receiver_name` | string | sí |  |  |
+| `receiver_rfc` | string | sí |  |  |
+| `receiver_tax_zip_code` | string | sí |  |  |
 | `rfc_emisor_cta_ben` | string | sí |  |  |
 | `rfc_emisor_cta_ord` | string | sí |  |  |
 | `sello_cfdi` | string | sí |  |  |
 | `sello_sat` | string | sí |  |  |
 | `serie` | string | sí |  |  |
+| `stamping_started_at` | string | sí |  |  |
 | `status` | string | no |  |  |
+| `timbre_reserva_id` | string | sí |  |  |
 | `tipo_cambio` | number | no |  |  |
 | `updated_at` | string | no |  |  |
 | `user_id` | string | no | **sí** |  |
@@ -701,28 +715,49 @@
 
 ---
 
+## cfdi_series
+
+| Campo | Tipo | Nulo | Obligatorio al insertar | FK |
+|---|---|---|---|---|
+| `empresa_id` | string | no | **sí** | → `empresas.id` |
+| `serie` | string | no |  |  |
+| `serie_pago` | string | no |  |  |
+| `siguiente_folio` | number | no |  |  |
+| `siguiente_folio_pago` | number | no |  |  |
+| `updated_at` | string | no |  |  |
+
+---
+
 ## cfdis
 
 | Campo | Tipo | Nulo | Obligatorio al insertar | FK |
 |---|---|---|---|---|
 | `cadena_original` | string | sí |  |  |
 | `cancel_date` | string | sí |  |  |
+| `cancel_motivo` | string | sí |  |  |
 | `cancel_status` | string | sí |  |  |
+| `cancel_uuid_sustitucion` | string | sí |  |  |
 | `cfdi_type` | string | no |  |  |
 | `created_at` | string | no |  |  |
 | `currency` | string | no |  |  |
+| `descuento_total` | number | no |  |  |
 | `empresa_id` | string | no | **sí** | → `empresas.id` |
 | `enviado_a` | string | sí |  |  |
 | `enviado_at` | string | sí |  |  |
 | `error_detalle` | string | sí |  |  |
+| `es_global` | boolean | no |  |  |
 | `expedition_place` | string | sí |  |  |
 | `facturama_ambiente` | string | no |  |  |
 | `facturama_id` | string | sí |  |  |
 | `fecha_timbrado` | string | sí |  |  |
 | `folio` | string | sí |  |  |
 | `folio_fiscal` | string | sí |  |  |
+| `global_anio` | number | sí |  |  |
+| `global_meses` | string | sí |  |  |
+| `global_periodicidad` | string | sí |  |  |
 | `id` | string | no |  |  |
 | `ieps_total` | number | no |  |  |
+| `impuestos_detalle` | Json | sí |  |  |
 | `iva_total` | number | no |  |  |
 | `no_certificado_emisor` | string | sí |  |  |
 | `no_certificado_sat` | string | sí |  |  |
@@ -738,15 +773,18 @@
 | `sello_cfdi` | string | sí |  |  |
 | `sello_sat` | string | sí |  |  |
 | `serie` | string | sí |  |  |
+| `stamping_started_at` | string | sí |  |  |
 | `status` | string | no |  |  |
 | `subtotal` | number | no |  |  |
+| `sustituye_cfdi_id` | string | sí |  | → `cfdis.id` |
+| `timbre_reserva_id` | string | sí |  |  |
 | `total` | number | no |  |  |
 | `updated_at` | string | no |  |  |
 | `user_id` | string | no | **sí** |  |
-| `venta_id` | string | sí |  | → `ventas.id` |
+| `venta_id` | string | sí |  | → `ventas.id` → `ventas_resumen_v.id` |
 | `xml_url` | string | sí |  |  |
 
-**Referenciada por:** `cfdi_lineas.cfdi_id`, `cfdi_pago_documentos.cfdi_id`, `venta_lineas.factura_cfdi_id`
+**Referenciada por:** `cfdi_lineas.cfdi_id`, `cfdi_pago_documentos.cfdi_id`, `cfdis.sustituye_cfdi_id`, `venta_lineas.factura_cfdi_id`
 
 ---
 
@@ -779,6 +817,25 @@
 | `origin_lat` | number | sí |  |  |
 | `origin_lng` | number | sí |  |  |
 | `updated_at` | string | no |  |  |
+| `vendedor_id` | string | sí |  |  |
+
+---
+
+## cliente_orden_ruta_dia_respaldo
+
+| Campo | Tipo | Nulo | Obligatorio al insertar | FK |
+|---|---|---|---|---|
+| `cliente_id` | string | sí |  |  |
+| `created_at` | string | sí |  |  |
+| `dia` | string | sí |  |  |
+| `empresa_id` | string | sí |  |  |
+| `id` | string | sí |  |  |
+| `orden` | number | sí |  |  |
+| `origin_label` | string | sí |  |  |
+| `origin_lat` | number | sí |  |  |
+| `origin_lng` | number | sí |  |  |
+| `respaldado_en` | string | sí |  |  |
+| `updated_at` | string | sí |  |  |
 | `vendedor_id` | string | sí |  |  |
 
 ---
@@ -877,7 +934,7 @@
 | `created_at` | string | no |  |  |
 | `id` | string | no |  |  |
 | `monto_aplicado` | number | no |  |  |
-| `venta_id` | string | no | **sí** | → `ventas.id` |
+| `venta_id` | string | no | **sí** | → `ventas.id` → `ventas_resumen_v.id` |
 
 ---
 
@@ -1365,7 +1422,7 @@
 | `tipo` | Database["public"]["Enums"]["tipo_devolucion"] | no |  |  |
 | `user_id` | string | no | **sí** |  |
 | `vendedor_id` | string | sí |  | → `profiles.id` |
-| `venta_id` | string | sí |  | → `ventas.id` |
+| `venta_id` | string | sí |  | → `ventas.id` → `ventas_resumen_v.id` |
 
 **Referenciada por:** `devolucion_lineas.devolucion_id`, `gastos.devolucion_id`
 
@@ -1494,7 +1551,7 @@
 | `uso_cfdi` | string | sí |  |  |
 | `zona_horaria` | string | no |  |  |
 
-**Referenciada por:** `admin_trial_crm_activities.empresa_id`, `admin_trial_crm_leads.empresa_id`, `ajustes_inventario.empresa_id`, `almacenes.empresa_id`, `auditorias.empresa_id`, `caja_movimientos.empresa_id`, `caja_turnos.empresa_id`, `cancellation_requests.empresa_id`, `cargas.empresa_id`, `cfdi_pago_documentos.empresa_id`, `cfdi_pagos.empresa_id`, `cfdis.empresa_id`, `clasificaciones.empresa_id`, `cliente_orden_ruta.empresa_id`, `clientes.empresa_id`, `cobradores.empresa_id`, `cobros.empresa_id`, `comision_esquemas.empresa_id`, `commission_client_attributions.empresa_id`, `compras.empresa_id`, `consumo_datos.empresa_id`, `conteos_fisicos.empresa_id`, `cupon_usos.empresa_id`, `descarga_ruta.empresa_id`, `devolucion_motivo_config.empresa_id`, `devoluciones.empresa_id`, `empresa_addons.empresa_id`, `entregas.empresa_id`, `facturas.empresa_id`, `gastos.empresa_id`, `internal_commission_entries.empresa_id`, `lista_precios.empresa_id`, `listas.empresa_id`, `logistica_pedido_resumen.empresa_id`, `marcas.empresa_id`, `metas_venta.empresa_id`, `movimientos_inventario.empresa_id`, `notifications.empresa_id`, `optimizacion_recargas.empresa_id`, `optimizacion_rutas_log.empresa_id`, `pago_comisiones.empresa_id`, `pago_compras.empresa_id`, `partner_atribuciones.empresa_id`, `partner_comisiones.empresa_id`, `partners.sandbox_empresa_id`, `payment_links.empresa_id`, `producto_almacen_config.empresa_id`, `productos.empresa_id`, `profiles.empresa_id`, `promociones.empresa_id`, `proveedores.empresa_id`, `reportes_personalizados.empresa_id`, `roles.empresa_id`, `ruta_sesiones.empresa_id`, `solicitud_compra_eventos.empresa_id`, `solicitud_traspaso_historial.empresa_id`, `solicitud_traspaso_surtidos.empresa_id`, `solicitudes_compra.empresa_id`, `solicitudes_pago.empresa_id`, `solicitudes_traspaso.empresa_id`, `stock_almacen.empresa_id`, `stock_camion.empresa_id`, `subscriptions.empresa_id`, `tarifas.empresa_id`, `tasas_ieps.empresa_id`, `tasas_isr_ret.empresa_id`, `tasas_iva.empresa_id`, `tasas_iva_ret.empresa_id`, `tienda_clientes.empresa_id`, `tienda_config.empresa_id`, `tienda_solicitudes_cliente.empresa_id`, `timbres_movimientos.empresa_id`, `timbres_saldo.empresa_id`, `traspaso_linea_lotes.empresa_id`, `traspasos.empresa_id`, `tutorial_videos.empresa_id`, `unidades.empresa_id`, `vehiculos.empresa_id`, `vendedor_ubicaciones.empresa_id`, `vendedores.empresa_id`, `venta_comisiones.empresa_id`, `venta_historial.empresa_id`, `venta_linea_lotes.empresa_id`, `venta_lineas.empresa_id`, `ventas.empresa_id`, `visitas.empresa_id`, `wa_bot_authorized_numbers.empresa_id`, `wa_bot_logs.empresa_id`, `whatsapp_config.empresa_id`, `whatsapp_log.empresa_id`, `whatsapp_templates.empresa_id`, `zonas.empresa_id`
+**Referenciada por:** `admin_trial_crm_activities.empresa_id`, `admin_trial_crm_leads.empresa_id`, `ajustes_inventario.empresa_id`, `almacenes.empresa_id`, `auditorias.empresa_id`, `caja_movimientos.empresa_id`, `caja_turnos.empresa_id`, `cancellation_requests.empresa_id`, `cargas.empresa_id`, `cfdi_pago_documentos.empresa_id`, `cfdi_pagos.empresa_id`, `cfdi_series.empresa_id`, `cfdis.empresa_id`, `clasificaciones.empresa_id`, `cliente_orden_ruta.empresa_id`, `clientes.empresa_id`, `cobradores.empresa_id`, `cobros.empresa_id`, `comision_esquemas.empresa_id`, `commission_client_attributions.empresa_id`, `compras.empresa_id`, `consumo_datos.empresa_id`, `conteos_fisicos.empresa_id`, `cupon_usos.empresa_id`, `descarga_ruta.empresa_id`, `devolucion_motivo_config.empresa_id`, `devoluciones.empresa_id`, `empresa_addons.empresa_id`, `entregas.empresa_id`, `facturas.empresa_id`, `gastos.empresa_id`, `internal_commission_entries.empresa_id`, `lista_precios.empresa_id`, `listas.empresa_id`, `logistica_pedido_resumen.empresa_id`, `marcas.empresa_id`, `metas_venta.empresa_id`, `movimientos_inventario.empresa_id`, `notifications.empresa_id`, `optimizacion_recargas.empresa_id`, `optimizacion_rutas_log.empresa_id`, `pago_comisiones.empresa_id`, `pago_compras.empresa_id`, `partner_atribuciones.empresa_id`, `partner_comisiones.empresa_id`, `partners.sandbox_empresa_id`, `payment_links.empresa_id`, `producto_almacen_config.empresa_id`, `productos.empresa_id`, `profiles.empresa_id`, `promociones.empresa_id`, `proveedores.empresa_id`, `reportes_personalizados.empresa_id`, `roles.empresa_id`, `ruta_sesiones.empresa_id`, `solicitud_compra_eventos.empresa_id`, `solicitud_traspaso_historial.empresa_id`, `solicitud_traspaso_surtidos.empresa_id`, `solicitudes_compra.empresa_id`, `solicitudes_pago.empresa_id`, `solicitudes_traspaso.empresa_id`, `stock_almacen.empresa_id`, `stock_camion.empresa_id`, `subscriptions.empresa_id`, `tarifas.empresa_id`, `tasas_ieps.empresa_id`, `tasas_isr_ret.empresa_id`, `tasas_iva.empresa_id`, `tasas_iva_ret.empresa_id`, `tienda_clientes.empresa_id`, `tienda_config.empresa_id`, `tienda_solicitudes_cliente.empresa_id`, `timbres_movimientos.empresa_id`, `timbres_saldo.empresa_id`, `traspaso_linea_lotes.empresa_id`, `traspasos.empresa_id`, `tutorial_videos.empresa_id`, `unidades.empresa_id`, `vehiculos.empresa_id`, `vendedor_ubicaciones.empresa_id`, `vendedores.empresa_id`, `venta_comisiones.empresa_id`, `venta_historial.empresa_id`, `venta_linea_lotes.empresa_id`, `venta_lineas.empresa_id`, `ventas.empresa_id`, `visitas.empresa_id`, `wa_bot_authorized_numbers.empresa_id`, `wa_bot_logs.empresa_id`, `whatsapp_config.empresa_id`, `whatsapp_log.empresa_id`, `whatsapp_templates.empresa_id`, `zonas.empresa_id`
 
 ---
 
@@ -1537,7 +1594,7 @@
 | `motivo_no_entrega` | string | sí |  |  |
 | `notas` | string | sí |  |  |
 | `orden_entrega` | number | sí |  |  |
-| `pedido_id` | string | sí |  | → `ventas.id` |
+| `pedido_id` | string | sí |  | → `ventas.id` → `ventas_resumen_v.id` |
 | `status` | Database["public"]["Enums"]["status_entrega"] | no |  |  |
 | `updated_at` | string | sí |  |  |
 | `validado_at` | string | sí |  |  |
@@ -1597,6 +1654,19 @@
 
 ---
 
+## folios_renumeracion
+
+| Campo | Tipo | Nulo | Obligatorio al insertar | FK |
+|---|---|---|---|---|
+| `empresa_id` | string | no | **sí** |  |
+| `folio_anterior` | string | no | **sí** |  |
+| `folio_nuevo` | string | no | **sí** |  |
+| `registro_id` | string | no | **sí** |  |
+| `renumerado_at` | string | no |  |  |
+| `tabla` | string | no | **sí** |  |
+
+---
+
 ## gastos
 
 | Campo | Tipo | Nulo | Obligatorio al insertar | FK |
@@ -1613,7 +1683,7 @@
 | `notas` | string | sí |  |  |
 | `user_id` | string | no | **sí** |  |
 | `vendedor_id` | string | sí |  | → `profiles.id` |
-| `venta_id` | string | sí |  | → `ventas.id` |
+| `venta_id` | string | sí |  | → `ventas.id` → `ventas_resumen_v.id` |
 
 **Referenciada por:** `pago_comisiones.gasto_id`
 
@@ -1752,6 +1822,20 @@
 
 ---
 
+## liquidacion_saldos_respaldo
+
+| Campo | Tipo | Nulo | Obligatorio al insertar | FK |
+|---|---|---|---|---|
+| `cliente_id` | string | sí |  |  |
+| `cobro_id` | string | sí |  |  |
+| `empresa_id` | string | no | **sí** |  |
+| `folio` | string | sí |  |  |
+| `liquidado_at` | string | no |  |  |
+| `saldo_antes` | number | no | **sí** |  |
+| `venta_id` | string | no | **sí** |  |
+
+---
+
 ## lista_precios
 
 | Campo | Tipo | Nulo | Obligatorio al insertar | FK |
@@ -1810,7 +1894,7 @@
 | `fully_generada` | boolean | no |  |  |
 | `fully_surtido` | boolean | no |  |  |
 | `lineas_pendientes` | number | no |  |  |
-| `pedido_id` | string | no | **sí** | → `ventas.id` |
+| `pedido_id` | string | no | **sí** | → `ventas.id` → `ventas_resumen_v.id` |
 | `total_demanda` | number | no |  |  |
 | `total_entregado` | number | no |  |  |
 | `total_generada` | number | no |  |  |
@@ -2401,6 +2485,7 @@
 | `almacenes` | string[] | sí |  |  |
 | `calculo_costo` | Database["public"]["Enums"]["calculo_costo"] | sí |  |  |
 | `cantidad` | number | sí |  |  |
+| `cfdi_iva_sin_iva` | string | sí |  |  |
 | `clasificacion_id` | string | sí |  | → `clasificaciones.id` |
 | `clave_alterna` | string | sí |  |  |
 | `codigo` | string | no | **sí** |  |
@@ -2499,7 +2584,7 @@
 | `promocion_id` | string | no | **sí** | → `promociones.id` |
 | `promocion_nombre` | string | sí |  |  |
 | `tipo` | string | sí |  |  |
-| `venta_id` | string | no | **sí** | → `ventas.id` |
+| `venta_id` | string | no | **sí** | → `ventas.id` → `ventas_resumen_v.id` |
 | `venta_linea_id` | string | sí |  | → `venta_lineas.id` |
 
 ---
@@ -2897,7 +2982,7 @@
 | `lote_id` | string | sí |  | → `lotes.id` |
 | `producto_id` | string | no | **sí** |  |
 | `updated_at` | string | no |  |  |
-| `venta_id` | string | no | **sí** | → `ventas.id` |
+| `venta_id` | string | no | **sí** | → `ventas.id` → `ventas_resumen_v.id` |
 | `venta_linea_id` | string | no | **sí** | → `venta_lineas.id` |
 
 ---
@@ -3194,6 +3279,7 @@
 | `empresa_id` | string | no | **sí** | → `empresas.id` |
 | `id` | string | no |  |  |
 | `notas` | string | sí |  |  |
+| `referencia_externa` | string | sí |  |  |
 | `referencia_id` | string | sí |  |  |
 | `saldo_anterior` | number | no |  |  |
 | `saldo_nuevo` | number | no |  |  |
@@ -3430,7 +3516,7 @@
 | `pago_comision_id` | string | sí |  | → `pago_comisiones.id` |
 | `producto_id` | string | sí |  | → `productos.id` |
 | `vendedor_id` | string | no | **sí** | → `profiles.id` |
-| `venta_id` | string | no | **sí** | → `ventas.id` |
+| `venta_id` | string | no | **sí** | → `ventas.id` → `ventas_resumen_v.id` |
 | `venta_linea_id` | string | no | **sí** | → `venta_lineas.id` |
 
 ---
@@ -3446,7 +3532,7 @@
 | `id` | string | no |  |  |
 | `user_id` | string | sí |  |  |
 | `user_nombre` | string | no |  |  |
-| `venta_id` | string | no | **sí** | → `ventas.id` |
+| `venta_id` | string | no | **sí** | → `ventas.id` → `ventas_resumen_v.id` |
 
 ---
 
@@ -3463,7 +3549,7 @@
 | `producto_id` | string | no | **sí** | → `productos.id` |
 | `updated_at` | string | no |  |  |
 | `user_id` | string | sí |  |  |
-| `venta_id` | string | no | **sí** | → `ventas.id` |
+| `venta_id` | string | no | **sí** | → `ventas.id` → `ventas_resumen_v.id` |
 | `venta_linea_id` | string | no | **sí** | → `venta_lineas.id` |
 
 ---
@@ -3520,7 +3606,7 @@
 | `total` | number | sí |  |  |
 | `unidad_id` | string | sí |  | → `unidades.id` |
 | `updated_at` | string | no |  |  |
-| `venta_id` | string | no | **sí** | → `ventas.id` |
+| `venta_id` | string | no | **sí** | → `ventas.id` → `ventas_resumen_v.id` |
 
 **Referenciada por:** `cfdi_lineas.venta_linea_id`, `promocion_aplicada.venta_linea_id`, `stock_apartado.venta_linea_id`, `venta_comisiones.venta_linea_id`, `venta_linea_lotes.venta_linea_id`
 
@@ -3556,7 +3642,7 @@
 | `iva_total` | number | sí |  |  |
 | `notas` | string | sí |  |  |
 | `origen` | string | sí |  |  |
-| `pedido_origen_id` | string | sí |  | → `ventas.id` |
+| `pedido_origen_id` | string | sí |  | → `ventas.id` → `ventas_resumen_v.id` |
 | `politica_cobro` | string | sí |  |  |
 | `requiere_factura` | boolean | sí |  |  |
 | `saldo_pendiente` | number | sí |  |  |
@@ -3592,6 +3678,18 @@
 
 ---
 
+## ventas_folio_renumeracion
+
+| Campo | Tipo | Nulo | Obligatorio al insertar | FK |
+|---|---|---|---|---|
+| `empresa_id` | string | no | **sí** |  |
+| `folio_anterior` | string | no | **sí** |  |
+| `folio_nuevo` | string | no | **sí** |  |
+| `renumerado_at` | string | no |  |  |
+| `venta_id` | string | no | **sí** |  |
+
+---
+
 ## visitas
 
 | Campo | Tipo | Nulo | Obligatorio al insertar | FK |
@@ -3607,7 +3705,7 @@
 | `notas` | string | sí |  |  |
 | `tipo` | string | no |  |  |
 | `user_id` | string | no | **sí** |  |
-| `venta_id` | string | sí |  | → `ventas.id` |
+| `venta_id` | string | sí |  | → `ventas.id` → `ventas_resumen_v.id` |
 
 ---
 
@@ -3796,6 +3894,33 @@
 | `total_generado` | number |
 | `total_pagado` | number |
 
+## ventas_resumen_v (vista)
+
+| Campo | Tipo |
+|---|---|
+| `almacen_id` | string |
+| `cerrado_at` | string |
+| `cliente_id` | string |
+| `cobrado_activo` | number |
+| `condicion_pago` | Database["public"]["Enums"]["condicion_pago"] |
+| `created_at` | string |
+| `descuento_total` | number |
+| `empresa_id` | string |
+| `es_saldo_inicial` | boolean |
+| `fecha` | string |
+| `folio` | string |
+| `id` | string |
+| `ieps_total` | number |
+| `iva_total` | number |
+| `lineas_descuento` | number |
+| `promo_descuento` | number |
+| `snapshot_total_efectivo` | number |
+| `status` | Database["public"]["Enums"]["status_venta"] |
+| `tipo` | Database["public"]["Enums"]["tipo_venta"] |
+| `total` | number |
+| `total_efectivo` | number |
+| `vendedor_id` | string |
+
 
 # Funciones / RPC disponibles
 
@@ -3803,6 +3928,7 @@
 - `_aplica_stock_lote()`
 - `_aplicar_delta_compra_edicion()`
 - `_mover_stock_entre_almacenes()`
+- `acreditar_timbres_pago()`
 - `actualizar_mi_partner_contacto()`
 - `add_timbres()`
 - `admin_link_team_account()`
@@ -3817,6 +3943,7 @@
 - `admin_sync_duplicados()`
 - `admin_sync_recientes()`
 - `ajustar_entrega()`
+- `apartar_rep()`
 - `aplicar_partner_referido()`
 - `aprobar_solicitud_partner()`
 - `aprobar_solicitud_traspaso()`
@@ -3832,6 +3959,7 @@
 - `check_stock_lote_paridad()`
 - `close_audit_line()`
 - `close_full_audit()`
+- `cobro_tiene_rep_vigente()`
 - `confirm_timbre_reserve()`
 - `confirmar_traspaso()`
 - `crear_mi_cupon_partner_v2()`
@@ -3891,6 +4019,7 @@
 - `fn_venta_cobrable()`
 - `fn_venta_lineas_resumen()`
 - `fn_ventas_resumen()`
+- `folio_lpad()`
 - `generar_recibo_volumen()`
 - `generate_folio()`
 - `get_audit_users()`
@@ -3913,10 +4042,12 @@
 - `preview_surtido_solicitud()`
 - `publicar_solicitud_traspaso()`
 - `puede_configurar_facturacion()`
+- `puede_facturar()`
 - `reabrir_pedido_parcial()`
 - `reasignar_entregas_bulk()`
 - `reasignar_pendientes_usuario()`
 - `recalc_producto_costo()`
+- `recalcular_facturacion_cfdi()`
 - `recalcular_nivel_partner()`
 - `rechazar_solicitud_partner()`
 - `rechazar_solicitud_traspaso()`
@@ -3945,6 +4076,7 @@
 - `surtir_solicitud_traspaso()`
 - `team_has_master_permission()`
 - `tiene_cobertura_vigente()`
+- `ultima_visita_por_cliente()`
 - `validar_stock_cotizacion()`
 - `verify_admin_pin()`
 - `wa_clientes_saldos()`

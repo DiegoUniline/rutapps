@@ -37,6 +37,7 @@ import { cn, fmtDate , todayLocal } from '@/lib/utils';
 import { generarEntregaPdf } from '@/lib/entregaPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { phoneWithLada } from '@/lib/phoneWithLada';
+import { opcionesConAsignado } from '@/lib/registrosInactivos';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -78,7 +79,8 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const { data: vendedores } = useVendedoresList();
   const { data: productosList } = useProductosForSelect();
   const { data: almacenesList } = useAlmacenes();
-  const { data: clientesList } = useClientes();
+  // Solo clientes activos para elegir (D-044); el ya guardado en la entrega se conserva marcado.
+  const { data: clientesList } = useClientes('', 'activo');
 
   const [lineas, setLineas] = useState<any[]>([]);
   const [showSurtirDialog, setShowSurtirDialog] = useState(false);
@@ -488,9 +490,9 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
     return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
   }
 
-  const vendedorOptions = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
-  const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}`, searchText: clienteTextoBusqueda(c) }));
-  const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
+  const vendedorOptions = opcionesConAsignado((vendedores ?? []).map(v => ({ value: v.id, label: v.nombre })), form.vendedor_id, form.vendedores?.nombre, '(baja)');
+  const clienteOptions = opcionesConAsignado((clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}`, searchText: clienteTextoBusqueda(c) })), form.cliente_id, form.clientes?.nombre);
+  const almacenOptions = opcionesConAsignado((almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre })), form.almacen_id, form.almacenes?.nombre);
 
   // Stock summary for surtir dialog
   const pendientesParaSurtir = lineas.filter((l: any) => !l.hecho);

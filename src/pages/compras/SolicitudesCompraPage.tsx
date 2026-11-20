@@ -109,13 +109,14 @@ export default function SolicitudesCompraPage() {
     staleTime: 60_000,
     queryFn: async () => {
       const [prov, alm, prod] = await Promise.all([
-        db.from('proveedores').select('id,nombre,email,condicion_pago,dias_credito').eq('empresa_id', empresa!.id).neq('status', 'baja').order('nombre'),
-        db.from('almacenes').select('id,nombre').eq('empresa_id', empresa!.id).order('nombre'),
+        db.from('proveedores').select('id,nombre,email,condicion_pago,dias_credito,status').eq('empresa_id', empresa!.id).order('nombre'),
+        db.from('almacenes').select('id,nombre,activo').eq('empresa_id', empresa!.id).order('nombre'),
         db.from('productos').select('id,codigo,nombre,nombre_compra,costo,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,factor_conversion, unidades_compra:unidades!productos_unidad_compra_id_fkey(abreviatura), unidades_venta:unidades!productos_unidad_venta_id_fkey(abreviatura)').eq('empresa_id', empresa!.id).neq('status', 'inactivo').order('nombre').limit(2000),
       ]);
       if (prov.error) console.error('Error proveedores:', prov.error);
       if (alm.error) console.error('Error almacenes:', alm.error);
       if (prod.error) console.error('Error productos:', prod.error);
+      // D-044: se traen todos para mostrar los ya guardados; los selectores solo ofrecen activos.
       return { proveedores: prov.data ?? [], almacenes: alm.data ?? [], productos: prod.data ?? [] };
     },
   });
@@ -431,8 +432,8 @@ export default function SolicitudesCompraPage() {
 
       <section className="bg-card border border-border rounded-xl p-4">
         <div className="grid md:grid-cols-3 gap-4">
-          <div><label className="label-odoo label-required">Proveedor</label><SearchableSelect disabled={!editable} options={catalogs.proveedores.map((p: any) => ({ value: p.id, label: p.nombre }))} value={header.proveedor_id || ''} onChange={v => { const p = catalogs.proveedores.find((x: any) => x.id === v); setHeader((h: any) => ({ ...h, proveedor_id: v, proveedor_nombre: p?.nombre || '', proveedor_email: p?.email || h.proveedor_email })); }} placeholder="Seleccionar proveedor…" /></div>
-          <div><label className="label-odoo label-required">Almacén destino</label><SearchableSelect disabled={!editable} options={catalogs.almacenes.map((a: any) => ({ value: a.id, label: a.nombre }))} value={header.almacen_id || ''} onChange={v => setHeader((h: any) => ({ ...h, almacen_id: v }))} placeholder="Seleccionar almacén…" /></div>
+          <div><label className="label-odoo label-required">Proveedor</label><SearchableSelect disabled={!editable} options={catalogs.proveedores.filter((p: any) => p.status === 'activo' || p.id === header.proveedor_id).map((p: any) => ({ value: p.id, label: p.status === 'activo' ? p.nombre : `${p.nombre} (inactivo)` }))} value={header.proveedor_id || ''} onChange={v => { const p = catalogs.proveedores.find((x: any) => x.id === v); setHeader((h: any) => ({ ...h, proveedor_id: v, proveedor_nombre: p?.nombre || '', proveedor_email: p?.email || h.proveedor_email })); }} placeholder="Seleccionar proveedor…" /></div>
+          <div><label className="label-odoo label-required">Almacén destino</label><SearchableSelect disabled={!editable} options={catalogs.almacenes.filter((a: any) => a.activo !== false || a.id === header.almacen_id).map((a: any) => ({ value: a.id, label: a.activo === false ? `${a.nombre} (inactivo)` : a.nombre }))} value={header.almacen_id || ''} onChange={v => setHeader((h: any) => ({ ...h, almacen_id: v }))} placeholder="Seleccionar almacén…" /></div>
           <div><label className="label-odoo">Correo del proveedor</label><input disabled={!editable} className="input-odoo w-full" value={header.proveedor_email || selectedProvider?.email || ''} onChange={e => setHeader((h: any) => ({ ...h, proveedor_email: e.target.value }))} placeholder="compras@proveedor.com" /></div>
         </div>
         <div className="mt-4"><label className="label-odoo">Mensaje / instrucciones</label><textarea disabled={!editable} className="input-odoo w-full min-h-[72px]" value={header.notas || ''} onChange={e => setHeader((h: any) => ({ ...h, notas: e.target.value }))} placeholder="Ej. favor de confirmar disponibilidad, cantidades y costos." /></div>
