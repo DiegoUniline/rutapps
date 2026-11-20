@@ -12,7 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Download, Search, BookOpen, ExternalLink } from 'lucide-react';
 import { cn, fmtNum } from '@/lib/utils';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 const REFERENCIA_LABELS: Record<string, string> = {
   ajuste: 'Ajuste inventario',
@@ -292,6 +295,9 @@ export default function KardexPage() {
     }
     return list;
   }, [rows, filterTipo, search]);
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const movil = useCargarMasMovil(filtered, `${almacenId}|${productoId}|${filterTipo}|${search}|${fechaDesde}|${fechaHasta}|${loteId}`);
 
   const saldoFinal = rows.length > 0 ? rows[rows.length - 1].saldo : saldoInicial;
   const cuadra = stockActual !== undefined && Math.abs(saldoFinal - (stockActual ?? 0)) < 0.001;
@@ -343,15 +349,39 @@ export default function KardexPage() {
 
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex items-center gap-2">
+    <div className="p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
+      {isMobile && (
+        <EncabezadoListaMovil titulo="Kardex">
+          <OdooFilterBar
+            search={search}
+            onSearchChange={setSearch}
+            placeholder="Buscar movimientos"
+            filterOptions={[
+              { key: 'tipo', label: 'Tipo', options: [{ value: 'entrada', label: 'Solo entradas' }, { value: 'salida', label: 'Solo salidas' }, ...Object.entries(REFERENCIA_LABELS).map(([k, v]) => ({ value: `ref:${k}`, label: v }))] },
+              ...(manejaLotes && productoId && (lotesProducto?.length ?? 0) > 0 ? [{ key: 'lote', label: 'Lote', options: (lotesProducto ?? []).map((l: any) => ({ value: l.id, label: l.codigo })) }] : []),
+            ]}
+            activeFilters={{ ...(filterTipo !== 'todos' ? { tipo: [filterTipo] } : {}), ...(loteId ? { lote: [loteId] } : {}) }}
+            onToggleFilter={(key, val) => { if (key === 'tipo') setFilterTipo(filterTipo === val ? 'todos' : val); if (key === 'lote') setLoteId(loteId === val ? '' : val); }}
+            onSetFilter={(key, vals) => { const v = vals[vals.length - 1]; if (key === 'tipo') setFilterTipo(v ?? 'todos'); if (key === 'lote') setLoteId(v ?? ''); }}
+            onClearFilters={() => { setFilterTipo('todos'); setLoteId(''); setSearch(''); }}
+            dateFrom={fechaDesde}
+            dateTo={fechaHasta}
+            onDateRangeChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }}
+            onDateFromChange={setFechaDesde}
+            onDateToChange={setFechaHasta}
+          />
+        </EncabezadoListaMovil>
+      )}
+      <div className="flex items-center gap-2 max-md:hidden">
         <BookOpen className="h-5 w-5 text-primary" />
         <h1 className="text-xl font-bold">Kardex</h1>
         <span className="text-sm text-muted-foreground">— Consulta de movimientos por producto y almacén</span>
       </div>
 
       {/* Selectors */}
-      <div className="bg-card border border-border rounded-lg p-3 space-y-3">
+      <div className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-[11px] font-medium text-muted-foreground uppercase">Almacén</label>
@@ -469,7 +499,7 @@ export default function KardexPage() {
 
 
           {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 max-md:hidden">
             <div className="relative flex-1 min-w-[150px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input placeholder="Buscar referencia/notas..." className="pl-8 h-8 text-[12px]" value={search} onChange={e => setSearch(e.target.value)} />
@@ -526,6 +556,31 @@ export default function KardexPage() {
           )}
 
           {/* Table */}
+          {isMobile ? (
+            isLoading ? <div className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</div> : (
+            <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio={rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'} {...movil}>
+              {movil.visibles.map(row => {
+                const od = getOrigenDestino(row);
+                const prodInfo = row.producto_id
+                  ? (refInfo?.productos?.[row.producto_id] ?? (row.producto_id === productoSel?.id ? { nombre: productoSel?.nombre, codigo: productoSel?.codigo } : null))
+                  : null;
+                const route = getReferenciaRoute(row.referencia_tipo, row.referencia_id);
+                const label = REFERENCIA_LABELS[row.referencia_tipo ?? ''] ?? row.referencia_tipo ?? '—';
+                const fecha = new Date(row.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' });
+                return (
+                  <ListaTarjetaMovil
+                    key={row.id}
+                    titulo={prodInfo?.nombre ?? '—'}
+                    linea2={<>{fecha} · {label}{od.origen || od.destino ? ` · ${od.origen || '—'} → ${od.destino || '—'}` : ''}{almacenId && productoId ? ` · Saldo ${fmtNum(row.saldo)}` : ''}</>}
+                    pildora={`${row.delta > 0 ? '+' : '−'}${fmtNum(Math.abs(row.delta))}`}
+                    tono={row.delta > 0 ? 'exito' : 'peligro'}
+                    onClick={route ? () => navigate(route) : undefined}
+                  />
+                );
+              })}
+            </ListaTarjetasMovil>
+            )
+          ) : (
           <div className="border border-border rounded overflow-auto max-h-[65vh]">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-card z-10">
@@ -651,7 +706,9 @@ export default function KardexPage() {
               </tbody>
             </table>
           </div>
+          )}
       </>
+    </div>
     </div>
   );
 }
