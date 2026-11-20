@@ -470,8 +470,8 @@ export default function VentaFormPage() {
         ) : undefined}
       />
       {!isNew && (
-        <div className="px-5 pt-3 flex items-center gap-3 flex-wrap">
-          <div className="flex-1 min-w-[240px] flex items-center gap-3 flex-wrap">
+        <div className="px-3 sm:px-5 pt-3 flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-3 flex-wrap">
             <OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly || h.editandoConfirmada ? undefined : (k => handleStatusChange(k as StatusVenta))} />
             {form.status !== 'borrador' && form.status !== 'cancelado' && (
               <span className={cn(

@@ -2,6 +2,7 @@ import type React from 'react';
 import { ArrowLeft, Save, Trash2, Check, Truck, FileText, Receipt, Printer, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StatusVenta } from '@/types';
+import { MasAccionesMovil, type AccionMovil } from '@/components/shared/MasAccionesMovil';
 
 interface Entrega {
   id: string;
@@ -47,10 +48,20 @@ export function VentaFormHeader({
   onBack, onSave, onDelete, onStatusChange, onCreateEntrega,
   onNavigateEntrega, onGenerarPdf, onPrintTicket, onFacturar, onDevolucion, accionesFinales,
 }: VentaFormHeaderProps) {
+  // En teléfono las acciones secundarias (consulta, impresión, devolución,
+  // cancelar, eliminar) van al menú «⋯»; los botones principales quedan a la vista.
+  const accionesMovil: AccionMovil[] = isNew ? [] : [
+    ...(tipo === 'pedido' && hayEntregas ? entregasExistentes.map(ent => ({ key: `ent-${ent.id}`, label: `Entrega ${ent.folio ?? ''}`, icon: Truck, onClick: () => onNavigateEntrega(ent.id) })) : []),
+    { key: 'doc', label: 'Documento', icon: FileText, onClick: onGenerarPdf },
+    ...(onPrintTicket ? [{ key: 'ticket', label: 'Imprimir ticket', icon: Printer, onClick: onPrintTicket }] : []),
+    ...(onDevolucion ? [{ key: 'dev', label: 'Devolución', icon: Undo2, onClick: onDevolucion, destructiva: true, separar: true }] : []),
+    ...(status !== 'cancelado' ? [{ key: 'cancelar', label: 'Cancelar venta', onClick: () => onStatusChange('cancelado'), destructiva: true, separar: !onDevolucion }] : []),
+    ...((status === 'borrador' || (status === 'cancelado' && canDeleteCancelada)) ? [{ key: 'eliminar', label: status === 'cancelado' ? 'Eliminar venta cancelada' : 'Eliminar borrador', icon: Trash2, onClick: onDelete, destructiva: true }] : []),
+  ];
   return (
     <div className="bg-card border-b border-border px-3 sm:px-4 py-2.5 sm:py-1.5 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-10">
       <div className="flex items-center gap-3 sm:gap-2.5 min-w-0">
-        <button onClick={onBack} className="btn-odoo-secondary !px-2.5">
+        <button onClick={onBack} className="btn-odoo-secondary !px-2.5 max-sm:!h-9 max-sm:!w-9 max-sm:!p-0 shrink-0" aria-label="Regresar">
           <ArrowLeft className="h-3.5 w-3.5" />
         </button>
         <div className="min-w-0">
@@ -71,40 +82,41 @@ export function VentaFormHeader({
       </div>
       {/* D-029: gris = consulta/impresión · rojo contorno = devolución/cancelar/eliminar ·
           azul = confirmar/guardar/crear/cobrar · naranja = editar (al final). */}
-      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+      <div className="flex items-center gap-2 min-w-0 max-w-full flex-wrap justify-end ml-auto">
+        <MasAccionesMovil acciones={accionesMovil} />
         {!isNew && tipo === 'pedido' && hayEntregas && entregasExistentes.map(ent => (
-          <button key={ent.id} onClick={() => onNavigateEntrega(ent.id)} className="btn-odoo-secondary text-xs">
+          <button key={ent.id} onClick={() => onNavigateEntrega(ent.id)} className="btn-odoo-secondary text-xs max-sm:hidden">
             <Truck className="h-3.5 w-3.5" /> {ent.folio}
           </button>
         ))}
         {!isNew && (
-          <button onClick={onGenerarPdf} className="btn-odoo-secondary text-xs">
+          <button onClick={onGenerarPdf} className="btn-odoo-secondary text-xs max-sm:hidden">
             <FileText className="h-3.5 w-3.5" /> Documento
           </button>
         )}
         {!isNew && onPrintTicket && (
-          <button onClick={onPrintTicket} className="btn-odoo-secondary text-xs">
+          <button onClick={onPrintTicket} className="btn-odoo-secondary text-xs max-sm:hidden">
             <Printer className="h-3.5 w-3.5" /> Imprimir ticket
           </button>
         )}
 
-        {!isNew && (onDevolucion || status !== 'cancelado') && <span className="w-px h-6 bg-border mx-0.5" aria-hidden />}
+        {!isNew && (onDevolucion || status !== 'cancelado') && <span className="w-px h-6 bg-border mx-0.5 max-sm:hidden" aria-hidden />}
         {!isNew && onDevolucion && (
-          <button onClick={onDevolucion} className="btn-odoo-danger text-xs">
+          <button onClick={onDevolucion} className="btn-odoo-danger text-xs max-sm:hidden">
             <Undo2 className="h-3.5 w-3.5" /> Devolución
           </button>
         )}
         {/* D-021: una venta confirmada ya no regresa a borrador; se corrige con Editar. */}
         {!isNew && status !== 'cancelado' && (
-          <button onClick={() => onStatusChange('cancelado')} className="btn-odoo-danger text-xs">Cancelar</button>
+          <button onClick={() => onStatusChange('cancelado')} className="btn-odoo-danger text-xs max-sm:hidden">Cancelar</button>
         )}
         {!isNew && (status === 'borrador' || (status === 'cancelado' && canDeleteCancelada)) && (
-          <button onClick={onDelete} className="btn-odoo-danger text-xs !px-2" title={status === 'cancelado' ? 'Eliminar venta cancelada' : 'Eliminar borrador'}>
+          <button onClick={onDelete} className="btn-odoo-danger text-xs !px-2 max-sm:hidden" title={status === 'cancelado' ? 'Eliminar venta cancelada' : 'Eliminar borrador'}>
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}
 
-        <span className="w-px h-6 bg-border mx-0.5" aria-hidden />
+        <span className="w-px h-6 bg-border mx-0.5 max-sm:hidden" aria-hidden />
         {isNew && (
           <button onClick={() => onSave()} disabled={isSaving} className="btn-odoo-secondary text-xs">
             <Save className="h-3.5 w-3.5" /> Guardar borrador

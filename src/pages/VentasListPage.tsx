@@ -564,8 +564,8 @@ export default function VentasListPage() {
         )}
 
         {canCreate && (
-          <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-7 px-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[11px] font-medium shrink-0">
-            <Plus className="h-3 w-3" /> Nueva venta
+          <button onClick={() => navigate('/ventas/nuevo')} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[12px] font-semibold shrink-0">
+            <Plus className="h-3.5 w-3.5" /> Nueva venta
           </button>
         )}
           </>
@@ -627,9 +627,9 @@ export default function VentasListPage() {
                   ) : (
                     <>
                       <span>Cant.: <strong className="text-foreground">{cantidadResumen}</strong></span>
-                      <span>Subtotal s/imp: <strong className="text-foreground">{fmt(resumenVentas.subtotal)}</strong></span>
-                      {resumenVentas.descuento > 0.005 && <span>Desc: <strong className="text-destructive">-{fmt(resumenVentas.descuento)}</strong></span>}
-                      <span>Imp: <strong className="text-foreground">{fmt(resumenVentas.impuestos)}</strong></span>
+                      <span className="max-sm:hidden">Subtotal s/imp: <strong className="text-foreground">{fmt(resumenVentas.subtotal)}</strong></span>
+                      {resumenVentas.descuento > 0.005 && <span className="max-sm:hidden">Desc: <strong className="text-destructive">-{fmt(resumenVentas.descuento)}</strong></span>}
+                      <span className="max-sm:hidden">Imp: <strong className="text-foreground">{fmt(resumenVentas.impuestos)}</strong></span>
                       <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
                       <span>Pagado: <strong className="text-success">{fmt(totalPagado)}</strong></span>
                       {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
