@@ -1,4 +1,6 @@
+import { useEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import type { PromoResult } from '@/hooks/usePromociones';
 import { VentaTotals } from '@/components/venta/VentaTotals';
@@ -20,7 +22,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { desgloseLineaHabilitado } from '@/lib/ventaLineaDesglose';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { useVentaLineaLotes } from '@/hooks/useVentaLineaLotes';
-import { useAllPresentaciones } from '@/hooks/usePresentaciones';
+import { useAllPresentaciones, type ProductoPresentacion } from '@/hooks/usePresentaciones';
+import { BuscadorProductoMovil, RenglonCompactoMovil, type AgregarProductoDatos, type PresentacionBuscable, type ProductoBuscable } from '@/components/productos/BuscadorProductoMovil';
+import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
+import { formatCurrency } from '@/lib/currency';
 
 
 interface Props {
@@ -53,11 +58,16 @@ interface Props {
   onToggleDescuentoExtraTipo?: () => void;
   onChangeLineListaPrecio?: (idx: number, selection: import('@/components/venta/ListaPrecioPicker').ListaPrecioSelection) => void;
   onPickLote?: (idx: number) => void;
+  /** D-038: precio neto por unidad base de la lista del cliente (buscador móvil). */
+  getPrecioLista?: (productoId: string, presentacion: ProductoPresentacion | null) => number;
 }
+
+type ProductoBuscableVenta = ProductoBuscable & { _stock?: number | null };
+const fmtCant = (n: number) => n.toLocaleString('es-MX', { maximumFractionDigits: 3 });
 
 export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
-  const { symbol } = useCurrency();
+  const { symbol, fmt } = useCurrency();
   const {
     readOnly, totals, onAddLine, pricingReady = true, sinImpuestos, setSinImpuestos,
     readOnlyForm, saldoPendiente, promoResults, currencyCode, cerradoSnapshot,
@@ -122,6 +132,57 @@ export function VentaLineasTab(props: Props) {
   })();
 
 
+  // ── D-038 · Teléfono: buscador a pantalla completa + renglones compactos ──
+  const capturaMovil = isMobile && !readOnly;
+  const money = (v: number | null | undefined) => (currencyCode ? formatCurrency(v, currencyCode) : fmt(v));
+  const [renglonAbierto, setRenglonAbierto] = useState<number | null>(null);
+  useEffect(() => { setRenglonAbierto(null); }, [lineas.length]);
+  const presentacionesDe = (productoId: string) => ((presentacionesActivas ?? []) as ProductoPresentacion[])
+    .filter(x => x.producto_id === productoId && x.activo !== false && Number(x.factor_base) > 0);
+  const precioDe = (p: ProductoBuscable, pres: PresentacionBuscable | null) => {
+    const completa = pres ? presentacionesDe(p.id).find(x => x.id === pres.id) ?? null : null;
+    return props.getPrecioLista ? props.getPrecioLista(p.id, completa) : 0;
+  };
+  // Tras elegir el producto con handleProductSelect, la cantidad y el precio se
+  // aplican con updateLine cuando el renglón ya existe (misma validación de stock).
+  const pendienteRef = useRef<{ idx: number; productoId: string; cantidad: number; porPaquetes: boolean; precio: number | null } | null>(null);
+  useEffect(() => {
+    const p = pendienteRef.current;
+    if (!p) return;
+    const l = props.lineas[p.idx];
+    if (!l || l.producto_id !== p.productoId) return;
+    pendienteRef.current = null;
+    props.onUpdateLine(p.idx, p.porPaquetes ? 'paquetes' : 'cantidad', p.cantidad);
+    if (p.precio != null) props.onUpdateLine(p.idx, 'precio_unitario', p.precio);
+  }, [props.lineas]); // eslint-disable-line react-hooks/exhaustive-deps
+  const agregarDesdeBuscador = ({ producto, cantidad, presentacion, precio }: AgregarProductoDatos<ProductoBuscableVenta>) => {
+    const pres = presentacion ? presentacionesDe(producto.id).find(x => x.id === presentacion.id) ?? null : null;
+    const existente = props.lineas.findIndex(l => l.producto_id === producto.id);
+    if (existente >= 0) {
+      const l = props.lineas[existente];
+      if ((l.presentacion_id ?? null) !== (pres?.id ?? null)) {
+        toast.error('Ese producto ya está en el documento con otra presentación. Cámbialo en su renglón.');
+        return false;
+      }
+      if (pres) props.onUpdateLine(existente, 'paquetes', (Number(l.paquetes) || 0) + cantidad);
+      else props.onUpdateLine(existente, 'cantidad', (Number(l.cantidad) || 0) + cantidad);
+      return;
+    }
+    let idx = props.lineas.findIndex(l => !l.producto_id);
+    if (idx < 0) { onAddLine(); idx = props.lineas.length; }
+    props.onProductSelect(idx, producto.id, pres ?? undefined);
+    const precioLista = precioDe(producto, presentacion);
+    pendienteRef.current = {
+      idx, productoId: producto.id, cantidad, porPaquetes: !!pres,
+      precio: props.canChangePrice && Math.abs(precio - precioLista) > 0.00005 ? precio : null,
+    };
+  };
+  const productosBuscador: ProductoBuscableVenta[] = capturaMovil ? (props.productosList ?? []).map((p: any) => ({
+    id: p.id, codigo: p.codigo ?? '', nombre: p.nombre ?? '', textoBusqueda: p.formula ?? '',
+    unidad: p.es_granel ? (p.unidad_granel || 'kg') : (p.unidades_venta?.abreviatura || 'pz'),
+    _stock: p._stock,
+  })) : [];
+
   return (
     <div className="min-w-0 max-w-full overflow-hidden p-2.5 sm:p-3">
       {!readOnly && !pricingReady && (
@@ -132,7 +193,53 @@ export function VentaLineasTab(props: Props) {
       {/* Tabla de líneas a lo ANCHO; la card de Resumen va DEBAJO de la tabla. */}
       <div className="min-w-0 max-w-full space-y-3">
         <div className="min-w-0 max-w-full space-y-3">
-          {isMobile ? (
+          {capturaMovil ? (
+            <div>
+              <BuscadorProductoMovil<ProductoBuscableVenta>
+                modo="venta"
+                productos={productosBuscador}
+                getExistencia={p => (p._stock == null ? null : Number(p._stock))}
+                getPresentaciones={p => presentacionesDe(p.id).map(x => ({ id: x.id, nombre: x.nombre, factor: Number(x.factor_base) }))}
+                getPrecio={precioDe}
+                puedeEditarPrecio={!!props.canChangePrice}
+                etiquetaPrecio="Precio s/imp."
+                agregados={new Set(lineas.map(l => l.producto_id).filter(Boolean) as string[])}
+                onAgregar={agregarDesdeBuscador}
+                disabled={!pricingReady}
+                avisoDeshabilitado="Elige primero el cliente."
+                fmt={v => money(v)}
+              />
+              {lineas.every(l => !l.producto_id) ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">Aún no hay productos. Toca «Buscar producto».</p>
+              ) : (
+                <div className="mt-3 border-b border-border">
+                  {lineas.map((l, idx) => {
+                    if (!l.producto_id) return null;
+                    const prod: any = (props.productosList ?? []).find((p: any) => p.id === l.producto_id);
+                    const snap: any = (l as any).productos;
+                    const unidad = (l as any).unidad_label || (prod?.es_granel ? prod.unidad_granel : '') || 'pz';
+                    const precio = Number(l.precio_unitario) || 0;
+                    const total = calculateSaleLineAmounts({ ...l, precio_unitario: precio } as SaleLinePricingLike, sinImpuestos).total;
+                    const detalle = l.presentacion_nombre
+                      ? `${fmtCant(Number(l.paquetes) || 0)} × ${l.presentacion_nombre} · ${money(precio)}`
+                      : `${fmtCant(Number(l.cantidad) || 0)} × ${unidad} · ${money(precio)}`;
+                    return (
+                      <RenglonCompactoMovil
+                        key={idx}
+                        nombre={prod?.nombre ?? snap?.nombre ?? l.descripcion ?? '—'}
+                        detalle={detalle}
+                        importe={money(total)}
+                        abierto={renglonAbierto === idx}
+                        onToggle={() => setRenglonAbierto(a => (a === idx ? null : idx))}
+                      >
+                        <VentaLineaMobile idx={idx} line={l} {...props} presentaciones={presentacionesActivas} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} sinMarco />
+                      </RenglonCompactoMovil>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : isMobile ? (
             <div className="space-y-2">
               {lineas.map((l, idx) => (
                 <VentaLineaMobile key={idx} idx={idx} line={l} {...props} presentaciones={presentacionesActivas} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} />
@@ -187,7 +294,7 @@ export function VentaLineasTab(props: Props) {
             </>
           )}
 
-          {!readOnly && (
+          {!readOnly && !capturaMovil && (
             <div className="flex items-center">
               <button onClick={onAddLine} disabled={!pricingReady} className="btn-odoo-secondary text-xs disabled:opacity-50 disabled:cursor-not-allowed">
                 <Plus className="h-3 w-3" /> Agregar producto
