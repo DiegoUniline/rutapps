@@ -1516,7 +1516,7 @@ export default function MiSuscripcionPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUpdateDialog(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowUpdateDialog(false)}>Cancelar</Button>
             <Button
               size="lg"
               className="font-bold"
@@ -1543,7 +1543,7 @@ export default function MiSuscripcionPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteFacturaDialog(null)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setDeleteFacturaDialog(null)}>Cancelar</Button>
             <Button
               variant="destructive"
               onClick={() => deleteFacturaDialog && handleDeleteFactura(deleteFacturaDialog)}
@@ -1633,7 +1633,7 @@ export default function MiSuscripcionPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTransferInfo(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowTransferInfo(false)}>Cancelar</Button>
             <Button onClick={handleSubmitTransfer} disabled={paying}>
               {paying && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               <BanknoteIcon className="h-4 w-4 mr-1" /> Ya transferí, enviar solicitud
@@ -1677,7 +1677,7 @@ export default function MiSuscripcionPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setInvoiceTransfer(null)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setInvoiceTransfer(null)}>Cancelar</Button>
             <Button onClick={handleSubmitInvoiceTransfer} disabled={!!payingInvoice}>
               {payingInvoice && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               <BanknoteIcon className="h-4 w-4 mr-1" /> Ya transferí

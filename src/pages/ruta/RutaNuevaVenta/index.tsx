@@ -98,7 +98,7 @@ function RutaNuevaVentaInner() {
         <div className="flex items-center gap-2 px-3 h-12">
           <button onClick={h.goBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent active:scale-95 transition-all"><ArrowLeft className="h-[18px] w-[18px] text-foreground" /></button>
           <span className="text-[15px] font-semibold text-foreground flex-1">Nueva venta</span>
-          <button
+          <button className="btn-cancelar"
             onClick={() => setShowCancelConfirm(true)}
             className="inline-flex items-center gap-1 px-2.5 h-8 rounded-lg bg-destructive/10 text-destructive text-[12px] font-semibold active:scale-95 transition-all"
           >

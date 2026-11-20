@@ -855,7 +855,7 @@ export default function LotesPage() {
               </div>
             </div>
             <div className="p-5 border-t border-border flex gap-2 justify-end">
-              <button onClick={() => setEdit(null)} className="btn-odoo text-sm" disabled={saving}>Cancelar</button>
+              <button onClick={() => setEdit(null)} className="btn-cancelar btn-odoo text-sm" disabled={saving}>Cancelar</button>
               <button onClick={handleSave} className="btn-odoo-primary text-sm" disabled={saving}>
                 {saving ? 'Guardando…' : 'Guardar'}
               </button>

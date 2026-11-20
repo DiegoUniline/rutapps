@@ -879,7 +879,7 @@ export default function EntregaListPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSurtirDialog(false)}>
+            <Button variant="cancelar" onClick={() => setShowSurtirDialog(false)}>
               Cancelar
             </Button>
             <Button
@@ -926,7 +926,7 @@ export default function EntregaListPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t">
-            <Button variant="ghost" onClick={() => setShowAsignarDialog(false)} disabled={bulkAsignarMut.isPending} className="text-destructive mr-auto">
+            <Button variant="cancelar" onClick={() => setShowAsignarDialog(false)} disabled={bulkAsignarMut.isPending} className="text-destructive mr-auto">
               Cancelar
             </Button>
             <Button

@@ -231,7 +231,7 @@ export function ImportDialog({ open, onOpenChange, type }: ImportDialogProps) {
             )}
 
             <div className="flex justify-end gap-2">
-              <button onClick={() => handleClose(false)} className="btn-odoo-secondary">Cancelar</button>
+              <button onClick={() => handleClose(false)} className="btn-cancelar btn-odoo-secondary">Cancelar</button>
               <button onClick={startImport} className="btn-odoo-primary gap-1">
                 <Upload className="h-3.5 w-3.5" />
                 Importar {rows.length} registros

@@ -115,7 +115,7 @@ export function CobroEditDialog({ open, onClose, cobro }: Props) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
+          <Button variant="cancelar" onClick={onClose} disabled={saving}>Cancelar</Button>
           <Button onClick={save} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</Button>
         </DialogFooter>
       </DialogContent>

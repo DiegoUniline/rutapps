@@ -244,7 +244,7 @@ export function DateRangePicker({
                 </div>
                 <div className="ml-auto flex items-center gap-2">
                   <Button variant="ghost" size="sm" onClick={handleClearDraft}>Limpiar</Button>
-                  <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancelar</Button>
+                  <Button variant="cancelar" size="sm" onClick={() => setOpen(false)}>Cancelar</Button>
                   <Button size="sm" onClick={handleApply}>Aplicar</Button>
                 </div>
               </div>

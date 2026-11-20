@@ -66,7 +66,7 @@ export function AbrirTurnoModal({ open, onOpenChange }: Props) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>
+          <Button variant="cancelar" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={busy}>{busy ? 'Abriendo…' : 'Abrir turno'}</Button>
         </DialogFooter>
       </DialogContent>

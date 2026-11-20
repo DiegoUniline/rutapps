@@ -500,7 +500,7 @@ export function ConfigEmisorCard() {
                 <Button size="sm" onClick={guardarSerie} disabled={guardandoSerie}>
                   {guardandoSerie ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar'}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setSerieForm(null)}>Cancelar</Button>
+                <Button size="sm" variant="cancelar" onClick={() => setSerieForm(null)}>Cancelar</Button>
               </>
             ) : (
               <>

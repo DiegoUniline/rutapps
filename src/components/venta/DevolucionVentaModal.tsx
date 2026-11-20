@@ -310,7 +310,7 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
+          <Button variant="cancelar" onClick={onClose} disabled={saving}>Cancelar</Button>
           <Button onClick={handleSave} disabled={!canSave} className="gap-1.5">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {saving ? 'Guardando…' : 'Registrar devolución'}

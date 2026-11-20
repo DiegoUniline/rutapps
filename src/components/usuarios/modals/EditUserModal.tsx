@@ -182,9 +182,9 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
           </div>
         </div>
         <div className="p-5 border-t border-border flex gap-2 justify-end">
-          <button onClick={onClose} className="btn-odoo text-sm">Cancelar</button>
+          <button onClick={onClose} className="btn-cancelar btn-odoo text-sm">Cancelar</button>
           <button onClick={handleSaveAll} disabled={savingUser} className="btn-odoo-primary text-sm">
-            {savingUser ? 'Guardando...' : 'Guardar cambios'}
+            {savingUser ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </div>

@@ -91,7 +91,7 @@ export function SurtidoPreviewDialog({ open, onOpenChange, lineas, cargando, eje
         )}
 
         <DialogFooter>
-          <button className="btn-odoo" onClick={() => onOpenChange(false)}>Cancelar</button>
+          <button className="btn-cancelar btn-odoo" onClick={() => onOpenChange(false)}>Cancelar</button>
           <button className="btn-odoo-primary" disabled={cargando || ejecutando || nada} onClick={onConfirm}>
             {ejecutando ? 'Procesando...' : textoBoton}
           </button>

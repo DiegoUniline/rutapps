@@ -88,7 +88,8 @@ function resolveCell(producto: ProductoPrecioRow, listaId: string | null, rules:
   const pricing = resolveProductPricing(rules, producto, listaId);
   const rule = pricing.appliedRule;
 
-  if (rule && (rule.comision_pct ?? 0) > 0) {
+  // D-041: la regla de la lista solo da comisión a productos con listas de precio (igual que la BD).
+  if (producto.usa_listas_precio && rule && (rule.comision_pct ?? 0) > 0) {
     return {
       precio: pricing.displayPrice,
       comisionPct: rule.comision_pct!,

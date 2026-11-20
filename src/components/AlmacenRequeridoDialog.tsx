@@ -27,7 +27,7 @@ export default function AlmacenRequeridoDialog({ open, onClose }: Props) {
           <Button onClick={() => { onClose(); navigate('/configuracion/usuarios'); }}>
             Ir a Usuarios
           </Button>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="cancelar" onClick={onClose}>
             Cancelar
           </Button>
         </DialogFooter>

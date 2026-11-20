@@ -308,7 +308,7 @@ export default function SolicitudCompraProveedorPublicaPage() {
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setCloseConfirmOpen(false)} className="rounded-xl border border-[#d0d5dd] bg-white px-4 py-3 text-sm font-black text-[#344054] transition hover:bg-[#f8fafc]">Cancelar</button>
+                <button type="button" onClick={() => setCloseConfirmOpen(false)} className="btn-cancelar rounded-xl border border-[#d0d5dd] bg-white px-4 py-3 text-sm font-black text-[#344054] transition hover:bg-[#f8fafc]">Cancelar</button>
                 <button type="button" disabled={saving} onClick={() => void submit('close')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0061e8] px-4 py-3 text-sm font-black text-white shadow-[0_8px_20px_rgba(0,97,232,.2)] transition hover:bg-[#004fc0] disabled:opacity-50">
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />} Sí, cerrar solicitud
                 </button>

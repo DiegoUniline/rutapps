@@ -1039,7 +1039,7 @@ export default function AjustesInventarioPage() {
                             <>
                               <Input value={editMotivo} onChange={e => setEditMotivo(e.target.value)} placeholder="Motivo" className="h-8 max-w-xs text-xs" />
                               <Button size="sm" className="h-8 text-xs gap-1" disabled={histBusy} onClick={() => guardarEdicion(group)}>
-                                <Save className="h-3.5 w-3.5" /> {histBusy ? 'Guardando…' : 'Guardar cambios'}
+                                <Save className="h-3.5 w-3.5" /> {histBusy ? 'Guardando…' : 'Guardar'}
                               </Button>
                               <Button size="sm" variant="outline" className="h-8 text-xs" disabled={histBusy} onClick={() => setEditGroupKey(null)}>Descartar</Button>
                             </>
@@ -1281,7 +1281,7 @@ export default function AjustesInventarioPage() {
               </p>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowResetDialog(false)}>Cancelar</Button>
+              <Button variant="cancelar" onClick={() => setShowResetDialog(false)}>Cancelar</Button>
               <Button variant="destructive" onClick={resetStock} disabled={resetting}>
                 <RotateCcw className="h-4 w-4 mr-1.5" />
                 {resetting ? 'Reiniciando...' : 'Confirmar reinicio'}
@@ -1312,7 +1312,7 @@ export default function AjustesInventarioPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowLoteConfirm(false)} disabled={applying}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowLoteConfirm(false)} disabled={applying}>Cancelar</Button>
             <Button onClick={() => { setShowLoteConfirm(false); applyAdjustments(); }} disabled={applying}>
               {applying ? 'Aplicando…' : 'Sí, asignar'}
             </Button>

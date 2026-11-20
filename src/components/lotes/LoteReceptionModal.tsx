@@ -152,7 +152,7 @@ export function LoteReceptionModal({ empresaId, producto, piezas, onClose, onCon
         </div>
 
         <div className="p-5 border-t border-border flex gap-2 justify-end">
-          <button onClick={onClose} className="btn-odoo text-sm" disabled={saving}>Cancelar</button>
+          <button onClick={onClose} className="btn-cancelar btn-odoo text-sm" disabled={saving}>Cancelar</button>
           <button onClick={confirmar} className="btn-odoo-primary text-sm" disabled={saving}>
             {saving ? 'Guardando…' : (confirmLabel ?? 'Recibir en este lote')}
           </button>

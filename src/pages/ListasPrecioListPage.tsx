@@ -263,7 +263,7 @@ export default function ListasPrecioListPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={confirmDelete} className="border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10">
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

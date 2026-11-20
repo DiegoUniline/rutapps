@@ -88,7 +88,7 @@ export default function MermaMotivosPage() {
             <Input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej. Caducado" autoFocus />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={submit} disabled={upsert.isPending}>Guardar</Button>
           </DialogFooter>
         </DialogContent>

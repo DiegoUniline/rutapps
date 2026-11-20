@@ -187,7 +187,7 @@ export function ComplementosPagoSection() {
                           <Button size="sm" variant="outline" disabled={accion === p.id} onClick={() => reconciliarRep(p.id)}>Reconciliar</Button>
                         )}
                         {['timbrado', 'cancelacion_rechazada'].includes(p.status) && (
-                          <Button size="sm" variant="ghost" className="text-destructive" disabled={accion === p.id} onClick={() => cancelarRep(p.id)}>Cancelar</Button>
+                          <Button size="sm" variant="cancelar" className="text-destructive" disabled={accion === p.id} onClick={() => cancelarRep(p.id)}>Cancelar</Button>
                         )}
                       </TableCell>
                     </TableRow>

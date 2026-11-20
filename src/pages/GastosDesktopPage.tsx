@@ -250,9 +250,9 @@ export default function GastosDesktopPage() {
             <Input placeholder="Notas" value={notas} onChange={e => setNotas(e.target.value)} />
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => { setShowForm(false); resetForm(); }}>Cancelar</Button>
+            <Button variant="cancelar" size="sm" onClick={() => { setShowForm(false); resetForm(); }}>Cancelar</Button>
             <Button size="sm" onClick={() => saveGasto.mutate()} disabled={saveGasto.isPending}>
-              <Save className="h-3.5 w-3.5 mr-1" /> {editId ? 'Guardar cambios' : 'Guardar'}
+              <Save className="h-3.5 w-3.5 mr-1" /> {editId ? 'Guardar' : 'Guardar'}
             </Button>
           </div>
         </div>

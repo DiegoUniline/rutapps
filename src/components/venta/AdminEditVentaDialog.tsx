@@ -216,7 +216,7 @@ export function AdminEditVentaDialog({ venta, lineas, onSaved }: Props) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={save} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Guardar cambios
             </Button>

@@ -79,7 +79,7 @@ export function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores
                 <td className="py-1.5 px-3 text-center" colSpan={2}>
                   <div className="flex items-center justify-center gap-1.5">
                     <button onClick={handleAdd} disabled={!newProv.proveedor_id || saving} className="btn-odoo-primary text-[11px] py-0.5 px-2">Agregar</button>
-                    <button onClick={() => setAdding(false)} className="btn-odoo-secondary text-[11px] py-0.5 px-2">Cancelar</button>
+                    <button onClick={() => setAdding(false)} className="btn-cancelar btn-odoo-secondary text-[11px] py-0.5 px-2">Cancelar</button>
                   </div>
                 </td>
               </tr>

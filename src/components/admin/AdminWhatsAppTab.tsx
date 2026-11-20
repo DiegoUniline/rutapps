@@ -338,7 +338,7 @@ export default function AdminWhatsAppTab() {
                 </div>
               </div>
               <Button onClick={saveTemplates} disabled={savingTemplates}>
-                <Save className="h-4 w-4 mr-1.5" />{savingTemplates ? 'Guardando...' : 'Guardar cambios'}
+                <Save className="h-4 w-4 mr-1.5" />{savingTemplates ? 'Guardando...' : 'Guardar'}
               </Button>
             </div>
           </CardHeader>

@@ -642,7 +642,7 @@ export default function FacturacionCfdiPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => setShowBulkDelete(false)}>Cancelar</Button>
+            <Button variant="cancelar" className="flex-1" onClick={() => setShowBulkDelete(false)}>Cancelar</Button>
             <Button variant="destructive" className="flex-1" disabled={bulkProcessing} onClick={() => {
               setShowBulkDelete(false);
               requestPin(

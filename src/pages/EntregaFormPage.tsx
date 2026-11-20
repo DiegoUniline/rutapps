@@ -1069,7 +1069,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSurtirDialog(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowSurtirDialog(false)}>Cancelar</Button>
             <Button
               onClick={handleSurtirTodoConfirmado}
               disabled={!surtirAlmacenId || surtirTodoMut.isPending}
@@ -1096,7 +1096,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAsignarDialog(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowAsignarDialog(false)}>Cancelar</Button>
             <Button onClick={handleAsignar} disabled={asignarMut.isPending}>Asignar</Button>
           </DialogFooter>
         </DialogContent>
@@ -1119,7 +1119,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowExpressDialog(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setShowExpressDialog(false)}>Cancelar</Button>
             <Button onClick={handleExpressAsignarCargar} disabled={asignarYCargarMut.isPending}>
               <Zap className="h-3.5 w-3.5" /> Asignar y cargar
             </Button>

@@ -763,7 +763,7 @@ export default function VentasListPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { if (!deleteTarget) return; deleteVenta.mutateAsync(deleteTarget).then(() => toast.success('Venta eliminada')).catch((err: any) => toast.error(err.message)); setDeleteTarget(null); }}>Eliminar</AlertDialogAction>
+            <AlertDialogAction className="border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10" onClick={() => { if (!deleteTarget) return; deleteVenta.mutateAsync(deleteTarget).then(() => toast.success('Venta eliminada')).catch((err: any) => toast.error(err.message)); setDeleteTarget(null); }}>Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

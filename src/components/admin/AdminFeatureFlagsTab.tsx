@@ -251,7 +251,7 @@ export default function AdminFeatureFlagsTab() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="cancelar" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={save} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Guardar
             </Button>

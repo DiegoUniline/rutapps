@@ -358,7 +358,7 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
           </div>
 
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={createMut.isPending}>
+            <Button variant="cancelar" onClick={() => onOpenChange(false)} className="flex-1" disabled={createMut.isPending}>
               Cancelar
             </Button>
             <Button onClick={() => createMut.mutate()} className="flex-1" disabled={createMut.isPending || !nombre.trim() || !unidadVentaId || !unidadCompraId}>

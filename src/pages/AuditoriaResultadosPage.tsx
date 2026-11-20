@@ -631,7 +631,7 @@ export default function AuditoriaResultadosPage() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowAprobar(false)}>Cancelar</Button>
+              <Button variant="cancelar" onClick={() => setShowAprobar(false)}>Cancelar</Button>
               <Button onClick={() => aprobarAuditoria.mutate()} disabled={aprobarAuditoria.isPending}>
                 {aprobarAuditoria.isPending ? 'Aplicando...' : 'Confirmar y ajustar stock'}
               </Button>

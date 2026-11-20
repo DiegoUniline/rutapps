@@ -158,7 +158,7 @@ export default function GpsMapPicker({ lat, lng, onChange }: GpsMapPickerProps) 
                 />
               </div>
               <div className="flex items-center justify-end gap-2">
-                <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-border px-3 py-1.5 text-[12px] text-muted-foreground hover:bg-accent">
+                <button type="button" onClick={() => setOpen(false)} className="btn-cancelar rounded-md border border-border px-3 py-1.5 text-[12px] text-muted-foreground hover:bg-accent">
                   Cancelar
                 </button>
                 <button

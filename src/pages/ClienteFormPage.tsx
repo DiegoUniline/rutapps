@@ -998,7 +998,7 @@ export default function ClienteFormPage() {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <button type="button" className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-accent transition-colors"
+              <button type="button" className="btn-cancelar px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-accent transition-colors"
                 onClick={() => { setShowNewZona(false); setNewZonaNombre(''); }}>
                 Cancelar
               </button>

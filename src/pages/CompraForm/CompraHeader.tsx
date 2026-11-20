@@ -81,7 +81,7 @@ export function CompraHeader(p: Props) {
             </button>
           )}
           {p.editingExisting && (
-            <button onClick={p.cancelEditing} disabled={p.saving} className="btn-odoo-secondary gap-1">
+            <button onClick={p.cancelEditing} disabled={p.saving} className="btn-cancelar btn-odoo-secondary gap-1">
               <X className="h-3.5 w-3.5" /> Descartar
             </button>
           )}
@@ -260,7 +260,7 @@ function ConfirmDialog({ confirmDialog, setConfirmDialog, handleStatusChange, ha
   return (
     <AlertDialog open={confirmDialog?.open} onOpenChange={open => { if (!open) setConfirmDialog(null); }}>
       <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirmDialog?.title}</AlertDialogTitle><AlertDialogDescription>{confirmDialog?.description}</AlertDialogDescription></AlertDialogHeader>
-        <AlertDialogFooter><AlertDialogCancel>No, volver</AlertDialogCancel><AlertDialogAction className={cn(confirmDialog?.action === 'cancelar' && "bg-destructive text-destructive-foreground hover:bg-destructive/90")} onClick={() => {
+        <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction className={cn(confirmDialog?.action === 'cancelar' && "border border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10")} onClick={() => {
           if (confirmDialog?.action === 'cancelar') {
             requestPin('Cancelar compra', 'Ingresa tu PIN', () => handleCancel());
           } else if (confirmDialog?.action === 'recibir_todo') {
@@ -269,7 +269,7 @@ function ConfirmDialog({ confirmDialog, setConfirmDialog, handleStatusChange, ha
             handleStatusChange(confirmDialog.action);
           }
           setConfirmDialog(null);
-        }}>Sí, continuar</AlertDialogAction></AlertDialogFooter>
+        }}>{({ confirmada: 'Confirmar', recibir_todo: 'Recibir', pagada: 'Marcar pagada', cancelar: 'Cancelar compra' } as Record<string, string>)[confirmDialog?.action ?? ''] ?? 'Continuar'}</AlertDialogAction></AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
