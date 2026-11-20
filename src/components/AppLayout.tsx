@@ -502,7 +502,7 @@ function Breadcrumb() {
   if (segments.length === 0 || isVentaFormPath(location.pathname) || location.pathname === '/ventas') return null;
 
   return (
-    <div className="h-9 flex items-center px-5 bg-card border-b border-border text-xs text-muted-foreground overflow-x-auto">
+    <div className="h-9 flex items-center px-3 sm:px-5 bg-card border-b border-border text-xs text-muted-foreground overflow-x-auto no-scrollbar">
       <div className="flex items-center gap-1.5 whitespace-nowrap">
         {segments.map((seg, i) => {
           const isLast = i === segments.length - 1;
@@ -661,7 +661,9 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, hasT
 const DemoWelcomeDialog = lazy(() => import('@/components/DemoWelcomeDialog'));
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
+  // En tablet (menos de 1100 px) la barra lateral arranca colapsada para dejar
+  // espacio a la vista; el usuario la puede expandir.
+  const [collapsed, setCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1100);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [showDemoWelcome, setShowDemoWelcome] = useState(false);
@@ -744,11 +746,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <SandboxBanner />
         <NotificationRuntime bannersOnly />
         {/* Mobile top bar */}
-        <header className="min-h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0 safe-area-top">
-          <div className="flex items-center gap-2">
+        <header className="min-h-14 flex items-center justify-between gap-2 pl-1.5 pr-1 bg-card border-b border-border shrink-0 safe-area-top">
+          <div className="flex items-center gap-1.5 min-w-0">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <button className="p-2 rounded-md text-foreground hover:bg-accent transition-colors">
+                <button className="h-10 w-10 inline-flex items-center justify-center rounded-md text-foreground hover:bg-accent transition-colors" aria-label="Abrir menú">
                   <Menu className="h-5 w-5" />
                 </button>
               </SheetTrigger>
@@ -808,19 +810,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-6 w-6 rounded object-contain" />
             <span className="text-[16px] font-black text-primary tracking-tight">Rutapp</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <TiendaOrdersBell />
             <button
               onClick={() => setPaletteOpen(true)}
-              className="p-2 rounded-md text-foreground/70 hover:text-foreground transition-colors"
+              className="h-10 w-10 inline-flex items-center justify-center rounded-md text-foreground/70 hover:text-foreground transition-colors"
               title="Buscar (⌘K)"
+              aria-label="Buscar"
             >
               <Search className="h-[18px] w-[18px]" />
             </button>
             <button
               onClick={applySwUpdate}
+              aria-label="Actualizar app"
               className={cn(
-                "p-2 rounded-md transition-colors",
+                "h-10 w-10 inline-flex items-center justify-center rounded-md transition-colors",
                 swUpdateAvailable
                   ? "text-primary animate-pulse hover:text-primary/80"
                   : "text-foreground/70 hover:text-foreground"
@@ -831,7 +835,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-md text-foreground/70 hover:text-foreground transition-colors"
+              className="h-10 w-10 inline-flex items-center justify-center rounded-md text-foreground/70 hover:text-foreground transition-colors"
+              aria-label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
             >
               {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
             </button>

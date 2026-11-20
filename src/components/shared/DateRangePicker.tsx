@@ -151,7 +151,10 @@ export function DateRangePicker({
             )}
           >
             <CalendarIcon className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
-            <span className="truncate max-w-[120px] sm:max-w-[160px]">{buttonLabel}</span>
+            <span className="truncate max-w-[150px] sm:max-w-[160px]">
+              <span className="sm:hidden">{buttonLabel.replace(/(\d{2}\/\d{2}\/)\d{2}(\d{2})/g, '$1$2')}</span>
+              <span className="hidden sm:inline">{buttonLabel}</span>
+            </span>
           </Button>
         </PopoverTrigger>
 

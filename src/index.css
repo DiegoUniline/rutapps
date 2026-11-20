@@ -348,7 +348,7 @@ html, body, #root {
 
   /* Statusbar */
   .statusbar-step {
-    @apply px-4 py-1.5 text-[12px] font-semibold cursor-pointer transition-all relative;
+    @apply px-3 sm:px-4 py-1.5 text-[12px] font-semibold cursor-pointer transition-all relative whitespace-nowrap shrink-0;
   }
   .statusbar-step-active {
     @apply bg-primary text-primary-foreground;

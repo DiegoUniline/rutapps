@@ -103,7 +103,7 @@ function IndependentFilterDropdown({
         <ChevronDown className="h-3 w-3" />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95 duration-150 w-[240px]">
+        <div className={cn("absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95 duration-150", bloque ? "right-0 min-w-[170px]" : "w-[240px]")}>
           {filter.options.length > 5 && (
             <div className="px-3 pt-2 pb-1">
               <div className="relative">
@@ -195,6 +195,7 @@ export function OdooFilterBar({
 }: OdooFilterBarProps) {
   const [groupOpen, setGroupOpen] = useState(false);
   const [filtrosOpen, setFiltrosOpen] = useState(false);
+  const [filtrosMovilOpen, setFiltrosMovilOpen] = useState(false);
   const filtrosRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -267,24 +268,6 @@ export function OdooFilterBar({
           />
         )}
       </ResponsiveFilterCard>
-
-    </>
-  );
-
-  const renderFilters = (isMobile: boolean) => (
-    <>
-      {/* Filter dropdowns */}
-      {filterOptions && filterOptions.length > 0 && onToggleFilter && filterOptions.map(fo => (
-        <ResponsiveFilterCard key={fo.key} label={fo.label} isMobile={isMobile}>
-          <IndependentFilterDropdown
-            filter={fo}
-            selected={activeFilters?.[fo.key] ?? []}
-            onToggle={(val) => onToggleFilter(fo.key, val)}
-            onSetAll={(vals) => onSetFilter?.(fo.key, vals)}
-            compact={compact}
-          />
-        </ResponsiveFilterCard>
-      ))}
 
     </>
   );
@@ -379,26 +362,6 @@ export function OdooFilterBar({
 
   const limpiarTodo = () => { onClearFilters?.(); if (onDateRangeChange) onDateRangeChange('', ''); else { onDateFromChange?.(''); onDateToChange?.(''); } };
 
-  const renderControls = (isMobile: boolean) => (
-    <>
-      {renderDate(isMobile)}
-      {renderFilters(isMobile)}
-      {renderGroup(isMobile)}
-      {/* Clear all */}
-      <ResponsiveFilterCard label="Acción" isMobile={isMobile}>
-        {activeCount > 0 && onClearFilters && (
-          <button type="button" onClick={() => { onClearFilters(); if (onDateRangeChange) onDateRangeChange('', ''); else { onDateFromChange?.(''); onDateToChange?.(''); } }} className={cn("text-destructive hover:underline flex items-center gap-1 shrink-0", compact ? "text-[10px]" : "text-[11px]")}>
-            <X className="h-3 w-3" /> Limpiar
-          </button>
-        )}
-      </ResponsiveFilterCard>
-
-      <ResponsiveFilterCard label="Más" isMobile={isMobile}>
-        {children}
-      </ResponsiveFilterCard>
-    </>
-  );
-
   const hayFiltros = !!(filterOptions && filterOptions.length > 0 && onToggleFilter);
   const hayAgrupar = !!(groupByOptions && groupByOptions.length > 0 && (onGroupByChange || onGroupByLevelChange));
   const hayAcciones = Children.toArray(children).length > 0;
@@ -408,9 +371,9 @@ export function OdooFilterBar({
   return (
     <div className="space-y-1.5">
       {/* Escritorio: barra central (fecha · buscador · filtros) y acciones a la derecha */}
-      <div className="hidden sm:flex items-center gap-2">
+      <div className="hidden sm:flex flex-wrap items-center gap-2">
         <div className={cn("flex-1 min-w-0", hayAcciones && "hidden xl:block")} aria-hidden />
-        <div className="flex items-stretch h-9 w-full max-w-2xl min-w-0 rounded-xl border border-border bg-card shadow-sm overflow-visible focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15 transition-shadow">
+        <div className="flex items-stretch h-9 flex-[1_1_26rem] max-w-2xl min-w-0 rounded-xl border border-border bg-card shadow-sm overflow-visible focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15 transition-shadow">
           {hayFecha && (
             <div className="shrink-0 rounded-l-[11px] overflow-hidden">{renderDate(false)}</div>
           )}
@@ -486,21 +449,99 @@ export function OdooFilterBar({
         <div className={cn("min-w-0 flex items-center justify-end gap-1.5 flex-wrap", hayAcciones ? "flex-1" : "flex-1 hidden sm:flex")}>{children}</div>
       </div>
 
-      {/* Móvil: buscador a lo ancho */}
-      <div className="sm:hidden relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={search}
-          onChange={e => onSearchChange(e.target.value)}
-          placeholder={placeholder}
-          className="input-odoo pl-8 w-full"
-        />
-      </div>
+      {/* Móvil: buscador + botón Filtros en un renglón; fecha y acciones en
+          otro (se acomodan con wrap). Los filtros se despliegan en un panel
+          dentro del flujo para no robar espacio ni salirse de la pantalla. */}
+      <div className="sm:hidden space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => onSearchChange(e.target.value)}
+              placeholder={placeholder}
+              className="input-odoo h-10 pl-8 pr-8 w-full"
+            />
+            {search && (
+              <button type="button" onClick={() => onSearchChange('')} aria-label="Borrar búsqueda" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {(hayFiltros || hayAgrupar) && (
+            <button
+              type="button"
+              onClick={() => setFiltrosMovilOpen(o => !o)}
+              aria-expanded={filtrosMovilOpen}
+              aria-label="Filtros"
+              className={cn(
+                "relative h-10 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-lg border text-[13px] font-medium transition-colors",
+                filtrosActivos > 0 || filtrosMovilOpen ? "border-primary/50 text-primary bg-primary/5" : "border-border bg-card text-foreground hover:bg-accent"
+              )}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              <span>Filtros</span>
+              {filtrosActivos > 0 && (
+                <span className="bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-4 min-w-4 px-1 inline-flex items-center justify-center">{filtrosActivos}</span>
+              )}
+            </button>
+          )}
+        </div>
 
-      {/* Mobile controls */}
-      <div className="flex sm:hidden items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        {renderControls(true)}
+        {(hayFecha || hayAcciones) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {hayFecha && (
+              <DateRangePicker
+                placeholder="Rango de fechas"
+                from={dateFrom ?? ''}
+                to={dateTo ?? ''}
+                onChange={(f, t) => {
+                  if (onDateRangeChange) onDateRangeChange(f, t);
+                  else { onDateFromChange?.(f); onDateToChange?.(t); }
+                }}
+                className="min-w-0 shrink-0"
+              />
+            )}
+            {hayAcciones && (
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 min-w-0">{children}</div>
+            )}
+          </div>
+        )}
+
+        {filtrosMovilOpen && (hayFiltros || hayAgrupar) && (
+          <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+              {hayFiltros && filterOptions!.map(fo => (
+                <div key={fo.key} className="space-y-1 min-w-0">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold truncate">{fo.label}</div>
+                  <IndependentFilterDropdown
+                    filter={fo}
+                    selected={activeFilters?.[fo.key] ?? []}
+                    onToggle={(val) => onToggleFilter!(fo.key, val)}
+                    onSetAll={(vals) => onSetFilter?.(fo.key, vals)}
+                    compact
+                    bloque
+                  />
+                </div>
+              ))}
+              {hayAgrupar && (
+                <div className="col-span-2 space-y-1 min-w-0">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Agrupar</div>
+                  {renderGroup(false)}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between border-t border-border mt-3 pt-2">
+              {activeCount > 0 && onClearFilters ? (
+                <button type="button" onClick={limpiarTodo} className="h-8 text-[12px] text-destructive hover:underline inline-flex items-center gap-1">
+                  <X className="h-3.5 w-3.5" /> Limpiar filtros
+                </button>
+              ) : <span />}
+              <button type="button" onClick={() => setFiltrosMovilOpen(false)} className="h-8 px-3 rounded-md text-[12px] font-semibold text-primary hover:bg-primary/5">Listo</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Active filter chips */}
