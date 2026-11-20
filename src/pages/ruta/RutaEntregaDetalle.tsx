@@ -73,6 +73,8 @@ export default function RutaEntregaDetalle() {
   const [editLinea, setEditLinea] = useState<any | null>(null);
   const [editCantidad, setEditCantidad] = useState(0);
   const [editMotivo, setEditMotivo] = useState('');
+  // D-036: lo que el cliente rechaza es «bueno» (queda vendible en el camión) o «merma» (no vendible).
+  const [editCondicion, setEditCondicion] = useState<'bueno' | 'merma' | null>(null);
   const [savingLinea, setSavingLinea] = useState(false);
 
   const { data: entrega, isLoading } = useQuery({
@@ -327,6 +329,7 @@ export default function RutaEntregaDetalle() {
     setEditLinea(l);
     setEditCantidad(Number(l.cantidad_entregada) || 0);
     setEditMotivo(l.motivo_no_entrega ?? '');
+    setEditCondicion(null);
   };
 
   const guardarLineaEditada = async () => {
@@ -337,6 +340,9 @@ export default function RutaEntregaDetalle() {
     if (quitada <= 0) { setEditLinea(null); return; }
     const motivo = editMotivo.trim();
     if (!motivo) { toast.error('Indica el motivo por el que se quita el producto'); return; }
+    if (!editCondicion) { toast.error('Indica si lo que regresa está bueno o es merma'); return; }
+    const mermaPrevia = Number(editLinea.cantidad_merma) || 0;
+    const cantidadMerma = editCondicion === 'merma' ? mermaPrevia + quitada : mermaPrevia;
     setSavingLinea(true);
     try {
       // Reducir cantidad_entregada deja el producto en el camión (no se descuenta
@@ -347,12 +353,14 @@ export default function RutaEntregaDetalle() {
         cantidad_entregada: nueva,
         hecho: nueva > 0,
         motivo_no_entrega: motivo,
+        cantidad_merma: cantidadMerma,
       };
       if (navigator.onLine) {
         const { error } = await supabase.from('entrega_lineas').update({
           cantidad_entregada: nueva,
           hecho: nueva > 0,
           motivo_no_entrega: motivo,
+          cantidad_merma: cantidadMerma,
         } as any).eq('id', editLinea.id);
         if (error) throw error;
       } else {
@@ -360,9 +368,10 @@ export default function RutaEntregaDetalle() {
         toast.message('Sin conexión: cambio guardado localmente, se sincronizará');
       }
       const prod = editLinea.productos?.nombre ?? 'Producto';
+      const destino = editCondicion === 'merma' ? 'pasan a merma en camión (no vendible)' : 'regresan al camión';
       toast.success(nueva === 0
-        ? `${prod} quitado de la entrega (regresa al camión)`
-        : `${prod}: ${quitada} ${quitada === 1 ? 'pieza' : 'piezas'} regresan al camión`);
+        ? `${prod} quitado de la entrega: ${quitada} ${destino}`
+        : `${prod}: ${quitada} ${quitada === 1 ? 'pieza' : 'piezas'} ${destino}`);
       setEditLinea(null);
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
@@ -901,7 +910,7 @@ export default function RutaEntregaDetalle() {
               </div>
               <div>
                 <p className="text-[14px] font-medium text-foreground">{editLinea.productos?.nombre ?? '—'}</p>
-                <p className="text-[12px] text-muted-foreground mt-0.5">El cliente rechazó parte o todo este producto. Lo que quites regresa al camión y no se cobra.</p>
+                <p className="text-[12px] text-muted-foreground mt-0.5">El cliente rechazó parte o todo este producto. Lo que quites no se cobra.</p>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[13px] text-muted-foreground">Cantidad a entregar</span>
@@ -942,6 +951,23 @@ export default function RutaEntregaDetalle() {
               </div>
               {quitada > 0 && (
                 <div className="space-y-1.5">
+                  <label className="text-[11px] text-muted-foreground font-medium">¿Cómo regresan las {quitada} {quitada === 1 ? 'pieza' : 'piezas'}?</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setEditCondicion('bueno')}
+                      className={`rounded-xl border py-2.5 text-[13px] font-semibold ${editCondicion === 'bueno' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-foreground'}`}>
+                      Bueno
+                      <span className="block text-[10px] font-normal opacity-80">Se puede vender</span>
+                    </button>
+                    <button type="button" onClick={() => setEditCondicion('merma')}
+                      className={`rounded-xl border py-2.5 text-[13px] font-semibold ${editCondicion === 'merma' ? 'bg-destructive text-destructive-foreground border-destructive' : 'bg-card border-destructive/50 text-destructive'}`}>
+                      Merma
+                      <span className="block text-[10px] font-normal opacity-80">No se vende, se descarga</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+              {quitada > 0 && (
+                <div className="space-y-1.5">
                   <label className="text-[11px] text-muted-foreground font-medium">Motivo</label>
                   <input
                     type="text"
@@ -954,7 +980,7 @@ export default function RutaEntregaDetalle() {
               <div className="flex gap-2 pt-1">
                 <button onClick={() => setEditLinea(null)} disabled={savingLinea}
                   className="flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">Cancelar</button>
-                <button onClick={guardarLineaEditada} disabled={savingLinea || quitada <= 0 || !editMotivo.trim()}
+                <button onClick={guardarLineaEditada} disabled={savingLinea || quitada <= 0 || !editMotivo.trim() || !editCondicion}
                   className="flex-1 bg-primary text-primary-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
                   {savingLinea ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   Guardar

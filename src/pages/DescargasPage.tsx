@@ -301,6 +301,25 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
+  // D-036: merma que trae el camión (no vendible). Al aprobar la descarga pasa al almacén Mermas.
+  const { data: mermaCamion } = useQuery({
+    queryKey: ['liq-merma-camion', descarga.id, descarga.vendedor_id],
+    enabled: !!descarga.vendedor_id && !!descarga.descargo_camion,
+    queryFn: async () => {
+      const { data: prof, error: pErr } = await supabase.from('profiles').select('almacen_id').eq('id', descarga.vendedor_id).maybeSingle();
+      if (pErr) throw pErr;
+      if (!prof?.almacen_id) return [];
+      const { data: merma, error: mErr } = await (supabase as any).from('almacenes').select('id').eq('merma_de_almacen_id', prof.almacen_id).maybeSingle();
+      if (mErr) throw mErr;
+      if (!merma?.id) return [];
+      const { data, error } = await supabase.from('stock_almacen')
+        .select('producto_id, cantidad, productos(nombre, codigo)')
+        .eq('almacen_id', merma.id).gt('cantidad', 0);
+      if (error) throw error;
+      return (data ?? []) as { producto_id: string; cantidad: number; productos: { nombre: string; codigo: string } | null }[];
+    },
+  });
+
   // --- Stock del almacén asignado al vendedor ---
   const { data: vendedorAlmacen } = useQuery({
     queryKey: ['vendedor-almacen', descarga.vendedor_id],
@@ -1708,6 +1727,19 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-2 leading-relaxed">
                       Al aprobar, el físico entra a esta bodega, el camión queda en 0 y las diferencias quedan registradas como ajuste.
                     </p>
+                  </div>
+                )}
+                {descarga.descargo_camion && (mermaCamion?.length ?? 0) > 0 && (
+                  <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+                    <p className="text-xs font-semibold text-destructive mb-1.5">Merma en camión (no vendible) · pasa al almacén Mermas al aprobar</p>
+                    <ul className="space-y-0.5">
+                      {mermaCamion!.map(m => (
+                        <li key={m.producto_id} className="flex justify-between gap-2 text-xs">
+                          <span className="truncate">{m.productos?.codigo ? `${m.productos.codigo} · ` : ''}{m.productos?.nombre ?? '—'}</span>
+                          <span className="font-semibold tabular-nums">{Number(m.cantidad)}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
                 <div>

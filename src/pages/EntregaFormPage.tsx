@@ -87,12 +87,13 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const [selectedVendedorRuta, setSelectedVendedorRuta] = useState('');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
-  const readOnly = !isNew && (form.status === 'hecho' || form.status === 'cancelado' || form.status === 'cargado' || form.status === 'en_ruta');
+  const readOnly = !isNew && (form.status === 'hecho' || form.status === 'cancelado' || form.status === 'cargado' || form.status === 'en_ruta' || form.status === 'no_entregado');
   const isSurtido = form.status === 'surtido';
   const isAsignado = form.status === 'asignado';
   const isBorrador = form.status === 'borrador';
   // D-030: asignada / cargada / en ruta → quitar productos, reasignar o cancelar eligiendo destino.
-  const enCamion = !isNew && ['asignado', 'cargado', 'en_ruta'].includes(form.status);
+  // D-036: «no entregado» sigue en el camión: mismas acciones que cargada (reasignar, quitar, cancelar).
+  const enCamion = !isNew && ['asignado', 'cargado', 'en_ruta', 'no_entregado'].includes(form.status);
   const lineasCargadas = lineas
     .filter((l: any) => l.hecho && Number(l.cantidad_entregada) > 0)
     .map((l: any) => ({
