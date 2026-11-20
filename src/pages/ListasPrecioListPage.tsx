@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
+import { ListaTarjetaMovil, ListaTarjetasMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 export default function ListasPrecioListPage() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ export default function ListasPrecioListPage() {
   const filtered = listas?.filter(l =>
     !search || l.nombre.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
+  const movil = useCargarMasMovil(filtered, search);
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -96,54 +98,25 @@ export default function ListasPrecioListPage() {
       {isLoading ? (
         <div className="p-4"><TableSkeleton rows={5} cols={4} /></div>
       ) : isMobile ? (
-        /* ─── Mobile: card layout ─── */
-        <div className="space-y-2 px-3 md:px-4">
-          {filtered.length === 0 && (
-            <p className="text-center py-12 text-muted-foreground text-sm">No hay listas de precios.</p>
-          )}
-          {filtered.map(l => (
-            <button
-              key={l.id}
-              onClick={() => goToLista(l)}
-              className="w-full bg-card border border-border rounded-xl p-3.5 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  {l.es_principal && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />}
-                  <span className="text-[14px] font-semibold text-foreground truncate">{l.nombre}</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span
-                    role="button"
-                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleActiva(l); }}
-                    className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full font-medium cursor-pointer",
-                      l.activa ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                    )}
-                    title={l.activa ? 'Clic para desactivar' : 'Clic para activar'}
-                  >
-                    {l.activa ? 'Activa' : 'Inactiva'}
-                  </span>
-                  {l.es_principal ? (
-                    <span className="text-[10px] text-amber-600 font-medium">Principal</span>
-                  ) : (
-                    <span
-                      role="button"
-                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPrincipal(l); }}
-                      className="text-[10px] text-muted-foreground hover:text-amber-600 underline underline-offset-2"
-                    >
-                      Hacer principal
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <span className="text-[11px] text-primary font-medium mr-1">Ver precios</span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </button>
-          ))}
-        </div>
+        /* ─── Teléfono: renglones estándar ─── */
+        <ListPage.Body card={false}>
+          <ListaTarjetasMovil vacia={filtered.length === 0} mensajeVacio="No hay listas de precios." {...movil}>
+            {movil.visibles.map(l => (
+              <ListaTarjetaMovil
+                key={l.id}
+                titulo={l.nombre}
+                linea2={l.es_principal ? '★ Principal' : 'Ver precios'}
+                pildora={l.activa ? 'Activa' : 'Inactiva'}
+                tono={l.activa ? 'exito' : 'neutro'}
+                onClick={() => goToLista(l)}
+                acciones={[
+                  { key: 'activa', label: l.activa ? 'Desactivar' : 'Activar', onClick: () => toggleActiva(l) },
+                  ...(!l.es_principal ? [{ key: 'principal', label: 'Hacer principal', icon: Star, onClick: () => setPrincipal(l) }] : []),
+                ]}
+              />
+            ))}
+          </ListaTarjetasMovil>
+        </ListPage.Body>
       ) : (
         /* ─── Desktop: table layout ─── */
         <div className={TABLE_CARD}>

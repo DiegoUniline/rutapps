@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { useAuth } from '@/contexts/AuthContext';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -77,6 +78,15 @@ export default function SolicitudesCompraPage() {
       return data ?? [];
     },
   });
+  // Teléfono: búsqueda y estado locales (solo presentación) y «Cargar más».
+  const [buscarMovil, setBuscarMovil] = useState('');
+  const [estadoMovil, setEstadoMovil] = useState('');
+  const itemsMovil = (listQuery.data ?? []).filter((s: any) => {
+    if (estadoMovil && s.status !== estadoMovil) return false;
+    const q = buscarMovil.trim().toLowerCase();
+    return !q || `${s.folio ?? ''} ${s.proveedores?.nombre ?? s.proveedor_nombre ?? ''}`.toLowerCase().includes(q);
+  });
+  const movil = useCargarMasMovil(itemsMovil, `${buscarMovil}|${estadoMovil}`);
 
   const detailQuery = useQuery({
     queryKey: ['solicitud-compra', sid],
@@ -353,28 +363,47 @@ export default function SolicitudesCompraPage() {
     const pending = items.filter((s: any) => ['enviada', 'vista', 'borrador_proveedor'].includes(s.status)).length;
     const answered = items.filter((s: any) => s.status === 'respondida').length;
     return (
-      <div className="p-3 sm:p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="p-2 md:p-4">
+      {/* D-037: una sola hoja blanca */}
+      <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
+        {isMobile && (
+          <EncabezadoListaMovil titulo="Solicitudes de compra" estado={estadoMovil || undefined} onNuevo={() => setSid('nueva')} nuevoLabel="Nueva solicitud">
+            <OdooFilterBar
+              search={buscarMovil}
+              onSearchChange={setBuscarMovil}
+              placeholder="Buscar solicitudes"
+              filterOptions={[{ key: 'estado', label: 'Estado', options: Array.from(new Set<string>(items.map((s: any) => String(s.status)))).map((v: string) => ({ value: v, label: v.replace(/_/g, ' ') })) }]}
+              activeFilters={estadoMovil ? { estado: [estadoMovil] } : {}}
+              onToggleFilter={(_k, v) => setEstadoMovil(prev => prev === v ? '' : v)}
+              onSetFilter={(_k, vals) => setEstadoMovil(vals[vals.length - 1] ?? '')}
+              onClearFilters={() => setEstadoMovil('')}
+            />
+          </EncabezadoListaMovil>
+        )}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 max-md:hidden">
           <div><h1 className="text-xl font-semibold">Solicitudes de compra</h1><p className="text-sm text-muted-foreground mt-0.5">Solicita disponibilidad y costos a tus proveedores sin darles acceso a RutApp.</p></div>
           <button onClick={() => setSid('nueva')} className="btn-odoo-primary flex items-center gap-1.5"><Plus className="h-4 w-4" /> Nueva solicitud</button>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 max-md:hidden">
           <Kpi label="Total" value={items.length} icon={<ClipboardList className="h-4 w-4" />} />
           <Kpi label="Esperando proveedor" value={pending} icon={<Mail className="h-4 w-4" />} />
           <Kpi label="Por revisar" value={answered} icon={<PackageCheck className="h-4 w-4" />} />
           <Kpi label="Convertidas" value={items.filter((s: any) => s.status === 'convertida').length} icon={<ShoppingCart className="h-4 w-4" />} />
         </div>
-        <div className={isMobile ? 'space-y-2' : 'bg-card border border-border rounded-xl overflow-hidden'}>
-          {isMobile ? items.map((s: any) => (
-            <ListaTarjetaMovil
-              key={s.id}
-              titulo={s.proveedores?.nombre || s.proveedor_nombre || '—'}
-              subtitulo={s.folio}
-              estado={<Status value={s.status} />}
-              onClick={() => setSid(s.id)}
-              campos={[{ label: 'Enviada', value: s.enviado_at ? new Date(s.enviado_at).toLocaleString('es-MX') : '—' }]}
-            />
-          )) : (
+        <div className={isMobile ? '' : 'border border-border rounded-xl overflow-hidden'}>
+          {isMobile ? (
+            <ListaTarjetasMovil aLoAncho vacia={!listQuery.isLoading && items.length > 0 && movil.total === 0} mensajeVacio="Ninguna solicitud coincide con la búsqueda" {...movil}>
+              {movil.visibles.map((s: any) => (
+                <ListaTarjetaMovil
+                  key={s.id}
+                  titulo={s.proveedores?.nombre || s.proveedor_nombre || '—'}
+                  linea2={<>{s.enviado_at ? new Date(s.enviado_at).toLocaleDateString('es-MX') : 'Sin enviar'}<span className="text-xs"> · {s.folio}</span></>}
+                  pildora={<Status value={s.status} />}
+                  onClick={() => setSid(s.id)}
+                />
+              ))}
+            </ListaTarjetasMovil>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/35 text-left text-xs text-muted-foreground"><th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Proveedor</th><th className="px-4 py-2.5">Estado</th><th className="px-4 py-2.5">Enviada</th><th className="px-4 py-2.5"></th></tr></thead>
@@ -385,6 +414,7 @@ export default function SolicitudesCompraPage() {
           {!listQuery.isLoading && items.length === 0 && <div className="py-14 text-center text-muted-foreground"><ClipboardList className="h-9 w-9 mx-auto mb-2 opacity-40" /><p className="font-medium text-foreground">Aún no hay solicitudes</p><p className="text-xs mt-1">Crea la primera y envíala al proveedor por correo.</p></div>}
           {listQuery.isLoading && <div className="py-12 text-center text-muted-foreground">Cargando solicitudes…</div>}
         </div>
+      </div>
       </div>
     );
   }

@@ -10,6 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { Navigate } from 'react-router-dom';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -272,6 +274,8 @@ export default function LotesPage() {
     if (sortBy === 'vence') return dir * ((a.fecha_caducidad ?? '9999-12-31').localeCompare(b.fecha_caducidad ?? '9999-12-31'));
     return dir * ((a.productos?.nombre ?? '').localeCompare(b.productos?.nombre ?? ''));
   });
+  const isMobile = useIsMobile();
+  const movil = useCargarMasMovil(lotesVisibles, lotesVisibles.length);
 
   const porAlmacenVisible = porAlmacen
     .filter(g => almacenFilters.size === 0 || almacenFilters.has(g.id))
@@ -564,7 +568,34 @@ export default function LotesPage() {
       </div>
       </ListPage.Toolbar>
 
-      {vista === 'matriz' && (
+      {isMobile && (vista === 'matriz' || vista === 'lote') && (
+        <ListPage.Body card={false}>
+          {isLoading ? <div className="py-8 text-center text-sm text-muted-foreground">Cargando…</div> : (
+          <ListaTarjetasMovil
+            vacia={lotesVisibles.length === 0}
+            mensajeVacio={(lotes?.length ?? 0) === 0 ? 'Aún no hay lotes. Crea el primero con «Nuevo lote».' : 'Ningún lote coincide con los filtros.'}
+            {...movil}
+          >
+            {movil.visibles.map(l => {
+              const est = estadoVencimiento(l.fecha_caducidad);
+              const disp = stockDe(l.id) - apartadoDe(l.id);
+              return (
+                <ListaTarjetaMovil
+                  key={l.id}
+                  titulo={l.productos?.nombre ?? '—'}
+                  linea2={<>Lote {l.codigo} · <span className={est.clase}>{est.texto}</span>{l.productos?.codigo ? <span className="text-xs"> · {l.productos.codigo}</span> : null}</>}
+                  pildora={nQty(disp)}
+                  tono={disp < 0 ? 'peligro' : disp === 0 ? 'neutro' : 'exito'}
+                  onClick={() => openEdit(l)}
+                />
+              );
+            })}
+          </ListaTarjetasMovil>
+          )}
+        </ListPage.Body>
+      )}
+
+      {vista === 'matriz' && !isMobile && (
         <div className={TABLE_CARD}>
           {isLoading ? (
             <div className="p-4"><TableSkeleton rows={5} cols={6} /></div>
@@ -672,7 +703,7 @@ export default function LotesPage() {
         </div>
       )}
 
-      {vista === 'lote' && (
+      {vista === 'lote' && !isMobile && (
       <div className={TABLE_CARD}>
         {isLoading ? (
           <div className="p-4"><TableSkeleton rows={5} cols={6} /></div>
