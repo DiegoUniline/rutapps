@@ -1,11 +1,9 @@
-import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useState, useMemo, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Search, Package, Zap, PackageCheck, ArrowRightLeft, Calendar, XCircle, ChevronDown, Loader2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Truck, Package, Zap, PackageCheck, ArrowRightLeft, Calendar, XCircle, ChevronDown, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -439,7 +437,26 @@ export default function EntregaListPage() {
           </div>
         </div>
       )}
-      <PedidosTabs />
+      <PedidosTabs
+        fechas={{
+          desde: fechaDesde, hasta: fechaHasta,
+          onChange: (f, t) => { setFechaDesde(f); setFechaHasta(t); },
+          headerContent: (
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">¿Qué fecha quieres filtrar?</label>
+                <Select value={fechaTipo} onValueChange={(value) => setFechaTipo(value as EntregaFechaTipo)}>
+                  <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="programada">Fecha programada de entrega</SelectItem>
+                    <SelectItem value="real">Fecha de entrega real</SelectItem>
+                    <SelectItem value="creacion">Fecha de creación de la entrega</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+          ),
+        }}
+        busqueda={{ value: search, onChange: setSearch, pendiente: isFetching && !!search.trim(), placeholder: 'Buscar por folio, pedido, cliente, vendedor o producto…' }}
+      />
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Truck className="h-5 w-5" /> Entregas
@@ -476,13 +493,6 @@ export default function EntregaListPage() {
 
       {/* Filters + Bulk action */}
       <div className="flex flex-wrap items-end gap-3">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por folio, pedido, cliente, vendedor o producto..." className="pl-9 pr-9" value={search} onChange={e => setSearch(e.target.value)} />
-          {isFetching && search.trim() && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" aria-label="Buscando" />
-          )}
-        </div>
         <div className="min-w-[180px]">
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Vendedor</label>
           <SearchableSelect
@@ -503,27 +513,6 @@ export default function EntregaListPage() {
             value={rutaFilter}
             onChange={setRutaFilter}
             placeholder="Ruta..."
-          />
-        </div>
-        <div>
-          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Rango de fechas</label>
-          <DateRangePicker
-            from={fechaDesde}
-            to={fechaHasta}
-            onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }}
-            headerContent={(
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">¿Qué fecha quieres filtrar?</label>
-                <Select value={fechaTipo} onValueChange={(value) => setFechaTipo(value as EntregaFechaTipo)}>
-                  <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="programada">Fecha programada de entrega</SelectItem>
-                    <SelectItem value="real">Fecha de entrega real</SelectItem>
-                    <SelectItem value="creacion">Fecha de creación de la entrega</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           />
         </div>
         {(rutaFilter !== 'todos' || fechaDesde || fechaHasta || vendedorFilter !== 'todos' || fechaTipo !== 'programada') && (
