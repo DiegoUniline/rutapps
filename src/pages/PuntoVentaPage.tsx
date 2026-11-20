@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ClienteQuickForm } from '@/components/ClienteQuickForm';
 import { MobileProductoQuickForm } from '@/components/MobileProductoQuickForm';
@@ -1964,24 +1964,18 @@ export default function PuntoVentaPage() {
       />
 
       {/* ─── Payment modal ─── */}
-      {showPago && (
-        <div className="fixed inset-0 z-[60] bg-foreground/40 flex items-end sm:items-center justify-center" onClick={() => !saving && setShowPago(false)}>
-          <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-hidden border border-border max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="px-5 pt-5 pb-3 border-b border-border">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[16px] font-bold text-foreground">Cobrar</h3>
-                <button onClick={() => setShowPago(false)} className="p-1 rounded-md hover:bg-accent">
-                  <X className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </div>
-              <div className="flex items-baseline justify-between mt-2">
-                <span className="text-[13px] text-muted-foreground">{clienteNombre} · {totals.items} artículos</span>
+      {/* D-040: modal estándar. Escape lo sigue manejando el atajo de teclado de la página (ESC/F2). */}
+      <Dialog open={showPago} onOpenChange={(o) => { if (!o && !saving) setShowPago(false); }}>
+        <DialogContent className="max-w-lg" onEscapeKeyDown={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>Cobrar</DialogTitle>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[13px] text-muted-foreground text-left">{clienteNombre} · {totals.items} artículos</span>
                 <span className="text-[28px] font-black text-primary tabular-nums">{fmtM(totals.total)}</span>
               </div>
-            </div>
+            </DialogHeader>
 
-            <div className="px-5 py-4 space-y-4 overflow-auto flex-1">
+            <div className="space-y-4">
               {/* Sin impuestos toggle */}
               <div className="flex items-center justify-between rounded-lg bg-accent/40 px-3 py-2">
                 <span className="text-[12px] font-medium text-foreground">Sin impuestos</span>
@@ -2184,7 +2178,7 @@ export default function PuntoVentaPage() {
             </div>
 
             {/* Confirm button */}
-            <div className="px-5 pb-5 pt-2">
+            <DialogFooter>
               <button
                 onClick={handleCobrar}
                 disabled={saving || cart.length === 0 || (condicion === 'credito' && totals.total > creditoDisponiblePOS) || (condicion === 'contado' && faltante > 0 && payMode !== 'efectivo')}
@@ -2194,24 +2188,21 @@ export default function PuntoVentaPage() {
                 {saving ? 'Guardando...' : condicion === 'credito' ? 'Confirmar venta a crédito' : `Confirmar ${fmtM(totals.total)}`}
                 <kbd className="ml-2 text-[10px] opacity-60 bg-white/20 px-1.5 py-0.5 rounded">F2</kbd>
               </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Ticket modal after sale (auto-print) ─── */}
+      {/* D-040: modal estándar. Escape lo sigue manejando el atajo de teclado de la página. */}
       {showTicket && lastVentaData && (
-        <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center" onClick={() => { setShowTicket(false); setLastVentaData(null); clearAll(); }}>
-          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border max-h-[90dvh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="px-5 pt-4 pb-2 border-b border-border flex items-center justify-between">
-              <h3 className="text-[14px] font-bold text-foreground flex items-center gap-1.5">
+        <Dialog open onOpenChange={(o) => { if (!o) { setShowTicket(false); setLastVentaData(null); clearAll(); } }}>
+          <DialogContent className="max-w-md" onEscapeKeyDown={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-primary" /> Venta registrada
-              </h3>
-              <button onClick={() => { setShowTicket(false); setLastVentaData(null); clearAll(); }} className="p-1 rounded-md hover:bg-accent">
-                <X className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-auto p-4">
+              </DialogTitle>
+            </DialogHeader>
+            <div>
               <TicketVenta
                 empresa={{
                   nombre: empresa?.nombre ?? '',
@@ -2294,7 +2285,7 @@ export default function PuntoVentaPage() {
                 }}
               />
             </div>
-            <div className="px-5 pb-4 pt-2 border-t border-border flex gap-2">
+            <DialogFooter className="flex-row gap-2 sm:space-x-0">
               <button
                 onClick={() => {
                   const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string; tipo?: string; cantidad_gratis?: number }[];
@@ -2325,9 +2316,9 @@ export default function PuntoVentaPage() {
               >
                 <Check className="h-4 w-4" /> Listo
               </button>
-            </div>
-          </div>
-        </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Prompt to open shift when trying to charge without one */}

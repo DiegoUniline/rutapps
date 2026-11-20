@@ -4,7 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
-import { Plus, Trash2, Pencil, X } from 'lucide-react';
+import { Plus, Trash2, Pencil } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCurrency } from '@/hooks/useCurrency';
 import { confirmDialog } from '@/lib/confirm';
 import EsquemaVigenciaDialog, { type ModoGuardado } from './EsquemaVigenciaDialog';
@@ -298,12 +299,11 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
   const setTiers = (next: Tier[]) => setCfg({ tiers: next });
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-lg max-h-[90dvh] overflow-y-auto p-4 space-y-3" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold">{esquema.id ? 'Editar esquema' : 'Nuevo esquema'}</h3>
-          <button onClick={onClose} className="p-1 hover:bg-muted rounded"><X className="h-4 w-4" /></button>
-        </div>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-2xl gap-3">
+        <DialogHeader>
+          <DialogTitle>{esquema.id ? 'Editar esquema' : 'Nuevo esquema'}</DialogTitle>
+        </DialogHeader>
 
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre</label>
@@ -410,11 +410,11 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
           Activo
         </label>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <DialogFooter className="gap-2 sm:space-x-0">
           <button onClick={onClose} className="btn-cancelar btn-odoo-secondary">Cancelar</button>
           <button onClick={onSave} disabled={saving} className="btn-odoo-primary">{saving ? 'Guardando...' : 'Guardar'}</button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

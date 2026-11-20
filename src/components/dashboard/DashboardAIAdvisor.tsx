@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Sparkles, Loader2, RefreshCw, AlertCircle, History, X, Clock } from 'lucide-react';
+import { Sparkles, Loader2, RefreshCw, AlertCircle, History, Clock } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -307,48 +308,38 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
         </div>
       </section>
 
-      {historyOpen && (
-        <div
-          className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4"
-          onClick={() => setHistoryOpen(false)}
-        >
-          <div
-            className="bg-card border rounded-xl shadow-xl w-full max-w-3xl max-h-[90dvh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="flex items-center justify-between px-5 py-3 border-b">
-              <div className="flex items-center gap-2">
-                <History className="h-4 w-4 text-primary" />
-                <h3 className="font-bold text-sm">Historial del Asesor IA</h3>
-                <span className="text-[10px] text-muted-foreground">({history.length} análisis guardados)</span>
-              </div>
-              <button onClick={() => setHistoryOpen(false)} className="p-1 rounded hover:bg-muted">
-                <X className="h-4 w-4" />
-              </button>
-            </header>
-            <div className="overflow-y-auto p-4 space-y-3">
-              {history.length === 0 && (
-                <p className="text-center text-xs text-muted-foreground py-6">
-                  Aún no hay análisis guardados.
-                </p>
-              )}
-              {history.map((row) => (
-                <details key={row.id} className="border rounded-lg bg-background">
-                  <summary className="px-3 py-2 cursor-pointer text-xs font-bold flex items-center justify-between hover:bg-muted/50 rounded-lg">
-                    <span>{new Date(row.created_at).toLocaleString('es-MX')}</span>
-                    <span className="text-[10px] text-muted-foreground font-normal">
-                      {row.content.length} caracteres
-                    </span>
-                  </summary>
-                  <div className="px-4 py-3 border-t">
-                    <AdviceTabs content={row.content} />
-                  </div>
-                </details>
-              ))}
-            </div>
+      {/* D-040: modal estándar (mediano: reportes) */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-3xl gap-3">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <History className="h-4 w-4 text-primary" />
+              Historial del Asesor IA
+              <span className="text-[10px] font-normal text-muted-foreground">({history.length} análisis guardados)</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {history.length === 0 && (
+              <p className="text-center text-xs text-muted-foreground py-6">
+                Aún no hay análisis guardados.
+              </p>
+            )}
+            {history.map((row) => (
+              <details key={row.id} className="border rounded-lg bg-background">
+                <summary className="px-3 py-2 cursor-pointer text-xs font-bold flex items-center justify-between hover:bg-muted/50 rounded-lg">
+                  <span>{new Date(row.created_at).toLocaleString('es-MX')}</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">
+                    {row.content.length} caracteres
+                  </span>
+                </summary>
+                <div className="px-4 py-3 border-t">
+                  <AdviceTabs content={row.content} />
+                </div>
+              </details>
+            ))}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
