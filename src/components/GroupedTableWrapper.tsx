@@ -22,7 +22,11 @@ export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummar
   const fill = fillProp ?? inListPage;
 
   if (!groupBy) {
-    return <div className={cn(sinMarcoMovil ? "md:bg-card md:border md:border-border md:rounded overflow-hidden" : "bg-card border border-border rounded overflow-hidden", fill && "flex-1 min-h-0 flex flex-col")}>{renderTable(groups[0]?.items ?? [])}</div>;
+    // D-037: dentro de <ListPage> (hoja única) la tabla no lleva cuadro propio, solo una línea arriba.
+    const marco = inListPage
+      ? "border-t border-border overflow-hidden"
+      : sinMarcoMovil ? "md:bg-card md:border md:border-border md:rounded overflow-hidden" : "bg-card border border-border rounded overflow-hidden";
+    return <div className={cn(marco, fill && "flex-1 min-h-0 flex flex-col")}>{renderTable(groups[0]?.items ?? [])}</div>;
   }
 
   const toggleGroup = (label: string) => {

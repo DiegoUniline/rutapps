@@ -624,7 +624,7 @@ export default function ProductosListPage() {
           {pageData.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground text-sm">No hay productos. Crea el primero.</div>
           ) : (
-            <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
+            <div className="-mx-3 md:-mx-4 border-y border-border divide-y divide-border">
               {pageData.map((p: any) => {
                 const stock = Number(p.cantidad ?? 0);
                 const unidad = p.unidades_venta?.abreviatura || 'unidades';
@@ -663,7 +663,7 @@ export default function ProductosListPage() {
             <button
               type="button"
               onClick={() => setMobileLimit(l => l + MOBILE_STEP)}
-              className="w-full mt-2 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground active:bg-accent"
+              className="w-full my-2 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground active:bg-accent"
             >
               Cargar más ({pageData.length} de {total})
             </button>

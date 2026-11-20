@@ -213,3 +213,13 @@
   4. Cada acción en una sola transacción en la BD.
 - **🧭 Criterio:** «Merma en camión» = almacén propio por camión (`almacenes.merma_de_almacen_id`), creado solo; así stock y kardex cuadran sin cambiar los cálculos existentes.
 - **Implementación:** migración `20261120140000_d036_reasignar_y_merma_camion.sql` (`entrega_lineas.cantidad_merma`, `fn_sync_entrega_merma` por diferencia).
+
+## D-037
+- **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Todo bien» sobre el mockup https://claude.ai/artifact/4NWGjqV7F7HMSbsBfENeWh)
+- **Decisión (escritorio y teléfono):**
+  1. Fondo de la app **gris** (`--app-bg`); en oscuro, gris casi negro.
+  2. **Un solo cuadro blanco por pantalla**: encabezado/folio, cliente, productos, totales, pagos, pestañas, buscador y tabla en la misma hoja, separados solo por líneas finas; nada de cuadros separados.
+  3. **Letras con más contraste** (texto principal casi negro, secundario gris oscuro; bordes un poco más marcados).
+  4. Encabezados de tabla y totales en gris muy claro **dentro** de la misma hoja.
+- **Implementación:** tokens en `src/index.css` (`--app-bg`, `--foreground`, `--muted-foreground`, `--border`), `ListPage` como hoja única, `TABLE_CARD`/`GroupedTableWrapper` sin marco propio dentro de la hoja, detalle de Venta en una hoja.
+- **Forma de preguntar (preferencia del dueño):** en preguntas de selección múltiple el título dice explícitamente «MARCA SOLO LO QUE QUIERES QUITAR» (o «…DEJAR») y cada opción empieza con «Quitar:» / «Dejar:».

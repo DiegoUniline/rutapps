@@ -430,7 +430,9 @@ export default function VentaFormPage() {
 
   const billingEnabled = isSuperAdminEmail(user?.email);
   return (
-    <div className="min-h-full">
+    // D-037: fondo gris y TODA la venta (encabezado, cliente, productos, pagos…) en una sola hoja blanca.
+    <div className="min-h-full p-2 md:p-4">
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip">
       <RepriceListaDialog pending={pendingReprice} onConfirm={confirmReprice} onDismiss={dismissReprice} />
       {h.excedenteDialog}
       {h.cancelarPagoDialog}
@@ -488,9 +490,9 @@ export default function VentaFormPage() {
           </div>
         </div>
       )}
-      <div className="w-full max-w-none p-2.5 sm:p-3 space-y-2.5">
+      <div className="w-full max-w-none">
         {catalogLoadError && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
+          <div className="mx-3 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
             <span className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
               La venta cargó, pero uno o más catálogos no respondieron. Los datos guardados permanecen intactos.
@@ -500,7 +502,7 @@ export default function VentaFormPage() {
             </button>
           </div>
         )}
-        <div className="bg-card border border-border rounded-md p-3">
+        <div className="px-3 sm:px-5 py-3">
           {h.editandoConfirmada && <div className="mb-3 text-xs text-foreground bg-accent/40 border border-border px-3 py-2 rounded">Editando venta {form.status}: agrega, quita o cambia productos. Al guardar se mueve solo la diferencia de stock y se recalcula el saldo.</div>}
           {!isNew && String(form.tipo) !== 'saldo_inicial' && Number(form.total) > 0 && lineas.filter(l => l.producto_id).length === 0 && (
             <div className="mb-3 text-xs bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 rounded">
@@ -509,7 +511,7 @@ export default function VentaFormPage() {
           )}
           <VentaFormFields form={form} readOnly={readOnly} bloquearTipoAlmacen={h.editandoConfirmada} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
         </div>
-        <div className="bg-card border border-border rounded-md">
+        <div className="border-t border-border">
           <OdooTabs tabs={[
             { key: 'lineas', label: 'Líneas de venta', content: <VentaLineasTab lineas={lineas} pricingReady={pricingReady} productosList={productosList ?? []} readOnly={readOnly} totals={totals} cerradoSnapshot={(form as any).cerrado_at ? ((form as any).cerrado_snapshot ?? null) : null} promoResults={promoResults} onChangePresentation={h.changePresentation} onProductSelect={handleProductSelect} onUpdateLine={updateLine} onRemoveLine={removeLine} onAddLine={addLine} setCellRef={setCellRef} onCellKeyDown={handleCellKeyDown} navigateCell={navigateCell} setLineas={setLineas} sinImpuestos={sinImpuestos} setSinImpuestos={setSinImpuestos} readOnlyForm={readOnly} saldoPendiente={saldoPendiente} canChangePrice={canChangePrice} canApplyDiscount={canApplyDiscount} descuentoExtraValor={Number((form as any).descuento_extra) || 0} descuentoExtraTipo={(form as any).descuento_extra_tipo || 'porcentaje'} onDescuentoExtraChange={(value) => set('descuento_extra', value)} onToggleDescuentoExtraTipo={() => set('descuento_extra_tipo', (form as any).descuento_extra_tipo === 'monto' ? 'porcentaje' : 'monto')} onChangeLineListaPrecio={changeLineListaPrecio} onPickLote={(idx) => { const l: any = lineas[idx]; if (!l?.producto_id) return; const prod: any = (productosList ?? []).find((p: any) => p.id === l.producto_id); h.setLoteParaLinea({ idx, producto: { id: l.producto_id, nombre: prod?.nombre ?? l.descripcion ?? 'Producto' } }); }} /> },
             ...(!isNew ? [{ key: 'pagos', label: `Pagos (${(pagosData ?? []).length})`, content: <VentaPagosTab pagos={(pagosData ?? []) as any} totalPagado={totalPagado} saldoPendiente={saldoPendiente} isMobile={isMobile} onAddPago={handleAddPago} onCancelPago={handleCancelPago} onReactivarPago={handleReactivarPago} onDeletePago={handleDeletePago} onUpdatePago={handleUpdatePago} onRealizarPago={() => setShowPago(true)} onPrintPago={handlePrintPago} /> }] : []),
@@ -522,6 +524,7 @@ export default function VentaFormPage() {
           ]} />
         </div>
       </div>
+    </div>
       {(() => {
         const cli = clientesList?.find(c => c.id === form.cliente_id);
         const phoneWA = phoneWithLada(cli?.telefono, (cli as any)?.lada, (empresa as any)?.lada || '52');

@@ -742,7 +742,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Mobile layout with hamburger
   if (isMobile) {
     return (
-      <div className="min-h-[100dvh] flex flex-col bg-background">
+      <div className="min-h-[100dvh] flex flex-col bg-app">
         <SandboxBanner />
         <NotificationRuntime bannersOnly />
         {/* Mobile top bar */}
@@ -885,7 +885,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Desktop layout with sidebar
   return (
     <div className={cn(
-      'flex-1 flex flex-col bg-background',
+      'flex-1 flex flex-col bg-app',
       isLongInventoryReport ? 'min-h-[100dvh] h-auto overflow-visible' : 'min-h-0 h-full overflow-hidden',
     )}>
       <SandboxBanner />

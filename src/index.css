@@ -35,13 +35,15 @@ html, body, #root {
   :root {
     /* Core palette — Light, ultra-clean */
     --background: 0 0% 100%;
-    --foreground: 220 14% 10%;
+    --foreground: 220 20% 9%;
+    /* D-037: fondo gris de la app; el contenido va en una sola hoja blanca (--card). */
+    --app-bg: 220 16% 94%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 14% 10%;
+    --card-foreground: 220 20% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 14% 10%;
+    --popover-foreground: 220 20% 9%;
 
     /* Primary: Rutapp corporate blue #0061e8 */
     --primary: 215 100% 45%;
@@ -51,7 +53,7 @@ html, body, #root {
     --secondary-foreground: 0 0% 98%;
 
     --muted: 220 10% 56%;
-    --muted-foreground: 220 10% 46%;
+    --muted-foreground: 220 12% 36%;
 
     --accent: 220 14% 96%;
     --accent-foreground: 215 100% 45%;
@@ -69,8 +71,8 @@ html, body, #root {
     --warning: 38 90% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
+    --border: 220 14% 87%;
+    --input: 220 14% 85%;
     --ring: 215 100% 45%;
 
     --radius: 0.625rem;
@@ -122,7 +124,8 @@ html, body, #root {
 
   .dark {
     --background: 220 14% 8%;
-    --foreground: 220 10% 93%;
+    --foreground: 220 10% 95%;
+    --app-bg: 220 14% 6%;
 
     --card: 220 14% 12%;
     --card-foreground: 220 10% 93%;
@@ -137,7 +140,7 @@ html, body, #root {
     --secondary-foreground: 0 0% 98%;
 
     --muted: 220 10% 40%;
-    --muted-foreground: 220 10% 60%;
+    --muted-foreground: 220 10% 68%;
 
     --accent: 225 20% 18%;
     --accent-foreground: 215 100% 65%;

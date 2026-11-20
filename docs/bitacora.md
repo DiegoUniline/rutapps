@@ -174,3 +174,4 @@
 2026-11-20 · ui-movil · Cobranza: tarjeta estándar con WhatsApp/Editar/Cancelar en menú «⋯» (antes 3 íconos sueltos apretaban el nombre del cliente); Clientes y Productos ya usaban la misma tarjeta
 2026-11-20 · desarrollador · Productos en teléfono: título + botón «+», buscador a todo lo ancho (estado dentro de Filtros), sin tarjetas de resumen ni pestañas, renglones con foto/nombre/precio/existencias y «Cargar más»
 2026-11-20 · ui-movil · CxC/CxP/Liquidar ruta/Solicitudes de traspaso/Mermas/Promociones: tarjeta estándar en teléfono (Cobrar y eliminar saldo inicial, cancelar merma, editar/eliminar promoción en «⋯») con renglón de totales; tabla de mermas con scroll horizontal en tablet
+2026-11-20 · desarrollador · D-037: fondo gris, hoja blanca única (ListPage y detalle de Venta), mayor contraste de texto y bordes
