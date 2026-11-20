@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useManejaLotes } from '@/hooks/useManejaLotes';
 import { useAlmacenes, useProductosForSelect } from '@/hooks/useData';
 import { useKardexUbicacion } from '@/hooks/useKardexUbicacion';
+import { origenDestinoMovimiento } from '@/lib/kardexOrigenDestino';
 import { useKardexReferencias } from '@/hooks/useKardexReferencias';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -193,85 +194,8 @@ export default function KardexPage() {
 
   const { data: refInfo } = useKardexReferencias(rows);
 
-  // Helper: build "Origen / Destino" cell content for a row
-  const getOrigenDestino = (row: any): { origen: string; destino: string } => {
-    const refTipo = row.referencia_tipo;
-    const refId = row.referencia_id;
-    const almNombre = (id?: string | null) =>
-      id ? (refInfo?.almacenes?.[id] ?? '—') : '';
-    // Para movimientos donde sólo conocemos un lado: usamos el almacén que
-    // venga en la fila, o el almacén seleccionado como fallback.
-    const almOrigen = almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—');
-    const almDestino = almNombre(row.almacen_destino_id) || (almacenSel?.nombre ?? '—');
-
-    // Ventas / cancelaciones: salida del almacén → cliente
-    if (refTipo === 'venta' || refTipo === 'venta_ruta') {
-      const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
-      return {
-        origen: almOrigen,
-        destino: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
-      };
-    }
-    if (refTipo === 'cancelacion_venta' || refTipo === 'reverso_borrador') {
-      const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
-      return {
-        origen: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
-        destino: almDestino,
-      };
-    }
-    // Compras: proveedor → almacén
-    if (refTipo === 'compra') {
-      const prov = refId ? refInfo?.compraProveedor?.[refId] : undefined;
-      return {
-        origen: prov ? `Prov: ${prov.nombre}` : 'Proveedor',
-        destino: almDestino,
-      };
-    }
-    // Entregas: almacén → cliente
-    if (refTipo === 'entrega') {
-      const ent = refId ? refInfo?.entregaCliente?.[refId] : undefined;
-      return {
-        origen: almOrigen,
-        destino: ent ? `Cliente: ${ent.nombre}` : 'Cliente',
-      };
-    }
-    // Traspasos: usar almacenes origen/destino del propio traspaso (los movimientos vienen
-    // en filas separadas, cada una con solo un lado poblado).
-    if (refTipo === 'traspaso') {
-      const t = refId ? refInfo?.traspasoAlmacenes?.[refId] : undefined;
-      const origenId = row.almacen_origen_id || t?.origen_id || null;
-      const destinoId = row.almacen_destino_id || t?.destino_id || null;
-      return {
-        origen: (origenId ? almNombre(origenId) : '') || '—',
-        destino: (destinoId ? almNombre(destinoId) : '') || '—',
-      };
-    }
-    // Devoluciones: cliente → almacén
-    if (refTipo === 'devolucion') {
-      return {
-        origen: 'Cliente',
-        destino: almDestino,
-      };
-    }
-    // Carga / Descarga
-    if (refTipo === 'carga') {
-      return {
-        origen: almOrigen,
-        destino: 'Camión',
-      };
-    }
-    if (refTipo === 'descarga') {
-      return {
-        origen: 'Camión',
-        destino: almDestino,
-      };
-    }
-    // Genérico
-    return {
-      origen: row.almacen_origen_id ? almNombre(row.almacen_origen_id) : (row.tipo === 'entrada' ? '—' : almOrigen),
-      destino: row.almacen_destino_id ? almNombre(row.almacen_destino_id) : (row.tipo === 'salida' ? '—' : almDestino),
-    };
-  };
+  const getOrigenDestino = (row: any) =>
+    origenDestinoMovimiento(row, refInfo, () => undefined, almacenSel?.nombre);
 
 
   const filtered = useMemo(() => {
