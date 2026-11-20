@@ -177,43 +177,44 @@ export default function VentaFormPage() {
         const accountApplied = new Map<string, number>();
         const cuentas = cuentasAplicadas ?? [];
 
+        // Un cobro por forma de pago, aplicado a la venta actual y a las cuentas pendientes en UNA
+        // sola operación de la BD (aplicar_cobro): o se aplica todo o nada. Antes se partía en un
+        // cobro por cuenta y un error en una dejaba el pago aplicado a medias sin avisar.
         for (const pago of pagos) {
           let remaining = pago.monto;
+          const aplicaciones: { venta_id: string; monto_aplicado: number }[] = [];
 
-          // Apply to current sale first
           if (saleRemaining > 0 && remaining > 0) {
-            const apply = Math.min(remaining, saleRemaining);
-            await handleAddPago(apply, pago.metodo, pago.referencia);
+            const apply = Math.round(Math.min(remaining, saleRemaining) * 100) / 100;
+            aplicaciones.push({ venta_id: form.id!, monto_aplicado: apply });
             saleRemaining -= apply;
             remaining -= apply;
           }
-
-          // Apply excess to pending accounts
           for (const cuenta of cuentas) {
             if (remaining <= 0.01) break;
             const alreadyApplied = accountApplied.get(cuenta.id) ?? 0;
             const cuentaRemaining = cuenta.monto - alreadyApplied;
             if (cuentaRemaining <= 0.01) continue;
-            const apply = Math.min(remaining, cuentaRemaining);
-
-            // Create cobro + aplicación atómico (aplicar_cobro) para la cuenta pendiente.
-            const { data: cobroId, error: cobroErr } = await (supabase as any).rpc('aplicar_cobro', {
-              p_empresa_id: empresa!.id,
-              p_cliente_id: form.cliente_id!,
-              p_monto: apply,
-              p_metodo: pago.metodo,
-              p_referencia: pago.referencia || null,
-              p_fecha: todayInTimezone(empresa?.zona_horaria),
-              p_aplicaciones: [{ venta_id: cuenta.id, monto_aplicado: apply }],
-              p_user_id: user!.id,
-            });
-            if (!cobroErr && cobroId) {
-              import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroId, empresa!.id));
-            }
-
+            const apply = Math.round(Math.min(remaining, cuentaRemaining) * 100) / 100;
+            aplicaciones.push({ venta_id: cuenta.id, monto_aplicado: apply });
             accountApplied.set(cuenta.id, alreadyApplied + apply);
             remaining -= apply;
           }
+          if (aplicaciones.length === 0) continue;
+
+          const montoCobro = Math.round(aplicaciones.reduce((t, x) => t + x.monto_aplicado, 0) * 100) / 100;
+          const { data: cobroId, error: cobroErr } = await (supabase as any).rpc('aplicar_cobro', {
+            p_empresa_id: empresa!.id,
+            p_cliente_id: form.cliente_id!,
+            p_monto: montoCobro,
+            p_metodo: pago.metodo,
+            p_referencia: pago.referencia || null,
+            p_fecha: todayInTimezone(empresa?.zona_horaria),
+            p_aplicaciones: aplicaciones,
+            p_user_id: user!.id,
+          });
+          if (cobroErr) throw cobroErr;
+          if (cobroId) import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroId, empresa!.id));
         }
       }
       setShowCheckout(false);
@@ -228,7 +229,7 @@ export default function VentaFormPage() {
     } finally {
       setCheckoutSaving(false);
     }
-  }, [form.id, form.cliente_id, totals.total, empresa, user, saveVenta, handleAddPago, queryClient]);
+  }, [form.id, form.cliente_id, totals.total, empresa, user, saveVenta, queryClient]);
 
   if (!isNew && isLoading) return (
     <div className="p-4 min-h-full space-y-3">

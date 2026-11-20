@@ -143,3 +143,4 @@
 2026-11-20 · desarrollador · ventas.tiene_promocion (trigger) reemplaza listas de 10 000 ids en el filtro de promoción
 2026-11-20 · desarrollador · Saldos por cliente/proveedor agregados en BD (resumen_saldos_clientes, clientes_con_saldo, resumen_saldos_proveedores): corrige corte en 1 000 renglones
 2026-11-20 · desarrollador · Listas paginadas completas (gastos, CFDI, conteos, auditorías, pagos a proveedor, órdenes de compra) y orden estable en traspasos/cotizaciones: sin corte en 1 000
+2026-11-20 · desarrollador · Cobro en checkout: un cobro por forma de pago aplicado a todas las ventas en una operación (antes N cobros y errores ignorados)
