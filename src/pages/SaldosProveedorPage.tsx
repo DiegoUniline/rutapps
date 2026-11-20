@@ -35,30 +35,17 @@ function useProveedoresSaldo(desde: string, hasta: string, condicion: string[]) 
     queryKey: ['proveedores-saldo-resumen', empresa?.id, desde, hasta, condicion.join(',')],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
-        .from('compras')
-        .select('proveedor_id, saldo_pendiente, total, status, fecha, condicion_pago, proveedores(id, nombre)')
-        .eq('empresa_id', empresa!.id)
-        .in('status', ['confirmada', 'recibida', 'pagada'] as any);
-      if (desde) q = q.gte('fecha', desde);
-      if (hasta) q = q.lte('fecha', hasta);
-      if (condicion.length > 0) q = q.in('condicion_pago', condicion as any);
-      const { data, error } = await q;
-      if (error) throw error;
-      const map = new Map<string, { id: string; nombre: string; totalComprado: number; saldoPendiente: number; docs: number }>();
-      (data ?? []).forEach((c: any) => {
-        const pid = c.proveedor_id;
-        if (!pid) return;
-        const existing = map.get(pid);
-        if (existing) {
-          existing.totalComprado += c.total ?? 0;
-          existing.saldoPendiente += c.saldo_pendiente ?? 0;
-          existing.docs += 1;
-        } else {
-          map.set(pid, { id: pid, nombre: c.proveedores?.nombre ?? 'Sin proveedor', totalComprado: c.total ?? 0, saldoPendiente: c.saldo_pendiente ?? 0, docs: 1 });
-        }
+      // La BD agrupa por proveedor (sin tope de 1 000 renglones ni sumas en el navegador).
+      type Fila = { proveedor_id: string; nombre: string | null; total_comprado: number; saldo_pendiente: number; docs: number };
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: Fila[] | null; error: { message: string } | null }>;
+      const { data, error } = await rpc('resumen_saldos_proveedores', {
+        p_desde: desde || null, p_hasta: hasta || null, p_condicion: condicion.length ? condicion : null,
       });
-      return Array.from(map.values()).sort((a, b) => b.saldoPendiente - a.saldoPendiente);
+      if (error) throw error;
+      return (data ?? []).map(r => ({
+        id: r.proveedor_id, nombre: r.nombre ?? 'Sin proveedor',
+        totalComprado: Number(r.total_comprado) || 0, saldoPendiente: Number(r.saldo_pendiente) || 0, docs: Number(r.docs) || 0,
+      }));
     },
   });
 }

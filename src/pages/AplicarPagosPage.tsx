@@ -37,34 +37,15 @@ function useClientesConSaldo(search: string) {
     queryKey: ['clientes-con-saldo', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      // Get all ventas with saldo > 0 grouped by client
-      const { data, error } = await supabase
-        .from('ventas')
-        .select('cliente_id, saldo_pendiente, total, clientes(id, nombre, codigo, telefono)')
-        .eq('empresa_id', empresa!.id)
-        .gt('saldo_pendiente', 0.009)
-        .neq('status', 'cancelado');
+      // La BD agrupa por cliente (sin tope de 1 000 renglones ni sumas en el navegador).
+      type Fila = { cliente_id: string; nombre: string | null; codigo: string | null; telefono: string | null; saldo: number; docs: number };
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: Fila[] | null; error: { message: string } | null }>;
+      const { data, error } = await rpc('clientes_con_saldo', {});
       if (error) throw error;
-
-      // Aggregate by client
-      const map = new Map<string, { id: string; nombre: string; codigo: string | null; telefono: string | null; saldo: number; docs: number }>();
-      (data ?? []).forEach((v: any) => {
-        const cid = v.cliente_id;
-        if (!cid) return;
-        const existing = map.get(cid);
-        const clienteNombre = v.clientes?.nombre ?? 'Sin cliente';
-        const clienteCodigo = v.clientes?.codigo ?? null;
-        const clienteTel = v.clientes?.telefono ?? null;
-        const saldoPendiente = roundMoney(v.saldo_pendiente ?? 0);
-        if (existing) {
-          existing.saldo = roundMoney(existing.saldo + saldoPendiente);
-          existing.docs += 1;
-        } else {
-          map.set(cid, { id: cid, nombre: clienteNombre, codigo: clienteCodigo, telefono: clienteTel, saldo: saldoPendiente, docs: 1 });
-        }
-      });
-
-      return Array.from(map.values()).filter(c => c.saldo >= 0.01).sort((a, b) => b.saldo - a.saldo);
+      return (data ?? []).map(r => ({
+        id: r.cliente_id, nombre: r.nombre ?? 'Sin cliente', codigo: r.codigo, telefono: r.telefono,
+        saldo: roundMoney(Number(r.saldo) || 0), docs: Number(r.docs) || 0,
+      }));
     },
   });
 }

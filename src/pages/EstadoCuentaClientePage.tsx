@@ -25,83 +25,27 @@ function useClientesSaldo(desde: string, hasta: string) {
     queryKey: ['clientes-saldo-resumen', empresa?.id, desde, hasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      // Un borrador no es una venta financiera: no participa en vendido, saldos ni liquidado.
-      let q = supabase
-        .from('ventas')
-        .select('cliente_id, fecha, saldo_pendiente, total, clientes(id, nombre, codigo, telefono, credito, dias_credito, limite_credito, rfc, direccion)')
-        .eq('empresa_id', empresa!.id)
-        .in('status', ['confirmado', 'entregado', 'facturado']);
-      if (desde) q = q.gte('fecha', desde);
-      if (hasta) q = q.lte('fecha', hasta);
-      // Saldo a favor por cliente lo calcula la BD (notas de crédito + pagos que quedaron a favor − usado).
-      const [ventasRes, favRes] = await Promise.all([
-        q,
-        (supabase.rpc.bind(supabase) as unknown as RpcSinTipos<{ cliente_id: string; disponible: number }[]>)('saldos_a_favor_empresa', {}),
-      ]);
-      if (ventasRes.error) throw ventasRes.error;
-      if (favRes.error) throw favRes.error;
-      const favor = new Map<string, number>();
-      (favRes.data ?? []).forEach(r => favor.set(r.cliente_id, Number(r.disponible) || 0));
-      const favorDisponible = (cid: string) => favor.get(cid) ?? 0;
-
-      const map = new Map<string, {
-        id: string; nombre: string; codigo: string | null; telefono: string | null;
-        credito: boolean; dias_credito: number; limite_credito: number;
-        rfc: string | null; direccion: string | null;
-        totalVendido: number; saldoPendiente: number; saldoFavor: number; saldoNeto: number; docs: number;
-      }>();
-      (ventasRes.data ?? []).forEach((v: any) => {
-        const cid = v.cliente_id;
-        if (!cid) return;
-        const c = v.clientes;
-        const existing = map.get(cid);
-        if (existing) {
-          existing.totalVendido += v.total ?? 0;
-          existing.saldoPendiente += v.saldo_pendiente ?? 0;
-          existing.docs += 1;
-        } else {
-          map.set(cid, {
-            id: cid, nombre: c?.nombre ?? 'Sin cliente', codigo: c?.codigo ?? null,
-            telefono: c?.telefono ?? null, credito: c?.credito ?? false,
-            dias_credito: c?.dias_credito ?? 0, limite_credito: c?.limite_credito ?? 0,
-            rfc: c?.rfc ?? null, direccion: c?.direccion ?? null,
-            totalVendido: v.total ?? 0, saldoPendiente: v.saldo_pendiente ?? 0,
-            saldoFavor: 0, saldoNeto: 0, docs: 1,
-          });
-        }
-      });
-      // Incluir clientes que solo tienen saldo a favor (sin ventas en el rango)
-      favor.forEach((_v, cid) => {
-        if (!map.has(cid) && favorDisponible(cid) > 0.009) {
-          map.set(cid, {
-            id: cid, nombre: 'Cliente', codigo: null, telefono: null,
-            credito: false, dias_credito: 0, limite_credito: 0, rfc: null, direccion: null,
-            totalVendido: 0, saldoPendiente: 0, saldoFavor: 0, saldoNeto: 0, docs: 0,
-          });
-        }
-      });
-      // Completar nombres faltantes
-      const sinNombre = Array.from(map.values()).filter(c => c.nombre === 'Cliente').map(c => c.id);
-      if (sinNombre.length) {
-        const { data: cli } = await supabase
-          .from('clientes')
-          .select('id, nombre, codigo, telefono, credito, dias_credito, limite_credito, rfc, direccion')
-          .in('id', sinNombre);
-        (cli ?? []).forEach((c: any) => {
-          const row = map.get(c.id);
-          if (row) Object.assign(row, {
-            nombre: c.nombre ?? 'Cliente', codigo: c.codigo, telefono: c.telefono,
-            credito: c.credito, dias_credito: c.dias_credito ?? 0,
-            limite_credito: c.limite_credito ?? 0, rfc: c.rfc, direccion: c.direccion,
-          });
-        });
-      }
-      // Aplicar saldo a favor y calcular neto
-      map.forEach((row, cid) => {
-        row.saldoFavor = favorDisponible(cid);
-        row.saldoNeto = Math.round((row.saldoPendiente - row.saldoFavor) * 100) / 100;
-      });
-      return Array.from(map.values()).sort((a, b) => b.saldoNeto - a.saldoNeto);
+      // La BD agrega por cliente (vendido, saldo pendiente, saldo a favor): sin tope de 1 000 renglones
+      // y sin sumar dinero en el navegador. Un borrador no participa en vendido ni saldos.
+      type Fila = {
+        cliente_id: string; nombre: string; codigo: string | null; telefono: string | null; credito: boolean;
+        dias_credito: number; limite_credito: number; rfc: string | null; direccion: string | null;
+        total_vendido: number; saldo_pendiente: number; docs: number; saldo_favor: number;
+      };
+      const { data, error } = await (supabase.rpc.bind(supabase) as unknown as RpcSinTipos<Fila[]>)(
+        'resumen_saldos_clientes', { p_desde: desde || null, p_hasta: hasta || null });
+      if (error) throw error;
+      return (data ?? []).map(r => {
+        const saldoPendiente = Number(r.saldo_pendiente) || 0;
+        const saldoFavor = Number(r.saldo_favor) || 0;
+        return {
+          id: r.cliente_id, nombre: r.nombre ?? 'Cliente', codigo: r.codigo, telefono: r.telefono,
+          credito: !!r.credito, dias_credito: Number(r.dias_credito) || 0, limite_credito: Number(r.limite_credito) || 0,
+          rfc: r.rfc, direccion: r.direccion,
+          totalVendido: Number(r.total_vendido) || 0, saldoPendiente, saldoFavor,
+          saldoNeto: Math.round((saldoPendiente - saldoFavor) * 100) / 100, docs: Number(r.docs) || 0,
+        };
+      }).sort((a, b) => b.saldoNeto - a.saldoNeto);
     },
   });
 }
