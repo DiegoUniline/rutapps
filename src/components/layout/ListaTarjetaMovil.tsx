@@ -73,16 +73,18 @@ interface EncabezadoListaMovilProps {
   extra?: ReactNode;
 }
 
-/** Encabezado móvil: título + «+» redondo y debajo el buscador con Filtros. */
+/**
+ * Encabezado móvil de lista. El nombre de la pantalla ya va en la barra superior (AppLayout), así que
+ * aquí no se repite: una sola fila con el buscador (Filtros) a lo ancho y el «+» redondo a la derecha.
+ * Si hay un filtro de estado distinto al de por omisión, se avisa en una línea pequeña.
+ */
 export function EncabezadoListaMovil({ titulo, estado, onNuevo, nuevoLabel = 'Nuevo', children, className, extra }: EncabezadoListaMovilProps) {
   return (
-    <div className={cn('shrink-0 space-y-2', className)}>
-      <div className="flex items-center justify-between gap-2 min-h-10">
-        <h1 className="text-lg font-semibold text-foreground min-w-0 truncate">
-          {titulo}
-          {estado ? <span className="ml-1.5 text-xs font-normal text-muted-foreground">· {estado}</span> : null}
-        </h1>
-        {extra && <div className="ml-auto flex items-center gap-2 shrink-0">{extra}</div>}
+    <div className={cn('shrink-0 space-y-1.5', className)}>
+      <h1 className="sr-only">{titulo}</h1>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">{children}</div>
+        {extra && <div className="flex items-center gap-2 shrink-0">{extra}</div>}
         {onNuevo && (
           <button
             type="button"
@@ -95,7 +97,7 @@ export function EncabezadoListaMovil({ titulo, estado, onNuevo, nuevoLabel = 'Nu
           </button>
         )}
       </div>
-      {children}
+      {estado ? <p className="text-xs text-muted-foreground">Mostrando: {estado}</p> : null}
     </div>
   );
 }
