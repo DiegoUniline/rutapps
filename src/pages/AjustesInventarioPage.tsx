@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -1280,14 +1280,14 @@ export default function AjustesInventarioPage() {
                 Se registrará quién lo hizo ({profile?.nombre || user?.email}), cuándo y el motivo.
               </p>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="cancelar" onClick={() => setShowResetDialog(false)}>Cancelar</Button>
-              <Button variant="destructive" onClick={resetStock} disabled={resetting}>
-                <RotateCcw className="h-4 w-4 mr-1.5" />
-                {resetting ? 'Reiniciando...' : 'Confirmar reinicio'}
-              </Button>
-            </div>
           </div>
+          <DialogFooter>
+            <Button variant="cancelar" onClick={() => setShowResetDialog(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={resetStock} disabled={resetting}>
+              <RotateCcw className="h-4 w-4 mr-1.5" />
+              {resetting ? 'Reiniciando...' : 'Reiniciar stock'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1311,12 +1311,12 @@ export default function AjustesInventarioPage() {
               })()}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-2">
+          <DialogFooter>
             <Button variant="cancelar" onClick={() => setShowLoteConfirm(false)} disabled={applying}>Cancelar</Button>
             <Button onClick={() => { setShowLoteConfirm(false); applyAdjustments(); }} disabled={applying}>
-              {applying ? 'Aplicando…' : 'Sí, asignar'}
+              {applying ? 'Aplicando…' : 'Asignar lote'}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1332,12 +1332,12 @@ export default function AjustesInventarioPage() {
             <Label>Motivo de la cancelación</Label>
             <Textarea value={cancelMotivo} onChange={e => setCancelMotivo(e.target.value)} rows={3} />
           </div>
-          <div className="flex justify-end gap-2">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setCancelGroup(null)} disabled={histBusy}>Volver</Button>
             <Button variant="destructive" onClick={confirmarCancelacion} disabled={histBusy}>
               {histBusy ? 'Cancelando…' : 'Cancelar ajuste'}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
