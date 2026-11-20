@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ListaTarjetaMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OdooFilterBar, type FilterOption, type GroupByOption } from '@/components/OdooFilterBar';
@@ -606,9 +606,32 @@ export default function CobranzaPage() {
     return <span className="text-[11px] font-semibold text-success">{fmtC(total)}</span>;
   };
 
+  const movil = useCargarMasMovil(filtered, `${search}|${dateFrom}|${dateTo}|${JSON.stringify(filters)}`);
   return (
-    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
+    <div className="p-2 md:p-4 min-h-full">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
       <CobranzaTabs />
+      {isMobile && (
+        <EncabezadoListaMovil titulo="Cobranza">
+          <OdooFilterBar
+            search={search}
+            onSearchChange={v => { setSearch(v); pagination.resetPage(); }}
+            placeholder="Buscar cobros"
+            filterOptions={filterDefs}
+            activeFilters={filters}
+            onToggleFilter={(k, v) => { toggleFilterValue(k, v); pagination.resetPage(); }}
+            onSetFilter={(k, v) => { setFilter(k, v); pagination.resetPage(); }}
+            onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); pagination.resetPage(); }}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onDateRangeChange={(f, t) => { setDates(f, t); pagination.resetPage(); }}
+            onDateFromChange={v => { setDateFrom(v); pagination.resetPage(); }}
+            onDateToChange={v => { setDateTo(v); pagination.resetPage(); }}
+          />
+        </EncabezadoListaMovil>
+      )}
+      <div className="max-md:hidden space-y-3">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Banknote className="h-5 w-5" /> Cobranza
         <HelpButton title={HELP.cobranza.title} sections={HELP.cobranza.sections} />
@@ -616,12 +639,12 @@ export default function CobranzaPage() {
       </h1>
 
       {/* Summary — uses full filtered data, NOT paginated */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
-        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
+      <div className="grid grid-cols-2 divide-x divide-border border-y border-border -mx-3 md:-mx-4">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Total cobrado</p>
           <p className="text-lg sm:text-2xl font-bold text-success truncate">{fmtC(totalCobrado)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-3 sm:p-4 min-w-0">
+        <div className="px-3 md:px-4 py-2.5 min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase">Cobros</p>
           <p className="text-lg sm:text-2xl font-bold text-foreground">{filtered.length}</p>
         </div>
@@ -648,6 +671,7 @@ export default function CobranzaPage() {
         onDateFromChange={v => { setDateFrom(v); pagination.resetPage(); }}
         onDateToChange={v => { setDateTo(v); pagination.resetPage(); }}
       />
+      </div>
 
       {selectedIds.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2">
@@ -672,47 +696,32 @@ export default function CobranzaPage() {
       )}
 
       {isMobile ? (
-        <div className="space-y-2">
-          {pagination.paginatedItems.map(c => (
-            <ListaTarjetaMovil
-              key={c.id}
-              titulo={(c.clientes as any)?.nombre ?? '—'}
-              subtitulo={fmtDate(c.fecha)}
-              leading={
-                <input
-                  type="checkbox"
-                  aria-label="Seleccionar cobro"
-                  className="rounded border-input h-4 w-4 shrink-0"
-                  checked={selectedIds.has(c.id)}
-                  onChange={() => toggleSelectOne(c.id)}
+        <>
+          {isLoading ? <div className="text-center py-8 text-muted-foreground">Cargando...</div> : (
+          <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio="Sin cobros" {...movil}>
+            {movil.visibles.map(c => {
+              const cancelado = (c as any).status === 'cancelado';
+              return (
+                <ListaTarjetaMovil
+                  key={c.id}
+                  titulo={(c.clientes as any)?.nombre ?? '—'}
+                  linea2={[fmtDate(c.fecha), c.metodo_pago, c.referencia].filter(Boolean).join(' · ')}
+                  pildora={cancelado ? 'Cancelado' : fmtC(c.monto)}
+                  tono={cancelado ? 'peligro' : 'exito'}
+                  className={cancelado ? 'opacity-60' : undefined}
+                  acciones={[
+                    { key: 'wa', label: 'WhatsApp', icon: MessageCircle, onClick: () => openWaCobro(c) },
+                    ...(!cancelado ? [
+                      { key: 'editar', label: 'Editar', icon: Pencil, onClick: () => setEditCobro(c) },
+                      { key: 'cancelar', label: 'Cancelar', icon: Ban, destructiva: true, separar: true, onClick: () => setCancelCobro(c) },
+                    ] : []),
+                  ]}
                 />
-              }
-              estado={<Badge variant="outline" className="text-[10px] capitalize">{c.metodo_pago}</Badge>}
-              acciones={[
-                { key: 'wa', label: 'WhatsApp', icon: MessageCircle, onClick: () => openWaCobro(c) },
-                ...((c as any).status !== 'cancelado' ? [
-                  { key: 'editar', label: 'Editar', icon: Pencil, onClick: () => setEditCobro(c) },
-                  { key: 'cancelar', label: 'Cancelar', icon: Ban, destructiva: true, separar: true, onClick: () => setCancelCobro(c) },
-                ] : []),
-              ]}
-              campos={[
-                ...(c.referencia ? [{ label: 'Ref', value: c.referencia }] : []),
-                { label: 'Monto', value: <span className="text-success font-bold">{fmtC(c.monto)}</span> },
-              ]}
-            />
-          ))}
-          {isLoading && <div className="text-center py-8 text-muted-foreground">Cargando...</div>}
-          {!isLoading && filtered.length === 0 && <div className="text-center py-8 text-muted-foreground">Sin cobros</div>}
-          {pagination.total > 0 && (
-            <TablePagination
-              from={pagination.from} to={pagination.to} total={pagination.total}
-              page={pagination.page} totalPages={pagination.totalPages}
-              pageSize={pagination.pageSize} onPageSizeChange={pagination.setPageSize}
-              onFirst={pagination.goFirst} onPrev={pagination.goPrev}
-              onNext={pagination.goNext} onLast={pagination.goLast}
-            />
+              );
+            })}
+          </ListaTarjetasMovil>
           )}
-        </div>
+        </>
       ) : (
         <>
           <GroupedTableWrapper
@@ -780,6 +789,7 @@ export default function CobranzaPage() {
       </AlertDialog>
 
       <PinDialog />
+    </div>
     </div>
   );
 }

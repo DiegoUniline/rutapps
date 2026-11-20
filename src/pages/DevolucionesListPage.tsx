@@ -13,7 +13,8 @@ import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { MermaConfigDialog } from '@/components/devoluciones/MermaConfigDialog';
@@ -210,9 +211,55 @@ export default function DevolucionesListPage() {
     setPage(1);
   };
 
+  const movil = useCargarMasMovil(filtered, `${search}|${clienteFilter}|${vendedorFilter}|${motivoFilter}|${accionFilter}|${desde}|${hasta}|${tabEstado}`);
+  const ESTADO_TAB_LABEL = { activas: 'Activas', canceladas: 'Canceladas', todas: 'Todas' } as const;
+  const filtroUnico: Record<string, [string, string, (v: string) => void]> = {
+    estado: [tabEstado, 'activas', v => setTabEstado(v as 'activas' | 'canceladas' | 'todas')],
+    cliente: [clienteFilter, 'all', setClienteFilter],
+    vendedor: [vendedorFilter, 'all', setVendedorFilter],
+    motivo: [motivoFilter, 'all', setMotivoFilter],
+    accion: [accionFilter, 'all', setAccionFilter],
+  };
+
   return (
-    <div className="p-4 space-y-4 max-w-[1200px]">
-      <div className="flex items-center justify-between">
+    <div className="p-2 md:p-4 max-w-[1200px]">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm px-3 md:px-4 py-3 space-y-3">
+      {isMobile && (
+        <EncabezadoListaMovil
+          titulo="Devoluciones"
+          estado={tabEstado !== 'activas' ? ESTADO_TAB_LABEL[tabEstado] : undefined}
+          extra={canConfig ? (
+            <button type="button" onClick={() => setMermaConfigOpen(true)} aria-label="Configurar mermas" title="Configurar mermas"
+              className="h-10 w-10 rounded-full border border-border bg-card text-muted-foreground flex items-center justify-center active:bg-accent">
+              <Settings2 className="h-4 w-4" />
+            </button>
+          ) : undefined}
+        >
+          <OdooFilterBar
+            search={search}
+            onSearchChange={v => { setSearch(v); setPage(1); }}
+            placeholder="Buscar devoluciones"
+            filterOptions={[
+              { key: 'estado', label: 'Estado', options: (['activas', 'canceladas', 'todas'] as const).map(t => ({ value: t, label: ESTADO_TAB_LABEL[t] })) },
+              { key: 'cliente', label: 'Cliente', options: clientes.map(([id, nombre]) => ({ value: id, label: nombre })) },
+              { key: 'vendedor', label: 'Vendedor', options: vendedores.map(([id, nombre]) => ({ value: id, label: nombre })) },
+              { key: 'motivo', label: 'Motivo', options: MOTIVOS.map(m => ({ value: m, label: MOTIVO_LABELS[m] })) },
+              { key: 'accion', label: 'Acción', options: ACCIONES.map(a => ({ value: a, label: ACCION_LABELS[a] })) },
+            ]}
+            activeFilters={Object.fromEntries(Object.entries(filtroUnico).filter(([, [v, def]]) => v !== def).map(([k, [v]]) => [k, [v]]))}
+            onToggleFilter={(key, val) => { const f = filtroUnico[key]; if (f) f[2](f[0] === val ? f[1] : val); setPage(1); }}
+            onSetFilter={(key, vals) => { const f = filtroUnico[key]; if (f) f[2](vals[vals.length - 1] ?? f[1]); setPage(1); }}
+            onClearFilters={clearFilters}
+            dateFrom={desde}
+            dateTo={hasta}
+            onDateRangeChange={(f, t) => { setDesde(f); setHasta(t); setPage(1); }}
+            onDateFromChange={v => { setDesde(v); setPage(1); }}
+            onDateToChange={v => { setHasta(v); setPage(1); }}
+          />
+        </EncabezadoListaMovil>
+      )}
+      <div className="flex items-center justify-between max-md:hidden">
         <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
           <RotateCcw className="h-5 w-5" /> Devoluciones
         </h1>
@@ -225,7 +272,7 @@ export default function DevolucionesListPage() {
 
       <MermaConfigDialog open={mermaConfigOpen} onOpenChange={setMermaConfigOpen} />
 
-      <nav className="flex gap-5 border-b border-border" role="tablist" aria-label="Estado de las devoluciones">
+      <nav className="flex gap-5 border-b border-border max-md:hidden" role="tablist" aria-label="Estado de las devoluciones">
         {(['activas', 'canceladas', 'todas'] as const).map(t => (
           <button
             key={t}
@@ -244,7 +291,7 @@ export default function DevolucionesListPage() {
       </nav>
 
       {/* Filters */}
-      <div className="bg-card border border-border rounded-lg p-3 space-y-2">
+      <div className="space-y-2 max-md:hidden">
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-semibold uppercase">
           <Filter className="h-3 w-3" /> Filtros
         </div>
@@ -300,49 +347,26 @@ export default function DevolucionesListPage() {
 
       {isMobile ? (
         isLoading ? <div className="py-8 text-center text-muted-foreground text-sm">Cargando...</div> : (
-        <>
-          {!!filtered.length && (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
-              <span className="text-muted-foreground">Totales ({filtered.length}) · {totalUds} uds.</span>
-              <span className="text-destructive tabular-nums">{fmt(totalCredito)}</span>
-            </div>
-          )}
-          <ListaTarjetasMovil vacia={paged.length === 0} mensajeVacio={hasFilters ? 'No hay devoluciones que coincidan con los filtros' : 'No hay devoluciones registradas'}>
-            {paged.map((d: any) => {
-              const lineas = d.devolucion_lineas ?? [];
-              const tUds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
-              const tCred = lineas.reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
-              const motivos = [...new Set(lineas.map((l: any) => l.motivo))] as string[];
-              const acciones = [...new Set(lineas.map((l: any) => l.accion))] as string[];
-              const lotesDev: Record<string, string> = (loteMapDev as any)[d.id] ?? {};
-              const productosText = lineas.map((l: any) => {
-                const lote = lotesDev[l.producto_id];
-                return `${l.productos?.nombre ?? '?'} (${l.cantidad})${lote ? ` · lote ${lote}` : ''}`;
-              }).join(', ');
-              const destinos = ((destinoMap as any)[d.id] ?? []) as any[];
-              return (
-                <ListaTarjetaMovil
-                  key={d.id}
-                  titulo={d.clientes?.nombre ?? '—'}
-                  subtitulo={[d.ventas?.folio, d.ventas?.vendedor?.nombre ?? d.vendedores?.nombre].filter(Boolean).join(' · ') || undefined}
-                  className={d.cancelado_at ? 'opacity-60' : undefined}
-                  estado={d.cancelado_at ? <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">Cancelada</span> : undefined}
-                  onClick={d.venta_id ? () => navigate(`/ventas/${d.venta_id}`) : undefined}
-                  campos={[
-                    { label: 'Fecha', value: fmtDate(d.fecha) },
-                    { label: 'Uds.', value: tUds },
-                    ...(tCred > 0 ? [{ label: 'Crédito', value: <span className="text-destructive">{fmt(tCred)}</span> }] : []),
-                    ...(motivos.length ? [{ label: 'Motivo', value: motivos.map(m => MOTIVO_LABELS[m] ?? m.replace(/_/g, ' ')).join(', ') }] : []),
-                    ...(acciones.length ? [{ label: 'Acción', value: acciones.map(a => ACCION_LABELS[a] ?? a).join(', ') }] : []),
-                    ...(destinos.length ? [{ label: 'Destino', value: destinos.map(a => a.nombre).join(', ') }] : []),
-                    ...(productosText ? [{ label: 'Productos', value: productosText, className: 'col-span-2 line-clamp-2' }] : []),
-                    ...(d.registradoPor ? [{ label: 'Registró', value: d.registradoPor, className: 'col-span-2' }] : []),
-                  ]}
-                />
-              );
-            })}
-          </ListaTarjetasMovil>
-        </>
+        <ListaTarjetasMovil aLoAncho vacia={movil.total === 0} mensajeVacio={hasFilters ? 'No hay devoluciones que coincidan con los filtros' : 'No hay devoluciones registradas'} {...movil}>
+          {movil.visibles.map((d: any) => {
+            const lineas = d.devolucion_lineas ?? [];
+            const tUds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+            const tCred = lineas.reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
+            const motivos = [...new Set(lineas.map((l: any) => l.motivo))] as string[];
+            return (
+              <ListaTarjetaMovil
+                key={d.id}
+                titulo={d.clientes?.nombre ?? '—'}
+                linea2={<>{fmtDate(d.fecha)} · {tUds} uds.{motivos.length ? ` · ${motivos.map(m => MOTIVO_LABELS[m] ?? m.replace(/_/g, ' ')).join(', ')}` : ''}{d.ventas?.folio ? <span className="text-xs"> · {d.ventas.folio}</span> : null}</>}
+                {...(d.cancelado_at
+                  ? { pildora: 'Cancelada', tono: 'peligro' as const }
+                  : tCred > 0 ? { pildora: fmt(tCred), tono: 'aviso' as const } : { pildora: `${tUds} uds.`, tono: 'neutro' as const })}
+                className={d.cancelado_at ? 'opacity-60' : undefined}
+                onClick={d.venta_id ? () => navigate(`/ventas/${d.venta_id}`) : undefined}
+              />
+            );
+          })}
+        </ListaTarjetasMovil>
         )
       ) : (
       <div className="bg-card border border-border rounded-md overflow-x-auto">
@@ -445,7 +469,7 @@ export default function DevolucionesListPage() {
       </div>
       )}
 
-      {total > pageSize && (
+      {!isMobile && total > pageSize && (
         <OdooPagination
           from={(page - 1) * pageSize + 1}
           to={Math.min(page * pageSize, total)}
@@ -454,6 +478,7 @@ export default function DevolucionesListPage() {
           onNext={() => setPage(p => p + 1)}
         />
       )}
+    </div>
     </div>
   );
 }

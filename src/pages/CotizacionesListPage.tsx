@@ -17,7 +17,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
 
 const ESTADO_STYLES: Record<CotizacionEstado, string> = {
   borrador: 'bg-muted text-foreground',
@@ -64,8 +65,38 @@ export default function CotizacionesListPage() {
     });
   }, [data, search, estadoFilter, dateFrom, dateTo]);
 
+  const ESTADOS_COT = ['borrador', 'enviada', 'aprobada', 'convertida', 'vencida', 'cancelada'] as const;
+  const movil = useCargarMasMovil(list, `${search}|${estadoFilter}|${dateFrom}|${dateTo}`);
+
   return (
     <ListPage>
+      {isMobile ? (
+        <ListPage.Toolbar>
+          <EncabezadoListaMovil
+            titulo="Cotizaciones"
+            estado={estadoFilter !== 'todas' ? estadoFilter.charAt(0).toUpperCase() + estadoFilter.slice(1) : undefined}
+            onNuevo={() => navigate('/cotizaciones/nuevo')}
+            nuevoLabel="Nueva cotización"
+          >
+            <OdooFilterBar
+              search={search}
+              onSearchChange={setSearch}
+              placeholder="Buscar cotizaciones"
+              filterOptions={[{ key: 'estado', label: 'Estado', options: ESTADOS_COT.map(e => ({ value: e, label: e.charAt(0).toUpperCase() + e.slice(1) })) }]}
+              activeFilters={estadoFilter !== 'todas' ? { estado: [estadoFilter] } : {}}
+              onToggleFilter={(_k, val) => setEstadoFilter(prev => prev === val ? 'todas' : val as CotizacionEstado)}
+              onSetFilter={(_k, vals) => setEstadoFilter((vals[vals.length - 1] as CotizacionEstado) ?? 'todas')}
+              onClearFilters={() => setEstadoFilter('todas')}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              onDateRangeChange={(f, t) => setDates(f, t)}
+              onDateFromChange={setDateFrom}
+              onDateToChange={setDateTo}
+            />
+          </EncabezadoListaMovil>
+        </ListPage.Toolbar>
+      ) : (
+      <ListPage.Toolbar>
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-foreground">Cotizaciones</h1>
         <Button onClick={() => navigate('/cotizaciones/nuevo')} size="sm">
@@ -103,32 +134,25 @@ export default function CotizacionesListPage() {
         </div>
       </div>
 
+      </ListPage.Toolbar>
+      )}
+
       {isMobile ? (
-        <div className={SCROLL_AREA}>
+        <ListPage.Body card={false}>
           {isLoading ? <div className="py-6 text-center text-muted-foreground text-sm">Cargando…</div> : (
-          <ListaTarjetasMovil vacia={list.length === 0} mensajeVacio="Sin cotizaciones">
-            {list.map(c => (
+          <ListaTarjetasMovil vacia={movil.total === 0} mensajeVacio="Sin cotizaciones" {...movil}>
+            {movil.visibles.map(c => (
               <ListaTarjetaMovil
                 key={c.id}
                 titulo={c.clientes?.nombre || 'Sin cliente'}
-                subtitulo={c.folio}
-                estado={<Badge className={cn('capitalize', ESTADO_STYLES[c.estado] || 'bg-muted')}>{c.estado}</Badge>}
+                linea2={<>{formatCurrency(c.total, c.moneda)} · {fmtDate(c.fecha)}<span className="text-xs"> · {c.folio}</span></>}
+                {...estadoPildora(c.estado)}
                 onClick={() => navigate(`/cotizaciones/${c.id}`)}
-                acciones={[
-                  { key: 'ver', label: 'Ver detalle', icon: FileText, onClick: () => navigate(`/cotizaciones/${c.id}`) },
-                  ...(c.estado !== 'convertida' ? [{ key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, separar: true, onClick: () => setToDelete(c) }] : []),
-                ]}
-                campos={[
-                  { label: 'Fecha', value: fmtDate(c.fecha) },
-                  { label: 'Total', value: formatCurrency(c.total, c.moneda) },
-                  { label: 'Vence', value: fmtDate(c.vence_at) },
-                  ...(c.enviada_wa_at || c.venta_id ? [{ label: 'Seguimiento', value: [c.enviada_wa_at ? 'Enviada' : null, c.venta_id ? 'Convertida' : null].filter(Boolean).join(' · ') }] : []),
-                ]}
               />
             ))}
           </ListaTarjetasMovil>
           )}
-        </div>
+        </ListPage.Body>
       ) : (
       <div className={TABLE_CARD}>
         <div>

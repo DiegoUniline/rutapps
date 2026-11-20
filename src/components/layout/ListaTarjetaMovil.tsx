@@ -69,10 +69,12 @@ interface EncabezadoListaMovilProps {
   /** Buscador (OdooFilterBar) a todo lo ancho. */
   children?: ReactNode;
   className?: string;
+  /** Botón secundario opcional junto al «+» (ícono redondo con aria-label). */
+  extra?: ReactNode;
 }
 
 /** Encabezado móvil: título + «+» redondo y debajo el buscador con Filtros. */
-export function EncabezadoListaMovil({ titulo, estado, onNuevo, nuevoLabel = 'Nuevo', children, className }: EncabezadoListaMovilProps) {
+export function EncabezadoListaMovil({ titulo, estado, onNuevo, nuevoLabel = 'Nuevo', children, className, extra }: EncabezadoListaMovilProps) {
   return (
     <div className={cn('shrink-0 space-y-2', className)}>
       <div className="flex items-center justify-between gap-2 min-h-10">
@@ -80,6 +82,7 @@ export function EncabezadoListaMovil({ titulo, estado, onNuevo, nuevoLabel = 'Nu
           {titulo}
           {estado ? <span className="ml-1.5 text-xs font-normal text-muted-foreground">· {estado}</span> : null}
         </h1>
+        {extra && <div className="ml-auto flex items-center gap-2 shrink-0">{extra}</div>}
         {onNuevo && (
           <button
             type="button"
