@@ -70,7 +70,7 @@ export function useUsuarios() {
     const [pr, ur, a, em] = await Promise.all([
       supabase.from('profiles').select('id, user_id, nombre, almacen_id, telefono, estado, pin_code, avatar_url, archivado_en, archivado_por, archivado_motivo').eq('empresa_id', empresa.id),
       supabase.from('user_roles').select('*'),
-      supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa.id),
+      supabase.from('almacenes').select('id, nombre, activo').eq('empresa_id', empresa.id),
       supabase.rpc('get_empresa_user_emails', { p_empresa_id: empresa.id }),
     ]);
     if (em.error) console.error('get_empresa_user_emails error:', em.error);

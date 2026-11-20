@@ -171,6 +171,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         .from('almacenes')
         .select('id, nombre, es_merma')
         .eq('empresa_id', descarga.empresa_id)
+        .eq('activo', true) // D-044: solo almacenes activos como destino
         .order('nombre');
       const esBodega = (n: string) => /general|principal|bodega|central|matriz/i.test(n || '');
       const items = (data ?? [])

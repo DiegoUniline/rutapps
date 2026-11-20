@@ -108,7 +108,7 @@ export default function NewUserModal({
             ) : (
               <select className="input-odoo w-full" value={newUser.almacen_id} onChange={e => setNewUser({ ...newUser, almacen_id: e.target.value })}>
                 <option value="">Sin almacén asignado</option>
-                {almacenes.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                {almacenes.filter(a => (a as any).activo !== false).map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
               </select>
             )}
           </div>

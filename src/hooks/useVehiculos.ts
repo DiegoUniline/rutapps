@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { offlineDb } from '@/lib/offlineDb';
+import { validarSinUsos } from '@/lib/registrosInactivos';
 
 export interface Vehiculo {
   id: string;
@@ -85,6 +86,9 @@ export function useDeleteVehiculo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      // D-044: con jornadas de ruta no se borra (el FK lo impide); mensaje claro antes de intentarlo.
+      const enUso = await validarSinUsos('vehiculos', [id], 'Cámbiale el estado a «Baja» en su lugar.');
+      if (enUso) throw new Error(enUso);
       const { error } = await supabase.from('vehiculos').delete().eq('id', id);
       if (error) throw error;
     },

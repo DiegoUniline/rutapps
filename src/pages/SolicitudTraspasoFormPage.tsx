@@ -34,7 +34,7 @@ export default function SolicitudTraspasoFormPage() {
   const { empresa, profile } = useAuth();
 
   const { data: almacenes = [] } = useAlmacenes();
-  const { data: productos = [] } = useProductos();
+  const { data: productos = [] } = useProductos(undefined, 'activo'); // D-044: solo activos para agregar
   const { data: solicitud } = useSolicitudTraspaso(id);
   const { data: lineasServidor = [] } = useSolicitudTraspasoLineas(id);
   const { data: historial = [] } = useSolicitudTraspasoHistorial(id);

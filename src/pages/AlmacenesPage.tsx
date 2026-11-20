@@ -27,7 +27,9 @@ export default function AlmacenesPage() {
   const [reasigning, setReasigning] = useState(false);
 
   const { data: items, isLoading } = useQuery({
-    queryKey: ['almacenes', empresa?.id, showInactive],
+    // Clave propia: ['almacenes', id, true|false] es la de useAlmacenes({ includeMermas }) y esta
+    // lista (con inactivos) se colaba en los selectores que la comparten en caché.
+    queryKey: ['almacenes', empresa?.id, 'admin', showInactive],
     enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase.from('almacenes').select('*').eq('empresa_id', empresa!.id).order('nombre');

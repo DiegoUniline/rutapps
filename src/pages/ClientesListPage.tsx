@@ -38,6 +38,7 @@ import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibilityMenu';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
 import { fmtMoney } from '@/lib/currency';
+import { validarSinUsos } from '@/lib/registrosInactivos';
 
 
 const CLIENTES_COLUMNS: ExportColumn[] = [
@@ -214,6 +215,9 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
     setBulkDeleting(true);
     try {
       if (forcedStatus === 'inactivo') {
+        // D-044: no se borra físicamente un cliente con ventas, cobros, visitas, etc.
+        const enUso = await validarSinUsos('clientes', ids, 'Déjalos inactivos (ya no aparecen para vender ni cobrar).');
+        if (enUso) { toast.error(enUso, { duration: 8000 }); return; }
         const { error } = await supabase.from('clientes').delete().in('id', ids).eq('empresa_id', empresa.id);
         if (error) throw error;
       } else {

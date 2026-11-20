@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProveedores } from '@/hooks/useData';
+import { useProveedores, useProveedoresTodos } from '@/hooks/useData';
 import { fmtMoney } from '@/lib/currency';
 import { getNombreCompra } from '@/lib/productoNombres';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
@@ -84,6 +84,7 @@ export default function ComprasSugeridasPage() {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const { data: proveedores } = useProveedores();
+  const { data: proveedoresTodos } = useProveedoresTodos();
   const [modo, setModo] = useState<Modo>('producto');
   const [filtroProv, setFiltroProv] = useState<string>('');
   const [editado, setEditado] = useState<Record<string, number>>({});
@@ -150,7 +151,7 @@ export default function ComprasSugeridasPage() {
       map.get(key)!.push(f);
     }
     return Array.from(map.entries()).map(([provId, items]) => {
-      const prov = proveedores?.find(p => p.id === provId);
+      const prov = proveedoresTodos?.find(p => p.id === provId);
       return {
         provId,
         provNombre: prov?.nombre || 'Sin proveedor asignado',
@@ -158,10 +159,11 @@ export default function ComprasSugeridasPage() {
         total: items.reduce((s, r) => s + r.sug * Number(r.p.costo || 0), 0),
       };
     }).sort((a, b) => a.provNombre.localeCompare(b.provNombre));
-  }, [filas, proveedores]);
+  }, [filas, proveedoresTodos]);
 
   const generarOC = async (provId: string, items: typeof filas) => {
     if (provId === '__sin__') { toast.error('Asigna un proveedor preferido a estos productos primero.'); return; }
+    if (proveedoresTodos?.find(p => p.id === provId)?.activo === false) { toast.error('El proveedor está inactivo. Asigna un proveedor activo a estos productos primero.'); return; }
     if (!empresa?.id) return;
     setGenerando(true);
     try {
@@ -359,6 +361,9 @@ export default function ComprasSugeridasPage() {
                           className={`border rounded px-1 py-0.5 bg-background text-[12px] max-w-[180px] ${!r.p.proveedor_preferido_id ? 'border-amber-400 text-amber-700' : 'border-input'}`}
                         >
                           <option value="">— Sin proveedor —</option>
+                          {r.p.proveedor_preferido_id && !proveedores?.some(p => p.id === r.p.proveedor_preferido_id) && (
+                            <option value={r.p.proveedor_preferido_id}>{proveedoresTodos?.find(p => p.id === r.p.proveedor_preferido_id)?.nombre ?? 'Proveedor (inactivo)'}</option>
+                          )}
                           {proveedores?.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                         </select>
                       </td>

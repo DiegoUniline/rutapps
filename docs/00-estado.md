@@ -10,6 +10,7 @@
 - **Siguiente paso exacto:** decidir datos históricos (cobros sin aplicar, pagado > total, saldos negativos); luego orden de trabajo por fases: F0 seguridad RPC → F1 saldo único + saldo a favor (D-008, D-020, D-021) → F2 pedido↔entrega → F3 inventario (D-022). Corte a Supabase propio: `docs/migracion-corte.md`.
 
 ## Decisiones recientes (últimas 10)
+- [D-044](./decisiones.md#d-044) 2026-11-20 · Lo inactivo no se ofrece para elegir (se conserva marcado «(inactivo)» donde ya estaba); un maestro en uso no se elimina, se desactiva.
 - [D-043](./decisiones.md#d-043) 2026-11-20 · «−/+» por caja en renglones por presentación (POS y ruta); teclado con decimales en devoluciones a granel.
 - [D-022](./decisiones.md#d-022) 2026-11-19 · Reasignar entrega o cambiar camión siempre mueve stock.
 - [D-021](./decisiones.md#d-021) 2026-11-19 · Borrador solo al inicio; confirmada no regresa a borrador, se edita con Editar venta.
@@ -19,10 +20,9 @@
 - [D-017](./decisiones.md#d-017) 2026-11-04 · Restaurar las 48 suscripciones Stripe canceladas sin cobro inicial, conservando fecha/hora de corte original; ejecutado y verificado 48/48.
 - [D-004](./decisiones.md#d-004) 2026-10-19 · Ventas sin `fecha_vencimiento` vencen a los días de crédito del cliente.
 - [D-003](./decisiones.md#d-003) 2026-10-19 · Plan de corrección PR A/B; relleno de `fecha_entrega` con `validado_at` → `updated_at`.
-- [D-002](./decisiones.md#d-002) 2026-10-19 · El dueño ejecuta los SQL correctivos de producción.
 
 ## Propuestas pendientes de aprobación 💡
-- (ninguna)
+- 💡 Blindaje en BD de borrados (D-044): hoy un DELETE directo por API de un producto/proveedor/lista en uso deja historial en NULL o lo borra en cascada (p. ej. `venta_lineas.producto_id`, `compras.proveedor_id` SET NULL; `venta_linea_lotes`, `lotes`, `stock_almacen` CASCADE). Propuesta: trigger BEFORE DELETE que use `usos_de_registros` (respetando `delete_empresa_cascade`) o FKs RESTRICT. Requiere aprobación.
 
 ## Pendientes / bloqueos
 - Suscripciones, verificación puntual 2026-11-04 23:47 UTC: 48 reemplazos vinculados, activos y desbloqueados en RutApp; Stripe en `trialing` hasta cada corte original; 48 facturas iniciales de total/importe pagado $0, sin cargos desde la creación y sin duplicados activos. Planes, usuarios, descuentos y configuración manual/legacy sin diferencias. No se modificó código, esquema, funciones ni se publicó. Los cobros futuros dependen de la tarjeta y no están probados antes de su fecha.

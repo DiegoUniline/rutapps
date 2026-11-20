@@ -32,7 +32,7 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
     (async () => {
       const { data } = await supabase
         .from('vehiculos')
-        .select('id, alias, placa, vendedor_default_id, empresa_id')
+        .select('id, alias, placa, vendedor_default_id, empresa_id, status')
         .eq('empresa_id', (editingUser as any).empresa_id ?? undefined as any);
       if (cancel) return;
       let list: VehiculoLite[] = (data as any) || [];
@@ -40,8 +40,9 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
         const { data: all } = await supabase.from('vehiculos').select('id, alias, placa, vendedor_default_id');
         list = (all as any) || [];
       }
-      setVehiculos(list);
       const mine = list.find(v => v.vendedor_default_id === editingUser.id);
+      // D-044: vehículos dados de baja no se ofrecen (salvo el que ya tiene asignado).
+      setVehiculos(list.filter(v => (v as any).status !== 'baja' || v.id === mine?.id));
       setVehiculoId(mine?.id || '');
       setInitialVehiculoId(mine?.id || '');
     })();
@@ -131,7 +132,8 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
             <label className="label-odoo">Almacén de trabajo</label>
             <select className="input-odoo w-full" value={editForm.almacen_id} onChange={e => setEditForm({ ...editForm, almacen_id: e.target.value })}>
               <option value="">Sin almacén asignado</option>
-              {almacenes.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+              {/* D-044: solo almacenes activos, más el que ya tiene asignado (marcado). */}
+              {almacenes.filter(a => (a as any).activo !== false || a.id === editForm.almacen_id).map(a => <option key={a.id} value={a.id}>{a.nombre}{(a as any).activo === false ? ' (inactivo)' : ''}</option>)}
             </select>
           </div>
           <div>
