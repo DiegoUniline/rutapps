@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { useCurrency } from '@/hooks/useCurrency';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
@@ -64,6 +66,7 @@ const emptyPromo: Partial<Promocion> = {
 
 export default function PromocionesPage() {
   const { empresa } = useAuth();
+  const isMobile = useIsMobile();
   const { data: promociones, isLoading } = usePromociones();
   const { symbol: s } = useCurrency();
   const savePromo = useSavePromocion();
@@ -186,7 +189,39 @@ export default function PromocionesPage() {
 
       <OdooFilterBar search={search} onSearchChange={setSearch} placeholder="Buscar promociones..." />
 
-      {isLoading ? <TableSkeleton /> : (
+      {isLoading ? <TableSkeleton /> : isMobile ? (
+        <ListaTarjetasMovil vacia={paged.length === 0} mensajeVacio="No hay promociones">
+          {paged.map(p => {
+            const tipoInfo = TIPO_LABELS[p.tipo];
+            const dias = (p.dias_semana ?? []);
+            const valor = p.tipo === 'producto_gratis'
+              ? `${p.cantidad_minima} → +${p.cantidad_gratis}`
+              : p.tipo === 'descuento_porcentaje' || p.tipo === 'volumen'
+                ? `${p.valor}%`
+                : `${s}${p.valor}`;
+            return (
+              <ListaTarjetaMovil
+                key={p.id}
+                titulo={p.nombre}
+                subtitulo={p.descripcion || tipoInfo?.label}
+                estado={<Badge variant={p.activa ? 'default' : 'secondary'}>{p.activa ? 'Activa' : 'Inactiva'}</Badge>}
+                onClick={() => setEditing({ ...p })}
+                acciones={[
+                  { key: 'editar', label: 'Editar', icon: Pencil, onClick: () => setEditing({ ...p }) },
+                  { key: 'eliminar', label: 'Eliminar', icon: Trash2, destructiva: true, separar: true, onClick: () => setDeleteTarget(p.id) },
+                ]}
+                campos={[
+                  { label: 'Tipo', value: tipoInfo?.label ?? p.tipo },
+                  { label: 'Valor', value: <>{valor}{p.cantidad_minima > 0 && p.tipo !== 'producto_gratis' && <span className="text-muted-foreground"> (min {p.cantidad_minima})</span>}</> },
+                  { label: 'Aplica a', value: APLICA_LABELS[p.aplica_a] },
+                  { label: 'Días', value: dias.length === 0 ? 'Todos' : dias.map(d => d.slice(0, 3)).join(', ') },
+                  ...(p.alcance_lista === 'especifica' ? [{ label: 'Lista', value: listaMap.get(p.lista_precio_id ?? '') ?? 'sin lista', className: 'col-span-2' }] : []),
+                ]}
+              />
+            );
+          })}
+        </ListaTarjetasMovil>
+      ) : (
         <div className="border border-border rounded-xl overflow-x-auto bg-card">
           <table className="w-full text-sm">
             <thead>

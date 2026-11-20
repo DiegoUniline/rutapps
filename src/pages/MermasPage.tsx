@@ -25,6 +25,8 @@ import { fmtMoney } from '@/lib/currency';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { confirmDialog } from '@/lib/confirm';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
@@ -42,6 +44,7 @@ interface LineaForm {
 
 export default function MermasPage() {
   const { empresa } = useAuth();
+  const isMobile = useIsMobile();
   const { hasPermiso, loading: permisosLoading } = usePermisos();
   const { data: almacenes } = useAlmacenes();
   const { data: almacenesConMermas } = useAlmacenes({ includeMermas: true });
@@ -205,7 +208,37 @@ export default function MermasPage() {
       </div>
 
       {/* Lista */}
-      <div className="bg-card border rounded-lg overflow-hidden">
+      {isMobile ? (
+        isLoading ? <div className="text-center py-8 text-sm">Cargando…</div> : (
+        <ListaTarjetasMovil vacia={(mermas ?? []).length === 0} mensajeVacio="Sin mermas registradas">
+          {(mermas ?? []).map((m: any) => (
+            <ListaTarjetaMovil
+              key={m.id}
+              titulo={m.merma_motivos?.nombre ?? '—'}
+              subtitulo={[m.folio, m.almacenes?.nombre].filter(Boolean).join(' · ')}
+              className={m.cancelada ? 'opacity-50' : undefined}
+              estado={m.cancelada ? <Badge variant="outline">Cancelada</Badge> : <Badge>Activa</Badge>}
+              onClick={() => setDetalleId(m.id)}
+              acciones={!m.cancelada && canCancelMermas ? [{
+                key: 'cancelar', label: 'Cancelar merma', icon: Trash2, destructiva: true,
+                onClick: async () => {
+                  if (await confirmDialog(`¿Cancelar merma ${m.folio}? Se devolverá el stock al almacén origen.`)) {
+                    cancelar.mutate(m.id);
+                  }
+                },
+              }] : undefined}
+              campos={[
+                { label: 'Fecha', value: fmtDate(m.fecha) },
+                { label: 'Usuario', value: m.profiles?.nombre ?? '—' },
+                { label: 'Costo', value: <span className="text-destructive">{fmtMoney(m.total_costo)}</span> },
+                { label: 'Venta', value: fmtMoney(m.total_venta) },
+              ]}
+            />
+          ))}
+        </ListaTarjetasMovil>
+        )
+      ) : (
+      <div className="bg-card border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -275,6 +308,7 @@ export default function MermasPage() {
           })()}
         </Table>
       </div>
+      )}
 
       {/* Modal: nueva merma */}
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>

@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
 import { ListPage } from '@/components/layout/ListPage';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { StatusChip } from '@/components/StatusChip';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { fmtDate } from '@/lib/utils';
@@ -25,6 +27,7 @@ const STATUS_TABS: Array<{ value: 'todas' | StatusSolicitudTraspaso; label: stri
 
 export default function SolicitudTraspasoListPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { data: solicitudes = [], isLoading } = useSolicitudesTraspaso();
   const [tab, setTab] = useState<'todas' | StatusSolicitudTraspaso>('todas');
   const [search, setSearch] = useState('');
@@ -85,13 +88,29 @@ export default function SolicitudTraspasoListPage() {
         </div>
       </ListPage.Toolbar>
 
-      <ListPage.Body>
+      <ListPage.Body card={!isMobile} className={isMobile ? 'space-y-2' : undefined}>
           {isLoading ? (
             <TableSkeleton rows={8} cols={7} />
           ) : filtradas.length === 0 ? (
             <p className="text-[12px] text-muted-foreground p-6 text-center">
               No hay solicitudes con este filtro.
             </p>
+          ) : isMobile ? (
+            <ListaTarjetasMovil>
+              {filtradas.map(s => (
+                <ListaTarjetaMovil
+                  key={s.id}
+                  titulo={`${s.almacen_origen?.nombre || '—'} → ${s.almacen_destino?.nombre || '—'}`}
+                  subtitulo={[s.folio, s.solicitante?.nombre].filter(Boolean).join(' · ') || undefined}
+                  estado={<StatusChip status={s.status} label={SOLICITUD_STATUS_LABELS[s.status]} />}
+                  onClick={() => navigate(`/almacen/solicitudes-traspaso/${s.id}`)}
+                  campos={[
+                    { label: 'Fecha', value: fmtDate(s.fecha) },
+                    { label: 'Creada', value: new Date(s.created_at).toLocaleString('es-MX') },
+                  ]}
+                />
+              ))}
+            </ListaTarjetasMovil>
           ) : (
             <table className="w-full text-[12px]">
               <thead>

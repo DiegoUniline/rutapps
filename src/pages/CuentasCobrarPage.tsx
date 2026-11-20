@@ -11,6 +11,8 @@ import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
@@ -91,6 +93,7 @@ export default function CuentasCobrarPage() {
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const qc = useQueryClient();
   const { requestPin, PinDialog } = usePinAuth();
   const [search, setSearch] = useState('');
@@ -291,6 +294,47 @@ export default function CuentasCobrarPage() {
         onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); }}
       />
 
+      {isMobile ? (
+        isLoading ? <div className="text-center py-8 text-muted-foreground text-sm">Cargando...</div> : (
+        <>
+          {!!filtered.length && (
+            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
+              <span className="text-muted-foreground">Pendiente ({filtered.length})</span>
+              <span className="text-destructive tabular-nums">{fmt(filtered.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0))}</span>
+            </div>
+          )}
+          <ListaTarjetasMovil vacia={filtered.length === 0} mensajeVacio="Sin cuentas pendientes 🎉">
+            {filtered.map(v => {
+              const esSaldo = v.es_saldo_inicial === true;
+              const canDelete = esSaldo && (v.saldo_pendiente ?? 0) === (v.total ?? 0);
+              return (
+                <ListaTarjetaMovil
+                  key={v.id}
+                  titulo={(v.clientes as any)?.nombre ?? '—'}
+                  subtitulo={[v.folio ?? v.id.slice(0, 8), (v.vendedores as any)?.nombre].filter(Boolean).join(' · ')}
+                  estado={
+                    <Badge variant={esSaldo ? 'secondary' : 'outline'} className="text-[10px] whitespace-nowrap">
+                      {esSaldo ? 'Saldo inicial' : v.condicion_pago}
+                    </Badge>
+                  }
+                  onClick={() => setCobrarVenta(v)}
+                  acciones={[
+                    { key: 'cobrar', label: 'Cobrar', icon: Banknote, onClick: () => setCobrarVenta(v) },
+                    ...(canDelete ? [{ key: 'eliminar', label: 'Eliminar saldo inicial', icon: Trash2, destructiva: true, separar: true, onClick: () => setDeleteId(v.id) }] : []),
+                  ]}
+                  campos={[
+                    { label: 'Fecha', value: fmtDate(v.fecha) },
+                    { label: 'Total', value: fmt(totalEfectivoVenta(v as any)) },
+                    { label: 'Pagado', value: <span className="text-success">{fmt(pagadoRealVenta(v))}</span> },
+                    { label: 'Pendiente', value: <span className="text-destructive font-bold">{fmt(v.saldo_pendiente ?? 0)}</span> },
+                  ]}
+                />
+              );
+            })}
+          </ListaTarjetasMovil>
+        </>
+        )
+      ) : (
       <div className="bg-card border border-border rounded overflow-x-auto">
         <Table>
           <TableHeader>
@@ -377,6 +421,7 @@ export default function CuentasCobrarPage() {
           })()}
         </Table>
       </div>
+      )}
 
       <SaldoInicialModal open={showModal} onOpenChange={setShowModal} />
       <SaldoInicialImportDialog open={showImport} onOpenChange={setShowImport} />

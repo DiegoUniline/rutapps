@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn, fmtDate , todayLocal } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidacionPdf';
 import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
 import { buildLiquidacionTicketHTML } from '@/lib/liquidacionTicketHtml';
@@ -2335,6 +2337,7 @@ export default function DescargasPage() {
   // Cuadre EN VIVO desde los cobros reales (reemplaza el efectivo_esperado congelado).
   const { data: cuadreVivo } = useDescargasLiveCuadre(descargas);
   const { data: vendedores } = useVendedores();
+  const isMobile = useIsMobile();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterVendedor, setFilterVendedor] = useState<string>('all');
@@ -2524,6 +2527,55 @@ export default function DescargasPage() {
               <Plus className="h-3.5 w-3.5 mr-1" /> Crear primera liquidación
             </Button>
           )}
+        </div>
+      ) : isMobile ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
+            <span className="text-muted-foreground">Totales {hasFilters && <span className="font-normal">(filtrado)</span>}</span>
+            <span className={cn("tabular-nums", totalDiferencia > 0 ? "text-green-600" : totalDiferencia < 0 ? "text-destructive" : "")}>
+              Dif. {totalDiferencia > 0 ? '+' : ''}{fmt(totalDiferencia)}
+            </span>
+          </div>
+          <ListaTarjetasMovil>
+            {pag.paginatedItems.map((d: any) => {
+              const s = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
+              const cv = cuadreDe(d);
+              const dif = cv.diferencia;
+              const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
+              const tipoLabel = d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
+              return (
+                <ListaTarjetaMovil
+                  key={d.id}
+                  titulo={(d as any).vendedores?.nombre ?? '—'}
+                  subtitulo={`${hasRange ? `${fmtDate(d.fecha_inicio)} → ${fmtDate(d.fecha_fin)}` : fmtDate(d.fecha)} · ${tipoLabel}`}
+                  estado={
+                    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap", s.color)}>
+                      <s.icon className="h-3 w-3" /> {s.label}
+                    </span>
+                  }
+                  onClick={() => setSelectedId(d.id)}
+                  campos={[
+                    { label: 'Esperado', value: fmt(cv.esperado) },
+                    { label: 'Entregado', value: fmt(Number(d.efectivo_entregado)) },
+                    { label: 'Diferencia', value: <span className={cn("font-bold", dif > 0 ? "text-green-600" : dif < 0 ? "text-destructive" : "")}>{dif > 0 ? '+' : ''}{fmt(dif)}</span> },
+                  ]}
+                />
+              );
+            })}
+          </ListaTarjetasMovil>
+          <TablePagination
+            from={pag.from}
+            to={pag.to}
+            total={pag.total}
+            page={pag.page}
+            totalPages={pag.totalPages}
+            pageSize={pag.pageSize}
+            onPageSizeChange={pag.setPageSize}
+            onFirst={pag.goFirst}
+            onPrev={pag.goPrev}
+            onNext={pag.goNext}
+            onLast={pag.goLast}
+          />
         </div>
       ) : (
         <div className="bg-card border border-border rounded-lg overflow-hidden">

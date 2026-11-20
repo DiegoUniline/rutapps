@@ -16,6 +16,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useListPreferences } from '@/hooks/useListPreferences';
 import { CxPTabs } from '@/components/CxPTabs';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -59,6 +61,7 @@ export default function CuentasPagarPage() {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [desde, setDesde] = useState('');
@@ -177,6 +180,41 @@ export default function CuentasPagarPage() {
         />
       </div>
 
+      {isMobile ? (
+        <div className="flex-1 min-h-0 overflow-auto space-y-2">
+          {!isLoading && pageData.length > 0 && (
+            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
+              <span className="text-muted-foreground">{total} cuentas</span>
+              <span className="text-destructive tabular-nums">{fmt(totalPorPagar)}</span>
+            </div>
+          )}
+          {isLoading ? <div className="text-center py-12 text-muted-foreground text-sm">Cargando...</div> : (
+          <ListaTarjetasMovil vacia={pageData.length === 0} mensajeVacio={hasFilters ? 'Sin cuentas con los filtros aplicados' : 'Sin cuentas por pagar'}>
+            {pageData.map((c: any) => (
+              <ListaTarjetaMovil
+                key={c.id}
+                titulo={c.proveedores?.nombre ?? '—'}
+                subtitulo={c.folio ?? c.id.slice(0, 8)}
+                estado={<StatusChip status={c.status} />}
+                onClick={() => navigate(`/almacen/compras/${c.id}`)}
+                campos={[
+                  { label: 'Fecha', value: fmtDate(c.fecha) },
+                  { label: 'Crédito', value: `${c.dias_credito ?? 0} días` },
+                  { label: 'Total', value: fmt(c.total ?? 0) },
+                  { label: 'Saldo', value: (c.saldo_pendiente ?? 0) > 0 ? <span className="text-destructive font-bold">{fmt(c.saldo_pendiente)}</span> : <span className="text-success">{fmt(0)}</span> },
+                ]}
+              />
+            ))}
+          </ListaTarjetasMovil>
+          )}
+          {total > 0 && (
+            <OdooPagination from={from} to={to} total={total}
+              onPrev={() => setPage(p => Math.max(1, p - 1))}
+              onNext={() => setPage(p => p + 1)}
+            />
+          )}
+        </div>
+      ) : (
       <div className={TABLE_CARD}>
         <table className="w-full text-sm">
           <thead>
@@ -251,6 +289,7 @@ export default function CuentasPagarPage() {
           />
         )}
       </div>
+      )}
     </ListPage>
   );
 }
