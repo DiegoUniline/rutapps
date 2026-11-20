@@ -40,8 +40,8 @@ export function StepSinCompra(props: Props) {
         </div>
       )}
       <div className="w-full max-w-xs mx-auto flex gap-2 mt-2">
-        <button className="btn-cancelar" onClick={() => { setSinCompra(false); setMotivoSinCompra(''); }}
-          className="flex-1 bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform">Cancelar</button>
+        <button className="btn-cancelar flex-1 bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform" onClick={() => { setSinCompra(false); setMotivoSinCompra(''); }}
+          >Cancelar</button>
         <button disabled={!motivoSinCompra || savingSinCompra}
           onClick={async () => {
             setSavingSinCompra(true);

@@ -91,9 +91,9 @@ function Header({ venta, onBack, showCancelChip, onCancelClick }: Props & { show
       <div className="flex-1 min-w-0"><h1 className="text-[16px] font-bold text-foreground truncate">{venta.folio ?? 'Sin folio'}</h1><p className="text-[11px] text-muted-foreground">{venta.tipo === 'venta_directa' ? 'Venta directa' : 'Pedido'}</p></div>
       <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', statusColors[venta.status] ?? '')}>{venta.status}</span>
       {showCancelChip && (
-        <button className="btn-cancelar"
+        <button className="btn-cancelar inline-flex items-center gap-1 px-2.5 h-8 rounded-lg bg-destructive/10 text-destructive text-[12px] font-semibold active:scale-95 transition-all shrink-0"
           onClick={onCancelClick}
-          className="inline-flex items-center gap-1 px-2.5 h-8 rounded-lg bg-destructive/10 text-destructive text-[12px] font-semibold active:scale-95 transition-all shrink-0"
+          
         >
           <X className="h-3.5 w-3.5" />
           Cancelar
