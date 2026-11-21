@@ -904,7 +904,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               subtitulo={`${(descarga as any).vendedores?.nombre ?? 'Sin vendedor'} · ${descarga.fecha_inicio && descarga.fecha_fin && descarga.fecha_inicio !== descarga.fecha_fin ? `${fmtDate(descarga.fecha_inicio)} al ${fmtDate(descarga.fecha_fin)}` : fmtDate(descarga.fecha)}`}
               principales={isPendiente && puedeEditar ? [
                 { key: 'aprobar', label: 'Aprobar', icon: CheckCircle2, onClick: () => aprobarMutation.mutate('aprobada'), disabled: !!descarga.descargo_camion && !destinoAlmacenId, cargando: aprobarMutation.isPending },
-                { key: 'rechazar', label: 'Rechazar', icon: XCircle, onClick: () => aprobarMutation.mutate('rechazada'), disabled: aprobarMutation.isPending, destructiva: true },
+                ...(descarga.inventario_aplicado_at ? [] : [{ key: 'rechazar', label: 'Rechazar', icon: XCircle, onClick: () => aprobarMutation.mutate('rechazada'), disabled: aprobarMutation.isPending, destructiva: true }]),
               ] : []}
               menuExtra={<div className="flex flex-col items-stretch gap-1 [&>*]:justify-start">{accionesLiq}</div>}
             />
@@ -1896,14 +1896,17 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   >
                     <CheckCircle2 className="h-4 w-4 mr-1.5" /> Aprobar liquidación
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => aprobarMutation.mutate('rechazada')}
-                    disabled={aprobarMutation.isPending}
-                    className="w-full h-10 border-destructive/40 text-destructive hover:bg-destructive/10"
-                  >
-                    <XCircle className="h-4 w-4 mr-1.5" /> Rechazar con nota
-                  </Button>
+                  {/* Ya movió inventario: no se rechaza, se corrige el conteo y se aprueba de nuevo (BD). */}
+                  {!descarga.inventario_aplicado_at && (
+                    <Button
+                      variant="outline"
+                      onClick={() => aprobarMutation.mutate('rechazada')}
+                      disabled={aprobarMutation.isPending}
+                      className="w-full h-10 border-destructive/40 text-destructive hover:bg-destructive/10"
+                    >
+                      <XCircle className="h-4 w-4 mr-1.5" /> Rechazar con nota
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
