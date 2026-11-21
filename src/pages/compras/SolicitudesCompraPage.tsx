@@ -17,6 +17,7 @@ import { todayLocal } from '@/lib/utils';
 import { calcLineTotals } from '@/pages/CompraForm/types';
 import { calcularTotalesCompra } from '@/lib/compraAjustes';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   borrador: { label: 'Borrador', cls: 'bg-slate-100 text-slate-700' },
@@ -88,6 +89,11 @@ export default function SolicitudesCompraPage() {
     return !q || `${s.folio ?? ''} ${s.proveedores?.nombre ?? s.proveedor_nombre ?? ''}`.toLowerCase().includes(q);
   }), buscarMovil, (s: any) => [s.folio], (s: any) => [s.proveedores?.nombre ?? s.proveedor_nombre]); // D-047
   const movil = useCargarMasMovil(itemsMovil, `${buscarMovil}|${estadoMovil}`);
+  // Orden por columna de la tabla de escritorio (todas las solicitudes ya están en memoria).
+  const ordenLista = useSortableTable(listQuery.data ?? [], (s: any, k) => {
+    if (k === 'proveedor') return s.proveedores?.nombre || s.proveedor_nombre || '';
+    return s?.[k];
+  }, undefined, 'solicitudes-compra');
 
   const detailQuery = useQuery({
     queryKey: ['solicitud-compra', sid],
@@ -408,8 +414,8 @@ export default function SolicitudesCompraPage() {
           ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="border-b bg-muted/35 text-left text-xs text-muted-foreground"><th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Proveedor</th><th className="px-4 py-2.5">Estado</th><th className="px-4 py-2.5">Enviada</th><th className="px-4 py-2.5"></th></tr></thead>
-              <tbody>{items.map((s: any) => <tr key={s.id} className="border-b last:border-0 hover:bg-muted/20 cursor-pointer" onClick={() => setSid(s.id)}><td className="px-4 py-3 font-semibold">{s.folio}</td><td className="px-4 py-3">{s.proveedores?.nombre || s.proveedor_nombre}</td><td className="px-4 py-3"><Status value={s.status} /></td><td className="px-4 py-3 text-muted-foreground">{s.enviado_at ? new Date(s.enviado_at).toLocaleString('es-MX') : '—'}</td><td className="px-4 py-3 text-right text-primary font-medium">Abrir</td></tr>)}</tbody>
+              <thead><tr className="border-b bg-muted/35 text-left text-xs text-muted-foreground"><SortableTh sortKey="folio" sort={ordenLista.sort} onToggle={ordenLista.toggle} className="px-4 py-2.5">Folio</SortableTh><SortableTh sortKey="proveedor" sort={ordenLista.sort} onToggle={ordenLista.toggle} className="px-4 py-2.5">Proveedor</SortableTh><SortableTh sortKey="status" sort={ordenLista.sort} onToggle={ordenLista.toggle} className="px-4 py-2.5">Estado</SortableTh><SortableTh sortKey="enviado_at" sort={ordenLista.sort} onToggle={ordenLista.toggle} className="px-4 py-2.5">Enviada</SortableTh><th className="px-4 py-2.5"></th></tr></thead>
+              <tbody>{ordenLista.sorted.map((s: any) => <tr key={s.id} className="border-b last:border-0 hover:bg-muted/20 cursor-pointer" onClick={() => setSid(s.id)}><td className="px-4 py-3 font-semibold">{s.folio}</td><td className="px-4 py-3">{s.proveedores?.nombre || s.proveedor_nombre}</td><td className="px-4 py-3"><Status value={s.status} /></td><td className="px-4 py-3 text-muted-foreground">{s.enviado_at ? new Date(s.enviado_at).toLocaleString('es-MX') : '—'}</td><td className="px-4 py-3 text-right text-primary font-medium">Abrir</td></tr>)}</tbody>
             </table>
           </div>
           )}

@@ -37,6 +37,7 @@ import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage'
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 interface LoteImportItem {
   producto_id: string;
@@ -709,7 +710,10 @@ export default function AjustesInventarioPage() {
   const totalH = filteredH.length;
   const fromH = Math.min((pageH - 1) * PAGE_SIZE_H + 1, totalH);
   const toH = Math.min(pageH * PAGE_SIZE_H, totalH);
-  const pageDataH = filteredH.slice(fromH - 1, toH);
+  // Orden por columna sobre todo el historial filtrado (en memoria), antes de paginar/agrupar.
+  const { sorted: historialOrdenado, sort: sortH, toggle: toggleH } = useSortableTable(filteredH, undefined, undefined, 'ajustes-historial');
+  const onSortH = (key: string) => { toggleH(key); setPageH(1); };
+  const pageDataH = historialOrdenado.slice(fromH - 1, toH);
   const totalDiffH = filteredH.reduce((s, l) => s + (l.diferencia ?? 0), 0);
 
   const groupsH = useMemo(() => groupData(pageDataH, groupByH, (item: any, key) => {
@@ -1154,15 +1158,15 @@ export default function AjustesInventarioPage() {
                 <table className="w-full text-[13px]">
                   <thead>
                     <tr className="border-b border-table-border text-left">
-                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Fecha</th>
-                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Almacén</th>
-                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Usuario</th>
-                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</th>
-                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</th>
-                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Anterior</th>
-                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Nueva</th>
-                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Diferencia</th>
-                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Motivo</th>
+                      <SortableTh sortKey="fecha" sort={sortH} onToggle={onSortH} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Fecha</SortableTh>
+                      <SortableTh sortKey="almacen" sort={sortH} onToggle={onSortH} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Almacén</SortableTh>
+                      <SortableTh sortKey="usuario" sort={sortH} onToggle={onSortH} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Usuario</SortableTh>
+                      <SortableTh sortKey="codigo" sort={sortH} onToggle={onSortH} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</SortableTh>
+                      <SortableTh sortKey="producto" sort={sortH} onToggle={onSortH} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</SortableTh>
+                      <SortableTh sortKey="cantidad_anterior" sort={sortH} onToggle={onSortH} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Anterior</SortableTh>
+                      <SortableTh sortKey="cantidad_nueva" sort={sortH} onToggle={onSortH} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Nueva</SortableTh>
+                      <SortableTh sortKey="diferencia" sort={sortH} onToggle={onSortH} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Diferencia</SortableTh>
+                      <SortableTh sortKey="motivo" sort={sortH} onToggle={onSortH} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Motivo</SortableTh>
                     </tr>
                   </thead>
                   <tbody>

@@ -23,6 +23,7 @@ import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { EntityMultiSelect, type MSOption } from '@/components/reportes/EntityMultiSelect';
 import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibilityMenu';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
+import { useSortState, useSortableTable, ordenarFilas, SortableTableHead } from '@/hooks/useSortableTable';
 import InventarioStockFechaTab from '@/pages/inventario/InventarioStockFechaTab';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -258,7 +259,7 @@ export default function InventarioPage() {
   const marcaSet = useMemo(() => new Set(marcaIds), [marcaIds]);
   const provSet = useMemo(() => new Set(proveedorIds), [proveedorIds]);
 
-  const filteredProducts = data?.productos.filter(p => {
+  const filteredProducts = useMemo(() => data?.productos.filter(p => {
     if (search && !p.nombre.toLowerCase().includes(search.toLowerCase()) && !p.codigo.toLowerCase().includes(search.toLowerCase())) return false;
     const total = p.stockTotal ?? 0;
     if (stockFilter === 'con' && total <= 0) return false;
@@ -267,7 +268,36 @@ export default function InventarioPage() {
     if (marcaSet.size > 0 && !marcaSet.has((p as any).marca_id)) return false;
     if (provSet.size > 0 && !provSet.has((p as any).proveedor_preferido_id)) return false;
     return true;
-  });
+  }), [data, search, stockFilter, catSet, marcaSet, provSet]);
+
+  // Orden por columna (todos los productos ya están en memoria). Cada vista recuerda su propio orden.
+  const ordenResumen = useSortState('inventario');
+  const ordenAlmacen = useSortState('inventario-almacen');
+  const ordenDemanda = useSortState('inventario-demanda');
+  const ordenVista = view === 'almacen' ? ordenAlmacen : view === 'demanda' ? ordenDemanda : ordenResumen;
+  const productosOrdenados = useMemo(() => {
+    const lista = filteredProducts ?? [];
+    if (!data || !ordenVista.sort.key) return lista;
+    const stockEn = (almacenId: string, prodId: string) => data.stockAlmacenMap[almacenId]?.[prodId] ?? 0;
+    const totalUbicaciones = (prodId: string) => (data.almacenes ?? []).reduce((s, a) => s + stockEn(a.id, prodId), 0);
+    const apartIds = new Set(data.apartadoAlmacenesIds ?? []);
+    const almacenesDemanda = (data.almacenes ?? []).filter(a => apartIds.has(a.id));
+    const stockDemanda = (prodId: string) => almacenesDemanda.reduce((s, a) => s + stockEn(a.id, prodId), 0);
+    const demanda = (prodId: string) => almacenesDemanda.reduce((s, a) => s + (data.apartadoMap?.[a.id]?.[prodId] ?? 0), 0);
+    return ordenarFilas(lista, ordenVista.sort, (p: any, k) => {
+      if (k === 'unidad') return p.unidades?.abreviatura ?? 'pz';
+      if (k === 'valorCosto') return p.valorCostoTotal ?? 0;
+      if (k === 'valorVenta') return p.valorVentaTotal ?? 0;
+      if (k === 'costoUnit') return p.costo ?? 0;
+      if (k.startsWith('ubic:')) return stockEn(k.slice(5), p.id);
+      if (k === 'totalUbic') return totalUbicaciones(p.id);
+      if (k === 'valorUbic') return totalUbicaciones(p.id) * (p.costo ?? 0);
+      if (k === 'demStock') return stockDemanda(p.id);
+      if (k === 'demDemanda') return demanda(p.id);
+      if (k === 'demDisp') return stockDemanda(p.id) - demanda(p.id);
+      return p?.[k];
+    });
+  }, [filteredProducts, ordenVista.sort, data]);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const movil = useCargarMasMovil(filteredProducts, `${search}|${stockFilter}|${categoriaIds.join()}|${marcaIds.join()}|${proveedorIds.join()}`);
@@ -573,16 +603,16 @@ export default function InventarioPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                {isCol('codigo') && <TableHead className="text-[11px]">Código</TableHead>}
-                <TableHead className="text-[11px]">Producto</TableHead>
-                {isCol('unidad') && <TableHead className="text-[11px] text-center">Ud.</TableHead>}
-                {isCol('stockTotal') && <TableHead className="text-[11px] text-center font-bold">Stock Total</TableHead>}
-                {isCol('valorCosto') && <TableHead className="text-[11px] text-right">Valor costo</TableHead>}
-                {isCol('valorVenta') && <TableHead className="text-[11px] text-right">Proyección</TableHead>}
+                {isCol('codigo') && <SortableTableHead sortKey="codigo" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} className="text-[11px]">Código</SortableTableHead>}
+                <SortableTableHead sortKey="nombre" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} className="text-[11px]">Producto</SortableTableHead>
+                {isCol('unidad') && <SortableTableHead sortKey="unidad" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} align="center" className="text-[11px] text-center">Ud.</SortableTableHead>}
+                {isCol('stockTotal') && <SortableTableHead sortKey="stockTotal" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} align="center" className="text-[11px] text-center font-bold">Stock Total</SortableTableHead>}
+                {isCol('valorCosto') && <SortableTableHead sortKey="valorCosto" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} align="right" className="text-[11px] text-right">Valor costo</SortableTableHead>}
+                {isCol('valorVenta') && <SortableTableHead sortKey="valorVenta" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} align="right" className="text-[11px] text-right">Proyección</SortableTableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts?.map(p => (
+              {productosOrdenados.map(p => (
                 <TableRow key={p.id}>
                   {isCol('codigo') && <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>}
                   <TableCell className="text-[12px] font-medium"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
@@ -632,20 +662,21 @@ export default function InventarioPage() {
             <TableHeader>
               <TableRow>
                 {isCol('codigo') && (
-                  <TableHead className="text-[11px] sticky left-0 bg-card z-30 w-[96px] min-w-[96px] max-w-[96px] sm:w-[120px] sm:min-w-[120px] sm:max-w-[120px] whitespace-nowrap overflow-hidden text-ellipsis">
+                  <SortableTableHead sortKey="codigo" sort={ordenAlmacen.sort} onToggle={ordenAlmacen.toggle} className="text-[11px] sticky left-0 bg-card z-30 w-[96px] min-w-[96px] max-w-[96px] sm:w-[120px] sm:min-w-[120px] sm:max-w-[120px] whitespace-nowrap overflow-hidden text-ellipsis">
                     Código
-                  </TableHead>
+                  </SortableTableHead>
                 )}
-                <TableHead
+                <SortableTableHead
+                  sortKey="nombre" sort={ordenAlmacen.sort} onToggle={ordenAlmacen.toggle}
                   className={cn(
                     "text-[11px] sticky bg-card z-30 w-[200px] min-w-[200px] max-w-[200px] sm:w-[280px] sm:min-w-[280px] sm:max-w-[280px] border-r border-border",
                     isCol('codigo') ? "left-[96px] sm:left-[120px]" : "left-0"
                   )}
                 >
                   Producto
-                </TableHead>
+                </SortableTableHead>
                 {ubicaciones.map(u => (
-                  <TableHead key={u.id} className="text-[11px] text-center whitespace-nowrap">
+                  <SortableTableHead key={u.id} sortKey={'ubic:' + u.id} sort={ordenAlmacen.sort} onToggle={ordenAlmacen.toggle} align="center" className="text-[11px] text-center whitespace-nowrap">
                     <u.icon className={cn("h-3 w-3 inline mr-0.5", u.tipo === 'ruta' ? "text-warning" : "text-primary")} />
                     {u.nombre}
                     <span className={cn("ml-1 text-[9px] px-1 py-0.5 rounded", u.tipo === 'ruta' ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary")}>
@@ -656,15 +687,15 @@ export default function InventarioPage() {
                         Apart.
                       </span>
                     )}
-                  </TableHead>
+                  </SortableTableHead>
                 ))}
-                {isCol('stockTotal') && <TableHead className="text-[11px] text-center font-bold">Total</TableHead>}
-                {isCol('costoUnit') && <TableHead className="text-[11px] text-right">Costo unit.</TableHead>}
-                {isCol('valorCosto') && <TableHead className="text-[11px] text-right">Valor total</TableHead>}
+                {isCol('stockTotal') && <SortableTableHead sortKey="totalUbic" sort={ordenAlmacen.sort} onToggle={ordenAlmacen.toggle} align="center" className="text-[11px] text-center font-bold">Total</SortableTableHead>}
+                {isCol('costoUnit') && <SortableTableHead sortKey="costoUnit" sort={ordenAlmacen.sort} onToggle={ordenAlmacen.toggle} align="right" className="text-[11px] text-right">Costo unit.</SortableTableHead>}
+                {isCol('valorCosto') && <SortableTableHead sortKey="valorUbic" sort={ordenAlmacen.sort} onToggle={ordenAlmacen.toggle} align="right" className="text-[11px] text-right">Valor total</SortableTableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts?.map(p => {
+              {productosOrdenados.map(p => {
                 const totalUbic = ubicaciones.reduce((s, u) => s + u.getStock(p.id), 0);
                 return (
                   <TableRow key={p.id}>
@@ -782,16 +813,16 @@ export default function InventarioPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[11px]">Código</TableHead>
-                  <TableHead className="text-[11px]">Producto</TableHead>
-                  <TableHead className="text-[11px] text-center">Ud.</TableHead>
-                  <TableHead className="text-[11px] text-center font-bold">Stock</TableHead>
-                  <TableHead className="text-[11px] text-center font-bold">Demanda</TableHead>
-                  <TableHead className="text-[11px] text-center font-bold">Disponible</TableHead>
+                  <SortableTableHead sortKey="codigo" sort={ordenDemanda.sort} onToggle={ordenDemanda.toggle} className="text-[11px]">Código</SortableTableHead>
+                  <SortableTableHead sortKey="nombre" sort={ordenDemanda.sort} onToggle={ordenDemanda.toggle} className="text-[11px]">Producto</SortableTableHead>
+                  <SortableTableHead sortKey="unidad" sort={ordenDemanda.sort} onToggle={ordenDemanda.toggle} align="center" className="text-[11px] text-center">Ud.</SortableTableHead>
+                  <SortableTableHead sortKey="demStock" sort={ordenDemanda.sort} onToggle={ordenDemanda.toggle} align="center" className="text-[11px] text-center font-bold">Stock</SortableTableHead>
+                  <SortableTableHead sortKey="demDemanda" sort={ordenDemanda.sort} onToggle={ordenDemanda.toggle} align="center" className="text-[11px] text-center font-bold">Demanda</SortableTableHead>
+                  <SortableTableHead sortKey="demDisp" sort={ordenDemanda.sort} onToggle={ordenDemanda.toggle} align="center" className="text-[11px] text-center font-bold">Disponible</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts?.map(p => {
+                {productosOrdenados.map(p => {
                   const stock = getStock(p.id);
                   const dem = getDemanda(p.id);
                   const disp = stock - dem;
@@ -916,6 +947,12 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
   const totalAbordo = lineas.reduce((s: number, l: any) => s + l.abordo, 0);
   const totalValorCosto = lineas.reduce((s: number, l: any) => s + l.abordo * l.costo, 0);
   const totalValorVenta = lineas.reduce((s: number, l: any) => s + l.abordo * l.precio, 0);
+  // Orden por columna de los productos de la ruta (en memoria).
+  const orden = useSortableTable(lineas, (l: any, k) => {
+    if (k === 'valorCosto') return l.abordo * l.costo;
+    if (k === 'valorVenta') return l.abordo * l.precio;
+    return l?.[k];
+  }, undefined, 'inventario-ruta');
 
   return (
     <div className="space-y-4">
@@ -962,14 +999,14 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-[11px]">Código</TableHead>
-              <TableHead className="text-[11px]">Producto</TableHead>
-              <TableHead className="text-[11px] text-center">Cargado</TableHead>
-              <TableHead className="text-[11px] text-center">Entregado</TableHead>
-              <TableHead className="text-[11px] text-center">Devuelto</TableHead>
-              <TableHead className="text-[11px] text-center font-bold">Abordo</TableHead>
-              <TableHead className="text-[11px] text-right">Valor costo</TableHead>
-              <TableHead className="text-[11px] text-right">Valor venta</TableHead>
+              <SortableTableHead sortKey="codigo" sort={orden.sort} onToggle={orden.toggle} className="text-[11px]">Código</SortableTableHead>
+              <SortableTableHead sortKey="nombre" sort={orden.sort} onToggle={orden.toggle} className="text-[11px]">Producto</SortableTableHead>
+              <SortableTableHead sortKey="cargado" sort={orden.sort} onToggle={orden.toggle} align="center" className="text-[11px] text-center">Cargado</SortableTableHead>
+              <SortableTableHead sortKey="entregado" sort={orden.sort} onToggle={orden.toggle} align="center" className="text-[11px] text-center">Entregado</SortableTableHead>
+              <SortableTableHead sortKey="devuelto" sort={orden.sort} onToggle={orden.toggle} align="center" className="text-[11px] text-center">Devuelto</SortableTableHead>
+              <SortableTableHead sortKey="abordo" sort={orden.sort} onToggle={orden.toggle} align="center" className="text-[11px] text-center font-bold">Abordo</SortableTableHead>
+              <SortableTableHead sortKey="valorCosto" sort={orden.sort} onToggle={orden.toggle} align="right" className="text-[11px] text-right">Valor costo</SortableTableHead>
+              <SortableTableHead sortKey="valorVenta" sort={orden.sort} onToggle={orden.toggle} align="right" className="text-[11px] text-right">Valor venta</SortableTableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -980,7 +1017,7 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
                 </TableCell>
               </TableRow>
             )}
-            {lineas.map((l: any, i: number) => (
+            {orden.sorted.map((l: any, i: number) => (
               <TableRow key={i}>
                 <TableCell className="font-mono text-[11px] text-muted-foreground">{l.codigo}</TableCell>
                 <TableCell className="text-[12px] font-medium">{l.nombre}</TableCell>

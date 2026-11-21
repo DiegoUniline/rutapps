@@ -134,6 +134,8 @@ interface SortableThProps {
   /** Opcionales, para encabezados de varias filas/columnas. */
   rowSpan?: number;
   colSpan?: number;
+  /** true: encabezado normal sin orden (p. ej. columna calculada que la consulta paginada no puede ordenar). */
+  disabled?: boolean;
   children: React.ReactNode;
 }
 
@@ -143,7 +145,8 @@ function etiquetaOrden(active: boolean, dir: SortDir) {
 }
 
 /** Encabezado `<th>` ordenable. Funciona con `th-odoo` y con las clases de `TableHead`. */
-export function SortableTh({ sortKey, sort, onToggle, align = 'left', className, rowSpan, colSpan, children }: SortableThProps) {
+export function SortableTh({ sortKey, sort, onToggle, align = 'left', className, rowSpan, colSpan, disabled, children }: SortableThProps) {
+  if (disabled) return <th className={className} rowSpan={rowSpan} colSpan={colSpan}>{children}</th>;
   const active = sort.key === sortKey;
   const Icon = !active ? ChevronsUpDown : sort.dir === 'asc' ? ChevronUp : ChevronDown;
   const justify = align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start';

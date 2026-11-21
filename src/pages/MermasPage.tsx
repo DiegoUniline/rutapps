@@ -31,6 +31,7 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 
 
 interface LineaForm {
@@ -62,6 +63,14 @@ export default function MermasPage() {
     return !q || `${m.folio ?? ''} ${m.merma_motivos?.nombre ?? ''} ${m.almacenes?.nombre ?? ''} ${m.profiles?.nombre ?? ''}`.toLowerCase().includes(q);
   }), busquedaMovil, (m: any) => [m.folio], (m: any) => [m.merma_motivos?.nombre, m.almacenes?.nombre, m.profiles?.nombre]); // D-047
   const movil = useCargarMasMovil(mermasMovil, `${busquedaMovil}|${desde}|${hasta}`);
+  // Orden por columna de la tabla de escritorio (todas las mermas del periodo ya están en memoria).
+  const ordenMermas = useSortableTable(mermas ?? [], (m: any, k) => {
+    if (k === 'almacen') return m.almacenes?.nombre ?? '';
+    if (k === 'motivo') return m.merma_motivos?.nombre ?? '';
+    if (k === 'usuario') return m.profiles?.nombre ?? '';
+    if (k === 'estado') return m.cancelada ? 'Cancelada' : 'Activa';
+    return m?.[k];
+  }, undefined, 'mermas');
   const registrar = useRegistrarMerma();
   const cancelar = useCancelarMerma();
 
@@ -273,15 +282,16 @@ export default function MermasPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Folio</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Almacén origen</TableHead>
+              <SortableTableHead sortKey="folio" sort={ordenMermas.sort} onToggle={ordenMermas.toggle}>Folio</SortableTableHead>
+              <SortableTableHead sortKey="fecha" sort={ordenMermas.sort} onToggle={ordenMermas.toggle}>Fecha</SortableTableHead>
+              <SortableTableHead sortKey="almacen" sort={ordenMermas.sort} onToggle={ordenMermas.toggle}>Almacén origen</SortableTableHead>
+              {/* Destino: el mismo almacén de mermas en todas las filas (no hay nada que ordenar). */}
               <TableHead>Almacén destino</TableHead>
-              <TableHead>Motivo</TableHead>
-              <TableHead>Usuario</TableHead>
-              <TableHead className="text-right">Costo perdido</TableHead>
-              <TableHead className="text-right">Venta no realizada</TableHead>
-              <TableHead>Estado</TableHead>
+              <SortableTableHead sortKey="motivo" sort={ordenMermas.sort} onToggle={ordenMermas.toggle}>Motivo</SortableTableHead>
+              <SortableTableHead sortKey="usuario" sort={ordenMermas.sort} onToggle={ordenMermas.toggle}>Usuario</SortableTableHead>
+              <SortableTableHead sortKey="total_costo" sort={ordenMermas.sort} onToggle={ordenMermas.toggle} align="right" className="text-right">Costo perdido</SortableTableHead>
+              <SortableTableHead sortKey="total_venta" sort={ordenMermas.sort} onToggle={ordenMermas.toggle} align="right" className="text-right">Venta no realizada</SortableTableHead>
+              <SortableTableHead sortKey="estado" sort={ordenMermas.sort} onToggle={ordenMermas.toggle}>Estado</SortableTableHead>
               <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
@@ -290,7 +300,7 @@ export default function MermasPage() {
               <TableRow><TableCell colSpan={10} className="text-center py-8">Cargando…</TableCell></TableRow>
             ) : (mermas ?? []).length === 0 ? (
               <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Sin mermas registradas</TableCell></TableRow>
-            ) : (mermas ?? []).map((m: any) => (
+            ) : ordenMermas.sorted.map((m: any) => (
               <TableRow
                 key={m.id}
                 className={`cursor-pointer hover:bg-muted/50 ${m.cancelada ? 'opacity-50' : ''}`}

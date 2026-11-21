@@ -20,6 +20,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 const ESTADO_STYLES: Record<CotizacionEstado, string> = {
   borrador: 'bg-muted text-foreground',
@@ -67,6 +68,12 @@ export default function CotizacionesListPage() {
     // D-047: con búsqueda, folio exacto primero, luego «empieza con», luego el resto (orden normal dentro de cada grupo).
     return ordenarPorRelevancia(lista, search, c => [c.folio], c => [c.clientes?.nombre]);
   }, [data, search, estadoFilter, dateFrom, dateTo]);
+
+  // Orden por columna (todas las cotizaciones del periodo ya están en memoria).
+  const { sorted: listaOrdenada, sort, toggle } = useSortableTable(list, (c: Cotizacion, k) => {
+    if (k === 'cliente') return c.clientes?.nombre ?? '';
+    return (c as any)[k];
+  }, undefined, 'cotizaciones');
 
   const ESTADOS_COT = ['borrador', 'enviada', 'aprobada', 'convertida', 'vencida', 'cancelada'] as const;
   const movil = useCargarMasMovil(list, `${search}|${estadoFilter}|${dateFrom}|${dateTo}`);
@@ -162,12 +169,12 @@ export default function CotizacionesListPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
-                <th className="text-left px-3 py-2">Folio</th>
-                <th className="text-left px-3 py-2">Fecha</th>
-                <th className="text-left px-3 py-2">Cliente</th>
-                <th className="text-right px-3 py-2">Total</th>
-                <th className="text-left px-3 py-2">Vence</th>
-                <th className="text-left px-3 py-2">Estado</th>
+                <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Folio</SortableTh>
+                <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Fecha</SortableTh>
+                <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Cliente</SortableTh>
+                <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Total</SortableTh>
+                <SortableTh sortKey="vence_at" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Vence</SortableTh>
+                <SortableTh sortKey="estado" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Estado</SortableTh>
                 <th className="text-right px-3 py-2">Acciones</th>
                 <th className="w-8"></th>
               </tr>
@@ -182,7 +189,7 @@ export default function CotizacionesListPage() {
                   Sin cotizaciones
                 </td></tr>
               )}
-              {list.map(c => {
+              {listaOrdenada.map(c => {
                 const isExpanded = expandedId === c.id;
                 return (
                   <Fragment key={c.id}>
