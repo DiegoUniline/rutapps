@@ -135,7 +135,7 @@ BEGIN
              WHERE c.empresa_id = d.empresa_id AND c.user_id = v_uid
                AND c.fecha BETWEEN v_desde AND v_hasta
                AND c.status <> 'cancelado'
-               AND c.metodo_pago NOT IN ('saldo_favor', 'ajuste_liquidacion')  -- no es dinero
+               AND COALESCE(c.metodo_pago, '') NOT IN ('saldo_favor', 'ajuste_liquidacion')  -- no es dinero
              GROUP BY 1) s;
 
     -- Cobros del periodo aplicados a ventas de fechas anteriores (saldos anteriores).
@@ -146,7 +146,7 @@ BEGIN
      WHERE c.empresa_id = d.empresa_id AND c.user_id = v_uid
        AND c.fecha BETWEEN v_desde AND v_hasta
        AND c.status <> 'cancelado'
-       AND c.metodo_pago NOT IN ('saldo_favor', 'ajuste_liquidacion')
+       AND COALESCE(c.metodo_pago, '') NOT IN ('saldo_favor', 'ajuste_liquidacion')
        AND v.fecha < v_desde;
   END IF;
 
@@ -204,10 +204,13 @@ DECLARE
 BEGIN
   IF NEW.vendedor_id IS NULL OR NEW.status::text = 'rechazada' THEN RETURN NEW; END IF;
   IF COALESCE(current_setting('app.borrando_empresa', true), '') = '1' THEN RETURN NEW; END IF;
+  -- En UPDATE solo se revisa si cambia vendedor, empresa o fechas, o si una rechazada
+  -- vuelve a contar (reabrir). Aprobar/reabrir una ya activa no se bloquea (datos viejos).
   IF TG_OP = 'UPDATE'
-     AND (NEW.vendedor_id, NEW.fecha, NEW.fecha_inicio, NEW.fecha_fin, NEW.status, NEW.empresa_id)
+     AND (NEW.vendedor_id, NEW.fecha, NEW.fecha_inicio, NEW.fecha_fin, NEW.empresa_id)
          IS NOT DISTINCT FROM
-         (OLD.vendedor_id, OLD.fecha, OLD.fecha_inicio, OLD.fecha_fin, OLD.status, OLD.empresa_id) THEN
+         (OLD.vendedor_id, OLD.fecha, OLD.fecha_inicio, OLD.fecha_fin, OLD.empresa_id)
+     AND OLD.status::text <> 'rechazada' THEN
     RETURN NEW;
   END IF;
 
@@ -281,8 +284,8 @@ CREATE TRIGGER trg_descarga_ruta_marca_aplicado
 --    bodega, camión en 0, diferencia como ajuste) y anota cantidad_aplicada.
 --    Re-aprobación: por renglón aplica SOLO real − cantidad_aplicada en la bodega
 --    (entrada o salida, con kardex) y registra el cambio de la diferencia como
---    ajuste; el camión no se vuelve a tocar. Un renglón agregado al reabrir se
---    aplica como en la primera vez (sale del camión a la bodega).
+--    ajuste; el camión no se vuelve a tocar. Un renglón agregado al reabrir cuenta
+--    desde 0 (entra a la bodega solo lo contado, sin tocar el camión).
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.apply_descarga_ruta_aprobada()
 RETURNS trigger
@@ -317,8 +320,10 @@ BEGIN
                    FROM public.descarga_ruta_lineas WHERE descarga_id=NEW.id LOOP
     v_real := COALESCE(v_linea.cantidad_real,0);
 
-    IF v_reaj AND v_linea.cantidad_aplicada IS NOT NULL THEN
-      -- Re-aprobación: solo la diferencia contra lo ya aplicado.
+    IF v_reaj THEN
+      -- Re-aprobación: solo la diferencia contra lo ya aplicado. Un renglón agregado al
+      -- reabrir cuenta desde 0. El camión NO se toca (ya tiene la carga de días siguientes).
+      v_linea.cantidad_aplicada := COALESCE(v_linea.cantidad_aplicada, 0);
       v_delta := v_real - v_linea.cantidad_aplicada;
       IF v_delta <> 0 THEN
         INSERT INTO public.stock_almacen (empresa_id, almacen_id, producto_id, cantidad)
@@ -512,6 +517,12 @@ BEGIN
         RAISE EXCEPTION 'La liquidación está aprobada: reábrela (con motivo) para cambiarla.'
           USING ERRCODE = '42501';
       END IF;
+      -- Ya movió inventario: no cambia si se descargó el camión ni a qué bodega entró.
+      IF OLD.inventario_aplicado_at IS NOT NULL
+         AND (NEW.descargo_camion, NEW.almacen_destino_id) IS DISTINCT FROM (OLD.descargo_camion, OLD.almacen_destino_id) THEN
+        RAISE EXCEPTION 'El inventario de esta liquidación ya se aplicó: no se cambia el descargo de camión ni la bodega destino.'
+          USING ERRCODE = '42501';
+      END IF;
     END IF;
     IF public.fn_puede_descargas(v_uid, OLD.empresa_id, 'editar') THEN RETURN NEW; END IF;
     IF NOT public._descarga_es_propia(v_uid, OLD.user_id, OLD.vendedor_id) THEN
@@ -563,6 +574,22 @@ BEGIN
   IF NOT FOUND THEN RETURN COALESCE(NEW, OLD); END IF;  -- la FK decide
   IF v_d.status = 'aprobada' AND COALESCE(current_setting('app.liquidacion_rpc', true), '') <> '1' THEN
     RAISE EXCEPTION 'La liquidación está aprobada: reábrela (con motivo) para cambiar el conteo.' USING ERRCODE = '42501';
+  END IF;
+  -- Lo ya aplicado a la bodega solo lo escribe la aprobación.
+  IF TG_OP = 'INSERT' AND COALESCE(current_setting('app.liquidacion_rpc', true), '') <> '1'
+     AND NEW.cantidad_aplicada IS NOT NULL THEN
+    RAISE EXCEPTION 'La cantidad aplicada a la bodega solo la registra la aprobación.' USING ERRCODE = '42501';
+  END IF;
+  IF TG_OP = 'UPDATE' THEN
+    IF COALESCE(current_setting('app.liquidacion_rpc', true), '') <> '1'
+       AND NEW.cantidad_aplicada IS DISTINCT FROM OLD.cantidad_aplicada THEN
+      RAISE EXCEPTION 'La cantidad aplicada a la bodega solo la registra la aprobación.' USING ERRCODE = '42501';
+    END IF;
+    -- Renglón ya aplicado a la bodega: no cambia de producto (se corrige la cantidad).
+    IF OLD.cantidad_aplicada IS NOT NULL
+       AND (NEW.producto_id, NEW.descarga_id) IS DISTINCT FROM (OLD.producto_id, OLD.descarga_id) THEN
+      RAISE EXCEPTION 'Este renglón ya entró a la bodega: corrige la cantidad, no el producto.' USING ERRCODE = '42501';
+    END IF;
   END IF;
   IF public.fn_puede_descargas(v_uid, v_d.empresa_id, 'editar') THEN RETURN COALESCE(NEW, OLD); END IF;
   IF v_d.status <> 'pendiente' THEN
