@@ -484,6 +484,7 @@ function dibujarResumenGeneralPdf(
   const pageHeight = doc.internal.pageSize.getHeight();
   const pageWidth = doc.internal.pageSize.getWidth();
   const ultimaY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 40;
+  let ultimaConPie = doc.getNumberOfPages();
   let y = ultimaY + 10;
   if (y > pageHeight - 50) { doc.addPage(); y = 20; }
   doc.setFont('helvetica', 'bold');
@@ -499,13 +500,20 @@ function dibujarResumenGeneralPdf(
       styles: { font: 'helvetica', fontSize: 9, cellPadding: { top: 1.8, bottom: 1.8, left: 3, right: 3 }, textColor: BW_BLACK },
       headStyles: { fontStyle: 'bold', fillColor: [255, 255, 255], textColor: BW_BLACK },
       columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+      didParseCell: (d: { section: string; column: { index: number }; cell: { styles: { halign: string } } }) => {
+        if (d.section === 'head' && d.column.index > 0) d.cell.styles.halign = 'right';
+      },
       margin: { left: margin, right: margin, top: 20, bottom: 14 },
-      didDrawPage: (d: { pageNumber: number }) => {
+      didDrawPage: () => {
+        // Pie solo en hojas nuevas (las anteriores ya lo traen de la tabla principal).
+        const n = doc.getCurrentPageInfo().pageNumber;
+        if (n <= ultimaConPie) return;
+        ultimaConPie = n;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(...BW_MUTED);
         doc.text(`Rutapp · ${empresaFooter}`, margin, pageHeight - 8);
-        doc.text(`Página ${d.pageNumber} de {totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+        doc.text(`Página ${n} de {totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
       },
     });
     return ((doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? startY) + 5;
