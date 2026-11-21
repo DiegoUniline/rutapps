@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { mesActualLocal } from '@/hooks/useListPreferences';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -140,6 +141,12 @@ export default function AuditoriasPage() {
     if (fechaHasta) list = list.filter((a: any) => (a.fecha ?? a.created_at ?? '').slice(0, 10) <= fechaHasta);
     return list;
   }, [auditorias, search, fechaDesde, fechaHasta]);
+  const { sorted: auditoriasOrdenadas, sort, toggle } = useSortableTable(filtered, (a: any, k) => {
+    if (k === 'almacen') return almacenes?.find(al => al.id === a.filtro_valor)?.nombre;
+    if (k === 'lineas') return a.auditoria_lineas?.[0]?.count ?? 0;
+    if (k === 'status') return (STATUS_BADGE[a.status] ?? STATUS_BADGE.pendiente).label;
+    return a[k];
+  }, undefined, 'auditorias');
 
 
   // Preview count
@@ -341,11 +348,11 @@ export default function AuditoriasPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Almacén</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Líneas</TableHead>
-              <TableHead>Status</TableHead>
+              <SortableTableHead sortKey="nombre" sort={sort} onToggle={toggle}>Nombre</SortableTableHead>
+              <SortableTableHead sortKey="almacen" sort={sort} onToggle={toggle}>Almacén</SortableTableHead>
+              <SortableTableHead sortKey="fecha" sort={sort} onToggle={toggle}>Fecha</SortableTableHead>
+              <SortableTableHead sortKey="lineas" sort={sort} onToggle={toggle}>Líneas</SortableTableHead>
+              <SortableTableHead sortKey="status" sort={sort} onToggle={toggle}>Status</SortableTableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
@@ -356,7 +363,7 @@ export default function AuditoriasPage() {
                 <Package className="h-8 w-8 mx-auto mb-2 opacity-30" /> No hay auditorías
               </TableCell></TableRow>
             )}
-            {filtered.map((a: any) => {
+            {auditoriasOrdenadas.map((a: any) => {
               const badge = STATUS_BADGE[a.status] ?? STATUS_BADGE.pendiente;
               const almNombre = almacenes?.find(al => al.id === a.filtro_valor)?.nombre ?? '-';
               const lineasCount = a.auditoria_lineas?.[0]?.count ?? 0;

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useListPreferences } from '@/hooks/useListPreferences';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
@@ -217,6 +218,13 @@ export default function FacturacionCfdiPage() {
     }
   }), search, (c: any) => [c.folio, c.folio_fiscal, c.receiver_rfc], (c: any) => [c.receiver_name]);
   const movilCfdi = useCargarMasMovil(filtered, search);
+  const { sorted: cfdisOrdenados, sort, toggle } = useSortableTable(filtered, (c: any, k) => {
+    if (k === 'folio') return `${c.serie ?? ''}${c.folio ?? ''}`;
+    if (k === 'venta') return c.ventas?.folio ?? '';
+    if (k === 'total') return Number(c.total || 0);
+    if (k === 'status') return STATUS_LABELS[c.status] || c.status;
+    return c[k];
+  }, undefined, 'facturacion-cfdi');
 
   const counts = (cfdis || []).reduce(
     (acc: any, c: any) => {
@@ -436,18 +444,18 @@ export default function FacturacionCfdiPage() {
                          aria-label="Seleccionar todas"
                        />
                      </TableHead>
-                     <TableHead className="w-[100px]">Folio</TableHead>
-                     <TableHead>Receptor</TableHead>
-                     <TableHead className="w-[120px]">RFC</TableHead>
-                     <TableHead className="w-[90px]">Venta</TableHead>
-                     <TableHead className="w-[100px] text-right">Total</TableHead>
-                     <TableHead className="w-[110px]">Status</TableHead>
-                     <TableHead className="w-[100px]">Fecha</TableHead>
+                     <SortableTableHead sortKey="folio" sort={sort} onToggle={toggle} className="w-[100px]">Folio</SortableTableHead>
+                     <SortableTableHead sortKey="receiver_name" sort={sort} onToggle={toggle}>Receptor</SortableTableHead>
+                     <SortableTableHead sortKey="receiver_rfc" sort={sort} onToggle={toggle} className="w-[120px]">RFC</SortableTableHead>
+                     <SortableTableHead sortKey="venta" sort={sort} onToggle={toggle} className="w-[90px]">Venta</SortableTableHead>
+                     <SortableTableHead sortKey="total" sort={sort} onToggle={toggle} align="right" className="w-[100px] text-right">Total</SortableTableHead>
+                     <SortableTableHead sortKey="status" sort={sort} onToggle={toggle} className="w-[110px]">Status</SortableTableHead>
+                     <SortableTableHead sortKey="created_at" sort={sort} onToggle={toggle} className="w-[100px]">Fecha</SortableTableHead>
                      <TableHead className="w-[140px]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((cfdi: any) => (
+                  {cfdisOrdenados.map((cfdi: any) => (
                     <TableRow key={cfdi.id} data-state={selectedIds.has(cfdi.id) ? 'selected' : undefined} className="text-[13px] cursor-pointer" onClick={() => navigate(`/facturacion-cfdi/${cfdi.id}`)}>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox

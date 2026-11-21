@@ -1,5 +1,6 @@
 import { useState, Fragment } from 'react';
-import { Boxes, Plus, Pencil, AlertTriangle, ChevronRight, ChevronDown, Warehouse, Truck, Search, Check, Download, ArrowUpDown, Tag } from 'lucide-react';
+import { useSortState, ordenarFilas, SortableTh } from '@/hooks/useSortableTable';
+import { Boxes, Plus, Pencil, AlertTriangle, ChevronRight, ChevronDown, Warehouse, Truck, Search, Check, Download, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -61,12 +62,9 @@ export default function LotesPage() {
   const toggleMarca = (id: string) => setMarcaFilters(prev => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
-  const [sortBy, setSortBy] = useState<'producto' | 'marca' | 'lote' | 'vence'>('producto');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const toggleSort = (k: 'producto' | 'marca' | 'lote' | 'vence') => {
-    if (sortBy === k) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
-    else { setSortBy(k); setSortDir('asc'); }
-  };
+  // Orden por columna compartido (se recuerda por lista). Sin orden elegido: producto A→Z.
+  const { sort, toggle } = useSortState('lotes');
+  const ordenPorAlmacen = useSortState('lotes-por-almacen');
   const [vencMode, setVencMode] = useState<'todos' | 'porvencer' | 'vencido'>('todos');
   const [vencDias, setVencDias] = useState('30'); // umbral editable de "por vencer"
   const toggleExpand = (id: string) => setExpanded(prev => {
@@ -267,13 +265,7 @@ export default function LotesPage() {
       if (stockFilter === 'sin' && q > 0) return false;
     }
     return true;
-  }).sort((a, b) => {
-    const dir = sortDir === 'asc' ? 1 : -1;
-    if (sortBy === 'marca') return dir * (marcaDe(a).localeCompare(marcaDe(b)) || (a.productos?.nombre ?? '').localeCompare(b.productos?.nombre ?? ''));
-    if (sortBy === 'lote') return dir * a.codigo.localeCompare(b.codigo);
-    if (sortBy === 'vence') return dir * ((a.fecha_caducidad ?? '9999-12-31').localeCompare(b.fecha_caducidad ?? '9999-12-31'));
-    return dir * ((a.productos?.nombre ?? '').localeCompare(b.productos?.nombre ?? ''));
-  });
+  }).sort((a, b) => (a.productos?.nombre ?? '').localeCompare(b.productos?.nombre ?? ''));
   const isMobile = useIsMobile();
   const movil = useCargarMasMovil(lotesVisibles, lotesVisibles.length);
 
@@ -296,6 +288,19 @@ export default function LotesPage() {
     if (almacenFilters.size === 0) return apartado?.porLote.get(loteId) ?? 0;
     return Array.from(almacenFilters).reduce((s, a) => s + apartadoEn(loteId, a), 0);
   };
+  const lotesOrdenados = ordenarFilas(lotesVisibles, sort, (l, k) => {
+    if (k === 'producto') return l.productos?.nombre;
+    if (k === 'marca') return marcaDe(l);
+    if (k === 'lote') return l.codigo;
+    if (k === 'vence' || k === 'caducidad') return l.fecha_caducidad;
+    if (k === 'fabricacion') return l.fecha_fabricacion;
+    if (k === 'costo') return l.costo;
+    if (k === 'total') return stockDe(l.id);
+    if (k === 'apartado') return apartadoDe(l.id);
+    if (k === 'disponible') return stockDe(l.id) - apartadoDe(l.id);
+    if (k.startsWith('alm:')) return cantidadEn(l.id, k.slice(4));
+    return (l as any)[k];
+  });
   const totalesCol = new Map<string, number>();
   matrizCols.forEach(c => totalesCol.set(c.id, lotesVisibles.reduce((s, l) => s + cantidadEn(l.id, c.id), 0)));
   const totalGeneral = lotesVisibles.reduce((s, l) => s + stockDe(l.id), 0);
@@ -607,42 +612,34 @@ export default function LotesPage() {
             <table className="text-sm min-w-full">
               <thead>
                 <tr className="border-b border-table-border">
-                  <th className="th-odoo text-left sticky left-0 z-20 bg-card min-w-[220px]">
-                    <button onClick={() => toggleSort('producto')} className="inline-flex items-center gap-1 hover:text-primary">
-                      Producto <ArrowUpDown className="h-3 w-3 opacity-60" />
-                    </button>
-                  </th>
-                  <th className="th-odoo text-left w-40">
-                    <button onClick={() => toggleSort('marca')} className="inline-flex items-center gap-1 hover:text-primary">
-                      Marca <ArrowUpDown className="h-3 w-3 opacity-60" />
-                    </button>
-                  </th>
-                  <th className="th-odoo text-left w-32">
-                    <button onClick={() => toggleSort('lote')} className="inline-flex items-center gap-1 hover:text-primary">
-                      Lote <ArrowUpDown className="h-3 w-3 opacity-60" />
-                    </button>
-                  </th>
-                  <th className="th-odoo text-left w-36">
-                    <button onClick={() => toggleSort('vence')} className="inline-flex items-center gap-1 hover:text-primary">
-                      Vence <ArrowUpDown className="h-3 w-3 opacity-60" />
-                    </button>
-                  </th>
+                  <SortableTh sortKey="producto" sort={sort} onToggle={toggle} className="th-odoo text-left sticky left-0 z-20 bg-card min-w-[220px]">
+                    Producto
+                  </SortableTh>
+                  <SortableTh sortKey="marca" sort={sort} onToggle={toggle} className="th-odoo text-left w-40">
+                    Marca
+                  </SortableTh>
+                  <SortableTh sortKey="lote" sort={sort} onToggle={toggle} className="th-odoo text-left w-32">
+                    Lote
+                  </SortableTh>
+                  <SortableTh sortKey="vence" sort={sort} onToggle={toggle} className="th-odoo text-left w-36">
+                    Vence
+                  </SortableTh>
                   {matrizCols.map(c => (
-                    <th key={c.id} className="th-odoo text-right whitespace-nowrap min-w-[110px]">
+                    <SortableTh key={c.id} sortKey={`alm:${c.id}`} sort={sort} onToggle={toggle} align="right" className="th-odoo text-right whitespace-nowrap min-w-[110px]">
                       <span className="inline-flex items-center gap-1 justify-end">
                         {c.tipo === 'ruta' ? <Truck className="h-3 w-3 text-amber-500" /> : <Warehouse className="h-3 w-3 text-primary" />}
                         {c.nombre}
                       </span>
-                    </th>
+                    </SortableTh>
                   ))}
-                  <th className="th-odoo text-right w-24 bg-muted/40">Total</th>
-                  <th className="th-odoo text-right w-24">Apartado</th>
-                  <th className="th-odoo text-right w-24 bg-muted/40">Disponible</th>
+                  <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right w-24 bg-muted/40">Total</SortableTh>
+                  <SortableTh sortKey="apartado" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right w-24">Apartado</SortableTh>
+                  <SortableTh sortKey="disponible" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right w-24 bg-muted/40">Disponible</SortableTh>
                   <th className="th-odoo w-12 text-right">·</th>
                 </tr>
               </thead>
               <tbody>
-                {lotesVisibles.map(l => {
+                {lotesOrdenados.map(l => {
                   const est = estadoVencimiento(l.fecha_caducidad);
                   const fisico = stockDe(l.id);
                   const ap = apartadoDe(l.id);
@@ -712,18 +709,18 @@ export default function LotesPage() {
             <thead>
               <tr className="border-b border-table-border">
                 <th className="th-odoo w-8"></th>
-                <th className="th-odoo text-left">Producto</th>
-                <th className="th-odoo text-left w-32">Código lote</th>
-                <th className="th-odoo text-left w-32">Caducidad</th>
-                <th className="th-odoo text-left w-40">Vence</th>
-                <th className="th-odoo text-left w-28">Fabricación</th>
-                <th className="th-odoo text-right w-24">Costo</th>
-                <th className="th-odoo text-right w-28">Stock{almacenFilters.size > 0 ? ' (filtrado)' : ''}</th>
+                <SortableTh sortKey="producto" sort={sort} onToggle={toggle} className="th-odoo text-left">Producto</SortableTh>
+                <SortableTh sortKey="lote" sort={sort} onToggle={toggle} className="th-odoo text-left w-32">Código lote</SortableTh>
+                <SortableTh sortKey="caducidad" sort={sort} onToggle={toggle} className="th-odoo text-left w-32">Caducidad</SortableTh>
+                <SortableTh sortKey="vence" sort={sort} onToggle={toggle} className="th-odoo text-left w-40">Vence</SortableTh>
+                <SortableTh sortKey="fabricacion" sort={sort} onToggle={toggle} className="th-odoo text-left w-28">Fabricación</SortableTh>
+                <SortableTh sortKey="costo" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right w-24">Costo</SortableTh>
+                <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right w-28">Stock{almacenFilters.size > 0 ? ' (filtrado)' : ''}</SortableTh>
                 <th className="th-odoo w-16 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {lotesVisibles.map(l => {
+              {lotesOrdenados.map(l => {
                 const total = stockDe(l.id);
                 const detalle = stockDetalle?.get(l.id) ?? [];
                 const isOpen = expanded.has(l.id);
@@ -808,18 +805,23 @@ export default function LotesPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-table-border">
-                      <th className="th-odoo text-left">Producto</th>
-                      <th className="th-odoo text-left w-32">Lote</th>
-                      <th className="th-odoo text-left w-40">Vence</th>
-                      <th className="th-odoo text-right w-24">Cantidad</th>
+                      <SortableTh sortKey="producto" sort={ordenPorAlmacen.sort} onToggle={ordenPorAlmacen.toggle} className="th-odoo text-left">Producto</SortableTh>
+                      <SortableTh sortKey="lote" sort={ordenPorAlmacen.sort} onToggle={ordenPorAlmacen.toggle} className="th-odoo text-left w-32">Lote</SortableTh>
+                      <SortableTh sortKey="vence" sort={ordenPorAlmacen.sort} onToggle={ordenPorAlmacen.toggle} className="th-odoo text-left w-40">Vence</SortableTh>
+                      <SortableTh sortKey="cantidad" sort={ordenPorAlmacen.sort} onToggle={ordenPorAlmacen.toggle} align="right" className="th-odoo text-right w-24">Cantidad</SortableTh>
                     </tr>
                   </thead>
                   <tbody>
                     {/* FEFO: lo que caduca primero, arriba */}
-                    {alm.items.slice().sort((a, b) => {
+                    {ordenarFilas(alm.items.slice().sort((a, b) => {
                       const da = a.lote.fecha_caducidad ?? '9999-12-31';
                       const db = b.lote.fecha_caducidad ?? '9999-12-31';
                       return da.localeCompare(db);
+                    }), ordenPorAlmacen.sort, (it, k) => {
+                      if (k === 'producto') return it.lote.productos?.nombre;
+                      if (k === 'lote') return it.lote.codigo;
+                      if (k === 'vence') return it.lote.fecha_caducidad;
+                      return it.cantidad;
                     }).map(({ lote, cantidad }) => {
                       const est = estadoVencimiento(lote.fecha_caducidad);
                       return (

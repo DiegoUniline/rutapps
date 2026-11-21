@@ -354,13 +354,27 @@ export default function CobranzaPage() {
   // KPIs use full filtered data (cancelled excluded from money totals)
   const totalCobrado = filtered.reduce((s, c) => s + ((c as any).status !== 'cancelado' ? (c.monto ?? 0) : 0), 0);
 
+  // Orden por columna sobre TODA la lista filtrada (antes de agrupar y paginar).
+  const { sorted: sortedCobros, sort, toggle } = useSortableTable(filtered, (r: any, k) => {
+    if (k === 'fecha') return r.fecha ?? '';
+    if (k === 'folio') return ((r.cobro_aplicaciones ?? []) as any[])
+      .map(a => a.ventas?.folio ?? (a.venta_id ? String(a.venta_id).slice(0, 8) : '')).filter(Boolean).join(', ');
+    if (k === 'cliente') return (r.clientes as any)?.nombre ?? '';
+    if (k === 'vendedor') return vendedorMap.get(r.user_id) || '';
+    if (k === 'metodo') return r.metodo_pago ?? '';
+    if (k === 'referencia') return r.referencia ?? '';
+    if (k === 'estado') return r.status === 'cancelado' ? 'cancelado' : 'activo';
+    if (k === 'monto') return r.monto ?? 0;
+    return r?.[k];
+  }, undefined, 'cobranza');
+
   // Visual pagination — only affects table rendering
-  const pagination = useTablePagination(filtered);
+  const pagination = useTablePagination(sortedCobros);
 
   // Reset page on filter change is handled by deps: filtered changes → useTablePagination clamps page
 
   // Grouping uses ALL filtered items (not paginated) so groups reflect the full result set
-  const groupSource = groupBy ? filtered : pagination.paginatedItems;
+  const groupSource = groupBy ? sortedCobros : pagination.paginatedItems;
   const groups = useMemo(() => groupData(groupSource, groupBy, (item: any, key: string) => {
     if (key === 'cliente') return (item.clientes as any)?.nombre ?? 'Sin cliente';
     if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
@@ -377,17 +391,7 @@ export default function CobranzaPage() {
         .map(a => ({ id: a.ventas?.id ?? a.venta_id, folio: a.ventas?.folio ?? (a.venta_id ? String(a.venta_id).slice(0, 8) : '') }))
         .filter(x => x.id);
     };
-    const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
-      if (k === 'fecha') return r.fecha ?? '';
-      if (k === 'folio') return getFolios(r).map(f => f.folio).join(', ');
-      if (k === 'cliente') return (r.clientes as any)?.nombre ?? '';
-      if (k === 'vendedor') return vendedorMap.get(r.user_id) || '';
-      if (k === 'metodo') return r.metodo_pago ?? '';
-      if (k === 'referencia') return r.referencia ?? '';
-      if (k === 'estado') return (r as any).status === 'cancelado' ? 'cancelado' : 'activo';
-      if (k === 'monto') return r.monto ?? 0;
-      return r?.[k];
-    });
+    const sorted = items;
     return (
       <Table className="bg-card">
         <TableHeader>

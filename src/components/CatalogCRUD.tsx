@@ -8,6 +8,7 @@ import { compressPhoto } from '@/lib/imageCompressor';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 export interface CatalogColumn {
   key: string;
@@ -76,7 +77,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey, image
 
   const activeItems = items?.filter(i => i.activo !== false) ?? [];
   const inactiveItems = items?.filter(i => i.activo === false) ?? [];
-  const displayItems = showInactive ? inactiveItems : activeItems;
+  const { sorted: displayItems, sort, toggle } = useSortableTable(showInactive ? inactiveItems : activeItems, undefined, undefined, `catalogo-${queryKey}`);
 
   const handleAdd = async () => {
     if (!newRow.nombre || (newRow.nombre as string).trim() === '') {
@@ -158,7 +159,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey, image
             <thead>
               <tr className="border-b border-table-border">
                 {columns.map(c => (
-                  <th key={c.key} className="th-odoo text-left">{c.label}</th>
+                  <SortableTh key={c.key} sortKey={c.key} sort={sort} onToggle={toggle} className="th-odoo text-left">{c.label}</SortableTh>
                 ))}
                 {imageColumn && <th className="th-odoo text-left w-40">Imagen</th>}
                 <th className="th-odoo w-20 text-right">Acciones</th>

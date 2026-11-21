@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -154,6 +155,14 @@ export default function AuditoriaResultadosPage() {
   }, [lineas]);
 
   // Init ajustes when opening dialog
+  const { sorted: lineasOrdenadas, sort, toggle } = useSortableTable(lineas ?? [], (l: any, k) => {
+    if (k === 'producto') return l.productos?.nombre;
+    if (k === 'codigo') return l.productos?.codigo;
+    if (k === 'diferencia') return l.cantidad_real === null ? null : (l.diferencia ?? 0);
+    if (k === 'ajustado') return l.ajustado ? 0 : 1;
+    return l[k];
+  }, undefined, 'auditoria-resultados');
+
   const initAjustes = () => {
     const sel: AjusteSelection = {};
     (lineas ?? []).forEach((l: any) => {
@@ -422,18 +431,18 @@ export default function AuditoriaResultadosPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[30px]"></TableHead>
-                <TableHead>Producto</TableHead>
-                <TableHead>Código</TableHead>
-                <TableHead className="text-right">Esperado</TableHead>
-                <TableHead className="text-right">Contado</TableHead>
-                <TableHead className="text-right">Diferencia</TableHead>
-                <TableHead className="text-center">Ajustado</TableHead>
-                <TableHead className="text-right">Cerrada</TableHead>
+                <SortableTableHead sortKey="producto" sort={sort} onToggle={toggle}>Producto</SortableTableHead>
+                <SortableTableHead sortKey="codigo" sort={sort} onToggle={toggle}>Código</SortableTableHead>
+                <SortableTableHead sortKey="cantidad_esperada" sort={sort} onToggle={toggle} align="right" className="text-right">Esperado</SortableTableHead>
+                <SortableTableHead sortKey="cantidad_real" sort={sort} onToggle={toggle} align="right" className="text-right">Contado</SortableTableHead>
+                <SortableTableHead sortKey="diferencia" sort={sort} onToggle={toggle} align="right" className="text-right">Diferencia</SortableTableHead>
+                <SortableTableHead sortKey="ajustado" sort={sort} onToggle={toggle} align="center" className="text-center">Ajustado</SortableTableHead>
+                <SortableTableHead sortKey="cerrada_at" sort={sort} onToggle={toggle} align="right" className="text-right">Cerrada</SortableTableHead>
                 <TableHead className="text-center w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(lineas ?? []).map((l: any) => {
+              {lineasOrdenadas.map((l: any) => {
                 const diff = l.diferencia ?? 0;
                 const notCounted = l.cantidad_real === null;
                 const lineEntries = entradas?.[l.id] ?? [];

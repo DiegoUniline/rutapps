@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { Warehouse, Truck, Plus, ToggleLeft, ToggleRight, AlertTriangle, Pencil } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil } from '@/components/layout/ListaTarjetaMovil';
@@ -49,7 +50,8 @@ export default function AlmacenesPage() {
 
   const activeItems = items?.filter(i => i.activo !== false) ?? [];
   const inactiveItems = items?.filter(i => i.activo === false) ?? [];
-  const displayItems = showInactive ? inactiveItems : activeItems;
+  const { sorted: displayItems, sort, toggle } = useSortableTable(showInactive ? inactiveItems : activeItems,
+    (a: any, k) => k === 'tipo' ? ((a.tipo ?? 'almacen') === 'ruta' ? 'Ruta' : 'Almacén') : a[k], undefined, 'almacenes');
   const isMobile = useIsMobile();
 
   const handleAdd = async () => {
@@ -233,8 +235,8 @@ export default function AlmacenesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
-                <th className="th-odoo text-left">Nombre</th>
-                <th className="th-odoo text-center w-28">Tipo</th>
+                <SortableTh sortKey="nombre" sort={sort} onToggle={toggle} className="th-odoo text-left">Nombre</SortableTh>
+                <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} align="center" className="th-odoo text-center w-28">Tipo</SortableTh>
                 <th className="th-odoo w-20 text-right">Acciones</th>
               </tr>
             </thead>

@@ -1,4 +1,5 @@
 import { pagadoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HelpButton from '@/components/HelpButton';
@@ -204,6 +205,17 @@ export default function CuentasCobrarPage() {
     return list;
   }, [cuentas, search, filters, desde, hasta]);
 
+  const { sorted: filasOrdenadas, sort, toggle } = useSortableTable(filtered, (v: any, k) => {
+    if (k === 'folio') return v.folio ?? v.id;
+    if (k === 'cliente') return v.clientes?.nombre ?? '';
+    if (k === 'vendedor') return v.vendedores?.nombre ?? '';
+    if (k === 'condicion') return v.es_saldo_inicial ? (v.concepto || 'Saldo anterior') : v.condicion_pago;
+    if (k === 'total') return totalEfectivoVenta(v);
+    if (k === 'pagado') return pagadoRealVenta(v);
+    if (k === 'pendiente') return v.saldo_pendiente ?? 0;
+    return v[k];
+  }, undefined, 'cuentas-cobrar');
+
   const totalPendiente = filtered.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
   const totalVentas = filtered.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
 
@@ -354,19 +366,19 @@ export default function CuentasCobrarPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-[11px]">Folio</TableHead>
-              <TableHead className="text-[11px]">Cliente</TableHead>
-              <TableHead className="text-[11px]">Vendedor</TableHead>
-              <TableHead className="text-[11px]">Fecha</TableHead>
-              <TableHead className="text-[11px]">Condición</TableHead>
-              <TableHead className="text-[11px] text-right">Total</TableHead>
-              <TableHead className="text-[11px] text-right">Pagado</TableHead>
-              <TableHead className="text-[11px] text-right">Pendiente</TableHead>
+              <SortableTableHead sortKey="folio" sort={sort} onToggle={toggle} className="text-[11px]">Folio</SortableTableHead>
+              <SortableTableHead sortKey="cliente" sort={sort} onToggle={toggle} className="text-[11px]">Cliente</SortableTableHead>
+              <SortableTableHead sortKey="vendedor" sort={sort} onToggle={toggle} className="text-[11px]">Vendedor</SortableTableHead>
+              <SortableTableHead sortKey="fecha" sort={sort} onToggle={toggle} className="text-[11px]">Fecha</SortableTableHead>
+              <SortableTableHead sortKey="condicion" sort={sort} onToggle={toggle} className="text-[11px]">Condición</SortableTableHead>
+              <SortableTableHead sortKey="total" sort={sort} onToggle={toggle} align="right" className="text-[11px] text-right">Total</SortableTableHead>
+              <SortableTableHead sortKey="pagado" sort={sort} onToggle={toggle} align="right" className="text-[11px] text-right">Pagado</SortableTableHead>
+              <SortableTableHead sortKey="pendiente" sort={sort} onToggle={toggle} align="right" className="text-[11px] text-right">Pendiente</SortableTableHead>
               <TableHead className="text-[11px] w-32 text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map(v => {
+            {filasOrdenadas.map(v => {
               const pagado = pagadoRealVenta(v);
               const esSaldo = v.es_saldo_inicial === true;
               const canDelete = esSaldo && (v.saldo_pendiente ?? 0) === (v.total ?? 0);

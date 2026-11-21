@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -109,6 +110,8 @@ export default function AplicarPagosProveedorPage() {
     const s = provSearch.toLowerCase();
     return proveedoresRaw.filter(p => p.nombre.toLowerCase().includes(s));
   }, [proveedoresRaw, provSearch]);
+
+  const { sorted: proveedoresOrdenados, sort, toggle } = useSortableTable(proveedores, undefined, undefined, 'aplicar-pagos-proveedores');
 
   const totalSaldoGlobal = roundMoney(proveedoresRaw?.reduce((s, p) => s + p.saldo, 0) ?? 0);
   const totalDocsGlobal = proveedoresRaw?.reduce((s, p) => s + p.docs, 0) ?? 0;
@@ -240,9 +243,9 @@ export default function AplicarPagosProveedorPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-table-border text-left">
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Proveedor</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Compras</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Saldo pendiente</th>
+                  <SortableTh sortKey="nombre" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Proveedor</SortableTh>
+                  <SortableTh sortKey="docs" sort={sort} onToggle={toggle} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Compras</SortableTh>
+                  <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Saldo pendiente</SortableTh>
                   <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Acción</th>
                 </tr>
               </thead>
@@ -253,7 +256,7 @@ export default function AplicarPagosProveedorPage() {
                     No hay proveedores con saldo pendiente
                   </td></tr>
                 )}
-                {proveedores.map(p => (
+                {proveedoresOrdenados.map(p => (
                   <tr key={p.id} className="border-b border-table-border cursor-pointer hover:bg-table-hover transition-colors" onClick={() => handleSelectProv(p)}>
                     <td className="py-2 px-3 font-medium">{p.nombre}</td>
                     <td className="py-2 px-3 text-center">

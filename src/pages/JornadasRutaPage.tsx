@@ -1,4 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,6 +32,15 @@ export default function JornadasRutaPage() {
       return data || [];
     },
   });
+
+  const { sorted: sesionesOrdenadas, sort, toggle } = useSortableTable(sesiones, (s: any, k) => {
+    if (k === 'vendedor') return s.profiles?.nombre;
+    if (k === 'vehiculo') return s.vehiculos?.alias;
+    if (k === 'duracion') return s.fin_at ? new Date(s.fin_at).getTime() - new Date(s.inicio_at).getTime() : null;
+    if (k === 'km_inicio' || k === 'km_fin' || k === 'km_recorridos') return s[k] != null ? Number(s[k]) : null;
+    if (k === 'status') return s.status === 'en_ruta' ? 'En ruta' : s.status === 'cerrada' ? 'Cerrada' : 'Cancelada';
+    return s[k];
+  }, undefined, 'jornadas-ruta');
 
   const fmtTime = (iso?: string | null) => iso ? new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '—';
   const fmtDur = (start: string, end?: string | null) => {
@@ -66,16 +76,16 @@ export default function JornadasRutaPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-xs text-muted-foreground">
             <tr>
-              <th className="px-3 py-3 text-left">Fecha</th>
-              <th className="px-3 py-3 text-left">Vendedor</th>
-              <th className="px-3 py-3 text-left">Vehículo</th>
-              <th className="px-3 py-3 text-left">Inicio</th>
-              <th className="px-3 py-3 text-left">Fin</th>
-              <th className="px-3 py-3 text-right">KM ini</th>
-              <th className="px-3 py-3 text-right">KM fin</th>
-              <th className="px-3 py-3 text-right">Recorrido</th>
-              <th className="px-3 py-3 text-left">Duración</th>
-              <th className="px-3 py-3 text-left">Estado</th>
+              <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="px-3 py-3 text-left">Fecha</SortableTh>
+              <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="px-3 py-3 text-left">Vendedor</SortableTh>
+              <SortableTh sortKey="vehiculo" sort={sort} onToggle={toggle} className="px-3 py-3 text-left">Vehículo</SortableTh>
+              <SortableTh sortKey="inicio_at" sort={sort} onToggle={toggle} className="px-3 py-3 text-left">Inicio</SortableTh>
+              <SortableTh sortKey="fin_at" sort={sort} onToggle={toggle} className="px-3 py-3 text-left">Fin</SortableTh>
+              <SortableTh sortKey="km_inicio" sort={sort} onToggle={toggle} align="right" className="px-3 py-3 text-right">KM ini</SortableTh>
+              <SortableTh sortKey="km_fin" sort={sort} onToggle={toggle} align="right" className="px-3 py-3 text-right">KM fin</SortableTh>
+              <SortableTh sortKey="km_recorridos" sort={sort} onToggle={toggle} align="right" className="px-3 py-3 text-right">Recorrido</SortableTh>
+              <SortableTh sortKey="duracion" sort={sort} onToggle={toggle} className="px-3 py-3 text-left">Duración</SortableTh>
+              <SortableTh sortKey="status" sort={sort} onToggle={toggle} className="px-3 py-3 text-left">Estado</SortableTh>
               <th className="px-3 py-3 text-center">Fotos</th>
             </tr>
           </thead>
@@ -84,7 +94,7 @@ export default function JornadasRutaPage() {
               <tr><td colSpan={11} className="px-4 py-8 text-center text-muted-foreground">Cargando...</td></tr>
             ) : sesiones.length === 0 ? (
               <tr><td colSpan={11} className="px-4 py-8 text-center text-muted-foreground">Sin jornadas en este rango.</td></tr>
-            ) : sesiones.map((s: any) => (
+            ) : sesionesOrdenadas.map((s: any) => (
               <tr key={s.id} className="border-t border-border hover:bg-muted/20">
                 <td className="px-3 py-2.5">{s.fecha}</td>
                 <td className="px-3 py-2.5 font-medium">{s.profiles?.nombre || '—'}</td>

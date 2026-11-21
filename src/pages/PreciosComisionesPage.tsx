@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useQuery } from '@tanstack/react-query';
 import { Percent, Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -147,6 +148,16 @@ export default function PreciosComisionesPage() {
     return p.nombre?.toLowerCase().includes(q) || p.codigo?.toLowerCase().includes(q);
   }), [productos, search, clasificacionFilter]);
 
+  // Orden: producto, o precio/comisión de una lista («precio:<id>», «comision:<id>»).
+  const { sorted: productosOrdenados, sort, toggle } = useSortableTable(filtered, (p, k) => {
+    if (k === 'producto') return p.nombre;
+    const [campo, listaId] = k.split(':');
+    const lista = listas.find(l => l.id === listaId);
+    if (!lista) return null;
+    const c = p.usa_listas_precio === false ? resolveCell(p, null, []) : resolveCell(p, lista.id, rulesFor(lista));
+    return campo === 'precio' ? c.precio : c.comisionMonto;
+  }, undefined, 'precios-comisiones');
+
   return (
     <ListPage>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -225,7 +236,7 @@ export default function PreciosComisionesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
-                <th rowSpan={2} className="th-odoo text-left sticky left-0 bg-card z-10 align-bottom">Producto</th>
+                <SortableTh sortKey="producto" sort={sort} onToggle={toggle} className="th-odoo text-left sticky left-0 bg-card z-10 align-bottom" rowSpan={2}>Producto</SortableTh>
                 {listas.map(l => (
                   <th key={l.id} colSpan={2} className={cn('th-odoo text-center border-l border-table-border', !l.activa && 'opacity-50')}>
                     <span className="flex items-center justify-center gap-1">
@@ -239,8 +250,8 @@ export default function PreciosComisionesPage() {
               <tr className="border-b border-table-border">
                 {listas.map(l => (
                   <Fragment key={l.id}>
-                    <th className="th-odoo text-right border-l border-table-border text-[10px] font-normal text-muted-foreground">Precio</th>
-                    <th className="th-odoo text-right text-[10px] font-normal text-muted-foreground">Comisión</th>
+                    <SortableTh sortKey={`precio:${l.id}`} sort={sort} onToggle={toggle} align="right" className="th-odoo text-right border-l border-table-border text-[10px] font-normal text-muted-foreground">Precio</SortableTh>
+                    <SortableTh sortKey={`comision:${l.id}`} sort={sort} onToggle={toggle} align="right" className="th-odoo text-right text-[10px] font-normal text-muted-foreground">Comisión</SortableTh>
                   </Fragment>
                 ))}
               </tr>
@@ -249,7 +260,7 @@ export default function PreciosComisionesPage() {
               {filtered.length === 0 && (
                 <tr><td colSpan={1 + listas.length * 2} className="text-center py-12 text-muted-foreground text-sm">No hay productos.</td></tr>
               )}
-              {filtered.map(p => {
+              {productosOrdenados.map(p => {
                 const directo = p.usa_listas_precio === false ? resolveCell(p, null, []) : null;
                 return (
                   <tr key={p.id} className="border-b border-table-border hover:bg-table-hover">

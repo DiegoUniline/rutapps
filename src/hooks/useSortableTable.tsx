@@ -131,6 +131,9 @@ interface SortableThProps {
   onToggle: (key: string) => void;
   align?: 'left' | 'right' | 'center';
   className?: string;
+  /** Opcionales, para encabezados de varias filas/columnas. */
+  rowSpan?: number;
+  colSpan?: number;
   children: React.ReactNode;
 }
 
@@ -140,13 +143,15 @@ function etiquetaOrden(active: boolean, dir: SortDir) {
 }
 
 /** Encabezado `<th>` ordenable. Funciona con `th-odoo` y con las clases de `TableHead`. */
-export function SortableTh({ sortKey, sort, onToggle, align = 'left', className, children }: SortableThProps) {
+export function SortableTh({ sortKey, sort, onToggle, align = 'left', className, rowSpan, colSpan, children }: SortableThProps) {
   const active = sort.key === sortKey;
   const Icon = !active ? ChevronsUpDown : sort.dir === 'asc' ? ChevronUp : ChevronDown;
   const justify = align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start';
   return (
     <th
       className={cn('cursor-pointer select-none hover:text-foreground transition-colors', className)}
+      rowSpan={rowSpan}
+      colSpan={colSpan}
       onClick={() => onToggle(sortKey)}
       aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
       title={etiquetaOrden(active, sort.dir)}
