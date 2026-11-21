@@ -22,7 +22,8 @@ import { ExportButton } from '@/components/ExportButton';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, PASO_MOVIL } from '@/components/layout/ListaTarjetaMovil';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
-import { useClientesPaginated } from '@/hooks/useClientes';
+import { useClientesPaginated, CLIENTES_ORDEN_BD } from '@/hooks/useClientes';
+import { useSortState, SortableTh } from '@/hooks/useSortableTable';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData } from '@/hooks/useListPreferences';
@@ -312,7 +313,10 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
   const zonaFilter = filters.zona?.length ? filters.zona.join(',') : 'todos';
   const debouncedSearch = useDebounce(search, 300);
-  const { data: clientesData, isLoading } = useClientesPaginated(debouncedSearch, statusFilter, isMobile ? 1 : page, numericPageSize, vendedorFilter, zonaFilter, !!groupBy);
+  // Orden por columna en la consulta (ordena toda la lista); al cambiarlo vuelve a la página 1.
+  const { sort, toggle: toggleSort } = useSortState(prefsKey);
+  const onSort = (key: string) => { toggleSort(key); setPage(1); setMobileLimit(PASO_MOVIL); };
+  const { data: clientesData, isLoading } = useClientesPaginated(debouncedSearch, statusFilter, isMobile ? 1 : page, numericPageSize, vendedorFilter, zonaFilter, !!groupBy, sort);
 
   // Client-side filters: credito + dia_visita
   const creditoFilter = filters.credito;
@@ -374,9 +378,10 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
               <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
             </th>
             {activeColumns.map(col => (
-              <th key={col.key} className={cn('th-odoo whitespace-nowrap', col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left')}>
+              // Zona, vendedor, cobrador y lista se resuelven en el navegador (enrichClientes): sin orden en la BD.
+              <SortableTh key={col.key} sortKey={col.key} sort={sort} onToggle={onSort} align={col.align ?? 'left'} disabled={!CLIENTES_ORDEN_BD[col.key]} className={cn('th-odoo whitespace-nowrap', col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left')}>
                 {col.label}
-              </th>
+              </SortableTh>
             ))}
           </tr>
         </thead>

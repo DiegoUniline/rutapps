@@ -28,6 +28,7 @@ import { getNombreCompra } from '@/lib/productoNombres';
 import { toast } from 'sonner';
 import { prorratearAjustesCompra } from '@/lib/compraAjustes';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
@@ -203,12 +204,18 @@ function useCompras(search: string, statusFilter: string[], empresaId?: string, 
   });
 }
 
-function LoteadoChip({ compra }: { compra: any }) {
+/** % de piezas loteadas de la compra (solo productos que manejan lote); null si no aplica. */
+function pctLoteado(compra: any): number | null {
   const lineas = (compra.compra_lineas ?? []).filter((l: any) => l.productos?.maneja_lote);
-  if (!lineas.length) return <span className="text-xxs text-muted-foreground">—</span>;
+  if (!lineas.length) return null;
   const total = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0) * (Number(l.factor_conversion) || 1), 0);
   const loteado = lineas.reduce((s: number, l: any) => s + (Number(l.piezas_loteadas) || 0), 0);
-  const pct = total > 0 ? Math.round((loteado / total) * 100) : 0;
+  return total > 0 ? Math.round((loteado / total) * 100) : 0;
+}
+
+function LoteadoChip({ compra }: { compra: any }) {
+  const pct = pctLoteado(compra);
+  if (pct === null) return <span className="text-xxs text-muted-foreground">—</span>;
   return (
     <span className={cn("text-xxs font-semibold px-2 py-0.5 rounded-full tabular-nums",
       pct >= 100 ? "bg-success/10 text-success" : pct > 0 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground")}>
@@ -364,10 +371,19 @@ export default function ComprasPage() {
     return list;
   }, [compras, filters, desde, hasta]);
 
+  // Orden por columna sobre todas las compras filtradas (en memoria), antes de paginar/agrupar.
+  const { sorted: comprasOrdenadas, sort, toggle } = useSortableTable(filteredCompras, (c: any, k) => {
+    if (k === 'proveedor') return c.proveedores?.nombre ?? '';
+    if (k === 'almacen') return c.almacenes?.nombre ?? '';
+    if (k === 'condicion_pago') return c.condicion_pago === 'credito' ? 'Crédito' : 'Contado';
+    if (k === 'loteado') return pctLoteado(c);
+    return c?.[k];
+  }, undefined, 'compras');
+  const onSort = (key: string) => { toggle(key); setPage(1); };
   const total = filteredCompras.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = filteredCompras.slice(from - 1, to);
+  const pageData = comprasOrdenadas.slice(from - 1, to);
   const allSelected = pageData.length > 0 && pageData.every((c: any) => selected.has(c.id));
   const toggleAll = () => allSelected ? setSelected(new Set()) : setSelected(new Set(pageData.map((c: any) => c.id)));
   const toggleOne = (id: string) => {
@@ -433,7 +449,9 @@ export default function ComprasPage() {
   const totalD = filteredLineas.length;
   const fromD = Math.min((pageD - 1) * PAGE_SIZE + 1, totalD);
   const toD = Math.min(pageD * PAGE_SIZE, totalD);
-  const pageDataD = filteredLineas.slice(fromD - 1, toD);
+  const { sorted: lineasOrdenadas, sort: sortD, toggle: toggleD } = useSortableTable(filteredLineas, undefined, undefined, 'compras-detalle');
+  const onSortD = (key: string) => { toggleD(key); setPageD(1); };
+  const pageDataD = lineasOrdenadas.slice(fromD - 1, toD);
   // Teléfono: lista continua con «Cargar más» (de 50 en 50).
   const movilCompras = useCargarMasMovil(filteredCompras, `${search}|${desde}|${hasta}|${JSON.stringify(filters)}`);
   const movilLineas = useCargarMasMovil(filteredLineas, `${searchD}|${JSON.stringify(filtersD)}`);
@@ -469,17 +487,17 @@ export default function ComprasPage() {
             <th className="th-odoo w-8 text-center" onClick={e => e.stopPropagation()}>
               <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
             </th>
-            <th className="th-odoo text-left">Folio</th>
-            <th className="th-odoo text-left">Proveedor</th>
-            <th className="th-odoo text-left hidden md:table-cell">Almacén</th>
-            <th className="th-odoo text-left">Fecha</th>
-            <th className="th-odoo text-left hidden lg:table-cell">Factura</th>
-            <th className="th-odoo text-left hidden lg:table-cell">Vence</th>
-            <th className="th-odoo text-center hidden sm:table-cell">Condición</th>
-            <th className="th-odoo text-right">Total</th>
-            <th className="th-odoo text-right hidden sm:table-cell">Saldo</th>
-            <th className="th-odoo text-center hidden md:table-cell">Loteado</th>
-            <th className="th-odoo text-center">Estado</th>
+            <SortableTh sortKey="folio" sort={sort} onToggle={onSort} className="th-odoo text-left">Folio</SortableTh>
+            <SortableTh sortKey="proveedor" sort={sort} onToggle={onSort} className="th-odoo text-left">Proveedor</SortableTh>
+            <SortableTh sortKey="almacen" sort={sort} onToggle={onSort} className="th-odoo text-left hidden md:table-cell">Almacén</SortableTh>
+            <SortableTh sortKey="fecha" sort={sort} onToggle={onSort} className="th-odoo text-left">Fecha</SortableTh>
+            <SortableTh sortKey="numero_factura" sort={sort} onToggle={onSort} className="th-odoo text-left hidden lg:table-cell">Factura</SortableTh>
+            <SortableTh sortKey="fecha_vencimiento" sort={sort} onToggle={onSort} className="th-odoo text-left hidden lg:table-cell">Vence</SortableTh>
+            <SortableTh sortKey="condicion_pago" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden sm:table-cell">Condición</SortableTh>
+            <SortableTh sortKey="total" sort={sort} onToggle={onSort} align="right" className="th-odoo text-right">Total</SortableTh>
+            <SortableTh sortKey="saldo_pendiente" sort={sort} onToggle={onSort} align="right" className="th-odoo text-right hidden sm:table-cell">Saldo</SortableTh>
+            <SortableTh sortKey="loteado" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden md:table-cell">Loteado</SortableTh>
+            <SortableTh sortKey="status" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center">Estado</SortableTh>
             <th className="th-odoo w-8" />
           </tr>
         </thead>
@@ -564,16 +582,16 @@ export default function ComprasPage() {
       <table className="w-full text-[13px]">
         <thead>
           <tr className="border-b border-table-border text-left">
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Factura</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Proveedor</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">P. Unit.</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total neto</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
+            <SortableTh sortKey="folio" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>
+            <SortableTh sortKey="numero_factura" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Factura</SortableTh>
+            <SortableTh sortKey="proveedor" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Proveedor</SortableTh>
+            <SortableTh sortKey="fecha" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</SortableTh>
+            <SortableTh sortKey="codigo" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</SortableTh>
+            <SortableTh sortKey="producto" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</SortableTh>
+            <SortableTh sortKey="cantidad" sort={sortD} onToggle={onSortD} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</SortableTh>
+            <SortableTh sortKey="precio_unitario" sort={sortD} onToggle={onSortD} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">P. Unit.</SortableTh>
+            <SortableTh sortKey="total_neto_linea" sort={sortD} onToggle={onSortD} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total neto</SortableTh>
+            <SortableTh sortKey="status" sort={sortD} onToggle={onSortD} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</SortableTh>
           </tr>
         </thead>
         <tbody>

@@ -9,6 +9,30 @@ import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist
 import { createVentaLoadError } from '@/lib/ventaLoadGuard';
 import type { Venta, VentaLinea } from '@/types';
 import { filtroCoincidenciaExacta, listaIdsPostgrest, MAX_EXACTOS, paginaConExactosPrimero } from '@/lib/busquedaRelevancia';
+import { aplicarOrdenConsulta, type SortState } from '@/hooks/useSortableTable';
+
+/**
+ * Columnas de la lista de ventas/pedidos que se ordenan en la BD (toda la lista, no solo la página).
+ * Cliente, vendedor y almacén usan la relación a-uno que el select ya trae. Montos: columna guardada
+ * de la venta (saldo_pendiente lo mantiene la BD). Cantidad neta y pagado se calculan en el navegador:
+ * sin orden en la consulta.
+ */
+export const VENTAS_ORDEN_BD: Record<string, string> = {
+  folio: 'folio', tipo: 'tipo', factura: 'clientes(requiere_factura)', cliente: 'clientes(nombre)',
+  vendedor: 'vendedores(nombre)', almacen: 'almacenes(nombre)', condicion: 'condicion_pago',
+  fecha: 'created_at', subtotal: 'subtotal', descuento: 'descuento_total', iva: 'iva_total',
+  total: 'total', saldo: 'saldo_pendiente', status: 'status',
+};
+
+/**
+ * Columnas de la vista «Productos» (renglones de venta) que se ordenan en la BD. Cliente, vendedor y
+ * lista vienen de una relación de segundo nivel (ventas → clientes): sin orden en la consulta.
+ */
+export const VENTA_LINEAS_ORDEN_BD: Record<string, string> = {
+  folio: 'ventas(folio)', tipo: 'ventas(tipo)', fecha: 'ventas(fecha)', codigo: 'productos(codigo)',
+  producto: 'productos(nombre)', cantidad: 'cantidad', precio: 'precio_unitario', total: 'total',
+  status: 'ventas(status)',
+};
 
 
 /**
@@ -35,7 +59,7 @@ async function idsExactosLineas(empresaId: string, search: string) {
 
 /** Paginated ventas for list views. When fetchAll=true, returns all matching rows (used for grouping). */
 /** soloConteo=true: solo cuenta (HEAD, sin traer renglones) — para los números de las pestañas. */
-export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, fetchAll = false, promoFilter?: 'si' | 'no', clienteFilter?: string, enabled = true, soloConteo = false) {
+export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string, fetchAll = false, promoFilter?: 'si' | 'no', clienteFilter?: string, enabled = true, soloConteo = false, sort?: SortState) {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
@@ -45,7 +69,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   // Se eliminó el canal duplicado 'ventas-realtime' para reducir egress de Realtime.
 
   return useQuery({
-    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas', soloConteo ? 'conteo' : 'filas'],
+    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas', soloConteo ? 'conteo' : 'filas', sort?.key ?? null, sort?.dir ?? null],
     enabled: !!empresa?.id && enabled,
     // Conserva los renglones mientras llega la siguiente página / «Cargar más» en teléfono (sin parpadeo).
     placeholderData: (prev) => prev,
@@ -78,7 +102,8 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
       }
 
       const applyFilters = (q: any) => {
-        q = q.eq('empresa_id', empresa!.id).eq('es_saldo_inicial', false).order('created_at', { ascending: false });
+        // Orden elegido en el encabezado; sin orden: más recientes primero (como antes).
+        q = aplicarOrdenConsulta(q.eq('empresa_id', empresa!.id).eq('es_saldo_inicial', false), sort, VENTAS_ORDEN_BD, { columna: 'created_at', asc: false });
         if (filterOwn) q = q.eq('vendedor_id', profileId!);
         if (searchOr) q = q.or(searchOr);
         if (statusFilter && statusFilter !== 'todos') {
@@ -310,14 +335,14 @@ export function useVentaLineasPaginated(
   page = 1, pageSize = 80, condicionFilter?: string,
   vendedorFilter?: string, dateFrom?: string, dateTo?: string,
   fetchAll = false, clienteFilter?: string, promoFilter?: 'si' | 'no',
-  enabled = true, soloConteo = false,
+  enabled = true, soloConteo = false, sort?: SortState,
 ) {
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
   const filterOwn = !seeAll && !!profileId;
 
   return useQuery({
-    queryKey: ['venta-lineas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas', soloConteo ? 'conteo' : 'filas'],
+    queryKey: ['venta-lineas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, clienteFilter, dateFrom, dateTo, fetchAll, promoFilter ?? 'todas', soloConteo ? 'conteo' : 'filas', sort?.key ?? null, sort?.dir ?? null],
     enabled: !!empresa?.id && enabled,
     queryFn: async () => {
       const SELECT = 'id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, tarifa_id, clientes(id, nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre))';
@@ -345,7 +370,8 @@ export function useVentaLineasPaginated(
       }
 
       const applyFilters = (q: any) => {
-        q = q.eq('empresa_id', empresa!.id).eq('ventas.empresa_id', empresa!.id).order('created_at', { ascending: false, referencedTable: undefined });
+        // Orden elegido en el encabezado; sin orden: renglones más recientes primero (como antes).
+        q = aplicarOrdenConsulta(q.eq('empresa_id', empresa!.id).eq('ventas.empresa_id', empresa!.id), sort, VENTA_LINEAS_ORDEN_BD, { columna: 'created_at', asc: false });
         if (filterOwn) q = q.eq('ventas.vendedor_id', profileId!);
         if (statusFilter && statusFilter !== 'todos') {
           const arr = statusFilter.split(',');

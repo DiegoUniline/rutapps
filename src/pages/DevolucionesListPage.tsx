@@ -20,6 +20,7 @@ import { MermaConfigDialog } from '@/components/devoluciones/MermaConfigDialog';
 import { DevolucionDetalleDialog } from '@/components/devoluciones/DevolucionDetalleDialog';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 const ACCION_LABELS: Record<string, string> = { reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero' };
@@ -199,8 +200,24 @@ export default function DevolucionesListPage() {
     todas: (rows as any[]).length,
   }), [rows]);
 
+  // Orden por columna sobre todas las devoluciones filtradas (en memoria), antes de paginar.
+  const { sorted: ordenadas, sort, toggle } = useSortableTable(filtered, (d: any, k) => {
+    const lineas = d.devolucion_lineas ?? [];
+    if (k === 'cliente') return d.clientes?.nombre ?? '';
+    if (k === 'vendedor') return d.ventas?.vendedor?.nombre ?? d.vendedores?.nombre ?? '';
+    if (k === 'registro') return d.registradoPor ?? '';
+    if (k === 'venta') return d.ventas?.folio ?? '';
+    if (k === 'productos') return lineas.map((l: any) => l.productos?.nombre ?? '').join(', ');
+    if (k === 'unidades') return lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+    if (k === 'motivo') return [...new Set(lineas.map((l: any) => MOTIVO_LABELS[l.motivo] ?? l.motivo))].join(', ');
+    if (k === 'accion') return [...new Set(lineas.map((l: any) => ACCION_LABELS[l.accion] ?? l.accion))].join(', ');
+    if (k === 'destino') return (((destinoMap as any)[d.id] ?? []) as any[]).map(a => a.nombre).join(', ');
+    if (k === 'credito') return lineas.reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
+    return d?.[k];
+  }, undefined, 'devoluciones');
+  const onSort = (key: string) => { toggle(key); setPage(1); };
   const total = filtered.length;
-  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const paged = ordenadas.slice((page - 1) * pageSize, page * pageSize);
 
   const totalUds = filtered.reduce((s, d: any) =>
     s + (d.devolucion_lineas ?? []).reduce((ss: number, l: any) => ss + (Number(l.cantidad) || 0), 0), 0);
@@ -379,17 +396,17 @@ export default function DevolucionesListPage() {
         <table className="w-full text-[12px]">
           <thead>
             <tr className="text-[10px] text-muted-foreground uppercase border-b border-border bg-card">
-              <th className="text-left py-2.5 px-3 font-medium">Fecha</th>
-              <th className="text-left py-2.5 px-3 font-medium">Cliente</th>
-              <th className="text-left py-2.5 px-3 font-medium">Vendedor</th>
-              <th className="text-left py-2.5 px-3 font-medium">Registró</th>
-              <th className="text-left py-2.5 px-3 font-medium">Venta</th>
-              <th className="text-left py-2.5 px-3 font-medium">Productos</th>
-              <th className="text-right py-2.5 px-3 font-medium">Uds.</th>
-              <th className="text-left py-2.5 px-3 font-medium">Motivo</th>
-              <th className="text-left py-2.5 px-3 font-medium">Acción</th>
-              <th className="text-left py-2.5 px-3 font-medium">Destino</th>
-              <th className="text-right py-2.5 px-3 font-medium">Crédito</th>
+              <SortableTh sortKey="fecha" sort={sort} onToggle={onSort} className="text-left py-2.5 px-3 font-medium">Fecha</SortableTh>
+              <SortableTh sortKey="cliente" sort={sort} onToggle={onSort} className="text-left py-2.5 px-3 font-medium">Cliente</SortableTh>
+              <SortableTh sortKey="vendedor" sort={sort} onToggle={onSort} className="text-left py-2.5 px-3 font-medium">Vendedor</SortableTh>
+              <SortableTh sortKey="registro" sort={sort} onToggle={onSort} className="text-left py-2.5 px-3 font-medium">Registró</SortableTh>
+              <SortableTh sortKey="venta" sort={sort} onToggle={onSort} className="text-left py-2.5 px-3 font-medium">Venta</SortableTh>
+              <SortableTh sortKey="productos" sort={sort} onToggle={onSort} className="text-left py-2.5 px-3 font-medium">Productos</SortableTh>
+              <SortableTh sortKey="unidades" sort={sort} onToggle={onSort} align="right" className="text-right py-2.5 px-3 font-medium">Uds.</SortableTh>
+              <SortableTh sortKey="motivo" sort={sort} onToggle={onSort} className="text-left py-2.5 px-3 font-medium">Motivo</SortableTh>
+              <SortableTh sortKey="accion" sort={sort} onToggle={onSort} className="text-left py-2.5 px-3 font-medium">Acción</SortableTh>
+              <SortableTh sortKey="destino" sort={sort} onToggle={onSort} className="text-left py-2.5 px-3 font-medium">Destino</SortableTh>
+              <SortableTh sortKey="credito" sort={sort} onToggle={onSort} align="right" className="text-right py-2.5 px-3 font-medium">Crédito</SortableTh>
             </tr>
           </thead>
           <tbody>

@@ -11,6 +11,7 @@ import { enrichProductos, ensureCatalogsForEnrich } from '@/lib/catalogEnrich';
 import { pickColumns, PRODUCTO_COLUMNS, TARIFA_COLUMNS, TARIFA_LINEA_COLUMNS, PRODUCTO_PROVEEDOR_COLUMNS } from '@/lib/allowlist';
 import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Lista, Unidad, TasaIva, TasaIeps, Almacen, UnidadSat } from '@/types';
 import { validarSinUsos, usosDeRegistros } from '@/lib/registrosInactivos';
+import { aplicarOrdenConsulta, type SortState } from '@/hooks/useSortableTable';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
 
@@ -88,11 +89,24 @@ export function useProductosRealtime() {
   }, [qc, empresaId]);
 }
 
+/**
+ * Columnas de la lista de productos que se ordenan en la BD. Las de catálogo usan la relación
+ * a-uno que el select ya trae (no agrega joins).
+ */
+export const PRODUCTOS_ORDEN_BD: Record<string, string> = {
+  codigo: 'codigo', nombre: 'nombre',
+  clasificacion: 'clasificaciones(nombre)', marca: 'marcas(nombre)', proveedor: 'proveedores(nombre)',
+  lote: 'maneja_lote', lista: 'listas(nombre)',
+  unidad_compra: 'unidades_compra(abreviatura)', unidad_venta: 'unidades_venta(abreviatura)',
+  factor: 'factor_conversion', precio: 'precio_principal', costo: 'costo', costo_unitario: 'costo',
+  stock: 'cantidad', iva: 'tiene_iva', status: 'status',
+};
+
 /** Paginated products for list views. When fetchAll=true, returns all matching rows (used for grouping). */
-export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, clasificacionFilter?: string, marcaFilter?: string, fetchAll = false, proveedorFilter?: string, manejaLoteFilter?: string) {
+export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, clasificacionFilter?: string, marcaFilter?: string, fetchAll = false, proveedorFilter?: string, manejaLoteFilter?: string, sort?: SortState) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['productos-page', empresa?.id, search, statusFilter, page, pageSize, clasificacionFilter, marcaFilter, fetchAll, proveedorFilter, manejaLoteFilter],
+    queryKey: ['productos-page', empresa?.id, search, statusFilter, page, pageSize, clasificacionFilter, marcaFilter, fetchAll, proveedorFilter, manejaLoteFilter, sort?.key ?? null, sort?.dir ?? null],
     staleTime: CATALOG_STALE,
     // Conserva los renglones mientras llega la siguiente página / «Cargar más» (sin parpadeo).
     placeholderData: (prev) => prev,
@@ -100,7 +114,8 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
     queryFn: async () => {
       const SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre, status), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre)';
       const applyFilters = (q: any) => {
-        q = q.eq('empresa_id', empresa!.id).order('nombre', { ascending: true });
+        // Orden elegido en el encabezado (toda la lista, no solo la página); sin orden: por nombre.
+        q = aplicarOrdenConsulta(q.eq('empresa_id', empresa!.id), sort, PRODUCTOS_ORDEN_BD, { columna: 'nombre', asc: true });
         if (search) {
           // D-047: código o código de barras (clave alterna) exacto también entra.
           const exacto = filtroCoincidenciaExacta(['codigo', 'clave_alterna'], search);

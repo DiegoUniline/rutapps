@@ -28,6 +28,7 @@ import { useProductosPaginated } from '@/hooks/useData';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { useSortState, SortableTh } from '@/hooks/useSortableTable';
 import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
@@ -267,7 +268,10 @@ export default function ProductosListPage() {
   const proveedorFilter = filters.proveedor?.length ? filters.proveedor.join(',') : 'todos';
   const manejaLoteFilter = filters.maneja_lote?.[0] ?? '';
   const debouncedSearch = useDebounce(search, 300);
-  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, isMobile ? 1 : page, effectivePageSize, clasificacionFilter, marcaFilter, !!groupBy, proveedorFilter, manejaLoteFilter);
+  // Orden por columna en la consulta (ordena toda la lista); al cambiarlo vuelve a la página 1.
+  const { sort, toggle: toggleSort } = useSortState('productos');
+  const onSort = (key: string) => { toggleSort(key); setPage(1); setMobileLimit(MOBILE_STEP); };
+  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, isMobile ? 1 : page, effectivePageSize, clasificacionFilter, marcaFilter, !!groupBy, proveedorFilter, manejaLoteFilter, sort);
 
   const productos = productosData?.rows ?? [];
   const { data: allPresentaciones } = useAllPresentaciones();
@@ -316,22 +320,22 @@ export default function ProductosListPage() {
               <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
             </th>
              <th className="th-odoo w-10">Img</th>
-             <th className="th-odoo text-left">Código</th>
-             <th className="th-odoo text-left">Nombre</th>
-             <th className="th-odoo text-left hidden lg:table-cell">Categoría</th>
-             <th className="th-odoo text-left hidden md:table-cell">Marca</th>
-             <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
-             {manejaLotes && <th className="th-odoo text-center hidden lg:table-cell">Lote</th>}
-             <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
-             <th className="th-odoo text-center hidden xl:table-cell">U. compra</th>
-             <th className="th-odoo text-center hidden xl:table-cell">U. venta</th>
-             <th className="th-odoo text-center hidden xl:table-cell">Factor</th>
-             <th className="th-odoo text-right">Precio</th>
-            <th className="th-odoo text-right hidden md:table-cell">Costo</th>
-            <th className="th-odoo text-right hidden xl:table-cell">C/U</th>
-             <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
-             <th className="th-odoo text-center hidden sm:table-cell">IVA</th>
-             <th className="th-odoo text-center">Status</th>
+             <SortableTh sortKey="codigo" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left">Código</SortableTh>
+             <SortableTh sortKey="nombre" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left">Nombre</SortableTh>
+             <SortableTh sortKey="clasificacion" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left hidden lg:table-cell">Categoría</SortableTh>
+             <SortableTh sortKey="marca" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left hidden md:table-cell">Marca</SortableTh>
+             <SortableTh sortKey="proveedor" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left hidden xl:table-cell">Proveedor</SortableTh>
+             {manejaLotes && <SortableTh sortKey="lote" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden lg:table-cell">Lote</SortableTh>}
+             <SortableTh sortKey="lista" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left hidden xl:table-cell">Lista</SortableTh>
+             <SortableTh sortKey="unidad_compra" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden xl:table-cell">U. compra</SortableTh>
+             <SortableTh sortKey="unidad_venta" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden xl:table-cell">U. venta</SortableTh>
+             <SortableTh sortKey="factor" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden xl:table-cell">Factor</SortableTh>
+             <SortableTh sortKey="precio" sort={sort} onToggle={onSort} align="right" className="th-odoo text-right">Precio</SortableTh>
+             <SortableTh sortKey="costo" sort={sort} onToggle={onSort} align="right" className="th-odoo text-right hidden md:table-cell">Costo</SortableTh>
+             <SortableTh sortKey="costo_unitario" sort={sort} onToggle={onSort} align="right" className="th-odoo text-right hidden xl:table-cell">C/U</SortableTh>
+             <SortableTh sortKey="stock" sort={sort} onToggle={onSort} align="right" className="th-odoo text-right hidden lg:table-cell">Stock</SortableTh>
+             <SortableTh sortKey="iva" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden sm:table-cell">IVA</SortableTh>
+             <SortableTh sortKey="status" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center">Status</SortableTh>
           </tr>
         </thead>
         <tbody>

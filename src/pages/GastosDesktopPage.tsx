@@ -22,6 +22,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 
 function useGastos(desde: string, hasta: string) {
   const { empresa } = useAuth();
@@ -183,6 +184,13 @@ export default function GastosDesktopPage() {
     return ordenarPorRelevancia(lista, search, () => [], (g: any) => [g.concepto, g.notas]);
   }, [gastos, search, vendedorFilter, desde, hasta]);
 
+  // Orden por columna (todos los gastos del periodo ya están en memoria).
+  const ordenGastos = useSortableTable(filtered, (g: any, k) => {
+    if (k === 'vendedor') return g.vendedores?.nombre ?? '';
+    if (k === 'monto') return Number(g.monto ?? 0);
+    return g?.[k];
+  }, undefined, 'gastos');
+
   const totalGastos = filtered.reduce((s, g: any) => s + Number(g.monto ?? 0), 0);
   const hasFilters = !!search || vendedorFilter !== 'all' || !!desde || !!hasta;
 
@@ -317,16 +325,16 @@ export default function GastosDesktopPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-[11px]">Fecha</TableHead>
-              <TableHead className="text-[11px]">Concepto</TableHead>
-              <TableHead className="text-[11px]">Vendedor</TableHead>
-              <TableHead className="text-[11px]">Notas</TableHead>
-              <TableHead className="text-[11px] text-right">Monto</TableHead>
+              <SortableTableHead sortKey="fecha" sort={ordenGastos.sort} onToggle={ordenGastos.toggle} className="text-[11px]">Fecha</SortableTableHead>
+              <SortableTableHead sortKey="concepto" sort={ordenGastos.sort} onToggle={ordenGastos.toggle} className="text-[11px]">Concepto</SortableTableHead>
+              <SortableTableHead sortKey="vendedor" sort={ordenGastos.sort} onToggle={ordenGastos.toggle} className="text-[11px]">Vendedor</SortableTableHead>
+              <SortableTableHead sortKey="notas" sort={ordenGastos.sort} onToggle={ordenGastos.toggle} className="text-[11px]">Notas</SortableTableHead>
+              <SortableTableHead sortKey="monto" sort={ordenGastos.sort} onToggle={ordenGastos.toggle} align="right" className="text-[11px] text-right">Monto</SortableTableHead>
               <TableHead className="text-[11px] w-20 text-center">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((g: any) => (
+            {ordenGastos.sorted.map((g: any) => (
               <TableRow
                 key={g.id}
                 className={

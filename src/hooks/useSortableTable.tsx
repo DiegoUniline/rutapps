@@ -131,6 +131,8 @@ interface SortableThProps {
   onToggle: (key: string) => void;
   align?: 'left' | 'right' | 'center';
   className?: string;
+  /** true: encabezado normal sin orden (p. ej. columna calculada que la consulta paginada no puede ordenar). */
+  disabled?: boolean;
   children: React.ReactNode;
 }
 
@@ -140,7 +142,8 @@ function etiquetaOrden(active: boolean, dir: SortDir) {
 }
 
 /** Encabezado `<th>` ordenable. Funciona con `th-odoo` y con las clases de `TableHead`. */
-export function SortableTh({ sortKey, sort, onToggle, align = 'left', className, children }: SortableThProps) {
+export function SortableTh({ sortKey, sort, onToggle, align = 'left', className, disabled, children }: SortableThProps) {
+  if (disabled) return <th className={className}>{children}</th>;
   const active = sort.key === sortKey;
   const Icon = !active ? ChevronsUpDown : sort.dir === 'asc' ? ChevronUp : ChevronDown;
   const justify = align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start';
