@@ -119,7 +119,7 @@ export default function ComisionesAvanceTab() {
   if (loadVend) return <TableSkeleton />;
   if (!vendedores || vendedores.length === 0) {
     return (
-      <div className="border border-border rounded p-8 text-center text-muted-foreground text-sm">
+      <div className="p-8 text-center text-muted-foreground text-sm">
         No hay vendedores activos.
       </div>
     );
@@ -133,20 +133,20 @@ export default function ComisionesAvanceTab() {
   return (
     <div className="space-y-3">
       {/* Filtros de periodo */}
-      <div className="flex items-center gap-2 flex-wrap bg-card border border-border rounded p-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Calendar className="h-4 w-4 text-muted-foreground" />
         <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         <div className="h-6 w-px bg-border mx-1" />
-        <button onClick={() => setPreset('semana')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Semana</button>
-        <button onClick={() => setPreset('quincena')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Quincena</button>
-        <button onClick={() => setPreset('mes')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Mes actual</button>
-        <button onClick={() => setPreset('mes_ant')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Mes anterior</button>
-        <button onClick={() => setPreset('anio')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Año</button>
+        <button onClick={() => setPreset('semana')} className="btn-odoo-secondary px-2.5 py-1 text-xs">Semana</button>
+        <button onClick={() => setPreset('quincena')} className="btn-odoo-secondary px-2.5 py-1 text-xs">Quincena</button>
+        <button onClick={() => setPreset('mes')} className="btn-odoo-secondary px-2.5 py-1 text-xs">Mes actual</button>
+        <button onClick={() => setPreset('mes_ant')} className="btn-odoo-secondary px-2.5 py-1 text-xs">Mes anterior</button>
+        <button onClick={() => setPreset('anio')} className="btn-odoo-secondary px-2.5 py-1 text-xs">Año</button>
         <span className="ml-auto text-xs text-muted-foreground">{fmtDate(desde)} a {fmtDate(hasta)}</span>
       </div>
 
       {/* Resumen compacto en barra */}
-      <div className="bg-card border border-border rounded p-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border border-y border-border -mx-3 md:-mx-4 text-sm [&>*:nth-child(3)]:max-md:border-l-0 [&>*:nth-child(n+3)]:max-md:border-t">
         <ResumenCell label="Ventas del equipo" value={fmt(sumVentas)} />
         <ResumenCell label="Comisiones del equipo" value={fmt(sumComision)} highlight />
         <ResumenCell label="# Ventas totales" value={`${sumNumV}`} />
@@ -157,10 +157,10 @@ export default function ComisionesAvanceTab() {
 
       {/* Tabla principal */}
       {!loadCalc && (
-        <div className="bg-card border border-border rounded overflow-hidden">
+        <div className="-mx-3 md:-mx-4 border-t border-border">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-primary/5 border-b border-border">
+              <thead className="border-b border-border">
                 <tr>
                   <th className="th-odoo text-left w-10">#</th>
                   <th className="th-odoo text-left">Vendedor</th>
@@ -186,9 +186,9 @@ export default function ComisionesAvanceTab() {
 
 function ResumenCell({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: boolean }) {
   return (
-    <div className="min-w-0">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{label}</div>
-      <div className={cn('text-base font-semibold font-mono truncate', highlight && 'text-primary')}>{value}</div>
+    <div className="min-w-0 px-3 md:px-4 py-2.5">
+      <div className="text-[11px] uppercase text-muted-foreground truncate">{label}</div>
+      <div className={cn('text-lg sm:text-2xl font-bold tabular-nums truncate', highlight ? 'text-primary' : 'text-foreground')}>{value}</div>
       {sub && <div className="text-[11px] text-muted-foreground truncate">{sub}</div>}
     </div>
   );
@@ -257,15 +257,15 @@ function VendedorRowComp({ vendedor, calc, rank, fmt, desde }: { vendedor: Vende
   }
 
   const barGradient = alcanzado
-    ? 'bg-gradient-to-r from-emerald-400 to-emerald-600'
+    ? 'bg-success'
     : metaPct >= 75
-    ? 'bg-gradient-to-r from-amber-400 to-amber-600'
+    ? 'bg-warning'
     : metaPct >= 25
-    ? 'bg-gradient-to-r from-primary/70 to-primary'
-    : 'bg-gradient-to-r from-primary/50 to-primary/80';
+    ? 'bg-primary'
+    : 'bg-primary/70';
 
   return (
-    <tr className="border-b border-border last:border-0 hover:bg-primary/5">
+    <tr className="border-b border-border last:border-0 hover:bg-table-hover">
       <td className="td-odoo text-xs text-muted-foreground font-mono">{rank}</td>
       <td className="td-odoo">
         <div className="font-medium text-sm">{vendedor.nombre}</div>
@@ -274,13 +274,13 @@ function VendedorRowComp({ vendedor, calc, rank, fmt, desde }: { vendedor: Vende
         <div className="text-xs">{tipoLabel}</div>
         {esquema && <div className="text-[11px] text-muted-foreground truncate">{esquema.nombre}</div>}
         {calc?.desde_efectivo && calc.desde_efectivo > desde && (
-          <div className="text-[11px] text-amber-600">Aplica desde {fmtDate(calc.desde_efectivo)}</div>
+          <div className="text-[11px] text-warning">Aplica desde {fmtDate(calc.desde_efectivo)}</div>
         )}
       </td>
       <td className="td-odoo text-right font-mono text-sm font-semibold">{fmt(total)}</td>
       <td className="td-odoo text-right font-mono text-sm">{numV}</td>
       <td className={cn('td-odoo text-right font-mono text-sm font-semibold',
-        sinEsquema ? 'text-muted-foreground' : alcanzado ? 'text-emerald-600' : 'text-primary')}>
+        sinEsquema ? 'text-muted-foreground' : alcanzado ? 'text-success' : 'text-primary')}>
         {sinEsquema ? '—' : fmt(comision)}
         {!sinEsquema && pctGanado && (
           <div className="text-[10px] text-muted-foreground font-normal">{pctGanado}</div>
@@ -295,12 +295,12 @@ function VendedorRowComp({ vendedor, calc, rank, fmt, desde }: { vendedor: Vende
               <span className="text-muted-foreground truncate">{metaLabel}</span>
               <span className={cn(
                 'font-mono font-bold shrink-0 px-1.5 py-0.5 rounded text-[11px]',
-                alcanzado ? 'bg-emerald-100 text-emerald-700' : metaPct >= 75 ? 'bg-amber-100 text-amber-700' : 'bg-primary/10 text-primary'
+                alcanzado ? 'bg-success/10 text-success' : metaPct >= 75 ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'
               )}>{metaPct.toFixed(0)}%</span>
             </div>
-            <div className="relative h-2.5 bg-primary/5 rounded-full overflow-hidden border border-primary/10">
+            <div className="relative h-2.5 bg-accent rounded-full overflow-hidden">
               <div
-                className={cn('h-full transition-all rounded-full shadow-sm', barGradient)}
+                className={cn('h-full transition-all rounded-full', barGradient)}
                 style={{ width: `${Math.max(metaPct, 2)}%` }}
               />
             </div>

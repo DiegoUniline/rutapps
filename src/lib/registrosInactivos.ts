@@ -85,3 +85,17 @@ export async function validarSinUsos(tabla: TablaMaestra, ids: string[], accion?
   const enUso = new Set(usos.map(u => u.registro_id));
   return mensajeEnUso(usos, { cuantos: enUso.size, total: ids.length, accion });
 }
+
+/**
+ * Cobranza en ruta (D-044: lo inactivo se permite en cobranza/histórico): se ofrecen los clientes
+ * activos y, además, los no activos (inactivo/suspendido) que todavía deben (saldo > 0), para poder
+ * cobrarles. Devuelve la marca a mostrar junto al nombre («(inactivo)», «(suspendido)») o null.
+ */
+export function clienteVisibleEnCobranza(status: string | null | undefined, saldo: number): boolean {
+  return status === 'activo' || (Number(saldo) || 0) > 0.005;
+}
+
+export function marcaClienteNoActivo(status: string | null | undefined): string | null {
+  if (!status || status === 'activo') return null;
+  return `(${status})`;
+}

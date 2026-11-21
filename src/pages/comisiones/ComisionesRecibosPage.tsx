@@ -99,15 +99,15 @@ export default function ComisionesRecibosPage() {
               className={cn('px-2.5 py-1.5 text-xs transition-colors', recibosEstado === key ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted')}>{label}</button>
           ))}
         </div>
-        <div className="ml-auto text-sm">Por pagar: <span className="font-mono font-bold text-amber-600">{fmt(totalBorrador)}</span></div>
+        <div className="ml-auto text-sm">Por pagar: <span className="font-mono font-bold text-warning">{fmt(totalBorrador)}</span></div>
       </div>
 
       {loadingRecibos ? <TableSkeleton /> : (recibos ?? []).length === 0 ? (
-        <div className="border border-border rounded p-8 text-center text-muted-foreground text-sm">
+        <div className="p-8 text-center text-muted-foreground text-sm">
           No hay recibos {recibosEstado === 'pendiente' ? 'por pagar' : recibosEstado === 'pagada' ? 'pagados' : ''}
         </div>
       ) : (
-        <div className="overflow-x-auto border border-border rounded">
+        <div className="-mx-3 md:-mx-4 border-t border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
@@ -132,16 +132,16 @@ export default function ComisionesRecibosPage() {
                     {r.estado === 'pagada' ? (
                       <span title={r.notas || 'Pagada'} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pagada</span>
                     ) : (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Por pagar</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">Por pagar</span>
                     )}
                   </td>
                   <td className="py-1.5 px-3 text-right">
                     {r.estado === 'pendiente' ? (
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => openPagar(r)} className="px-2 py-1 text-[11px] bg-primary text-primary-foreground rounded hover:bg-primary/90 inline-flex items-center gap-1">
+                        <button onClick={() => openPagar(r)} className="btn-odoo-primary px-2.5 py-1 text-[11px]">
                           <Check className="h-3 w-3" /> Pagar
                         </button>
-                        <button onClick={() => setCancelingRecibo(r)} disabled={cancelarReciboMut.isPending} className="btn-cancelar px-2 py-1 text-[11px] bg-muted text-foreground rounded hover:bg-muted/70">Cancelar</button>
+                        <button onClick={() => setCancelingRecibo(r)} disabled={cancelarReciboMut.isPending} className="btn-cancelar btn-odoo-secondary px-2.5 py-1 text-[11px]">Cancelar</button>
                       </div>
                     ) : r.gasto_id ? (
                       <a href={`/finanzas/gastos`} className="text-[11px] text-primary hover:underline">Ver gasto</a>

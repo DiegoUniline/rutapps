@@ -147,7 +147,7 @@ export default function ComisionesEsquemasTab() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-card border border-border rounded p-3">
+      <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold text-sm">Esquemas de comisión por volumen</h3>
           <button onClick={openNuevo} className="btn-odoo-primary text-xs"><Plus className="h-3 w-3" /> Nuevo esquema</button>
@@ -160,9 +160,9 @@ export default function ComisionesEsquemasTab() {
         {isLoading ? <TableSkeleton /> : (esquemas ?? []).length === 0 ? (
           <div className="text-xs text-muted-foreground text-center py-6">Aún no hay esquemas creados</div>
         ) : (
-          <div className="overflow-x-auto border border-border rounded">
+          <div className="-mx-3 md:-mx-4 border-t border-border overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40">
+              <thead>
                 <tr className="border-b border-table-border">
                   <th className="th-odoo text-left">Nombre</th>
                   <th className="th-odoo text-left">Tipo</th>
@@ -188,12 +188,12 @@ export default function ComisionesEsquemasTab() {
                     </td>
                     <td className="py-1.5 px-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => setEditing(e)} className="p-1 hover:bg-muted rounded" title="Editar">
+                        <button onClick={() => setEditing(e)} className="p-1 hover:bg-accent rounded text-brand-orange" title="Editar">
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={async () => { if (await confirmDialog('¿Eliminar este esquema?')) deleteMut.mutate(e.id); }}
-                          className="p-1 hover:bg-red-50 hover:text-red-600 rounded" title="Eliminar"
+                          className="p-1 hover:bg-destructive/10 text-destructive rounded" title="Eliminar"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -207,14 +207,14 @@ export default function ComisionesEsquemasTab() {
         )}
       </div>
 
-      <div className="bg-card border border-border rounded p-3">
+      <div className="border-t border-border -mx-3 md:-mx-4 px-3 md:px-4 pt-3">
         <h3 className="font-semibold text-sm mb-2">Asignación por vendedor</h3>
         <p className="text-xs text-muted-foreground mb-3">
           Elige el esquema de cada vendedor. Sin esquema = sigue cobrando por producto (regla actual).
         </p>
-        <div className="overflow-x-auto border border-border rounded">
+        <div className="-mx-3 md:-mx-4 border-t border-border overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40">
+            <thead>
               <tr className="border-b border-table-border">
                 <th className="th-odoo text-left">Vendedor</th>
                 <th className="th-odoo text-left">Esquema de comisión</th>
@@ -359,7 +359,7 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
                 <input type="number" step="0.01" className="input-odoo flex-1 text-xs" placeholder="0" value={t.desde} onChange={e => { const c = [...tiers]; c[i] = { ...t, desde: parseFloat(e.target.value) || 0 }; setTiers(c); }} />
                 <input type="number" step="0.01" className="input-odoo flex-1 text-xs" placeholder="∞" value={t.hasta ?? ''} onChange={e => { const c = [...tiers]; c[i] = { ...t, hasta: e.target.value === '' ? null : parseFloat(e.target.value) }; setTiers(c); }} />
                 <input type="number" step="0.01" className="input-odoo w-24 text-xs" placeholder="0" value={t.pct} onChange={e => { const c = [...tiers]; c[i] = { ...t, pct: parseFloat(e.target.value) || 0 }; setTiers(c); }} />
-                <button type="button" onClick={() => setTiers(tiers.filter((_, j) => j !== i))} className="p-1 hover:bg-red-50 hover:text-red-600 rounded"><Trash2 className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => setTiers(tiers.filter((_, j) => j !== i))} className="p-1 hover:bg-destructive/10 text-destructive rounded"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             ))}
           </div>

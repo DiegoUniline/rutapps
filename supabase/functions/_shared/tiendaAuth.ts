@@ -91,6 +91,26 @@ export const TTL_SESION_SEGUNDOS = 60 * 60 * 24 * 90;
 
 export const BLOCKED_HASH = "BLOCKED$NO_LOGIN";
 
+/**
+ * ¿Puede este cliente enviar un pedido desde la tienda? Mismo criterio que la venta normal
+ * (escritorio y ruta solo ofrecen clientes con `clientes.status = 'activo'`) más el bloqueo propio
+ * de la tienda (`tienda_clientes` con `verificado=false` o `BLOCKED_HASH`, igual que login/refresh).
+ * Devuelve null si puede, o el error (mensaje claro + código) para responder 403.
+ */
+export function motivoRechazoPedidoTienda(
+  cliente: { status?: string | null } | null,
+  acceso: { verificado?: boolean | null; password_hash?: string | null } | null,
+): { error: string; code: "bloqueado" | "cliente_no_activo" } | null {
+  if (!acceso || acceso.verificado === false || acceso.password_hash === BLOCKED_HASH) {
+    return { error: "Tu acceso a esta tienda fue bloqueado. Contacta al proveedor.", code: "bloqueado" };
+  }
+  if (!cliente || cliente.status !== "activo") {
+    const estado = cliente?.status === "suspendido" ? "suspendida" : "inactiva";
+    return { error: `Tu cuenta de cliente está ${estado}; no podemos recibir pedidos. Contacta al proveedor.`, code: "cliente_no_activo" };
+  }
+  return null;
+}
+
 export async function signToken(payload: Omit<TiendaTokenPayload, "exp">, secret: string, ttlSeconds = TTL_SESION_SEGUNDOS): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
   const full: TiendaTokenPayload = { ...payload, exp: Math.floor(Date.now() / 1000) + ttlSeconds };
