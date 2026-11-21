@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,6 +37,12 @@ export default function ComisionesRecibosPage() {
     () => (recibos ?? []).filter(r => r.estado === 'pendiente').reduce((s, r) => s + (r.total_comisiones ?? 0), 0),
     [recibos]
   );
+
+  const { sorted: recibosOrdenados, sort, toggle } = useSortableTable(recibos ?? [], (r: any, k) => {
+    if (k === 'vendedor') return r.vendedores?.nombre ?? (r.vendedor_id ? null : 'Varios vendedores');
+    if (k === 'estado') return r.estado === 'pagada' ? 'Pagada' : 'Por pagar';
+    return r[k];
+  }, undefined, 'comisiones-recibos');
 
   const [payingRecibo, setPayingRecibo] = useState<any | null>(null);
   const [cancelingRecibo, setCancelingRecibo] = useState<any | null>(null);
@@ -111,17 +118,17 @@ export default function ComisionesRecibosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
-                <th className="th-odoo text-left">Generado</th>
-                <th className="th-odoo text-left">Vendedor</th>
-                <th className="th-odoo text-left">Corte</th>
-                <th className="th-odoo text-left">Pagado</th>
-                <th className="th-odoo text-right">Total</th>
-                <th className="th-odoo text-center">Estado</th>
+                <SortableTh sortKey="created_at" sort={sort} onToggle={toggle} className="th-odoo text-left">Generado</SortableTh>
+                <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="th-odoo text-left">Vendedor</SortableTh>
+                <SortableTh sortKey="fecha_corte" sort={sort} onToggle={toggle} className="th-odoo text-left">Corte</SortableTh>
+                <SortableTh sortKey="fecha_pago" sort={sort} onToggle={toggle} className="th-odoo text-left">Pagado</SortableTh>
+                <SortableTh sortKey="total_comisiones" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Total</SortableTh>
+                <SortableTh sortKey="estado" sort={sort} onToggle={toggle} align="center" className="th-odoo text-center">Estado</SortableTh>
                 <th className="th-odoo text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {(recibos ?? []).map((r: any) => (
+              {recibosOrdenados.map((r: any) => (
                 <tr key={r.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                   <td className="py-1.5 px-3 text-xs">{fmtDate(r.created_at)}</td>
                   <td className="py-1.5 px-3 text-xs font-medium" title={!r.vendedor_id && r.notas ? r.notas : undefined}>{r.vendedores?.nombre ?? (r.vendedor_id ? '—' : 'Varios vendedores')}</td>

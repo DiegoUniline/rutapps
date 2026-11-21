@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortState, ordenarFilas, SortableTh } from '@/hooks/useSortableTable';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -19,6 +20,8 @@ export default function ComisionesPorPagarPage() {
   const [ppSaldoFilter, setPpSaldoFilter] = useState<'cobradas' | 'pendientes' | 'todas'>('cobradas');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [collapsedVendors, setCollapsedVendors] = useState<Set<string>>(new Set());
+  // Orden por columna dentro de cada vendedor.
+  const { sort, toggle } = useSortState('comisiones-por-pagar');
   const toggleCollapse = (id: string) => setCollapsedVendors(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const { data: pendientesPP, isLoading: loadingPP } = useQuery({
@@ -174,15 +177,15 @@ export default function ComisionesPorPagarPage() {
                     <thead>
                       <tr className="border-b border-table-border">
                         <th className="th-odoo w-8"></th>
-                        <th className="th-odoo text-left">Fecha</th>
-                        <th className="th-odoo text-left">Folio</th>
-                        <th className="th-odoo text-right">Venta</th>
-                        <th className="th-odoo text-right">Saldo venta</th>
-                        <th className="th-odoo text-right">Comisión</th>
+                        <SortableTh sortKey="fecha_venta" sort={sort} onToggle={toggle} className="th-odoo text-left">Fecha</SortableTh>
+                        <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="th-odoo text-left">Folio</SortableTh>
+                        <SortableTh sortKey="monto_venta" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Venta</SortableTh>
+                        <SortableTh sortKey="saldo_venta" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Saldo venta</SortableTh>
+                        <SortableTh sortKey="comision_monto" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Comisión</SortableTh>
                       </tr>
                     </thead>
                     <tbody>
-                      {g.items.map(i => (
+                      {ordenarFilas(g.items, sort, (i: any, k) => k === 'folio' ? i.ventas?.folio : k === 'saldo_venta' ? i.ventas?.saldo_pendiente : i[k]).map(i => (
                         <tr key={i.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                           <td className="py-1.5 px-3 text-center">
                             <input type="checkbox" checked={selected.has(i.id)} onChange={() => toggleOne(i.id)} />

@@ -1,4 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { useSortableTable, useSortState, ordenarFilas, SortableTh } from '@/hooks/useSortableTable';
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, Link } from 'react-router-dom';
@@ -142,6 +143,7 @@ async function fetchTurnos(empresaId: string, soloCerrados = false) {
 
 function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: string) => void }) {
   const { fmt: _fmt } = useCurrency();
+  const { sort, toggle } = useSortState('pos-admin-turnos');
   const q = useQuery({ queryKey: ['pos-admin-turnos', empresaId], queryFn: () => fetchTurnos(empresaId) });
   const turnos = q.data ?? [];
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
@@ -151,19 +153,19 @@ function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-xs">
           <tr>
-            <th className="text-left px-3 py-2">Caja</th>
-            <th className="text-left px-3 py-2">Cajero</th>
-            <th className="text-left px-3 py-2">Apertura</th>
-            <th className="text-left px-3 py-2">Cierre</th>
-            <th className="text-right px-3 py-2">Fondo</th>
-            <th className="text-right px-3 py-2">Esperado</th>
-            <th className="text-right px-3 py-2">Diferencia</th>
-            <th className="text-center px-3 py-2">Estado</th>
+            <SortableTh sortKey="caja_nombre" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Caja</SortableTh>
+            <SortableTh sortKey="cajero_nombre" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Cajero</SortableTh>
+            <SortableTh sortKey="abierto_at" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Apertura</SortableTh>
+            <SortableTh sortKey="cerrado_at" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Cierre</SortableTh>
+            <SortableTh sortKey="fondo_inicial" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Fondo</SortableTh>
+            <SortableTh sortKey="total_efectivo_esperado" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Esperado</SortableTh>
+            <SortableTh sortKey="diferencia" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Diferencia</SortableTh>
+            <SortableTh sortKey="status" sort={sort} onToggle={toggle} align="center" className="text-center px-3 py-2">Estado</SortableTh>
             <th className="text-center px-3 py-2"></th>
           </tr>
         </thead>
         <tbody>
-          {turnos.map((t: any) => (
+          {ordenarFilas(turnos, sort, (t: any, k) => (k === 'fondo_inicial' || k === 'total_efectivo_esperado' || k === 'diferencia') ? (t[k] != null ? Number(t[k]) : null) : t[k]).map((t: any) => (
             <tr key={t.id} className="border-t border-border/50 hover:bg-muted/30">
               <td className="px-3 py-2 font-medium">{t.caja_nombre}</td>
               <td className="px-3 py-2">{t.cajero_nombre}</td>
@@ -192,6 +194,7 @@ function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
 
 function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: string) => void }) {
   const { fmt: _fmt } = useCurrency();
+  const { sort, toggle } = useSortState('pos-admin-cortes');
   const q = useQuery({ queryKey: ['pos-admin-cortes', empresaId], queryFn: () => fetchTurnos(empresaId, true) });
   const turnos = q.data ?? [];
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
@@ -201,20 +204,20 @@ function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-xs">
           <tr>
-            <th className="text-left px-3 py-2">Caja</th>
-            <th className="text-left px-3 py-2">Cajero</th>
-            <th className="text-left px-3 py-2">Cierre</th>
-            <th className="text-right px-3 py-2">Efectivo esp.</th>
-            <th className="text-right px-3 py-2">Efectivo contado</th>
-            <th className="text-right px-3 py-2">Tarjeta</th>
-            <th className="text-right px-3 py-2">Transferencia</th>
-            <th className="text-right px-3 py-2">Otros</th>
-            <th className="text-right px-3 py-2">Diferencia</th>
+            <SortableTh sortKey="caja_nombre" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Caja</SortableTh>
+            <SortableTh sortKey="cajero_nombre" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Cajero</SortableTh>
+            <SortableTh sortKey="cerrado_at" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Cierre</SortableTh>
+            <SortableTh sortKey="total_efectivo_esperado" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Efectivo esp.</SortableTh>
+            <SortableTh sortKey="total_efectivo_contado" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Efectivo contado</SortableTh>
+            <SortableTh sortKey="total_tarjeta_contado" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Tarjeta</SortableTh>
+            <SortableTh sortKey="total_transferencia_contado" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Transferencia</SortableTh>
+            <SortableTh sortKey="total_otros_contado" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Otros</SortableTh>
+            <SortableTh sortKey="diferencia" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Diferencia</SortableTh>
             <th className="text-center px-3 py-2"></th>
           </tr>
         </thead>
         <tbody>
-          {turnos.map((t: any) => (
+          {ordenarFilas(turnos, sort, (t: any, k) => (k === 'caja_nombre' || k === 'cajero_nombre' || k === 'cerrado_at') ? t[k] : Number(t[k] ?? 0)).map((t: any) => (
             <tr key={t.id} className="border-t border-border/50 hover:bg-muted/30">
               <td className="px-3 py-2 font-medium">{t.caja_nombre}</td>
               <td className="px-3 py-2">{t.cajero_nombre}</td>
@@ -240,6 +243,7 @@ function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
 
 function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'deposito' | 'retiro' | 'gasto' }) {
   const { fmt: _fmt } = useCurrency();
+  const { sort, toggle } = useSortState(`pos-admin-movimientos-${tipo}`);
   const [search, setSearch] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -294,15 +298,15 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs">
               <tr>
-                <th className="text-left px-3 py-2">Fecha</th>
-                <th className="text-left px-3 py-2">Caja</th>
-                <th className="text-left px-3 py-2">Usuario</th>
-                <th className="text-left px-3 py-2">Motivo</th>
-                <th className="text-right px-3 py-2">Monto</th>
+                <SortableTh sortKey="created_at" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Fecha</SortableTh>
+                <SortableTh sortKey="caja" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Caja</SortableTh>
+                <SortableTh sortKey="user_nombre" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Usuario</SortableTh>
+                <SortableTh sortKey="motivo" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Motivo</SortableTh>
+                <SortableTh sortKey="monto" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Monto</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => (
+              {ordenarFilas(rows, sort, (r: any, k) => k === 'caja' ? r.caja_turnos?.caja_nombre : k === 'monto' ? Number(r.monto) : r[k]).map(r => (
                 <tr key={r.id} className="border-t border-border/50 hover:bg-muted/30">
                   <td className="px-3 py-2 text-xs tabular-nums">{fmtDate(r.created_at)}</td>
                   <td className="px-3 py-2">{r.caja_turnos?.caja_nombre ?? '—'}</td>
@@ -405,6 +409,14 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
     });
   }, [allRows, search, from, to, statusFilter, metodoFilter]);
 
+  const { sorted: rowsOrdenadas, sort, toggle } = useSortableTable(rows, (r: any, k) => {
+    if (k === 'fecha') return r.fecha || r.created_at;
+    if (k === 'cliente') return r.cliente?.nombre;
+    if (k === 'caja') return r.caja_turnos?.caja_nombre;
+    if (k === 'metodos_pago') return (r.metodos_pago ?? []).join(', ');
+    if (k === 'total') return Number(r.total);
+    return r[k];
+  }, undefined, 'pos-admin-ventas');
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
   const total = rows.filter(r => r.status !== 'cancelado').reduce((s, r) => s + (Number(r.total) || 0), 0);
 
@@ -447,20 +459,20 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
             <thead className="bg-muted/50 text-xs">
               <tr>
                 <th className="w-8 px-2 py-2"></th>
-                <th className="text-left px-3 py-2">Folio</th>
-                <th className="text-left px-3 py-2">Fecha</th>
-                <th className="text-left px-3 py-2">Cliente</th>
-                <th className="text-left px-3 py-2">Vendedor</th>
-                <th className="text-left px-3 py-2">Caja</th>
-                <th className="text-left px-3 py-2">Cajero</th>
-                <th className="text-left px-3 py-2">Condición</th>
-                <th className="text-left px-3 py-2">Métodos de pago</th>
-                <th className="text-left px-3 py-2">Estado</th>
-                <th className="text-right px-3 py-2">Total</th>
+                <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Folio</SortableTh>
+                <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Fecha</SortableTh>
+                <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Cliente</SortableTh>
+                <SortableTh sortKey="vendedor_nombre" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Vendedor</SortableTh>
+                <SortableTh sortKey="caja" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Caja</SortableTh>
+                <SortableTh sortKey="cajero_nombre" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Cajero</SortableTh>
+                <SortableTh sortKey="condicion_pago" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Condición</SortableTh>
+                <SortableTh sortKey="metodos_pago" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Métodos de pago</SortableTh>
+                <SortableTh sortKey="status" sort={sort} onToggle={toggle} className="text-left px-3 py-2">Estado</SortableTh>
+                <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="text-right px-3 py-2">Total</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => {
+              {rowsOrdenadas.map(r => {
                 const isExpanded = expandedId === r.id;
                 const isCancelled = r.status === 'cancelado';
                 return (
@@ -533,6 +545,9 @@ function FiltersBar({
 }
 
 function VentaExpandedRow({ ventaId, fmt }: { ventaId: string; fmt: (v: number | null | undefined) => string }) {
+  const oLineas = useSortState('pos-admin-venta-lineas');
+  const oPagos = useSortState('pos-admin-venta-pagos');
+  const oHistorial = useSortState('pos-admin-venta-historial');
   const q = useQuery({
     queryKey: ['pos-admin-venta-detalle', ventaId],
     queryFn: async () => {
@@ -570,17 +585,17 @@ function VentaExpandedRow({ ventaId, fmt }: { ventaId: string; fmt: (v: number |
                   <table className="w-full text-xs">
                     <thead className="text-muted-foreground">
                       <tr className="border-b border-border/50">
-                        <th className="text-left py-1.5 font-medium">Producto</th>
-                        <th className="text-right py-1.5 font-medium w-16">Cant</th>
-                        <th className="text-center py-1.5 font-medium w-12">Ud</th>
-                        <th className="text-right py-1.5 font-medium w-20">Precio</th>
-                        <th className="text-right py-1.5 font-medium w-16">Desc</th>
-                        <th className="text-right py-1.5 font-medium w-20">IVA</th>
-                        <th className="text-right py-1.5 font-medium w-24">Total</th>
+                        <SortableTh sortKey="producto" sort={oLineas.sort} onToggle={oLineas.toggle} className="text-left py-1.5 font-medium">Producto</SortableTh>
+                        <SortableTh sortKey="cantidad" sort={oLineas.sort} onToggle={oLineas.toggle} align="right" className="text-right py-1.5 font-medium w-16">Cant</SortableTh>
+                        <SortableTh sortKey="unidad" sort={oLineas.sort} onToggle={oLineas.toggle} align="center" className="text-center py-1.5 font-medium w-12">Ud</SortableTh>
+                        <SortableTh sortKey="precio_unitario" sort={oLineas.sort} onToggle={oLineas.toggle} align="right" className="text-right py-1.5 font-medium w-20">Precio</SortableTh>
+                        <SortableTh sortKey="descuento_pct" sort={oLineas.sort} onToggle={oLineas.toggle} align="right" className="text-right py-1.5 font-medium w-16">Desc</SortableTh>
+                        <SortableTh sortKey="iva_monto" sort={oLineas.sort} onToggle={oLineas.toggle} align="right" className="text-right py-1.5 font-medium w-20">IVA</SortableTh>
+                        <SortableTh sortKey="total" sort={oLineas.sort} onToggle={oLineas.toggle} align="right" className="text-right py-1.5 font-medium w-24">Total</SortableTh>
                       </tr>
                     </thead>
                     <tbody>
-                      {q.data.lineas.map((l: any) => (
+                      {ordenarFilas(q.data.lineas, oLineas.sort, (l: any, k) => k === 'producto' ? l.productos?.nombre : k === 'unidad' ? (l.productos?.unidad_granel || 'Pzs') : l[k]).map((l: any) => (
                         <tr key={l.id} className="border-b border-border/30">
                           <td className="py-1.5">{l.productos?.nombre ?? '—'}</td>
                           <td className="py-1.5 text-right tabular-nums">{l.cantidad}</td>
@@ -601,14 +616,14 @@ function VentaExpandedRow({ ventaId, fmt }: { ventaId: string; fmt: (v: number |
                   <table className="w-full text-xs">
                     <thead className="text-muted-foreground">
                       <tr className="border-b border-border/50">
-                        <th className="text-left py-1.5 font-medium">Método</th>
-                        <th className="text-left py-1.5 font-medium">Referencia</th>
-                        <th className="text-left py-1.5 font-medium">Fecha</th>
-                        <th className="text-right py-1.5 font-medium">Monto</th>
+                        <SortableTh sortKey="metodo_pago" sort={oPagos.sort} onToggle={oPagos.toggle} className="text-left py-1.5 font-medium">Método</SortableTh>
+                        <SortableTh sortKey="referencia" sort={oPagos.sort} onToggle={oPagos.toggle} className="text-left py-1.5 font-medium">Referencia</SortableTh>
+                        <SortableTh sortKey="fecha" sort={oPagos.sort} onToggle={oPagos.toggle} className="text-left py-1.5 font-medium">Fecha</SortableTh>
+                        <SortableTh sortKey="monto_aplicado" sort={oPagos.sort} onToggle={oPagos.toggle} align="right" className="text-right py-1.5 font-medium">Monto</SortableTh>
                       </tr>
                     </thead>
                     <tbody>
-                      {q.data.pagos.map((p: any) => (
+                      {ordenarFilas(q.data.pagos, oPagos.sort, (p: any, k) => k === 'monto_aplicado' ? p.monto_aplicado : p.cobros?.[k]).map((p: any) => (
                         <tr key={p.id} className="border-b border-border/30">
                           <td className="py-1.5 capitalize">{p.cobros?.metodo_pago ?? '—'}</td>
                           <td className="py-1.5 text-muted-foreground">{p.cobros?.referencia || '—'}</td>
@@ -626,13 +641,13 @@ function VentaExpandedRow({ ventaId, fmt }: { ventaId: string; fmt: (v: number |
                   <table className="w-full text-xs">
                     <thead className="text-muted-foreground">
                       <tr className="border-b border-border/50">
-                        <th className="text-left py-1.5 font-medium">Fecha</th>
-                        <th className="text-left py-1.5 font-medium">Acción</th>
-                        <th className="text-left py-1.5 font-medium">Usuario</th>
+                        <SortableTh sortKey="created_at" sort={oHistorial.sort} onToggle={oHistorial.toggle} className="text-left py-1.5 font-medium">Fecha</SortableTh>
+                        <SortableTh sortKey="accion" sort={oHistorial.sort} onToggle={oHistorial.toggle} className="text-left py-1.5 font-medium">Acción</SortableTh>
+                        <SortableTh sortKey="user_nombre" sort={oHistorial.sort} onToggle={oHistorial.toggle} className="text-left py-1.5 font-medium">Usuario</SortableTh>
                       </tr>
                     </thead>
                     <tbody>
-                      {q.data.historial.map((h: any) => (
+                      {ordenarFilas(q.data.historial, oHistorial.sort).map((h: any) => (
                         <tr key={h.id} className="border-b border-border/30">
                           <td className="py-1.5 tabular-nums text-muted-foreground">{fmtDate(h.created_at)}</td>
                           <td className="py-1.5 capitalize">{h.accion}</td>
@@ -653,6 +668,8 @@ function VentaExpandedRow({ ventaId, fmt }: { ventaId: string; fmt: (v: number |
 
 function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClose: () => void }) {
   const { fmt: _fmt } = useCurrency();
+  const oCobros = useSortState('pos-admin-turno-cobros');
+  const oMovs = useSortState('pos-admin-turno-movimientos');
   const q = useQuery({
     queryKey: ['pos-admin-turno-detalle', turnoId],
     queryFn: async () => {
@@ -741,10 +758,10 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
               <Card className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50">
-                    <tr><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Cliente</th><th className="text-left px-2 py-1.5">Método</th><th className="text-left px-2 py-1.5">Referencia</th><th className="text-left px-2 py-1.5">Estado</th><th className="text-right px-2 py-1.5">Monto</th></tr>
+                    <tr><SortableTh sortKey="created_at" sort={oCobros.sort} onToggle={oCobros.toggle} className="text-left px-2 py-1.5">Fecha</SortableTh><SortableTh sortKey="cliente" sort={oCobros.sort} onToggle={oCobros.toggle} className="text-left px-2 py-1.5">Cliente</SortableTh><SortableTh sortKey="metodo_pago" sort={oCobros.sort} onToggle={oCobros.toggle} className="text-left px-2 py-1.5">Método</SortableTh><SortableTh sortKey="referencia" sort={oCobros.sort} onToggle={oCobros.toggle} className="text-left px-2 py-1.5">Referencia</SortableTh><SortableTh sortKey="status" sort={oCobros.sort} onToggle={oCobros.toggle} className="text-left px-2 py-1.5">Estado</SortableTh><SortableTh sortKey="monto" sort={oCobros.sort} onToggle={oCobros.toggle} align="right" className="text-right px-2 py-1.5">Monto</SortableTh></tr>
                   </thead>
                   <tbody>
-                    {(q.data?.cobros ?? []).map((c: any) => (
+                    {ordenarFilas(q.data?.cobros ?? [], oCobros.sort, (c: any, k) => k === 'cliente' ? c.cliente?.nombre : k === 'monto' ? Number(c.monto) : c[k]).map((c: any) => (
                       <tr key={c.id} className="border-t border-border/50">
                         <td className="px-2 py-1.5 tabular-nums whitespace-nowrap">{fmtDate(c.created_at)}</td>
                         <td className="px-2 py-1.5">{c.cliente?.nombre ?? '—'}</td>
@@ -764,10 +781,10 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
               <Card className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50">
-                    <tr><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Tipo</th><th className="text-left px-2 py-1.5">Motivo</th><th className="text-right px-2 py-1.5">Monto</th></tr>
+                    <tr><SortableTh sortKey="created_at" sort={oMovs.sort} onToggle={oMovs.toggle} className="text-left px-2 py-1.5">Fecha</SortableTh><SortableTh sortKey="tipo" sort={oMovs.sort} onToggle={oMovs.toggle} className="text-left px-2 py-1.5">Tipo</SortableTh><SortableTh sortKey="motivo" sort={oMovs.sort} onToggle={oMovs.toggle} className="text-left px-2 py-1.5">Motivo</SortableTh><SortableTh sortKey="monto" sort={oMovs.sort} onToggle={oMovs.toggle} align="right" className="text-right px-2 py-1.5">Monto</SortableTh></tr>
                   </thead>
                   <tbody>
-                    {(q.data?.movs ?? []).map((m: any) => (
+                    {ordenarFilas(q.data?.movs ?? [], oMovs.sort, (m: any, k) => k === 'monto' ? Number(m.monto) : m[k]).map((m: any) => (
                       <tr key={m.id} className="border-t border-border/50">
                         <td className="px-2 py-1.5 tabular-nums">{fmtDate(m.created_at)}</td>
                         <td className="px-2 py-1.5 capitalize">{m.tipo}</td>

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -80,6 +81,15 @@ export default function KardexUbicacionModal({
     }
     return list;
   }, [rows, filterTipo, search]);
+
+  // Orden por columna (solo presentación: el saldo de cada renglón ya viene calculado en orden cronológico).
+  const { sorted: filasOrdenadas, sort, toggle } = useSortableTable(filtered, (r: any, k) => {
+    if (k === 'tipo') return (TIPO_CONFIG[r.tipo] ?? TIPO_CONFIG.entrada).label;
+    if (k === 'referencia') return REFERENCIA_LABELS[r.referencia_tipo ?? ''] ?? r.referencia_tipo;
+    if (k === 'entrada') return r.delta > 0 ? r.delta : null;
+    if (k === 'salida') return r.delta < 0 ? Math.abs(r.delta) : null;
+    return r[k];
+  }, undefined, 'kardex-ubicacion');
 
   const handleExportCSV = () => {
     const header = 'Fecha,Tipo,Referencia,Entrada,Salida,Saldo,Notas';
@@ -184,15 +194,15 @@ export default function KardexUbicacionModal({
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-card z-10">
               <tr className="border-b border-border">
-                <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Fecha</th>
-                <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
-                <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
-                <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen</th>
-                <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Destino</th>
-                <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</th>
-                <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</th>
-                <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground font-semibold">Saldo</th>
-                <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Notas</th>
+                <SortableTh sortKey="created_at" sort={sort} onToggle={toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Fecha</SortableTh>
+                <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</SortableTh>
+                <SortableTh sortKey="referencia" sort={sort} onToggle={toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</SortableTh>
+                <SortableTh sortKey="origen_nombre" sort={sort} onToggle={toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen</SortableTh>
+                <SortableTh sortKey="destino_nombre" sort={sort} onToggle={toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Destino</SortableTh>
+                <SortableTh sortKey="entrada" sort={sort} onToggle={toggle} align="right" className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</SortableTh>
+                <SortableTh sortKey="salida" sort={sort} onToggle={toggle} align="right" className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</SortableTh>
+                <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} align="right" className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground font-semibold">Saldo</SortableTh>
+                <SortableTh sortKey="notas" sort={sort} onToggle={toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Notas</SortableTh>
               </tr>
             </thead>
             <tbody>
@@ -203,7 +213,7 @@ export default function KardexUbicacionModal({
                   {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                 </td></tr>
               ) : (
-                filtered.map(row => {
+                filasOrdenadas.map(row => {
                   const cfg = TIPO_CONFIG[row.tipo] ?? TIPO_CONFIG.entrada;
                   const Icon = cfg.icon;
                   return (

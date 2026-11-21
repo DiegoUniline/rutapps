@@ -1,4 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -53,7 +54,14 @@ export default function ComisionesGeneradasPage() {
 
 
   const comisionesList = comisiones ?? [];
-  const pag = useTablePagination(comisionesList);
+  const { sorted: comisionesOrdenadas, sort, toggle } = useSortableTable(comisionesList, (c: any, k) => {
+    if (k === 'folio') return c.ventas?.folio;
+    if (k === 'vendedor') return c.vendedores?.nombre;
+    if (k === 'producto') return c.productos?.nombre;
+    if (k === 'estado') return c.pagada ? 'Pagada' : c.pago_comision_id ? 'En recibo' : 'Pendiente';
+    return c[k];
+  }, undefined, 'comisiones-generadas');
+  const pag = useTablePagination(comisionesOrdenadas);
   useEffect(() => { pag.resetPage(); }, [vendedorFilter, statusFilter, fechaDesde, fechaHasta]);
   const totalMonto = useMemo(() => comisionesList.reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisionesList]);
   const totalPend = useMemo(() => comisionesList.filter(c => !c.pagada).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisionesList]);
@@ -74,6 +82,7 @@ export default function ComisionesGeneradasPage() {
     }
     return Array.from(map.values()).sort((a, b) => b.comision - a.comision);
   }, [comisiones]);
+  const ordenResumen = useSortableTable(resumenVendedor, (r, k) => k === 'ventas' ? r.ventas.size : (r as any)[k], undefined, 'comisiones-resumen-vendedor');
 
   const vendedorOpts = [{ value: '', label: 'Todos los vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))];
   const setRange = (d: string, h: string) => { setFechaDesde(d); setFechaHasta(h); };
@@ -114,16 +123,16 @@ export default function ComisionesGeneradasPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
-                <th className="th-odoo text-left">Vendedor</th>
-                <th className="th-odoo text-right"># Ventas</th>
-                <th className="th-odoo text-right">Vendido</th>
-                <th className="th-odoo text-right">Comisión total</th>
-                <th className="th-odoo text-right">Pendiente</th>
-                <th className="th-odoo text-right">Pagada</th>
+                <SortableTh sortKey="nombre" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} className="th-odoo text-left">Vendedor</SortableTh>
+                <SortableTh sortKey="ventas" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} align="right" className="th-odoo text-right"># Ventas</SortableTh>
+                <SortableTh sortKey="vendido" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} align="right" className="th-odoo text-right">Vendido</SortableTh>
+                <SortableTh sortKey="comision" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} align="right" className="th-odoo text-right">Comisión total</SortableTh>
+                <SortableTh sortKey="pendiente" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} align="right" className="th-odoo text-right">Pendiente</SortableTh>
+                <SortableTh sortKey="pagada" sort={ordenResumen.sort} onToggle={ordenResumen.toggle} align="right" className="th-odoo text-right">Pagada</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {resumenVendedor.map(r => (
+              {ordenResumen.sorted.map(r => (
                 <tr key={r.vendedor_id} className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer"
                   onClick={() => setVendedorFilter(r.vendedor_id === 'sin' ? '' : r.vendedor_id)}>
                   <td className="py-1.5 px-3 text-xs font-medium">{r.nombre}</td>
@@ -144,14 +153,14 @@ export default function ComisionesGeneradasPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
-                <th className="th-odoo text-left">Fecha</th>
-                <th className="th-odoo text-left">Folio</th>
-                <th className="th-odoo text-left">Vendedor</th>
-                <th className="th-odoo text-left">Producto</th>
-                <th className="th-odoo text-right">Venta</th>
-                <th className="th-odoo text-right">% Com.</th>
-                <th className="th-odoo text-right">Comisión</th>
-                <th className="th-odoo text-center">Estado</th>
+                <SortableTh sortKey="fecha_venta" sort={sort} onToggle={toggle} className="th-odoo text-left">Fecha</SortableTh>
+                <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="th-odoo text-left">Folio</SortableTh>
+                <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="th-odoo text-left">Vendedor</SortableTh>
+                <SortableTh sortKey="producto" sort={sort} onToggle={toggle} className="th-odoo text-left">Producto</SortableTh>
+                <SortableTh sortKey="monto_venta" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Venta</SortableTh>
+                <SortableTh sortKey="comision_pct" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">% Com.</SortableTh>
+                <SortableTh sortKey="comision_monto" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Comisión</SortableTh>
+                <SortableTh sortKey="estado" sort={sort} onToggle={toggle} align="center" className="th-odoo text-center">Estado</SortableTh>
               </tr>
             </thead>
             <tbody>

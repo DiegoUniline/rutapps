@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -76,6 +77,18 @@ export default function KardexTab({ productoId, isNew }: KardexTabProps) {
     return list;
   }, [rows, filterTipo, search]);
 
+  // Orden por columna (solo presentación: el saldo de cada renglón ya está calculado en orden cronológico).
+  const { sorted: filasOrdenadas, sort, toggle } = useSortableTable(filtered, (r: any, k) => {
+    if (k === 'tipo') return (TIPO_CONFIG[r.tipo as keyof typeof TIPO_CONFIG] ?? TIPO_CONFIG.entrada).label;
+    if (k === 'origen') return r.tipo === 'transferencia'
+      ? `${r.almacenes?.nombre ?? '?'} → ${r.almacen_dest?.nombre ?? '?'}`
+      : r.almacenes?.nombre || r.almacen_dest?.nombre;
+    if (k === 'referencia') return REFERENCIA_LABELS[r.referencia_tipo] ?? r.referencia_tipo;
+    if (k === 'entrada') return r.tipo === 'entrada' ? r.cantidad : null;
+    if (k === 'salida') return r.tipo === 'salida' ? r.cantidad : null;
+    return r[k];
+  }, undefined, 'kardex-producto');
+
   if (isNew) {
     return (
       <div className="text-[12px] text-muted-foreground py-4 bg-accent/30 border border-accent/50 rounded px-3">
@@ -144,14 +157,14 @@ export default function KardexTab({ productoId, isNew }: KardexTabProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-table-border">
-              <th className="th-odoo text-left">Fecha</th>
-              <th className="th-odoo text-left">Tipo</th>
-              <th className="th-odoo text-left">Origen</th>
-              <th className="th-odoo text-left">Referencia</th>
-              <th className="th-odoo text-right">Entrada</th>
-              <th className="th-odoo text-right">Salida</th>
-              <th className="th-odoo text-right font-semibold">Saldo</th>
-              <th className="th-odoo text-left">Notas</th>
+              <SortableTh sortKey="created_at" sort={sort} onToggle={toggle} className="th-odoo text-left">Fecha</SortableTh>
+              <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="th-odoo text-left">Tipo</SortableTh>
+              <SortableTh sortKey="origen" sort={sort} onToggle={toggle} className="th-odoo text-left">Origen</SortableTh>
+              <SortableTh sortKey="referencia" sort={sort} onToggle={toggle} className="th-odoo text-left">Referencia</SortableTh>
+              <SortableTh sortKey="entrada" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Entrada</SortableTh>
+              <SortableTh sortKey="salida" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Salida</SortableTh>
+              <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right font-semibold">Saldo</SortableTh>
+              <SortableTh sortKey="notas" sort={sort} onToggle={toggle} className="th-odoo text-left">Notas</SortableTh>
             </tr>
           </thead>
           <tbody>
@@ -162,7 +175,7 @@ export default function KardexTab({ productoId, isNew }: KardexTabProps) {
                 {rows.length === 0 ? 'Sin movimientos registrados para este producto' : 'Sin resultados con los filtros actuales'}
               </td></tr>
             ) : (
-              filtered.map((row: any) => {
+              filasOrdenadas.map((row: any) => {
                 const cfg = TIPO_CONFIG[row.tipo as keyof typeof TIPO_CONFIG] ?? TIPO_CONFIG.entrada;
                 const Icon = cfg.icon;
                 const almOrigen = (row.almacenes as any)?.nombre;

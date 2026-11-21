@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSortState, ordenarFilas, SortableTableHead } from '@/hooks/useSortableTable';
 import { useControlData } from '@/hooks/useControlData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { subDays, format } from 'date-fns';
@@ -25,6 +26,13 @@ export default function ControlPage() {
     to: new Date(dateTo + 'T23:59:59'),
   });
   const [expandedDescarga, setExpandedDescarga] = useState<string | null>(null);
+  // Orden por columna de cada tabla de alertas (se recuerda por tabla).
+  const oCanceladas = useSortState('control-canceladas');
+  const oDescuentos = useSortState('control-descuentos');
+  const oBajoCosto = useSortState('control-bajo-costo');
+  const oDescargaLineas = useSortState('control-descarga-lineas');
+  const oVencidas = useSortState('control-credito-vencido');
+  const valorVenta = (v: any, k: string) => k === 'cliente' ? v.clientes?.nombre : k === 'vendedor' ? v.vendedores?.nombre : v[k];
 
   const alertCounts = {
     canceladas: data.canceladas.length,
@@ -101,10 +109,10 @@ export default function ControlPage() {
                 {data.canceladas.length === 0 ? <EmptyState /> : (
                   <Table>
                     <TableHeader><TableRow>
-                      <TableHead>Folio</TableHead><TableHead>Fecha</TableHead><TableHead>Cliente</TableHead><TableHead>Vendedor</TableHead><TableHead className="text-right">Total</TableHead><TableHead></TableHead>
+                      <SortableTableHead sortKey="folio" sort={oCanceladas.sort} onToggle={oCanceladas.toggle}>Folio</SortableTableHead><SortableTableHead sortKey="fecha" sort={oCanceladas.sort} onToggle={oCanceladas.toggle}>Fecha</SortableTableHead><SortableTableHead sortKey="cliente" sort={oCanceladas.sort} onToggle={oCanceladas.toggle}>Cliente</SortableTableHead><SortableTableHead sortKey="vendedor" sort={oCanceladas.sort} onToggle={oCanceladas.toggle}>Vendedor</SortableTableHead><SortableTableHead sortKey="total" sort={oCanceladas.sort} onToggle={oCanceladas.toggle} align="right" className="text-right">Total</SortableTableHead><TableHead></TableHead>
                     </TableRow></TableHeader>
                     <TableBody>
-                      {data.canceladas.map((v: any) => (
+                      {ordenarFilas(data.canceladas, oCanceladas.sort, valorVenta).map((v: any) => (
                         <TableRow key={v.id} className="cursor-pointer hover:bg-table-hover" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
                           <TableCell className="text-xs">{fmtDate(v.fecha)}</TableCell>
@@ -132,10 +140,10 @@ export default function ControlPage() {
                 {data.descuentosAltos.length === 0 ? <EmptyState /> : (
                   <Table>
                     <TableHeader><TableRow>
-                      <TableHead>Folio</TableHead><TableHead>Fecha</TableHead><TableHead>Cliente</TableHead><TableHead>Vendedor</TableHead><TableHead className="text-right">Descuento</TableHead><TableHead className="text-right">Total</TableHead>
+                      <SortableTableHead sortKey="folio" sort={oDescuentos.sort} onToggle={oDescuentos.toggle}>Folio</SortableTableHead><SortableTableHead sortKey="fecha" sort={oDescuentos.sort} onToggle={oDescuentos.toggle}>Fecha</SortableTableHead><SortableTableHead sortKey="cliente" sort={oDescuentos.sort} onToggle={oDescuentos.toggle}>Cliente</SortableTableHead><SortableTableHead sortKey="vendedor" sort={oDescuentos.sort} onToggle={oDescuentos.toggle}>Vendedor</SortableTableHead><SortableTableHead sortKey="descuento_porcentaje" sort={oDescuentos.sort} onToggle={oDescuentos.toggle} align="right" className="text-right">Descuento</SortableTableHead><SortableTableHead sortKey="total" sort={oDescuentos.sort} onToggle={oDescuentos.toggle} align="right" className="text-right">Total</SortableTableHead>
                     </TableRow></TableHeader>
                     <TableBody>
-                      {data.descuentosAltos.map((v: any) => (
+                      {ordenarFilas(data.descuentosAltos, oDescuentos.sort, valorVenta).map((v: any) => (
                         <TableRow key={v.id} className="cursor-pointer hover:bg-table-hover" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
                           <TableCell className="text-xs">{fmtDate(v.fecha)}</TableCell>
@@ -167,10 +175,10 @@ export default function ControlPage() {
                 {data.ventasBajoCosto.length === 0 ? <EmptyState text="No se detectaron ventas por debajo del costo" /> : (
                   <Table>
                     <TableHeader><TableRow>
-                      <TableHead>Folio</TableHead><TableHead>Producto</TableHead><TableHead>Vendedor</TableHead><TableHead className="text-right">Costo</TableHead><TableHead className="text-right">Precio venta</TableHead><TableHead className="text-right">Pérdida</TableHead>
+                      <SortableTableHead sortKey="folio" sort={oBajoCosto.sort} onToggle={oBajoCosto.toggle}>Folio</SortableTableHead><SortableTableHead sortKey="producto" sort={oBajoCosto.sort} onToggle={oBajoCosto.toggle}>Producto</SortableTableHead><SortableTableHead sortKey="vendedor" sort={oBajoCosto.sort} onToggle={oBajoCosto.toggle}>Vendedor</SortableTableHead><SortableTableHead sortKey="costo" sort={oBajoCosto.sort} onToggle={oBajoCosto.toggle} align="right" className="text-right">Costo</SortableTableHead><SortableTableHead sortKey="precio_venta" sort={oBajoCosto.sort} onToggle={oBajoCosto.toggle} align="right" className="text-right">Precio venta</SortableTableHead><SortableTableHead sortKey="perdida" sort={oBajoCosto.sort} onToggle={oBajoCosto.toggle} align="right" className="text-right">Pérdida</SortableTableHead>
                     </TableRow></TableHeader>
                     <TableBody>
-                      {data.ventasBajoCosto.map((a: any, i: number) => (
+                      {ordenarFilas(data.ventasBajoCosto, oBajoCosto.sort).map((a: any, i: number) => (
                         <TableRow key={i} className="cursor-pointer hover:bg-table-hover" onClick={() => navigate(`/ventas/${a.venta_id}`)}>
                           <TableCell className="font-mono text-xs">{a.folio}</TableCell>
                           <TableCell className="text-xs max-w-[200px] truncate">{a.producto}</TableCell>
@@ -232,13 +240,13 @@ export default function ControlPage() {
                           <div className="mt-3 border-t pt-2">
                             <Table>
                               <TableHeader><TableRow>
-                                <TableHead className="text-xs">Producto</TableHead>
-                                <TableHead className="text-right text-xs">Esperada</TableHead>
-                                <TableHead className="text-right text-xs">Real</TableHead>
-                                <TableHead className="text-right text-xs">Diferencia</TableHead>
+                                <SortableTableHead sortKey="producto" sort={oDescargaLineas.sort} onToggle={oDescargaLineas.toggle} className="text-xs">Producto</SortableTableHead>
+                                <SortableTableHead sortKey="esperada" sort={oDescargaLineas.sort} onToggle={oDescargaLineas.toggle} align="right" className="text-right text-xs">Esperada</SortableTableHead>
+                                <SortableTableHead sortKey="real" sort={oDescargaLineas.sort} onToggle={oDescargaLineas.toggle} align="right" className="text-right text-xs">Real</SortableTableHead>
+                                <SortableTableHead sortKey="diferencia" sort={oDescargaLineas.sort} onToggle={oDescargaLineas.toggle} align="right" className="text-right text-xs">Diferencia</SortableTableHead>
                               </TableRow></TableHeader>
                               <TableBody>
-                                {d.lineas.map((l: any, i: number) => (
+                                {ordenarFilas(d.lineas, oDescargaLineas.sort).map((l: any, i: number) => (
                                   <TableRow key={i}>
                                     <TableCell className="text-xs">{l.producto}</TableCell>
                                     <TableCell className="text-right text-xs">{l.esperada}</TableCell>
@@ -271,10 +279,10 @@ export default function ControlPage() {
                 {data.creditoVencido.length === 0 ? <EmptyState text="No hay créditos vencidos" /> : (
                   <Table>
                     <TableHeader><TableRow>
-                      <TableHead>Folio</TableHead><TableHead>Cliente</TableHead><TableHead>Vendedor</TableHead><TableHead>Vencimiento</TableHead><TableHead className="text-right">Días vencido</TableHead><TableHead className="text-right">Saldo</TableHead>
+                      <SortableTableHead sortKey="folio" sort={oVencidas.sort} onToggle={oVencidas.toggle}>Folio</SortableTableHead><SortableTableHead sortKey="cliente" sort={oVencidas.sort} onToggle={oVencidas.toggle}>Cliente</SortableTableHead><SortableTableHead sortKey="vendedor" sort={oVencidas.sort} onToggle={oVencidas.toggle}>Vendedor</SortableTableHead><SortableTableHead sortKey="vencimiento" sort={oVencidas.sort} onToggle={oVencidas.toggle}>Vencimiento</SortableTableHead><SortableTableHead sortKey="dias_vencido" sort={oVencidas.sort} onToggle={oVencidas.toggle} align="right" className="text-right">Días vencido</SortableTableHead><SortableTableHead sortKey="saldo_pendiente" sort={oVencidas.sort} onToggle={oVencidas.toggle} align="right" className="text-right">Saldo</SortableTableHead>
                     </TableRow></TableHeader>
                     <TableBody>
-                      {data.creditoVencido.map((v: any) => (
+                      {ordenarFilas(data.creditoVencido, oVencidas.sort).map((v: any) => (
                         <TableRow key={v.id} className="cursor-pointer hover:bg-table-hover" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
                           <TableCell className="text-xs">{v.cliente}</TableCell>

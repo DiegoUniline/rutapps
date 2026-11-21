@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -100,6 +101,11 @@ export default function DatabaseHealthPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // «Tamaño» se ordena por bytes, no por el texto («9 MB» > «10 MB»).
+  const ordenTablas = useSortableTable(health?.top_tables ?? [], (t, k) => k === 'tamano' ? t.bytes : k === 'last_vacuum' ? (t.last_vacuum || t.last_autovacuum) : (t as any)[k], undefined, 'db-health-tablas');
+  const ordenBuckets = useSortableTable(health?.storage_buckets ?? [], (b, k) => k === 'tamano' ? b.bytes : (b as any)[k], undefined, 'db-health-buckets');
+  const ordenLogs = useSortableTable(logs, (l, k) => k === 'tablas' ? (l.tablas_procesadas ?? []).length : (l as any)[k], undefined, 'db-health-mantenimiento');
 
   const runVacuum = async () => {
     setRunning(true);
@@ -222,16 +228,16 @@ export default function DatabaseHealthPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tabla</TableHead>
-                  <TableHead className="text-right">Tamaño</TableHead>
-                  <TableHead className="text-right">Filas vivas</TableHead>
-                  <TableHead className="text-right">Dead tuples</TableHead>
-                  <TableHead className="text-right">Bloat %</TableHead>
-                  <TableHead>Último vacuum</TableHead>
+                  <SortableTableHead sortKey="tabla" sort={ordenTablas.sort} onToggle={ordenTablas.toggle}>Tabla</SortableTableHead>
+                  <SortableTableHead sortKey="tamano" sort={ordenTablas.sort} onToggle={ordenTablas.toggle} align="right" className="text-right">Tamaño</SortableTableHead>
+                  <SortableTableHead sortKey="filas_vivas" sort={ordenTablas.sort} onToggle={ordenTablas.toggle} align="right" className="text-right">Filas vivas</SortableTableHead>
+                  <SortableTableHead sortKey="dead_tuples" sort={ordenTablas.sort} onToggle={ordenTablas.toggle} align="right" className="text-right">Dead tuples</SortableTableHead>
+                  <SortableTableHead sortKey="bloat_pct" sort={ordenTablas.sort} onToggle={ordenTablas.toggle} align="right" className="text-right">Bloat %</SortableTableHead>
+                  <SortableTableHead sortKey="last_vacuum" sort={ordenTablas.sort} onToggle={ordenTablas.toggle}>Último vacuum</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(health?.top_tables ?? []).map((t) => (
+                {ordenTablas.sorted.map((t) => (
                   <TableRow key={t.tabla}>
                     <TableCell className="font-mono text-xs">{t.tabla}</TableCell>
                     <TableCell className="text-right font-medium">{t.tamano}</TableCell>
@@ -283,13 +289,13 @@ export default function DatabaseHealthPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Bucket</TableHead>
-                  <TableHead className="text-right">Archivos</TableHead>
-                  <TableHead className="text-right">Tamaño</TableHead>
+                  <SortableTableHead sortKey="bucket" sort={ordenBuckets.sort} onToggle={ordenBuckets.toggle}>Bucket</SortableTableHead>
+                  <SortableTableHead sortKey="num_archivos" sort={ordenBuckets.sort} onToggle={ordenBuckets.toggle} align="right" className="text-right">Archivos</SortableTableHead>
+                  <SortableTableHead sortKey="tamano" sort={ordenBuckets.sort} onToggle={ordenBuckets.toggle} align="right" className="text-right">Tamaño</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(health?.storage_buckets ?? []).map((b) => (
+                {ordenBuckets.sorted.map((b) => (
                   <TableRow key={b.bucket}>
                     <TableCell className="font-mono text-xs">{b.bucket}</TableCell>
                     <TableCell className="text-right">
@@ -324,14 +330,14 @@ export default function DatabaseHealthPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tablas</TableHead>
-                  <TableHead className="text-right">Duración</TableHead>
-                  <TableHead>Notas</TableHead>
+                  <SortableTableHead sortKey="ejecutado_en" sort={ordenLogs.sort} onToggle={ordenLogs.toggle}>Fecha</SortableTableHead>
+                  <SortableTableHead sortKey="tablas" sort={ordenLogs.sort} onToggle={ordenLogs.toggle}>Tablas</SortableTableHead>
+                  <SortableTableHead sortKey="duracion_ms" sort={ordenLogs.sort} onToggle={ordenLogs.toggle} align="right" className="text-right">Duración</SortableTableHead>
+                  <SortableTableHead sortKey="notas" sort={ordenLogs.sort} onToggle={ordenLogs.toggle}>Notas</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((l) => (
+                {ordenLogs.sorted.map((l) => (
                   <TableRow key={l.id}>
                     <TableCell className="text-xs">{formatDate(l.ejecutado_en)}</TableCell>
                     <TableCell className="text-xs">
