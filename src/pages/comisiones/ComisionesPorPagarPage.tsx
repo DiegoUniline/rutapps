@@ -113,7 +113,7 @@ export default function ComisionesPorPagarPage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 flex-wrap bg-card border border-border rounded p-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Calendar className="h-4 w-4 text-muted-foreground" />
         <span className="text-xs text-muted-foreground">Pagar comisiones hasta:</span>
         <input type="date" className="input-odoo text-xs py-1.5 w-36" value={ppFechaCorte} onChange={e => { setPpFechaCorte(e.target.value); clearSel(); }} />
@@ -124,10 +124,10 @@ export default function ComisionesPorPagarPage() {
               className={cn('px-2.5 py-1.5 text-xs transition-colors', ppSaldoFilter === key ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted')}>{label}</button>
           ))}
         </div>
-        <button onClick={selectAll} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Seleccionar todo</button>
-        <button onClick={clearSel} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Limpiar</button>
-        <button onClick={() => setCollapsedVendors(new Set(ppGrupos.map(g => g.vendedor_id)))} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Contraer todo</button>
-        <button onClick={() => setCollapsedVendors(new Set())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Expandir todo</button>
+        <button onClick={selectAll} className="btn-odoo-secondary px-2.5 py-1 text-[11px]">Seleccionar todo</button>
+        <button onClick={clearSel} className="btn-odoo-secondary px-2.5 py-1 text-[11px]">Limpiar</button>
+        <button onClick={() => setCollapsedVendors(new Set(ppGrupos.map(g => g.vendedor_id)))} className="btn-odoo-secondary px-2.5 py-1 text-[11px]">Contraer todo</button>
+        <button onClick={() => setCollapsedVendors(new Set())} className="btn-odoo-secondary px-2.5 py-1 text-[11px]">Expandir todo</button>
         <div className="ml-auto flex items-center gap-3">
           <div className="text-xs">Seleccionado: <span className="font-mono font-bold text-odoo-teal">{fmt(selectedTotal)}</span> ({selected.size})</div>
           <button onClick={() => generarMut.mutate()} disabled={generarMut.isPending || selected.size === 0} className="btn-odoo-primary">
@@ -137,13 +137,13 @@ export default function ComisionesPorPagarPage() {
       </div>
 
       {loadingPP ? <TableSkeleton /> : ppGrupos.length === 0 ? (
-        <div className="border border-border rounded p-8 text-center text-muted-foreground text-sm">
+        <div className="p-8 text-center text-muted-foreground text-sm">
           {ppSaldoFilter === 'cobradas' ? 'No hay comisiones de ventas cobradas hasta la fecha de corte'
             : ppSaldoFilter === 'pendientes' ? 'No hay comisiones de ventas por cobrar hasta la fecha de corte'
             : 'No hay comisiones pendientes hasta la fecha de corte'}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="-mx-3 md:-mx-4 border-y border-border divide-y divide-border">
           {ppGrupos.map(g => {
             const allSel = g.items.every(i => selected.has(i.id));
             const someSel = g.items.some(i => selected.has(i.id));
@@ -152,8 +152,8 @@ export default function ComisionesPorPagarPage() {
             const cobradas = g.items.filter(i => i.ventas?.saldo_pendiente === 0).length;
             const porCobrar = g.items.filter(i => (i.ventas?.saldo_pendiente ?? 0) > 0).length;
             return (
-              <div key={g.vendedor_id} className="border border-border rounded overflow-hidden">
-                <div className="flex items-center gap-3 bg-muted/40 px-3 py-2 border-b border-table-border">
+              <div key={g.vendedor_id} className="overflow-x-auto">
+                <div className="flex items-center gap-3 bg-accent px-3 md:px-4 py-2 border-b border-table-border">
                   <input type="checkbox" checked={allSel}
                     ref={el => { if (el) el.indeterminate = !allSel && someSel; }}
                     onChange={() => toggleVendor(g.items)} onClick={e => e.stopPropagation()} />
@@ -162,8 +162,8 @@ export default function ComisionesPorPagarPage() {
                     <span className="font-semibold text-sm">{g.nombre}</span>
                     <span className="text-xs text-muted-foreground">
                       {g.items.length} comisiones
-                      {cobradas > 0 && <span className="ml-1 text-green-600">· {cobradas} cobradas</span>}
-                      {porCobrar > 0 && <span className="ml-1 text-amber-600">· {porCobrar} por cobrar</span>}
+                      {cobradas > 0 && <span className="ml-1 text-success">· {cobradas} cobradas</span>}
+                      {porCobrar > 0 && <span className="ml-1 text-warning">· {porCobrar} por cobrar</span>}
                       {' · Total: '}<span className="font-mono font-semibold text-odoo-teal">{fmt(g.total)}</span>
                     </span>
                   </button>
@@ -196,7 +196,7 @@ export default function ComisionesPorPagarPage() {
                           <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(i.monto_venta)}</td>
                           <td className="py-1.5 px-3 text-right font-mono text-xs">
                             {i.ventas?.saldo_pendiente !== undefined && i.ventas?.saldo_pendiente !== null ? (
-                              <span className={i.ventas.saldo_pendiente === 0 ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+                              <span className={i.ventas.saldo_pendiente === 0 ? 'text-success font-medium' : 'text-warning font-medium'}>
                                 {fmt(i.ventas.saldo_pendiente)}
                               </span>
                             ) : '—'}

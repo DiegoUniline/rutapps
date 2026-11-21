@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react';
 import { Users, UserPlus, Edit2, KeyRound, Archive, RotateCcw, AlertTriangle, LogOut, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { EncabezadoListaMovil, ListaTarjetasMovil, ListaTarjetaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import type { AccionMovil } from '@/components/shared/MasAccionesMovil';
 import type { ProfileUser, AuthUser, UserRole, Almacen } from '@/hooks/useUsuarios';
 import type { Role } from '@/hooks/useRoles';
 
@@ -58,15 +61,17 @@ export default function UsuariosTab({
       );
     });
   }, [profiles, showArchived, search, authUsers, userRoles, roles, almacenes]);
-  return (
-    <div className="space-y-4">
+  const isMobile = useIsMobile();
+  const movil = useCargarMasMovil(visibleProfiles, `${search}|${showArchived}`);
+
+  const buscador = (
       <div className="relative">
         <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar por nombre, email, teléfono, rol o almacén..."
+          placeholder={isMobile ? "Buscar usuario" : "Buscar por nombre, email, teléfono, rol o almacén..."}
           className="input-odoo w-full pl-8 pr-8 text-sm"
         />
         {search && (
@@ -80,6 +85,77 @@ export default function UsuariosTab({
           </button>
         )}
       </div>
+  );
+
+  // Teléfono (docs/sistema-diseno.md, «Listas en teléfono»): renglones en vez de tabla.
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        <EncabezadoListaMovil titulo="Usuarios" onNuevo={onNewUser} nuevoLabel="Nuevo usuario">
+          {buscador}
+        </EncabezadoListaMovil>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span className="text-xs text-muted-foreground">
+            <Users className="h-3.5 w-3.5 inline mr-1" />
+            {activeUsers} / {maxUsuarios} usuarios activos
+          </span>
+          <label className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+            <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="h-3.5 w-3.5" />
+            Mostrar archivados
+          </label>
+          {availableSlots <= 0 && (
+            <span className="w-full text-xs text-warning flex items-center gap-1">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              Al límite — usuarios extra se cobrarán en el próximo ciclo
+            </span>
+          )}
+          {availableSlots > 0 && availableSlots <= 2 && (
+            <span className="w-full text-xs text-warning">
+              {availableSlots} lugar{availableSlots !== 1 ? 'es' : ''} disponible{availableSlots !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+        <ListaTarjetasMovil vacia={visibleProfiles.length === 0} mensajeVacio="No hay usuarios para mostrar" {...movil}>
+          {movil.visibles.map(p => {
+            const userRole = userRoles.find(ur => ur.user_id === p.user_id);
+            const authUser = authUsers.find(au => au.id === p.user_id);
+            const isOwnerUser = ownerUserId === p.user_id;
+            const isArchived = p.estado === 'archivado' || p.estado === 'baja';
+            const rolNombre = userRole ? roles.find(r => r.id === userRole.role_id)?.nombre : 'Sin rol';
+            const almNombre = almacenes.find(a => a.id === p.almacen_id)?.nombre;
+            const { pildora, tono } = isOwnerUser ? { pildora: 'Dueño', tono: 'primario' as const } : estadoPildora(p.estado);
+            const acciones: AccionMovil[] = [
+              { key: 'editar', label: 'Editar', icon: Edit2, onClick: () => onEditUser(p) },
+              { key: 'password', label: 'Cambiar contraseña', icon: KeyRound, onClick: () => onSetPassword(p.user_id, p.nombre || authUser?.email || '') },
+            ];
+            if (!isOwnerUser && p.estado === 'activo') {
+              acciones.push({ key: 'signout', label: 'Cerrar sesión del usuario', icon: LogOut, onClick: () => onForceSignOut(p) });
+              acciones.push({ key: 'archivar', label: 'Archivar usuario', icon: Archive, destructiva: true, separar: true, onClick: () => onArchive(p, authUser?.email) });
+            }
+            if (!isOwnerUser && isArchived) {
+              acciones.push({ key: 'reactivar', label: 'Reactivar usuario', icon: RotateCcw, separar: true, onClick: () => onReactivate(p) });
+            }
+            return (
+              <ListaTarjetaMovil
+                key={p.id}
+                titulo={p.nombre || 'Sin nombre'}
+                linea2={[rolNombre, almNombre, authUser?.email || p.telefono].filter(Boolean).join(' · ')}
+                pildora={pildora}
+                tono={tono}
+                className={isArchived ? 'opacity-60' : undefined}
+                onClick={() => onEditUser(p)}
+                acciones={acciones}
+              />
+            );
+          })}
+        </ListaTarjetasMovil>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {buscador}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-xs text-muted-foreground">

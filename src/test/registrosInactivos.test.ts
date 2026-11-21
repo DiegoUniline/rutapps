@@ -45,4 +45,15 @@ describe('D-044 registros inactivos', () => {
 
     expect(await validarSinUsos('clientes', [])).toBeNull();
   });
+  it('cobranza en ruta: activos siempre; inactivos/suspendidos solo si deben, marcados', async () => {
+    const { clienteVisibleEnCobranza, marcaClienteNoActivo } = await import('@/lib/registrosInactivos');
+    expect(clienteVisibleEnCobranza('activo', 0)).toBe(true);
+    expect(clienteVisibleEnCobranza('inactivo', 0)).toBe(false);
+    expect(clienteVisibleEnCobranza('inactivo', 150.5)).toBe(true);
+    expect(clienteVisibleEnCobranza('suspendido', 10)).toBe(true);
+    expect(clienteVisibleEnCobranza('inactivo', 0.001)).toBe(false);
+    expect(marcaClienteNoActivo('activo')).toBeNull();
+    expect(marcaClienteNoActivo('inactivo')).toBe('(inactivo)');
+    expect(marcaClienteNoActivo('suspendido')).toBe('(suspendido)');
+  });
 });

@@ -124,7 +124,7 @@ export default function ComisionesReglasTab() {
           >
             {nombre}
           </h3>
-          <div className="overflow-x-auto border border-border rounded">
+          <div className="-mx-3 md:-mx-4 border-t border-border overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-table-border">
@@ -152,7 +152,7 @@ export default function ComisionesReglasTab() {
                       <td className="py-1.5 px-3 text-xs">
                         {listaName ? (
                           <span className="flex items-center gap-1">
-                            {esPrincipal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+                            {esPrincipal && <Star className="h-3 w-3 text-warning fill-warning" />}
                             {listaName}
                           </span>
                         ) : <span className="text-muted-foreground">—</span>}
