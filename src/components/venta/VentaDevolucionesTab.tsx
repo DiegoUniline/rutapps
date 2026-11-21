@@ -5,12 +5,14 @@ import { RotateCcw, Plus } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Button } from '@/components/ui/button';
 import { DevolucionVentaModal } from './DevolucionVentaModal';
+import { DevolucionDetalleDialog } from '@/components/devoluciones/DevolucionDetalleDialog';
+import { DESTINO_DEVOLUCION_CORTO } from '@/lib/devolucionGuardado';
 
 const MOTIVO_LABELS: Record<string, string> = {
   no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro',
 };
 const ACCION_LABELS: Record<string, string> = {
-  reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero',
+  reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero', aplicar_venta: 'Nota aplicada',
 };
 
 interface Props { ventaId: string; clienteId?: string | null; folio?: string | null; readOnly?: boolean; }
@@ -18,13 +20,14 @@ interface Props { ventaId: string; clienteId?: string | null; folio?: string | n
 export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Props) {
   const { fmt } = useCurrency();
   const [showModal, setShowModal] = useState(false);
+  const [detalleId, setDetalleId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ['venta-devoluciones', ventaId],
     enabled: !!ventaId,
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, cancelado_at, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, reemplazo_producto_id, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
+        .select('id, fecha, tipo, notas, cancelado_at, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, reemplazo_producto_id, destino, aplica_venta, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
         .eq('venta_id', ventaId);
       return data ?? [];
     },
@@ -36,7 +39,9 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
       nombre: l.productos?.nombre ?? '',
       cantidad: Number(l.cantidad) ?? 0,
       motivo: l.motivo ?? '',
-      accion: l.accion ?? 'reposicion',
+      accion: l.aplica_venta ? 'aplicar_venta' : (l.accion ?? 'reposicion'),
+      destino: (l.destino as string | null) ?? null,
+      devolucionId: d.id as string,
       monto_credito: Number(l.monto_credito) ?? 0,
       cliente: d.clientes?.nombre ?? '—',
       cancelada: !!d.cancelado_at,
@@ -44,7 +49,8 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
   );
 
   const totalUnidades = lineas.reduce((s, l) => s + l.cantidad, 0);
-  const totalCredito = lineas.reduce((s, l) => s + l.monto_credito, 0);
+  // Solo lo vigente: una devolución cancelada ya no da crédito.
+  const totalCredito = lineas.filter(l => !l.cancelada).reduce((s, l) => s + l.monto_credito, 0);
 
   if (isLoading) return <div className="p-4 text-sm text-muted-foreground">Cargando...</div>;
 
@@ -60,7 +66,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-3 text-xs">
         {lineas.length > 0 && <span className="bg-card border border-border px-2 py-1 rounded font-medium">{totalUnidades} unidades devueltas</span>}
-        {lineas.some(l => l.cancelada) && <span className="bg-destructive/10 text-destructive border border-destructive/20 px-2 py-1 rounded font-medium">Cancelada con la venta</span>}
+        {lineas.some(l => l.cancelada) && <span className="bg-destructive/10 text-destructive border border-destructive/20 px-2 py-1 rounded font-medium">Con devoluciones canceladas</span>}
         {totalCredito > 0 && (
           <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">Crédito: {fmt(totalCredito)}</span>
         )}
@@ -96,13 +102,14 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
             <th className="text-left py-2 font-medium">Producto</th>
             <th className="text-right py-2 font-medium">Cant.</th>
             <th className="text-left py-2 font-medium">Motivo</th>
+            <th className="text-left py-2 font-medium">Destino</th>
             <th className="text-left py-2 font-medium">Acción</th>
             <th className="text-right py-2 font-medium">Crédito</th>
           </tr>
         </thead>
         <tbody>
           {lineas.map((l, i) => (
-            <tr key={i} className="border-b border-border">
+            <tr key={i} className={`border-b border-border cursor-pointer hover:bg-accent/30 ${l.cancelada ? 'opacity-60' : ''}`} onClick={() => setDetalleId(l.devolucionId)} title="Ver o cancelar la devolución">
               <td className="py-2 text-muted-foreground">{i + 1}</td>
               <td className="py-2">
                 <span className="font-mono text-muted-foreground text-[10px]">{l.codigo}</span>
@@ -115,8 +122,15 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
                 </span>
               </td>
               <td className="py-2">
+                {l.destino ? (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${l.destino === 'merma' ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}`}>
+                    {DESTINO_DEVOLUCION_CORTO[l.destino] ?? l.destino}
+                  </span>
+                ) : <span className="text-muted-foreground">—</span>}
+              </td>
+              <td className="py-2">
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent text-foreground font-medium">
-                  {ACCION_LABELS[l.accion] ?? l.accion}
+                  {l.cancelada ? 'Cancelada · ' : ''}{ACCION_LABELS[l.accion] ?? l.accion}
                 </span>
               </td>
               <td className="py-2 text-right font-semibold">
@@ -128,13 +142,14 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
         {totalCredito > 0 && (
           <tfoot>
             <tr className="border-t border-border font-bold text-[11px]">
-              <td colSpan={5} className="py-2 text-right text-muted-foreground">Total crédito:</td>
+              <td colSpan={6} className="py-2 text-right text-muted-foreground">Total crédito:</td>
               <td className="py-2 text-right text-destructive">{fmt(totalCredito)}</td>
             </tr>
           </tfoot>
         )}
       </table>
       {modal}
+      {detalleId && <DevolucionDetalleDialog devolucionId={detalleId} onClose={() => setDetalleId(null)} />}
     </div>
   );
 }

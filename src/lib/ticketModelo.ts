@@ -441,8 +441,9 @@ export function construirModeloTicket(data: TicketData, campos?: TicketCampos | 
       const accion = ACCION_DEVOLUCION_LABELS[d.accion] || d.accion;
       const motivo = MOTIVO_DEVOLUCION_LABELS[d.motivo] || d.motivo;
       c.push({ tipo: 'texto', texto: `${d.cantidad}x ${d.nombre}`, modo: 'recortar' });
+      // Destino primero: en 58 mm el renglón se recorta por la derecha del texto.
       const destino = d.destino ? DESTINO_DEVOLUCION_TICKET[d.destino] ?? d.destino : '';
-      c.push({ tipo: 'par', izq: `  ${motivo}${destino ? ` · ${destino}` : ''}`, der: (d.monto ?? 0) > 0 ? `${accion} ${fmt(d.monto!)}` : accion });
+      c.push({ tipo: 'par', izq: `  ${destino ? `${destino} · ` : ''}${motivo}`, der: (d.monto ?? 0) > 0 ? `${accion} ${fmt(d.monto!)}` : accion });
     }
   }
 

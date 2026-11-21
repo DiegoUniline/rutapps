@@ -69,6 +69,9 @@ export default function RutaEntregaDetalle() {
   const [motivoSeleccionado, setMotivoSeleccionado] = useState<string>('');
   const [motivoCustom, setMotivoCustom] = useState('');
   const [savingNoEntregado, setSavingNoEntregado] = useState(false);
+  // D-049 (D-036 p.2): al no entregar, por producto se elige Bueno (queda vendible en el
+  // camión) o Merma (pasa a «Merma en camión»), igual que en «Quitar producto».
+  const [condicionNoEntrega, setCondicionNoEntrega] = useState<Record<string, 'bueno' | 'merma'>>({});
   const [showReprogramarModal, setShowReprogramarModal] = useState(false);
   const [nuevaFecha, setNuevaFecha] = useState('');
   const [savingReprog, setSavingReprog] = useState(false);
@@ -305,8 +308,22 @@ export default function RutaEntregaDetalle() {
   const marcarNoEntregado = async () => {
     const motivo = (motivoSeleccionado === 'Otro' ? motivoCustom : motivoSeleccionado).trim();
     if (!motivo) { toast.error('Selecciona o escribe un motivo'); return; }
+    const conProducto = lineasSurtidas;
+    if (conProducto.some(l => !condicionNoEntrega[l.id])) { toast.error('Indica por producto si regresa bueno o es merma'); return; }
     setSavingNoEntregado(true);
     try {
+      // Primero la merma de cada producto (mueve camión → merma en camión, D-036).
+      for (const l of conProducto.filter(x => condicionNoEntrega[x.id] === 'merma')) {
+        const quitada = Number(l.cantidad_entregada) || 0;
+        const cantidadMerma = Math.round(((Number(l.cantidad_merma) || 0) + quitada) * 1000) / 1000;
+        const lp = { id: l.id, cantidad_entregada: 0, hecho: false, motivo_no_entrega: motivo, cantidad_merma: cantidadMerma };
+        if (navigator.onLine) {
+          const { error } = await supabase.from('entrega_lineas').update({ cantidad_entregada: 0, hecho: false, motivo_no_entrega: motivo, cantidad_merma: cantidadMerma } as any).eq('id', l.id);
+          if (error) throw error;
+        } else {
+          await queueOperation('entrega_lineas', 'update', lp);
+        }
+      }
       const now = new Date().toISOString();
       const nuevaNota = `No entregado: ${motivo}`;
       const notasFinales = entrega.notas ? `${entrega.notas}\n${nuevaNota}` : nuevaNota;
@@ -329,6 +346,7 @@ export default function RutaEntregaDetalle() {
       setShowNoEntregadoModal(false);
       setMotivoSeleccionado('');
       setMotivoCustom('');
+      setCondicionNoEntrega({});
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
     } catch (err: any) { toast.error(err.message); }
@@ -895,11 +913,32 @@ export default function RutaEntregaDetalle() {
                   className="w-full bg-accent/40 rounded-lg px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 resize-none" />
               </div>
             )}
+            {lineasSurtidas.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[12px] font-semibold text-foreground">¿Cómo regresa cada producto?</p>
+                {(lineasSurtidas as any[]).map(l => (
+                  <div key={l.id} className="space-y-1">
+                    <p className="text-[11.5px] text-foreground truncate">{Number(l.cantidad_entregada)} × {l.productos?.nombre ?? 'Producto'}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => setCondicionNoEntrega(prev => ({ ...prev, [l.id]: 'bueno' }))}
+                        className={`rounded-lg border py-2 text-[12px] font-semibold ${condicionNoEntrega[l.id] === 'bueno' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-foreground'}`}>
+                        Bueno
+                      </button>
+                      <button type="button" onClick={() => setCondicionNoEntrega(prev => ({ ...prev, [l.id]: 'merma' }))}
+                        className={`rounded-lg border py-2 text-[12px] font-semibold ${condicionNoEntrega[l.id] === 'merma' ? 'bg-destructive text-destructive-foreground border-destructive' : 'bg-card border-destructive/50 text-destructive'}`}>
+                        Merma
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <p className="text-[10.5px] text-muted-foreground">Bueno: queda vendible en el camión. Merma: pasa a «Merma en camión» y se descarga a Mermas.</p>
+              </div>
+            )}
             <div className="flex gap-2 pt-1">
               <button className="btn-cancelar flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium" onClick={() => setShowNoEntregadoModal(false)} disabled={savingNoEntregado}
                 >Cancelar</button>
               <button onClick={marcarNoEntregado}
-                disabled={savingNoEntregado || !motivoSeleccionado || (motivoSeleccionado === 'Otro' && !motivoCustom.trim())}
+                disabled={savingNoEntregado || !motivoSeleccionado || (motivoSeleccionado === 'Otro' && !motivoCustom.trim()) || lineasSurtidas.some((l: any) => !condicionNoEntrega[l.id])}
                 className="flex-1 bg-destructive text-destructive-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
                 {savingNoEntregado ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
                 Confirmar

@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { OdooPagination } from '@/components/OdooPagination';
-import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -18,6 +17,7 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { MermaConfigDialog } from '@/components/devoluciones/MermaConfigDialog';
+import { DevolucionDetalleDialog } from '@/components/devoluciones/DevolucionDetalleDialog';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
@@ -30,7 +30,6 @@ export default function DevolucionesListPage() {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const manejaLotes = useManejaLotes();
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const canConfig = hasPermiso('ventas.devoluciones', 'editar');
@@ -50,6 +49,7 @@ export default function DevolucionesListPage() {
   const [hasta, setHasta] = useState('');
   const [page, setPage] = useState(1);
   const [tabEstado, setTabEstado] = useState<'activas' | 'canceladas' | 'todas'>('activas');
+  const [detalleId, setDetalleId] = useState<string | null>(null);
   const pageSize = 25;
 
   const { data: rows = [], isLoading } = useQuery({
@@ -276,6 +276,7 @@ export default function DevolucionesListPage() {
       </div>
 
       <MermaConfigDialog open={mermaConfigOpen} onOpenChange={setMermaConfigOpen} />
+      {detalleId && <DevolucionDetalleDialog devolucionId={detalleId} onClose={() => setDetalleId(null)} />}
 
       <nav className="flex gap-5 border-b border-border max-md:hidden" role="tablist" aria-label="Estado de las devoluciones">
         {(['activas', 'canceladas', 'todas'] as const).map(t => (
@@ -367,7 +368,7 @@ export default function DevolucionesListPage() {
                   ? { pildora: 'Cancelada', tono: 'peligro' as const }
                   : tCred > 0 ? { pildora: fmt(tCred), tono: 'aviso' as const } : { pildora: `${tUds} uds.`, tono: 'neutro' as const })}
                 className={d.cancelado_at ? 'opacity-60' : undefined}
-                onClick={d.venta_id ? () => navigate(`/ventas/${d.venta_id}`) : undefined}
+                onClick={() => setDetalleId(d.id)}
               />
             );
           })}
@@ -413,7 +414,7 @@ export default function DevolucionesListPage() {
               }).join(', ');
 
               return (
-                <tr key={d.id} className={cn('border-b border-border/50 hover:bg-card/50 cursor-pointer', d.cancelado_at && 'opacity-60')} onClick={() => d.venta_id && navigate(`/ventas/${d.venta_id}`)}>
+                <tr key={d.id} className={cn('border-b border-border/50 hover:bg-card/50 cursor-pointer', d.cancelado_at && 'opacity-60')} onClick={() => setDetalleId(d.id)}>
                   <td className="py-2 px-3 font-mono text-muted-foreground">
                     {fmtDate(d.fecha)}
                     {d.cancelado_at && (
