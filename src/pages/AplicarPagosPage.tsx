@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -98,6 +99,8 @@ export default function AplicarPagosPage() {
     const s = clienteSearch.toLowerCase();
     return clientesRaw.filter(c => c.nombre.toLowerCase().includes(s) || (c.codigo ?? '').toLowerCase().includes(s));
   }, [clientesRaw, clienteSearch]);
+
+  const { sorted: clientesOrdenados, sort, toggle } = useSortableTable(clientes, undefined, undefined, 'aplicar-pagos-clientes');
 
   const totalSaldoGlobal = roundMoney(clientesRaw?.reduce((s, c) => s + c.saldo, 0) ?? 0);
   const totalDocsGlobal = clientesRaw?.reduce((s, c) => s + c.docs, 0) ?? 0;
@@ -276,11 +279,11 @@ export default function AplicarPagosPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-table-border text-left">
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden sm:table-cell">Teléfono</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Documentos</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Saldo pendiente</th>
+                  <SortableTh sortKey="codigo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</SortableTh>
+                  <SortableTh sortKey="nombre" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>
+                  <SortableTh sortKey="telefono" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden sm:table-cell">Teléfono</SortableTh>
+                  <SortableTh sortKey="docs" sort={sort} onToggle={toggle} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Documentos</SortableTh>
+                  <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Saldo pendiente</SortableTh>
                   <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Acción</th>
                 </tr>
               </thead>
@@ -291,7 +294,7 @@ export default function AplicarPagosPage() {
                     No hay clientes con saldo pendiente
                   </td></tr>
                 )}
-                {clientes.map(c => (
+                {clientesOrdenados.map(c => (
                   <tr key={c.id} className="border-b border-table-border cursor-pointer hover:bg-table-hover transition-colors" onClick={() => handleSelectCliente(c)}>
                     <td className="py-2 px-3 font-mono text-xs text-muted-foreground">{c.codigo ?? '—'}</td>
                     <td className="py-2 px-3 font-medium">{c.nombre}</td>

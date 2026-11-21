@@ -1,4 +1,5 @@
-import { Columns3, Check } from 'lucide-react';
+import { useState } from 'react';
+import { Columns3, Check, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,12 +43,33 @@ interface Props {
   compact?: boolean;
   /** Renglón del menú «⋯». */
   item?: boolean;
+  /**
+   * Modo opcional «mover de lugar»: con `onMove` las columnas se listan en `order`
+   * y cada una trae flechas subir/bajar (y manija para arrastrar si hay `onMoveTo`).
+   * Sin `onMove` el menú se comporta igual que siempre.
+   */
+  order?: string[];
+  onMove?: (key: string, delta: number) => void;
+  onMoveTo?: (fromKey: string, toKey: string) => void;
 }
 
 
 export function ColumnVisibilityMenu({
   columns, visible, onToggle, onShowAll, onReset, presets, onApplyPreset, groupOrder, compact, item,
+  order, onMove, onMoveTo,
 }: Props) {
+  const reorder = !!onMove;
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const [overKey, setOverKey] = useState<string | null>(null);
+
+  // Modo «mover»: columnas en el orden guardado (las que falten en `order` van al final).
+  const orderedColumns = (() => {
+    if (!reorder || !order?.length) return columns;
+    const byKey = new Map(columns.map(c => [c.key, c] as const));
+    const out: ColumnDef[] = [];
+    for (const k of order) { const c = byKey.get(k); if (c) { out.push(c); byKey.delete(k); } }
+    return [...out, ...byKey.values()];
+  })();
 
   const visibleCount = columns.filter(c => c.required || visible[c.key]).length;
 
@@ -88,6 +110,63 @@ export function ColumnVisibilityMenu({
     );
   };
 
+  const renderMovableOption = (col: ColumnDef, idx: number) => (
+    <div
+      key={col.key}
+      draggable={!!onMoveTo}
+      onDragStart={e => {
+        setDragKey(col.key);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', col.key);
+      }}
+      onDragOver={e => {
+        if (!dragKey) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (overKey !== col.key) setOverKey(col.key);
+      }}
+      onDrop={e => {
+        e.preventDefault();
+        if (dragKey && dragKey !== col.key) onMoveTo?.(dragKey, col.key);
+        setDragKey(null);
+        setOverKey(null);
+      }}
+      onDragEnd={() => { setDragKey(null); setOverKey(null); }}
+      className={cn(
+        "flex items-center gap-0.5 rounded-sm",
+        dragKey === col.key && "opacity-50",
+        overKey === col.key && dragKey && dragKey !== col.key && "bg-accent",
+      )}
+    >
+      {onMoveTo && (
+        <span className="cursor-grab active:cursor-grabbing text-muted-foreground px-0.5" title="Arrastrar para mover" aria-hidden>
+          <GripVertical className="h-3.5 w-3.5" />
+        </span>
+      )}
+      <div className="flex-1 min-w-0">{renderOption(col)}</div>
+      <button
+        type="button"
+        onClick={() => onMove?.(col.key, -1)}
+        disabled={idx === 0}
+        className="h-6 w-6 shrink-0 flex items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+        title="Subir (más a la izquierda)"
+        aria-label={`Subir ${col.label}`}
+      >
+        <ChevronUp className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onMove?.(col.key, 1)}
+        disabled={idx === orderedColumns.length - 1}
+        className="h-6 w-6 shrink-0 flex items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+        title="Bajar (más a la derecha)"
+        aria-label={`Bajar ${col.label}`}
+      >
+        <ChevronDown className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -104,7 +183,7 @@ export function ColumnVisibilityMenu({
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-64 max-h-[70dvh] overflow-y-auto">
+      <DropdownMenuContent align="end" className={cn(reorder ? "w-80" : "w-64", "max-h-[70dvh] overflow-y-auto")}>
         {presets && presets.length > 0 && onApplyPreset && (
           <>
             <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -131,11 +210,15 @@ export function ColumnVisibilityMenu({
         )}
 
         <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-          Columnas visibles
+          {reorder ? 'Mostrar y ordenar columnas' : 'Columnas visibles'}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {groupOrder && groupOrder.length > 0 ? (
+        {reorder ? (
+          <div className="py-1">
+            {orderedColumns.map(renderMovableOption)}
+          </div>
+        ) : groupOrder && groupOrder.length > 0 ? (
           <div className="py-1">
             {groupOrder.map(g => {
               const items = columns.filter(c => (c.group ?? '') === g);

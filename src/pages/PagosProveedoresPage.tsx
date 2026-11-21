@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTh, type SortState } from '@/hooks/useSortableTable';
 import { mesActualLocal } from '@/hooks/useListPreferences';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
@@ -107,10 +108,13 @@ export default function PagosProveedoresPage() {
 
   const totalMonto = useMemo(() => filtered.reduce((s, p) => s + p.monto, 0), [filtered]);
 
+  const { sorted: ordenados, sort, toggle } = useSortableTable(filtered, (p: any, k) =>
+    k === 'metodo_pago' ? (METODO_LABELS[p.metodo_pago] ?? p.metodo_pago) : p[k], undefined, 'pagos-proveedores');
+
   const grouped = useMemo(() => {
     if (groupBy === 'ninguno') return null;
     const map = new Map<string, typeof filtered>();
-    filtered.forEach(p => {
+    ordenados.forEach(p => {
       let key: string;
       if (groupBy === 'proveedor') key = p.proveedor;
       else if (groupBy === 'metodo') key = METODO_LABELS[p.metodo_pago] ?? p.metodo_pago;
@@ -120,12 +124,12 @@ export default function PagosProveedoresPage() {
       map.set(key, arr);
     });
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filtered, groupBy]);
+  }, [ordenados, groupBy]);
 
   const paged = useMemo(() => {
     if (grouped) return null;
-    return filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  }, [filtered, page, grouped]);
+    return ordenados.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  }, [ordenados, page, grouped]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const isMobile = useIsMobile();
@@ -270,7 +274,7 @@ export default function PagosProveedoresPage() {
                     <span className="font-bold text-sm text-primary">{fmt(groupTotal)}</span>
                   </div>
                 </div>
-                <PagosTable rows={items} fmt={fmt} />
+                <PagosTable rows={items} fmt={fmt} sort={sort} onToggle={toggle} />
               </div>
             );
           })}
@@ -278,7 +282,7 @@ export default function PagosProveedoresPage() {
       ) : (
         <>
           <div className="md:border md:border-border md:rounded-xl overflow-hidden">
-            <PagosTable rows={paged ?? []} fmt={fmt} sinMarco />
+            <PagosTable rows={paged ?? []} fmt={fmt} sinMarco sort={sort} onToggle={toggle} />
           </div>
           {totalPages > 1 && (
             <OdooPagination
@@ -297,7 +301,7 @@ export default function PagosProveedoresPage() {
   );
 }
 
-function PagosTable({ rows, fmt, sinMarco }: { rows: any[]; fmt: (n: number) => string; sinMarco?: boolean }) {
+function PagosTable({ rows, fmt, sinMarco, sort, onToggle }: { rows: any[]; fmt: (n: number) => string; sinMarco?: boolean; sort: SortState; onToggle: (k: string) => void }) {
   const isMobile = useIsMobile();
   if (isMobile) {
     return (
@@ -330,12 +334,12 @@ function PagosTable({ rows, fmt, sinMarco }: { rows: any[]; fmt: (n: number) => 
     <table className="w-full text-sm">
       <thead>
         <tr className="bg-muted/30 text-left">
-          <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Fecha</th>
-          <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Proveedor</th>
-          <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Compra</th>
-          <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Método</th>
-          <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Referencia</th>
-          <th className="px-4 py-2 text-xs font-medium text-muted-foreground text-right">Monto</th>
+          <SortableTh sortKey="fecha" sort={sort} onToggle={onToggle} className="px-4 py-2 text-xs font-medium text-muted-foreground">Fecha</SortableTh>
+          <SortableTh sortKey="proveedor" sort={sort} onToggle={onToggle} className="px-4 py-2 text-xs font-medium text-muted-foreground">Proveedor</SortableTh>
+          <SortableTh sortKey="compra_folio" sort={sort} onToggle={onToggle} className="px-4 py-2 text-xs font-medium text-muted-foreground">Compra</SortableTh>
+          <SortableTh sortKey="metodo_pago" sort={sort} onToggle={onToggle} className="px-4 py-2 text-xs font-medium text-muted-foreground">Método</SortableTh>
+          <SortableTh sortKey="referencia" sort={sort} onToggle={onToggle} className="px-4 py-2 text-xs font-medium text-muted-foreground">Referencia</SortableTh>
+          <SortableTh sortKey="monto" sort={sort} onToggle={onToggle} align="right" className="px-4 py-2 text-xs font-medium text-muted-foreground text-right">Monto</SortableTh>
         </tr>
       </thead>
       <tbody className="divide-y divide-border">

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { usePromociones, useSavePromocion, useDeletePromocion, type Promocion } from '@/hooks/usePromociones';
@@ -132,8 +133,15 @@ export default function PromocionesPage() {
   const filtered = (promociones ?? []).filter(p =>
     !search || p.nombre.toLowerCase().includes(search.toLowerCase())
   );
+  const { sorted: promosOrdenadas, sort, toggle } = useSortableTable(filtered, (p: any, k) => {
+    if (k === 'tipo') return TIPO_LABELS[p.tipo]?.label ?? p.tipo;
+    if (k === 'aplica_a') return APLICA_LABELS[p.aplica_a] ?? p.aplica_a;
+    if (k === 'dias') return (p.dias_semana ?? []).length === 0 ? 'Todos' : (p.dias_semana ?? []).join(', ');
+    if (k === 'activa') return p.activa ? 'Activa' : 'Inactiva';
+    return p[k];
+  }, undefined, 'promociones');
   const totalPages = Math.ceil(filtered.length / pageSize);
-  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const paged = promosOrdenadas.slice((page - 1) * pageSize, page * pageSize);
 
   const handleSave = async () => {
     if (!editing?.nombre) { toast.error('Nombre requerido'); return; }
@@ -231,12 +239,12 @@ export default function PromocionesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-card">
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Nombre</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Tipo</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Valor</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Aplica a</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Días</th>
-                <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Estado</th>
+                <SortableTh sortKey="nombre" sort={sort} onToggle={toggle} className="text-left px-4 py-3 font-semibold text-muted-foreground">Nombre</SortableTh>
+                <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="text-left px-4 py-3 font-semibold text-muted-foreground">Tipo</SortableTh>
+                <SortableTh sortKey="valor" sort={sort} onToggle={toggle} className="text-left px-4 py-3 font-semibold text-muted-foreground">Valor</SortableTh>
+                <SortableTh sortKey="aplica_a" sort={sort} onToggle={toggle} className="text-left px-4 py-3 font-semibold text-muted-foreground">Aplica a</SortableTh>
+                <SortableTh sortKey="dias" sort={sort} onToggle={toggle} className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Días</SortableTh>
+                <SortableTh sortKey="activa" sort={sort} onToggle={toggle} align="center" className="text-center px-4 py-3 font-semibold text-muted-foreground">Estado</SortableTh>
                 <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Acciones</th>
               </tr>
             </thead>

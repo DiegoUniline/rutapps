@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useVehiculos, useUpsertVehiculo, useDeleteVehiculo, type Vehiculo } from '@/hooks/useVehiculos';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +26,12 @@ export default function VehiculosPage() {
       return data || [];
     },
   });
+  const { sorted: vehiculosOrdenados, sort, toggle } = useSortableTable(vehiculos, (v: any, k) => {
+    if (k === 'marca') return [v.marca, v.modelo].filter(Boolean).join(' ');
+    if (k === 'km_actual') return Number(v.km_actual);
+    if (k === 'asignado') return usuarios.find((u: any) => u.id === v.vendedor_default_id)?.nombre;
+    return v[k];
+  }, undefined, 'vehiculos');
   const upsert = useUpsertVehiculo();
   const del = useDeleteVehiculo();
   const [editing, setEditing] = useState<Partial<Vehiculo> | null>(null);
@@ -66,13 +73,13 @@ export default function VehiculosPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-xs text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left">Alias</th>
-              <th className="px-4 py-3 text-left">Placa</th>
-              <th className="px-4 py-3 text-left">Marca / Modelo</th>
-              <th className="px-4 py-3 text-left">Tipo</th>
-              <th className="px-4 py-3 text-right">KM actual</th>
-              <th className="px-4 py-3 text-left">Asignado a</th>
-              <th className="px-4 py-3 text-left">Estado</th>
+              <SortableTh sortKey="alias" sort={sort} onToggle={toggle} className="px-4 py-3 text-left">Alias</SortableTh>
+              <SortableTh sortKey="placa" sort={sort} onToggle={toggle} className="px-4 py-3 text-left">Placa</SortableTh>
+              <SortableTh sortKey="marca" sort={sort} onToggle={toggle} className="px-4 py-3 text-left">Marca / Modelo</SortableTh>
+              <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="px-4 py-3 text-left">Tipo</SortableTh>
+              <SortableTh sortKey="km_actual" sort={sort} onToggle={toggle} align="right" className="px-4 py-3 text-right">KM actual</SortableTh>
+              <SortableTh sortKey="asignado" sort={sort} onToggle={toggle} className="px-4 py-3 text-left">Asignado a</SortableTh>
+              <SortableTh sortKey="status" sort={sort} onToggle={toggle} className="px-4 py-3 text-left">Estado</SortableTh>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -81,7 +88,7 @@ export default function VehiculosPage() {
               <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Cargando...</td></tr>
             ) : vehiculos.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Sin vehículos. Agrega el primero.</td></tr>
-            ) : vehiculos.map(v => {
+            ) : vehiculosOrdenados.map(v => {
               const assigned = usuarios.find((u: any) => u.id === v.vendedor_default_id);
               return (
                 <tr key={v.id} className="border-t border-border hover:bg-muted/20">

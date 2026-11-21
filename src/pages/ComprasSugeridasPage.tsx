@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShoppingCart, RefreshCw, Filter, Sparkles } from 'lucide-react';
@@ -141,11 +142,21 @@ export default function ComprasSugeridasPage() {
   }, [data, modo, editado, filtroProv]);
 
   const filas = useMemo(() => soloSugeridos ? filasAll.filter(r => r.sug > 0) : filasAll, [filasAll, soloSugeridos]);
+  // Orden dentro de cada proveedor. Solo columnas de consulta (no las que se capturan en la fila).
+  const { sorted: filasOrdenadas, sort, toggle } = useSortableTable(filas, (r, k) => {
+    if (k === 'codigo') return r.p.codigo;
+    if (k === 'producto') return getNombreCompra(r.p as any);
+    if (k === 'stock') return Number(r.p.cantidad);
+    if (k === 'venta_diaria') return r.ventaDiaria;
+    if (k === 'sugerido') return r.sugAuto;
+    if (k === 'costo') return Number(r.p.costo || 0);
+    return (r as any)[k];
+  }, undefined, 'compras-sugeridas');
   const sinConfigurar = useMemo(() => filasAll.filter(r => (Number(r.p.max) || 0) === 0).length, [filasAll]);
 
   const grupos = useMemo(() => {
     const map = new Map<string, typeof filas>();
-    for (const f of filas) {
+    for (const f of filasOrdenadas) {
       const key = f.p.proveedor_preferido_id || '__sin__';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(f);
@@ -159,7 +170,7 @@ export default function ComprasSugeridasPage() {
         total: items.reduce((s, r) => s + r.sug * Number(r.p.costo || 0), 0),
       };
     }).sort((a, b) => a.provNombre.localeCompare(b.provNombre));
-  }, [filas, proveedoresTodos]);
+  }, [filasOrdenadas, proveedoresTodos]);
 
   const generarOC = async (provId: string, items: typeof filas) => {
     if (provId === '__sin__') { toast.error('Asigna un proveedor preferido a estos productos primero.'); return; }
@@ -281,15 +292,15 @@ export default function ComprasSugeridasPage() {
               <table className="w-full text-[12px]">
                 <thead className="bg-muted/30 text-muted-foreground">
                   <tr>
-                    <th className="text-left p-2">Código</th>
-                    <th className="text-left p-2">Producto</th>
-                    <th className="text-right p-2">Stock</th>
+                    <SortableTh sortKey="codigo" sort={sort} onToggle={toggle} className="text-left p-2">Código</SortableTh>
+                    <SortableTh sortKey="producto" sort={sort} onToggle={toggle} className="text-left p-2">Producto</SortableTh>
+                    <SortableTh sortKey="stock" sort={sort} onToggle={toggle} align="right" className="text-right p-2">Stock</SortableTh>
                     <th className="text-right p-2">Min</th>
                     <th className="text-right p-2">Max</th>
-                    <th className="text-right p-2">Vta/día</th>
-                    <th className="text-right p-2">Sugerido</th>
+                    <SortableTh sortKey="venta_diaria" sort={sort} onToggle={toggle} align="right" className="text-right p-2">Vta/día</SortableTh>
+                    <SortableTh sortKey="sugerido" sort={sort} onToggle={toggle} align="right" className="text-right p-2">Sugerido</SortableTh>
                     <th className="text-right p-2">A pedir</th>
-                    <th className="text-right p-2">Costo</th>
+                    <SortableTh sortKey="costo" sort={sort} onToggle={toggle} align="right" className="text-right p-2">Costo</SortableTh>
                     <th className="text-right p-2">Importe</th>
                     <th className="text-left p-2">Proveedor</th>
                   </tr>

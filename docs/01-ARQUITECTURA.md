@@ -126,6 +126,11 @@ Cotizaciones, Traspasos, Proveedores, Listas de precio, Inventario, Lotes, Entre
 
 Preferencias de listado (columnas visibles, filtros, rango de fechas) se persisten
 **por usuario en localStorage** con `useListPreferences` + `useColumnPreferences`.
+`useColumnPreferences` además sincroniza entre dispositivos en `profiles.ui_prefs` (RPC
+`set_ui_pref`): visibilidad en `cols_<lista>` y, desde 2026-11-21, el orden de columnas en
+`colsorder_<lista>` (Productos y Clientes; columnas nuevas al final, las que ya no existen se
+ignoran, `null` = orden por omisión). El menú `ColumnVisibilityMenu` con `onMove` muestra
+flechas subir/bajar y manija para arrastrar.
 
 ## 7. Capa de datos (hooks)
 

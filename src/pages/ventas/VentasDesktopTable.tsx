@@ -6,7 +6,7 @@ import { cn, fmtDateTime } from '@/lib/utils';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { VentaExpandedRow } from './VentaExpandedRow';
 import { ClienteLink } from '@/components/links/EntityLinks';
-import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
+import { useSortableTable, SortableTh, type SortState } from '@/hooks/useSortableTable';
 import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel, saldoRealVenta } from '@/lib/ventaCerrada';
 import { isVentaEntregadaParcial } from '@/lib/ventaEntregaParcial';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
@@ -50,9 +50,12 @@ interface Props {
   /** Mostrar el pie de totales dentro de la tabla. En la vista sin agrupar se
    *  apaga porque los totales de la página van en la barra fija de abajo. */
   showFooter?: boolean;
+  /** Lista paginada en la BD: el orden lo aplica la consulta (toda la lista); aquí solo se muestra.
+   *  Las columnas que no están en `columnas` quedan sin orden. */
+  ordenServidor?: { sort: SortState; onToggle: (key: string) => void; columnas: Record<string, string> };
 }
 
-export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget, onCancelTarget, empresaId, empresa, clientesList, columnVisibility, showFooter = true }: Props) {
+export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget, onCancelTarget, empresaId, empresa, clientesList, columnVisibility, showFooter = true, ordenServidor }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const v = (key: string) => columnVisibility ? columnVisibility[key] !== false : true;
 
@@ -78,7 +81,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     return row.clientes?.requiere_factura === true;
   };
 
-  const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
+  const enMemoria = useSortableTable(items, (r, k) => {
     if (k === 'cliente') return r.clientes?.nombre ?? '';
     if (k === 'vendedor') return r.vendedores?.nombre ?? '';
     if (k === 'almacen') return r.almacenes?.nombre ?? '';
@@ -94,6 +97,10 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     if (k === 'pagado') return Math.max(0, totalEfectivoVenta(r) - saldoRealVenta(r));
     return r?.[k];
   });
+  const sort = ordenServidor ? ordenServidor.sort : enMemoria.sort;
+  const toggle = ordenServidor ? ordenServidor.onToggle : enMemoria.toggle;
+  const sorted = ordenServidor ? items : enMemoria.sorted;
+  const sinOrden = (k: string) => !!ordenServidor && !ordenServidor.columnas[k];
 
   // Count visible data columns for the empty/footer colSpan
   const dataCols = ['folio','tipo','factura','cliente','vendedor','almacen','condicion','fecha','cantidad','subtotal','descuento','iva','total','pagado','saldo','status']
@@ -107,22 +114,22 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           <th className="py-2 px-3 w-10 text-center">
             <input type="checkbox" checked={allSelected} onChange={onToggleAll} className="rounded border-input" />
           </th>
-          {v('folio') && <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>}
-          {v('tipo') && <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</SortableTh>}
-          {v('factura') && <SortableTh sortKey="factura" sort={sort} onToggle={toggle} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Factura</SortableTh>}
-          {v('cliente') && <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>}
-          {v('vendedor') && <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Vendedor</SortableTh>}
-          {v('almacen') && <SortableTh sortKey="almacen" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Almacén</SortableTh>}
-          {v('condicion') && <SortableTh sortKey="condicion" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden 2xl:table-cell">Condición</SortableTh>}
-          {v('fecha') && <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden 2xl:table-cell">Fecha / Hora</SortableTh>}
-          {v('cantidad') && <SortableTh sortKey="cantidad" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cant.</SortableTh>}
-          {v('subtotal') && <SortableTh sortKey="subtotal" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Subtotal s/imp</SortableTh>}
-          {v('descuento') && <SortableTh sortKey="descuento" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Desc. / promo</SortableTh>}
-          {v('iva') && <SortableTh sortKey="iva" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Impuestos</SortableTh>}
-          {v('total') && <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</SortableTh>}
-          {v('pagado') && <SortableTh sortKey="pagado" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Pagado</SortableTh>}
-          {v('saldo') && <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Saldo</SortableTh>}
-          {v('status') && <SortableTh sortKey="status" sort={sort} onToggle={toggle} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</SortableTh>}
+          {v('folio') && <SortableTh sortKey="folio" sort={sort} onToggle={toggle} disabled={sinOrden('folio')} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>}
+          {v('tipo') && <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} disabled={sinOrden('tipo')} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</SortableTh>}
+          {v('factura') && <SortableTh sortKey="factura" sort={sort} onToggle={toggle} disabled={sinOrden('factura')} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Factura</SortableTh>}
+          {v('cliente') && <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} disabled={sinOrden('cliente')} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>}
+          {v('vendedor') && <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} disabled={sinOrden('vendedor')} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Vendedor</SortableTh>}
+          {v('almacen') && <SortableTh sortKey="almacen" sort={sort} onToggle={toggle} disabled={sinOrden('almacen')} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Almacén</SortableTh>}
+          {v('condicion') && <SortableTh sortKey="condicion" sort={sort} onToggle={toggle} disabled={sinOrden('condicion')} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden 2xl:table-cell">Condición</SortableTh>}
+          {v('fecha') && <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} disabled={sinOrden('fecha')} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden 2xl:table-cell">Fecha / Hora</SortableTh>}
+          {v('cantidad') && <SortableTh sortKey="cantidad" sort={sort} onToggle={toggle} disabled={sinOrden('cantidad')} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cant.</SortableTh>}
+          {v('subtotal') && <SortableTh sortKey="subtotal" sort={sort} onToggle={toggle} disabled={sinOrden('subtotal')} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Subtotal s/imp</SortableTh>}
+          {v('descuento') && <SortableTh sortKey="descuento" sort={sort} onToggle={toggle} disabled={sinOrden('descuento')} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Desc. / promo</SortableTh>}
+          {v('iva') && <SortableTh sortKey="iva" sort={sort} onToggle={toggle} disabled={sinOrden('iva')} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Impuestos</SortableTh>}
+          {v('total') && <SortableTh sortKey="total" sort={sort} onToggle={toggle} disabled={sinOrden('total')} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</SortableTh>}
+          {v('pagado') && <SortableTh sortKey="pagado" sort={sort} onToggle={toggle} disabled={sinOrden('pagado')} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Pagado</SortableTh>}
+          {v('saldo') && <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} disabled={sinOrden('saldo')} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden 2xl:table-cell">Saldo</SortableTh>}
+          {v('status') && <SortableTh sortKey="status" sort={sort} onToggle={toggle} disabled={sinOrden('status')} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</SortableTh>}
           <th className="py-2 px-2 w-8" />
         </tr>
       </thead>

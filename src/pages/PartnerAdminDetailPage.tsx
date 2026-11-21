@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSortState, ordenarFilas, SortableTableHead } from '@/hooks/useSortableTable';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -78,6 +79,11 @@ export default function PartnerAdminDetailPage() {
   const [saving, setSaving] = useState(false);
   const [paying, setPaying] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>(emptyEditForm());
+  // Orden por columna de cada pestaña del expediente.
+  const oEmpresas = useSortState('partner-empresas');
+  const oComisiones = useSortState('partner-comisiones');
+  const oCupones = useSortState('partner-cupones');
+  const oPagos = useSortState('partner-pagos');
 
   const detailQuery = useQuery({
     queryKey: ['admin-partner-detail', partnerId],
@@ -341,27 +347,42 @@ export default function PartnerAdminDetailPage() {
           </CardContent></Card>
         </TabsContent>
 
-        <TabsContent value="empresas"><Card><Table><TableHeader><TableRow><TableHead>Empresa</TableHead><TableHead>Estado</TableHead><TableHead>Origen</TableHead><TableHead>Alta</TableHead><TableHead>Stripe</TableHead></TableRow></TableHeader><TableBody>
-          {companies.map(row => { const status = row.subscription?.acceso_bloqueado ? 'suspended' : row.subscription?.status || 'sin_suscripcion'; const meta = SUB_STATUS[status] || { label: status, className: 'bg-slate-100' }; return <TableRow key={row.id}>
+        <TabsContent value="empresas"><Card><Table><TableHeader><TableRow><SortableTableHead sortKey="empresa" sort={oEmpresas.sort} onToggle={oEmpresas.toggle}>Empresa</SortableTableHead><SortableTableHead sortKey="estado" sort={oEmpresas.sort} onToggle={oEmpresas.toggle}>Estado</SortableTableHead><SortableTableHead sortKey="metodo" sort={oEmpresas.sort} onToggle={oEmpresas.toggle}>Origen</SortableTableHead><SortableTableHead sortKey="created_at" sort={oEmpresas.sort} onToggle={oEmpresas.toggle}>Alta</SortableTableHead><SortableTableHead sortKey="stripe" sort={oEmpresas.sort} onToggle={oEmpresas.toggle}>Stripe</SortableTableHead></TableRow></TableHeader><TableBody>
+          {ordenarFilas(companies, oEmpresas.sort, (row: any, k) => {
+            if (k === 'empresa') return row.empresas?.nombre;
+            if (k === 'estado') return row.subscription?.acceso_bloqueado ? 'suspended' : row.subscription?.status || 'sin_suscripcion';
+            if (k === 'stripe') return row.subscription?.stripe_subscription_id;
+            return row[k];
+          }).map(row => { const status = row.subscription?.acceso_bloqueado ? 'suspended' : row.subscription?.status || 'sin_suscripcion'; const meta = SUB_STATUS[status] || { label: status, className: 'bg-slate-100' }; return <TableRow key={row.id}>
             <TableCell className="font-medium">{row.empresas?.nombre || 'Empresa referida'}</TableCell><TableCell><Badge className={meta.className}>{meta.label}</Badge></TableCell>
             <TableCell>{row.metodo}{row.ref_slug ? ` · /${row.ref_slug}` : ''}</TableCell><TableCell>{fmtDate(row.created_at)}</TableCell><TableCell className="font-mono text-xs">{row.subscription?.stripe_subscription_id || '—'}</TableCell>
           </TableRow>; })}
           {!companies.length && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Sin empresas referidas</TableCell></TableRow>}
         </TableBody></Table></Card></TabsContent>
 
-        <TabsContent value="comisiones"><Card><Table><TableHeader><TableRow><TableHead>Periodo</TableHead><TableHead>Tipo / empresa</TableHead><TableHead>Base</TableHead><TableHead>Regla</TableHead><TableHead className="text-right">Comisión</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader><TableBody>
-          {commissions.map(row => <TableRow key={row.id}><TableCell>{row.periodo}</TableCell><TableCell>{row.tipo === 'bono_nivel' ? <Badge className="bg-amber-100 text-amber-800"><Gift className="h-3 w-3 mr-1" /> Bono de nivel</Badge> : row.empresas?.nombre || 'Empresa'}</TableCell>
+        <TabsContent value="comisiones"><Card><Table><TableHeader><TableRow><SortableTableHead sortKey="periodo" sort={oComisiones.sort} onToggle={oComisiones.toggle}>Periodo</SortableTableHead><SortableTableHead sortKey="tipo" sort={oComisiones.sort} onToggle={oComisiones.toggle}>Tipo / empresa</SortableTableHead><SortableTableHead sortKey="monto_factura" sort={oComisiones.sort} onToggle={oComisiones.toggle}>Base</SortableTableHead><SortableTableHead sortKey="partner_pct" sort={oComisiones.sort} onToggle={oComisiones.toggle}>Regla</SortableTableHead><SortableTableHead sortKey="monto_comision" sort={oComisiones.sort} onToggle={oComisiones.toggle} align="right" className="text-right">Comisión</SortableTableHead><SortableTableHead sortKey="status" sort={oComisiones.sort} onToggle={oComisiones.toggle}>Estado</SortableTableHead></TableRow></TableHeader><TableBody>
+          {ordenarFilas(commissions, oComisiones.sort, (row: any, k) => {
+            if (k === 'tipo') return row.tipo === 'bono_nivel' ? 'Bono de nivel' : row.empresas?.nombre || 'Empresa';
+            if (k === 'monto_factura' || k === 'monto_comision' || k === 'partner_pct') return Number(row[k]);
+            return row[k];
+          }).map(row => <TableRow key={row.id}><TableCell>{row.periodo}</TableCell><TableCell>{row.tipo === 'bono_nivel' ? <Badge className="bg-amber-100 text-amber-800"><Gift className="h-3 w-3 mr-1" /> Bono de nivel</Badge> : row.empresas?.nombre || 'Empresa'}</TableCell>
             <TableCell>{fmt(Number(row.monto_factura))}</TableCell><TableCell>{row.tipo === 'bono_nivel' ? row.notas : `${row.partner_pct}% − ${row.cupon_pct}%`}</TableCell><TableCell className="text-right font-bold">{fmt(Number(row.monto_comision))}</TableCell><TableCell><Badge variant={row.status === 'pagada' ? 'default' : row.status === 'pendiente' ? 'secondary' : 'outline'}>{row.status}</Badge></TableCell></TableRow>)}
           {!commissions.length && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Sin comisiones</TableCell></TableRow>}
         </TableBody></Table></Card></TabsContent>
 
-        <TabsContent value="cupones"><Card><Table><TableHeader><TableRow><TableHead>Código</TableHead><TableHead>Descuento</TableHead><TableHead>Comisión disponible</TableHead><TableHead>Usos</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader><TableBody>
-          {coupons.map(row => { const over = Number(row.descuento_pct) > currentPct; return <TableRow key={row.id} className={over && row.activo ? 'bg-red-50' : ''}><TableCell className="font-mono font-bold">{row.codigo}</TableCell><TableCell>{row.descuento_pct}%</TableCell><TableCell>{currentPct}% − {row.descuento_pct}% = <b>{Math.max(currentPct - Number(row.descuento_pct), 0)}%</b></TableCell><TableCell>{row.usos_actuales || 0}</TableCell><TableCell>{over && row.activo ? <Badge variant="destructive">Fuera de regla</Badge> : <Badge variant={row.activo ? 'default' : 'secondary'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>}</TableCell></TableRow>; })}
+        <TabsContent value="cupones"><Card><Table><TableHeader><TableRow><SortableTableHead sortKey="codigo" sort={oCupones.sort} onToggle={oCupones.toggle}>Código</SortableTableHead><SortableTableHead sortKey="descuento_pct" sort={oCupones.sort} onToggle={oCupones.toggle}>Descuento</SortableTableHead><SortableTableHead sortKey="disponible" sort={oCupones.sort} onToggle={oCupones.toggle}>Comisión disponible</SortableTableHead><SortableTableHead sortKey="usos_actuales" sort={oCupones.sort} onToggle={oCupones.toggle}>Usos</SortableTableHead><SortableTableHead sortKey="activo" sort={oCupones.sort} onToggle={oCupones.toggle}>Estado</SortableTableHead></TableRow></TableHeader><TableBody>
+          {ordenarFilas(coupons, oCupones.sort, (row: any, k) => {
+            if (k === 'descuento_pct') return Number(row.descuento_pct);
+            if (k === 'disponible') return Math.max(currentPct - Number(row.descuento_pct), 0);
+            if (k === 'usos_actuales') return row.usos_actuales || 0;
+            if (k === 'activo') return Number(row.descuento_pct) > currentPct && row.activo ? 'Fuera de regla' : row.activo ? 'Activo' : 'Inactivo';
+            return row[k];
+          }).map(row => { const over = Number(row.descuento_pct) > currentPct; return <TableRow key={row.id} className={over && row.activo ? 'bg-red-50' : ''}><TableCell className="font-mono font-bold">{row.codigo}</TableCell><TableCell>{row.descuento_pct}%</TableCell><TableCell>{currentPct}% − {row.descuento_pct}% = <b>{Math.max(currentPct - Number(row.descuento_pct), 0)}%</b></TableCell><TableCell>{row.usos_actuales || 0}</TableCell><TableCell>{over && row.activo ? <Badge variant="destructive">Fuera de regla</Badge> : <Badge variant={row.activo ? 'default' : 'secondary'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>}</TableCell></TableRow>; })}
           {!coupons.length && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Sin cupones</TableCell></TableRow>}
         </TableBody></Table></Card></TabsContent>
 
-        <TabsContent value="pagos"><Card><Table><TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Método</TableHead><TableHead>Referencia</TableHead><TableHead>Notas</TableHead><TableHead className="text-right">Monto</TableHead></TableRow></TableHeader><TableBody>
-          {payments.map(row => <TableRow key={row.id}><TableCell>{fmtDate(row.pagado_en)}</TableCell><TableCell>{row.metodo || '—'}</TableCell><TableCell>{row.referencia || '—'}</TableCell><TableCell>{row.notas || '—'}</TableCell><TableCell className="text-right font-bold">{fmt(Number(row.monto))}</TableCell></TableRow>)}
+        <TabsContent value="pagos"><Card><Table><TableHeader><TableRow><SortableTableHead sortKey="pagado_en" sort={oPagos.sort} onToggle={oPagos.toggle}>Fecha</SortableTableHead><SortableTableHead sortKey="metodo" sort={oPagos.sort} onToggle={oPagos.toggle}>Método</SortableTableHead><SortableTableHead sortKey="referencia" sort={oPagos.sort} onToggle={oPagos.toggle}>Referencia</SortableTableHead><SortableTableHead sortKey="notas" sort={oPagos.sort} onToggle={oPagos.toggle}>Notas</SortableTableHead><SortableTableHead sortKey="monto" sort={oPagos.sort} onToggle={oPagos.toggle} align="right" className="text-right">Monto</SortableTableHead></TableRow></TableHeader><TableBody>
+          {ordenarFilas(payments, oPagos.sort, (row: any, k) => k === 'monto' ? Number(row.monto) : row[k]).map(row => <TableRow key={row.id}><TableCell>{fmtDate(row.pagado_en)}</TableCell><TableCell>{row.metodo || '—'}</TableCell><TableCell>{row.referencia || '—'}</TableCell><TableCell>{row.notas || '—'}</TableCell><TableCell className="text-right font-bold">{fmt(Number(row.monto))}</TableCell></TableRow>)}
           {!payments.length && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Sin pagos registrados</TableCell></TableRow>}
         </TableBody></Table></Card></TabsContent>
 

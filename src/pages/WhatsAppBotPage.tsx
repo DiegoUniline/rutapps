@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { useAuth } from '@/contexts/AuthContext';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -111,6 +112,9 @@ export default function WhatsAppBotPage() {
     onSuccess: () => { toast.success('Número agregado · Jarvis envió la bienvenida'); setNewPhone(''); setNewName(''); qc.invalidateQueries({ queryKey: ['wa_bot_authorized_numbers', empresaId] }); },
     onError: (e: any) => toast.error(e.message),
   });
+
+  // Orden por teléfono o nombre (los interruptores de la fila no se ordenan: se editan ahí mismo).
+  const { sorted: numerosOrdenados, sort, toggle } = useSortableTable(numbersQ.data || [], undefined, undefined, 'whatsapp-bot-numeros');
 
   const toggleActive = useMutation({
     mutationFn: async (row: any) => {
@@ -253,14 +257,14 @@ export default function WhatsAppBotPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Activo</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Nombre</TableHead>
+              <SortableTableHead sortKey="phone_e164" sort={sort} onToggle={toggle}>Teléfono</SortableTableHead>
+              <SortableTableHead sortKey="nombre" sort={sort} onToggle={toggle}>Nombre</SortableTableHead>
               {COMMANDS.map(c => <TableHead key={c} className="capitalize text-center">{c}</TableHead>)}
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(numbersQ.data || []).map((row: any) => (
+            {numerosOrdenados.map((row: any) => (
               <TableRow key={row.id} className={!row.activo ? 'opacity-50' : ''}>
                 <TableCell><Switch checked={row.activo} onCheckedChange={() => toggleActive.mutate(row)} /></TableCell>
                 <TableCell className="font-mono">{row.phone_e164}</TableCell>

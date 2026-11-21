@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -112,6 +113,13 @@ export default function SuperAdminPartnersPage() {
     qc.invalidateQueries({ queryKey: ['admin-partners'] });
   };
 
+  const { sorted: partnersOrdenados, sort, toggle } = useSortableTable(partners || [], (p: any, k) => {
+    if (k === 'nivel') return Number(p.comision_actual_pct ?? p.comision_pct);
+    if (k === 'empresas_activas') return p.empresas_activas ?? 0;
+    if (k === 'total_generado' || k === 'total_pagado' || k === 'saldo_pendiente') return Number(p[k]);
+    return p[k];
+  }, undefined, 'super-admin-partners');
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
@@ -136,19 +144,19 @@ export default function SuperAdminPartnersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Partner</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Nivel / %</TableHead>
-                  <TableHead>Empresas activas</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Pagado</TableHead>
-                  <TableHead className="text-right">Pendiente</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <SortableTableHead sortKey="nombre" sort={sort} onToggle={toggle}>Partner</SortableTableHead>
+                  <SortableTableHead sortKey="ref_slug" sort={sort} onToggle={toggle}>Slug</SortableTableHead>
+                  <SortableTableHead sortKey="nivel" sort={sort} onToggle={toggle}>Nivel / %</SortableTableHead>
+                  <SortableTableHead sortKey="empresas_activas" sort={sort} onToggle={toggle}>Empresas activas</SortableTableHead>
+                  <SortableTableHead sortKey="total_generado" sort={sort} onToggle={toggle} align="right" className="text-right">Total</SortableTableHead>
+                  <SortableTableHead sortKey="total_pagado" sort={sort} onToggle={toggle} align="right" className="text-right">Pagado</SortableTableHead>
+                  <SortableTableHead sortKey="saldo_pendiente" sort={sort} onToggle={toggle} align="right" className="text-right">Pendiente</SortableTableHead>
+                  <SortableTableHead sortKey="estado" sort={sort} onToggle={toggle}>Estado</SortableTableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(partners || []).map(p => (
+                {partnersOrdenados.map(p => (
                   <TableRow key={p.partner_id} className="cursor-pointer hover:bg-muted/60" onClick={() => navigate(`/super-admin/partners/${p.partner_id}`)}>
                     <TableCell><button className="font-medium text-left hover:underline">{p.nombre}</button><div className="text-[11px] text-muted-foreground">{p.email || 'Sin correo'}</div></TableCell>
                     <TableCell><code className="text-xs bg-muted px-2 py-0.5 rounded">{p.ref_slug}</code></TableCell>

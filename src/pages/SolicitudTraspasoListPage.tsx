@@ -14,6 +14,7 @@ import {
   type StatusSolicitudTraspaso,
 } from '@/hooks/useSolicitudesTraspaso';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 const STATUS_TABS: Array<{ value: 'todas' | StatusSolicitudTraspaso; label: string }> = [
   { value: 'todas', label: 'Todas' },
@@ -47,6 +48,14 @@ export default function SolicitudTraspasoListPage() {
   }, [solicitudes, tab, search]);
 
   const movil = useCargarMasMovil(filtradas, `${search}|${tab}`);
+  // Orden por columna de la tabla de escritorio (todas las solicitudes ya están en memoria).
+  const { sorted: ordenadas, sort, toggle } = useSortableTable(filtradas, (s: any, k) => {
+    if (k === 'origen') return s.almacen_origen?.nombre ?? '';
+    if (k === 'destino') return s.almacen_destino?.nombre ?? '';
+    if (k === 'solicitante') return s.solicitante?.nombre ?? '';
+    if (k === 'status') return SOLICITUD_STATUS_LABELS[s.status as StatusSolicitudTraspaso] ?? s.status;
+    return s?.[k];
+  }, undefined, 'solicitudes-traspaso');
 
   const conteo = (value: 'todas' | StatusSolicitudTraspaso) =>
     value === 'todas' ? solicitudes.length : solicitudes.filter(s => s.status === value).length;
@@ -139,17 +148,17 @@ export default function SolicitudTraspasoListPage() {
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="text-left text-muted-foreground border-b border-border">
-                  <th className="px-3 py-2">Folio</th>
-                  <th className="px-3 py-2">Fecha</th>
-                  <th className="px-3 py-2">Origen</th>
-                  <th className="px-3 py-2">Destino</th>
-                  <th className="px-3 py-2">Solicitante</th>
-                  <th className="px-3 py-2">Estado</th>
-                  <th className="px-3 py-2">Creada</th>
+                  <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="px-3 py-2">Folio</SortableTh>
+                  <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="px-3 py-2">Fecha</SortableTh>
+                  <SortableTh sortKey="origen" sort={sort} onToggle={toggle} className="px-3 py-2">Origen</SortableTh>
+                  <SortableTh sortKey="destino" sort={sort} onToggle={toggle} className="px-3 py-2">Destino</SortableTh>
+                  <SortableTh sortKey="solicitante" sort={sort} onToggle={toggle} className="px-3 py-2">Solicitante</SortableTh>
+                  <SortableTh sortKey="status" sort={sort} onToggle={toggle} className="px-3 py-2">Estado</SortableTh>
+                  <SortableTh sortKey="created_at" sort={sort} onToggle={toggle} className="px-3 py-2">Creada</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {filtradas.map(s => (
+                {ordenadas.map(s => (
                   <tr
                     key={s.id}
                     onClick={() => navigate(`/almacen/solicitudes-traspaso/${s.id}`)}

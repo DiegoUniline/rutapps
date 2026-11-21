@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -136,6 +137,14 @@ export default function SaldosProveedorPage() {
 
   const comprasPendientes = compras?.filter(c => (c.saldo_pendiente ?? 0) > 0.01) ?? [];
   const comprasPagadas = compras?.filter(c => (c.saldo_pendiente ?? 0) <= 0.01) ?? [];
+  const valorCompra = (c: any, k: string) => {
+    if (k === 'folio') return c.folio ?? c.id;
+    if (k === 'pagado') return (c.total ?? 0) - (c.saldo_pendiente ?? 0);
+    return c[k];
+  };
+  const ordenProveedores = useSortableTable(filtered, undefined, undefined, 'saldos-proveedor');
+  const ordenPendientes = useSortableTable(comprasPendientes, valorCompra, undefined, 'saldos-proveedor-pendientes');
+  const ordenPagadas = useSortableTable(comprasPagadas, valorCompra, undefined, 'saldos-proveedor-pagadas');
 
   // Payment distribution helpers
   const montoNum = parseFloat(montoRecibido) || 0;
@@ -413,17 +422,17 @@ export default function SaldosProveedorPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[11px]">Folio</TableHead>
-                  <TableHead className="text-[11px]">Fecha</TableHead>
-                  <TableHead className="text-[11px] text-center">Días crédito</TableHead>
-                  <TableHead className="text-[11px] text-right">Total</TableHead>
-                  <TableHead className="text-[11px] text-right">Pagado</TableHead>
-                  <TableHead className="text-[11px] text-right">Pendiente</TableHead>
-                  <TableHead className="text-[11px] text-center">Estado</TableHead>
+                  <SortableTableHead sortKey="folio" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} className="text-[11px]">Folio</SortableTableHead>
+                  <SortableTableHead sortKey="fecha" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} className="text-[11px]">Fecha</SortableTableHead>
+                  <SortableTableHead sortKey="dias_credito" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} align="center" className="text-[11px] text-center">Días crédito</SortableTableHead>
+                  <SortableTableHead sortKey="total" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} align="right" className="text-[11px] text-right">Total</SortableTableHead>
+                  <SortableTableHead sortKey="pagado" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} align="right" className="text-[11px] text-right">Pagado</SortableTableHead>
+                  <SortableTableHead sortKey="saldo_pendiente" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} align="right" className="text-[11px] text-right">Pendiente</SortableTableHead>
+                  <SortableTableHead sortKey="status" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} align="center" className="text-[11px] text-center">Estado</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {comprasPendientes.map(c => (
+                {ordenPendientes.sorted.map(c => (
                   <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/almacen/compras/${c.id}`)}>
                     <TableCell className="font-mono text-[11px]">{c.folio ?? c.id.slice(0, 8)}</TableCell>
                     <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
@@ -452,14 +461,14 @@ export default function SaldosProveedorPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-[11px]">Folio</TableHead>
-                    <TableHead className="text-[11px]">Fecha</TableHead>
-                    <TableHead className="text-[11px] text-right">Total</TableHead>
-                    <TableHead className="text-[11px] text-center">Estado</TableHead>
+                    <SortableTableHead sortKey="folio" sort={ordenPagadas.sort} onToggle={ordenPagadas.toggle} className="text-[11px]">Folio</SortableTableHead>
+                    <SortableTableHead sortKey="fecha" sort={ordenPagadas.sort} onToggle={ordenPagadas.toggle} className="text-[11px]">Fecha</SortableTableHead>
+                    <SortableTableHead sortKey="total" sort={ordenPagadas.sort} onToggle={ordenPagadas.toggle} align="right" className="text-[11px] text-right">Total</SortableTableHead>
+                    <SortableTableHead sortKey="status" sort={ordenPagadas.sort} onToggle={ordenPagadas.toggle} align="center" className="text-[11px] text-center">Estado</SortableTableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {comprasPagadas.slice(0, 30).map(c => (
+                  {ordenPagadas.sorted.slice(0, 30).map(c => (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/almacen/compras/${c.id}`)}>
                       <TableCell className="font-mono text-[11px]">{c.folio ?? c.id.slice(0, 8)}</TableCell>
                       <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
@@ -526,15 +535,15 @@ export default function SaldosProveedorPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-[11px]">Proveedor</TableHead>
-              <TableHead className="text-[11px] text-center">Compras</TableHead>
-              <TableHead className="text-[11px] text-right">Total comprado</TableHead>
-              <TableHead className="text-[11px] text-right">Saldo pendiente</TableHead>
+              <SortableTableHead sortKey="nombre" sort={ordenProveedores.sort} onToggle={ordenProveedores.toggle} className="text-[11px]">Proveedor</SortableTableHead>
+              <SortableTableHead sortKey="docs" sort={ordenProveedores.sort} onToggle={ordenProveedores.toggle} align="center" className="text-[11px] text-center">Compras</SortableTableHead>
+              <SortableTableHead sortKey="totalComprado" sort={ordenProveedores.sort} onToggle={ordenProveedores.toggle} align="right" className="text-[11px] text-right">Total comprado</SortableTableHead>
+              <SortableTableHead sortKey="saldoPendiente" sort={ordenProveedores.sort} onToggle={ordenProveedores.toggle} align="right" className="text-[11px] text-right">Saldo pendiente</SortableTableHead>
               <TableHead className="text-[11px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map(p => (
+            {ordenProveedores.sorted.map(p => (
               <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedId(p.id)}>
                 <TableCell className="font-medium text-[12px]">{p.nombre}</TableCell>
                 <TableCell className="text-center text-[12px]">{p.docs}</TableCell>

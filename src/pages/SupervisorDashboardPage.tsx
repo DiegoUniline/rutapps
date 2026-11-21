@@ -1,4 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { useSortState, ordenarFilas, SortableTh } from '@/hooks/useSortableTable';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { ClientesEnRiesgoWidget } from '@/components/reportes/ClientesEnRiesgoWidget';
 import { useQuery } from '@tanstack/react-query';
@@ -131,6 +132,9 @@ export default function SupervisorDashboardPage() {
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
+  // Orden por columna de las tablas del tablero (se recuerda por tabla).
+  const oClientes = useSortState('supervisor-clientes');
+  const oRanking = useSortState('supervisor-ranking');
   const [visitFilter, setVisitFilter] = useState<'todos' | 'visitados' | 'pendientes'>('todos');
   const [mapMode, setMapMode] = useState<'visitas' | 'entregas'>('visitas');
   const [deliveryMapFilter, setDeliveryMapFilter] = useState<'todas' | 'entregadas' | 'pendientes'>('todas');
@@ -1138,15 +1142,15 @@ export default function SupervisorDashboardPage() {
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-card z-[1]">
                     <tr>
-                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">Estado</th>
-                      <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</th>
-                      <th className="text-right px-2 py-2 text-[10px] font-semibold text-muted-foreground">Últ. visita</th>
-                      <th className="text-right px-2 py-2 text-[10px] font-semibold text-muted-foreground">Días</th>
-                      <th className="text-right px-3 py-2 text-[10px] font-semibold text-muted-foreground">Valor</th>
+                      <SortableTh sortKey="visitado" sort={oClientes.sort} onToggle={oClientes.toggle} className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">Estado</SortableTh>
+                      <SortableTh sortKey="nombre" sort={oClientes.sort} onToggle={oClientes.toggle} className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</SortableTh>
+                      <SortableTh sortKey="ultimaVisitaFecha" sort={oClientes.sort} onToggle={oClientes.toggle} align="right" className="text-right px-2 py-2 text-[10px] font-semibold text-muted-foreground">Últ. visita</SortableTh>
+                      <SortableTh sortKey="diasSinComprar" sort={oClientes.sort} onToggle={oClientes.toggle} align="right" className="text-right px-2 py-2 text-[10px] font-semibold text-muted-foreground">Días</SortableTh>
+                      <SortableTh sortKey="ultimaVisitaValor" sort={oClientes.sort} onToggle={oClientes.toggle} align="right" className="text-right px-3 py-2 text-[10px] font-semibold text-muted-foreground">Valor</SortableTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {clienteActivity.map((c) => (
+                    {ordenarFilas(clienteActivity, oClientes.sort, (c: any, k) => k === 'visitado' ? (c.visitado ? 'OK' : 'Pend.') : c[k]).map((c) => (
                       <tr key={c.id}
                         className={cn("border-t border-border/30 hover:bg-accent/30 cursor-pointer transition-colors",
                           selectedClientId === c.id && "bg-primary/5",
@@ -1218,17 +1222,17 @@ export default function SupervisorDashboardPage() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-border">
-                          <th className="text-left px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">#</th>
-                          <th className="text-left px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Vendedor</th>
-                          <th className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Ventas $</th>
-                          <th className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Ops</th>
-                          <th className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Ticket</th>
-                          <th className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Cobros</th>
-                          <th className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Visitas</th>
+                          <SortableTh sortKey="rank" sort={oRanking.sort} onToggle={oRanking.toggle} className="text-left px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">#</SortableTh>
+                          <SortableTh sortKey="nombre" sort={oRanking.sort} onToggle={oRanking.toggle} className="text-left px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Vendedor</SortableTh>
+                          <SortableTh sortKey="ventas" sort={oRanking.sort} onToggle={oRanking.toggle} align="right" className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Ventas $</SortableTh>
+                          <SortableTh sortKey="numVentas" sort={oRanking.sort} onToggle={oRanking.toggle} align="right" className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Ops</SortableTh>
+                          <SortableTh sortKey="ticket" sort={oRanking.sort} onToggle={oRanking.toggle} align="right" className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Ticket</SortableTh>
+                          <SortableTh sortKey="cobros" sort={oRanking.sort} onToggle={oRanking.toggle} align="right" className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Cobros</SortableTh>
+                          <SortableTh sortKey="visitas" sort={oRanking.sort} onToggle={oRanking.toggle} align="right" className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Visitas</SortableTh>
                         </tr>
                       </thead>
                       <tbody>
-                        {weeklySellerRanking.map((s, i) => (
+                        {ordenarFilas(weeklySellerRanking.map((s, i) => [s, i] as const), oRanking.sort, ([s, i], k) => k === 'rank' ? i : (s as any)[k]).map(([s, i]) => (
                           <tr key={s.id} className={cn("border-b border-border/30 hover:bg-accent/30 transition-colors",
                             selectedVendedor === s.id && "bg-primary/5")}
                             onClick={() => setSelectedVendedor(selectedVendedor === s.id ? null : s.id)}

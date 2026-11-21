@@ -26,6 +26,7 @@ import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage'
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -193,10 +194,18 @@ export default function TraspasosListPage() {
     return ordenarPorRelevancia(list, search, (t: any) => [t.folio], (t: any) => [getOrigenLabel(t), getDestinoLabel(t)]);
   }, [traspasos, search, filters.status, filters.tipo, desde, hasta]);
 
+  // Orden por columna sobre todos los traspasos filtrados (en memoria), antes de paginar/agrupar.
+  const { sorted: traspasosOrdenados, sort, toggle } = useSortableTable(filtered, (t: any, k) => {
+    if (k === 'tipo') return TIPO_LABELS[t.tipo] || t.tipo;
+    if (k === 'origen') return getOrigenLabel(t);
+    if (k === 'destino') return getDestinoLabel(t);
+    return t?.[k];
+  }, undefined, 'traspasos');
+  const onSort = (key: string) => { toggle(key); setPage(1); };
   const total = filtered.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = filtered.slice(from - 1, to);
+  const pageData = traspasosOrdenados.slice(from - 1, to);
   const allSelected = pageData.length > 0 && pageData.every((t: any) => selected.has(t.id));
 
   const toggleAll = () => {
@@ -272,7 +281,12 @@ export default function TraspasosListPage() {
   const totalD = filteredLineas.length;
   const fromD = Math.min((pageD - 1) * PAGE_SIZE + 1, totalD);
   const toD = Math.min(pageD * PAGE_SIZE, totalD);
-  const pageDataD = filteredLineas.slice(fromD - 1, toD);
+  const { sorted: lineasOrdenadas, sort: sortD, toggle: toggleD } = useSortableTable(filteredLineas, (l: any, k) => {
+    if (k === 'tipo') return TIPO_LABELS[l.tipo] || l.tipo;
+    return l?.[k];
+  }, undefined, 'traspasos-detalle');
+  const onSortD = (key: string) => { toggleD(key); setPageD(1); };
+  const pageDataD = lineasOrdenadas.slice(fromD - 1, toD);
   // Teléfono: lista continua con «Cargar más» (de 50 en 50).
   const movilTraspasos = useCargarMasMovil(filtered, `${search}|${desde}|${hasta}|${JSON.stringify(filters)}`);
   const movilLineas = useCargarMasMovil(filteredLineas, `${searchD}|${JSON.stringify(filtersD)}`);
@@ -319,12 +333,12 @@ export default function TraspasosListPage() {
             <th className="py-2 px-3 w-10 text-center">
               <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
             </th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Origen</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Destino</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Fecha</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
+            <SortableTh sortKey="folio" sort={sort} onToggle={onSort} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>
+            <SortableTh sortKey="tipo" sort={sort} onToggle={onSort} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</SortableTh>
+            <SortableTh sortKey="origen" sort={sort} onToggle={onSort} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Origen</SortableTh>
+            <SortableTh sortKey="destino" sort={sort} onToggle={onSort} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Destino</SortableTh>
+            <SortableTh sortKey="fecha" sort={sort} onToggle={onSort} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Fecha</SortableTh>
+            <SortableTh sortKey="status" sort={sort} onToggle={onSort} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</SortableTh>
             <th className="py-2 px-2 w-8" />
           </tr>
         </thead>
@@ -398,15 +412,15 @@ export default function TraspasosListPage() {
       <table className="w-full text-[13px]">
         <thead>
           <tr className="border-b border-table-border text-left">
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Origen</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Destino</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</th>
-            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
+            <SortableTh sortKey="folio" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>
+            <SortableTh sortKey="tipo" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</SortableTh>
+            <SortableTh sortKey="origen" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Origen</SortableTh>
+            <SortableTh sortKey="destino" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Destino</SortableTh>
+            <SortableTh sortKey="fecha" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</SortableTh>
+            <SortableTh sortKey="codigo" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</SortableTh>
+            <SortableTh sortKey="producto" sort={sortD} onToggle={onSortD} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</SortableTh>
+            <SortableTh sortKey="cantidad" sort={sortD} onToggle={onSortD} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</SortableTh>
+            <SortableTh sortKey="status" sort={sortD} onToggle={onSortD} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</SortableTh>
           </tr>
         </thead>
         <tbody>

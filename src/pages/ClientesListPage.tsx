@@ -22,7 +22,8 @@ import { ExportButton } from '@/components/ExportButton';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, PASO_MOVIL } from '@/components/layout/ListaTarjetaMovil';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
-import { useClientesPaginated } from '@/hooks/useClientes';
+import { useClientesPaginated, CLIENTES_ORDEN_BD } from '@/hooks/useClientes';
+import { useSortState, SortableTh } from '@/hooks/useSortableTable';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData } from '@/hooks/useListPreferences';
@@ -39,6 +40,9 @@ import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibil
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
 import { fmtMoney } from '@/lib/currency';
 import { validarSinUsos } from '@/lib/registrosInactivos';
+import { fmtDate } from '@/lib/utils';
+import { useThumb } from '@/hooks/useThumb';
+import { thumbUrl } from '@/lib/imageThumb';
 
 
 const CLIENTES_COLUMNS: ExportColumn[] = [
@@ -88,6 +92,12 @@ const GROUP_BY_OPTIONS = [
 ];
 
 const dash = (v: any) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const siNo = (v: any) => (v === null || v === undefined ? '—' : v ? 'Sí' : 'No');
+const RFC_VALIDADO_LABEL: Record<string, string> = { valido: 'Válido', no_encontrado: 'No encontrado', inconsistencia: 'Inconsistencia' };
+const miniatura = (url: string | null | undefined) => (url
+  ? <img src={thumbUrl(url, 64)} alt="" loading="lazy" className="h-7 w-7 rounded object-cover" />
+  : <div className="h-7 w-7 rounded bg-secondary flex items-center justify-center text-xxs text-muted-foreground">—</div>);
+const textoLargo = (v: any) => (v ? <span className="block max-w-[260px] truncate" title={String(v)}>{String(v)}</span> : '—');
 
 /** Todas las columnas disponibles en la tabla de clientes. */
 const CLIENTES_TABLE_COLUMNS: (ColumnDef & {
@@ -112,20 +122,41 @@ const CLIENTES_TABLE_COLUMNS: (ColumnDef & {
   { key: 'vendedor', label: 'Vendedor', render: c => dash(c.vendedores?.nombre) },
   { key: 'cobrador', label: 'Cobrador', render: c => dash(c.cobradores?.nombre) },
   { key: 'tarifa', label: 'Lista de precios', render: c => dash(c.tarifas?.nombre) },
+  { key: 'lista', label: 'Lista', render: c => dash(c.listas?.nombre) },
   { key: 'credito', label: 'Crédito', align: 'center', render: c => (c.credito ? 'Sí' : 'No') },
   { key: 'limite_credito', label: 'Límite crédito', align: 'right', render: c => fmtMoney(Number(c.limite_credito ?? 0)) },
   { key: 'dias_credito', label: 'Días crédito', align: 'right', render: c => dash(c.dias_credito) },
   { key: 'frecuencia', label: 'Frecuencia', render: c => dash(c.frecuencia) },
   { key: 'orden', label: 'Orden', align: 'right', render: c => dash(c.orden) },
   { key: 'gps', label: 'GPS', render: c => (c.gps_lat && c.gps_lng ? `${Number(c.gps_lat).toFixed(5)}, ${Number(c.gps_lng).toFixed(5)}` : '—') },
+  { key: 'foto', label: 'Foto', align: 'center', render: c => miniatura(c.foto_url) },
+  { key: 'foto_fachada', label: 'Fachada', align: 'center', render: c => miniatura(c.foto_fachada_url) },
+  { key: 'requiere_factura', label: 'Requiere factura', align: 'center', render: c => siNo(c.requiere_factura) },
+  { key: 'facturama_rfc', label: 'RFC', render: c => <span className="font-mono text-xs">{dash(c.facturama_rfc)}</span> },
+  { key: 'facturama_razon_social', label: 'Razón social', render: c => textoLargo(c.facturama_razon_social) },
+  { key: 'facturama_regimen_fiscal', label: 'Régimen fiscal', render: c => dash(c.facturama_regimen_fiscal) },
+  { key: 'facturama_uso_cfdi', label: 'Uso CFDI', render: c => dash(c.facturama_uso_cfdi) },
+  { key: 'facturama_cp', label: 'C.P. fiscal', render: c => dash(c.facturama_cp) },
+  { key: 'facturama_forma_pago', label: 'Forma de pago', render: c => dash(c.facturama_forma_pago) },
+  { key: 'facturama_correo_facturacion', label: 'Correo facturación', render: c => dash(c.facturama_correo_facturacion) },
+  { key: 'facturama_direccion_fiscal', label: 'Dirección fiscal', render: c => textoLargo(c.facturama_direccion_fiscal) },
+  { key: 'rfc_validado', label: 'Validación RFC', render: c => (c.rfc_validado_status ? `${RFC_VALIDADO_LABEL[c.rfc_validado_status] ?? c.rfc_validado_status}${c.rfc_validado_at ? ` (${fmtDate(c.rfc_validado_at)})` : ''}` : '—') },
+  { key: 'notas_fiscales', label: 'Notas fiscales', render: c => textoLargo(c.notas_fiscales) },
+  { key: 'es_publico_general', label: 'Público en general', align: 'center', render: c => siNo(c.es_publico_general) },
+  { key: 'recibir_notificaciones', label: 'Recibe notificaciones', align: 'center', render: c => siNo(c.recibir_notificaciones) },
+  { key: 'notas', label: 'Notas', render: c => textoLargo(c.notas) },
+  { key: 'fecha_alta', label: 'Fecha alta', render: c => fmtDate(c.fecha_alta) },
+  { key: 'created_at', label: 'Registrado', render: c => fmtDate(c.created_at) },
+  { key: 'updated_at', label: 'Última modificación', render: c => fmtDate(c.updated_at) },
   { key: 'status', label: 'Status', align: 'center', render: c => <StatusChip status={c.status ?? 'activo'} /> },
 ];
 
-/** Por defecto: las columnas que ya se mostraban. */
+/** Por omisión se muestran TODAS; cada usuario oculta o mueve las que quiera (se guarda por usuario). */
 const CLIENTES_DEFAULT_COLUMNS: Record<string, boolean> = CLIENTES_TABLE_COLUMNS.reduce((acc, col) => {
-  acc[col.key] = ['codigo', 'nombre', 'contacto', 'dia_visita', 'telefono', 'zona', 'vendedor', 'tarifa', 'status'].includes(col.key);
+  acc[col.key] = true;
   return acc;
 }, {} as Record<string, boolean>);
+const CLIENTES_COL_BY_KEY = new Map(CLIENTES_TABLE_COLUMNS.map(c => [c.key, c] as const));
 
 function getNumericPageSize(ps: PageSizeOption): number {
   return ps === 'all' ? 10000 : ps;
@@ -268,11 +299,15 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const [importOpen, setImportOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences(prefsKey);
   const { vendedores, zonas } = useDynamicFilterOptions();
-  const { visible: colVisible, toggleColumn, setAll, reset } = useColumnPreferences('clientes', CLIENTES_DEFAULT_COLUMNS);
+  const { visible: colVisible, toggleColumn, setAll, reset, columnOrder, moveColumn, moveColumnTo, resetOrder } = useColumnPreferences('clientes', CLIENTES_DEFAULT_COLUMNS);
+  // Columnas visibles en el orden que eligió el usuario.
   const activeColumns = useMemo(
-    () => CLIENTES_TABLE_COLUMNS.filter(c => c.required || colVisible[c.key]),
-    [colVisible],
+    () => columnOrder
+      .map(k => CLIENTES_COL_BY_KEY.get(k))
+      .filter((c): c is (typeof CLIENTES_TABLE_COLUMNS)[number] => !!c && (!!c.required || !!colVisible[c.key])),
+    [colVisible, columnOrder],
   );
+  useThumb(); // re-render al resolverse el soporte de miniaturas (Foto / Fachada)
 
 
   // Count active clients without vendedor
@@ -312,7 +347,10 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
   const zonaFilter = filters.zona?.length ? filters.zona.join(',') : 'todos';
   const debouncedSearch = useDebounce(search, 300);
-  const { data: clientesData, isLoading } = useClientesPaginated(debouncedSearch, statusFilter, isMobile ? 1 : page, numericPageSize, vendedorFilter, zonaFilter, !!groupBy);
+  // Orden por columna en la consulta (ordena toda la lista); al cambiarlo vuelve a la página 1.
+  const { sort, toggle: toggleSort } = useSortState(prefsKey);
+  const onSort = (key: string) => { toggleSort(key); setPage(1); setMobileLimit(PASO_MOVIL); };
+  const { data: clientesData, isLoading } = useClientesPaginated(debouncedSearch, statusFilter, isMobile ? 1 : page, numericPageSize, vendedorFilter, zonaFilter, !!groupBy, sort);
 
   // Client-side filters: credito + dia_visita
   const creditoFilter = filters.credito;
@@ -374,9 +412,10 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
               <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
             </th>
             {activeColumns.map(col => (
-              <th key={col.key} className={cn('th-odoo whitespace-nowrap', col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left')}>
+              // Zona, vendedor, cobrador y lista se resuelven en el navegador (enrichClientes): sin orden en la BD.
+              <SortableTh key={col.key} sortKey={col.key} sort={sort} onToggle={onSort} align={col.align ?? 'left'} disabled={!CLIENTES_ORDEN_BD[col.key]} className={cn('th-odoo whitespace-nowrap', col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left')}>
                 {col.label}
-              </th>
+              </SortableTh>
             ))}
           </tr>
         </thead>
@@ -487,7 +526,10 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
                   visible={colVisible}
                   onToggle={toggleColumn}
                   onShowAll={() => setAll(true)}
-                  onReset={reset}
+                  onReset={() => { reset(); resetOrder(); }}
+                  order={columnOrder}
+                  onMove={moveColumn}
+                  onMoveTo={moveColumnTo}
                 />
                 <ExportButton
 

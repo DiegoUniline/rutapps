@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +23,12 @@ export default function TarifasListPage() {
     !search || t.nombre.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
   const total = filtered.length;
+  const { sorted: tarifasOrdenadas, sort, toggle } = useSortableTable(filtered, (t: any, k) => {
+    if (k === 'tipo') return tipoLabel[t.tipo] ?? t.tipo;
+    if (k === 'productos') return t.tarifa_lineas?.length ?? 0;
+    if (k === 'activa') return t.activa ? 'Activa' : 'Inactiva';
+    return t[k];
+  }, undefined, 'tarifas');
   const allSelected = filtered.length > 0 && filtered.every(t => selected.has(t.id));
 
   const toggleAll = () => {
@@ -51,11 +58,11 @@ export default function TarifasListPage() {
                   <th className="th-odoo w-10 text-center">
                     <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
                   </th>
-                  <th className="th-odoo text-left">Nombre</th>
-                  <th className="th-odoo text-left">Tipo</th>
-                  <th className="th-odoo text-left">Vigencia</th>
-                  <th className="th-odoo text-center"># Productos</th>
-                  <th className="th-odoo text-center">Estado</th>
+                  <SortableTh sortKey="nombre" sort={sort} onToggle={toggle} className="th-odoo text-left">Nombre</SortableTh>
+                  <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="th-odoo text-left">Tipo</SortableTh>
+                  <SortableTh sortKey="vigencia_inicio" sort={sort} onToggle={toggle} className="th-odoo text-left">Vigencia</SortableTh>
+                  <SortableTh sortKey="productos" sort={sort} onToggle={toggle} align="center" className="th-odoo text-center"># Productos</SortableTh>
+                  <SortableTh sortKey="activa" sort={sort} onToggle={toggle} align="center" className="th-odoo text-center">Estado</SortableTh>
                 </tr>
               </thead>
               <tbody>
@@ -64,7 +71,7 @@ export default function TarifasListPage() {
                     <td colSpan={6} className="text-center py-12 text-muted-foreground text-sm">No hay tarifas.</td>
                   </tr>
                 )}
-                {filtered.map(t => (
+                {tarifasOrdenadas.map(t => (
                   <tr
                     key={t.id}
                     className={cn(

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -58,6 +59,9 @@ export default function SyncHealthPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const ordenDups = useSortableTable(dups, undefined, undefined, 'sync-health-duplicados');
+  const ordenRecientes = useSortableTable(recientes, undefined, undefined, 'sync-health-recientes');
 
   const hardIssues = (health?.cobros_duplicados ?? 0) + (health?.aplicaciones_duplicadas ?? 0);
   const allGood = health != null && hardIssues === 0;
@@ -146,16 +150,16 @@ export default function SyncHealthPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Folio</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Cobro huérfano</TableHead>
-                    <TableHead>Gemelo aplicado</TableHead>
-                    <TableHead className="text-right">Δ seg</TableHead>
+                    <SortableTableHead sortKey="folio" sort={ordenDups.sort} onToggle={ordenDups.toggle}>Folio</SortableTableHead>
+                    <SortableTableHead sortKey="monto" sort={ordenDups.sort} onToggle={ordenDups.toggle} align="right" className="text-right">Monto</SortableTableHead>
+                    <SortableTableHead sortKey="fecha" sort={ordenDups.sort} onToggle={ordenDups.toggle}>Fecha</SortableTableHead>
+                    <SortableTableHead sortKey="cobro_huerfano" sort={ordenDups.sort} onToggle={ordenDups.toggle}>Cobro huérfano</SortableTableHead>
+                    <SortableTableHead sortKey="cobro_aplicado" sort={ordenDups.sort} onToggle={ordenDups.toggle}>Gemelo aplicado</SortableTableHead>
+                    <SortableTableHead sortKey="seg_diferencia" sort={ordenDups.sort} onToggle={ordenDups.toggle} align="right" className="text-right">Δ seg</SortableTableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dups.map((d) => (
+                  {ordenDups.sorted.map((d) => (
                     <TableRow key={d.cobro_huerfano}>
                       <TableCell className="font-medium">{d.folio ?? '—'}</TableCell>
                       <TableCell className="text-right tabular-nums">{money(d.monto)}</TableCell>
@@ -183,15 +187,15 @@ export default function SyncHealthPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Id (estable)</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead>Método</TableHead>
-                  <TableHead>Creado</TableHead>
-                  <TableHead>Aplicado</TableHead>
+                  <SortableTableHead sortKey="id" sort={ordenRecientes.sort} onToggle={ordenRecientes.toggle}>Id (estable)</SortableTableHead>
+                  <SortableTableHead sortKey="monto" sort={ordenRecientes.sort} onToggle={ordenRecientes.toggle} align="right" className="text-right">Monto</SortableTableHead>
+                  <SortableTableHead sortKey="metodo_pago" sort={ordenRecientes.sort} onToggle={ordenRecientes.toggle}>Método</SortableTableHead>
+                  <SortableTableHead sortKey="created_at" sort={ordenRecientes.sort} onToggle={ordenRecientes.toggle}>Creado</SortableTableHead>
+                  <SortableTableHead sortKey="aplicado" sort={ordenRecientes.sort} onToggle={ordenRecientes.toggle}>Aplicado</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recientes.map((c) => (
+                {ordenRecientes.sorted.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>
                       <button onClick={() => copyId(c.id)} className="font-mono text-xs inline-flex items-center gap-1 hover:text-primary">

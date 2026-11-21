@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useSortState, ordenarFilas, SortableTh } from '@/hooks/useSortableTable';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,6 +56,11 @@ interface ClientVisit {
 
 export function MonitorContent() {
   const { empresa } = useAuth();
+  // Orden por columna de cada tabla del monitor (se recuerda por tabla).
+  const oVisitas = useSortState('monitor-visitas');
+  const oEntregas = useSortState('monitor-entregas');
+  const oVendedores = useSortState('monitor-vendedores');
+  const oDetalle = useSortState('monitor-detalle-visitas');
   const { fmt: fmtMoney } = useCurrency();
   const { isLoaded } = useGoogleMaps();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -436,14 +442,14 @@ export function MonitorContent() {
                     <table className="w-full text-xs">
                       <thead className="sticky top-0 bg-card z-[1]">
                         <tr className="bg-card">
-                          <th className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">#</th>
-                          <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</th>
-                          <th className="text-center px-2 py-2 text-[10px] font-semibold text-muted-foreground">Estado</th>
-                          <th className="text-right px-3 py-2 text-[10px] font-semibold text-muted-foreground">Venta</th>
+                          <SortableTh sortKey="orden" sort={oVisitas.sort} onToggle={oVisitas.toggle} className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">#</SortableTh>
+                          <SortableTh sortKey="nombre" sort={oVisitas.sort} onToggle={oVisitas.toggle} className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</SortableTh>
+                          <SortableTh sortKey="estado" sort={oVisitas.sort} onToggle={oVisitas.toggle} align="center" className="text-center px-2 py-2 text-[10px] font-semibold text-muted-foreground">Estado</SortableTh>
+                          <SortableTh sortKey="ventaTotal" sort={oVisitas.sort} onToggle={oVisitas.toggle} align="right" className="text-right px-3 py-2 text-[10px] font-semibold text-muted-foreground">Venta</SortableTh>
                         </tr>
                       </thead>
                       <tbody>
-                        {filtered.map((v, idx) => (
+                        {ordenarFilas(filtered, oVisitas.sort, (v: any, k) => k === 'orden' ? v.ordenEntrega : k === 'estado' ? statusLabel(v.status) : k === 'direccion' ? [v.direccion, v.colonia].filter(Boolean).join(', ') : k === 'gps' ? (v.gps_lat ? 0 : 1) : v[k]).map((v, idx) => (
                           <tr
                             key={v.id}
                             className={cn(
@@ -495,14 +501,18 @@ export function MonitorContent() {
                     <table className="w-full text-xs">
                       <thead className="sticky top-0 bg-card z-[1]">
                         <tr className="bg-card">
-                          <th className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">#</th>
-                          <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</th>
-                          <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Folio</th>
-                          <th className="text-center px-3 py-2 text-[10px] font-semibold text-muted-foreground">Estado</th>
+                          <SortableTh sortKey="orden_entrega" sort={oEntregas.sort} onToggle={oEntregas.toggle} className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">#</SortableTh>
+                          <SortableTh sortKey="cliente" sort={oEntregas.sort} onToggle={oEntregas.toggle} className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</SortableTh>
+                          <SortableTh sortKey="folio" sort={oEntregas.sort} onToggle={oEntregas.toggle} className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Folio</SortableTh>
+                          <SortableTh sortKey="estado" sort={oEntregas.sort} onToggle={oEntregas.toggle} align="center" className="text-center px-3 py-2 text-[10px] font-semibold text-muted-foreground">Estado</SortableTh>
                         </tr>
                       </thead>
                       <tbody>
-                        {(entregasHoy ?? []).map((e: any, idx: number) => {
+                        {ordenarFilas(entregasHoy ?? [], oEntregas.sort, (e: any, k) => {
+                          if (k === 'cliente') return e.clientes?.nombre;
+                          if (k === 'estado') return e.status === 'hecho' ? 'Entregado' : ['cargado', 'asignado', 'surtido'].includes(e.status) ? 'En ruta' : e.status;
+                          return e[k];
+                        }).map((e: any, idx: number) => {
                           const cli = e.clientes;
                           const isDone = e.status === 'hecho';
                           const isEnRuta = ['cargado', 'asignado', 'surtido'].includes(e.status);
@@ -698,16 +708,16 @@ export function MonitorContent() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-card">
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Vendedor</th>
-                        <th className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Programados</th>
-                        <th className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Visitados</th>
-                        <th className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Ventas</th>
-                        <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground">Monto</th>
-                        <th className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Efectividad</th>
+                        <SortableTh sortKey="nombre" sort={oVendedores.sort} onToggle={oVendedores.toggle} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Vendedor</SortableTh>
+                        <SortableTh sortKey="scheduled" sort={oVendedores.sort} onToggle={oVendedores.toggle} align="center" className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Programados</SortableTh>
+                        <SortableTh sortKey="visited" sort={oVendedores.sort} onToggle={oVendedores.toggle} align="center" className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Visitados</SortableTh>
+                        <SortableTh sortKey="sold" sort={oVendedores.sort} onToggle={oVendedores.toggle} align="center" className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Ventas</SortableTh>
+                        <SortableTh sortKey="salesTotal" sort={oVendedores.sort} onToggle={oVendedores.toggle} align="right" className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground">Monto</SortableTh>
+                        <SortableTh sortKey="efectividad" sort={oVendedores.sort} onToggle={oVendedores.toggle} align="center" className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Efectividad</SortableTh>
                       </tr>
                     </thead>
                     <tbody>
-                      {vendedorSummary.map(vs => {
+                      {ordenarFilas(vendedorSummary, oVendedores.sort, (vs: any, k) => k === 'efectividad' ? (vs.scheduled > 0 ? vs.visited / vs.scheduled : 0) : vs[k]).map(vs => {
                         const rate = vs.scheduled > 0 ? Math.round((vs.visited / vs.scheduled) * 100) : 0;
                         return (
                           <tr key={vs.id} className="border-t border-border/30 hover:bg-card">
@@ -753,16 +763,16 @@ export function MonitorContent() {
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-card z-[1]">
                       <tr className="bg-card">
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Cliente</th>
-                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">Vendedor</th>
-                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">Dirección</th>
-                        <th className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Estado</th>
-                        <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground">Venta</th>
-                        <th className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">GPS</th>
+                        <SortableTh sortKey="nombre" sort={oDetalle.sort} onToggle={oDetalle.toggle} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Cliente</SortableTh>
+                        <SortableTh sortKey="vendedorNombre" sort={oDetalle.sort} onToggle={oDetalle.toggle} className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">Vendedor</SortableTh>
+                        <SortableTh sortKey="direccion" sort={oDetalle.sort} onToggle={oDetalle.toggle} className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">Dirección</SortableTh>
+                        <SortableTh sortKey="estado" sort={oDetalle.sort} onToggle={oDetalle.toggle} align="center" className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Estado</SortableTh>
+                        <SortableTh sortKey="ventaTotal" sort={oDetalle.sort} onToggle={oDetalle.toggle} align="right" className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground">Venta</SortableTh>
+                        <SortableTh sortKey="gps" sort={oDetalle.sort} onToggle={oDetalle.toggle} align="center" className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">GPS</SortableTh>
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map(v => (
+                      {ordenarFilas(filtered, oDetalle.sort, (v: any, k) => k === 'orden' ? v.ordenEntrega : k === 'estado' ? statusLabel(v.status) : k === 'direccion' ? [v.direccion, v.colonia].filter(Boolean).join(', ') : k === 'gps' ? (v.gps_lat ? 0 : 1) : v[k]).map(v => (
                         <tr key={v.id} className="border-t border-border/30 hover:bg-card">
                           <td className="px-4 py-2.5">
                             <p className="font-medium text-foreground text-sm">{v.nombre}</p>

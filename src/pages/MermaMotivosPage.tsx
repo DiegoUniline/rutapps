@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { useMermaMotivos, useUpsertMermaMotivo, useDeleteMermaMotivo } from '@/hooks/useMermas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,8 @@ export default function MermaMotivosPage() {
     }
   };
 
+  const { sorted: motivosOrdenados, sort, toggle } = useSortableTable(motivos ?? [], undefined, undefined, 'merma-motivos');
+
   if (!permisosLoading && !isOwner) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-sm text-muted-foreground p-6 text-center">
@@ -56,7 +59,7 @@ export default function MermaMotivosPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre</TableHead>
+              <SortableTableHead sortKey="nombre" sort={sort} onToggle={toggle}>Nombre</SortableTableHead>
               <TableHead className="w-32 text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -65,7 +68,7 @@ export default function MermaMotivosPage() {
               <TableRow><TableCell colSpan={2} className="text-center py-8">Cargando…</TableCell></TableRow>
             ) : (motivos ?? []).length === 0 ? (
               <TableRow><TableCell colSpan={2} className="text-center py-8 text-muted-foreground">Sin motivos</TableCell></TableRow>
-            ) : (motivos ?? []).map((m: any) => (
+            ) : motivosOrdenados.map((m: any) => (
               <TableRow key={m.id}>
                 <TableCell>{m.nombre}</TableCell>
                 <TableCell className="text-right">

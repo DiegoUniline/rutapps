@@ -3,16 +3,19 @@ import { StatusChip } from '@/components/StatusChip';
 import { cn, fmtDate } from '@/lib/utils';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { ClienteLink, ProductoLink } from '@/components/links/EntityLinks';
-import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
+import { useSortableTable, SortableTh, type SortState } from '@/hooks/useSortableTable';
 
 interface Props {
   items: any[];
   fmt: (v: number | null | undefined) => string;
+  /** Lista paginada en la BD: el orden lo aplica la consulta (toda la lista); aquí solo se muestra.
+   *  Las columnas que no están en `columnas` quedan sin orden. */
+  ordenServidor?: { sort: SortState; onToggle: (key: string) => void; columnas: Record<string, string> };
 }
 
-export function VentasProductosTable({ items, fmt }: Props) {
+export function VentasProductosTable({ items, fmt, ordenServidor }: Props) {
   const navigate = useNavigate();
-  const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
+  const enMemoria = useSortableTable(items, (r, k) => {
     if (k === 'cliente') return r.cliente_nombre ?? '';
     if (k === 'vendedor') return r.vendedor_nombre ?? '';
     if (k === 'codigo') return r.producto_codigo ?? '';
@@ -24,23 +27,27 @@ export function VentasProductosTable({ items, fmt }: Props) {
     if (k === 'tipo') return TIPO_LABELS[r.tipo] || r.tipo;
     return r?.[k];
   });
+  const sort = ordenServidor ? ordenServidor.sort : enMemoria.sort;
+  const toggle = ordenServidor ? ordenServidor.onToggle : enMemoria.toggle;
+  const sorted = ordenServidor ? items : enMemoria.sorted;
+  const sinOrden = (k: string) => !!ordenServidor && !ordenServidor.columnas[k];
 
   return (
     <table className="w-full text-[13px]">
       <thead>
         <tr className="border-b border-table-border text-left">
-          <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>
-          <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</SortableTh>
-          <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>
-          <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</SortableTh>
-          <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</SortableTh>
-          <SortableTh sortKey="lista" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Lista</SortableTh>
-          <SortableTh sortKey="codigo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</SortableTh>
-          <SortableTh sortKey="producto" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</SortableTh>
-          <SortableTh sortKey="cantidad" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</SortableTh>
-          <SortableTh sortKey="precio" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">P. Unit.</SortableTh>
-          <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</SortableTh>
-          <SortableTh sortKey="status" sort={sort} onToggle={toggle} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center hidden lg:table-cell">Estado</SortableTh>
+          <SortableTh sortKey="folio" sort={sort} onToggle={toggle} disabled={sinOrden('folio')} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>
+          <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} disabled={sinOrden('tipo')} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</SortableTh>
+          <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} disabled={sinOrden('cliente')} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>
+          <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} disabled={sinOrden('vendedor')} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</SortableTh>
+          <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} disabled={sinOrden('fecha')} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</SortableTh>
+          <SortableTh sortKey="lista" sort={sort} onToggle={toggle} disabled={sinOrden('lista')} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Lista</SortableTh>
+          <SortableTh sortKey="codigo" sort={sort} onToggle={toggle} disabled={sinOrden('codigo')} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</SortableTh>
+          <SortableTh sortKey="producto" sort={sort} onToggle={toggle} disabled={sinOrden('producto')} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</SortableTh>
+          <SortableTh sortKey="cantidad" sort={sort} onToggle={toggle} disabled={sinOrden('cantidad')} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</SortableTh>
+          <SortableTh sortKey="precio" sort={sort} onToggle={toggle} disabled={sinOrden('precio')} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">P. Unit.</SortableTh>
+          <SortableTh sortKey="total" sort={sort} onToggle={toggle} disabled={sinOrden('total')} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</SortableTh>
+          <SortableTh sortKey="status" sort={sort} onToggle={toggle} disabled={sinOrden('status')} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center hidden lg:table-cell">Estado</SortableTh>
         </tr>
       </thead>
       <tbody>

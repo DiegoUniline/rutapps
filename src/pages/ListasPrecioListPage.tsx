@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Star, Pencil, Trash2, Link2, Copy, Eye, ChevronRight } from 'lucide-react';
@@ -31,6 +32,12 @@ export default function ListasPrecioListPage() {
     !search || l.nombre.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
   const movil = useCargarMasMovil(filtered, search);
+  const { sorted: listasOrdenadas, sort, toggle } = useSortableTable(filtered, (l: any, k) => {
+    if (k === 'es_principal') return l.es_principal ? 0 : 1;
+    if (k === 'activa') return l.activa ? 'Activa' : 'Inactiva';
+    if (k === 'share_activo') return l.share_activo ? 0 : 1;
+    return l[k];
+  }, undefined, 'listas-precio');
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -123,10 +130,10 @@ export default function ListasPrecioListPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
-                <th className="th-odoo text-left">Nombre</th>
-                <th className="th-odoo text-center">Principal</th>
-                <th className="th-odoo text-center">Estado</th>
-                <th className="th-odoo text-center">Catálogo</th>
+                <SortableTh sortKey="nombre" sort={sort} onToggle={toggle} className="th-odoo text-left">Nombre</SortableTh>
+                <SortableTh sortKey="es_principal" sort={sort} onToggle={toggle} align="center" className="th-odoo text-center">Principal</SortableTh>
+                <SortableTh sortKey="activa" sort={sort} onToggle={toggle} align="center" className="th-odoo text-center">Estado</SortableTh>
+                <SortableTh sortKey="share_activo" sort={sort} onToggle={toggle} align="center" className="th-odoo text-center">Catálogo</SortableTh>
                 <th className="th-odoo text-center w-32">Acciones</th>
               </tr>
             </thead>
@@ -134,7 +141,7 @@ export default function ListasPrecioListPage() {
               {filtered.length === 0 && (
                 <tr><td colSpan={5} className="text-center py-12 text-muted-foreground text-sm">No hay listas de precios.</td></tr>
               )}
-              {filtered.map(l => (
+              {listasOrdenadas.map(l => (
                 <tr
                   key={l.id}
                   className={cn("border-b border-table-border transition-colors cursor-pointer hover:bg-table-hover")}

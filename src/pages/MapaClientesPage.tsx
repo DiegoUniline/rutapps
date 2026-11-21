@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useSortState, ordenarFilas, SortableTh } from '@/hooks/useSortableTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Map as MapGL, Marker, Popup, NavigationControl, MapRef, Source, Layer } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
@@ -100,6 +101,8 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
 
 export default function MapaClientesPage() {
   const { user, empresa } = useAuth();
+  // Orden por columna de la lista «Clientes filtrados».
+  const ordenLista = useSortState('mapa-clientes-lista');
   // OpenFreeMap = tiles MapLibre gratuitos, sin API key, sin watermark.
   const [search, setSearch] = useState('');
   const [zonaFilter, setZonaFilter] = useState('');
@@ -1331,17 +1334,25 @@ export default function MapaClientesPage() {
               <table className="w-full text-[11px]">
                 <thead className="bg-muted/40 sticky top-0">
                   <tr className="text-left text-muted-foreground">
-                    <th className="px-2 py-1.5 font-medium w-8">#</th>
-                    <th className="px-2 py-1.5 font-medium">Cliente</th>
-                    <th className="px-2 py-1.5 font-medium">Día</th>
-                    <th className="px-2 py-1.5 font-medium">Vend.</th>
+                    <SortableTh sortKey="orden" sort={ordenLista.sort} onToggle={ordenLista.toggle} className="px-2 py-1.5 font-medium w-8">#</SortableTh>
+                    <SortableTh sortKey="nombre" sort={ordenLista.sort} onToggle={ordenLista.toggle} className="px-2 py-1.5 font-medium">Cliente</SortableTh>
+                    <SortableTh sortKey="dia" sort={ordenLista.sort} onToggle={ordenLista.toggle} className="px-2 py-1.5 font-medium">Día</SortableTh>
+                    <SortableTh sortKey="vendedor" sort={ordenLista.sort} onToggle={ordenLista.toggle} className="px-2 py-1.5 font-medium">Vend.</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 && (
                     <tr><td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">Sin clientes</td></tr>
                   )}
-                  {filtered.map((c: any) => {
+                  {ordenarFilas(filtered, ordenLista.sort, (c: any, k) => {
+                    if (k === 'orden') return ordenRutaMap.get(c.id);
+                    if (k === 'dia') {
+                      const idx = (c.dia_visita ?? []).map((d: string) => DIAS.indexOf(d)).filter((i: number) => i >= 0);
+                      return idx.length ? Math.min(...idx) : null;
+                    }
+                    if (k === 'vendedor') return c.vendedores?.nombre;
+                    return c[k];
+                  }).map((c: any) => {
                     const orden = ordenRutaMap.get(c.id);
                     const visited = ventasHoy?.has(c.id);
                     const hasGps = !!(c.gps_lat && c.gps_lng);

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { mesActualLocal } from '@/hooks/useListPreferences';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
@@ -97,6 +98,13 @@ export default function ConteosFisicosPage() {
     { key: 'cancelado', label: 'Cancelado' },
   ];
   const movil = useCargarMasMovil(filtered, `${search}|${statusFilter}|${fechaDesde}|${fechaHasta}`);
+  const { sorted: conteosOrdenados, sort, toggle } = useSortableTable(filtered, (c: any, k) => {
+    if (k === 'almacen') return c.almacenes?.nombre;
+    if (k === 'progreso') return c.total_productos > 0 ? c.productos_contados / c.total_productos : 0;
+    if (k === 'status') return (STATUS_MAP[c.status] ?? STATUS_MAP.abierto).label;
+    if (k === 'diferencia') return c.status === 'cerrado' ? (c.diferencia_total_valor ?? 0) : null;
+    return c[k];
+  }, undefined, 'conteos-fisicos');
 
   return (
     <div className="p-2 md:p-4 min-h-full">
@@ -207,12 +215,12 @@ export default function ConteosFisicosPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-[11px]">Folio</TableHead>
-              <TableHead className="text-[11px]">Almacén</TableHead>
-              <TableHead className="text-[11px]">Progreso</TableHead>
-              <TableHead className="text-[11px]">Estado</TableHead>
-              <TableHead className="text-[11px]">Apertura</TableHead>
-              <TableHead className="text-[11px] text-right">Diferencia</TableHead>
+              <SortableTableHead sortKey="folio" sort={sort} onToggle={toggle} className="text-[11px]">Folio</SortableTableHead>
+              <SortableTableHead sortKey="almacen" sort={sort} onToggle={toggle} className="text-[11px]">Almacén</SortableTableHead>
+              <SortableTableHead sortKey="progreso" sort={sort} onToggle={toggle} className="text-[11px]">Progreso</SortableTableHead>
+              <SortableTableHead sortKey="status" sort={sort} onToggle={toggle} className="text-[11px]">Estado</SortableTableHead>
+              <SortableTableHead sortKey="abierto_en" sort={sort} onToggle={toggle} className="text-[11px]">Apertura</SortableTableHead>
+              <SortableTableHead sortKey="diferencia" sort={sort} onToggle={toggle} align="right" className="text-[11px] text-right">Diferencia</SortableTableHead>
               <TableHead className="text-[11px] text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -223,7 +231,7 @@ export default function ConteosFisicosPage() {
             {!isLoading && filtered.length === 0 && (
               <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Sin conteos</TableCell></TableRow>
             )}
-            {filtered.map((c: any) => {
+            {conteosOrdenados.map((c: any) => {
               const st = STATUS_MAP[c.status] ?? STATUS_MAP.abierto;
               const pct = c.total_productos > 0 ? Math.round((c.productos_contados / c.total_productos) * 100) : 0;
               return (

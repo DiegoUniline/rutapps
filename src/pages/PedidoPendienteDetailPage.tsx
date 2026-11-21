@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, lazy, Suspense } from 'react';
+import { useSortState, ordenarFilas, SortableTh } from '@/hooks/useSortableTable';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -241,6 +242,9 @@ export default function PedidoPendienteDetailPage() {
     }
   };
 
+  const oLineas = useSortState('pedido-pendiente-lineas');
+  const oEntregas = useSortState('pedido-pendiente-entregas');
+
   if (isLoading) return <div className="p-4"><TableSkeleton rows={6} cols={4} /></div>;
   if (!pedido) return <div className="p-8 text-center text-muted-foreground">Pedido no encontrado</div>;
 
@@ -372,17 +376,27 @@ export default function PedidoPendienteDetailPage() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-border text-left">
-                <th className="py-2 px-4 text-muted-foreground font-medium text-[11px]">Código</th>
-                <th className="py-2 px-4 text-muted-foreground font-medium text-[11px]">Producto</th>
-                <th className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right w-20">Pedida</th>
-                <th className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right w-20">Surtida</th>
-                <th className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right w-20">Faltante</th>
-                <th className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right w-24">P. Unit.</th>
-                <th className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right w-24">Subtotal pend.</th>
+                <SortableTh sortKey="codigo" sort={oLineas.sort} onToggle={oLineas.toggle} className="py-2 px-4 text-muted-foreground font-medium text-[11px]">Código</SortableTh>
+                <SortableTh sortKey="producto" sort={oLineas.sort} onToggle={oLineas.toggle} className="py-2 px-4 text-muted-foreground font-medium text-[11px]">Producto</SortableTh>
+                <SortableTh sortKey="pedida" sort={oLineas.sort} onToggle={oLineas.toggle} align="right" className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right w-20">Pedida</SortableTh>
+                <SortableTh sortKey="surtida" sort={oLineas.sort} onToggle={oLineas.toggle} align="right" className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right w-20">Surtida</SortableTh>
+                <SortableTh sortKey="faltante" sort={oLineas.sort} onToggle={oLineas.toggle} align="right" className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right w-20">Faltante</SortableTh>
+                <SortableTh sortKey="precio_unitario" sort={oLineas.sort} onToggle={oLineas.toggle} align="right" className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right w-24">P. Unit.</SortableTh>
+                <SortableTh sortKey="subtotal_pendiente" sort={oLineas.sort} onToggle={oLineas.toggle} align="right" className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right w-24">Subtotal pend.</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {lineas.map((l: any, idx: number) => {
+              {ordenarFilas(lineas, oLineas.sort, (l: any, k) => {
+                const pedida = Number(l.cantidad) || 0;
+                const faltante = Math.max(0, pedida - (deliverySummary[l.producto_id] ?? 0));
+                if (k === 'codigo') return l.productos?.codigo;
+                if (k === 'producto') return l.productos?.nombre;
+                if (k === 'pedida') return pedida;
+                if (k === 'surtida') return deliverySummary[l.producto_id] ?? 0;
+                if (k === 'faltante') return faltante;
+                if (k === 'precio_unitario') return Number(l.precio_unitario);
+                return faltante * Number(l.precio_unitario);
+              }).map((l: any, idx: number) => {
                 const pedida = Number(l.cantidad) || 0;
                 const surtida = deliverySummary[l.producto_id] ?? 0;
                 const faltante = Math.max(0, pedida - surtida);
@@ -450,14 +464,14 @@ export default function PedidoPendienteDetailPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-border text-left">
-                  <th className="py-2 px-4 text-muted-foreground font-medium text-[11px]">Folio</th>
-                  <th className="py-2 px-4 text-muted-foreground font-medium text-[11px]">Estado</th>
-                  <th className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right">Líneas</th>
+                  <SortableTh sortKey="folio" sort={oEntregas.sort} onToggle={oEntregas.toggle} className="py-2 px-4 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>
+                  <SortableTh sortKey="status" sort={oEntregas.sort} onToggle={oEntregas.toggle} className="py-2 px-4 text-muted-foreground font-medium text-[11px]">Estado</SortableTh>
+                  <SortableTh sortKey="lineas" sort={oEntregas.sort} onToggle={oEntregas.toggle} align="right" className="py-2 px-4 text-muted-foreground font-medium text-[11px] text-right">Líneas</SortableTh>
                   <th className="py-2 px-4 text-muted-foreground font-medium text-[11px] w-8"></th>
                 </tr>
               </thead>
               <tbody>
-                {(entregasExistentes ?? []).map((e: any) => {
+                {ordenarFilas(entregasExistentes ?? [], oEntregas.sort, (e: any, k) => k === 'lineas' ? (e.entrega_lineas ?? []).length : k === 'folio' ? (e.folio ?? e.id) : e[k]).map((e: any) => {
                   const isCancelled = e.status === 'cancelado';
                   return (
                     <tr key={e.id} className={cn("border-b border-border hover:bg-accent/30", isCancelled && "opacity-50")}>

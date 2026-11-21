@@ -21,7 +21,8 @@ import { ListPage, SCROLL_AREA } from '@/components/layout/ListPage';
 import { EncabezadoListaMovil, PASO_MOVIL } from '@/components/layout/ListaTarjetaMovil';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
-import { useVentasPaginated, useVentaLineasPaginated, useVentasResumen, useVentaLineasResumen, useDeleteVenta } from '@/hooks/useVentas';
+import { useVentasPaginated, useVentaLineasPaginated, useVentasResumen, useVentaLineasResumen, useDeleteVenta, VENTAS_ORDEN_BD, VENTA_LINEAS_ORDEN_BD } from '@/hooks/useVentas';
+import { useSortState } from '@/hooks/useSortableTable';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData, dateGroupLabel, dateGroupSortKey } from '@/hooks/useListPreferences';
@@ -138,9 +139,14 @@ export default function VentasListPage() {
 
   // Solo consulta el conjunto de la pestaña visible. Los resúmenes de abajo
   // permanecen separados y siguen calculando TODO el filtro, no solo la página.
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, isMobile ? 1 : page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter, clienteFilter, viewMode === 'ventas');
+  // Orden por columna en la consulta (ordena toda la lista, no solo la página); al cambiarlo vuelve a la página 1.
+  const { sort: ventasSort, toggle: toggleVentasSort } = useSortState('ventas');
+  const { sort: lineasSort, toggle: toggleLineasSort } = useSortState('ventas-productos');
+  const onSortVentas = (key: string) => { toggleVentasSort(key); setPage(1); setMobileLimit(PASO_MOVIL); };
+  const onSortLineas = (key: string) => { toggleLineasSort(key); setPage(1); };
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, isMobile ? 1 : page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, promocionFilter, clienteFilter, viewMode === 'ventas', false, ventasSort);
 
-  const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, clienteFilter, promocionFilter, viewMode === 'productos');
+  const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy, clienteFilter, promocionFilter, viewMode === 'productos', false, lineasSort);
   const primaryRowsReady = viewMode === 'ventas' ? ventasData !== undefined : lineasData !== undefined;
 
   // Conteo por pestaña (mismos filtros, sin la pestaña): una consulta de 1 renglón con count exacto.
@@ -469,6 +475,7 @@ export default function VentasListPage() {
         empresaId={empresa?.id} empresa={empresa} clientesList={clientesList}
         columnVisibility={columnVisibility}
         showFooter={!!groupBy}
+        ordenServidor={{ sort: ventasSort, onToggle: onSortVentas, columnas: VENTAS_ORDEN_BD }}
       />
     </div>
   );
@@ -710,7 +717,7 @@ export default function VentasListPage() {
             groups={productGroups}
             renderTable={(items) => (
               <div className={cn(!groupBy && SCROLL_AREA)}>
-                <VentasProductosTable items={items} fmt={fmt} />
+                <VentasProductosTable items={items} fmt={fmt} ordenServidor={{ sort: lineasSort, onToggle: onSortLineas, columnas: VENTA_LINEAS_ORDEN_BD }} />
               </div>
             )}
             renderSummary={(items) => (

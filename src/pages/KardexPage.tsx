@@ -18,6 +18,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 const REFERENCIA_LABELS: Record<string, string> = {
   ajuste: 'Ajuste inventario',
@@ -242,6 +243,22 @@ export default function KardexPage() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const movil = useCargarMasMovil(filtered, `${almacenId}|${productoId}|${filterTipo}|${search}|${fechaDesde}|${fechaHasta}|${loteId}`);
+  // Orden por columna (todos los movimientos del periodo ya están en memoria); sin orden: más recientes primero.
+  const orden = useSortableTable(filtered, (row: any, k) => {
+    if (k === 'producto') {
+      const info = row.producto_id ? (refInfo?.productos?.[row.producto_id] ?? (row.producto_id === productoSel?.id ? { nombre: productoSel?.nombre } : null)) : null;
+      return info?.nombre ?? '';
+    }
+    if (k === 'lote') return row.lote_id ? refInfo?.lotes?.[row.lote_id]?.codigo ?? '' : '';
+    if (k === 'tipo') return (TIPO_CONFIG[row.tipo] ?? TIPO_CONFIG.entrada).label;
+    if (k === 'referencia') return REFERENCIA_LABELS[row.referencia_tipo ?? ''] ?? row.referencia_tipo ?? '';
+    if (k === 'origen') return getOrigenDestino(row).origen ?? '';
+    if (k === 'destino') return getOrigenDestino(row).destino ?? '';
+    if (k === 'usuario') return row.user_id ? (refInfo?.usuarios?.[row.user_id] ?? '') : 'Sistema';
+    if (k === 'entrada') return row.delta > 0 ? row.delta : null;
+    if (k === 'salida') return row.delta < 0 ? Math.abs(row.delta) : null;
+    return row?.[k];
+  }, undefined, 'kardex');
 
   const saldoFinal = rows.length > 0 ? rows[rows.length - 1].saldo : saldoInicial;
   const cuadra = stockActual !== undefined && Math.abs(saldoFinal - (stockActual ?? 0)) < 0.001;
@@ -532,20 +549,20 @@ export default function KardexPage() {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-card z-10">
                 <tr className="border-b border-border">
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Fecha</th>
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Producto</th>
-                  {manejaLotes && <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Lote</th>}
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen</th>
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Destino</th>
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Usuario</th>
-                  <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</th>
-                  <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</th>
+                  <SortableTh sortKey="created_at" sort={orden.sort} onToggle={orden.toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Fecha</SortableTh>
+                  <SortableTh sortKey="producto" sort={orden.sort} onToggle={orden.toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Producto</SortableTh>
+                  {manejaLotes && <SortableTh sortKey="lote" sort={orden.sort} onToggle={orden.toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Lote</SortableTh>}
+                  <SortableTh sortKey="tipo" sort={orden.sort} onToggle={orden.toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</SortableTh>
+                  <SortableTh sortKey="referencia" sort={orden.sort} onToggle={orden.toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</SortableTh>
+                  <SortableTh sortKey="origen" sort={orden.sort} onToggle={orden.toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen</SortableTh>
+                  <SortableTh sortKey="destino" sort={orden.sort} onToggle={orden.toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Destino</SortableTh>
+                  <SortableTh sortKey="usuario" sort={orden.sort} onToggle={orden.toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Usuario</SortableTh>
+                  <SortableTh sortKey="entrada" sort={orden.sort} onToggle={orden.toggle} align="right" className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</SortableTh>
+                  <SortableTh sortKey="salida" sort={orden.sort} onToggle={orden.toggle} align="right" className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</SortableTh>
                   {almacenId && productoId && (
-                    <th className="text-right text-[11px] font-semibold px-3 py-2 text-muted-foreground">Saldo</th>
+                    <SortableTh sortKey="saldo" sort={orden.sort} onToggle={orden.toggle} align="right" className="text-right text-[11px] font-semibold px-3 py-2 text-muted-foreground">Saldo</SortableTh>
                   )}
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Notas</th>
+                  <SortableTh sortKey="notas" sort={orden.sort} onToggle={orden.toggle} className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Notas</SortableTh>
                 </tr>
               </thead>
               <tbody>
@@ -556,7 +573,7 @@ export default function KardexPage() {
                     {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                   </td></tr>
                 ) : (
-                  filtered.map(row => {
+                  orden.sorted.map(row => {
                     const cfg = TIPO_CONFIG[row.tipo] ?? TIPO_CONFIG.entrada;
                     const Icon = cfg.icon;
                     const od = getOrigenDestino(row);

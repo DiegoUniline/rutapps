@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSortState, ordenarFilas, SortableTh } from '@/hooks/useSortableTable';
 import { useAuth } from '@/contexts/AuthContext';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -717,6 +718,11 @@ export default function MiSuscripcionPage() {
     cancelada: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
   };
 
+  // Orden por columna de las tablas de facturas (resumen de las 5 recientes y lista completa).
+  const ordenFacturasRecientes = useSortState('mi-suscripcion-facturas-recientes');
+  const ordenFacturas = useSortState('mi-suscripcion-facturas');
+  const valorFactura = (fa: any, k: string) => k === 'estado' ? (facturaStatusLabel[fa.estado] || fa.estado) : fa[k];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -1001,15 +1007,15 @@ export default function MiSuscripcionPage() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border">
-                            <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Factura</th>
-                            <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Periodo</th>
-                            <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Total</th>
-                            <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs">Estado</th>
+                            <SortableTh sortKey="numero_factura" sort={ordenFacturasRecientes.sort} onToggle={ordenFacturasRecientes.toggle} className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Factura</SortableTh>
+                            <SortableTh sortKey="periodo_inicio" sort={ordenFacturasRecientes.sort} onToggle={ordenFacturasRecientes.toggle} className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Periodo</SortableTh>
+                            <SortableTh sortKey="total" sort={ordenFacturasRecientes.sort} onToggle={ordenFacturasRecientes.toggle} align="right" className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Total</SortableTh>
+                            <SortableTh sortKey="estado" sort={ordenFacturasRecientes.sort} onToggle={ordenFacturasRecientes.toggle} align="center" className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs">Estado</SortableTh>
                             <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs"></th>
                           </tr>
                         </thead>
                         <tbody>
-                          {facturas.slice(0, 5).map(f => (
+                          {ordenarFilas(facturas.slice(0, 5), ordenFacturasRecientes.sort, valorFactura).map(f => (
                             <tr key={f.id} className="border-b border-border/50 hover:bg-card">
                               <td className="py-2.5 px-2">
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -1265,16 +1271,16 @@ export default function MiSuscripcionPage() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border">
-                            <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Factura</th>
-                            <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Periodo</th>
-                            <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Usuarios</th>
-                            <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Total</th>
-                            <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs">Estado</th>
+                            <SortableTh sortKey="numero_factura" sort={ordenFacturas.sort} onToggle={ordenFacturas.toggle} className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Factura</SortableTh>
+                            <SortableTh sortKey="periodo_inicio" sort={ordenFacturas.sort} onToggle={ordenFacturas.toggle} className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Periodo</SortableTh>
+                            <SortableTh sortKey="num_usuarios" sort={ordenFacturas.sort} onToggle={ordenFacturas.toggle} align="right" className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Usuarios</SortableTh>
+                            <SortableTh sortKey="total" sort={ordenFacturas.sort} onToggle={ordenFacturas.toggle} align="right" className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Total</SortableTh>
+                            <SortableTh sortKey="estado" sort={ordenFacturas.sort} onToggle={ordenFacturas.toggle} align="center" className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs">Estado</SortableTh>
                             <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs"></th>
                           </tr>
                         </thead>
                         <tbody>
-                          {facturas.map(f => (
+                          {ordenarFilas(facturas, ordenFacturas.sort, valorFactura).map(f => (
                             <tr key={f.id} className="border-b border-border/50 hover:bg-card">
                               <td className="py-2.5 px-2">
                                 <div className="flex items-center gap-1.5 flex-wrap">

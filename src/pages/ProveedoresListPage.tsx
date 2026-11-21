@@ -13,6 +13,7 @@ import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage'
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, useCargarMasMovil } from '@/components/layout/ListaTarjetaMovil';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 const PAGE_SIZE = 50;
 
@@ -48,10 +49,17 @@ export default function ProveedoresListPage() {
     },
   });
 
+  // Orden por columna sobre todos los proveedores (ya están en memoria), antes de paginar.
+  const { sorted: proveedoresOrdenados, sort, toggle } = useSortableTable(proveedores ?? [], (p: any, k) => {
+    if (k === 'ciudad') return [p.ciudad, p.estado].filter(Boolean).join(', ');
+    if (k === 'condicion_pago') return p.condicion_pago ?? 'contado';
+    return p?.[k];
+  }, undefined, 'proveedores');
+  const onSort = (key: string) => { toggle(key); setPage(1); };
   const total = proveedores?.length ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = proveedores?.slice(from - 1, to) ?? [];
+  const pageData = proveedoresOrdenados.slice(from - 1, to);
   const movil = useCargarMasMovil(proveedores, search);
 
   return (
@@ -121,13 +129,13 @@ export default function ProveedoresListPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
-                <th className="th-odoo text-left">Nombre</th>
-                <th className="th-odoo text-left">Contacto</th>
-                <th className="th-odoo text-left">Teléfono</th>
-                <th className="th-odoo text-left">Email</th>
-                <th className="th-odoo text-left">Ciudad</th>
-                <th className="th-odoo text-left">Pago</th>
-                <th className="th-odoo text-center">Estado</th>
+                <SortableTh sortKey="nombre" sort={sort} onToggle={onSort} className="th-odoo text-left">Nombre</SortableTh>
+                <SortableTh sortKey="contacto" sort={sort} onToggle={onSort} className="th-odoo text-left">Contacto</SortableTh>
+                <SortableTh sortKey="telefono" sort={sort} onToggle={onSort} className="th-odoo text-left">Teléfono</SortableTh>
+                <SortableTh sortKey="email" sort={sort} onToggle={onSort} className="th-odoo text-left">Email</SortableTh>
+                <SortableTh sortKey="ciudad" sort={sort} onToggle={onSort} className="th-odoo text-left">Ciudad</SortableTh>
+                <SortableTh sortKey="condicion_pago" sort={sort} onToggle={onSort} className="th-odoo text-left">Pago</SortableTh>
+                <SortableTh sortKey="status" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center">Estado</SortableTh>
               </tr>
             </thead>
             <tbody>

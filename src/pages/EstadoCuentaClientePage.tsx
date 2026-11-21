@@ -1,4 +1,5 @@
 import { pagadoRealVenta, saldoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
+import { useSortableTable, useSortState, ordenarFilas, SortableTableHead } from '@/hooks/useSortableTable';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -206,6 +207,21 @@ export default function EstadoCuentaClientePage() {
     totalEfectivoVenta(v) > 0.01 && saldoRealVenta(v) <= 0.01
   ) ?? [];
 
+  const valorVenta = (v: any, k: string) => {
+    if (k === 'folio') return v.folio ?? v.id;
+    if (k === 'total') return totalEfectivoVenta(v);
+    if (k === 'pagado') return pagadoRealVenta(v);
+    if (k === 'pendiente') return saldoRealVenta(v);
+    return v[k];
+  };
+  const ordenClientes = useSortableTable(filtered, undefined, undefined, 'estado-cuenta-clientes');
+  const ordenPendientes = useSortableTable(ventasPendientes, valorVenta, undefined, 'estado-cuenta-pendientes');
+  const ordenPagadas = useSortableTable(ventasPagadas, valorVenta, undefined, 'estado-cuenta-pagadas');
+  const ordenCobros = useSortableTable(detalle?.cobros ?? [], undefined, undefined, 'estado-cuenta-cobros');
+  // Estas dos listas se arman dentro de la vista de detalle: solo se guarda aquí el orden elegido.
+  const ordenFavor = useSortState('estado-cuenta-favor');
+  const ordenReembolsos = useSortState('estado-cuenta-reembolsos');
+
   const handleDescargarPdf = async () => {
     if (!selected || !detalle || !empresa) return;
     const blob = await generarEstadoCuentaPdf({
@@ -339,14 +355,14 @@ export default function EstadoCuentaClientePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[11px]">Fecha</TableHead>
-                      <TableHead className="text-[11px]">Concepto</TableHead>
-                      <TableHead className="text-[11px]">Venta</TableHead>
-                      <TableHead className="text-[11px] text-right">Monto</TableHead>
+                      <SortableTableHead sortKey="fecha" sort={ordenFavor.sort} onToggle={ordenFavor.toggle} className="text-[11px]">Fecha</SortableTableHead>
+                      <SortableTableHead sortKey="concepto" sort={ordenFavor.sort} onToggle={ordenFavor.toggle} className="text-[11px]">Concepto</SortableTableHead>
+                      <SortableTableHead sortKey="folio" sort={ordenFavor.sort} onToggle={ordenFavor.toggle} className="text-[11px]">Venta</SortableTableHead>
+                      <SortableTableHead sortKey="monto" sort={ordenFavor.sort} onToggle={ordenFavor.toggle} align="right" className="text-[11px] text-right">Monto</SortableTableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {movFavor.map((m, i) => (
+                    {ordenarFilas(movFavor, ordenFavor.sort).map((m, i) => (
                       <TableRow key={i}>
                         <TableCell className="text-[12px]">{fmtDate(m.fecha)}</TableCell>
                         <TableCell className="text-[12px]">{m.concepto}</TableCell>
@@ -372,15 +388,15 @@ export default function EstadoCuentaClientePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[11px]">Fecha</TableHead>
-                      <TableHead className="text-[11px]">Motivo</TableHead>
-                      <TableHead className="text-[11px]">Venta</TableHead>
-                      <TableHead className="text-[11px]">Caja</TableHead>
-                      <TableHead className="text-[11px] text-right">Monto</TableHead>
+                      <SortableTableHead sortKey="created_at" sort={ordenReembolsos.sort} onToggle={ordenReembolsos.toggle} className="text-[11px]">Fecha</SortableTableHead>
+                      <SortableTableHead sortKey="motivo" sort={ordenReembolsos.sort} onToggle={ordenReembolsos.toggle} className="text-[11px]">Motivo</SortableTableHead>
+                      <SortableTableHead sortKey="folio" sort={ordenReembolsos.sort} onToggle={ordenReembolsos.toggle} className="text-[11px]">Venta</SortableTableHead>
+                      <SortableTableHead sortKey="caja" sort={ordenReembolsos.sort} onToggle={ordenReembolsos.toggle} className="text-[11px]">Caja</SortableTableHead>
+                      <SortableTableHead sortKey="monto" sort={ordenReembolsos.sort} onToggle={ordenReembolsos.toggle} align="right" className="text-[11px] text-right">Monto</SortableTableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {reembolsos.map(r => (
+                    {ordenarFilas(reembolsos, ordenReembolsos.sort, (r: any, k) => k === 'caja' ? (r.turno_id ? 'Retiro de turno' : 'Sin turno') : r[k]).map(r => (
                       <TableRow key={r.id}>
                         <TableCell className="text-[12px]">{fmtDate(r.created_at)}</TableCell>
                         <TableCell className="text-[12px]">{r.motivo}</TableCell>
@@ -407,16 +423,16 @@ export default function EstadoCuentaClientePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[11px]">Folio</TableHead>
-                  <TableHead className="text-[11px]">Fecha</TableHead>
-                  <TableHead className="text-[11px]">Condición</TableHead>
-                  <TableHead className="text-[11px] text-right">Total</TableHead>
-                  <TableHead className="text-[11px] text-right">Pagado</TableHead>
-                  <TableHead className="text-[11px] text-right">Pendiente</TableHead>
+                  <SortableTableHead sortKey="folio" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} className="text-[11px]">Folio</SortableTableHead>
+                  <SortableTableHead sortKey="fecha" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} className="text-[11px]">Fecha</SortableTableHead>
+                  <SortableTableHead sortKey="condicion_pago" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} className="text-[11px]">Condición</SortableTableHead>
+                  <SortableTableHead sortKey="total" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} align="right" className="text-[11px] text-right">Total</SortableTableHead>
+                  <SortableTableHead sortKey="pagado" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} align="right" className="text-[11px] text-right">Pagado</SortableTableHead>
+                  <SortableTableHead sortKey="pendiente" sort={ordenPendientes.sort} onToggle={ordenPendientes.toggle} align="right" className="text-[11px] text-right">Pendiente</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ventasPendientes.map(v => (
+                {ordenPendientes.sorted.map(v => (
                   <TableRow key={v.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/ventas/${v.id}`)}>
                     <TableCell className="font-mono text-[11px]">{v.folio ?? v.id.slice(0, 8)}</TableCell>
                     <TableCell className="text-[12px]">{fmtDate(v.fecha)}</TableCell>
@@ -458,16 +474,16 @@ export default function EstadoCuentaClientePage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-[11px]">Folio</TableHead>
-                    <TableHead className="text-[11px]">Fecha</TableHead>
-                    <TableHead className="text-[11px]">Condición</TableHead>
-                    <TableHead className="text-[11px] text-right">Total</TableHead>
-                    <TableHead className="text-[11px] text-right">Pagado</TableHead>
-                    <TableHead className="text-[11px]">Estado</TableHead>
+                    <SortableTableHead sortKey="folio" sort={ordenPagadas.sort} onToggle={ordenPagadas.toggle} className="text-[11px]">Folio</SortableTableHead>
+                    <SortableTableHead sortKey="fecha" sort={ordenPagadas.sort} onToggle={ordenPagadas.toggle} className="text-[11px]">Fecha</SortableTableHead>
+                    <SortableTableHead sortKey="condicion_pago" sort={ordenPagadas.sort} onToggle={ordenPagadas.toggle} className="text-[11px]">Condición</SortableTableHead>
+                    <SortableTableHead sortKey="total" sort={ordenPagadas.sort} onToggle={ordenPagadas.toggle} align="right" className="text-[11px] text-right">Total</SortableTableHead>
+                    <SortableTableHead sortKey="pagado" sort={ordenPagadas.sort} onToggle={ordenPagadas.toggle} align="right" className="text-[11px] text-right">Pagado</SortableTableHead>
+                    <SortableTableHead sortKey="status" sort={ordenPagadas.sort} onToggle={ordenPagadas.toggle} className="text-[11px]">Estado</SortableTableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {ventasPagadas.slice(0, 30).map(v => (
+                  {ordenPagadas.sorted.slice(0, 30).map(v => (
                     <TableRow key={v.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/ventas/${v.id}`)}>
                       <TableCell className="font-mono text-[11px]">{v.folio ?? v.id.slice(0, 8)}</TableCell>
                       <TableCell className="text-[12px]">{fmtDate(v.fecha)}</TableCell>
@@ -479,7 +495,7 @@ export default function EstadoCuentaClientePage() {
                   ))}
                 </TableBody>
                 {ventasPagadas.length > 0 && (() => {
-                  const shown = ventasPagadas.slice(0, 30);
+                  const shown = ordenPagadas.sorted.slice(0, 30);
                   const t = shown.reduce((s, v) => s + totalEfectivoVenta(v), 0);
                   const p = shown.reduce((s, v) => s + pagadoRealVenta(v), 0);
                   return (
@@ -506,14 +522,14 @@ export default function EstadoCuentaClientePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[11px]">Fecha</TableHead>
-                  <TableHead className="text-[11px]">Método</TableHead>
-                  <TableHead className="text-[11px]">Referencia</TableHead>
-                  <TableHead className="text-[11px] text-right">Monto</TableHead>
+                  <SortableTableHead sortKey="fecha" sort={ordenCobros.sort} onToggle={ordenCobros.toggle} className="text-[11px]">Fecha</SortableTableHead>
+                  <SortableTableHead sortKey="metodo_pago" sort={ordenCobros.sort} onToggle={ordenCobros.toggle} className="text-[11px]">Método</SortableTableHead>
+                  <SortableTableHead sortKey="referencia" sort={ordenCobros.sort} onToggle={ordenCobros.toggle} className="text-[11px]">Referencia</SortableTableHead>
+                  <SortableTableHead sortKey="monto" sort={ordenCobros.sort} onToggle={ordenCobros.toggle} align="right" className="text-[11px] text-right">Monto</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(detalle?.cobros ?? []).map(c => (
+                {ordenCobros.sorted.map(c => (
                   <TableRow key={c.id}>
                     <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
                     <TableCell className="text-[12px]">{c.metodo_pago}</TableCell>
@@ -588,18 +604,18 @@ export default function EstadoCuentaClientePage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-[11px]">Código</TableHead>
-              <TableHead className="text-[11px]">Cliente</TableHead>
-              <TableHead className="text-[11px]">Teléfono</TableHead>
-              <TableHead className="text-[11px] text-center">Docs</TableHead>
-              <TableHead className="text-[11px] text-right">Total vendido</TableHead>
-              <TableHead className="text-[11px] text-right">A favor</TableHead>
-              <TableHead className="text-[11px] text-right">Saldo</TableHead>
+              <SortableTableHead sortKey="codigo" sort={ordenClientes.sort} onToggle={ordenClientes.toggle} className="text-[11px]">Código</SortableTableHead>
+              <SortableTableHead sortKey="nombre" sort={ordenClientes.sort} onToggle={ordenClientes.toggle} className="text-[11px]">Cliente</SortableTableHead>
+              <SortableTableHead sortKey="telefono" sort={ordenClientes.sort} onToggle={ordenClientes.toggle} className="text-[11px]">Teléfono</SortableTableHead>
+              <SortableTableHead sortKey="docs" sort={ordenClientes.sort} onToggle={ordenClientes.toggle} align="center" className="text-[11px] text-center">Docs</SortableTableHead>
+              <SortableTableHead sortKey="totalVendido" sort={ordenClientes.sort} onToggle={ordenClientes.toggle} align="right" className="text-[11px] text-right">Total vendido</SortableTableHead>
+              <SortableTableHead sortKey="saldoFavor" sort={ordenClientes.sort} onToggle={ordenClientes.toggle} align="right" className="text-[11px] text-right">A favor</SortableTableHead>
+              <SortableTableHead sortKey="saldoNeto" sort={ordenClientes.sort} onToggle={ordenClientes.toggle} align="right" className="text-[11px] text-right">Saldo</SortableTableHead>
               <TableHead className="text-[11px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map(c => (
+            {ordenClientes.sorted.map(c => (
               <TableRow
                 key={c.id}
                 className="cursor-pointer hover:bg-muted/50"

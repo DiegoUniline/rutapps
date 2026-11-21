@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
@@ -79,6 +80,13 @@ export default function SaldosInicialesPage() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const { sorted: saldosOrdenados, sort, toggle } = useSortableTable(saldos ?? [], (v: any, k) => {
+    if (k === 'folio') return v.folio ?? v.id;
+    if (k === 'cliente') return v.clientes?.nombre ?? '';
+    if (k === 'concepto') return v.concepto || 'Saldo anterior';
+    return v[k];
+  }, undefined, 'saldos-iniciales');
 
   const totalOriginal = saldos?.reduce((s, v) => s + (v.total ?? 0), 0) ?? 0;
   const totalPendiente = saldos?.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0) ?? 0;
@@ -231,18 +239,18 @@ export default function SaldosInicialesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[11px]">Folio</TableHead>
-                  <TableHead className="text-[11px]">Cliente</TableHead>
-                  <TableHead className="text-[11px]">Fecha</TableHead>
-                  <TableHead className="text-[11px]">Concepto</TableHead>
-                  <TableHead className="text-[11px] text-right">Monto original</TableHead>
-                  <TableHead className="text-[11px] text-right">Pendiente</TableHead>
-                  <TableHead className="text-[11px]">Vencimiento</TableHead>
+                  <SortableTableHead sortKey="folio" sort={sort} onToggle={toggle} className="text-[11px]">Folio</SortableTableHead>
+                  <SortableTableHead sortKey="cliente" sort={sort} onToggle={toggle} className="text-[11px]">Cliente</SortableTableHead>
+                  <SortableTableHead sortKey="fecha" sort={sort} onToggle={toggle} className="text-[11px]">Fecha</SortableTableHead>
+                  <SortableTableHead sortKey="concepto" sort={sort} onToggle={toggle} className="text-[11px]">Concepto</SortableTableHead>
+                  <SortableTableHead sortKey="total" sort={sort} onToggle={toggle} align="right" className="text-[11px] text-right">Monto original</SortableTableHead>
+                  <SortableTableHead sortKey="saldo_pendiente" sort={sort} onToggle={toggle} align="right" className="text-[11px] text-right">Pendiente</SortableTableHead>
+                  <SortableTableHead sortKey="fecha_vencimiento" sort={sort} onToggle={toggle} className="text-[11px]">Vencimiento</SortableTableHead>
                   <TableHead className="text-[11px] w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {saldos?.map(v => {
+                {saldosOrdenados.map(v => {
                   const canDelete = (v.saldo_pendiente ?? 0) === (v.total ?? 0);
                   return (
                     <TableRow key={v.id}>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useSortableTable, useSortState, ordenarFilas, SortableTh } from '@/hooks/useSortableTable';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { Package } from 'lucide-react';
 import HelpButton from '@/components/HelpButton';
@@ -148,6 +149,15 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const isMobile = useIsMobile();
   const { empresa } = useAuth();
   const { symbol: cs, fmt } = useCurrency();
+  // Orden por columna de cada tabla del detalle (se recuerda por tabla).
+  const oVentas = useSortState('liquidacion-ventas');
+  const oProductos = useSortState('liquidacion-productos');
+  const oCobros = useSortState('liquidacion-cobros');
+  const oEntregas = useSortState('liquidacion-entregas');
+  const oEntregaLineas = useSortState('liquidacion-entrega-lineas');
+  const oStock = useSortState('liquidacion-stock');
+  const oGastos = useSortState('liquidacion-gastos');
+  const oDevoluciones = useSortState('liquidacion-devoluciones');
   const qc = useQueryClient();
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
@@ -1235,15 +1245,15 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     <table className="w-full">
                       <thead>
                         <tr className={THEAD_TR}>
-                          <th className={TH}>Folio</th>
-                          <th className={TH}>Cliente</th>
-                          <th className={TH}>Pago</th>
-                          <th className={TH}>Estado</th>
-                          <th className={cn(TH, "text-right")}>Total</th>
+                          <SortableTh sortKey="folio" sort={oVentas.sort} onToggle={oVentas.toggle} className={TH}>Folio</SortableTh>
+                          <SortableTh sortKey="cliente" sort={oVentas.sort} onToggle={oVentas.toggle} className={TH}>Cliente</SortableTh>
+                          <SortableTh sortKey="condicion_pago" sort={oVentas.sort} onToggle={oVentas.toggle} className={TH}>Pago</SortableTh>
+                          <SortableTh sortKey="status" sort={oVentas.sort} onToggle={oVentas.toggle} className={TH}>Estado</SortableTh>
+                          <SortableTh sortKey="total" sort={oVentas.sort} onToggle={oVentas.toggle} align="right" className={cn(TH, "text-right")}>Total</SortableTh>
                         </tr>
                       </thead>
                       <tbody>
-                        {ventasActivas.map((v: any) => (
+                        {ordenarFilas(ventasActivas, oVentas.sort, (r: any, k) => k === 'cliente' ? r.clientes?.nombre : (k === 'total' || k === 'monto') ? Number(r[k]) : r[k]).map((v: any) => (
                           <tr key={v.id} className={TBODY_TR}>
                             <td className={cn(TD, "font-mono text-foreground")}>{v.folio ?? '—'}</td>
                             <td className={TD}>{v.clientes?.nombre ?? '—'}</td>
@@ -1293,14 +1303,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     <table className="w-full">
                       <thead>
                         <tr className={THEAD_TR}>
-                          <th className={TH}>Producto</th>
-                          <th className={TH}>Código</th>
-                          <th className={cn(TH, "text-right")}>Cantidad</th>
-                          <th className={cn(TH, "text-right")}>Total</th>
+                          <SortableTh sortKey="nombre" sort={oProductos.sort} onToggle={oProductos.toggle} className={TH}>Producto</SortableTh>
+                          <SortableTh sortKey="codigo" sort={oProductos.sort} onToggle={oProductos.toggle} className={TH}>Código</SortableTh>
+                          <SortableTh sortKey="cantidad" sort={oProductos.sort} onToggle={oProductos.toggle} align="right" className={cn(TH, "text-right")}>Cantidad</SortableTh>
+                          <SortableTh sortKey="total" sort={oProductos.sort} onToggle={oProductos.toggle} align="right" className={cn(TH, "text-right")}>Total</SortableTh>
                         </tr>
                       </thead>
                       <tbody>
-                        {productosArr.map((p, i) => (
+                        {ordenarFilas(productosArr, oProductos.sort).map((p, i) => (
                           <tr key={i} className={TBODY_TR}>
                             <td className={cn(TD, "font-medium")}>{p.nombre}</td>
                             <td className={cn(TD, "font-mono text-muted-foreground")}>{p.codigo}</td>
@@ -1339,14 +1349,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                       <table className="w-full">
                         <thead>
                           <tr className={THEAD_TR}>
-                            <th className={TH}>Cliente</th>
-                            <th className={TH}>Método</th>
-                            <th className={TH}>Referencia</th>
-                            <th className={cn(TH, "text-right")}>Monto</th>
+                            <SortableTh sortKey="cliente" sort={oCobros.sort} onToggle={oCobros.toggle} className={TH}>Cliente</SortableTh>
+                            <SortableTh sortKey="metodo_pago" sort={oCobros.sort} onToggle={oCobros.toggle} className={TH}>Método</SortableTh>
+                            <SortableTh sortKey="referencia" sort={oCobros.sort} onToggle={oCobros.toggle} className={TH}>Referencia</SortableTh>
+                            <SortableTh sortKey="monto" sort={oCobros.sort} onToggle={oCobros.toggle} align="right" className={cn(TH, "text-right")}>Monto</SortableTh>
                           </tr>
                         </thead>
                         <tbody>
-                          {(cobros || []).map((c: any) => (
+                          {ordenarFilas(cobros || [], oCobros.sort, (r: any, k) => k === 'cliente' ? r.clientes?.nombre : (k === 'total' || k === 'monto') ? Number(r[k]) : r[k]).map((c: any) => (
                             <tr key={c.id} className={TBODY_TR}>
                               <td className={TD}>{c.clientes?.nombre ?? '—'}</td>
                               <td className={cn(TD, "capitalize")}>{c.metodo_pago}</td>
@@ -1376,18 +1386,27 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     <table className="w-full">
                       <thead>
                         <tr className={THEAD_TR}>
-                          <th className={TH}>Folio</th>
-                          <th className={TH}>Pedido</th>
-                          <th className={TH}>Cliente</th>
-                          <th className={TH}>Fecha</th>
-                          <th className={cn(TH, "text-right")}>Entregadas</th>
-                          <th className={cn(TH, "text-right")}>No entregadas</th>
-                          <th className={cn(TH, "text-right")}>Total</th>
+                          <SortableTh sortKey="folio" sort={oEntregas.sort} onToggle={oEntregas.toggle} className={TH}>Folio</SortableTh>
+                          <SortableTh sortKey="pedido" sort={oEntregas.sort} onToggle={oEntregas.toggle} className={TH}>Pedido</SortableTh>
+                          <SortableTh sortKey="cliente" sort={oEntregas.sort} onToggle={oEntregas.toggle} className={TH}>Cliente</SortableTh>
+                          <SortableTh sortKey="fecha" sort={oEntregas.sort} onToggle={oEntregas.toggle} className={TH}>Fecha</SortableTh>
+                          <SortableTh sortKey="entregadas" sort={oEntregas.sort} onToggle={oEntregas.toggle} align="right" className={cn(TH, "text-right")}>Entregadas</SortableTh>
+                          <SortableTh sortKey="no_entregadas" sort={oEntregas.sort} onToggle={oEntregas.toggle} align="right" className={cn(TH, "text-right")}>No entregadas</SortableTh>
+                          <SortableTh sortKey="total" sort={oEntregas.sort} onToggle={oEntregas.toggle} align="right" className={cn(TH, "text-right")}>Total</SortableTh>
                           <th className={cn(TH, "w-8")} />
                         </tr>
                       </thead>
                       <tbody>
-                        {entregasList.map((e: any) => {
+                        {ordenarFilas(entregasList, oEntregas.sort, (e: any, k) => {
+                          const ls = (e.entrega_lineas || []) as any[];
+                          if (k === 'pedido') return e.ventas?.folio;
+                          if (k === 'cliente') return e.clientes?.nombre;
+                          if (k === 'fecha') return e.validado_at || e.fecha_entrega || e.fecha;
+                          if (k === 'entregadas') return ls.filter(l => l.hecho).reduce((s, l) => s + (Number(l.cantidad_entregada) || 0), 0);
+                          if (k === 'no_entregadas') return ls.filter(l => !l.hecho).reduce((s, l) => s + (Number(l.cantidad ?? l.cantidad_entregada) || 0), 0);
+                          if (k === 'total') return e.ventas?.total != null ? Number(e.ventas.total) : null;
+                          return e[k];
+                        }).map((e: any) => {
                           const lineas = (e.entrega_lineas || []) as any[];
                           const fechaRealEntrega = e.validado_at || e.fecha_entrega || e.fecha;
                           const udsEntregadas = lineas.filter(l => l.hecho).reduce((s, l) => s + (Number(l.cantidad_entregada) || 0), 0);
@@ -1418,15 +1437,20 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                                       <table className="w-full">
                                         <thead>
                                           <tr className="text-[11px] text-muted-foreground uppercase border-b border-table-border bg-muted/20">
-                                            <th className="text-left py-2 pl-8 pr-3">Producto</th>
-                                            <th className="text-left py-2">Código</th>
-                                            <th className="text-right py-2">Pedidas</th>
-                                            <th className="text-right py-2">Entregadas</th>
-                                            <th className="text-center py-2 pr-8">Estado</th>
+                                            <SortableTh sortKey="producto" sort={oEntregaLineas.sort} onToggle={oEntregaLineas.toggle} className="text-left py-2 pl-8 pr-3">Producto</SortableTh>
+                                            <SortableTh sortKey="codigo" sort={oEntregaLineas.sort} onToggle={oEntregaLineas.toggle} className="text-left py-2">Código</SortableTh>
+                                            <SortableTh sortKey="cantidad" sort={oEntregaLineas.sort} onToggle={oEntregaLineas.toggle} align="right" className="text-right py-2">Pedidas</SortableTh>
+                                            <SortableTh sortKey="cantidad_entregada" sort={oEntregaLineas.sort} onToggle={oEntregaLineas.toggle} align="right" className="text-right py-2">Entregadas</SortableTh>
+                                            <SortableTh sortKey="hecho" sort={oEntregaLineas.sort} onToggle={oEntregaLineas.toggle} align="center" className="text-center py-2 pr-8">Estado</SortableTh>
                                           </tr>
                                         </thead>
                                         <tbody>
-                                          {lineas.map((l: any, i: number) => (
+                                          {ordenarFilas(lineas, oEntregaLineas.sort, (l: any, k) => {
+                                            if (k === 'producto') return l.productos?.nombre;
+                                            if (k === 'codigo') return l.productos?.codigo;
+                                            if (k === 'hecho') return l.hecho ? 'Entregado' : 'Pendiente';
+                                            return Number(l[k] ?? 0);
+                                          }).map((l: any, i: number) => (
                                             <tr key={i} className="border-b border-table-border/40 last:border-b-0 hover:bg-table-hover transition-colors">
                                               <td className="py-2 pl-8 pr-3">{l.productos?.nombre ?? '—'}</td>
                                               <td className="py-2 font-mono text-muted-foreground">{l.productos?.codigo ?? ''}</td>
@@ -1563,12 +1587,12 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                       <table className="w-full">
                         <thead>
                           <tr className={THEAD_TR}>
-                            <th className={TH}>Producto</th>
-                            <th className={cn(TH, "text-right")}>Existencia</th>
+                            <SortableTh sortKey="nombre" sort={oStock.sort} onToggle={oStock.toggle} className={TH}>Producto</SortableTh>
+                            <SortableTh sortKey="cantidad" sort={oStock.sort} onToggle={oStock.toggle} align="right" className={cn(TH, "text-right")}>Existencia</SortableTh>
                           </tr>
                         </thead>
                         <tbody>
-                          {stockItems.map((p: any, i: number) => (
+                          {ordenarFilas(stockItems, oStock.sort).map((p: any, i: number) => (
                             <tr key={i} className={TBODY_TR}>
                               <td className={TD}>{p.nombre} <span className="text-muted-foreground font-mono text-[11px]">{p.codigo}</span></td>
                               <td className={cn(TD, "text-right font-semibold")}>{p.cantidad}</td>
@@ -1658,13 +1682,13 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     <table className="w-full">
                       <thead>
                         <tr className={THEAD_TR}>
-                          <th className={TH}>Concepto</th>
-                          <th className={TH}>Notas</th>
-                          <th className={cn(TH, "text-right")}>Monto</th>
+                          <SortableTh sortKey="concepto" sort={oGastos.sort} onToggle={oGastos.toggle} className={TH}>Concepto</SortableTh>
+                          <SortableTh sortKey="notas" sort={oGastos.sort} onToggle={oGastos.toggle} className={TH}>Notas</SortableTh>
+                          <SortableTh sortKey="monto" sort={oGastos.sort} onToggle={oGastos.toggle} align="right" className={cn(TH, "text-right")}>Monto</SortableTh>
                         </tr>
                       </thead>
                       <tbody>
-                        {(gastos || []).map((g: any) => (
+                        {ordenarFilas(gastos || [], oGastos.sort, (r: any, k) => k === 'cliente' ? r.clientes?.nombre : (k === 'total' || k === 'monto') ? Number(r[k]) : r[k]).map((g: any) => (
                           <tr key={g.id} className={TBODY_TR}>
                             <td className={cn(TD, "font-medium")}>{g.concepto}</td>
                             <td className={cn(TD, "text-muted-foreground")}>{g.notas || '—'}</td>
@@ -1700,16 +1724,16 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                       <table className="w-full">
                         <thead>
                           <tr className={THEAD_TR}>
-                            <th className={TH}>Producto</th>
-                            <th className={TH}>Cliente</th>
-                            <th className={cn(TH, "text-right")}>Cant.</th>
-                            <th className={TH}>Motivo</th>
-                            <th className={TH}>Acción</th>
-                            <th className={cn(TH, "text-right")}>Crédito</th>
+                            <SortableTh sortKey="nombre" sort={oDevoluciones.sort} onToggle={oDevoluciones.toggle} className={TH}>Producto</SortableTh>
+                            <SortableTh sortKey="cliente" sort={oDevoluciones.sort} onToggle={oDevoluciones.toggle} className={TH}>Cliente</SortableTh>
+                            <SortableTh sortKey="cantidad" sort={oDevoluciones.sort} onToggle={oDevoluciones.toggle} align="right" className={cn(TH, "text-right")}>Cant.</SortableTh>
+                            <SortableTh sortKey="motivo" sort={oDevoluciones.sort} onToggle={oDevoluciones.toggle} className={TH}>Motivo</SortableTh>
+                            <SortableTh sortKey="accion" sort={oDevoluciones.sort} onToggle={oDevoluciones.toggle} className={TH}>Acción</SortableTh>
+                            <SortableTh sortKey="monto_credito" sort={oDevoluciones.sort} onToggle={oDevoluciones.toggle} align="right" className={cn(TH, "text-right")}>Crédito</SortableTh>
                           </tr>
                         </thead>
                         <tbody>
-                          {devLineas.map((d, i) => (
+                          {ordenarFilas(devLineas, oDevoluciones.sort, (d: any, k) => k === 'motivo' ? (MOTIVO_LABELS[d.motivo] ?? d.motivo) : d[k]).map((d, i) => (
                             <tr key={i} className={TBODY_TR}>
                               <td className={TD}>
                                 <span className="font-medium">{d.nombre}</span>
@@ -1983,6 +2007,10 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
 function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const { user, empresa } = useAuth();
   const { symbol: cs, fmt } = useCurrency();
+  const oVentasPrev = useSortState('nueva-liquidacion-ventas');
+  const oProductosPrev = useSortState('nueva-liquidacion-productos');
+  const oCobrosPrev = useSortState('nueva-liquidacion-cobros');
+  const oGastosPrev = useSortState('nueva-liquidacion-gastos');
   const qc = useQueryClient();
   const [vendedorId, setVendedorId] = useState<string>('');
   const [efectivoEntregado, setEfectivoEntregado] = useState('');
@@ -2310,14 +2338,14 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-2">Folio</th>
-                  <th className="text-left py-2">Cliente</th>
-                  <th className="text-left py-2">Pago</th>
-                  <th className="text-right py-2">Total</th>
+                  <SortableTh sortKey="folio" sort={oVentasPrev.sort} onToggle={oVentasPrev.toggle} className="text-left py-2">Folio</SortableTh>
+                  <SortableTh sortKey="cliente" sort={oVentasPrev.sort} onToggle={oVentasPrev.toggle} className="text-left py-2">Cliente</SortableTh>
+                  <SortableTh sortKey="condicion_pago" sort={oVentasPrev.sort} onToggle={oVentasPrev.toggle} className="text-left py-2">Pago</SortableTh>
+                  <SortableTh sortKey="total" sort={oVentasPrev.sort} onToggle={oVentasPrev.toggle} align="right" className="text-right py-2">Total</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {(ventasPreview || []).map((v: any) => (
+                {ordenarFilas(ventasPreview || [], oVentasPrev.sort, (r: any, k) => k === 'cliente' ? r.clientes?.nombre : (k === 'total' || k === 'monto') ? Number(r[k]) : r[k]).map((v: any) => (
                   <tr key={v.id} className="border-b border-border/50">
                     <td className="py-1.5 font-mono text-foreground">{v.folio ?? '—'}</td>
                     <td className="py-1.5">{v.clientes?.nombre ?? '—'}</td>
@@ -2342,14 +2370,14 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
           <table className="w-full text-[12px]">
             <thead>
               <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                <th className="text-left py-2">Producto</th>
-                <th className="text-left py-2">Código</th>
-                <th className="text-right py-2">Cantidad</th>
-                <th className="text-right py-2">Total</th>
+                <SortableTh sortKey="nombre" sort={oProductosPrev.sort} onToggle={oProductosPrev.toggle} className="text-left py-2">Producto</SortableTh>
+                <SortableTh sortKey="codigo" sort={oProductosPrev.sort} onToggle={oProductosPrev.toggle} className="text-left py-2">Código</SortableTh>
+                <SortableTh sortKey="cantidad" sort={oProductosPrev.sort} onToggle={oProductosPrev.toggle} align="right" className="text-right py-2">Cantidad</SortableTh>
+                <SortableTh sortKey="total" sort={oProductosPrev.sort} onToggle={oProductosPrev.toggle} align="right" className="text-right py-2">Total</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {productosArr.map((p, i) => (
+              {ordenarFilas(productosArr, oProductosPrev.sort).map((p, i) => (
                 <tr key={i} className="border-b border-border/50">
                   <td className="py-1.5 font-medium">{p.nombre}</td>
                   <td className="py-1.5 font-mono text-muted-foreground">{p.codigo}</td>
@@ -2369,14 +2397,14 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-2">Cliente</th>
-                  <th className="text-left py-2">Método</th>
-                  <th className="text-left py-2">Referencia</th>
-                  <th className="text-right py-2">Monto</th>
+                  <SortableTh sortKey="cliente" sort={oCobrosPrev.sort} onToggle={oCobrosPrev.toggle} className="text-left py-2">Cliente</SortableTh>
+                  <SortableTh sortKey="metodo_pago" sort={oCobrosPrev.sort} onToggle={oCobrosPrev.toggle} className="text-left py-2">Método</SortableTh>
+                  <SortableTh sortKey="referencia" sort={oCobrosPrev.sort} onToggle={oCobrosPrev.toggle} className="text-left py-2">Referencia</SortableTh>
+                  <SortableTh sortKey="monto" sort={oCobrosPrev.sort} onToggle={oCobrosPrev.toggle} align="right" className="text-right py-2">Monto</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {(cobrosPreview || []).map((c: any) => (
+                {ordenarFilas(cobrosPreview || [], oCobrosPrev.sort, (r: any, k) => k === 'cliente' ? r.clientes?.nombre : (k === 'total' || k === 'monto') ? Number(r[k]) : r[k]).map((c: any) => (
                   <tr key={c.id} className="border-b border-border/50">
                     <td className="py-1.5">{c.clientes?.nombre ?? '—'}</td>
                     <td className="py-1.5 capitalize">{c.metodo_pago}</td>
@@ -2403,13 +2431,13 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-2">Concepto</th>
-                  <th className="text-left py-2">Notas</th>
-                  <th className="text-right py-2">Monto</th>
+                  <SortableTh sortKey="concepto" sort={oGastosPrev.sort} onToggle={oGastosPrev.toggle} className="text-left py-2">Concepto</SortableTh>
+                  <SortableTh sortKey="notas" sort={oGastosPrev.sort} onToggle={oGastosPrev.toggle} className="text-left py-2">Notas</SortableTh>
+                  <SortableTh sortKey="monto" sort={oGastosPrev.sort} onToggle={oGastosPrev.toggle} align="right" className="text-right py-2">Monto</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {(gastosPreview || []).map((g: any) => (
+                {ordenarFilas(gastosPreview || [], oGastosPrev.sort, (r: any, k) => k === 'cliente' ? r.clientes?.nombre : (k === 'total' || k === 'monto') ? Number(r[k]) : r[k]).map((g: any) => (
                   <tr key={g.id} className="border-b border-border/50">
                     <td className="py-1.5 font-medium">{g.concepto}</td>
                     <td className="py-1.5 text-muted-foreground">{g.notas || '—'}</td>
@@ -2588,7 +2616,18 @@ export default function DescargasPage() {
   const totalEntregado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_entregado) || 0), 0);
   const totalDiferencia = filtered.reduce((s, d: any) => s + cuadreDe(d).diferencia, 0);
 
-  const pag = useTablePagination(filtered);
+  const { sorted: liquidacionesOrdenadas, sort, toggle } = useSortableTable(filtered, (d: any, k) => {
+    const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
+    if (k === 'fecha') return hasRange ? d.fecha_inicio : d.fecha;
+    if (k === 'vendedor') return d.vendedores?.nombre;
+    if (k === 'tipo') return d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
+    if (k === 'esperado') return cuadreDe(d).esperado;
+    if (k === 'entregado') return Number(d.efectivo_entregado) || 0;
+    if (k === 'diferencia') return cuadreDe(d).diferencia;
+    if (k === 'status') return (STATUS_MAP[d.status] || STATUS_MAP.pendiente).label;
+    return d[k];
+  }, undefined, 'liquidaciones');
+  const pag = useTablePagination(liquidacionesOrdenadas);
   // Teléfono: búsqueda local (solo presentación) sobre las liquidaciones ya filtradas.
   const [busquedaMovil, setBusquedaMovil] = useState('');
   const filtradasMovil = useMemo(() => {
@@ -2799,13 +2838,13 @@ export default function DescargasPage() {
           <table className="w-full text-[13px] min-w-[760px]">
             <thead>
               <tr className="bg-card text-[11px] text-muted-foreground uppercase border-b border-border">
-                <th className="text-left py-2.5 px-4">Fecha / Periodo</th>
-                <th className="text-left py-2.5 px-4">Vendedor</th>
-                <th className="text-left py-2.5 px-4">Tipo</th>
-                <th className="text-right py-2.5 px-4">Esperado</th>
-                <th className="text-right py-2.5 px-4">Entregado</th>
-                <th className="text-right py-2.5 px-4">Diferencia</th>
-                <th className="text-center py-2.5 px-4">Status</th>
+                <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="text-left py-2.5 px-4">Fecha / Periodo</SortableTh>
+                <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="text-left py-2.5 px-4">Vendedor</SortableTh>
+                <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="text-left py-2.5 px-4">Tipo</SortableTh>
+                <SortableTh sortKey="esperado" sort={sort} onToggle={toggle} align="right" className="text-right py-2.5 px-4">Esperado</SortableTh>
+                <SortableTh sortKey="entregado" sort={sort} onToggle={toggle} align="right" className="text-right py-2.5 px-4">Entregado</SortableTh>
+                <SortableTh sortKey="diferencia" sort={sort} onToggle={toggle} align="right" className="text-right py-2.5 px-4">Diferencia</SortableTh>
+                <SortableTh sortKey="status" sort={sort} onToggle={toggle} align="center" className="text-center py-2.5 px-4">Status</SortableTh>
                 <th className="text-center py-2.5 px-4"></th>
               </tr>
             </thead>

@@ -10,19 +10,34 @@ import { pickColumns, CLIENTE_COLUMNS } from '@/lib/allowlist';
 import { enrichClientes, ensureCatalogsForEnrich } from '@/lib/catalogEnrich';
 import { deterministicUuid } from '@/lib/deterministicId';
 import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
+import { aplicarOrdenConsulta, type SortState } from '@/hooks/useSortableTable';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
 
+/** Columnas de la lista de clientes que se ordenan en la BD (clave de columna → columna real). */
+export const CLIENTES_ORDEN_BD: Record<string, string> = {
+  codigo: 'codigo', nombre: 'nombre', contacto: 'contacto', dia_visita: 'dia_visita', telefono: 'telefono',
+  lada: 'lada', email: 'email', direccion: 'direccion', colonia: 'colonia', credito: 'credito',
+  limite_credito: 'limite_credito', dias_credito: 'dias_credito', frecuencia: 'frecuencia', orden: 'orden',
+  gps: 'gps_lat', status: 'status',
+  requiere_factura: 'requiere_factura', facturama_rfc: 'facturama_rfc', facturama_razon_social: 'facturama_razon_social',
+  facturama_regimen_fiscal: 'facturama_regimen_fiscal', facturama_uso_cfdi: 'facturama_uso_cfdi', facturama_cp: 'facturama_cp',
+  facturama_forma_pago: 'facturama_forma_pago', facturama_correo_facturacion: 'facturama_correo_facturacion',
+  facturama_direccion_fiscal: 'facturama_direccion_fiscal', rfc_validado: 'rfc_validado_status', notas_fiscales: 'notas_fiscales',
+  es_publico_general: 'es_publico_general', recibir_notificaciones: 'recibir_notificaciones', notas: 'notas',
+  fecha_alta: 'fecha_alta', created_at: 'created_at', updated_at: 'updated_at',
+};
+
 
 /** Paginated clients for list views. When fetchAll=true, returns all matching rows (used for grouping). */
-export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, vendedorFilter?: string, zonaFilter?: string, fetchAll = false) {
+export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, vendedorFilter?: string, zonaFilter?: string, fetchAll = false, sort?: SortState) {
   const { empresa } = useAuth();
   const qc = useQueryClient();
   const { seeAll, profileId, clientesVisibilidad, blocked } = useDataVisibility('clientes');
   const filterByVendedor = clientesVisibilidad === 'propios' && !seeAll && !!profileId;
 
   return useQuery({
-    queryKey: ['clientes-page', empresa?.id, search, statusFilter, page, pageSize, filterByVendedor ? profileId : 'all', vendedorFilter, zonaFilter, fetchAll],
+    queryKey: ['clientes-page', empresa?.id, search, statusFilter, page, pageSize, filterByVendedor ? profileId : 'all', vendedorFilter, zonaFilter, fetchAll, sort?.key ?? null, sort?.dir ?? null],
     staleTime: CATALOG_STALE,
     // FAIL-CLOSED: si no se puede comprobar qué clientes tiene permitido ver el
     // usuario, no se consulta la lista (antes se mostraba la cartera completa).
@@ -36,9 +51,10 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
       // el cliente con `enrichClientes` a partir de los catálogos pequeños
       // ya cacheados por useBootstrapPrefetch. La forma de la fila se
       // preserva: consumidores siguen leyendo cliente.zonas?.nombre, etc.
-      const SELECT = 'id, codigo, nombre, telefono, lada, contacto, email, direccion, colonia, requiere_factura, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url';
+      const SELECT = 'id, codigo, nombre, telefono, lada, contacto, email, direccion, colonia, requiere_factura, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, facturama_rfc, facturama_razon_social, facturama_regimen_fiscal, facturama_uso_cfdi, facturama_cp, facturama_forma_pago, facturama_correo_facturacion, facturama_direccion_fiscal, rfc_validado_status, rfc_validado_at, notas_fiscales, es_publico_general, recibir_notificaciones, notas, fecha_alta, created_at, updated_at';
       const applyFilters = (q: any) => {
-        q = q.eq('empresa_id', empresa!.id).order('nombre', { ascending: true });
+        // Orden elegido en el encabezado (toda la lista, no solo la página); sin orden: por nombre.
+        q = aplicarOrdenConsulta(q.eq('empresa_id', empresa!.id), sort, CLIENTES_ORDEN_BD, { columna: 'nombre', asc: true });
         if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
         if (search) {
           const s = search.replace(/'/g, "''");

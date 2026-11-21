@@ -1,4 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { useSortableTable, ordenarFilas, SortableTh, type SortState } from '@/hooks/useSortableTable';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -70,6 +71,8 @@ export default function ReportesPersonalizadosPage() {
       return (data || []) as any[];
     },
   });
+
+  const { sorted: reportesOrdenados, sort, toggle } = useSortableTable(reportes, (r: any, k) => k === 'columnas' ? (r.columnas ?? []).length : r[k], undefined, 'reportes-personalizados');
 
   const saveMutation = useMutation({
     mutationFn: async (cfg: ReporteConfig) => {
@@ -152,9 +155,9 @@ export default function ReportesPersonalizadosPage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40">
                 <tr className="text-left">
-                  <th className="px-3 py-2">Nombre</th>
-                  <th className="px-3 py-2">Fuente</th>
-                  <th className="px-3 py-2">Columnas</th>
+                  <SortableTh sortKey="nombre" sort={sort} onToggle={toggle} className="px-3 py-2">Nombre</SortableTh>
+                  <SortableTh sortKey="fuente" sort={sort} onToggle={toggle} className="px-3 py-2">Fuente</SortableTh>
+                  <SortableTh sortKey="columnas" sort={sort} onToggle={toggle} className="px-3 py-2">Columnas</SortableTh>
                   <th className="px-3 py-2 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -163,7 +166,7 @@ export default function ReportesPersonalizadosPage() {
                 {!isLoading && reportes.length === 0 && (
                   <tr><td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">Aún no hay reportes. Crea el primero.</td></tr>
                 )}
-                {reportes.map((r) => (
+                {reportesOrdenados.map((r) => (
                   <tr key={r.id} className="border-t hover:bg-muted/30">
                     <td className="px-3 py-2">
                       <div className="font-medium">{r.nombre}</div>
@@ -510,6 +513,7 @@ function DataPreview({ columns, rows, grouping }: {
   const [limit, setLimit] = useState(100);
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   const [allOpen, setAllOpen] = useState(true);
+  const { sorted: rowsOrdenadas, sort, toggle } = useSortableTable(rows, undefined, undefined, 'reporte-personalizado-vista');
 
   const fmtCell = (val: any, format?: string) => {
     if (val === null || val === undefined || val === '') return '';
@@ -535,7 +539,7 @@ function DataPreview({ columns, rows, grouping }: {
   };
 
   const isNumeric = (f?: string) => f === 'currency' || f === 'number' || f === 'percent';
-  const shown = rows.slice(0, limit);
+  const shown = rowsOrdenadas.slice(0, limit);
 
   return (
     <div>
@@ -561,7 +565,7 @@ function DataPreview({ columns, rows, grouping }: {
           <thead className="bg-muted/40 sticky top-0">
             <tr className="text-left">
               {columns.map(c => (
-                <th key={c.key} className={`px-2 py-2 whitespace-nowrap ${isNumeric(c.format) ? 'text-right' : ''}`}>{c.header}</th>
+                <SortableTh key={c.key} sortKey={c.key} sort={sort} onToggle={toggle} align={isNumeric(c.format) ? 'right' : 'left'} className={`px-2 py-2 whitespace-nowrap ${isNumeric(c.format) ? 'text-right' : ''}`}>{c.header}</SortableTh>
               ))}
             </tr>
           </thead>
@@ -574,6 +578,7 @@ function DataPreview({ columns, rows, grouping }: {
                   columns={columns}
                   fmtCell={fmtCell}
                   isNumeric={isNumeric}
+                  sort={sort}
                   open={openMap[g.key] ?? allOpen}
                   onToggle={() => setOpenMap(m => ({ ...m, [g.key]: !(m[g.key] ?? allOpen) }))}
                 />
@@ -596,11 +601,12 @@ function DataPreview({ columns, rows, grouping }: {
   );
 }
 
-function GroupBlock({ group, columns, fmtCell, isNumeric, open, onToggle }: {
+function GroupBlock({ group, columns, fmtCell, isNumeric, sort, open, onToggle }: {
   group: ReturnType<typeof groupRows>['groups'][number];
   columns: ReturnType<typeof buildExportColumns>;
   fmtCell: (v: any, f?: string) => string;
   isNumeric: (f?: string) => boolean;
+  sort: SortState;
   open: boolean;
   onToggle: () => void;
 }) {
@@ -611,7 +617,7 @@ function GroupBlock({ group, columns, fmtCell, isNumeric, open, onToggle }: {
           {open ? '▾' : '▸'} {group.label} <span className="text-muted-foreground font-normal">({group.rows.length})</span>
         </td>
       </tr>
-      {open && group.rows.map((row, i) => (
+      {open && ordenarFilas(group.rows, sort).map((row, i) => (
         <tr key={i} className="border-t hover:bg-muted/20">
           {columns.map(c => (
             <td key={c.key} className={`px-2 py-1.5 whitespace-nowrap ${isNumeric(c.format) ? 'text-right tabular-nums' : ''}`}>

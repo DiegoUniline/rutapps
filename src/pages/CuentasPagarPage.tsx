@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
@@ -115,7 +116,14 @@ export default function CuentasPagarPage() {
   const movil = useCargarMasMovil(filteredCuentas, `${search}|${desde}|${hasta}|${JSON.stringify(filters)}`);
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = filteredCuentas.slice(from - 1, to);
+  const { sorted: cuentasOrdenadas, sort, toggle } = useSortableTable(filteredCuentas, (c: any, k) => {
+    if (k === 'folio') return c.folio ?? c.id;
+    if (k === 'proveedor') return c.proveedores?.nombre ?? '';
+    if (k === 'pagado') return (c.total ?? 0) - (c.saldo_pendiente ?? 0);
+    if (k === 'saldo') return c.saldo_pendiente ?? 0;
+    return c[k];
+  }, undefined, 'cuentas-pagar');
+  const pageData = cuentasOrdenadas.slice(from - 1, to);
 
   const totalPorPagar = filteredCuentas.reduce((s, c: any) => s + (c.saldo_pendiente ?? 0), 0);
   const totalCompras = filteredCuentas.reduce((s, c: any) => s + (c.total ?? 0), 0);
@@ -229,14 +237,14 @@ export default function CuentasPagarPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-table-border">
-              <th className="th-odoo text-left">Folio</th>
-              <th className="th-odoo text-left">Proveedor</th>
-              <th className="th-odoo text-left">Fecha</th>
-              <th className="th-odoo text-center">Días crédito</th>
-              <th className="th-odoo text-right">Total</th>
-              <th className="th-odoo text-right">Pagado</th>
-              <th className="th-odoo text-right">Saldo</th>
-              <th className="th-odoo text-center">Estado</th>
+              <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="th-odoo text-left">Folio</SortableTh>
+              <SortableTh sortKey="proveedor" sort={sort} onToggle={toggle} className="th-odoo text-left">Proveedor</SortableTh>
+              <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="th-odoo text-left">Fecha</SortableTh>
+              <SortableTh sortKey="dias_credito" sort={sort} onToggle={toggle} align="center" className="th-odoo text-center">Días crédito</SortableTh>
+              <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Total</SortableTh>
+              <SortableTh sortKey="pagado" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Pagado</SortableTh>
+              <SortableTh sortKey="saldo" sort={sort} onToggle={toggle} align="right" className="th-odoo text-right">Saldo</SortableTh>
+              <SortableTh sortKey="status" sort={sort} onToggle={toggle} align="center" className="th-odoo text-center">Estado</SortableTh>
             </tr>
           </thead>
           <tbody>

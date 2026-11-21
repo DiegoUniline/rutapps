@@ -1,4 +1,5 @@
 import React, { useState, useMemo, Fragment, useEffect, useRef, useCallback } from 'react';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -139,6 +140,13 @@ function PedidoExpandedContent({
 }) {
   const { data, isLoading, isError } = usePedidoDetalle(pedidoId, true);
   const lineas = data?.lineas ?? [];
+  const { sorted: lineasOrdenadas, sort, toggle } = useSortableTable(lineas, (l: any, k) => {
+    if (k === 'codigo') return l.productos?.codigo;
+    if (k === 'producto') return l.productos?.nombre;
+    if (k === 'subtotal') return l.subtotal ?? l.cantidad * l.precio_unitario;
+    if (k === 'cantidad_pendiente') return Math.max(0, l.cantidad_pendiente);
+    return l[k];
+  }, undefined, 'demanda-pedido-lineas');
 
   if (isLoading) {
     return (
@@ -189,19 +197,19 @@ function PedidoExpandedContent({
         <table className="w-full text-[12px]">
           <thead>
             <tr className="text-muted-foreground border-b border-border">
-              <th className="text-left py-1 pr-2 font-medium">Código</th>
-              <th className="text-left py-1 pr-2 font-medium">Producto</th>
-              <th className="text-right py-1 pr-2 font-medium">Cantidad</th>
-              <th className="text-right py-1 pr-2 font-medium">Generado</th>
-              <th className="text-right py-1 pr-2 font-medium">Surtido</th>
-              <th className="text-right py-1 pr-2 font-medium">Entregado</th>
-              <th className="text-right py-1 pr-2 font-medium">Pendiente</th>
-              <th className="text-right py-1 pr-2 font-medium">Precio</th>
-              <th className="text-right py-1 font-medium">Subtotal</th>
+              <SortableTh sortKey="codigo" sort={sort} onToggle={toggle} className="text-left py-1 pr-2 font-medium">Código</SortableTh>
+              <SortableTh sortKey="producto" sort={sort} onToggle={toggle} className="text-left py-1 pr-2 font-medium">Producto</SortableTh>
+              <SortableTh sortKey="cantidad" sort={sort} onToggle={toggle} align="right" className="text-right py-1 pr-2 font-medium">Cantidad</SortableTh>
+              <SortableTh sortKey="cantidad_generada" sort={sort} onToggle={toggle} align="right" className="text-right py-1 pr-2 font-medium">Generado</SortableTh>
+              <SortableTh sortKey="cantidad_surtida" sort={sort} onToggle={toggle} align="right" className="text-right py-1 pr-2 font-medium">Surtido</SortableTh>
+              <SortableTh sortKey="cantidad_entregada" sort={sort} onToggle={toggle} align="right" className="text-right py-1 pr-2 font-medium">Entregado</SortableTh>
+              <SortableTh sortKey="cantidad_pendiente" sort={sort} onToggle={toggle} align="right" className="text-right py-1 pr-2 font-medium">Pendiente</SortableTh>
+              <SortableTh sortKey="precio_unitario" sort={sort} onToggle={toggle} align="right" className="text-right py-1 pr-2 font-medium">Precio</SortableTh>
+              <SortableTh sortKey="subtotal" sort={sort} onToggle={toggle} align="right" className="text-right py-1 font-medium">Subtotal</SortableTh>
             </tr>
           </thead>
           <tbody>
-            {lineas.map((l: any) => (
+            {lineasOrdenadas.map((l: any) => (
               <tr key={l.id} className="border-b border-border/40 last:border-0">
                 <td className="py-1 pr-2 font-mono text-[11px]">{l.productos?.codigo ?? '—'}</td>
                 <td className="py-1 pr-2">{l.productos?.nombre ?? '—'}</td>

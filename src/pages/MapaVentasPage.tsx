@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useSortState, ordenarFilas, SortableTh } from '@/hooks/useSortableTable';
 import { Map as MapGL, Marker, Popup, NavigationControl, MapRef, Source, Layer } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -576,6 +577,8 @@ function PanelEntregas({
   STATUS_COLORS: Record<string, string>;
   mapRef: React.MutableRefObject<MapRef | null>;
 }) {
+  // Orden por columna; «#» conserva el número de parada de la ruta (el mismo del mapa).
+  const { sort, toggle } = useSortState('mapa-entregas');
   const sinGps = useMemo(
     () => (entregasData ?? []).filter((e: any) => !e.clientes?.gps_lat || !e.clientes?.gps_lng),
     [entregasData]
@@ -642,15 +645,20 @@ function PanelEntregas({
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-muted/50 text-[10px] uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-2 py-2 text-left w-8">#</th>
-                <th className="px-2 py-2 text-left">Folio / Cliente</th>
-                <th className="px-2 py-2 text-left w-16">Est.</th>
-                <th className="px-2 py-2 text-left w-20">Ruta</th>
+                <SortableTh sortKey="parada" sort={sort} onToggle={toggle} className="px-2 py-2 text-left w-8">#</SortableTh>
+                <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="px-2 py-2 text-left">Folio / Cliente</SortableTh>
+                <SortableTh sortKey="status" sort={sort} onToggle={toggle} className="px-2 py-2 text-left w-16">Est.</SortableTh>
+                <SortableTh sortKey="ruta" sort={sort} onToggle={toggle} className="px-2 py-2 text-left w-20">Ruta</SortableTh>
                 <th className="px-1 py-2 text-right w-8"></th>
               </tr>
             </thead>
             <tbody>
-              {filaList.map((e: any, idx: number) => {
+              {ordenarFilas(filaList.map((e: any, i: number) => [e, i] as const), sort, ([e, i], k) => {
+                if (k === 'parada') return i;
+                if (k === 'cliente') return e.clientes?.nombre;
+                if (k === 'status') return e.status === 'hecho' ? 'Entregada' : e.status;
+                return e.vendedor_ruta?.nombre ?? e.vendedores?.nombre;
+              }).map(([e, idx]) => {
                 const isSelected = selectedEntrega?.id === e.id;
                 const hasGps = !!(e.clientes?.gps_lat && e.clientes?.gps_lng);
                 const delivered = e.status === 'hecho';
