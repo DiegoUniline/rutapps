@@ -27,8 +27,10 @@ import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, useCargarM
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidacionPdf';
 import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
-import { buildLiquidacionTicketHTML } from '@/lib/liquidacionTicketHtml';
-import { toPng } from 'html-to-image';
+import { generarLiquidacionTicketPdf } from '@/lib/liquidacionTicketHtml';
+import { empresaToTicket } from '@/lib/cobroTicket';
+import { ticketAnchoDe } from '@/lib/ticketPdf';
+import { downloadBlob } from '@/lib/mergePdfs';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useTablePagination } from '@/hooks/useTablePagination';
 import { TablePagination } from '@/components/TablePagination';
@@ -761,6 +763,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               try {
                 const ticketData = {
                   empresaNombre: empresa?.nombre ?? '',
+                  empresa: empresa ? empresaToTicket(empresa) : undefined,
                   vendedorNombre: (descarga as any).vendedores?.nombre ?? 'Sin vendedor',
                   fechaInicio: fInicio, fechaFin: fFin, status: descarga.status,
                   efectivoEntregado: Number(descarga.efectivo_entregado) || 0,
@@ -785,24 +788,10 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     stockInicio: { fecha: almacenNombre, lineas: stockItems.map(s => ({ nombre: s.nombre, codigo: s.codigo, cargada: s.cantidad, vendida: 0, devuelta: 0, restante: s.cantidad })) },
                   } : {}),
                 };
-                const html = buildLiquidacionTicketHTML(ticketData);
-                const container = document.createElement('div');
-                container.style.position = 'fixed';
-                container.style.left = '-9999px';
-                container.style.top = '0';
-                container.innerHTML = html;
-                document.body.appendChild(container);
-                try {
-                  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
-                  const dataUrl = await toPng(container.firstElementChild as HTMLElement, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' });
-                  const a = document.createElement('a');
-                  a.href = dataUrl;
-                  a.download = `Ticket-Liquidacion-${(descarga as any).vendedores?.nombre ?? 'vendedor'}-${fInicio}.png`;
-                  a.click();
-                  toast.success('Ticket descargado');
-                } finally {
-                  document.body.removeChild(container);
-                }
+                // Ticket de liquidación en PDF por código, mismo motor que el ticket de venta (D-051).
+                const pdf = await generarLiquidacionTicketPdf(ticketData, { ticketAncho: ticketAnchoDe(empresa) });
+                downloadBlob(pdf.blob, pdf.fileName);
+                toast.success('Ticket descargado');
               } catch (e: any) {
                 toast.error('Error: ' + e.message);
               }
