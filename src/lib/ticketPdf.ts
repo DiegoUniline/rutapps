@@ -44,6 +44,13 @@ export function anchoTicketMm(ticketAncho?: string | null): 58 | 80 {
   return ticketAncho === '58' ? 58 : 80;
 }
 
+/** `empresas.ticket_ancho` de un objeto empresa cualquiera (el tipo `Empresa` no lo declara). */
+export function ticketAnchoDe(empresa: unknown): string | null {
+  if (!empresa || typeof empresa !== 'object') return null;
+  const v = (empresa as { ticket_ancho?: unknown }).ticket_ancho;
+  return typeof v === 'string' ? v : null;
+}
+
 /** Columnas del ticket según el ancho: 32 en 58 mm, 48 en 80 mm (las del ESC/POS). */
 export function columnasTicket(ticketAncho?: string | null): number {
   return anchoTicketMm(ticketAncho) === 58 ? 32 : 48;

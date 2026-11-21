@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TicketVenta from '@/components/ruta/TicketVenta';
+import { ticketAnchoDe } from '@/lib/ticketPdf';
 import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver';
 import { buildPosLinePricing, getTaxMultiplier as posGetTaxMult, round2 as posR2, type BasePrecioMode } from '@/lib/posPricing';
 import { printTicket } from '@/lib/printTicketUtil';
@@ -2193,6 +2194,7 @@ export default function PuntoVentaPage() {
             <div>
               <TicketVenta
                 {...posTicketDatos(lastVentaData, empresa, profile, productos)}
+                ticketAncho={ticketAnchoDe(empresa)}
                 onPrintTicket={() => {
                   const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
                   printTicket(ticketVentaADatos(posTicketDatos(lastVentaData, empresa, profile, productos)), { ticketAncho });

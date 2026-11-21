@@ -10,11 +10,13 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { fmtDate, roundMoney, todayInTimezone } from '@/lib/utils';
-import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/lib/ticketHtml';
+import type { TicketData } from '@/lib/ticketHtml';
+import { generarTicketPdf, nombreArchivoTicket, ticketAnchoDe } from '@/lib/ticketPdf';
+import { compartirPdf } from '@/lib/pdfAcciones';
+import { downloadBlob } from '@/lib/mergePdfs';
 import { printTicket } from '@/lib/printTicketUtil';
 import { isBluetoothAvailable, connectPrinter, sendBytes } from '@/lib/bluetoothPrinter';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
-import { toPng } from 'html-to-image';
 import type { View, CuentaPendiente, EditLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
@@ -934,76 +936,29 @@ export function useVentaDetalle() {
     try {
       const { sendReceiptWhatsApp } = await import('@/lib/whatsappReceipt');
       const td = getTicketData()!;
-      const result = await sendReceiptWhatsApp({ data: td, empresaId: empresa?.id ?? '', phone: waPhone, referencia_id: venta.id });
+      const result = await sendReceiptWhatsApp({ data: td, empresaId: empresa?.id ?? '', phone: waPhone, referencia_id: venta.id, ticketAncho: ticketAnchoDe(empresa) });
       if (result.success) { toast.success('Enviado por WhatsApp'); setShowWADialog(false); } else toast.error(result.error || 'Error al enviar');
     } catch (err: any) { toast.error(err.message); } finally { setSendingWA(false); }
   };
 
-  const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
-
-  /** Convert remote logo URL to base64 to avoid CORS issues with toPng */
-  const logoToBase64 = async (td: TicketData): Promise<TicketData> => {
-    if (!td.empresa.logo_url || td.empresa.logo_url.startsWith('data:')) return td;
-    const copy = { ...td, empresa: { ...td.empresa } };
-    try {
-      const resp = await fetch(copy.empresa.logo_url!, { mode: 'cors' });
-      const blob = await resp.blob();
-      copy.empresa.logo_url = await new Promise<string>((res) => {
-        const reader = new FileReader();
-        reader.onloadend = () => res(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    } catch {
-      try {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = copy.empresa.logo_url!;
-        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; });
-        const c = document.createElement('canvas');
-        c.width = img.naturalWidth; c.height = img.naturalHeight;
-        c.getContext('2d')!.drawImage(img, 0, 0);
-        copy.empresa.logo_url = c.toDataURL('image/png');
-      } catch { copy.empresa.logo_url = null; }
-    }
-    return copy;
-  };
-
-  // Genera la imagen del comprobante (ticket) que se reutiliza al Descargar y al Compartir.
-  const generarTicketPng = async (): Promise<{ dataUrl: string; blob: Blob; fileName: string } | null> => {
-    const tdBase = getTicketData(); if (!tdBase) return null;
-    const td = await logoToBase64(tdBase);
-    const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.left = '0';
-    container.style.top = '0';
-    container.style.width = 'max-content';
-    container.style.pointerEvents = 'none';
-    container.style.zIndex = '-1';
-    container.innerHTML = buildUnifiedTicketHTML(td, { ticketAncho });
-    document.body.appendChild(container);
-    try {
-      await document.fonts?.ready;
-      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
-      const ticketEl = container.firstElementChild as HTMLElement;
-      ticketEl.style.width = '420px';
-      ticketEl.style.minWidth = '420px';
-      ticketEl.style.maxWidth = 'none';
-      ticketEl.style.boxSizing = 'border-box';
-      ticketEl.style.overflow = 'visible';
-      const width = Math.ceil(Math.max(ticketEl.scrollWidth, ticketEl.offsetWidth, ticketEl.getBoundingClientRect().width));
-      const height = Math.ceil(Math.max(ticketEl.scrollHeight, ticketEl.offsetHeight, ticketEl.getBoundingClientRect().height));
-      const dataUrl = await toPng(ticketEl, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff', width, height, style: { width: `${width}px`, height: `${height}px`, maxWidth: 'none', overflow: 'visible' } });
-      const blob = await (await fetch(dataUrl)).blob();
-      return { dataUrl, blob, fileName: `${venta?.folio ?? 'ticket'}.png` };
-    } finally { document.body.removeChild(container); }
+  // Ticket PDF por código (D-051): mismo modelo y campos del diseñador que la
+  // impresión; ancho del diseñador (80 mm por omisión). Se reutiliza al
+  // Descargar y al Compartir.
+  const generarTicketPdfVenta = async (): Promise<{ blob: Blob; fileName: string; folio: string } | null> => {
+    const td = getTicketData(); if (!td) return null;
+    const blob = await generarTicketPdf(td, { ticketAncho: ticketAnchoDe(empresa) });
+    return { blob, fileName: nombreArchivoTicket(td.folio), folio: td.folio };
   };
 
   const handleDownloadPDF = async () => {
     try {
-      const png = await generarTicketPng();
-      if (!png) return;
-      const a = document.createElement('a'); a.href = png.dataUrl; a.download = png.fileName; a.click(); toast.success('Ticket descargado');
-    } catch { toast.error('Error generando imagen'); }
+      const pdf = await generarTicketPdfVenta();
+      if (!pdf) return;
+      downloadBlob(pdf.blob, pdf.fileName);
+      toast.success('Ticket descargado');
+    } catch (err) {
+      toast.error(err instanceof Error ? `Error generando el PDF: ${err.message}` : 'Error generando el PDF');
+    }
   };
 
   const handlePrintTicket = async () => {
@@ -1013,42 +968,14 @@ export function useVentaDetalle() {
   };
 
   const handleShareTicket = async () => {
-    const td = getTicketData(); if (!td) return;
-    // Comparte el mismo comprobante (imagen del ticket) que genera el botón Imprimir.
+    // Comparte el ticket como archivo PDF; si el teléfono no puede compartir archivos, lo descarga.
     try {
-      const png = await generarTicketPng();
-      if (png) {
-        const file = new File([png.blob], png.fileName, { type: 'image/png' });
-        const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
-        if (nav.share && nav.canShare?.({ files: [file] })) {
-          try { await nav.share({ files: [file], title: `Ticket ${td.folio}` }); return; } catch { return; }
-        }
-      }
-    } catch { /* si falla la imagen, comparte el texto */ }
-    const text = [
-      td.empresa.nombre,
-      td.empresa.rfc ? `RFC: ${td.empresa.rfc}` : '',
-      td.empresa.direccion ?? '',
-      td.empresa.telefono ? `Tel: ${td.empresa.telefono}` : '',
-      '─'.repeat(30),
-      `Folio: ${td.folio}`, `Fecha: ${td.fecha}`, `Cliente: ${td.clienteNombre}`,
-      `Pago: ${td.condicionPago === 'credito' ? 'Crédito' : td.condicionPago === 'contado' ? 'Contado' : 'Por definir'}`,
-      td.metodoPago ? `Método: ${td.metodoPago}` : '',
-      '─'.repeat(30),
-      ...td.lineas.map(l => `${l.cantidad}x ${l.nombre} ${fmtM(l.total)}`),
-      '─'.repeat(30),
-      `Sub total: ${fmtM(td.subtotal)}`,
-      `Descuentos: ${(td.descuento ?? 0) > 0 ? '-' : ''}${fmtM(td.descuento ?? 0)}`,
-      `Impuestos: ${fmtM((td.iva ?? 0) + (td.ieps ?? 0))}`,
-      `Total pagado: ${fmtM((td.pagos ?? []).reduce((s, p) => s + (p.monto ?? 0), 0) || (td.condicionPago === 'credito' ? 0 : td.total))}`,
-      `Saldo: ${fmtM(td.saldoNuevo ?? 0)}`,
-      '', 'rutapp.mx',
-    ].filter(Boolean).join('\n');
-    if (navigator.share) {
-      try { await navigator.share({ title: `Ticket ${td.folio}`, text }); } catch { /* cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(text);
-      toast.success('Copiado al portapapeles');
+      const pdf = await generarTicketPdfVenta();
+      if (!pdf) return;
+      const r = await compartirPdf(pdf.blob, pdf.fileName, `Ticket ${pdf.folio}`);
+      if (r === 'descargado') toast.success('Ticket descargado (PDF)');
+    } catch (err) {
+      toast.error(err instanceof Error ? `Error generando el PDF: ${err.message}` : 'Error generando el PDF');
     }
   };
 
