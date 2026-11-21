@@ -1,7 +1,7 @@
 # Estado del proyecto — DOCUMENTO VIVO
 > Se lee al iniciar cada sesión. Se actualiza tras decisiones confirmadas o cambios verificados (no por consultas).
 
-**Última actualización:** 2026-11-20 · **Agente:** desarrollador (F0 devoluciones y liquidación)
+**Última actualización:** 2026-11-21 · **Agente:** desarrollador (detalles chicos 1–8)
 
 ## Dónde vamos
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
@@ -29,6 +29,7 @@
 - Suscripciones, verificación puntual 2026-11-04 23:47 UTC: 48 reemplazos vinculados, activos y desbloqueados en RutApp; Stripe en `trialing` hasta cada corte original; 48 facturas iniciales de total/importe pagado $0, sin cargos desde la creación y sin duplicados activos. Planes, usuarios, descuentos y configuración manual/legacy sin diferencias. No se modificó código, esquema, funciones ni se publicó. Los cobros futuros dependen de la tarjeta y no están probados antes de su fecha.
 - Inventario Fase 1 hecho. Producción 2026-10-19: R-001, R-004…R-006 corregidos (PR #148) y **publicado**; Control de descuentos validado por el dueño con datos reales; portal del cliente y alertas WA (edge functions) sin confirmar; R-009 y huecos de R-010 resueltos (PR #150 aplicado por el dueño). Pendientes: PR #149 crédito (en espera de avisar vendedores), R-002, R-013, registrar migraciones en `supabase_migrations`.
 - F0 (D-050) — quedó fuera / por revisar: (a) «Al almacén» en ruta sigue sumando al camión (H2; se quita en F1); (b) un reembolso hecho por un admin desde oficina sin caja cuenta en la liquidación de **ese admin**, no del vendedor (la fórmula usa quién registró el reembolso); (c) al cancelar una venta cuya devolución se reembolsó con gasto (origen «devolucion» en cobro_excedentes) el gasto se cancela y ese dinero ya no resta en la liquidación — revisar en F1/F2; (d) antes del corte, contar en producción `devolucion_lineas` con cantidad ≤ 0 (el CHECK nuevo rechazaría esas filas al copiar datos); (e) la pantalla de liquidaciones no oculta Aprobar/Rechazar a quien no tiene permiso: la BD lo rechaza con mensaje.
+- Detalles chicos (2026-11-21): requieren `CONFIRMO`: desplegar edge function `tienda-checkout` (rechazo de bloqueados/no activos) y borrar `src/pages/ProductoFormPage.tsx` (sin importaciones). Vistos sin tocar: `tienda-checkout` crea venta y renglones en pasos separados (si fallan los renglones borra la venta, no es transaccional) y acepta un pedido sin renglones válidos; `CfdiFormPage` guarda renglones con borrar+insertar sin transacción; la clase `text-odoo-teal` no existe (22 usos se ven en color normal).
 - Validar el AutoPrompter con una solicitud real (comportamiento del modelo no probado; solo integración documental y hooks).
 
 ## Fuentes de conocimiento vigentes
