@@ -18,6 +18,7 @@ import {
   type HistoricalQuantityFilter,
   type HistoricalStockRow,
 } from '@/lib/inventoryHistory';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface StockHistorySnapshot {
   generated_at: string;
@@ -177,6 +178,12 @@ export default function InventarioStockFechaTab() {
     brandId: brandId || undefined,
     supplierId: supplierId || undefined,
   }), [rows, search, locationType, quantity, categoryId, brandId, supplierId]);
+  const { sorted: filteredOrd, sort, toggle: toggleSort } = useSortableTable(filtered, (row, key) => {
+    if (key === 'categoria') return `${row.categoria ?? ''} ${row.marca ?? ''}`.trim() || null;
+    if (key === 'valor') return row.cantidad * row.costo_actual;
+    if (key === 'estado') return row.cantidad < 0 ? 'Negativo' : row.cantidad === 0 ? 'En cero' : 'Con stock';
+    return (row as any)[key];
+  }, undefined, 'inventario-stock-fecha');
 
   const exportRows = () => {
     const columns: ExportColumn[] = [
@@ -265,11 +272,11 @@ export default function InventarioStockFechaTab() {
           <table className="w-full min-w-[1180px] text-xs">
             <thead className="sticky top-0 z-10 bg-card shadow-sm">
               <tr className="border-b border-border text-[10px] uppercase text-muted-foreground">
-                <th className="px-3 py-2 text-left">Producto</th><th className="px-3 py-2 text-left">Categoría / marca</th><th className="px-3 py-2 text-left">Ubicación</th><th className="px-3 py-2 text-center">Estado</th><th className="px-3 py-2 text-right">Stock al corte</th><th className="px-3 py-2 text-right">Stock actual</th><th className="px-3 py-2 text-right">Cambio</th><th className="px-3 py-2 text-right">Valor</th><th className="px-3 py-2 text-center">Explicación</th>
+                <SortableTh sortKey="producto" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Producto</SortableTh><SortableTh sortKey="categoria" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Categoría / marca</SortableTh><SortableTh sortKey="almacen" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Ubicación</SortableTh><SortableTh sortKey="estado" sort={sort} onToggle={toggleSort} align="center" className="px-3 py-2 text-center">Estado</SortableTh><SortableTh sortKey="cantidad" sort={sort} onToggle={toggleSort} align="right" className="px-3 py-2 text-right">Stock al corte</SortableTh><SortableTh sortKey="cantidad_actual" sort={sort} onToggle={toggleSort} align="right" className="px-3 py-2 text-right">Stock actual</SortableTh><SortableTh sortKey="diferencia_actual" sort={sort} onToggle={toggleSort} align="right" className="px-3 py-2 text-right">Cambio</SortableTh><SortableTh sortKey="valor" sort={sort} onToggle={toggleSort} align="right" className="px-3 py-2 text-right">Valor</SortableTh><th className="px-3 py-2 text-center">Explicación</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map(row => (
+              {filteredOrd.map(row => (
                 <tr key={`${row.producto_id}-${row.almacen_id}`} className="border-b border-border/60 last:border-0 hover:bg-accent/30">
                   <td className="px-3 py-2"><p className="font-semibold">{row.producto}</p><p className="text-[10px] text-muted-foreground">{row.codigo} · {row.unidad || 'PZA'}</p></td>
                   <td className="px-3 py-2"><p>{row.categoria || 'Sin categoría'}</p><p className="text-[10px] text-muted-foreground">{row.marca || 'Sin marca'}{row.proveedor ? ` · ${row.proveedor}` : ''}</p></td>
@@ -326,6 +333,14 @@ function HistoricalKardexDialog({ row, cutoffDate, today, onClose }: { row: Hist
   });
   const referenceRows = useMemo(() => (query.data?.rows ?? []).map(item => ({ ...item, created_at: item.registrado_at, fecha: item.fecha_documento, producto_id: row?.producto_id })), [query.data?.rows, row?.producto_id]);
   const { data: references } = useKardexReferencias(referenceRows);
+  const { sorted: movimientosOrd, sort, toggle: toggleSort } = useSortableTable<any>(query.data?.rows ?? [], (item, key) => {
+    if (key === 'tipo') return TYPE_LABELS[item.tipo] || item.tipo;
+    if (key === 'referencia') return REFERENCE_LABELS[item.referencia_tipo || ''] || item.referencia_tipo;
+    if (key === 'usuario') return item.user_id ? (references?.usuarios?.[item.user_id] || item.user_id) : 'Sistema';
+    if (key === 'entrada') return item.delta > 0 ? item.delta : null;
+    if (key === 'salida') return item.delta < 0 ? Math.abs(item.delta) : null;
+    return item[key];
+  }, undefined, 'inventario-stock-fecha-kardex');
 
   return <Dialog open={!!row} onOpenChange={open => !open && onClose()}>
     <DialogContent className="flex h-[92dvh] w-[96vw] max-w-[96vw] flex-col p-0">
@@ -354,10 +369,10 @@ function HistoricalKardexDialog({ row, cutoffDate, today, onClose }: { row: Hist
           </div>
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[1280px] text-xs">
-              <thead className="sticky top-0 z-10 bg-card"><tr className="border-b border-border text-[10px] uppercase text-muted-foreground"><th className="px-3 py-2 text-left">Registrado</th><th className="px-3 py-2 text-left">Fecha documento</th><th className="px-3 py-2 text-left">Movimiento</th><th className="px-3 py-2 text-left">Referencia</th><th className="px-3 py-2 text-left">Origen</th><th className="px-3 py-2 text-left">Destino</th><th className="px-3 py-2 text-left">Usuario</th><th className="px-3 py-2 text-right">Entrada</th><th className="px-3 py-2 text-right">Salida</th><th className="px-3 py-2 text-right">Saldo</th><th className="px-3 py-2 text-left">Notas</th></tr></thead>
+              <thead className="sticky top-0 z-10 bg-card"><tr className="border-b border-border text-[10px] uppercase text-muted-foreground"><SortableTh sortKey="registrado_at" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Registrado</SortableTh><SortableTh sortKey="fecha_documento" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Fecha documento</SortableTh><SortableTh sortKey="tipo" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Movimiento</SortableTh><SortableTh sortKey="referencia" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Referencia</SortableTh><SortableTh sortKey="origen" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Origen</SortableTh><SortableTh sortKey="destino" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Destino</SortableTh><SortableTh sortKey="usuario" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Usuario</SortableTh><SortableTh sortKey="entrada" sort={sort} onToggle={toggleSort} align="right" className="px-3 py-2 text-right">Entrada</SortableTh><SortableTh sortKey="salida" sort={sort} onToggle={toggleSort} align="right" className="px-3 py-2 text-right">Salida</SortableTh><SortableTh sortKey="saldo" sort={sort} onToggle={toggleSort} align="right" className="px-3 py-2 text-right">Saldo</SortableTh><SortableTh sortKey="notas" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left">Notas</SortableTh></tr></thead>
               <tbody>
                 <tr className="border-b border-border bg-primary/[0.035]"><td className="px-3 py-2 font-bold" colSpan={9}>Saldo al inicio del {fmtDate(effectiveFrom)}</td><td className="px-3 py-2 text-right font-black">{fmtNum(query.data.metrics.opening_stock)}</td><td /></tr>
-                {query.data.rows.map(item => {
+                {movimientosOrd.map(item => {
                   const user = item.user_id ? references?.usuarios?.[item.user_id] : null;
                   const lot = item.lote_id ? references?.lotes?.[item.lote_id] : null;
                   return <tr key={item.id} className="border-b border-border/60 last:border-0 hover:bg-accent/30"><td className="px-3 py-2 whitespace-nowrap">{new Date(item.registrado_at).toLocaleString('es-MX', { timeZone: query.data.timezone, dateStyle: 'short', timeStyle: 'short' })}</td><td className="px-3 py-2 whitespace-nowrap">{fmtDate(item.fecha_documento)}</td><td className="px-3 py-2 font-semibold">{TYPE_LABELS[item.tipo] || item.tipo}</td><td className="px-3 py-2">{REFERENCE_LABELS[item.referencia_tipo || ''] || item.referencia_tipo || '—'}{item.referencia_id ? <p className="font-mono text-[9px] text-muted-foreground">{item.referencia_id.slice(0, 8)}</p> : null}</td><td className="px-3 py-2">{item.origen || '—'}</td><td className="px-3 py-2">{item.destino || '—'}</td><td className="px-3 py-2">{user || (item.user_id ? `ID ${item.user_id.slice(0, 8)}` : 'Sistema')}{lot ? <p className="text-[9px] text-muted-foreground">Lote {lot.codigo}</p> : null}</td><td className="px-3 py-2 text-right font-bold text-green-600">{item.delta > 0 ? `+${fmtNum(item.delta)}` : ''}</td><td className="px-3 py-2 text-right font-bold text-destructive">{item.delta < 0 ? fmtNum(Math.abs(item.delta)) : ''}</td><td className={`px-3 py-2 text-right font-black ${item.saldo < 0 ? 'text-destructive' : ''}`}>{fmtNum(item.saldo)}</td><td className="max-w-[260px] px-3 py-2 text-muted-foreground"><span className="line-clamp-2">{item.notas || '—'}</span></td></tr>;

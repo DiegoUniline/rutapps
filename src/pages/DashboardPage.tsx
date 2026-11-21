@@ -46,6 +46,7 @@ import { useDashboardVisitas, useClientesActivos, useUltimaCompraPorCliente } fr
 import { Target, Route, Wrench, Sparkles } from 'lucide-react';
 import { startOfMonth as startOfMonthFn, endOfMonth as endOfMonthFn } from 'date-fns';
 import { calcularUtilidadConCosto } from '@/lib/utilidadFinanciera';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 const PRESETS = [
   { label: 'Hoy', range: () => ({ from: new Date(), to: new Date() }) },
@@ -551,6 +552,8 @@ function EvolucionMensualSection({
 
 // ============ Tabla: ventas por mes con crecimiento ============
 function VentasPorMesTable({ data, money, cSym }: { data: any[]; money: (n: number) => string; cSym: string }) {
+  const { sorted: filasOrd, sort, toggle: toggleSort } = useSortableTable<any>(data ?? [], (r, key) =>
+    key === 'label' ? r.key : r[key], undefined, 'dashboard-ventas-por-mes');
   const chartData = (data ?? []).map((r: any) => ({
     label: r.label,
     total: r.total,
@@ -607,15 +610,15 @@ function VentasPorMesTable({ data, money, cSym }: { data: any[]; money: (n: numb
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-2 text-muted-foreground font-medium">Mes</th>
-              <th className="text-right py-2 text-muted-foreground font-medium">Operaciones</th>
-              <th className="text-right py-2 text-muted-foreground font-medium">Total</th>
-              <th className="text-right py-2 text-muted-foreground font-medium">Mes anterior</th>
-              <th className="text-right py-2 text-muted-foreground font-medium">Crecimiento</th>
+              <SortableTh sortKey="label" sort={sort} onToggle={toggleSort} className="text-left py-2 text-muted-foreground font-medium">Mes</SortableTh>
+              <SortableTh sortKey="count" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 text-muted-foreground font-medium">Operaciones</SortableTh>
+              <SortableTh sortKey="total" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 text-muted-foreground font-medium">Total</SortableTh>
+              <SortableTh sortKey="prev" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 text-muted-foreground font-medium">Mes anterior</SortableTh>
+              <SortableTh sortKey="growth" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 text-muted-foreground font-medium">Crecimiento</SortableTh>
             </tr>
           </thead>
           <tbody>
-            {(data ?? []).map(r => (
+            {filasOrd.map(r => (
               <tr key={r.key} className="border-b border-border/30 hover:bg-accent/30">
                 <td className="py-2 font-medium text-foreground capitalize">{r.label}</td>
                 <td className="py-2 text-right text-muted-foreground tabular-nums">{r.count}</td>
@@ -655,6 +658,7 @@ function UsuarioMesVsMesTable({ data, money, cSym }: { data: any[]; money: (n: n
     nombre: r.nombre.length > 14 ? r.nombre.slice(0, 14) + '…' : r.nombre,
     growth: r.growth,
   }));
+  const { sorted: filasOrd, sort, toggle: toggleSort } = useSortableTable<any>(sorted, undefined, undefined, 'dashboard-usuario-mes-vs-mes');
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 mt-4">
@@ -705,16 +709,16 @@ function UsuarioMesVsMesTable({ data, money, cSym }: { data: any[]; money: (n: n
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-2 text-muted-foreground font-medium">Vendedor</th>
-              <th className="text-right py-2 text-muted-foreground font-medium">Mes anterior</th>
-              <th className="text-right py-2 text-muted-foreground font-medium"># mes ant.</th>
-              <th className="text-right py-2 text-muted-foreground font-medium">Mes actual</th>
-              <th className="text-right py-2 text-muted-foreground font-medium"># mes act.</th>
-              <th className="text-right py-2 text-muted-foreground font-medium">Crecimiento</th>
+              <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="text-left py-2 text-muted-foreground font-medium">Vendedor</SortableTh>
+              <SortableTh sortKey="prev" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 text-muted-foreground font-medium">Mes anterior</SortableTh>
+              <SortableTh sortKey="prevCount" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 text-muted-foreground font-medium"># mes ant.</SortableTh>
+              <SortableTh sortKey="cur" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 text-muted-foreground font-medium">Mes actual</SortableTh>
+              <SortableTh sortKey="curCount" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 text-muted-foreground font-medium"># mes act.</SortableTh>
+              <SortableTh sortKey="growth" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 text-muted-foreground font-medium">Crecimiento</SortableTh>
             </tr>
           </thead>
           <tbody>
-            {sorted.map(r => (
+            {filasOrd.map(r => (
               <tr key={r.id} className="border-b border-border/30 hover:bg-accent/30">
                 <td className="py-2 font-medium text-foreground">{r.nombre}</td>
                 <td className="py-2 text-right text-muted-foreground tabular-nums">{money(r.prev)}</td>
@@ -948,6 +952,9 @@ export default function DashboardPage() {
   const { data: evolucion } = useDashboardEvolucionMensual(12, activeTab === 'evolucion');
   const { data: ventasPorMes } = useDashboardVentasPorMes(12, activeTab === 'comparativo' || enIA);
   const { data: usuarioMes } = useDashboardVentasUsuarioMes(activeTab === 'comparativo' || enIA);
+
+  const { sorted: vendedoresDetalleOrd, sort: sortVendDet, toggle: toggleVendDet } = useSortableTable<any>(ventasPorVendedorData ?? [], (v, key) =>
+    key === 'ticket' ? (v.count > 0 ? v.total / v.count : 0) : key === 'participacion' ? v.total : v[key], undefined, 'dashboard-detalle-vendedor');
 
   const handlePreset = (idx: number) => {
     setActivePreset(idx);
@@ -1227,15 +1234,15 @@ export default function DashboardPage() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-2 text-muted-foreground font-medium">Vendedor</th>
-                      <th className="text-right py-2 text-muted-foreground font-medium">Ventas</th>
-                      <th className="text-right py-2 text-muted-foreground font-medium">Total</th>
-                      <th className="text-right py-2 text-muted-foreground font-medium">Ticket prom.</th>
-                      <th className="text-left py-2 text-muted-foreground font-medium pl-4">Participación</th>
+                      <SortableTh sortKey="nombre" sort={sortVendDet} onToggle={toggleVendDet} className="text-left py-2 text-muted-foreground font-medium">Vendedor</SortableTh>
+                      <SortableTh sortKey="count" sort={sortVendDet} onToggle={toggleVendDet} align="right" className="text-right py-2 text-muted-foreground font-medium">Ventas</SortableTh>
+                      <SortableTh sortKey="total" sort={sortVendDet} onToggle={toggleVendDet} align="right" className="text-right py-2 text-muted-foreground font-medium">Total</SortableTh>
+                      <SortableTh sortKey="ticket" sort={sortVendDet} onToggle={toggleVendDet} align="right" className="text-right py-2 text-muted-foreground font-medium">Ticket prom.</SortableTh>
+                      <SortableTh sortKey="participacion" sort={sortVendDet} onToggle={toggleVendDet} className="text-left py-2 text-muted-foreground font-medium pl-4">Participación</SortableTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {(ventasPorVendedorData ?? []).map(v => {
+                    {vendedoresDetalleOrd.map(v => {
                       const pct = kpis.totalVentas > 0 ? (v.total / kpis.totalVentas) * 100 : 0;
                       return (
                         <tr key={v.id} className="border-b border-border/30 hover:bg-accent/30">

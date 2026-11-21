@@ -20,6 +20,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 
 function addDays(iso: string, n: number) {
@@ -197,6 +198,8 @@ export default function ConcentradoSurtidoPage() {
 
   const rows = productoData?.rows ?? [];
   const faltantes = useMemo(() => rows.filter(r => r.faltante > 0), [rows]);
+  const { sorted: rowsOrd, sort, toggle: toggleSort } = useSortableTable(rows, (r, key) =>
+    key === 'proveedor' ? (proveedores?.find(p => p.id === r.proveedor_preferido_id)?.nombre ?? null) : (r as any)[key], undefined, 'concentrado-surtido-productos');
 
   const ensureProductosData = async () => {
     if (productoData) return productoData;
@@ -701,14 +704,14 @@ export default function ConcentradoSurtidoPage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs text-muted-foreground">
                 <tr>
-                  <th className="text-left px-3 py-2">Código</th>
-                  <th className="text-left px-3 py-2">Producto</th>
-                  <th className="text-right px-3 py-2">Requerido</th>
-                  <th className="text-right px-3 py-2">Ya surtido</th>
-                  <th className="text-right px-3 py-2">Falta surtir</th>
-                  <th className="text-right px-3 py-2">Stock actual</th>
-                  <th className="text-right px-3 py-2">Faltante compra</th>
-                  <th className="text-left px-3 py-2">Proveedor</th>
+                  <SortableTh sortKey="codigo" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Código</SortableTh>
+                  <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Producto</SortableTh>
+                  <SortableTh sortKey="requerido" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Requerido</SortableTh>
+                  <SortableTh sortKey="entregado" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Ya surtido</SortableTh>
+                  <SortableTh sortKey="pendiente" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Falta surtir</SortableTh>
+                  <SortableTh sortKey="stock" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Stock actual</SortableTh>
+                  <SortableTh sortKey="faltante" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Faltante compra</SortableTh>
+                  <SortableTh sortKey="proveedor" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Proveedor</SortableTh>
                 </tr>
               </thead>
               <tbody>
@@ -718,7 +721,7 @@ export default function ConcentradoSurtidoPage() {
                 {!isLoadingProductos && rows.length === 0 && (
                   <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Sin productos pendientes a surtir en este rango.</td></tr>
                 )}
-                {rows.map(r => {
+                {rowsOrd.map(r => {
                   const prov = proveedores?.find(p => p.id === r.proveedor_preferido_id);
                   const tieneFaltante = r.faltante > 0;
                   return (

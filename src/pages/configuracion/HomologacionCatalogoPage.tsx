@@ -16,6 +16,7 @@ import {
   loadCatalog, matchAll, summary, type ExternalRow, type MatchedRow, type MatchTipo,
 } from '@/lib/catalogMatcher';
 import { confirmDialog } from '@/lib/confirm';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 // ───────── Helpers ─────────
 const fmtDate = (iso: string) => {
@@ -722,6 +723,8 @@ function EquivalenciasTab() {
       r.producto?.nombre?.toLowerCase().includes(s)
     );
   }, [data, q]);
+  const { sorted: filteredOrd, sort, toggle: toggleSort } = useSortableTable<any>(filtered, (r, key) =>
+    key === 'producto' ? (r.producto ? `${r.producto.codigo ?? ''} ${r.producto.nombre ?? ''}` : null) : r[key], undefined, 'homologacion-equivalencias');
 
   return (
     <div className="bg-card border border-border rounded-lg p-5 space-y-4">
@@ -747,10 +750,10 @@ function EquivalenciasTab() {
         <table className="w-full text-xs">
           <thead className="sticky top-0 bg-secondary">
             <tr className="border-b border-border">
-              <th className="px-2 py-1.5 text-left">Código externo</th>
-              <th className="px-2 py-1.5 text-left">Sistema origen</th>
-              <th className="px-2 py-1.5 text-left">Producto interno</th>
-              <th className="px-2 py-1.5 text-left">Notas</th>
+              <SortableTh sortKey="codigo_externo" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Código externo</SortableTh>
+              <SortableTh sortKey="sistema_origen" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Sistema origen</SortableTh>
+              <SortableTh sortKey="producto" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Producto interno</SortableTh>
+              <SortableTh sortKey="notas" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Notas</SortableTh>
               <th className="px-2 py-1.5"></th>
             </tr>
           </thead>
@@ -759,7 +762,7 @@ function EquivalenciasTab() {
             {!isLoading && filtered.length === 0 && (
               <tr><td colSpan={5} className="text-center py-6 text-muted-foreground">Sin equivalencias.</td></tr>
             )}
-            {filtered.map((r: any) => (
+            {filteredOrd.map((r: any) => (
               <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30">
                 <td className="px-2 py-1 font-mono">{r.codigo_externo}</td>
                 <td className="px-2 py-1 text-muted-foreground">{r.sistema_origen ?? '—'}</td>
@@ -913,6 +916,7 @@ function HistorialTab() {
       return data ?? [];
     },
   });
+  const { sorted: jobsOrd, sort, toggle: toggleSort } = useSortableTable<any>(data, undefined, undefined, 'homologacion-historial');
 
   return (
     <div className="bg-card border border-border rounded-lg p-5 space-y-4">
@@ -921,13 +925,13 @@ function HistorialTab() {
         <table className="w-full text-xs">
           <thead className="sticky top-0 bg-secondary">
             <tr className="border-b border-border">
-              <th className="px-2 py-1.5 text-left">Fecha</th>
-              <th className="px-2 py-1.5 text-left">Archivo</th>
-              <th className="px-2 py-1.5 text-left">Sistema</th>
-              <th className="px-2 py-1.5 text-right">Total</th>
-              <th className="px-2 py-1.5 text-right">Match</th>
-              <th className="px-2 py-1.5 text-right">Sin match</th>
-              <th className="px-2 py-1.5 text-right">Errores</th>
+              <SortableTh sortKey="created_at" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Fecha</SortableTh>
+              <SortableTh sortKey="archivo_nombre" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Archivo</SortableTh>
+              <SortableTh sortKey="sistema_origen" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Sistema</SortableTh>
+              <SortableTh sortKey="total_filas" sort={sort} onToggle={toggleSort} align="right" className="px-2 py-1.5 text-right">Total</SortableTh>
+              <SortableTh sortKey="matched" sort={sort} onToggle={toggleSort} align="right" className="px-2 py-1.5 text-right">Match</SortableTh>
+              <SortableTh sortKey="sin_coincidencia" sort={sort} onToggle={toggleSort} align="right" className="px-2 py-1.5 text-right">Sin match</SortableTh>
+              <SortableTh sortKey="errores" sort={sort} onToggle={toggleSort} align="right" className="px-2 py-1.5 text-right">Errores</SortableTh>
               <th className="px-2 py-1.5"></th>
             </tr>
           </thead>
@@ -936,7 +940,7 @@ function HistorialTab() {
             {!isLoading && data.length === 0 && (
               <tr><td colSpan={8} className="text-center py-6 text-muted-foreground">Sin importaciones aún.</td></tr>
             )}
-            {data.map((j: any) => (
+            {jobsOrd.map((j: any) => (
               <tr key={j.id} className="border-b border-border/50 hover:bg-secondary/30">
                 <td className="px-2 py-1">{fmtDate(j.created_at)}</td>
                 <td className="px-2 py-1">{j.archivo_nombre ?? '—'}</td>
@@ -974,6 +978,12 @@ function JobDetailDialog({ jobId, onClose }: { jobId: string; onClose: () => voi
     },
   });
 
+  const { sorted: lineasOrd, sort, toggle: toggleSort } = useSortableTable<any>(data, (r, key) => {
+    if (key === 'match_tipo') return matchLabel[r.match_tipo as MatchTipo] ?? r.match_tipo;
+    if (key === 'producto') return r.producto ? `${r.producto.codigo ?? ''} ${r.producto.nombre ?? ''}` : null;
+    return r[key];
+  }, undefined, 'homologacion-detalle-importacion');
+
   const exportXlsx = () => {
     const out = data.map((r: any) => ({
       Fila: r.fila_num,
@@ -1008,16 +1018,16 @@ function JobDetailDialog({ jobId, onClose }: { jobId: string; onClose: () => voi
             <table className="w-full text-xs">
               <thead className="sticky top-0 bg-secondary">
                 <tr className="border-b border-border">
-                  <th className="px-2 py-1.5 text-left">Fila</th>
-                  <th className="px-2 py-1.5 text-left">Cód. externo</th>
-                  <th className="px-2 py-1.5 text-left">Descripción</th>
-                  <th className="px-2 py-1.5 text-left">Match</th>
-                  <th className="px-2 py-1.5 text-left">Producto interno</th>
-                  <th className="px-2 py-1.5 text-left">Nota</th>
+                  <SortableTh sortKey="fila_num" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Fila</SortableTh>
+                  <SortableTh sortKey="codigo_externo" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Cód. externo</SortableTh>
+                  <SortableTh sortKey="descripcion_externa" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Descripción</SortableTh>
+                  <SortableTh sortKey="match_tipo" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Match</SortableTh>
+                  <SortableTh sortKey="producto" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Producto interno</SortableTh>
+                  <SortableTh sortKey="mensaje" sort={sort} onToggle={toggleSort} className="px-2 py-1.5 text-left">Nota</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {data.map((r: any) => (
+                {lineasOrd.map((r: any) => (
                   <tr key={r.id} className="border-b border-border/50">
                     <td className="px-2 py-1">{r.fila_num}</td>
                     <td className="px-2 py-1 font-mono">{r.codigo_externo}</td>

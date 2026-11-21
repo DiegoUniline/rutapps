@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/lib/confirm';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 export default function PartnerCupones() {
   const { data: partner } = usePartner();
@@ -40,6 +41,9 @@ export default function PartnerCupones() {
     },
     enabled: !!partner?.id,
   });
+
+  const { sorted: cuponesOrd, sort, toggle: toggleSort } = useSortableTable<any>(cupones ?? [], (c, key) =>
+    key === 'usos_actuales' ? (c.usos_actuales || 0) : c[key], undefined, 'partner-cupones');
 
   const create = async () => {
     if (!form.codigo.trim() || !form.descuento_pct) { toast.error('Código y % son obligatorios'); return; }
@@ -96,17 +100,17 @@ export default function PartnerCupones() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Código</TableHead>
-              <TableHead>Descuento</TableHead>
-              <TableHead>Duración</TableHead>
-              <TableHead>Vence</TableHead>
-              <TableHead>Usos</TableHead>
-              <TableHead>Activo</TableHead>
+              <SortableTableHead sortKey="codigo" sort={sort} onToggle={toggleSort}>Código</SortableTableHead>
+              <SortableTableHead sortKey="descuento_pct" sort={sort} onToggle={toggleSort}>Descuento</SortableTableHead>
+              <SortableTableHead sortKey="meses_duracion" sort={sort} onToggle={toggleSort}>Duración</SortableTableHead>
+              <SortableTableHead sortKey="vigencia_fin" sort={sort} onToggle={toggleSort}>Vence</SortableTableHead>
+              <SortableTableHead sortKey="usos_actuales" sort={sort} onToggle={toggleSort}>Usos</SortableTableHead>
+              <SortableTableHead sortKey="activo" sort={sort} onToggle={toggleSort}>Activo</SortableTableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(cupones || []).map(c => (
+            {cuponesOrd.map(c => (
               <TableRow key={c.id}>
                 <TableCell className="font-mono font-bold">{c.codigo}</TableCell>
                 <TableCell>{c.descuento_pct}%</TableCell>

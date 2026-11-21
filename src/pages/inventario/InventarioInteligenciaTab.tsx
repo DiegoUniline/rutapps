@@ -28,6 +28,7 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/compon
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { useKardexReferencias } from '@/hooks/useKardexReferencias';
 import { origenDestinoMovimiento } from '@/lib/kardexOrigenDestino';
+import { SortableTableHead, useSortState, ordenarFilas, type SortState } from '@/hooks/useSortableTable';
 
 export type IntelligenceProduct = {
   id: string;
@@ -451,6 +452,30 @@ export default function InventarioInteligenciaTab({
   const { data: refMovimientos } = useKardexReferencias(tab === 'movimientos' ? movimientosVisibles : undefined);
 
   const topStopped = useMemo(() => filtered.filter(product => product.stockTotal > 0 && ['detenido', 'lento'].includes(product.health)).sort((a, b) => b.inventoryValue - a.inventoryValue), [filtered]);
+  // Orden por columna de cada tabla (se recuerda por tabla).
+  const sCapital = useSortState('inventario-inteligencia-capital');
+  const sDimension = useSortState('inventario-inteligencia-dimensiones');
+  const sLotes = useSortState('inventario-inteligencia-caducidades');
+  const sMovs = useSortState('inventario-inteligencia-movimientos');
+  const sReabasto = useSortState('inventario-inteligencia-reabasto');
+  const sAbc = useSortState('inventario-inteligencia-abc');
+  const valorProducto = (p: any, key: string) => {
+    if (key === 'producto') return p.nombre;
+    if (key === 'health') return HEALTH_LABELS[p.health as InventoryHealth];
+    if (key === 'idle') return p.health === 'detenido' ? p.idleDays : null;
+    return p[key];
+  };
+  const valorMovimiento = (m: any, key: string) => {
+    if (key === 'fecha') return `${m.fecha ?? ''} ${m.created_at ?? ''}`;
+    if (key === 'producto') return m.producto_id ? productMap.get(m.producto_id)?.nombre : null;
+    if (key === 'cantidad') return Math.abs(Number(m.cantidad || 0));
+    if (key === 'origen' || key === 'destino') {
+      const od = origenDestinoMovimiento(m, refMovimientos, id => warehouseMap.get(id)?.nombre);
+      return od[key];
+    }
+    if (key === 'referencia') return m.referencia_tipo || 'Movimiento manual';
+    return m[key];
+  };
   const restock = useMemo(() => filtered.filter(product => ['agotado', 'critico', 'reorden'].includes(product.health)).sort((a, b) => (a.coverageDays ?? -1) - (b.coverageDays ?? -1)), [filtered]);
   const expiryRisks = useMemo(() => searchedLots.filter(row => row.health !== 'vigente').sort((a, b) => (a.days ?? 99999) - (b.days ?? 99999)), [searchedLots]);
 
@@ -584,12 +609,12 @@ export default function InventarioInteligenciaTab({
               <Insight icon={PackageCheck} title="Criterio" text="Capital detenido exige stock, cero ventas en el periodo y al menos 90 días desde la última evidencia disponible."/>
             </CardContent></Card>
           </div>
-          <DataTable headers={[
-            { label: 'Producto' }, { label: 'Stock', align: 'right' }, { label: 'Capital', align: 'right' },
-            { label: `Vendido ${windowDays}d`, align: 'right' }, { label: 'Cobertura', align: 'center' },
-            { label: 'Última venta', align: 'center' }, { label: 'Parado desde', align: 'center' }, { label: 'Diagnóstico', align: 'center' },
+          <DataTable sort={sCapital.sort} onToggle={sCapital.toggle} headers={[
+            { label: 'Producto', sortKey: 'producto' }, { label: 'Stock', align: 'right', sortKey: 'stockTotal' }, { label: 'Capital', align: 'right', sortKey: 'inventoryValue' },
+            { label: `Vendido ${windowDays}d`, align: 'right', sortKey: 'soldUnits' }, { label: 'Cobertura', align: 'center', sortKey: 'coverageDays' },
+            { label: 'Última venta', align: 'center', sortKey: 'lastSaleAt' }, { label: 'Parado desde', align: 'center', sortKey: 'idle' }, { label: 'Diagnóstico', align: 'center', sortKey: 'health' },
           ]} empty="No hay productos para mostrar.">
-            {filtered.slice().sort((a, b) => b.inventoryValue - a.inventoryValue).map(product => <TableRow key={product.id}>
+            {ordenarFilas(filtered.slice().sort((a, b) => b.inventoryValue - a.inventoryValue), sCapital.sort, valorProducto).map(product => <TableRow key={product.id}>
               <TableCell><ProductoCell product={product}/></TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.stockTotal)}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmt(product.inventoryValue)}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.soldUnits)}</TableCell><TableCell className="text-center tabular-nums">{product.coverageDays == null ? 'Sin demanda' : `${Math.round(product.coverageDays)} d`}</TableCell><TableCell className="text-center tabular-nums">{formatDate(product.lastSaleAt)}</TableCell><TableCell className="text-center tabular-nums">{product.health === 'detenido' ? `${product.idleDays} días` : '—'}</TableCell><TableCell className="text-center"><HealthBadge health={product.health}/></TableCell>
             </TableRow>)}
           </DataTable>
@@ -631,12 +656,12 @@ export default function InventarioInteligenciaTab({
             </CardContent></Card>
           </div>
 
-          <DataTable headers={[
-            { label: DIMENSION_CONFIG[dimensionMode].singular }, { label: 'Productos', align: 'right' }, { label: 'Unidades', align: 'right' },
-            { label: 'Capital', align: 'right' }, { label: 'Capital detenido', align: 'right' }, { label: 'Sin movimiento', align: 'center' },
-            { label: `Ingresos ${windowDays}d`, align: 'right' }, { label: 'Requieren acción', align: 'center' },
+          <DataTable sort={sDimension.sort} onToggle={sDimension.toggle} headers={[
+            { label: DIMENSION_CONFIG[dimensionMode].singular, sortKey: 'name' }, { label: 'Productos', align: 'right', sortKey: 'productCount' }, { label: 'Unidades', align: 'right', sortKey: 'stockUnits' },
+            { label: 'Capital', align: 'right', sortKey: 'capital' }, { label: 'Capital detenido', align: 'right', sortKey: 'stoppedCapital' }, { label: 'Sin movimiento', align: 'center', sortKey: 'noMovementProducts' },
+            { label: `Ingresos ${windowDays}d`, align: 'right', sortKey: 'revenue' }, { label: 'Requieren acción', align: 'center', sortKey: 'criticalProducts' },
           ]} empty="No hay información para los filtros seleccionados.">
-            {activeDimensionGroups.map(row => <TableRow key={row.name}>
+            {ordenarFilas(activeDimensionGroups, sDimension.sort).map(row => <TableRow key={row.name}>
               <TableCell className="font-semibold">{row.name}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(row.productCount)}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(row.stockUnits)}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmt(row.capital)}</TableCell><TableCell className="text-right font-semibold text-destructive tabular-nums">{fmt(row.stoppedCapital)}</TableCell><TableCell className="text-center tabular-nums">{fmtNum(row.noMovementProducts)}</TableCell><TableCell className="text-right tabular-nums">{fmt(row.revenue)}</TableCell><TableCell className="text-center tabular-nums">{fmtNum(row.criticalProducts)}</TableCell>
             </TableRow>)}
           </DataTable>
@@ -675,22 +700,22 @@ export default function InventarioInteligenciaTab({
                 {(expirationStatus !== 'todos' || expirationFrom || expirationTo) && <Button variant="ghost" size="sm" onClick={() => { setExpirationStatus('todos'); setExpirationFrom(''); setExpirationTo(''); }}>Limpiar</Button>}
               </div>
             </div>
-            <DataTable headers={[
-              { label: 'Caducidad', align: 'center' }, { label: 'Estado', align: 'center' }, { label: 'Producto / lote' },
-              { label: 'Ubicación', align: 'center' }, { label: 'Existencia', align: 'right' }, { label: 'Capital en riesgo', align: 'right' },
+            <DataTable sort={sLotes.sort} onToggle={sLotes.toggle} headers={[
+              { label: 'Caducidad', align: 'center', sortKey: 'expirationDate' }, { label: 'Estado', align: 'center', sortKey: 'days' }, { label: 'Producto / lote', sortKey: 'productName' },
+              { label: 'Ubicación', align: 'center', sortKey: 'warehouse' }, { label: 'Existencia', align: 'right', sortKey: 'quantity' }, { label: 'Capital en riesgo', align: 'right', sortKey: 'value' },
             ]} empty="No hay lotes que coincidan con la búsqueda.">
-              {visibleLots.map(row => <TableRow key={row.id} className={row.health === 'vencido' ? 'bg-destructive/5' : ''}><TableCell className="text-center font-semibold tabular-nums">{formatDate(row.expirationDate)}</TableCell><TableCell className="text-center"><ExpirationBadge health={row.health} days={row.days}/></TableCell><TableCell><ProductoLink id={row.productId}>{row.productName}</ProductoLink><div className="text-[11px] text-muted-foreground">{row.productCode} · Lote {row.lotCode}</div></TableCell><TableCell className="text-center">{row.warehouse}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(row.quantity)}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmt(row.value)}</TableCell></TableRow>)}
+              {ordenarFilas(visibleLots, sLotes.sort).map(row => <TableRow key={row.id} className={row.health === 'vencido' ? 'bg-destructive/5' : ''}><TableCell className="text-center font-semibold tabular-nums">{formatDate(row.expirationDate)}</TableCell><TableCell className="text-center"><ExpirationBadge health={row.health} days={row.days}/></TableCell><TableCell><ProductoLink id={row.productId}>{row.productName}</ProductoLink><div className="text-[11px] text-muted-foreground">{row.productCode} · Lote {row.lotCode}</div></TableCell><TableCell className="text-center">{row.warehouse}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(row.quantity)}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmt(row.value)}</TableCell></TableRow>)}
             </DataTable>
           </>}
         </TabsContent>
 
         <TabsContent value="movimientos" className="space-y-4">
           <ChartCard title="Entradas y salidas" subtitle={`${windowDays} días · transferencias no alteran el total de la empresa`}><ResponsiveContainer width="100%" height={300}><AreaChart data={movementTrend}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="label" tick={{ fontSize: 10 }} minTickGap={24}/><YAxis tick={{ fontSize: 10 }}/><ChartTooltip/><Legend/><Area dataKey="entradas" name="Entradas" stroke="#10B981" fill="#10B98122"/><Area dataKey="salidas" name="Salidas" stroke="#4F46E5" fill="#4F46E522"/><Area dataKey="transferencias" name="Transferencias" stroke="#F59E0B" fill="#F59E0B18"/></AreaChart></ResponsiveContainer></ChartCard>
-          <DataTable headers={[
-            { label: 'Fecha', align: 'center' }, { label: 'Tipo', align: 'center' }, { label: 'Producto' },
-            { label: 'Cantidad', align: 'right' }, { label: 'Origen', align: 'center' }, { label: 'Destino', align: 'center' }, { label: 'Referencia / nota' },
+          <DataTable sort={sMovs.sort} onToggle={sMovs.toggle} headers={[
+            { label: 'Fecha', align: 'center', sortKey: 'fecha' }, { label: 'Tipo', align: 'center', sortKey: 'tipo' }, { label: 'Producto', sortKey: 'producto' },
+            { label: 'Cantidad', align: 'right', sortKey: 'cantidad' }, { label: 'Origen', align: 'center', sortKey: 'origen' }, { label: 'Destino', align: 'center', sortKey: 'destino' }, { label: 'Referencia / nota', sortKey: 'referencia' },
           ]} empty="No hay movimientos en este periodo.">
-            {movimientosVisibles.map(movement => {
+            {ordenarFilas(movimientosVisibles, sMovs.sort, valorMovimiento).map(movement => {
               const od = origenDestinoMovimiento(movement, refMovimientos, id => warehouseMap.get(id)?.nombre);
               const product = movement.producto_id ? productMap.get(movement.producto_id) : null;
               const referenceRoute = getMovementReferenceRoute(movement.referencia_tipo, movement.referencia_id);
@@ -704,30 +729,30 @@ export default function InventarioInteligenciaTab({
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {(Object.keys(HEALTH_LABELS) as InventoryHealth[]).filter(health => ['agotado', 'critico', 'reorden', 'saludable'].includes(health)).map(health => <Card key={health}><CardContent className="p-4"><div className="text-xs text-muted-foreground">{HEALTH_LABELS[health]}</div><div className="mt-2 text-2xl font-black" style={{ color: HEALTH_COLORS[health] }}>{analytics.filter(product => product.health === health).length}</div></CardContent></Card>)}
           </div>
-          <DataTable headers={[
-            { label: 'Prioridad', align: 'center' }, { label: 'Producto' }, { label: 'Stock', align: 'right' },
-            { label: 'Venta/día', align: 'right' }, { label: 'Cobertura', align: 'center' }, { label: 'Punto reorden', align: 'right' },
-            { label: 'Compra sugerida', align: 'right', className: 'min-w-[140px]' }, { label: 'Acción', align: 'center', className: 'min-w-[130px]' },
+          <DataTable sort={sReabasto.sort} onToggle={sReabasto.toggle} headers={[
+            { label: 'Prioridad', align: 'center', sortKey: 'health' }, { label: 'Producto', sortKey: 'producto' }, { label: 'Stock', align: 'right', sortKey: 'stockTotal' },
+            { label: 'Venta/día', align: 'right', sortKey: 'avgDaily' }, { label: 'Cobertura', align: 'center', sortKey: 'coverageDays' }, { label: 'Punto reorden', align: 'right', sortKey: 'reorderPoint' },
+            { label: 'Compra sugerida', align: 'right', className: 'min-w-[140px]', sortKey: 'suggestedPurchase' }, { label: 'Acción', align: 'center', className: 'min-w-[130px]' },
           ]} empty="No hay productos que requieran reabasto.">
-            {restock.map(product => <TableRow key={product.id}><TableCell className="text-center"><HealthBadge health={product.health}/></TableCell><TableCell><ProductoCell product={product}/></TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.stockTotal)}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(Math.round(product.avgDaily * 100) / 100)}</TableCell><TableCell className="text-center tabular-nums">{product.coverageDays == null ? '—' : `${Math.floor(product.coverageDays)} d`}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(Math.ceil(product.reorderPoint))}</TableCell><TableCell className="min-w-[140px] text-right font-black text-primary tabular-nums">{fmtNum(product.suggestedPurchase)}</TableCell><TableCell className="min-w-[130px] text-center"><Link to="/almacen/compras/nuevo"><Button size="sm" variant="outline" disabled={product.suggestedPurchase <= 0}><ShoppingCart className="mr-1 h-3.5 w-3.5"/>Comprar</Button></Link></TableCell></TableRow>)}
+            {ordenarFilas(restock, sReabasto.sort, valorProducto).map(product => <TableRow key={product.id}><TableCell className="text-center"><HealthBadge health={product.health}/></TableCell><TableCell><ProductoCell product={product}/></TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.stockTotal)}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(Math.round(product.avgDaily * 100) / 100)}</TableCell><TableCell className="text-center tabular-nums">{product.coverageDays == null ? '—' : `${Math.floor(product.coverageDays)} d`}</TableCell><TableCell className="text-right tabular-nums">{fmtNum(Math.ceil(product.reorderPoint))}</TableCell><TableCell className="min-w-[140px] text-right font-black text-primary tabular-nums">{fmtNum(product.suggestedPurchase)}</TableCell><TableCell className="min-w-[130px] text-center"><Link to="/almacen/compras/nuevo"><Button size="sm" variant="outline" disabled={product.suggestedPurchase <= 0}><ShoppingCart className="mr-1 h-3.5 w-3.5"/>Comprar</Button></Link></TableCell></TableRow>)}
           </DataTable>
         </TabsContent>
 
         <TabsContent value="abc" className="space-y-4">
           <div className="rounded-xl border bg-card p-4 text-sm"><b>A</b> concentra aproximadamente el primer 80% de ingresos, <b>B</b> el siguiente 15% y <b>C</b> el restante. El producto que cruza cada umbral conserva la clase que ayudó a completar.</div>
-          <DataTable headers={[
-            { label: 'Clase', align: 'center' }, { label: 'Producto' }, { label: `Unidades ${windowDays}d`, align: 'right' },
-            { label: `Ingresos ${windowDays}d`, align: 'right' }, { label: '% acumulado', align: 'right' },
-            { label: 'Stock', align: 'right' }, { label: 'Capital', align: 'right' }, { label: 'Diagnóstico', align: 'center' },
+          <DataTable sort={sAbc.sort} onToggle={sAbc.toggle} headers={[
+            { label: 'Clase', align: 'center', sortKey: 'abcClass' }, { label: 'Producto', sortKey: 'producto' }, { label: `Unidades ${windowDays}d`, align: 'right', sortKey: 'soldUnits' },
+            { label: `Ingresos ${windowDays}d`, align: 'right', sortKey: 'revenue' }, { label: '% acumulado', align: 'right', sortKey: 'cumulativePct' },
+            { label: 'Stock', align: 'right', sortKey: 'stockTotal' }, { label: 'Capital', align: 'right', sortKey: 'inventoryValue' }, { label: 'Diagnóstico', align: 'center', sortKey: 'health' },
           ]} empty="No hay ventas suficientes para clasificar.">
-            {abc.filter(product => {
+            {ordenarFilas(abc.filter(product => {
               const matchesSearch = !normalizedSearch || product.nombre.toLowerCase().includes(normalizedSearch) || product.codigo.toLowerCase().includes(normalizedSearch);
               return matchesSearch
                 && (healthFilter === 'todos' || product.health === healthFilter)
                 && (categoryFilter === 'todos' || product.categoryName === categoryFilter)
                 && (brandFilter === 'todos' || product.brandName === brandFilter)
                 && (providerFilter === 'todos' || product.providerName === providerFilter);
-            }).map(product => <TableRow key={product.id}><TableCell className="text-center"><Badge className={cn(product.abcClass === 'A' && 'bg-emerald-600', product.abcClass === 'B' && 'bg-amber-500', product.abcClass === 'C' && 'bg-slate-500')}>{product.abcClass}</Badge></TableCell><TableCell><ProductoCell product={product}/></TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.soldUnits)}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmt(product.revenue)}</TableCell><TableCell className="text-right tabular-nums">{(product.cumulativePct * 100).toFixed(1)}%</TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.stockTotal)}</TableCell><TableCell className="text-right tabular-nums">{fmt(product.inventoryValue)}</TableCell><TableCell className="text-center"><HealthBadge health={product.health}/></TableCell></TableRow>)}
+            }), sAbc.sort, valorProducto).map(product => <TableRow key={product.id}><TableCell className="text-center"><Badge className={cn(product.abcClass === 'A' && 'bg-emerald-600', product.abcClass === 'B' && 'bg-amber-500', product.abcClass === 'C' && 'bg-slate-500')}>{product.abcClass}</Badge></TableCell><TableCell><ProductoCell product={product}/></TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.soldUnits)}</TableCell><TableCell className="text-right font-semibold tabular-nums">{fmt(product.revenue)}</TableCell><TableCell className="text-right tabular-nums">{(product.cumulativePct * 100).toFixed(1)}%</TableCell><TableCell className="text-right tabular-nums">{fmtNum(product.stockTotal)}</TableCell><TableCell className="text-right tabular-nums">{fmt(product.inventoryValue)}</TableCell><TableCell className="text-center"><HealthBadge health={product.health}/></TableCell></TableRow>)}
           </DataTable>
         </TabsContent>
       </Tabs>
@@ -743,11 +768,14 @@ function Insight({ icon: Icon, title, text }: { icon: React.ElementType; title: 
   return <div className="flex gap-3 rounded-lg border bg-muted/20 p-3"><Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary"/><div><p className="font-semibold">{title}</p><p className="text-xs leading-5 text-muted-foreground">{text}</p></div></div>;
 }
 
-type DataTableHeader = { label: string; align?: 'left' | 'center' | 'right'; className?: string };
+type DataTableHeader = { label: string; align?: 'left' | 'center' | 'right'; className?: string; sortKey?: string };
 
-function DataTable({ headers, children, empty }: { headers: DataTableHeader[]; children: React.ReactNode; empty: string }) {
+function DataTable({ headers, children, empty, sort, onToggle }: { headers: DataTableHeader[]; children: React.ReactNode; empty: string; sort?: SortState; onToggle?: (key: string) => void }) {
   const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
-  return <div className="rounded-xl border bg-card max-md:overflow-x-auto md:overflow-visible"><table className="w-full caption-bottom text-sm"><TableHeader className="sticky top-0 z-20 bg-card shadow-[0_1px_0_hsl(var(--border))]"><TableRow>{headers.map(header => <TableHead key={header.label} className={cn('whitespace-nowrap bg-card text-[11px]', header.align === 'center' && 'text-center', header.align === 'right' && 'text-right', header.className)}>{header.label}</TableHead>)}</TableRow></TableHeader><TableBody>{hasRows ? children : <TableRow><TableCell colSpan={headers.length} className="py-12 text-center text-sm text-muted-foreground">{empty}</TableCell></TableRow>}</TableBody></table></div>;
+  const headClass = (header: DataTableHeader) => cn('whitespace-nowrap bg-card text-[11px]', header.align === 'center' && 'text-center', header.align === 'right' && 'text-right', header.className);
+  return <div className="rounded-xl border bg-card max-md:overflow-x-auto md:overflow-visible"><table className="w-full caption-bottom text-sm"><TableHeader className="sticky top-0 z-20 bg-card shadow-[0_1px_0_hsl(var(--border))]"><TableRow>{headers.map(header => header.sortKey && sort && onToggle
+    ? <SortableTableHead key={header.label} sortKey={header.sortKey} sort={sort} onToggle={onToggle} align={header.align} className={headClass(header)}>{header.label}</SortableTableHead>
+    : <TableHead key={header.label} className={headClass(header)}>{header.label}</TableHead>)}</TableRow></TableHeader><TableBody>{hasRows ? children : <TableRow><TableCell colSpan={headers.length} className="py-12 text-center text-sm text-muted-foreground">{empty}</TableCell></TableRow>}</TableBody></table></div>;
 }
 
 function ProductoCell({ product }: { product: Pick<IntelligenceProduct, 'id' | 'codigo' | 'nombre'> }) {

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, Clock3, KeyRound, Loader2, Search, ShieldCheck, ShieldOff, UserPlus, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Acceso { id: string; email: string; telefono: string | null; verificado: boolean; ultimo_login: string | null; created_at: string; registrado: boolean; }
 interface Row { cliente_id: string; cliente_nombre: string; cliente_email: string | null; cliente_telefono: string | null; acceso: Acceso | null; bloqueado: boolean; }
@@ -70,6 +71,16 @@ export default function TiendaClientesAdmin() {
   });
   const stats = { total: items.length, activos: items.filter((i) => !i.bloqueado).length, bloqueados: items.filter((i) => i.bloqueado).length, registrados: items.filter((i) => i.acceso?.registrado && !i.bloqueado).length };
 
+  const { sorted: solicitudesOrd, sort: sortSol, toggle: toggleSol } = useSortableTable(solicitudes, (s, key) =>
+    key === 'duplicado' ? s.posible_cliente_nombre : (s as any)[key], undefined, 'tienda-solicitudes');
+  const estadoAcceso = (r: Row) => r.bloqueado ? 'Bloqueado' : r.acceso?.registrado ? 'Registrado' : r.cliente_email ? 'Acceso inicial' : 'Falta correo';
+  const { sorted: filteredOrd, sort, toggle: toggleSort } = useSortableTable(filtered, (r, key) => {
+    if (key === 'correo') return r.acceso?.registrado ? r.acceso.email : r.cliente_email;
+    if (key === 'ultimo_login') return r.acceso?.ultimo_login;
+    if (key === 'estado') return estadoAcceso(r);
+    return (r as any)[key];
+  }, undefined, 'tienda-clientes-acceso');
+
   const toggleBlock = async (r: Row) => {
     try { await callAdmin(r.bloqueado ? "unblock" : "block", { cliente_id: r.cliente_id }, empresaId); toast.success(r.bloqueado ? "Acceso restaurado" : "Cliente bloqueado"); loadClients(); }
     catch (e) { toast.error((e as Error).message); }
@@ -99,11 +110,11 @@ export default function TiendaClientesAdmin() {
           </div>
           <div className="overflow-x-auto border rounded-lg">
             <table className="w-full text-sm">
-              <thead><tr className="bg-gray-50 text-left"><th className="p-3">Solicitante</th><th className="p-3">Contacto</th><th className="p-3">Fecha</th><th className="p-3">Estado</th><th className="p-3">Posible duplicado</th><th className="p-3"></th></tr></thead>
+              <thead><tr className="bg-gray-50 text-left"><SortableTh sortKey="nombre" sort={sortSol} onToggle={toggleSol} className="p-3">Solicitante</SortableTh><SortableTh sortKey="email" sort={sortSol} onToggle={toggleSol} className="p-3">Contacto</SortableTh><SortableTh sortKey="created_at" sort={sortSol} onToggle={toggleSol} className="p-3">Fecha</SortableTh><SortableTh sortKey="status" sort={sortSol} onToggle={toggleSol} className="p-3">Estado</SortableTh><SortableTh sortKey="duplicado" sort={sortSol} onToggle={toggleSol} className="p-3">Posible duplicado</SortableTh><th className="p-3"></th></tr></thead>
               <tbody>
                 {requestLoading && <tr><td colSpan={6} className="p-8 text-center"><Loader2 className="h-5 w-5 animate-spin inline" /></td></tr>}
                 {!requestLoading && solicitudes.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay solicitudes en este estado.</td></tr>}
-                {!requestLoading && solicitudes.map((s) => (
+                {!requestLoading && solicitudesOrd.map((s) => (
                   <tr key={s.id} className="border-t hover:bg-gray-50/60">
                     <td className="p-3"><div className="font-semibold">{s.nombre}</div>{s.contacto && <div className="text-xs text-gray-500">Contacto: {s.contacto}</div>}</td>
                     <td className="p-3"><div>{s.email}</div><div className="text-xs text-gray-500">{s.telefono || "Sin teléfono"}{s.ciudad ? ` · ${s.ciudad}` : ""}</div></td>
@@ -126,10 +137,10 @@ export default function TiendaClientesAdmin() {
               {([['todos',`Todos (${stats.total})`],['activos',`Con acceso (${stats.activos})`],['registrados',`Ya registrados (${stats.registrados})`],['bloqueados',`Bloqueados (${stats.bloqueados})`]] as const).map(([v,l]) => <button key={v} onClick={() => setFilter(v)} className={`px-3 py-1.5 text-xs font-semibold rounded ${filter === v ? "bg-white shadow text-primary" : "text-gray-600"}`}>{l}</button>)}
             </div>
           </div>
-          <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50 text-left"><th className="p-2">Cliente</th><th className="p-2">Correo de acceso</th><th className="p-2">Último ingreso</th><th className="p-2">Estado</th><th className="p-2"></th></tr></thead><tbody>
+          <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50 text-left"><SortableTh sortKey="cliente_nombre" sort={sort} onToggle={toggleSort} className="p-2">Cliente</SortableTh><SortableTh sortKey="correo" sort={sort} onToggle={toggleSort} className="p-2">Correo de acceso</SortableTh><SortableTh sortKey="ultimo_login" sort={sort} onToggle={toggleSort} className="p-2">Último ingreso</SortableTh><SortableTh sortKey="estado" sort={sort} onToggle={toggleSort} className="p-2">Estado</SortableTh><th className="p-2"></th></tr></thead><tbody>
             {loading && <tr><td colSpan={5} className="p-4 text-center"><Loader2 className="h-4 w-4 animate-spin inline" /></td></tr>}
             {!loading && filtered.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-500">Sin resultados.</td></tr>}
-            {filtered.map((r) => { const a = r.acceso; return <tr key={r.cliente_id} className="border-t"><td className="p-2 font-medium">{r.cliente_nombre}{r.cliente_email && <div className="text-xs text-gray-500">{r.cliente_email}</div>}</td><td className="p-2">{a?.registrado ? a.email : (r.cliente_email || <span className="text-gray-400">Sin correo</span>)}</td><td className="p-2">{a?.ultimo_login ? new Date(a.ultimo_login).toLocaleString("es-MX") : <span className="text-gray-400">Nunca</span>}</td><td className="p-2">{r.bloqueado ? <span className="text-red-600 font-semibold">Bloqueado</span> : a?.registrado ? <span className="text-green-700 font-semibold">Registrado</span> : r.cliente_email ? <span className="text-blue-700 font-semibold">Acceso inicial</span> : <span className="text-gray-500">Falta correo</span>}</td><td className="p-2 text-right"><div className="flex gap-1 justify-end">{!r.bloqueado && r.cliente_email && <button onClick={() => setResetFor(r)} title="Cambiar contraseña" className="p-1.5 hover:bg-gray-100 rounded text-blue-700"><KeyRound className="h-4 w-4" /></button>}<button onClick={() => toggleBlock(r)} className={`px-2 py-1 text-xs rounded inline-flex items-center gap-1 ${r.bloqueado ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>{r.bloqueado ? <><ShieldCheck className="h-3.5 w-3.5" /> Restaurar</> : <><ShieldOff className="h-3.5 w-3.5" /> Bloquear</>}</button></div></td></tr>; })}
+            {filteredOrd.map((r) => { const a = r.acceso; return <tr key={r.cliente_id} className="border-t"><td className="p-2 font-medium">{r.cliente_nombre}{r.cliente_email && <div className="text-xs text-gray-500">{r.cliente_email}</div>}</td><td className="p-2">{a?.registrado ? a.email : (r.cliente_email || <span className="text-gray-400">Sin correo</span>)}</td><td className="p-2">{a?.ultimo_login ? new Date(a.ultimo_login).toLocaleString("es-MX") : <span className="text-gray-400">Nunca</span>}</td><td className="p-2">{r.bloqueado ? <span className="text-red-600 font-semibold">Bloqueado</span> : a?.registrado ? <span className="text-green-700 font-semibold">Registrado</span> : r.cliente_email ? <span className="text-blue-700 font-semibold">Acceso inicial</span> : <span className="text-gray-500">Falta correo</span>}</td><td className="p-2 text-right"><div className="flex gap-1 justify-end">{!r.bloqueado && r.cliente_email && <button onClick={() => setResetFor(r)} title="Cambiar contraseña" className="p-1.5 hover:bg-gray-100 rounded text-blue-700"><KeyRound className="h-4 w-4" /></button>}<button onClick={() => toggleBlock(r)} className={`px-2 py-1 text-xs rounded inline-flex items-center gap-1 ${r.bloqueado ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>{r.bloqueado ? <><ShieldCheck className="h-3.5 w-3.5" /> Restaurar</> : <><ShieldOff className="h-3.5 w-3.5" /> Bloquear</>}</button></div></td></tr>; })}
           </tbody></table></div>
         </>
       )}

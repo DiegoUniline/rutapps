@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Cliente {
   id: string; nombre: string; vendedor_id?: string | null; ultimaCompra?: string | null; diasSinCompra: number;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function ClientesSinCompraModal({ open, onClose, clientes }: Props) {
+  const { sorted: clientesOrd, sort, toggle: toggleSort } = useSortableTable<any>(clientes, undefined, undefined, 'dashboard-clientes-sin-compra');
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto z-[60]">
@@ -22,13 +24,13 @@ export default function ClientesSinCompraModal({ open, onClose, clientes }: Prop
           <table className="w-full text-sm">
             <thead className="text-muted-foreground border-b border-border">
               <tr>
-                <th className="text-left py-2">Cliente</th>
-                <th className="text-left py-2">Última compra</th>
-                <th className="text-right py-2">Días sin compra</th>
+                <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="text-left py-2">Cliente</SortableTh>
+                <SortableTh sortKey="ultimaCompra" sort={sort} onToggle={toggleSort} className="text-left py-2">Última compra</SortableTh>
+                <SortableTh sortKey="diasSinCompra" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2">Días sin compra</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {clientes.map((c) => (
+              {clientesOrd.map((c) => (
                 <tr key={c.id} className="border-b border-border/40">
                   <td className="py-2 font-medium">{c.nombre}</td>
                   <td className="py-2 text-xs">{c.ultimaCompra ? format(new Date(c.ultimaCompra), 'dd/MM/yyyy') : 'Nunca'}</td>
