@@ -9,7 +9,7 @@ import type { TicketCampos } from '@/lib/ticketModelo';
 import { construirModeloTicket } from '@/lib/ticketModelo';
 import { maquetarTicket, centerText, textoLinea } from '@/lib/ticketLayout';
 import {
-  documentoTicketPdf, limpiarTextoPdf, columnasTicket, anchoTicketMm, nombreArchivoTicket,
+  documentoTicketPdf, limpiarTextoPdf, columnasTicket, anchoTicketMm, nombreArchivoTicket, ticketAnchoEmpresa,
 } from '@/lib/ticketPdf';
 import { construirDocumentoLiquidacion, type LiquidacionTicketData } from '@/lib/liquidacionTicketHtml';
 import { ticketEjemplo, ticketRutaCredito, ticketPosContado } from './fixtures/ticketFixtures';
@@ -36,16 +36,19 @@ async function pdfDe(td: TicketData, ticketAncho?: string, logoDataUrl: string |
 const sinEspaciosFinales = (s: string) => s.replace(/\s+$/, '');
 
 describe('ticketPdf: ancho y columnas del diseñador', () => {
-  it('80 mm = 48 columnas (por omisión) y 58 mm = 32 columnas, como el ESC/POS', () => {
-    expect(columnasTicket(undefined)).toBe(48);
+  it('80 mm = 48 columnas y 58 mm = 32 columnas (por omisión), como el ESC/POS', () => {
+    expect(columnasTicket(undefined)).toBe(32);
     expect(columnasTicket('80')).toBe(48);
     expect(columnasTicket('58')).toBe(32);
-    expect(anchoTicketMm(null)).toBe(80);
+    expect(anchoTicketMm(null)).toBe(58);
+    expect(anchoTicketMm('80')).toBe(80);
+    expect(ticketAnchoEmpresa({})).toBe('58');
+    expect(ticketAnchoEmpresa({ ticket_ancho: '80' })).toBe('80');
     expect(anchoTicketMm('58')).toBe(58);
   });
 
   it('la hoja mide el ancho del papel y el alto crece con el ticket', async () => {
-    const corto = await pdfDe(ticketPosContado);
+    const corto = await pdfDe(ticketPosContado, '80');
     expect(corto.doc.internal.pageSize.getWidth()).toBeCloseTo(80, 1);
     const alto80 = corto.doc.internal.pageSize.getHeight();
     expect(alto80).toBeGreaterThan(80);
@@ -53,7 +56,7 @@ describe('ticketPdf: ancho y columnas del diseñador', () => {
     const angosto = await pdfDe(ticketPosContado, '58');
     expect(angosto.doc.internal.pageSize.getWidth()).toBeCloseTo(58, 1);
 
-    const largo = await pdfDe({ ...ticketPosContado, lineas: Array.from({ length: 40 }, (_, i) => ({ ...ticketPosContado.lineas[0], nombre: `Producto ${i}` })) });
+    const largo = await pdfDe({ ...ticketPosContado, lineas: Array.from({ length: 40 }, (_, i) => ({ ...ticketPosContado.lineas[0], nombre: `Producto ${i}` })) }, '80');
     expect(largo.doc.internal.pageSize.getHeight()).toBeGreaterThan(alto80 + 40);
     expect(largo.doc.getNumberOfPages()).toBe(1);
   });
@@ -166,7 +169,7 @@ describe('ticket de liquidación: mismo motor de ticket', () => {
     const documento = construirDocumentoLiquidacion(liq);
     expect(documento.encabezado.nombre).toBe('Abarrotera del Sur');
     expect(documento.encabezado.lineas.map(l => l.texto)).toContain('RFC: ASU010101AAA');
-    const doc = await documentoTicketPdf(documento, { comprimir: false });
+    const doc = await documentoTicketPdf(documento, { comprimir: false, ticketAncho: '80' });
     const todo = textosPdf(doc.output()).join('\n');
     expect(doc.internal.pageSize.getWidth()).toBeCloseTo(80, 1);
     expect(todo).toContain('LIQUIDACION DE RUTA');

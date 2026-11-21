@@ -3,8 +3,8 @@
  * HTML, el ESC/POS y el texto (`ticketModelo` → `maquetarTicket`) con texto
  * monoespaciado real (Courier), sin capturas de pantalla.
  *
- * - Ancho del papel según el diseñador: 80 mm (48 columnas, por omisión) o
- *   58 mm (32 columnas), igual que la impresora térmica.
+ * - Ancho del papel según el diseñador: 80 mm (48 columnas) o 58 mm (32
+ *   columnas, por omisión), igual que la impresora térmica.
  * - Alto dinámico: la hoja mide lo que mide el ticket (si fuera enorme se parte
  *   en varias hojas del mismo ancho).
  * - Logo con `addImage` cuando existe y el diseñador lo tiene encendido.
@@ -18,7 +18,7 @@ import { construirModeloTicket } from './ticketModelo';
 import { maquetarTicket, centerText, textoLinea, type DocumentoTicket, type LineaTicket } from './ticketLayout';
 
 export interface OpcionesTicketPdf {
-  /** '58' o '80' (empresas.ticket_ancho). Cualquier otro valor = 80 mm. */
+  /** '58' o '80' (empresas.ticket_ancho). Sin valor o cualquier otro = 58 mm. */
   ticketAncho?: string | null;
   /**
    * Logo ya cargado (data URL). `undefined` = se descarga de `encabezado.logoUrl`;
@@ -40,8 +40,16 @@ const IMPRIMIBLE = { 80: 72, 58: 48 } as const;
 const ALTO_MAX_MM = 5000;
 const MARGEN_VERTICAL_MM = 4;
 
+/** Ancho cuando la empresa no lo tiene configurado (decisión del dueño 2026-11-21: 58 mm). */
+export const TICKET_ANCHO_POR_OMISION = '58' as const;
+
 export function anchoTicketMm(ticketAncho?: string | null): 58 | 80 {
-  return ticketAncho === '58' ? 58 : 80;
+  return ticketAncho === '80' ? 80 : 58;
+}
+
+/** Ancho efectivo ('58' | '80') para impresión, PDF y ESC/POS de una empresa. */
+export function ticketAnchoEmpresa(empresa: unknown): '58' | '80' {
+  return ticketAnchoDe(empresa) === '80' ? '80' : TICKET_ANCHO_POR_OMISION;
 }
 
 /** `empresas.ticket_ancho` de un objeto empresa cualquiera (el tipo `Empresa` no lo declara). */

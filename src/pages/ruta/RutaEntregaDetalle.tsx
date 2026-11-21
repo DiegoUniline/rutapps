@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import type { TicketData } from '@/lib/ticketHtml';
-import { generarTicketPdf, nombreArchivoTicket } from '@/lib/ticketPdf';
+import { generarTicketPdf, nombreArchivoTicket, ticketAnchoEmpresa } from '@/lib/ticketPdf';
 import { compartirPdf } from '@/lib/pdfAcciones';
 import { downloadBlob } from '@/lib/mergePdfs';
 import { printTicket } from '@/lib/printTicketUtil';
@@ -535,7 +535,7 @@ export default function RutaEntregaDetalle() {
     };
   };
 
-  const ticketAncho = (empresa as any)?.ticket_ancho ?? '80';
+  const ticketAncho = ticketAnchoEmpresa(empresa);
 
   const handlePrintTicket = async () => {
     const td = getTicketData();

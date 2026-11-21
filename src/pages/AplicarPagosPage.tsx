@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { printTicket } from '@/lib/printTicketUtil';
 import { buildCobroTicketData } from '@/lib/cobroTicket';
 import { enviarReciboCobro } from '@/lib/enviarReciboCobro';
+import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
 
 /* ──────────── types ──────────── */
 interface PendingSale {
@@ -226,7 +227,7 @@ export default function AplicarPagosPage() {
             saldoNuevo: roundMoney(Math.max(0, v.saldo_pendiente - v.montoAplicar)),
           })),
         });
-        printTicket(ticketData, { ticketAncho: (empresa as any).ticket_ancho ?? '80' });
+        printTicket(ticketData, { ticketAncho: ticketAnchoEmpresa(empresa) });
       }
 
       handleBack();

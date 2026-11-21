@@ -19,6 +19,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import TicketDisenadorPreview from '@/components/configuracion/TicketDisenadorPreview';
 import { DEFAULT_CAMPOS, CAMPO_SECCIONES, CAMPO_LABELS, CAMPO_DEPENDE_DE, TICKET_TEXTOS, TICKET_TEXTO_MAX } from '@/lib/ticketCamposConfig';
 import { campoOn, campoTexto, leerTicketCampos, type TicketCampos } from '@/lib/ticketModelo';
+import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
 
 function useEmpresaConfig() {
   const { empresa } = useAuth();
@@ -131,7 +132,7 @@ export default function ConfiguracionPage() {
   const [moneda, setMoneda] = useState('MXN');
   const [clientesVisibilidad, setClientesVisibilidad] = useState('todos');
   const [zonaHoraria, setZonaHoraria] = useState('America/Mexico_City');
-  const [ticketAncho, setTicketAncho] = useState<'58' | '80'>('80');
+  const [ticketAncho, setTicketAncho] = useState<'58' | '80'>('58');
   const [requiereJornadaRuta, setRequiereJornadaRuta] = useState(false);
   const [requiereJornadaDesde, setRequiereJornadaDesde] = useState<string>('');
   const [permiteSinVehiculo, setPermiteSinVehiculo] = useState(false);
@@ -190,7 +191,7 @@ export default function ConfiguracionPage() {
     setMoneda((config as any).moneda ?? 'MXN');
     setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
     setZonaHoraria((config as any).zona_horaria ?? 'America/Mexico_City');
-    setTicketAncho((config as any).ticket_ancho ?? '80');
+    setTicketAncho(ticketAnchoEmpresa(config));
     setRequiereJornadaRuta(!!(config as any).requiere_jornada_ruta);
     setRequiereJornadaDesde(((config as any).requiere_jornada_desde as string | null) ?? '');
     setPermiteSinVehiculo(!!(config as any).jornada_permite_sin_vehiculo);
@@ -205,7 +206,7 @@ export default function ConfiguracionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configId, initialized]);
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || apartarStockPedidos !== !!((config as any)?.apartar_stock_pedidos) || apartadoSoloConStock !== !!((config as any)?.apartado_solo_con_stock) || JSON.stringify([...apartadoAlmacenesIds].sort()) !== JSON.stringify([...(((config as any)?.apartado_almacenes_ids ?? []) as string[])].sort()) || politicaCobro !== (((config as any)?.politica_cobro === 'entregado') ? 'entregado' : 'pedido') || manejaLotes !== !!((config as any)?.maneja_lotes) || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ticketAnchoEmpresa(config) || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || apartarStockPedidos !== !!((config as any)?.apartar_stock_pedidos) || apartadoSoloConStock !== !!((config as any)?.apartado_solo_con_stock) || JSON.stringify([...apartadoAlmacenesIds].sort()) !== JSON.stringify([...(((config as any)?.apartado_almacenes_ids ?? []) as string[])].sort()) || politicaCobro !== (((config as any)?.politica_cobro === 'entregado') ? 'entregado' : 'pedido') || manejaLotes !== !!((config as any)?.maneja_lotes) || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',

@@ -43,6 +43,7 @@ import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { nextVisitDate } from '@/lib/nextVisitDate';
 import { RepriceListaDialog } from '@/components/venta/RepriceListaDialog';
 import { useVendedores, usePerfilesNombres } from '@/hooks/useClientes';
+import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -393,7 +394,7 @@ export default function VentaFormPage() {
         monto: Number(d.monto_credito ?? 0) || 0,
       })),
     });
-    const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
+    const ticketAncho = ticketAnchoEmpresa(empresa);
     printTicket(td, { ticketAncho });
   };
 
