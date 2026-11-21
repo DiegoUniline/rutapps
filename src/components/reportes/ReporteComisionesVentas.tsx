@@ -33,6 +33,7 @@ import {
   type ReporteComisionVenta,
   type TotalesComisiones,
 } from '@/lib/reporteComisionesVentas';
+import { SortableTh, useSortableTable, type SortState } from '@/hooks/useSortableTable';
 
 const GROUP_BY_OPTIONS = (Object.keys(AGRUPACION_COMISION_LABEL) as AgrupacionComision[])
   .map(value => ({ value, label: AGRUPACION_COMISION_LABEL[value] }));
@@ -125,14 +126,21 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
 
   const totals = useMemo(() => totalizarComisiones(filtered), [filtered]);
 
+  const { sorted: filteredOrd, sort, toggle: toggleSort } = useSortableTable(filtered, (row, key) => {
+    if (key === 'estadoCuenta') return ESTADO_CUENTA_LABEL[row.estadoCuenta];
+    if (key === 'estadoComision') return ESTADO_COMISION_LABEL[row.estadoComision];
+    if (key === 'facturacion') return row.requiereFactura ? `Fiscal ${row.rfc || ''}` : 'No fiscal';
+    return (row as any)[key];
+  }, undefined, 'reporte-comisiones-ventas');
+
   const groups = useMemo(
-    () => groupData(filtered, groupBy, etiquetaAgrupacionComision, groupByLevels, ordenAgrupacionComision),
-    [filtered, groupBy, groupByLevels],
+    () => groupData(filteredOrd, groupBy, etiquetaAgrupacionComision, groupByLevels, ordenAgrupacionComision),
+    [filteredOrd, groupBy, groupByLevels],
   );
 
-  const pagination = useTablePagination(filtered, 'reporte-comisiones-ventas');
+  const pagination = useTablePagination(filteredOrd, 'reporte-comisiones-ventas');
   const { resetPage } = pagination;
-  useEffect(() => resetPage(), [resetPage, search, filters, desde, hasta, vendedorIds]);
+  useEffect(() => resetPage(), [resetPage, search, filters, desde, hasta, vendedorIds, sort]);
 
   const exportRow = (row: ReporteComisionVenta) => ({
     ...row,
@@ -284,12 +292,12 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
         <GroupedTableWrapper
           groupBy={groupBy}
           groups={groups}
-          renderTable={items => <ComisionesTable rows={items} fmt={fmt} />}
+          renderTable={items => <ComisionesTable rows={items} fmt={fmt} sort={sort} onToggle={toggleSort} />}
           renderSummary={items => <GroupSummary totals={totalizarComisiones(items)} fmt={fmt} />}
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
-          <ComisionesTable rows={pagination.paginatedItems} fmt={fmt} footer={filtered.length ? { count: filtered.length, totals } : undefined} />
+          <ComisionesTable rows={pagination.paginatedItems} fmt={fmt} sort={sort} onToggle={toggleSort} footer={filtered.length ? { count: filtered.length, totals } : undefined} />
           <TablePagination
             from={pagination.from} to={pagination.to} total={pagination.total}
             page={pagination.page} totalPages={pagination.totalPages} pageSize={pagination.pageSize}
@@ -306,25 +314,27 @@ interface ComisionesTableProps {
   rows: ReporteComisionVenta[];
   fmt: (value: number) => string;
   footer?: { count: number; totals: TotalesComisiones };
+  sort: SortState;
+  onToggle: (key: string) => void;
 }
 
-function ComisionesTable({ rows, fmt, footer }: ComisionesTableProps) {
+function ComisionesTable({ rows, fmt, footer, sort, onToggle }: ComisionesTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[1320px] text-xs">
         <thead className="border-b border-border bg-muted/40">
           <tr>
-            <th className="th-odoo text-left">Folio</th>
-            <th className="th-odoo text-left">Cliente</th>
-            <th className="th-odoo text-left">Vendedor</th>
-            <th className="th-odoo text-left">Fecha</th>
-            <th className="th-odoo text-left">Ruta/Zona</th>
-            <th className="th-odoo text-center">Cuenta</th>
-            <th className="th-odoo text-left">Facturación</th>
-            <th className="th-odoo text-center">Comisión</th>
-            <th className="th-odoo text-right">Comisión $</th>
-            <th className="th-odoo text-right">Total</th>
-            <th className="th-odoo text-right">Saldo</th>
+            <SortableTh sortKey="folio" sort={sort} onToggle={onToggle} className="th-odoo text-left">Folio</SortableTh>
+            <SortableTh sortKey="cliente" sort={sort} onToggle={onToggle} className="th-odoo text-left">Cliente</SortableTh>
+            <SortableTh sortKey="vendedor" sort={sort} onToggle={onToggle} className="th-odoo text-left">Vendedor</SortableTh>
+            <SortableTh sortKey="fecha" sort={sort} onToggle={onToggle} className="th-odoo text-left">Fecha</SortableTh>
+            <SortableTh sortKey="ruta" sort={sort} onToggle={onToggle} className="th-odoo text-left">Ruta/Zona</SortableTh>
+            <SortableTh sortKey="estadoCuenta" sort={sort} onToggle={onToggle} align="center" className="th-odoo text-center">Cuenta</SortableTh>
+            <SortableTh sortKey="facturacion" sort={sort} onToggle={onToggle} className="th-odoo text-left">Facturación</SortableTh>
+            <SortableTh sortKey="estadoComision" sort={sort} onToggle={onToggle} align="center" className="th-odoo text-center">Comisión</SortableTh>
+            <SortableTh sortKey="comision" sort={sort} onToggle={onToggle} align="right" className="th-odoo text-right">Comisión $</SortableTh>
+            <SortableTh sortKey="total" sort={sort} onToggle={onToggle} align="right" className="th-odoo text-right">Total</SortableTh>
+            <SortableTh sortKey="saldo" sort={sort} onToggle={onToggle} align="right" className="th-odoo text-right">Saldo</SortableTh>
           </tr>
         </thead>
         <tbody>

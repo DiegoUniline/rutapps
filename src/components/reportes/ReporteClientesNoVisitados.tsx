@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useRegistrarPdfReporte, type RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
 import { pdfDeReporte, periodoReporte } from '@/lib/reportePdf';
+import { SortableTh, useSortState, ordenarFilas } from '@/hooks/useSortableTable';
 
 interface Props {
   desde: string;
@@ -195,6 +196,14 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds, registra
     }, empresa ?? { nombre: '' });
   });
 
+  // Orden por columna dentro de cada vendedor (sin orden: no visitados primero y por nombre).
+  const { sort, toggle: toggleSort } = useSortState('reporte-clientes-no-visitados');
+  const valorCliente = (c: ClienteReporte, key: string) => {
+    if (key === 'dias') return c.ultima_visita ? -new Date(c.ultima_visita + 'T12:00:00').getTime() : null;
+    if (key === 'dia_visita') return c.dia_visita.join(', ');
+    return (c as any)[key];
+  };
+
   if (isLoading) return <div className="py-8 text-center text-muted-foreground text-[13px]">Cargando...</div>;
   if (isError) {
     return (
@@ -258,17 +267,17 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds, registra
               <thead>
                 <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
                   <th className="text-left py-2 px-3 w-8">#</th>
-                  <th className="text-center py-2 px-3 w-16">Estado</th>
-                  <th className="text-left py-2 px-3">Código</th>
-                  <th className="text-left py-2 px-3">Cliente</th>
-                  <th className="text-left py-2 px-3">Última visita</th>
-                  <th className="text-right py-2 px-3">Días sin visita</th>
-                  <th className="text-left py-2 px-3">Días visita</th>
-                  <th className="text-left py-2 px-3">Teléfono</th>
+                  <SortableTh sortKey="visitado" sort={sort} onToggle={toggleSort} align="center" className="text-center py-2 px-3 w-16">Estado</SortableTh>
+                  <SortableTh sortKey="codigo" sort={sort} onToggle={toggleSort} className="text-left py-2 px-3">Código</SortableTh>
+                  <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="text-left py-2 px-3">Cliente</SortableTh>
+                  <SortableTh sortKey="ultima_visita" sort={sort} onToggle={toggleSort} className="text-left py-2 px-3">Última visita</SortableTh>
+                  <SortableTh sortKey="dias" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 px-3">Días sin visita</SortableTh>
+                  <SortableTh sortKey="dia_visita" sort={sort} onToggle={toggleSort} className="text-left py-2 px-3">Días visita</SortableTh>
+                  <SortableTh sortKey="telefono" sort={sort} onToggle={toggleSort} className="text-left py-2 px-3">Teléfono</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {g.items.map((c, i) => {
+                {ordenarFilas(g.items, sort, valorCliente).map((c, i) => {
                   const diasSinVisita = c.ultima_visita
                     ? Math.floor((Date.now() - new Date(c.ultima_visita + 'T12:00:00').getTime()) / 86400000)
                     : null;

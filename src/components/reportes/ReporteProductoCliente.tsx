@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { ColumnChooser, useColumnVisibility, type ColumnDef } from './ColumnChooser';
+import { SortableTh, useSortState, ordenarFilas } from '@/hooks/useSortableTable';
 
 interface VentaLinea {
   id: string;
@@ -53,6 +54,8 @@ export function ReporteProductoCliente({ data }: { data: any }) {
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const { visible, setVisible, isVisible } = useColumnVisibility(INNER_COLUMNS);
+  const { sort, toggle: toggleSort } = useSortState('reporte-producto-cliente');
+  const valorProducto = (p: any, key: string) => (key === 'pct' ? p.total : p[key]);
 
   const ventaLineas: VentaLinea[] = data.ventaLineas ?? [];
   const promoDescByLinea: Record<string, number> = data.promoDescByLinea ?? {};
@@ -160,15 +163,15 @@ export function ReporteProductoCliente({ data }: { data: any }) {
                 <table className="w-full text-[11px]">
                   <thead>
                     <tr className="text-[9px] text-muted-foreground uppercase border-b border-border/50">
-                      {isVisible('codigo') && <th className="py-1.5 px-3 text-left">Código</th>}
-                      {isVisible('producto') && <th className="py-1.5 px-3 text-left">Producto</th>}
-                      {isVisible('cantidad') && <th className="py-1.5 px-3 text-right">Uds</th>}
-                      {isVisible('total') && <th className="py-1.5 px-3 text-right">Total</th>}
-                      {isVisible('pct') && <th className="py-1.5 px-3 text-right w-16">%</th>}
+                      {isVisible('codigo') && <SortableTh sortKey="codigo" sort={sort} onToggle={toggleSort} className="py-1.5 px-3 text-left">Código</SortableTh>}
+                      {isVisible('producto') && <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="py-1.5 px-3 text-left">Producto</SortableTh>}
+                      {isVisible('cantidad') && <SortableTh sortKey="cantidad" sort={sort} onToggle={toggleSort} align="right" className="py-1.5 px-3 text-right">Uds</SortableTh>}
+                      {isVisible('total') && <SortableTh sortKey="total" sort={sort} onToggle={toggleSort} align="right" className="py-1.5 px-3 text-right">Total</SortableTh>}
+                      {isVisible('pct') && <SortableTh sortKey="pct" sort={sort} onToggle={toggleSort} align="right" className="py-1.5 px-3 text-right w-16">%</SortableTh>}
                     </tr>
                   </thead>
                   <tbody>
-                    {c.productos.map(p => (
+                    {ordenarFilas(c.productos, sort, valorProducto).map(p => (
                       <tr key={p.productoId} className="border-b border-border/30">
                         {isVisible('codigo') && <td className="py-1 px-3 font-mono text-muted-foreground">{p.codigo}</td>}
                         {isVisible('producto') && <td className="py-1 px-3 font-medium">{p.nombre}</td>}

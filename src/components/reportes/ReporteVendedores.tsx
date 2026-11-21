@@ -1,5 +1,6 @@
 import { useCurrency } from '@/hooks/useCurrency';
 import { ColumnChooser, useColumnVisibility, type ColumnDef } from './ColumnChooser';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 const COLUMNS: ColumnDef[] = [
   { key: '#', label: '#' },
@@ -18,6 +19,12 @@ export function ReporteVendedores({ data }: { data: any }) {
   const items: any[] = data.topVendedores ?? [];
   const totalGeneral = items.reduce((s, v) => s + v.total, 0);
   const totalUtilidad = items.reduce((s, v) => s + (v.utilidad ?? 0), 0);
+  const { sorted: itemsOrd, sort, toggle: toggleSort } = useSortableTable(items, (v, key) => {
+    if (key === 'margen') return v.total > 0 ? (v.utilidad ?? 0) / v.total : 0;
+    if (key === 'pct') return v.total;
+    if (key === 'costo' || key === 'utilidad') return v[key] ?? 0;
+    return v[key];
+  }, undefined, 'reporte-vendedores');
 
   return (
     <div className="space-y-4">
@@ -44,17 +51,17 @@ export function ReporteVendedores({ data }: { data: any }) {
           <thead>
             <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
               {isVisible('#') && <th className="text-left py-2 px-3 w-8">#</th>}
-              {isVisible('nombre') && <th className="text-left py-2 px-3">Vendedor</th>}
-              {isVisible('ventas') && <th className="text-right py-2 px-3">Ventas</th>}
-              {isVisible('total') && <th className="text-right py-2 px-3">Total</th>}
-              {isVisible('costo') && <th className="text-right py-2 px-3">Costo</th>}
-              {isVisible('utilidad') && <th className="text-right py-2 px-3">Utilidad</th>}
-              {isVisible('margen') && <th className="text-right py-2 px-3">Margen</th>}
-              {isVisible('pct') && <th className="text-right py-2 px-3">% Part.</th>}
+              {isVisible('nombre') && <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="text-left py-2 px-3">Vendedor</SortableTh>}
+              {isVisible('ventas') && <SortableTh sortKey="ventas" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 px-3">Ventas</SortableTh>}
+              {isVisible('total') && <SortableTh sortKey="total" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 px-3">Total</SortableTh>}
+              {isVisible('costo') && <SortableTh sortKey="costo" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 px-3">Costo</SortableTh>}
+              {isVisible('utilidad') && <SortableTh sortKey="utilidad" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 px-3">Utilidad</SortableTh>}
+              {isVisible('margen') && <SortableTh sortKey="margen" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 px-3">Margen</SortableTh>}
+              {isVisible('pct') && <SortableTh sortKey="pct" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 px-3">% Part.</SortableTh>}
             </tr>
           </thead>
           <tbody>
-            {items.map((v, i) => {
+            {itemsOrd.map((v, i) => {
               const margen = v.total > 0 ? ((v.utilidad ?? 0) / v.total) * 100 : 0;
               const pct = totalGeneral > 0 ? (v.total / totalGeneral) * 100 : 0;
               return (

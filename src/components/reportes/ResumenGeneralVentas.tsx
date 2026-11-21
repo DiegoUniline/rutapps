@@ -1,4 +1,5 @@
 import { useCurrency } from '@/hooks/useCurrency';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface VendedorBreakdown {
   nombre: string;
@@ -31,6 +32,9 @@ const metodoPagoLabels: Record<string, string> = {
 
 export function ResumenGeneralVentas({ totalVentas, totalContado, totalCredito, vendedores, metodosPago }: ResumenProps) {
   const { fmt } = useCurrency();
+  const { sorted: vendedoresOrd, sort: sortVend, toggle: toggleVend } = useSortableTable(vendedores, undefined, undefined, 'resumen-ventas-vendedores');
+  const { sorted: metodosOrd, sort: sortMet, toggle: toggleMet } = useSortableTable(metodosPago, (m, key) =>
+    key === 'metodo' ? (metodoPagoLabels[m.metodo] ?? m.metodo) : (m as any)[key], undefined, 'resumen-ventas-metodos');
 
   return (
     <div className="space-y-4 print:break-before-page">
@@ -65,13 +69,13 @@ export function ResumenGeneralVentas({ totalVentas, totalContado, totalCredito, 
           <table className="w-full text-[11px]">
             <thead>
               <tr className="text-[9px] text-muted-foreground uppercase border-b border-border/50">
-                <th className="text-left py-1.5 px-3">Vendedor</th>
-                <th className="text-right py-1.5 px-3">Total</th>
-                <th className="text-right py-1.5 px-3 w-16">%</th>
+                <SortableTh sortKey="nombre" sort={sortVend} onToggle={toggleVend} className="text-left py-1.5 px-3">Vendedor</SortableTh>
+                <SortableTh sortKey="total" sort={sortVend} onToggle={toggleVend} align="right" className="text-right py-1.5 px-3">Total</SortableTh>
+                <SortableTh sortKey="pct" sort={sortVend} onToggle={toggleVend} align="right" className="text-right py-1.5 px-3 w-16">%</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {vendedores.map((v, i) => (
+              {vendedoresOrd.map((v, i) => (
                 <tr key={i} className="border-b border-border/30">
                   <td className="py-1.5 px-3 font-medium">{v.nombre}</td>
                   <td className="py-1.5 px-3 text-right font-semibold">{fmt(v.total)}</td>
@@ -93,13 +97,13 @@ export function ResumenGeneralVentas({ totalVentas, totalContado, totalCredito, 
           <table className="w-full text-[11px]">
             <thead>
               <tr className="text-[9px] text-muted-foreground uppercase border-b border-border/50">
-                <th className="text-left py-1.5 px-3">Método</th>
-                <th className="text-right py-1.5 px-3">Total</th>
-                <th className="text-right py-1.5 px-3 w-16">%</th>
+                <SortableTh sortKey="metodo" sort={sortMet} onToggle={toggleMet} className="text-left py-1.5 px-3">Método</SortableTh>
+                <SortableTh sortKey="total" sort={sortMet} onToggle={toggleMet} align="right" className="text-right py-1.5 px-3">Total</SortableTh>
+                <SortableTh sortKey="pct" sort={sortMet} onToggle={toggleMet} align="right" className="text-right py-1.5 px-3 w-16">%</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {metodosPago.map((m, i) => (
+              {metodosOrd.map((m, i) => (
                 <tr key={i} className="border-b border-border/30">
                   <td className="py-1.5 px-3 font-medium">{metodoPagoLabels[m.metodo] ?? m.metodo}</td>
                   <td className="py-1.5 px-3 text-right font-semibold">{fmt(m.total)}</td>

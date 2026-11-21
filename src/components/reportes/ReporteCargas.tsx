@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { fmtDate } from '@/lib/utils';
 import { ColumnChooser, useColumnVisibility, type ColumnDef } from './ColumnChooser';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 const statusLabels: Record<string, string> = { pendiente: 'Pendiente', en_ruta: 'En ruta', completada: 'Completada', cancelada: 'Cancelada' };
 
@@ -17,7 +18,8 @@ const COLUMNS: ColumnDef[] = [
 export function ReporteCargas({ data }: { data: any }) {
   const { visible, setVisible, isVisible } = useColumnVisibility(COLUMNS);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const cargas = data.cargasData ?? [];
+  const { sorted: cargas, sort, toggle: toggleSort } = useSortableTable<any>(data.cargasData ?? [], (c, key) =>
+    key === 'status' ? (statusLabels[c.status] ?? c.status) : c[key], undefined, 'reporte-cargas');
   const colCount = COLUMNS.filter(c => visible.has(c.key)).length;
 
   return (
@@ -45,11 +47,11 @@ export function ReporteCargas({ data }: { data: any }) {
           <thead>
             <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
               {isVisible('expand') && <th className="py-2 px-3 w-8"></th>}
-              {isVisible('fecha') && <th className="text-left py-2 px-3">Fecha</th>}
-              {isVisible('vendedor') && <th className="text-left py-2 px-3">Vendedor</th>}
-              {isVisible('status') && <th className="text-left py-2 px-3">Status</th>}
-              {isVisible('cargado') && <th className="text-right py-2 px-3">Cargado</th>}
-              {isVisible('vendido') && <th className="text-right py-2 px-3">Vendido</th>}
+              {isVisible('fecha') && <SortableTh sortKey="fecha" sort={sort} onToggle={toggleSort} className="text-left py-2 px-3">Fecha</SortableTh>}
+              {isVisible('vendedor') && <SortableTh sortKey="vendedor" sort={sort} onToggle={toggleSort} className="text-left py-2 px-3">Vendedor</SortableTh>}
+              {isVisible('status') && <SortableTh sortKey="status" sort={sort} onToggle={toggleSort} className="text-left py-2 px-3">Status</SortableTh>}
+              {isVisible('cargado') && <SortableTh sortKey="totalCargado" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 px-3">Cargado</SortableTh>}
+              {isVisible('vendido') && <SortableTh sortKey="totalVendido" sort={sort} onToggle={toggleSort} align="right" className="text-right py-2 px-3">Vendido</SortableTh>}
             </tr>
           </thead>
           <tbody>
