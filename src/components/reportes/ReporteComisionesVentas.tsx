@@ -14,7 +14,8 @@ import { ExportButton } from '@/components/ExportButton';
 import { OdooFilterBar, type FilterOption } from '@/components/OdooFilterBar';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { groupData, useListPreferences, type GroupNode } from '@/hooks/useListPreferences';
-import { exportToExcel, exportToPDF, type ExportGroup, type ExportOptions } from '@/lib/exportUtils';
+import { exportToExcel, exportToPDF, generarPdfExport, type ExportGroup, type ExportOptions } from '@/lib/exportUtils';
+import { abrirPdf } from '@/lib/pdfAcciones';
 import { cn, fmtDate } from '@/lib/utils';
 import {
   AGRUPACION_COMISION_LABEL,
@@ -193,16 +194,34 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
     groups: exportGroups(),
     groupByLabel: groupByLevels.length ? groupByLevels.map(level => AGRUPACION_COMISION_LABEL[level as AgrupacionComision] ?? level).join(' › ') : undefined,
     totals: { comision: totals.comision, total: totals.vendido, saldo: totals.saldo },
+    filtros: filtrosActivos(),
   });
 
-  const exportReport = async (format: 'excel' | 'pdf') => {
+  /** Búsqueda y filtros activos, como se ven en la barra (van en el PDF). */
+  const filtrosActivos = (): { label: string; value: string }[] => {
+    const out: { label: string; value: string }[] = [];
+    if (search.trim()) out.push({ label: 'Búsqueda', value: search.trim() });
+    for (const opt of filterOptions) {
+      const valores = filters[opt.key] ?? [];
+      if (!valores.length) continue;
+      out.push({ label: opt.label, value: valores.map(v => opt.options.find(o => o.value === v)?.label ?? v).join(', ') });
+    }
+    return out;
+  };
+
+  const exportReport = async (format: 'excel' | 'pdf' | 'imprimir') => {
     if (!filtered.length) {
       toast.info('No hay ventas para exportar con los filtros actuales');
       return;
     }
     try {
       if (format === 'excel') await exportToExcel(exportOptions());
-      else await exportToPDF(exportOptions());
+      else if (format === 'pdf') await exportToPDF(exportOptions());
+      else {
+        // Imprimir = el mismo PDF por código, abierto en el visor (D-051; antes window.print()).
+        const opciones = exportOptions();
+        abrirPdf(await generarPdfExport(opciones), `${opciones.fileName}.pdf`);
+      }
     } catch (error) {
       console.error('[ReporteComisionesVentas] export', error);
       toast.error('No se pudo generar el archivo');
@@ -255,7 +274,7 @@ export function ReporteComisionesVentas({ desde, hasta, vendedorIds }: Props) {
           onClearFilters={clearFilters}
         >
           <ExportButton compact onExcel={() => void exportReport('excel')} onPDF={() => void exportReport('pdf')} />
-          <button onClick={() => window.print()} className="btn-odoo-secondary h-7 gap-1 text-[11px]">
+          <button onClick={() => void exportReport('imprimir')} className="btn-odoo-secondary h-7 gap-1 text-[11px]">
             <FileText className="h-3 w-3" /> Imprimir
           </button>
         </OdooFilterBar>

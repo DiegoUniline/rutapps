@@ -54,6 +54,8 @@ export interface ExportOptions {
   groups?: ExportGroup[];
   /** Etiqueta de la dimensión por la que se agrupó (p.ej. "Vendedor"). */
   groupByLabel?: string;
+  /** Filtros aplicados en pantalla; el PDF los muestra bajo el encabezado. */
+  filtros?: { label: string; value: string }[];
 }
 
 // ─── Format Helpers ─────────────────────────────────────────────
@@ -211,8 +213,20 @@ async function loadLogoDataUrl(url: string): Promise<{ dataUrl: string; w: numbe
   }
 }
 
+/** Descarga el PDF del reporte (B/N corporativo). */
 export async function exportToPDF(options: ExportOptions) {
-  const { fileName, title, columns, data, empresa, empresaInfo, dateRange, groups } = options;
+  const doc = await construirPdfExport(options);
+  doc.save(`${options.fileName}.pdf`);
+}
+
+/** El mismo PDF de `exportToPDF`, como archivo (para abrirlo e imprimir). */
+export async function generarPdfExport(options: ExportOptions): Promise<Blob> {
+  const doc = await construirPdfExport(options);
+  return doc.output('blob');
+}
+
+async function construirPdfExport(options: ExportOptions) {
+  const { title, columns, data, empresa, empresaInfo, dateRange, groups, filtros, resumenGeneral } = options;
 
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -299,6 +313,18 @@ export async function exportToPDF(options: ExportOptions) {
   doc.setLineWidth(0.7);
   doc.line(margin, dividerY, pageWidth - margin, dividerY);
 
+  // ─── Filtros aplicados (los mismos que muestra la pantalla) ─────
+  let inicioTabla = dividerY + 4;
+  const filtrosActivos = (filtros ?? []).filter(f => f.value);
+  if (filtrosActivos.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...BW_MUTED);
+    const lineas = doc.splitTextToSize(`Filtros: ${filtrosActivos.map(f => `${f.label}: ${f.value}`).join(' · ')}`, pageWidth - margin * 2) as string[];
+    doc.text(lineas, margin, dividerY + 5);
+    inicioTabla = dividerY + 5 + lineas.length * 4;
+  }
+
   // ─── Datos: ordenar por fecha si existe la columna ──────────────
   const fechaCol = columns.find(c => c.format === 'date' || /fecha/i.test(c.key) || /fecha/i.test(c.header));
   let rows = [...data];
@@ -383,7 +409,7 @@ export async function exportToPDF(options: ExportOptions) {
   });
 
   autoTable(doc, {
-    startY: dividerY + 4,
+    startY: inicioTabla,
     head,
     body,
     foot,
@@ -435,12 +461,62 @@ export async function exportToPDF(options: ExportOptions) {
     margin: { left: margin, right: margin, top: dividerY + 4, bottom: 14 },
   });
 
+  if (resumenGeneral) dibujarResumenGeneralPdf(doc, autoTable, resumenGeneral, margin, empresaInfo?.nombre || empresa || '');
+
   // Reemplazar {totalPages} usando putTotalPages
   if ((doc as any).putTotalPages) {
     (doc as any).putTotalPages('{totalPages}');
   }
 
-  doc.save(`${fileName}.pdf`);
+  return doc;
+}
+
+/** Resumen general de ventas (totales, vendedores y métodos de pago), como el pie de la pantalla. */
+function dibujarResumenGeneralPdf(
+  doc: import('jspdf').jsPDF,
+  autoTable: typeof import('jspdf-autotable').default,
+  r: ResumenGeneralExport,
+  margin: number,
+  empresaFooter: string,
+) {
+  const money = (n: number) => `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const pct = (n: number) => `${Number(n || 0).toFixed(1)}%`;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const ultimaY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 40;
+  let y = ultimaY + 10;
+  if (y > pageHeight - 50) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...BW_BLACK);
+  doc.text('RESUMEN GENERAL', margin, y);
+  const tabla = (head: string[], body: string[][], startY: number) => {
+    autoTable(doc, {
+      startY,
+      head: [head],
+      body,
+      theme: 'plain',
+      styles: { font: 'helvetica', fontSize: 9, cellPadding: { top: 1.8, bottom: 1.8, left: 3, right: 3 }, textColor: BW_BLACK },
+      headStyles: { fontStyle: 'bold', fillColor: [255, 255, 255], textColor: BW_BLACK },
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+      margin: { left: margin, right: margin, top: 20, bottom: 14 },
+      didDrawPage: (d: { pageNumber: number }) => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(...BW_MUTED);
+        doc.text(`Rutapp · ${empresaFooter}`, margin, pageHeight - 8);
+        doc.text(`Página ${d.pageNumber} de {totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+      },
+    });
+    return ((doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? startY) + 5;
+  };
+  y = tabla(['Concepto', 'Total'], [
+    ['Total ventas generales', money(r.totalVentas)],
+    ['Total ventas de contado', money(r.totalContado)],
+    ['Total ventas a crédito', money(r.totalCredito)],
+  ], y + 3);
+  if (r.vendedores.length) y = tabla(['Vendedor', 'Total', '%'], r.vendedores.map(v => [v.nombre, money(v.total), pct(v.pct)]), y);
+  if (r.metodosPago.length) tabla(['Método de pago', 'Total', '%'], r.metodosPago.map(m => [m.metodo, money(m.total), pct(m.pct)]), y);
 }
 
 

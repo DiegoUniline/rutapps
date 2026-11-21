@@ -3,8 +3,10 @@ import { supabase } from '@/lib/supabase';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasEmpresa, requireEmpresa } from '@/lib/empresaGuard';
+import { useRegistrarPdfReporte, type RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
+import { pdfDeReporte, periodoReporte } from '@/lib/reportePdf';
 
-export function ReportePromociones({ desde, hasta }: { desde: string; hasta: string }) {
+export function ReportePromociones({ desde, hasta, registrarPdf }: { desde: string; hasta: string; registrarPdf?: RegistrarPdfReporte }) {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
@@ -41,6 +43,29 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
     },
   });
 
+
+  // PDF por código con lo mismo que la pantalla (D-051).
+  useRegistrarPdfReporte(registrarPdf, async () => {
+    if (!promociones) return null;
+    const totalDesc = promociones.reduce((s, p) => s + p.totalDescuento, 0);
+    const veces = promociones.reduce((s, p) => s + p.veces, 0);
+    return pdfDeReporte({
+      titulo: 'Reporte de Promociones',
+      periodo: periodoReporte(desde, hasta),
+      kpis: [
+        { label: 'Total descuentos otorgados', value: fmt(totalDesc) },
+        { label: 'Promociones activas usadas', value: String(promociones.length) },
+        { label: 'Veces aplicadas', value: String(veces) },
+      ],
+      secciones: [{
+        columnas: [{ header: 'Promoción' }, { header: 'Tipo' }, { header: 'Veces aplicada', align: 'right' }, { header: 'Total descuento', align: 'right' }],
+        filas: promociones.map(p => [p.nombre, p.tipo, String(p.veces), fmt(p.totalDescuento)]),
+        pie: ['Total', '', String(veces), fmt(totalDesc)],
+        vacio: 'No se aplicaron promociones en este período',
+      }],
+      archivo: `Reporte_Promociones_${desde}_${hasta}`,
+    }, empresa ?? { nombre: '' });
+  });
 
   if (isLoading) return <p className="text-center py-8 text-muted-foreground">Cargando...</p>;
   if (isError) {

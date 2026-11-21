@@ -10,8 +10,23 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 import { fmtMoney } from '@/lib/currency';
 import { fmtDate, cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { toast } from 'sonner';
+import { generarReportePdf } from '@/lib/reportePdf';
+import { reporteProductosCargadosPdf, reportePedidosEntregarPdf } from '@/lib/logisticaReportesPdf';
+import { abrirPdf } from '@/lib/pdfAcciones';
 
 type Tab = 'productos_cargados' | 'pedidos_entregar';
+
+/** Pedido tal como lo trae la consulta de «Pedidos a entregar». */
+interface PedidoPantalla {
+  folio: string | null;
+  fecha: string;
+  fecha_entrega?: string | null;
+  clientes?: { nombre?: string | null; direccion?: string | null } | null;
+  piezas: number;
+  total: number | null;
+  status: string;
+}
 
 // ============================================================================
 // Hook: Productos cargados (consolidado por producto, con desglose por vendedor)
@@ -171,7 +186,7 @@ function usePedidosEntregar(empresaId: string | undefined, desde: string, hasta:
 // Page
 // ============================================================================
 export default function LogisticaReportesPage() {
-  const { profile } = useAuth();
+  const { profile, empresa } = useAuth();
   const empresaId = profile?.empresa_id;
   const { desde, hasta, setDesde, setHasta } = useDateFilter();
   const { data: vendedores = [] } = useVendedores();
@@ -193,7 +208,34 @@ export default function LogisticaReportesPage() {
     setSelectedVendedores(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const handlePrint = () => window.print();
+  // Imprimir / PDF = PDF por código con el contenido y filtros de la pestaña activa (D-051).
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  const handlePrint = async () => {
+    const porVendedor = isAllVendedores || selectedVendedores.length > 1;
+    const reporte = tab === 'productos_cargados'
+      ? (productosQ.data ? reporteProductosCargadosPdf(productosQ.data, { desde, hasta, vendedoresLabel: selectedLabel, porVendedor }) : null)
+      : (pedidosQ.data ? reportePedidosEntregarPdf({
+          ...pedidosQ.data,
+          vendedores: pedidosQ.data.vendedores.map(v => ({
+            ...v,
+            pedidos: v.pedidos.map((p: PedidoPantalla) => ({
+              folio: p.folio, fecha: p.fecha, fecha_entrega: p.fecha_entrega,
+              cliente: p.clientes?.nombre ?? '—', direccion: p.clientes?.direccion ?? '—',
+              piezas: p.piezas, total: Number(p.total) || 0, status: p.status,
+            })),
+          })),
+        }, { desde, hasta, vendedoresLabel: selectedLabel, porVendedor, fmtMoneda: n => fmtMoney(n) }) : null);
+    if (!reporte) { toast.info('Espera a que cargue el reporte'); return; }
+    setGenerandoPdf(true);
+    try {
+      const blob = await generarReportePdf(reporte, empresa ?? { nombre: '' });
+      abrirPdf(blob, `${reporte.archivo}.pdf`);
+    } catch (err) {
+      toast.error(err instanceof Error ? `No se pudo generar el PDF: ${err.message}` : 'No se pudo generar el PDF');
+    } finally {
+      setGenerandoPdf(false);
+    }
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-4 print:p-0">
@@ -205,7 +247,7 @@ export default function LogisticaReportesPage() {
           </h1>
           <p className="text-sm text-muted-foreground">Productos cargados y pedidos pendientes de entregar</p>
         </div>
-        <button onClick={handlePrint} className="btn-pdf inline-flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+        <button onClick={() => void handlePrint()} disabled={generandoPdf} className="btn-pdf inline-flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
           <Printer className="h-4 w-4" /> Imprimir / PDF
         </button>
       </div>
