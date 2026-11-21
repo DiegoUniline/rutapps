@@ -38,7 +38,9 @@ export function useSaldoFavor(clienteId?: string | null) {
     const devIds = new Set(devIdsList);
 
     const emitido = (devLineas ?? [])
-      .filter((l: any) => devIds.has(l.devolucion_id) && l.accion === 'nota_credito')
+      // Nota aplicada a la venta aún sin sincronizar: su cobro lo crea el servidor; mientras
+      // tanto no cuenta como saldo disponible (ya pagó la venta).
+      .filter((l: any) => devIds.has(l.devolucion_id) && l.accion === 'nota_credito' && !(l._offline && l.aplica_venta))
       .reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
 
     // F1a: los cobros cancelados no cuentan; lo que una corrección dejó a favor (cobros.saldo_favor_monto) suma.

@@ -153,7 +153,8 @@ export async function encolarDevolucion(
   const { queueOperations } = await import('./syncQueue');
   const { getOfflineTable } = await import('./offlineDb');
   const { deterministicUuid } = await import('./deterministicId');
-  const pLineas = lineasParaRpc(lineas);
+  // Ids de renglón deterministas: la copia local y el servidor usan el mismo id (no se duplican al bajar).
+  const pLineas = await Promise.all(lineasParaRpc(lineas).map(async (l, i) => ({ ...l, id: await deterministicUuid('devlinea', devolucion.id, i) })));
   await queueOperations([{
     table: COLA_REGISTRAR_DEVOLUCION,
     operation: 'rpc',
@@ -166,7 +167,7 @@ export async function encolarDevolucion(
     const tl = getOfflineTable('devolucion_lineas');
     if (tl) {
       for (let i = 0; i < pLineas.length; i++) {
-        await tl.put({ ...pLineas[i], id: await deterministicUuid('devlinea', devolucion.id, i), devolucion_id: devolucion.id, created_at: now, _offline: true });
+        await tl.put({ ...pLineas[i], devolucion_id: devolucion.id, created_at: now, _offline: true });
       }
     }
   } catch (e) {

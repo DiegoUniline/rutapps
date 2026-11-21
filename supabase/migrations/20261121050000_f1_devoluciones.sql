@@ -504,7 +504,7 @@ GRANT EXECUTE ON FUNCTION public.cancelar_devolucion(uuid, text) TO authenticate
 --    p_devolucion: id, empresa_id, vendedor_id, cliente_id, carga_id, venta_id,
 --      almacen_destino_id, reembolso_metodo, tipo, fecha, notas, registrar_gasto,
 --      reemplaza_id (editar), motivo_edicion.
---    p_lineas[]: producto_id, cantidad, motivo, notas, accion, monto_credito,
+--    p_lineas[]: id (opcional), producto_id, cantidad, motivo, notas, accion, monto_credito,
 --      reemplazo_producto_id, destino, precio_unitario, aplica_venta, reposicion_en_venta.
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Monto (crédito o dinero) de un renglón. Con destino (F1) y precio: la BD lo calcula
@@ -683,10 +683,12 @@ BEGIN
     END IF;
   END IF;
 
+  -- El id del renglón puede venir del cliente (copia local sin conexión = mismo id que el servidor).
   INSERT INTO public.devolucion_lineas
-    (devolucion_id, producto_id, cantidad, motivo, notas, accion, monto_credito, reemplazo_producto_id,
+    (id, devolucion_id, producto_id, cantidad, motivo, notas, accion, monto_credito, reemplazo_producto_id,
      destino, precio_unitario, aplica_venta, reposicion_almacen_id)
-  SELECT v_id,
+  SELECT COALESCE(NULLIF(x->>'id', '')::uuid, gen_random_uuid()),
+         v_id,
          (x->>'producto_id')::uuid,
          (x->>'cantidad')::numeric,
          COALESCE(NULLIF(x->>'motivo', ''), 'no_vendido')::public.motivo_devolucion,
