@@ -90,8 +90,8 @@ Comparado catálogo de la BD nueva vs `20261119000001_base_public.sql` (mismo n�
 
 | Constraint | Migración | Columna | Datos viejos | Qué pasa |
 |---|---|---|---|---|
-| `devolucion_lineas_cantidad_positiva` CHECK cantidad > 0 | 20261121000000 F0 | vieja | pueden violarlo | NOT VALID + C1 lista las filas · ❓ |
-| `uq_descarga_ruta_vendedor_dia` índice único | 20261121043000 F3 | viejas | duplicados posibles | sin crear (queda el trigger) + C2 · ❓ |
+| `devolucion_lineas_cantidad_positiva` CHECK cantidad > 0 | 20261121000000 F0 | vieja | pueden violarlo | NOT VALID + C1 lista las filas · se quedan (D-052) |
+| `uq_descarga_ruta_vendedor_dia` índice único | 20261121043000 F3 | viejas | duplicados posibles | sin crear (queda el trigger) + C2 · se quedan (D-052) |
 | `ajustes_inventario_status_chk` | 20261119180000 | nueva (default 'aplicado') | cumplen | se repone |
 | `cobros_saldo_favor_reembolso_chk`, `cobros_devolucion_id_fkey` | 20261119200000 / 20261121050000 | nuevas (0 / NULL) | cumplen | se repone |
 | `almacenes_merma_de_almacen_id_fkey`, `uq_almacenes_merma_de` | 20261120140000 D-036 | nueva (NULL) | cumplen | se repone |
@@ -107,8 +107,8 @@ No hay `SET NOT NULL`, cambios de tipo, `DROP COLUMN/TABLE` ni enums nuevos post
 | 20261120060000 ventas_tiene_promocion | marca `ventas.tiene_promocion` | **A1** se aplica (marca derivada, sin decisión) |
 | 20261121043000 F3 | `descarga_ruta.inventario_aplicado_at` y `descarga_ruta_lineas.cantidad_aplicada` de liquidaciones con inventario ya aplicado | **A2/A3** se aplican (sin esto, re-aprobar volvería a meter todo a bodega, H7) |
 | 20261120000000 excedentes | `cobro_excedentes` 'previo' desde `cobros.saldo_favor_monto/reembolso_monto` | **A4** idempotente; da 0 (columnas nuevas = 0; D-023) |
-| 20261120030000 D-034 | recalcula estado y saldo de todos los pedidos por lo entregado | **B1** solo vista previa; `--recalcular-pedidos` lo aplica · ❓ |
-| 20261119233000 | re-sincroniza inventario de ventas canceladas/borrador con devoluciones | **B2** solo vista previa; `--corregir-canceladas-devol` lo aplica · ❓ |
+| 20261120030000 D-034 | recalcula estado y saldo de todos los pedidos por lo entregado | **B1** solo vista previa; `--recalcular-pedidos` lo aplica · NO se usa (D-052) |
+| 20261119233000 | re-sincroniza inventario de ventas canceladas/borrador con devoluciones | **B2** solo vista previa; `--corregir-canceladas-devol` lo aplica · NO se usa (D-052) |
 | 20261120010000 D-033 | cancelaba devoluciones de ventas canceladas | **fuera**: D-049 lo revirtió (cancelar la venta no cancela devoluciones) |
 | 20261119180000, 200000, 20261120140000, 20261121050000 | columnas nuevas | sin backfill: el default es lo correcto (ajustes «aplicado», sin saldo a favor viejo, sin merma, destino NULL = ruteo viejo por motivo) |
 | 20261121043000 (desglose congelado) | — | sin backfill: aprobadas antes de F3 siguen en vivo (D-049) |
@@ -127,11 +127,13 @@ No hay `SET NOT NULL`, cambios de tipo, `DROP COLUMN/TABLE` ni enums nuevos post
 - **C verificación:** C1–C5; cualquier número distinto de 0 en C1/C2/C3/C5 se lleva al dueño antes de operar.
 - **E totales:** usuarios, empresas, ventas y última venta = las del backup.
 
-### Pendientes del dueño (❓)
-1. `devolucion_lineas` con cantidad ≤ 0 (si C1 > 0): recomendación dejarlas (no mueven nada) con el CHECK NOT VALID.
-2. Liquidaciones duplicadas por vendedor y día (si C2 > 0): recomendación revisarlas y rechazar la sobrante con motivo; después crear el índice.
-3. B1 (D-034 vs D-023): recomendación aplicar solo si la vista previa es chica; si no, dejar que cada pedido se recalcule al tocarlo.
-4. B2 (inventario de canceladas con devoluciones): recomendación no aplicar; corregir con conteo físico.
-5. C3 entregas con producto repetido sin descontar: recomendación ajuste de inventario manual por camión tras revisar.
+### Decisión del dueño sobre datos viejos ([D-052](./decisiones.md#d-052))
+«Lo histórico se queda como está.» En el corte NO se corrige ni se mueve ningún dato histórico:
+1. `devolucion_lineas` con cantidad ≤ 0 (C1): se quedan; el CHECK queda NOT VALID (solo valida filas nuevas).
+2. Liquidaciones duplicadas por vendedor y día (C2): se quedan; el índice único no se crea (el trigger sigue evitando duplicados nuevos).
+3. B1 (`--recalcular-pedidos`): **no se usa**.
+4. B2 (`--corregir-canceladas-devol`): **no se usa**.
+5. C3 entregas con producto repetido sin descontar: no se ajustan; solo quedan en el reporte.
+Sí se aplican A1–A3: no cambian montos, cantidades ni inventario; solo marcan lo que ya pasó (bandera de promoción y «inventario ya aplicado» en liquidaciones aprobadas) para que el sistema nuevo no lo vuelva a aplicar.
 
 Probado 2026-11-21: SQL en BD de prueba (rollback) y el script completo contra un Postgres local con esquema reducido (ensayo, ejecutar y abortos).
