@@ -3,7 +3,7 @@ import { ArrowLeft, X } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import TicketVenta from '@/components/ruta/TicketVenta';
-import { ticketAnchoDe } from '@/lib/ticketPdf';
+import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
 import { STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
 import { printTicket } from '@/lib/printTicketUtil';
@@ -28,7 +28,7 @@ function RutaNuevaVentaInner() {
   const h = useRutaVenta({ onAlmacenMissing: () => checkAlmacen() });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-  const ticketAncho = (h.empresa as any)?.ticket_ancho ?? '58';
+  const ticketAncho = ticketAnchoEmpresa(h.empresa);
 
   // Un solo objeto de ticket para la pantalla y la impresión (salen iguales).
   const ticketDatos = useMemo((): TicketVentaDatos | null => {
@@ -99,7 +99,7 @@ function RutaNuevaVentaInner() {
     return (
       <TicketVenta
         {...ticketDatos}
-        ticketAncho={ticketAnchoDe(h.empresa)}
+        ticketAncho={ticketAnchoEmpresa(h.empresa)}
         onPrintTicket={handlePrintTicket}
         onClose={() => h.navigate('/ruta')}
       />

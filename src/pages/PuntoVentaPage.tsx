@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TicketVenta from '@/components/ruta/TicketVenta';
-import { ticketAnchoDe } from '@/lib/ticketPdf';
+import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
 import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver';
 import { buildPosLinePricing, getTaxMultiplier as posGetTaxMult, round2 as posR2, type BasePrecioMode } from '@/lib/posPricing';
 import { printTicket } from '@/lib/printTicketUtil';
@@ -887,7 +887,7 @@ export default function PuntoVentaPage() {
     if (!showTicket || !lastVentaData) return;
     const timer = setTimeout(() => {
       const td = ticketVentaADatos(posTicketDatos(lastVentaData, empresa, profile, productos));
-      printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
+      printTicket(td, { ticketAncho: ticketAnchoEmpresa(empresa) });
     }, 400);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2194,9 +2194,9 @@ export default function PuntoVentaPage() {
             <div>
               <TicketVenta
                 {...posTicketDatos(lastVentaData, empresa, profile, productos)}
-                ticketAncho={ticketAnchoDe(empresa)}
+                ticketAncho={ticketAnchoEmpresa(empresa)}
                 onPrintTicket={() => {
-                  const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
+                  const ticketAncho = ticketAnchoEmpresa(empresa);
                   printTicket(ticketVentaADatos(posTicketDatos(lastVentaData, empresa, profile, productos)), { ticketAncho });
                 }}
                 onClose={() => {
@@ -2210,7 +2210,7 @@ export default function PuntoVentaPage() {
               <button
                 onClick={() => {
                   const td = ticketVentaADatos(posTicketDatos(lastVentaData, empresa, profile, productos));
-                  printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
+                  printTicket(td, { ticketAncho: ticketAnchoEmpresa(empresa) });
                 }}
                 className="flex-1 bg-accent text-foreground rounded-xl py-3 text-[13px] font-semibold flex items-center justify-center gap-1.5 hover:bg-accent/80 transition-colors"
               >

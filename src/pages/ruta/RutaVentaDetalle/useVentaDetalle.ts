@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { fmtDate, roundMoney, todayInTimezone } from '@/lib/utils';
 import type { TicketData } from '@/lib/ticketHtml';
-import { generarTicketPdf, nombreArchivoTicket, ticketAnchoDe } from '@/lib/ticketPdf';
+import { generarTicketPdf, nombreArchivoTicket, ticketAnchoEmpresa } from '@/lib/ticketPdf';
 import { compartirPdf } from '@/lib/pdfAcciones';
 import { downloadBlob } from '@/lib/mergePdfs';
 import { printTicket } from '@/lib/printTicketUtil';
@@ -936,7 +936,7 @@ export function useVentaDetalle() {
     try {
       const { sendReceiptWhatsApp } = await import('@/lib/whatsappReceipt');
       const td = getTicketData()!;
-      const result = await sendReceiptWhatsApp({ data: td, empresaId: empresa?.id ?? '', phone: waPhone, referencia_id: venta.id, ticketAncho: ticketAnchoDe(empresa) });
+      const result = await sendReceiptWhatsApp({ data: td, empresaId: empresa?.id ?? '', phone: waPhone, referencia_id: venta.id, ticketAncho: ticketAnchoEmpresa(empresa) });
       if (result.success) { toast.success('Enviado por WhatsApp'); setShowWADialog(false); } else toast.error(result.error || 'Error al enviar');
     } catch (err: any) { toast.error(err.message); } finally { setSendingWA(false); }
   };
@@ -946,7 +946,7 @@ export function useVentaDetalle() {
   // Descargar y al Compartir.
   const generarTicketPdfVenta = async (): Promise<{ blob: Blob; fileName: string; folio: string } | null> => {
     const td = getTicketData(); if (!td) return null;
-    const blob = await generarTicketPdf(td, { ticketAncho: ticketAnchoDe(empresa) });
+    const blob = await generarTicketPdf(td, { ticketAncho: ticketAnchoEmpresa(empresa) });
     return { blob, fileName: nombreArchivoTicket(td.folio), folio: td.folio };
   };
 

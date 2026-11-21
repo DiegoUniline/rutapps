@@ -148,6 +148,7 @@ function useCobros(dateFrom?: string, dateTo?: string) {
 
 // Re-exported shared hook (offline-first) for filter dropdowns.
 import { useVendedoresForFilter as useVendedoresFilter } from '@/hooks/useFilterOptions';
+import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
 function useVendedores() {
   const q = useVendedoresFilter();
   // CobranzaPage expects records with user_id+nombre; map accordingly.
@@ -302,7 +303,7 @@ export default function CobranzaPage() {
       },
       clienteNombre: (cobro.clientes as any)?.nombre ?? 'Sin cliente',
     });
-    printTicket(ticketData, { ticketAncho: (empresa as any).ticket_ancho ?? '80' });
+    printTicket(ticketData, { ticketAncho: ticketAnchoEmpresa(empresa) });
   };
 
   // Build dynamic filter options

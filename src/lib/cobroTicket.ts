@@ -4,6 +4,7 @@
  */
 import type { TicketData, TicketEmpresa } from '@/lib/ticketHtml';
 import { printTicket } from '@/lib/printTicketUtil';
+import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
 
 export interface CobroTicketInput {
   empresa: TicketEmpresa;
@@ -87,6 +88,6 @@ export function printCobroTicket(
   input: Omit<CobroTicketInput, 'empresa'>,
 ) {
   return printTicket(buildCobroTicketData({ ...input, empresa: empresaToTicket(empresa) }), {
-    ticketAncho: empresa?.ticket_ancho ?? '80',
+    ticketAncho: ticketAnchoEmpresa(empresa),
   });
 }

@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { printTicket } from '@/lib/printTicketUtil';
 import { buildCobroTicketData } from '@/lib/cobroTicket';
 import { enviarReciboCobro } from '@/lib/enviarReciboCobro';
+import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
 
 type MetodoPago = 'efectivo' | 'transferencia' | 'tarjeta';
 
@@ -189,7 +190,7 @@ export default function AplicarPagoClienteDialog({ open, onOpenChange, cliente, 
           saldoNuevo: roundMoney(Math.max(0, v.saldo_pendiente - v.montoAplicar)),
         })),
       });
-      printTicket(ticketData, { ticketAncho: (empresa as any).ticket_ancho ?? '80' });
+      printTicket(ticketData, { ticketAncho: ticketAnchoEmpresa(empresa) });
 
       onOpenChange(false);
       onApplied?.();

@@ -29,7 +29,7 @@ import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidac
 import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
 import { generarLiquidacionTicketPdf } from '@/lib/liquidacionTicketHtml';
 import { empresaToTicket } from '@/lib/cobroTicket';
-import { ticketAnchoDe } from '@/lib/ticketPdf';
+import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
 import { downloadBlob } from '@/lib/mergePdfs';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useTablePagination } from '@/hooks/useTablePagination';
@@ -789,7 +789,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   } : {}),
                 };
                 // Ticket de liquidación en PDF por código, mismo motor que el ticket de venta (D-051).
-                const pdf = await generarLiquidacionTicketPdf(ticketData, { ticketAncho: ticketAnchoDe(empresa) });
+                const pdf = await generarLiquidacionTicketPdf(ticketData, { ticketAncho: ticketAnchoEmpresa(empresa) });
                 downloadBlob(pdf.blob, pdf.fileName);
                 toast.success('Ticket descargado');
               } catch (e: any) {
