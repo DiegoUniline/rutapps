@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { erroresReceptorCfdi } from '@/lib/cfdiReceptor';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
@@ -201,12 +202,13 @@ export default function CfdiFormPage() {
   }, [lineas]);
 
   // Save draft
-  const handleSave = async () => {
-    if (!cfdi || readOnly) return;
+  // Devuelve true solo si todo quedó guardado (timbrar no debe seguir con datos viejos).
+  const handleSave = async (): Promise<boolean> => {
+    if (!cfdi || readOnly) return false;
     setSaving(true);
     try {
       // Update CFDI header
-      await supabase.from('cfdis').update({
+      const { error: hErr } = await supabase.from('cfdis').update({
         receiver_rfc: receiver.rfc.toUpperCase().trim(),
         receiver_name: receiver.name.trim(),
         receiver_cfdi_use: receiver.cfdi_use,
@@ -221,9 +223,11 @@ export default function CfdiFormPage() {
         total: totals.total,
         updated_at: new Date().toISOString(),
       }).eq('id', cfdi.id);
+      if (hErr) throw hErr;
 
       // Upsert lines: delete all then re-insert
-      await supabase.from('cfdi_lineas').delete().eq('cfdi_id', cfdi.id);
+      const { error: dErr } = await supabase.from('cfdi_lineas').delete().eq('cfdi_id', cfdi.id);
+      if (dErr) throw dErr;
       if (lineas.length > 0) {
         const rows = lineas.map(l => ({
           cfdi_id: cfdi.id,
@@ -251,8 +255,10 @@ export default function CfdiFormPage() {
       setDirty(false);
       queryClient.invalidateQueries({ queryKey: ['cfdi-lineas', cfdi.id] });
       queryClient.invalidateQueries({ queryKey: ['cfdi', cfdi.id] });
+      return true;
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error('No se pudo guardar el borrador: ' + (e?.message ?? 'error desconocido'));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -308,17 +314,13 @@ export default function CfdiFormPage() {
       toast.error('Configura los datos fiscales del emisor primero');
       return;
     }
-    if (!receiver.rfc || !receiver.name) {
-      toast.error('RFC y nombre del receptor son obligatorios');
-      return;
-    }
     if (lineas.length === 0) {
       toast.error('Agrega al menos una línea');
       return;
     }
 
-    // Validate SAT data per line
-    const missing: string[] = [];
+    // Receptor CFDI 4.0 y pago (espejo del servidor, que es quien decide) + datos SAT por línea
+    const missing: string[] = erroresReceptorCfdi(receiver, { payment_form: paymentForm, payment_method: paymentMethod });
     lineas.forEach((l, i) => {
       const code = (l.product_code || '').toString().trim();
       if (!/^\d{8}$/.test(code) || code === '01010101') {
@@ -334,7 +336,7 @@ export default function CfdiFormPage() {
     }
 
     // Save first if dirty
-    if (dirty) await handleSave();
+    if (dirty && !(await handleSave())) return;
 
     setTimbring(true);
     try {
@@ -535,11 +537,11 @@ export default function CfdiFormPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[11px] text-muted-foreground font-medium">Régimen Fiscal</label>
-                <SearchableSelect options={regimenOptions} value={receiver.fiscal_regime} onChange={v => { setReceiver({ ...receiver, fiscal_regime: v }); setDirty(true); }} placeholder="Régimen" />
+                <SearchableSelect options={regimenOptions} value={receiver.fiscal_regime} onChange={v => { setReceiver({ ...receiver, fiscal_regime: v }); setDirty(true); }} placeholder="Régimen" disabled={readOnly} />
               </div>
               <div className="space-y-1">
                 <label className="text-[11px] text-muted-foreground font-medium">Uso CFDI</label>
-                <SearchableSelect options={usoOptions} value={receiver.cfdi_use} onChange={v => { setReceiver({ ...receiver, cfdi_use: v }); setDirty(true); }} placeholder="Uso" />
+                <SearchableSelect options={usoOptions} value={receiver.cfdi_use} onChange={v => { setReceiver({ ...receiver, cfdi_use: v }); setDirty(true); }} placeholder="Uso" disabled={readOnly} />
               </div>
             </div>
           </div>
@@ -550,7 +552,7 @@ export default function CfdiFormPage() {
             <h3 className="text-sm font-semibold text-foreground">Datos de Pago</h3>
             <div className="space-y-1">
               <label className="text-[11px] text-muted-foreground font-medium">Forma de Pago</label>
-              <SearchableSelect options={formaOptions} value={paymentForm} onChange={v => { setPaymentForm(v); setDirty(true); }} placeholder="Forma pago" />
+              <SearchableSelect options={formaOptions} value={paymentForm} onChange={v => { setPaymentForm(v); setDirty(true); }} placeholder="Forma pago" disabled={readOnly} />
             </div>
             <div className="space-y-1">
               <label className="text-[11px] text-muted-foreground font-medium">Método de Pago</label>
@@ -562,6 +564,7 @@ export default function CfdiFormPage() {
                 value={paymentMethod}
                 onChange={v => { setPaymentMethod(v); setDirty(true); }}
                 placeholder="Método"
+                disabled={readOnly}
               />
             </div>
 

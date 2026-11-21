@@ -110,7 +110,7 @@ export default function ComisionesVolumenTab({ onAfterGenerar }: { onAfterGenera
   if (loadVend) return <TableSkeleton />;
   if (!vendedores || vendedores.length === 0) {
     return (
-      <div className="border border-border rounded p-8 text-center text-muted-foreground text-sm">
+      <div className="p-8 text-center text-muted-foreground text-sm">
         No hay vendedores con esquema de volumen asignado. Configúralos en la pestaña <span className="font-medium">Esquemas</span>.
       </div>
     );
@@ -118,22 +118,22 @@ export default function ComisionesVolumenTab({ onAfterGenerar }: { onAfterGenera
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 flex-wrap bg-card border border-border rounded p-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Calendar className="h-4 w-4 text-muted-foreground" />
         <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         <div className="h-6 w-px bg-border mx-1" />
-        <button onClick={() => setPreset('semana')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Semana</button>
-        <button onClick={() => setPreset('quincena')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Quincena</button>
-        <button onClick={() => setPreset('mes')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Mes actual</button>
-        <button onClick={() => setPreset('mes_ant')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Mes anterior</button>
-        <button onClick={() => setPreset('anio')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Año</button>
+        <button onClick={() => setPreset('semana')} className="btn-odoo-secondary px-2.5 py-1 text-xs">Semana</button>
+        <button onClick={() => setPreset('quincena')} className="btn-odoo-secondary px-2.5 py-1 text-xs">Quincena</button>
+        <button onClick={() => setPreset('mes')} className="btn-odoo-secondary px-2.5 py-1 text-xs">Mes actual</button>
+        <button onClick={() => setPreset('mes_ant')} className="btn-odoo-secondary px-2.5 py-1 text-xs">Mes anterior</button>
+        <button onClick={() => setPreset('anio')} className="btn-odoo-secondary px-2.5 py-1 text-xs">Año</button>
       </div>
 
       {loadCalc && <TableSkeleton />}
 
       {!loadCalc && (
-        <div className="border border-border rounded overflow-hidden">
-          <div className="bg-muted/40 px-3 py-2 border-b border-table-border flex items-center gap-2">
+        <div className="-mx-3 md:-mx-4 border-t border-border overflow-x-auto">
+          <div className="px-3 md:px-4 py-2 border-b border-table-border flex items-center gap-2">
             <span className="font-semibold text-sm">Comisión sobre ventas filtradas</span>
             <span className="text-xs text-muted-foreground">· {fmtDate(desde)} a {fmtDate(hasta)}</span>
           </div>
@@ -164,11 +164,11 @@ export default function ComisionesVolumenTab({ onAfterGenerar }: { onAfterGenera
                       {v.esquema.tipo === 'volumen_tiers' && <span>Escalón: <span className="font-mono">{c?.pct_aplicado ?? 0}%</span></span>}
                       {v.esquema.tipo === 'bono_meta' && (
                         c?.meta_alcanzada
-                          ? <span className="text-green-600">Meta alcanzada</span>
-                          : <span className="text-amber-600">Meta no alcanzada ({fmt(v.esquema.config?.meta ?? 0)})</span>
+                          ? <span className="text-success">Meta alcanzada</span>
+                          : <span className="text-warning">Meta no alcanzada ({fmt(v.esquema.config?.meta ?? 0)})</span>
                       )}
                       {c?.desde_efectivo && c.desde_efectivo > desde && (
-                        <div className="text-[11px] text-amber-600 mt-0.5">
+                        <div className="text-[11px] text-warning mt-0.5">
                           El esquema aplica desde {fmtDate(c.desde_efectivo)}; las ventas previas no se consideran.
                         </div>
                       )}

@@ -5,7 +5,6 @@ import { subDays, format } from 'date-fns';
 import { fmtDate } from '@/lib/utils';
 import { es } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,9 +36,11 @@ export default function ControlPage() {
   const totalAlerts = Object.values(alertCounts).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="p-3 md:p-4 space-y-4 md:space-y-6">
+    <div className="min-h-full p-2 md:p-4">
+    {/* D-037: una sola hoja blanca */}
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-clip px-3 md:px-4 py-3 space-y-3">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center">
             <ShieldAlert className="h-5 w-5 text-destructive" />
@@ -55,34 +56,34 @@ export default function ControlPage() {
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {/* Resumen: franja con divide-x (D-037) */}
+      <div className="grid grid-cols-2 md:grid-cols-5 -mx-3 md:-mx-4 border-t md:border-b border-border md:divide-x divide-border [&>*]:max-md:border-b [&>*:nth-child(odd)]:max-md:border-r">
         <SummaryCard icon={XCircle} label="Canceladas" count={alertCounts.canceladas} color="text-destructive bg-destructive/10" />
-        <SummaryCard icon={PercentCircle} label="Descuento alto" count={alertCounts.descuentos} color="text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30" />
-        <SummaryCard icon={TrendingDown} label="Bajo costo" count={alertCounts.bajoCosto} color="text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30" />
-        <SummaryCard icon={Truck} label="Dif. descargas" count={alertCounts.descargas} color="text-orange-600 bg-orange-100 dark:text-orange-400 dark:bg-orange-900/30" />
-        <SummaryCard icon={Clock} label="Crédito vencido" count={alertCounts.vencidas} color="text-purple-600 bg-purple-100 dark:text-purple-400 dark:bg-purple-900/30" />
+        <SummaryCard icon={PercentCircle} label="Descuento alto" count={alertCounts.descuentos} color="text-warning bg-warning/10" />
+        <SummaryCard icon={TrendingDown} label="Bajo costo" count={alertCounts.bajoCosto} color="text-destructive bg-destructive/10" />
+        <SummaryCard icon={Truck} label="Dif. descargas" count={alertCounts.descargas} color="text-brand-orange bg-brand-orange/10" />
+        <SummaryCard icon={Clock} label="Crédito vencido" count={alertCounts.vencidas} color="text-primary bg-primary/10" />
       </div>
 
       {data.isLoading ? (
         <div className="text-center py-12 text-muted-foreground text-sm">Cargando alertas...</div>
       ) : (
         <Tabs defaultValue="canceladas" className="space-y-4">
-          <TabsList className="bg-card border border-border/60 p-1 h-auto flex-wrap">
+          <TabsList className="bg-accent p-1 h-auto flex-wrap justify-start">
             <TabsTrigger value="canceladas" className="gap-1.5 text-xs">
               <XCircle className="h-3.5 w-3.5" /> Canceladas {alertCounts.canceladas > 0 && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{alertCounts.canceladas}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="descuentos" className="gap-1.5 text-xs">
-              <PercentCircle className="h-3.5 w-3.5" /> Descuentos {alertCounts.descuentos > 0 && <Badge className="text-[10px] px-1.5 py-0 bg-amber-500">{alertCounts.descuentos}</Badge>}
+              <PercentCircle className="h-3.5 w-3.5" /> Descuentos {alertCounts.descuentos > 0 && <Badge className="text-[10px] px-1.5 py-0 bg-warning text-warning-foreground">{alertCounts.descuentos}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="bajo_costo" className="gap-1.5 text-xs">
               <TrendingDown className="h-3.5 w-3.5" /> Bajo costo {alertCounts.bajoCosto > 0 && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{alertCounts.bajoCosto}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="descargas" className="gap-1.5 text-xs">
-              <Truck className="h-3.5 w-3.5" /> Descargas {alertCounts.descargas > 0 && <Badge className="text-[10px] px-1.5 py-0 bg-orange-500">{alertCounts.descargas}</Badge>}
+              <Truck className="h-3.5 w-3.5" /> Descargas {alertCounts.descargas > 0 && <Badge className="text-[10px] px-1.5 py-0 bg-brand-orange text-brand-orange-foreground">{alertCounts.descargas}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="vencidas" className="gap-1.5 text-xs">
-              <Clock className="h-3.5 w-3.5" /> Crédito vencido {alertCounts.vencidas > 0 && <Badge className="text-[10px] px-1.5 py-0 bg-purple-500">{alertCounts.vencidas}</Badge>}
+              <Clock className="h-3.5 w-3.5" /> Crédito vencido {alertCounts.vencidas > 0 && <Badge className="text-[10px] px-1.5 py-0 bg-primary">{alertCounts.vencidas}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="historial" className="gap-1.5 text-xs">
               <History className="h-3.5 w-3.5" /> Bitácora
@@ -91,12 +92,12 @@ export default function ControlPage() {
 
           {/* Canceladas */}
           <TabsContent value="canceladas">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Ventas canceladas</CardTitle>
-                <CardDescription>Ventas que fueron canceladas en el periodo. Revisa si hay patrones sospechosos.</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <section>
+              <div className="pb-2">
+                <h2 className="text-base font-semibold">Ventas canceladas</h2>
+                <p className="text-xs text-muted-foreground">Ventas que fueron canceladas en el periodo. Revisa si hay patrones sospechosos.</p>
+              </div>
+              <div className="-mx-3 md:-mx-4 border-t border-border">
                 {data.canceladas.length === 0 ? <EmptyState /> : (
                   <Table>
                     <TableHeader><TableRow>
@@ -104,7 +105,7 @@ export default function ControlPage() {
                     </TableRow></TableHeader>
                     <TableBody>
                       {data.canceladas.map((v: any) => (
-                        <TableRow key={v.id} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${v.id}`)}>
+                        <TableRow key={v.id} className="cursor-pointer hover:bg-table-hover" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
                           <TableCell className="text-xs">{fmtDate(v.fecha)}</TableCell>
                           <TableCell className="text-xs">{(v.clientes as any)?.nombre ?? '—'}</TableCell>
@@ -116,18 +117,18 @@ export default function ControlPage() {
                     </TableBody>
                   </Table>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           </TabsContent>
 
           {/* Descuentos altos */}
           <TabsContent value="descuentos">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Descuentos superiores al 15%</CardTitle>
-                <CardDescription>Ventas con descuentos inusualmente altos que podrían necesitar revisión.</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <section>
+              <div className="pb-2">
+                <h2 className="text-base font-semibold">Descuentos superiores al 15%</h2>
+                <p className="text-xs text-muted-foreground">Ventas con descuentos inusualmente altos que podrían necesitar revisión.</p>
+              </div>
+              <div className="-mx-3 md:-mx-4 border-t border-border">
                 {data.descuentosAltos.length === 0 ? <EmptyState /> : (
                   <Table>
                     <TableHeader><TableRow>
@@ -135,13 +136,13 @@ export default function ControlPage() {
                     </TableRow></TableHeader>
                     <TableBody>
                       {data.descuentosAltos.map((v: any) => (
-                        <TableRow key={v.id} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${v.id}`)}>
+                        <TableRow key={v.id} className="cursor-pointer hover:bg-table-hover" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
                           <TableCell className="text-xs">{fmtDate(v.fecha)}</TableCell>
                           <TableCell className="text-xs">{(v.clientes as any)?.nombre ?? '—'}</TableCell>
                           <TableCell className="text-xs">{(v.vendedores as any)?.nombre ?? '—'}</TableCell>
                           <TableCell className="text-right text-xs">
-                            <Badge variant="outline" className="text-amber-600 border-amber-300 dark:text-amber-400">{v.descuento_porcentaje}%</Badge>
+                            <Badge variant="outline" className="text-warning border-warning/40">{v.descuento_porcentaje}%</Badge>
                           </TableCell>
                           <TableCell className="text-right text-xs font-medium">{fmt(v.total)}</TableCell>
                         </TableRow>
@@ -149,20 +150,20 @@ export default function ControlPage() {
                     </TableBody>
                   </Table>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           </TabsContent>
 
           {/* Ventas bajo costo */}
           <TabsContent value="bajo_costo">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
+            <section>
+              <div className="pb-2">
+                <h2 className="text-base font-semibold flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-destructive" /> Ventas por debajo del costo
-                </CardTitle>
-                <CardDescription>Productos vendidos a un precio inferior al costo registrado. Esto genera pérdida directa.</CardDescription>
-              </CardHeader>
-              <CardContent>
+                </h2>
+                <p className="text-xs text-muted-foreground">Productos vendidos a un precio inferior al costo registrado. Esto genera pérdida directa.</p>
+              </div>
+              <div className="-mx-3 md:-mx-4 border-t border-border">
                 {data.ventasBajoCosto.length === 0 ? <EmptyState text="No se detectaron ventas por debajo del costo" /> : (
                   <Table>
                     <TableHeader><TableRow>
@@ -170,7 +171,7 @@ export default function ControlPage() {
                     </TableRow></TableHeader>
                     <TableBody>
                       {data.ventasBajoCosto.map((a: any, i: number) => (
-                        <TableRow key={i} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${a.venta_id}`)}>
+                        <TableRow key={i} className="cursor-pointer hover:bg-table-hover" onClick={() => navigate(`/ventas/${a.venta_id}`)}>
                           <TableCell className="font-mono text-xs">{a.folio}</TableCell>
                           <TableCell className="text-xs max-w-[200px] truncate">{a.producto}</TableCell>
                           <TableCell className="text-xs">{a.vendedor}</TableCell>
@@ -182,22 +183,22 @@ export default function ControlPage() {
                     </TableBody>
                   </Table>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           </TabsContent>
 
           {/* Descargas con diferencia */}
           <TabsContent value="descargas">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Diferencias en descargas de ruta</CardTitle>
-                <CardDescription>Liquidaciones donde hay faltantes de producto o diferencias de efectivo.</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <section>
+              <div className="pb-2">
+                <h2 className="text-base font-semibold">Diferencias en descargas de ruta</h2>
+                <p className="text-xs text-muted-foreground">Liquidaciones donde hay faltantes de producto o diferencias de efectivo.</p>
+              </div>
+              <div className="-mx-3 md:-mx-4 border-t border-border">
                 {data.diferenciasDescarga.length === 0 ? <EmptyState text="No hay descargas con diferencias" /> : (
-                  <div className="space-y-2">
+                  <div className="divide-y divide-border">
                     {data.diferenciasDescarga.map((d: any) => (
-                      <div key={d.id} className="border border-border rounded-lg p-3">
+                      <div key={d.id} className="px-3 md:px-4 py-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div>
@@ -209,13 +210,13 @@ export default function ControlPage() {
                             {d.diferencia_efectivo !== 0 && (
                               <div className="text-right">
                                 <p className="text-[10px] text-muted-foreground">Dif. efectivo</p>
-                                <p className={`text-sm font-bold ${d.diferencia_efectivo < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                <p className={`text-sm font-bold ${d.diferencia_efectivo < 0 ? 'text-destructive' : 'text-success'}`}>
                                   {fmt(d.diferencia_efectivo)}
                                 </p>
                               </div>
                             )}
                             {d.productos_con_diferencia > 0 && (
-                              <Badge variant="outline" className="text-orange-600 border-orange-300">
+                              <Badge variant="outline" className="text-brand-orange border-brand-orange/40">
                                 {d.productos_con_diferencia} productos
                               </Badge>
                             )}
@@ -242,7 +243,7 @@ export default function ControlPage() {
                                     <TableCell className="text-xs">{l.producto}</TableCell>
                                     <TableCell className="text-right text-xs">{l.esperada}</TableCell>
                                     <TableCell className="text-right text-xs">{l.real}</TableCell>
-                                    <TableCell className={`text-right text-xs font-bold ${l.diferencia < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                    <TableCell className={`text-right text-xs font-bold ${l.diferencia < 0 ? 'text-destructive' : 'text-success'}`}>
                                       {l.diferencia > 0 ? '+' : ''}{l.diferencia}
                                     </TableCell>
                                   </TableRow>
@@ -255,18 +256,18 @@ export default function ControlPage() {
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           </TabsContent>
 
           {/* Crédito vencido */}
           <TabsContent value="vencidas">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Créditos vencidos</CardTitle>
-                <CardDescription>Ventas a crédito cuyo plazo ya venció y aún tienen saldo pendiente.</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <section>
+              <div className="pb-2">
+                <h2 className="text-base font-semibold">Créditos vencidos</h2>
+                <p className="text-xs text-muted-foreground">Ventas a crédito cuyo plazo ya venció y aún tienen saldo pendiente.</p>
+              </div>
+              <div className="-mx-3 md:-mx-4 border-t border-border">
                 {data.creditoVencido.length === 0 ? <EmptyState text="No hay créditos vencidos" /> : (
                   <Table>
                     <TableHeader><TableRow>
@@ -274,7 +275,7 @@ export default function ControlPage() {
                     </TableRow></TableHeader>
                     <TableBody>
                       {data.creditoVencido.map((v: any) => (
-                        <TableRow key={v.id} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${v.id}`)}>
+                        <TableRow key={v.id} className="cursor-pointer hover:bg-table-hover" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
                           <TableCell className="text-xs">{v.cliente}</TableCell>
                           <TableCell className="text-xs">{v.vendedor}</TableCell>
@@ -290,20 +291,20 @@ export default function ControlPage() {
                     </TableBody>
                   </Table>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           </TabsContent>
 
           {/* Bitácora */}
           <TabsContent value="historial">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Bitácora de actividad</CardTitle>
-                <CardDescription>Registro cronológico de todas las acciones críticas sobre ventas.</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <section>
+              <div className="pb-2">
+                <h2 className="text-base font-semibold">Bitácora de actividad</h2>
+                <p className="text-xs text-muted-foreground">Registro cronológico de todas las acciones críticas sobre ventas.</p>
+              </div>
+              <div className="-mx-3 md:-mx-4 border-t border-border">
                 {data.historial.length === 0 ? <EmptyState text="No hay actividad registrada en el periodo" /> : (
-                  <div className="space-y-1.5 max-h-[600px] overflow-y-auto">
+                  <div className="space-y-1.5 max-h-[600px] overflow-y-auto px-3 md:px-4 pt-2">
                     {data.historial.map((h: any) => (
                       <div key={h.id} className="flex items-start gap-3 border-b border-border/50 pb-2 last:border-0">
                         <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
@@ -329,28 +330,27 @@ export default function ControlPage() {
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           </TabsContent>
         </Tabs>
       )}
+    </div>
     </div>
   );
 }
 
 function SummaryCard({ icon: Icon, label, count, color }: { icon: any; label: string; count: number; color: string }) {
   return (
-    <Card>
-      <CardContent className="p-3 flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
-          <Icon className="h-4.5 w-4.5" />
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-foreground">{count}</p>
-          <p className="text-[11px] text-muted-foreground">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="px-3 md:px-4 py-2.5 flex items-center gap-3 min-w-0">
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
+        <Icon className="h-4.5 w-4.5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-2xl font-bold text-foreground tabular-nums">{count}</p>
+        <p className="text-[11px] text-muted-foreground truncate">{label}</p>
+      </div>
+    </div>
   );
 }
 

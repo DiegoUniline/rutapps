@@ -7,6 +7,7 @@ import { useKardexUbicacion } from '@/hooks/useKardexUbicacion';
 import { origenDestinoMovimiento } from '@/lib/kardexOrigenDestino';
 import { useKardexReferencias } from '@/hooks/useKardexReferencias';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -87,7 +88,26 @@ function getReferenciaRoute(tipo: string | null, id: string | null): string | nu
 export default function KardexPage() {
   const { empresa } = useAuth();
   const { data: almacenes } = useAlmacenes({ includeMermas: true });
-  const { data: productos } = useProductosForSelect();
+  const { data: productosActivos } = useProductosForSelect();
+  // D-044: el kardex es histórico; los productos inactivos se pueden consultar, marcados «(inactivo)».
+  const { data: productosInactivos } = useQuery({
+    queryKey: ['kardex-productos-inactivos', empresa?.id],
+    enabled: !!empresa?.id,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const data = await fetchAllPages<any>((from, to) => supabase.from('productos')
+        .select('id, codigo, nombre, status')
+        .eq('empresa_id', empresa!.id)
+        .neq('status', 'activo')
+        .order('nombre')
+        .range(from, to));
+      return (data ?? []).map((p: any) => ({ ...p, inactivo: `(${p.status ?? 'inactivo'})` }));
+    },
+  });
+  const productos = useMemo(
+    () => [...(productosActivos ?? []), ...(productosInactivos ?? [])],
+    [productosActivos, productosInactivos],
+  );
 
   const [searchParams, setSearchParams] = useSearchParams();
   const updateParam = (key: string, value: string) => {
@@ -148,7 +168,7 @@ export default function KardexPage() {
   // Sync product search input label when productoId is set externally (e.g. back navigation)
   useEffect(() => {
     if (productoSel && !productoSearch) {
-      setProductoSearch(`${productoSel.codigo} · ${productoSel.nombre}`);
+      setProductoSearch(`${productoSel.codigo} · ${productoSel.nombre}${(productoSel as any).inactivo ? ` ${(productoSel as any).inactivo}` : ''}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productoSel?.id]);
@@ -340,7 +360,7 @@ export default function KardexPage() {
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => {
                         setProductoId(p.id);
-                        setProductoSearch(`${p.codigo} · ${p.nombre}`);
+                        setProductoSearch(`${p.codigo} · ${p.nombre}${p.inactivo ? ` ${p.inactivo}` : ''}`);
                         setProductoDropdownOpen(false);
                       }}
                       className={cn(
@@ -348,7 +368,10 @@ export default function KardexPage() {
                         productoId === p.id && "bg-accent"
                       )}
                     >
-                      <div className="font-medium truncate">{p.nombre}</div>
+                      <div className="font-medium truncate">
+                        {p.nombre}
+                        {p.inactivo && <span className="ml-1 text-xs font-normal text-muted-foreground">{p.inactivo}</span>}
+                      </div>
                       <div className="text-[11px] text-muted-foreground">{p.codigo}</div>
                     </button>
                   ))}
@@ -392,7 +415,7 @@ export default function KardexPage() {
         {almacenId && productoId && (
           <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border rounded-lg p-3">
             <div className="min-w-0">
-              <div className="text-base font-semibold truncate">{productoSel?.nombre}</div>
+              <div className="text-base font-semibold truncate">{productoSel?.nombre}{(productoSel as any)?.inactivo ? ` ${(productoSel as any).inactivo}` : ''}</div>
               <div className="text-xs text-muted-foreground">{productoSel?.codigo} · {almacenSel?.nombre}</div>
             </div>
             <div className="flex flex-wrap items-center gap-2">

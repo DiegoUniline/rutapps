@@ -11,6 +11,10 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface ReasignState {
   almacenId: string;
@@ -27,6 +31,7 @@ export default function AlmacenesPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [reasign, setReasign] = useState<ReasignState | null>(null);
   const [reasigning, setReasigning] = useState(false);
+  const [renombrar, setRenombrar] = useState<{ id: string; actual: string; nombre: string } | null>(null);
 
   const { data: items, isLoading } = useQuery({
     // Clave propia: ['almacenes', id, true|false] es la de useAlmacenes({ includeMermas }) y esta
@@ -195,7 +200,7 @@ export default function AlmacenesPage() {
                   pildora={tipo === 'ruta' ? 'Ruta' : 'Almacén'}
                   tono={tipo === 'ruta' ? 'aviso' : 'primario'}
                   acciones={[
-                    { key: 'renombrar', label: 'Renombrar', icon: Pencil, onClick: () => { const v = window.prompt('Nombre del almacén', item.nombre ?? ''); if (v && v.trim() && v.trim() !== item.nombre) handleInlineSave(item.id, 'nombre', v.trim()); } },
+                    { key: 'renombrar', label: 'Renombrar', icon: Pencil, onClick: () => setRenombrar({ id: item.id, actual: item.nombre ?? '', nombre: item.nombre ?? '' }) },
                     { key: 'tipo', label: tipo === 'ruta' ? 'Cambiar a almacén' : 'Cambiar a ruta', icon: tipo === 'ruta' ? Warehouse : Truck, onClick: () => handleTipoToggle(item.id, tipo) },
                     activo
                       ? { key: 'baja', label: 'Dar de baja', icon: ToggleLeft, destructiva: true, separar: true, onClick: () => handleToggleActivo(item.id, true) }
@@ -307,6 +312,39 @@ export default function AlmacenesPage() {
       </div>
 
       )}
+
+      {/* Renombrar (teléfono) */}
+      <Dialog open={!!renombrar} onOpenChange={(o) => { if (!o) setRenombrar(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Renombrar almacén</DialogTitle>
+          </DialogHeader>
+          <form
+            id="form-renombrar-almacen"
+            className="space-y-1 py-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!renombrar) return;
+              const v = renombrar.nombre.trim();
+              if (!v) { toast.error('El nombre es obligatorio'); return; }
+              if (v !== renombrar.actual) handleInlineSave(renombrar.id, 'nombre', v);
+              setRenombrar(null);
+            }}
+          >
+            <Label htmlFor="renombrar-almacen-nombre">Nombre del almacén</Label>
+            <Input
+              id="renombrar-almacen-nombre"
+              autoFocus
+              value={renombrar?.nombre ?? ''}
+              onChange={(e) => setRenombrar(prev => prev ? { ...prev, nombre: e.target.value } : prev)}
+            />
+          </form>
+          <DialogFooter>
+            <Button type="button" variant="cancelar" onClick={() => setRenombrar(null)}>Cancelar</Button>
+            <Button type="submit" form="form-renombrar-almacen" disabled={!renombrar?.nombre.trim()}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reasign Modal */}
       {reasign && (

@@ -97,22 +97,22 @@ export default function ComisionesGeneradasPage() {
         <div className="h-6 w-px bg-border mx-1" />
         <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }} />
         <div className="flex gap-1">
-          <button onClick={() => setRange(todayLocal(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Hoy</button>
-          <button onClick={() => setRange(mondayOfWeek(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Semana</button>
-          <button onClick={() => setRange(firstOfMonth(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Mes</button>
-          <button onClick={() => setRange(firstOfLastMonth(), lastOfLastMonth())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Ant.</button>
+          <button onClick={() => setRange(todayLocal(), todayLocal())} className="btn-odoo-secondary px-2.5 py-1 text-[11px]">Hoy</button>
+          <button onClick={() => setRange(mondayOfWeek(), todayLocal())} className="btn-odoo-secondary px-2.5 py-1 text-[11px]">Semana</button>
+          <button onClick={() => setRange(firstOfMonth(), todayLocal())} className="btn-odoo-secondary px-2.5 py-1 text-[11px]">Mes</button>
+          <button onClick={() => setRange(firstOfLastMonth(), lastOfLastMonth())} className="btn-odoo-secondary px-2.5 py-1 text-[11px]">Ant.</button>
         </div>
         <div className="ml-auto flex items-center gap-3 text-xs">
-          <div>Pendiente: <span className="font-mono font-semibold text-amber-600">{fmt(totalPend)}</span></div>
+          <div>Pendiente: <span className="font-mono font-semibold text-warning">{fmt(totalPend)}</span></div>
           <div>Pagado: <span className="font-mono font-semibold text-primary">{fmt(totalPag)}</span></div>
           <div className="text-sm">Total: <span className="font-mono font-bold text-odoo-teal">{fmt(totalMonto)}</span></div>
         </div>
       </div>
 
       {!isLoading && resumenVendedor.length > 0 && (
-        <div className="border border-border rounded overflow-x-auto">
+        <div className="-mx-3 md:-mx-4 border-t border-border overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40">
+            <thead>
               <tr className="border-b border-table-border">
                 <th className="th-odoo text-left">Vendedor</th>
                 <th className="th-odoo text-right"># Ventas</th>
@@ -130,7 +130,7 @@ export default function ComisionesGeneradasPage() {
                   <td className="py-1.5 px-3 text-right font-mono text-xs">{r.ventas.size}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(r.vendido)}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(r.comision)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-xs text-amber-600">{fmt(r.pendiente)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-xs text-warning">{fmt(r.pendiente)}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-xs text-primary">{fmt(r.pagada)}</td>
                 </tr>
               ))}
@@ -140,7 +140,7 @@ export default function ComisionesGeneradasPage() {
       )}
 
       {isLoading ? <TableSkeleton /> : (
-        <div className="overflow-x-auto border border-border rounded">
+        <div className="-mx-3 md:-mx-4 border-t border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
@@ -172,7 +172,7 @@ export default function ComisionesGeneradasPage() {
                     {c.pagada ? (
                       <span title={c.pago_comisiones?.fecha_corte ? `Pagada al corte ${fmtDate(c.pago_comisiones.fecha_corte)}` : 'Pagada'} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pagada</span>
                     ) : c.pago_comision_id ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">En recibo</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">En recibo</span>
                     ) : (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground">Pendiente</span>
                     )}

@@ -39,7 +39,7 @@ export default function EsquemaVigenciaDialog({ nombre, onCancel, onConfirm, sav
           </div>
         </label>
 
-        <label className={`flex gap-3 items-start border rounded p-3 cursor-pointer ${modo === 'historico' ? 'border-amber-500 bg-amber-500/5' : 'border-border'}`}>
+        <label className={`flex gap-3 items-start border rounded p-3 cursor-pointer ${modo === 'historico' ? 'border-warning bg-warning/5' : 'border-border'}`}>
           <input type="radio" className="mt-1" checked={modo === 'historico'} onChange={() => setModo('historico')} />
           <div>
             <div className="text-sm font-medium flex items-center gap-1"><History className="h-3.5 w-3.5" /> Actualizar también el histórico</div>

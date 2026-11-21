@@ -17,6 +17,7 @@ import { usePermisos } from '@/hooks/usePermisos';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 import { getMobileReceivables, isMobileReceivable } from '@/lib/mobileReceivables';
+import { clienteVisibleEnCobranza, marcaClienteNoActivo } from '@/lib/registrosInactivos';
 
 type Step = 'cliente' | 'monto' | 'cuentas' | 'pago';
 
@@ -68,7 +69,7 @@ function RutaCobrarInner() {
   const savingRef = useRef(false);
 
   // Offline-compatible: read clients and ventas from local cache
-  const { data: clientesRaw } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
+  const { data: clientesRaw } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id, orderBy: 'nombre' });
   const { data: allVentas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
   // En móvil, la configuración "clientes propios" manda sobre "ver todos".
@@ -86,7 +87,10 @@ function RutaCobrarInner() {
         saldosPorCliente[v.cliente_id] = (saldosPorCliente[v.cliente_id] ?? 0) + (v.saldo_pendiente ?? 0);
       }
     });
-    return clientesFiltrados.map((c: any) => ({ ...c, saldoPendiente: saldosPorCliente[c.id] ?? 0 }));
+    // D-044: activos + los inactivos/suspendidos que todavía deben (se marcan «(inactivo)»).
+    return clientesFiltrados
+      .map((c: any) => ({ ...c, saldoPendiente: saldosPorCliente[c.id] ?? 0, marcaInactivo: marcaClienteNoActivo(c.status) }))
+      .filter((c: any) => clienteVisibleEnCobranza(c.status, c.saldoPendiente));
   }, [clientesFiltrados, allVentas]);
 
   // Offline-compatible: filter pending ventas for selected client
@@ -104,7 +108,7 @@ function RutaCobrarInner() {
 
   const selectCliente = (c: any) => {
     setClienteId(c.id);
-    setClienteNombre(c.nombre);
+    setClienteNombre(c.marcaInactivo ? `${c.nombre} ${c.marcaInactivo}` : c.nombre);
     setCuentas([]);
     setMontoRecibido('');
     setStep('monto');
@@ -113,11 +117,11 @@ function RutaCobrarInner() {
   // Auto-seleccionar cliente cuando se llega desde CxC con state.clienteId
   useEffect(() => {
     if (!preselectedClienteId || clienteId) return;
-    const lista = clientesFiltrados as any[];
+    const lista = clientes as any[];
     if (!lista || lista.length === 0) return;
     const c = lista.find((x: any) => x.id === preselectedClienteId);
     if (c) selectCliente(c);
-  }, [preselectedClienteId, clienteId, clientesFiltrados]);
+  }, [preselectedClienteId, clienteId, clientes]);
 
   // Notas preseleccionadas desde CxC: arma la distribución (más antigua primero)
   // con el saldo completo de cada nota y salta al paso de cuentas.
@@ -363,7 +367,10 @@ function RutaCobrarInner() {
                         <span className="text-sm font-bold text-destructive">{c.nombre.charAt(0)}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{c.nombre}</p>
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {c.nombre}
+                          {c.marcaInactivo && <span className="ml-1 text-xs font-normal text-muted-foreground">{c.marcaInactivo}</span>}
+                        </p>
                         {c.codigo && <p className="text-xs text-muted-foreground">{c.codigo}</p>}
                       </div>
                       <div className="text-right shrink-0">
