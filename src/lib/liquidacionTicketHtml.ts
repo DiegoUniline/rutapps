@@ -1,9 +1,18 @@
 /**
- * Ticket HTML para liquidación de ruta — formato térmico 80mm
+ * Ticket de liquidación de ruta. Se arma como documento de ticket
+ * (`DocumentoTicket`) y se dibuja con el MISMO motor que el ticket de venta
+ * (`ticketLayout`): encabezado de empresa del diseñador, columnas fijas y
+ * estilo monoespaciado. Sale en PDF por código (`ticketPdf`) o en HTML para
+ * imprimir; nunca por captura de pantalla (D-051).
  */
-
-const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const makeFmt = (sym: string) => (n: number) => `${sym}${fmtNum(n)}`;
+import type { TicketEmpresa } from './ticketHtml';
+import { documentoTicketHTML } from './ticketHtml';
+import {
+  construirEncabezadoTicket, resolverOpcionesTicket, crearFormatoTicket,
+  MARCA_RUTAPP, MOTIVO_DEVOLUCION_LABELS, type RenglonTicket,
+} from './ticketModelo';
+import type { DocumentoTicket } from './ticketLayout';
+import { documentoTicketPdf, nombreArchivoTicket, type OpcionesTicketPdf } from './ticketPdf';
 
 export interface StockLineItem {
   nombre: string;
@@ -17,6 +26,8 @@ export interface StockLineItem {
 export interface LiquidacionTicketData {
   currencySymbol?: string;
   empresaNombre: string;
+  /** Datos de la empresa para el encabezado (con `ticket_campos` del diseñador). */
+  empresa?: TicketEmpresa;
   vendedorNombre: string;
   fechaInicio: string;
   fechaFin: string;
@@ -40,172 +51,128 @@ export interface LiquidacionTicketData {
   stockFin?: { fecha: string; lineas: StockLineItem[] };
 }
 
-const statusLabel: Record<string, string> = {
-  pendiente: '⏳ Pendiente', aprobada: '✅ Aprobada', rechazada: '❌ Rechazada',
+const STATUS_LABEL: Record<string, string> = {
+  pendiente: 'Pendiente', aprobada: 'Aprobada', rechazada: 'Rechazada',
 };
 
-export function buildLiquidacionTicketHTML(data: LiquidacionTicketData): string {
+/** Formato de dinero solo ASCII con un símbolo dado (−$1,234.50). */
+function formatoConSimbolo(sym: string): (n: number) => string {
+  return (n: number) => {
+    const [ent, dec] = Math.abs(n).toFixed(2).split('.');
+    return `${n < 0 ? '-' : ''}${sym}${ent.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${dec}`;
+  };
+}
+
+/** Documento de ticket de la liquidación (mismos renglones que el ticket de venta). */
+export function construirDocumentoLiquidacion(data: LiquidacionTicketData): DocumentoTicket {
   const {
-    empresaNombre, vendedorNombre, fechaInicio, fechaFin, status,
+    vendedorNombre, fechaInicio, fechaFin, status,
     efectivoEntregado, ventas, cobros, gastos, devoluciones, cuadre,
   } = data;
-  const fmt = makeFmt(data.currencySymbol ?? '$');
+  const empresa: TicketEmpresa = data.empresa ?? { nombre: data.empresaNombre };
+  const opciones = resolverOpcionesTicket(empresa.ticket_campos);
+  const fmt = data.currencySymbol ? formatoConSimbolo(data.currencySymbol) : crearFormatoTicket(empresa.moneda);
 
   const totalVentas = ventas.reduce((s, v) => s + v.total, 0);
   const totalCobros = cobros.reduce((s, c) => s + c.monto, 0);
   const totalGastos = gastos.reduce((s, g) => s + g.monto, 0);
-  const periodoLabel = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
+  const periodo = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
 
-  function buildStockSection(stock: { fecha: string; lineas: StockLineItem[] } | undefined, title: string) {
-    if (!stock || stock.lineas.length === 0) return '';
-    const rows = stock.lineas.map(l => `
-      <div style="display:flex;justify-content:space-between;font-size:10px;padding:1px 0">
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:4px">${l.nombre}</span>
-        <span style="white-space:nowrap;color:#888;font-size:9px">C:${l.cargada} V:${l.vendida} D:${l.devuelta}</span>
-        <span style="font-weight:600;white-space:nowrap;min-width:30px;text-align:right">${l.restante}</span>
-      </div>
-    `).join('');
-    return `
-    <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
-    <div style="padding:4px 0">
-      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:4px">📦 ${title} (${stock.fecha})</div>
-      ${rows}
-    </div>`;
+  const c: RenglonTicket[] = [];
+  const sep = () => c.push({ tipo: 'separador' });
+  const par = (izq: string, der: string, negrita?: boolean) => c.push({ tipo: 'par', izq, der, negrita });
+
+  sep();
+  c.push({ tipo: 'titulo', texto: 'LIQUIDACION DE RUTA' });
+  c.push({ tipo: 'texto', texto: `Estado: ${STATUS_LABEL[status] ?? status}`, modo: 'recortar' });
+  sep();
+  c.push({ tipo: 'texto', texto: `Vendedor: ${vendedorNombre}`, modo: 'recortar' });
+  c.push({ tipo: 'texto', texto: `Periodo: ${periodo}`, modo: 'envolver' });
+
+  sep();
+  c.push({ tipo: 'titulo', texto: 'RESUMEN DE COBROS' });
+  par('+ Cobros en efectivo', fmt(cuadre.cobrosEfectivo));
+  if (cuadre.cobrosTransferencia > 0) par('Cobros transferencia', fmt(cuadre.cobrosTransferencia));
+  if (cuadre.cobrosTarjeta > 0) par('Cobros tarjeta', fmt(cuadre.cobrosTarjeta));
+  par('- Gastos', `-${fmt(cuadre.totalGastos)}`);
+
+  sep();
+  c.push({ tipo: 'titulo', texto: 'CUADRE DE EFECTIVO' });
+  par('Efectivo esperado', fmt(cuadre.efectivoEsperado), true);
+  par('Efectivo entregado', fmt(efectivoEntregado), true);
+  const dif = cuadre.diferencia;
+  const difLabel = dif > 0 ? 'Sobra' : dif < 0 ? 'Falta' : 'Cuadra';
+  par('Diferencia', `${dif > 0 ? '+' : ''}${fmt(dif)} (${difLabel})`, true);
+
+  if (ventas.length > 0) {
+    sep();
+    c.push({ tipo: 'titulo', texto: `VENTAS (${ventas.length})` });
+    for (const v of ventas) par(`${v.folio} ${v.cliente}`, fmt(v.total));
+    sep();
+    par('Total ventas', fmt(totalVentas), true);
+    par('  Contado', fmt(cuadre.totalContado));
+    par('  Credito', fmt(cuadre.totalCredito));
   }
 
-  const ventasHtml = ventas.map(v => `
-    <div style="display:flex;justify-content:space-between;font-size:10px;padding:1px 0">
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:4px"><b>${v.folio}</b> ${v.cliente}</span>
-      <span style="font-weight:600;white-space:nowrap">${fmt(v.total)}</span>
-    </div>
-  `).join('');
+  if (cobros.length > 0) {
+    sep();
+    c.push({ tipo: 'titulo', texto: `COBROS (${cobros.length})` });
+    for (const co of cobros) par(`${co.cliente} (${co.metodo})`, fmt(co.monto));
+    sep();
+    par('Total cobros', fmt(totalCobros), true);
+  }
 
-  const cobrosHtml = cobros.map(c => `
-    <div style="display:flex;justify-content:space-between;font-size:10px;padding:1px 0">
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:4px">${c.cliente} <span style="color:#888;text-transform:capitalize">(${c.metodo})</span></span>
-      <span style="font-weight:600;white-space:nowrap">${fmt(c.monto)}</span>
-    </div>
-  `).join('');
+  if (gastos.length > 0) {
+    sep();
+    c.push({ tipo: 'titulo', texto: `GASTOS (${gastos.length})` });
+    for (const g of gastos) par(g.concepto, `-${fmt(g.monto)}`);
+    sep();
+    par('Total gastos', `-${fmt(totalGastos)}`, true);
+  }
 
-  const gastosHtml = gastos.map(g => `
-    <div style="display:flex;justify-content:space-between;font-size:10px;padding:1px 0">
-      <span style="color:#666">${g.concepto}</span>
-      <span style="font-weight:600;color:#dc2626;white-space:nowrap">-${fmt(g.monto)}</span>
-    </div>
-  `).join('');
+  if (devoluciones.length > 0) {
+    sep();
+    c.push({ tipo: 'titulo', texto: `DEVOLUCIONES (${devoluciones.length})` });
+    for (const d of devoluciones) par(`${d.cantidad}x ${d.nombre}`, MOTIVO_DEVOLUCION_LABELS[d.motivo] ?? d.motivo);
+  }
 
-  const devHtml = devoluciones.map(d => `
-    <div style="display:flex;justify-content:space-between;font-size:10px;padding:1px 0">
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:4px">${d.cantidad}x ${d.nombre}</span>
-      <span style="color:#888;font-size:9px">${d.motivo}</span>
-    </div>
-  `).join('');
+  const stock = (s: LiquidacionTicketData['stockInicio'], titulo: string) => {
+    if (!s || s.lineas.length === 0) return;
+    sep();
+    c.push({ tipo: 'titulo', texto: titulo });
+    c.push({ tipo: 'texto', texto: `(${s.fecha})`, modo: 'envolver' });
+    for (const l of s.lineas) {
+      c.push({ tipo: 'producto', texto: l.nombre, importe: String(l.restante), gratis: false });
+      c.push({ tipo: 'detalle', partes: [{ texto: `C:${l.cargada} V:${l.vendida} D:${l.devuelta}` }] });
+    }
+  };
+  stock(data.stockInicio, 'STOCK A BORDO - INICIO');
+  stock(data.stockFin, 'STOCK A BORDO - FIN');
 
-  const dif = cuadre.diferencia;
-  const difColor = dif > 0 ? '#16a34a' : dif < 0 ? '#dc2626' : '#16a34a';
-  const difLabel = dif > 0 ? 'Sobra' : dif < 0 ? 'Falta' : 'Cuadra';
+  sep();
+  c.push({ tipo: 'blanco' });
+  c.push({ tipo: 'blanco' });
+  c.push({ tipo: 'firmas', izq: 'Vendedor', der: 'Supervisor' });
+  c.push({ tipo: 'blanco' });
 
-  return `<div style="width:320px;padding:12px 16px;font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;color:#222;line-height:1.4">
-    <div style="text-align:center;padding-bottom:6px">
-      <div style="font-size:12px;font-weight:700">${empresaNombre}</div>
-      <div style="font-size:10px;font-weight:700;margin-top:4px;color:#333">LIQUIDACIÓN DE RUTA</div>
-      <div style="font-size:9px;color:#888;margin-top:2px">${statusLabel[status] ?? status}</div>
-    </div>
+  return {
+    encabezado: construirEncabezadoTicket(empresa, opciones),
+    cuerpo: c,
+    pie: [],
+    marca: MARCA_RUTAPP,
+  };
+}
 
-    <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
+/** HTML del ticket de liquidación (mismo dibujo que el ticket de venta). */
+export function buildLiquidacionTicketHTML(data: LiquidacionTicketData, opts?: { columnas?: number }): string {
+  return documentoTicketHTML(construirDocumentoLiquidacion(data), { columnas: opts?.columnas });
+}
 
-    <div style="font-size:10px;padding:4px 0">
-      <div><b>Vendedor</b> <span style="color:#666">${vendedorNombre}</span></div>
-      <div><b>Periodo</b> <span style="color:#666">${periodoLabel}</span></div>
-    </div>
-
-    <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
-
-    <!-- RESUMEN DE COBROS -->
-    <div style="padding:4px 0">
-      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:4px">Resumen de cobros</div>
-      <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">+ Cobros en efectivo</span><span>${fmt(cuadre.cobrosEfectivo)}</span></div>
-      ${cuadre.cobrosTransferencia > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Cobros transferencia</span><span>${fmt(cuadre.cobrosTransferencia)}</span></div>` : ''}
-      ${cuadre.cobrosTarjeta > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Cobros tarjeta</span><span>${fmt(cuadre.cobrosTarjeta)}</span></div>` : ''}
-      <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">− Gastos</span><span style="color:#dc2626">-${fmt(cuadre.totalGastos)}</span></div>
-    </div>
-
-    <!-- CUADRE DE EFECTIVO -->
-    <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
-    <div style="padding:4px 0">
-      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:4px">Cuadre de efectivo</div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700">
-        <span>Efectivo esperado</span><span>${fmt(cuadre.efectivoEsperado)}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-top:2px">
-        <span>Efectivo entregado</span><span>${fmt(efectivoEntregado)}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;border-top:1px dashed #aaa;padding-top:3px;margin-top:3px">
-        <span>Diferencia</span><span style="color:${difColor}">${dif > 0 ? '+' : ''}${fmt(dif)} (${difLabel})</span>
-      </div>
-    </div>
-
-    ${ventas.length > 0 ? `
-    <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
-    <div style="padding:4px 0">
-      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:4px">Ventas (${ventas.length})</div>
-      ${ventasHtml}
-      <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;border-top:1px dashed #aaa;padding-top:3px;margin-top:3px">
-        <span>Total ventas</span><span>${fmt(totalVentas)}</span>
-      </div>
-      <div style="display:flex;gap:12px;font-size:9px;color:#888;margin-top:2px">
-        <span>Contado: ${fmt(cuadre.totalContado)}</span>
-        <span>Crédito: ${fmt(cuadre.totalCredito)}</span>
-      </div>
-    </div>` : ''}
-
-    ${cobros.length > 0 ? `
-    <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
-    <div style="padding:4px 0">
-      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:4px">Cobros (${cobros.length})</div>
-      ${cobrosHtml}
-      <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;border-top:1px dashed #aaa;padding-top:3px;margin-top:3px">
-        <span>Total cobros</span><span>${fmt(totalCobros)}</span>
-      </div>
-    </div>` : ''}
-
-    ${gastos.length > 0 ? `
-    <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
-    <div style="padding:4px 0">
-      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:4px">Gastos (${gastos.length})</div>
-      ${gastosHtml}
-      <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;border-top:1px dashed #aaa;padding-top:3px;margin-top:3px">
-        <span>Total gastos</span><span style="color:#dc2626">-${fmt(totalGastos)}</span>
-      </div>
-    </div>` : ''}
-
-    ${devoluciones.length > 0 ? `
-    <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
-    <div style="padding:4px 0">
-      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:4px">Devoluciones (${devoluciones.length})</div>
-      ${devHtml}
-    </div>` : ''}
-
-    ${buildStockSection(data.stockInicio, 'Stock a bordo — Inicio')}
-    ${buildStockSection(data.stockFin, 'Stock a bordo — Fin')}
-
-    <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
-
-    <!-- FIRMAS -->
-    <div style="padding:20px 0 4px;display:flex;gap:16px">
-      <div style="flex:1;text-align:center">
-        <div style="border-top:1px solid #222;margin-top:30px;padding-top:3px">
-          <div style="font-size:9px;color:#888">Vendedor</div>
-          <div style="font-size:9px;font-weight:600">${vendedorNombre}</div>
-        </div>
-      </div>
-      <div style="flex:1;text-align:center">
-        <div style="border-top:1px solid #222;margin-top:30px;padding-top:3px">
-          <div style="font-size:9px;color:#888">Supervisor</div>
-        </div>
-      </div>
-    </div>
-
-    <div style="border-top:1px dashed #ccc;margin-top:6px;padding-top:4px;text-align:center;font-size:7px;color:#999">rutapp.mx</div>
-  </div>`;
+/** PDF del ticket de liquidación (80 mm por omisión, alto dinámico), generado por código. */
+export async function generarLiquidacionTicketPdf(data: LiquidacionTicketData, opts: OpcionesTicketPdf = {}): Promise<{ blob: Blob; fileName: string }> {
+  const doc = await documentoTicketPdf(construirDocumentoLiquidacion(data), {
+    titulo: `Liquidacion ${data.vendedorNombre} ${data.fechaInicio}`,
+    ...opts,
+  });
+  return { blob: doc.output('blob'), fileName: nombreArchivoTicket(`${data.vendedorNombre}-${data.fechaInicio}`, 'Ticket-Liquidacion') };
 }
