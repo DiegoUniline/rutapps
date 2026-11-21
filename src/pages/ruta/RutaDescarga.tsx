@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw, Camera, MapPin, Truck } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw, Camera, MapPin, Truck, XCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
@@ -297,11 +297,43 @@ export default function RutaDescarga() {
           </div>
         </header>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-          <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-            <CheckCircle className="h-8 w-8 text-green-600" />
-          </div>
-          <h2 className="text-lg font-bold text-foreground mb-1">Liquidación enviada ✓</h2>
-          <p className="text-sm text-muted-foreground mb-6">El administrador la revisará y aprobará.</p>
+          {existingDescarga.status === 'rechazada' ? (
+            <>
+              <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                <XCircle className="h-8 w-8 text-destructive" />
+              </div>
+              <h2 className="text-lg font-bold text-foreground mb-1">Liquidación rechazada</h2>
+              {existingDescarga.notas_supervisor && (
+                <p className="text-sm text-foreground mb-1"><span className="text-muted-foreground">Motivo:</span> {existingDescarga.notas_supervisor}</p>
+              )}
+              <p className="text-sm text-muted-foreground mb-6">Habla con tu supervisor: puede reabrirla para corregirla.</p>
+            </>
+          ) : existingDescarga.status === 'aprobada' ? (
+            <>
+              <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-lg font-bold text-foreground mb-1">Liquidación aprobada ✓</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                {existingDescarga.fecha_aprobacion
+                  ? `Aprobada el ${new Date(existingDescarga.fecha_aprobacion).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}`
+                  : 'El administrador ya la aprobó'}
+                {existingDescarga.notas_supervisor ? ` · Nota: ${existingDescarga.notas_supervisor}` : ''}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-4">
+                <Clock className="h-8 w-8 text-amber-600" />
+              </div>
+              <h2 className="text-lg font-bold text-foreground mb-1">Liquidación enviada · pendiente</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                {existingDescarga.motivo_reapertura
+                  ? `Tu supervisor la reabrió para corregirla (${existingDescarga.motivo_reapertura}).`
+                  : 'El administrador la revisará y aprobará.'}
+              </p>
+            </>
+          )}
           <button onClick={() => nav('/ruta')} className="text-sm text-primary font-medium">
             Volver al inicio
           </button>

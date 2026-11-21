@@ -8,11 +8,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { esCobroSinDinero } from '@/lib/saldoFavor';
-import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargasLiveCuadre, useLiquidacionEsperado, DescargaLinea } from '@/hooks/useDescargaRuta';
+import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargasLiveCuadre, useLiquidacionEsperado, useLiquidacionDesgloseVivo, useLiquidacionEventos, DescargaLinea } from '@/hooks/useDescargaRuta';
+import { aprobarLiquidacion, rechazarLiquidacion, reabrirLiquidacion, parseLiquidacionDesglose, cambiosDespuesDeAprobar, ACCION_EVENTO_LABEL } from '@/lib/liquidacionCierre';
+import { usePermisos } from '@/hooks/usePermisos';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { calcularEfectivoEsperado } from '@/lib/liquidacion';
 import { useVendedores } from '@/hooks/useClientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw, Trash2, Boxes, LayoutDashboard, ChevronDown } from 'lucide-react';
+import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw, Trash2, Boxes, LayoutDashboard, ChevronDown, History, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -141,7 +144,7 @@ type LiqSectionKey = 'resumen' | 'ventas' | 'productos' | 'cobros' | 'entregas' 
 
 function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => void }) {
   const isMobile = useIsMobile();
-  const { user, empresa, profile } = useAuth();
+  const { empresa } = useAuth();
   const { symbol: cs, fmt } = useCurrency();
   const qc = useQueryClient();
   const { data: lineas } = useDescargaLineas(descarga.id);
@@ -157,6 +160,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const [activeTab, setActiveTab] = useState<LiqTabKey>('resumen');
   const [expandedEntregaId, setExpandedEntregaId] = useState<string | null>(null);
   const [mostrarSinDiferencias, setMostrarSinDiferencias] = useState(false);
+  // F3 (D-049): reabrir pide motivo; aprobar/rechazar/reabrir/editar solo con permiso.
+  const [reabrirOpen, setReabrirOpen] = useState(false);
+  const [motivoReabrir, setMotivoReabrir] = useState('');
+  const { hasPermiso } = usePermisos();
+  const puedeEditar = hasPermiso('logistica.descargas', 'editar');
+  const puedeEliminar = hasPermiso('logistica.descargas', 'eliminar');
+  const { data: desgloseVivo } = useLiquidacionDesgloseVivo(descarga.id);
+  const { data: eventos } = useLiquidacionEventos(descarga.id);
 
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
@@ -489,10 +500,22 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const { data: liqCalc } = useLiquidacionEsperado({
     empresaId: descarga.empresa_id, vendedorId: descarga.vendedor_id, desde: fInicio, hasta: fFin, userId: descarga.user_id,
   });
-  const dineroDevuelto = (liqCalc?.devolucionesDinero ?? 0) + (liqCalc?.reembolsos ?? 0);
-  const efectivoSistema = liqCalc
-    ? liqCalc.esperado
-    : calcularEfectivoEsperado({ cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0, gastos: totalGastos });
+  // F3 (D-049): aprobada = cuadre CONGELADO al aprobar (no se recalcula); pendiente = en vivo.
+  // Las aprobadas antes de F3 no tienen congelado: se siguen mostrando en vivo.
+  const congelado = currentStatus === 'aprobada' ? parseLiquidacionDesglose(descarga.esperado_desglose) : null;
+  const cambiosPosteriores = cambiosDespuesDeAprobar(congelado, desgloseVivo ?? null);
+  const dineroDevuelto = congelado ? congelado.dineroDevuelto : (liqCalc?.devolucionesDinero ?? 0) + (liqCalc?.reembolsos ?? 0);
+  const efectivoSistema = congelado
+    ? congelado.esperado
+    : liqCalc
+      ? liqCalc.esperado
+      : calcularEfectivoEsperado({ cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0, gastos: totalGastos });
+  const cobrosEfectivoCuadre = congelado ? congelado.cobrosEfectivo : (cobrosPorMetodo['efectivo'] || 0);
+  const cobrosTransferenciaCuadre = congelado ? congelado.cobrosTransferencia : (cobrosPorMetodo['transferencia'] || 0);
+  const cobrosTarjetaCuadre = congelado ? congelado.cobrosTarjeta : (cobrosPorMetodo['tarjeta'] || 0);
+  const gastosCuadre = congelado ? congelado.gastos : totalGastos;
+  const contadoCuadre = congelado ? congelado.ventasContado : totalContado;
+  const creditoCuadre = congelado ? congelado.ventasCredito : totalCredito;
   const diferenciaCuadre = Number(descarga.efectivo_entregado) - efectivoSistema;
   const entregasConIncidencia = entregasList.filter((e: any) =>
     (e.entrega_lineas || []).some((l: any) => !l.hecho)
@@ -520,46 +543,44 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   }, [descarga.id]);
 
   useEffect(() => {
-    if (isPendiente && efectivoDraft === '') {
+    if (isPendiente && puedeEditar && efectivoDraft === '') {
       setEfectivoDraft(String(Number(descarga.efectivo_entregado) || 0));
       setEditingEfectivo(true);
     }
-  }, [isPendiente, efectivoDraft, descarga.efectivo_entregado]);
+  }, [isPendiente, puedeEditar, efectivoDraft, descarga.efectivo_entregado]);
 
+  const invalidarLiquidacion = () => {
+    qc.invalidateQueries({ queryKey: ['descargas-list'] });
+    qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
+    qc.invalidateQueries({ queryKey: ['descarga-lineas', descarga.id] });
+    qc.invalidateQueries({ queryKey: ['descargas-live-cuadre'] });
+    qc.invalidateQueries({ queryKey: ['liquidacion-desglose'] });
+    qc.invalidateQueries({ queryKey: ['liquidacion-eventos'] });
+    qc.invalidateQueries({ queryKey: ['liq-overlap-check'] });
+  };
+
+  // F3: aprobar y rechazar son RPC de la BD (permiso logistica.descargas). Aprobar congela
+  // el desglose del efectivo esperado y mueve el inventario (re-aprobar: solo la diferencia).
   const aprobarMutation = useMutation({
     mutationFn: async (accion: 'aprobada' | 'rechazada') => {
-      if (accion === 'rechazada' && !notasSupervisor.trim()) {
-        throw new Error('Agrega una nota antes de rechazar');
+      if (accion === 'rechazada') {
+        if (!notasSupervisor.trim()) throw new Error('Escribe el motivo del rechazo en las notas');
+        await rechazarLiquidacion(descarga.id, notasSupervisor);
+        return;
       }
       // Si se descargó el camión, exigir bodega destino al aprobar (a ahí regresa el físico).
-      if (accion === 'aprobada' && descarga.descargo_camion && !destinoAlmacenId) {
+      if (descarga.descargo_camion && !destinoAlmacenId) {
         throw new Error('Elige la bodega destino para descargar el camión');
       }
-      const payload: any = {
-        status: accion,
-        aprobado_por: profile!.id,
-        fecha_aprobacion: new Date().toISOString(),
-        notas_supervisor: notasSupervisor || null,
-      };
-      if (accion === 'aprobada' && descarga.descargo_camion) {
-        payload.almacen_destino_id = destinoAlmacenId;
-      }
-      const { error } = await supabase
-        .from('descarga_ruta')
-        .update(payload)
-        .eq('id', descarga.id);
-      if (error) throw error;
-
-      // El descuento de inventario al aprobar (cuando se descargó el camión) lo hace
-      // ÚNICAMENTE el trigger apply_descarga_ruta_aprobada en la BD: mete el físico a
-      // la bodega destino, deja el camión en 0 y registra la diferencia como ajuste.
-      // Antes había aquí un descuento en JS que (a) duplicaba con el trigger y
-      // (b) descontaba aunque descargo_camion fuera false. Eliminado.
+      await aprobarLiquidacion({
+        descargaId: descarga.id,
+        notas: notasSupervisor || null,
+        almacenDestinoId: descarga.descargo_camion ? destinoAlmacenId : null,
+      });
     },
     onSuccess: (_, accion) => {
       toast.success(accion === 'aprobada' ? 'Liquidación aprobada' : 'Liquidación rechazada');
-      qc.invalidateQueries({ queryKey: ['descargas-list'] });
-      qc.invalidateQueries({ queryKey: ['liq-overlap-check'] });
+      invalidarLiquidacion();
       onClose();
     },
     onError: (e: any) => toast.error(e.message),
@@ -567,27 +588,54 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
 
   const reabrirMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('descarga_ruta')
-        .update({
-          status: 'pendiente',
-          aprobado_por: null,
-          fecha_aprobacion: null,
-        } as any)
-        .eq('id', descarga.id);
-      if (error) throw error;
+      await reabrirLiquidacion(descarga.id, motivoReabrir);
     },
     onSuccess: () => {
-      toast.success('Liquidación reabierta para edición');
+      toast.success('Liquidación reabierta para corrección');
+      setReabrirOpen(false);
+      setMotivoReabrir('');
       setStatusOverride('pendiente');
       setEfectivoDraft(String(Number(descarga.efectivo_entregado) || 0));
       setEditingEfectivo(true);
-      qc.invalidateQueries({ queryKey: ['descargas-list'] });
-      qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
-      qc.invalidateQueries({ queryKey: ['liq-overlap-check'] });
+      invalidarLiquidacion();
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  // Corregir el físico contado de un renglón (solo pendiente y con permiso). Al
+  // re-aprobar, la BD aplica a la bodega solo la diferencia contra lo ya aplicado.
+  const corregirFisicoMutation = useMutation({
+    mutationFn: async ({ lineaId, real, esperada }: { lineaId: string; real: number; esperada: number }) => {
+      const { error } = await supabase
+        .from('descarga_ruta_lineas')
+        .update({ cantidad_real: real, diferencia: Math.round((real - esperada) * 1000) / 1000 } as any)
+        .eq('id', lineaId)
+        .eq('descarga_id', descarga.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Conteo actualizado');
+      qc.invalidateQueries({ queryKey: ['descarga-lineas', descarga.id] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const puedeCorregirFisico = isPendiente && puedeEditar && !!descarga.descargo_camion;
+  const fisicoCelda = (l: any) => puedeCorregirFisico ? (
+    <Input
+      key={`${l.id}-${l.cantidad_real}`}
+      type="number"
+      step="any"
+      min={0}
+      defaultValue={Number(l.cantidad_real)}
+      aria-label={`Físico de ${(l as any).productos?.nombre ?? 'producto'}`}
+      className="h-8 w-20 text-right text-[13px] font-semibold"
+      onBlur={(e) => {
+        const n = Number(e.target.value);
+        if (e.target.value === '' || !Number.isFinite(n) || n < 0) { e.target.value = String(Number(l.cantidad_real)); return; }
+        if (n !== Number(l.cantidad_real)) corregirFisicoMutation.mutate({ lineaId: l.id, real: n, esperada: Number(l.cantidad_esperada) || 0 });
+      }}
+    />
+  ) : <strong className="text-foreground">{Number(l.cantidad_real)}</strong>;
 
   const editEfectivoMutation = useMutation({
     mutationFn: async (nuevoMonto: number) => {
@@ -726,11 +774,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   gastos: (gastos || []).map((g: any) => ({ concepto: g.concepto ?? '—', monto: Number(g.monto) || 0 })),
                   devoluciones: devLineas.map(d => ({ nombre: d.nombre, cantidad: d.cantidad, motivo: d.motivo })),
                   cuadre: {
-                    totalContado, totalCredito,
-                    cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0,
-                    cobrosTransferencia: cobrosPorMetodo['transferencia'] || 0,
-                    cobrosTarjeta: cobrosPorMetodo['tarjeta'] || 0,
-                    totalGastos, efectivoEsperado: efectivoSistema,
+                    totalContado: contadoCuadre, totalCredito: creditoCuadre,
+                    cobrosEfectivo: cobrosEfectivoCuadre,
+                    cobrosTransferencia: cobrosTransferenciaCuadre,
+                    cobrosTarjeta: cobrosTarjetaCuadre,
+                    totalGastos: gastosCuadre, efectivoEsperado: efectivoSistema,
                     diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
                   },
                   ...(incluirStock && stockItems.length > 0 ? {
@@ -798,11 +846,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   })),
                   devoluciones: devLineas,
                   cuadre: {
-                    totalContado, totalCredito,
-                    cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0,
-                    cobrosTransferencia: cobrosPorMetodo['transferencia'] || 0,
-                    cobrosTarjeta: cobrosPorMetodo['tarjeta'] || 0,
-                    totalGastos, efectivoEsperado: efectivoSistema,
+                    totalContado: contadoCuadre, totalCredito: creditoCuadre,
+                    cobrosEfectivo: cobrosEfectivoCuadre,
+                    cobrosTransferencia: cobrosTransferenciaCuadre,
+                    cobrosTarjeta: cobrosTarjetaCuadre,
+                    totalGastos: gastosCuadre, efectivoEsperado: efectivoSistema,
                     diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
                   },
                   ...(incluirStock && stockItems.length > 0 ? {
@@ -823,41 +871,40 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             }}>
               <FileText className="h-3.5 w-3.5" /> Documento
             </Button>
-            {(currentStatus === 'rechazada' || currentStatus === 'aprobada') && (
+            {puedeEditar && (currentStatus === 'rechazada' || currentStatus === 'aprobada') && (
               <Button
-                onClick={() => reabrirMutation.mutate()}
+                onClick={() => { setMotivoReabrir(''); setReabrirOpen(true); }}
                 disabled={reabrirMutation.isPending}
-                variant="outline"
+                variant="editar"
                 size="sm"
-                className="text-xs gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+                className="text-xs gap-1.5"
               >
                 <RefreshCw className="h-3.5 w-3.5" /> Reabrir
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              title="Eliminar liquidación"
-              disabled={eliminarMutation.isPending}
-              onClick={() => {
-                const msg = currentStatus === 'aprobada'
-                  ? 'Esta liquidación está APROBADA. Si se descargó camión, el inventario ya se aplicó y NO se revierte al eliminar. ¿Eliminar de todos modos?'
-                  : '¿Eliminar esta liquidación? Esta acción no se puede deshacer.';
-                if (window.confirm(msg)) eliminarMutation.mutate();
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {puedeEliminar && !descarga.inventario_aplicado_at && currentStatus !== 'aprobada' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                title="Eliminar liquidación"
+                disabled={eliminarMutation.isPending}
+                onClick={() => {
+                  if (window.confirm('¿Eliminar esta liquidación? Esta acción no se puede deshacer.')) eliminarMutation.mutate();
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </>); return isMobile ? (
             <EncabezadoDetalleMovil
               onBack={onClose}
               titulo="Liquidación de ruta"
               estado={{ texto: (STATUS_MAP[currentStatus] || STATUS_MAP.pendiente).label, tono: currentStatus === 'aprobada' ? 'exito' : currentStatus === 'rechazada' ? 'peligro' : 'aviso' }}
               subtitulo={`${(descarga as any).vendedores?.nombre ?? 'Sin vendedor'} · ${descarga.fecha_inicio && descarga.fecha_fin && descarga.fecha_inicio !== descarga.fecha_fin ? `${fmtDate(descarga.fecha_inicio)} al ${fmtDate(descarga.fecha_fin)}` : fmtDate(descarga.fecha)}`}
-              principales={isPendiente ? [
+              principales={isPendiente && puedeEditar ? [
                 { key: 'aprobar', label: 'Aprobar', icon: CheckCircle2, onClick: () => aprobarMutation.mutate('aprobada'), disabled: !!descarga.descargo_camion && !destinoAlmacenId, cargando: aprobarMutation.isPending },
-                { key: 'rechazar', label: 'Rechazar', icon: XCircle, onClick: () => aprobarMutation.mutate('rechazada'), disabled: aprobarMutation.isPending, destructiva: true },
+                ...(descarga.inventario_aplicado_at ? [] : [{ key: 'rechazar', label: 'Rechazar', icon: XCircle, onClick: () => aprobarMutation.mutate('rechazada'), disabled: aprobarMutation.isPending, destructiva: true }]),
               ] : []}
               menuExtra={<div className="flex flex-col items-stretch gap-1 [&>*]:justify-start">{accionesLiq}</div>}
             />
@@ -964,17 +1011,17 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-x-4 gap-y-4">
                   <div>
                     <div className="text-[11px] text-muted-foreground">Ventas contado</div>
-                    <div className="mt-1 text-lg font-bold text-foreground">{fmt(totalContado)}</div>
-                    <div className="text-[11px] text-muted-foreground">{ventasContado.length} ventas</div>
+                    <div className="mt-1 text-lg font-bold text-foreground">{fmt(contadoCuadre)}</div>
+                    <div className="text-[11px] text-muted-foreground">{congelado ? congelado.ventasContadoN : ventasContado.length} ventas</div>
                   </div>
                   <div>
                     <div className="text-[11px] text-muted-foreground">Ventas crédito</div>
-                    <div className="mt-1 text-lg font-bold text-foreground">{fmt(totalCredito)}</div>
-                    <div className="text-[11px] text-muted-foreground">{ventasCredito.length} ventas</div>
+                    <div className="mt-1 text-lg font-bold text-foreground">{fmt(creditoCuadre)}</div>
+                    <div className="text-[11px] text-muted-foreground">{congelado ? congelado.ventasCreditoN : ventasCredito.length} ventas</div>
                   </div>
                   <div>
                     <div className="text-[11px] text-muted-foreground">Cobros</div>
-                    <div className="mt-1 text-lg font-bold text-foreground">{fmt(totalCobros)}</div>
+                    <div className="mt-1 text-lg font-bold text-foreground">{fmt(congelado ? congelado.cobrosTotal : totalCobros)}</div>
                     <div className="text-[11px] text-muted-foreground">{(cobros || []).length} registros</div>
                   </div>
                   <div>
@@ -984,7 +1031,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   </div>
                   <div>
                     <div className="text-[11px] text-muted-foreground">Gastos</div>
-                    <div className="mt-1 text-lg font-bold text-destructive">-{fmt(totalGastos)}</div>
+                    <div className="mt-1 text-lg font-bold text-destructive">-{fmt(gastosCuadre)}</div>
                     <div className="text-[11px] text-muted-foreground">{(gastos || []).length} registros</div>
                   </div>
                   <div>
@@ -1010,7 +1057,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
                       <div className="flex items-center justify-between gap-2">
                         <div className="text-xs text-muted-foreground">Efectivo entregado</div>
-                        {!editingEfectivo && isPendiente && (
+                        {!editingEfectivo && isPendiente && puedeEditar && (
                           <button
                             type="button"
                             onClick={() => { setEfectivoDraft(String(Number(descarga.efectivo_entregado) || 0)); setEditingEfectivo(true); }}
@@ -1019,7 +1066,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                             Editar
                           </button>
                         )}
-                        {!editingEfectivo && !isPendiente && (
+                        {!editingEfectivo && !isPendiente && puedeEditar && (
                           <span className="text-[11px] text-muted-foreground">Reabre para editar</span>
                         )}
                       </div>
@@ -1058,7 +1105,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                       <div className="rounded-lg border border-border/70 bg-muted/10 p-4">
                         <div className="flex items-center justify-between gap-2">
                           <div className="text-xs text-muted-foreground">Fecha del corte</div>
-                          {!editingFecha && isPendiente && (
+                          {!editingFecha && isPendiente && puedeEditar && (
                             <button
                               type="button"
                               onClick={() => { setFechaDraft(descarga.fecha || descarga.fecha_inicio || ''); setEditingFecha(true); }}
@@ -1067,7 +1114,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                               Editar
                             </button>
                           )}
-                          {!editingFecha && !isPendiente && (
+                          {!editingFecha && !isPendiente && puedeEditar && (
                             <span className="text-[11px] text-muted-foreground">Reabre para editar</span>
                           )}
                         </div>
@@ -1110,13 +1157,39 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   </div>
 
                   <div className="space-y-3">
-                    <div className="text-xs font-semibold text-muted-foreground">Calculado por sistema</div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-semibold text-muted-foreground">{congelado ? 'Congelado al aprobar' : 'Calculado por sistema'}</div>
+                      {congelado ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Lock className="h-3 w-3" />
+                          {descarga.congelado_at ? new Date(descarga.congelado_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : ''}
+                        </span>
+                      ) : currentStatus === 'aprobada' ? (
+                        <span className="text-[11px] text-muted-foreground">Aprobada antes del congelado · en vivo</span>
+                      ) : null}
+                    </div>
+                    {congelado && cambiosPosteriores.length > 0 && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-xs dark:border-amber-900 dark:bg-amber-950/20">
+                        <div className="flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-300">
+                          <AlertTriangle className="h-3.5 w-3.5" /> Hubo movimientos después de aprobar
+                        </div>
+                        <ul className="mt-1.5 space-y-0.5 text-amber-800/90 dark:text-amber-300/90">
+                          {cambiosPosteriores.map(c => (
+                            <li key={c.concepto} className="flex justify-between gap-2">
+                              <span>{c.concepto}</span>
+                              <span className="tabular-nums">{fmt(c.congelado)} → {fmt(c.actual)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-1.5 text-amber-700 dark:text-amber-400">Solo informativo: lo aprobado no cambia. Para corregirlo, reabre la liquidación.</p>
+                      </div>
+                    )}
                     <div className="rounded-lg border border-border/70 p-4 space-y-2 text-sm">
-                      <div className="flex justify-between"><span className="text-muted-foreground">+ Cobros en efectivo</span><span className="font-semibold tabular-nums">{fmt((cobrosPorMetodo['efectivo'] || 0))}</span></div>
-                      {(cobrosPorMetodo['transferencia'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros transferencia</span><span className="font-semibold tabular-nums">{fmt((cobrosPorMetodo['transferencia'] || 0))}</span></div>}
-                      {(cobrosPorMetodo['tarjeta'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros tarjeta</span><span className="font-semibold tabular-nums">{fmt((cobrosPorMetodo['tarjeta'] || 0))}</span></div>}
-                      <div className="flex justify-between"><span className="text-muted-foreground">− Gastos</span><span className="font-semibold text-destructive tabular-nums">-{fmt(totalGastos)}</span></div>
-                      {(gastos || []).length > 0 && (
+                      <div className="flex justify-between"><span className="text-muted-foreground">+ Cobros en efectivo</span><span className="font-semibold tabular-nums">{fmt(cobrosEfectivoCuadre)}</span></div>
+                      {cobrosTransferenciaCuadre > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros transferencia</span><span className="font-semibold tabular-nums">{fmt(cobrosTransferenciaCuadre)}</span></div>}
+                      {cobrosTarjetaCuadre > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros tarjeta</span><span className="font-semibold tabular-nums">{fmt(cobrosTarjetaCuadre)}</span></div>}
+                      <div className="flex justify-between"><span className="text-muted-foreground">− Gastos</span><span className="font-semibold text-destructive tabular-nums">-{fmt(gastosCuadre)}</span></div>
+                      {!congelado && (gastos || []).length > 0 && (
                         <div className="pl-3 space-y-1 border-l-2 border-destructive/20 ml-1 py-1">
                           {(gastos || []).map((g: any) => (
                             <div key={g.id} className="flex justify-between text-xs">
@@ -1133,6 +1206,13 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                         <span>Efectivo esperado</span>
                         <span className="tabular-nums">{fmt(efectivoSistema)}</span>
                       </div>
+                      {congelado && (
+                        <div className="border-t border-border/60 pt-2 space-y-1 text-xs">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Ventas de contado ({congelado.ventasContadoN})</span><span className="tabular-nums">{fmt(congelado.ventasContado)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Ventas a crédito ({congelado.ventasCreditoN})</span><span className="tabular-nums">{fmt(congelado.ventasCredito)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Cobros de saldos anteriores</span><span className="tabular-nums">{fmt(congelado.cobrosSaldosAnteriores)}</span></div>
+                        </div>
+                      )}
                     </div>
                     <div className={cn(
                       "rounded-lg border p-4 flex items-center justify-between",
@@ -1438,7 +1518,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                           <div key={l.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-4 items-center px-4 py-3 bg-amber-50/50 dark:bg-amber-950/15 text-[13px]">
                             <span className="font-semibold truncate">{(l as any).productos?.nombre}</span>
                             <span className="text-muted-foreground">Sistema <strong className="text-foreground">{Number(l.cantidad_esperada)}</strong></span>
-                            <span className="text-muted-foreground">Físico <strong className="text-foreground">{Number(l.cantidad_real)}</strong></span>
+                            <span className="text-muted-foreground inline-flex items-center gap-1.5">Físico {fisicoCelda(l)}</span>
                             <span className={cn("min-w-[56px] text-right font-black", d > 0 ? "text-green-700" : "text-destructive")}>
                               {d > 0 ? '+' : ''}{d}
                             </span>
@@ -1466,7 +1546,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                               <span className="font-medium">{(l as any).productos?.nombre}</span>
                               <div className="flex items-center gap-3 text-muted-foreground">
                                 <span>Sistema: {Number(l.cantidad_esperada)}</span>
-                                <span>Físico: {Number(l.cantidad_real)}</span>
+                                <span className="inline-flex items-center gap-1.5">Físico: {fisicoCelda(l)}</span>
                                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                               </div>
                             </div>
@@ -1747,8 +1827,26 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               </div>
             </div>
 
-            {isPendiente && (
+            {isPendiente && !puedeEditar && (
+              <div className="border-t border-border/70 py-4">
+                <p className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+                  <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  Pendiente de revisión. Solo quien tiene permiso de Descargas de ruta puede aprobarla o rechazarla.
+                </p>
+              </div>
+            )}
+
+            {isPendiente && puedeEditar && (
               <div className="border-t border-border/70 py-4 space-y-4">
+                {descarga.motivo_reapertura && (
+                  <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-xs">
+                    <div className="font-semibold text-foreground">Reabierta{descarga.reabierta_at ? ` el ${new Date(descarga.reabierta_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}` : ''}</div>
+                    <div className="mt-0.5 text-muted-foreground">Motivo: {descarga.motivo_reapertura}</div>
+                    {descarga.inventario_aplicado_at && (
+                      <div className="mt-1.5 text-muted-foreground">Al aprobar de nuevo, el inventario solo se ajusta por la diferencia del conteo.</div>
+                    )}
+                  </div>
+                )}
                 {descarga.descargo_camion && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900 dark:bg-amber-950/20">
                     <label className="text-xs font-semibold text-amber-800 dark:text-amber-300 block mb-2 flex items-center gap-1.5">
@@ -1759,13 +1857,16 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                       value={destinoAlmacenId}
                       onChange={setDestinoAlmacenId}
                       placeholder="Selecciona bodega..."
+                      disabled={!!descarga.inventario_aplicado_at}
                     />
                     <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-2 leading-relaxed">
-                      Al aprobar, el físico entra a esta bodega, el camión queda en 0 y las diferencias quedan registradas como ajuste.
+                      {descarga.inventario_aplicado_at
+                        ? 'El inventario ya entró a esta bodega. Al aprobar de nuevo solo se ajusta la diferencia del conteo (el camión no se vuelve a tocar).'
+                        : 'Al aprobar, el físico entra a esta bodega, el camión queda en 0 y las diferencias quedan registradas como ajuste.'}
                     </p>
                   </div>
                 )}
-                {descarga.descargo_camion && (mermaCamion?.length ?? 0) > 0 && (
+                {descarga.descargo_camion && !descarga.inventario_aplicado_at && (mermaCamion?.length ?? 0) > 0 && (
                   <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
                     <p className="text-xs font-semibold text-destructive mb-1.5">Merma en camión (no vendible) · pasa al almacén Mermas al aprobar</p>
                     <ul className="space-y-0.5">
@@ -1779,11 +1880,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   </div>
                 )}
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">Notas del administrador</label>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">Notas del administrador (obligatorias para rechazar)</label>
                   <textarea
                     value={notasSupervisor}
                     onChange={e => setNotasSupervisor(e.target.value)}
-                    placeholder="Observaciones sobre esta liquidación..."
+                    placeholder="Observaciones o motivo del rechazo..."
                     className="w-full border border-input bg-background rounded-lg px-3 py-2.5 text-sm min-h-[84px] resize-y focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
@@ -1795,22 +1896,49 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   >
                     <CheckCircle2 className="h-4 w-4 mr-1.5" /> Aprobar liquidación
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => aprobarMutation.mutate('rechazada')}
-                    disabled={aprobarMutation.isPending}
-                    className="w-full h-10 border-destructive/40 text-destructive hover:bg-destructive/10"
-                  >
-                    <XCircle className="h-4 w-4 mr-1.5" /> Rechazar con nota
-                  </Button>
+                  {/* Ya movió inventario: no se rechaza, se corrige el conteo y se aprueba de nuevo (BD). */}
+                  {!descarga.inventario_aplicado_at && (
+                    <Button
+                      variant="outline"
+                      onClick={() => aprobarMutation.mutate('rechazada')}
+                      disabled={aprobarMutation.isPending}
+                      className="w-full h-10 border-destructive/40 text-destructive hover:bg-destructive/10"
+                    >
+                      <XCircle className="h-4 w-4 mr-1.5" /> Rechazar con nota
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
 
             {descarga.notas_supervisor && !isPendiente && (
               <div className="border-t border-border/70 py-4">
-                <div className="text-xs text-muted-foreground font-semibold mb-1.5">Notas del administrador</div>
+                <div className="text-xs text-muted-foreground font-semibold mb-1.5">{currentStatus === 'rechazada' ? 'Motivo del rechazo' : 'Notas del administrador'}</div>
                 <p className="text-sm text-foreground leading-relaxed">{descarga.notas_supervisor}</p>
+              </div>
+            )}
+
+            {(eventos?.length ?? 0) > 0 && (
+              <div className="border-t border-border/70 py-4">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold mb-2">
+                  <History className="h-3.5 w-3.5" /> Historial
+                  {Number(descarga.veces_reabierta) > 0 && (
+                    <span className="ml-auto font-normal">Reabierta {descarga.veces_reabierta} {Number(descarga.veces_reabierta) === 1 ? 'vez' : 'veces'}</span>
+                  )}
+                </div>
+                <ol className="space-y-2.5">
+                  {eventos!.map(ev => (
+                    <li key={ev.id} className="text-xs leading-relaxed">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className={cn('font-semibold', ev.accion === 'aprobada' ? 'text-green-700 dark:text-green-400' : ev.accion === 'rechazada' ? 'text-destructive' : 'text-brand-orange')}>
+                          {ACCION_EVENTO_LABEL[ev.accion] ?? ev.accion}
+                        </span>
+                        <span className="text-muted-foreground tabular-nums">{new Date(ev.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      </div>
+                      <div className="text-muted-foreground">{ev.usuario_nombre ?? '—'}{ev.motivo ? ` · ${ev.motivo}` : ''}</div>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
 
@@ -1826,6 +1954,37 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         </div>
       </div>
       </div>
+
+      {/* F3 (D-049): reabrir pide motivo; queda en el historial con quién y cuándo. */}
+      <Dialog open={reabrirOpen} onOpenChange={(o) => { if (!reabrirMutation.isPending) setReabrirOpen(o); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reabrir liquidación</DialogTitle>
+            <DialogDescription>
+              {currentStatus === 'aprobada'
+                ? 'Vuelve a pendiente para corregirla. Al aprobar de nuevo se congela otra vez el efectivo y el inventario solo se ajusta por la diferencia del conteo.'
+                : 'Vuelve a pendiente para revisarla de nuevo.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <label htmlFor="motivo-reabrir" className="text-xs font-medium text-muted-foreground">Motivo (obligatorio)</label>
+            <textarea
+              id="motivo-reabrir"
+              value={motivoReabrir}
+              onChange={e => setMotivoReabrir(e.target.value)}
+              placeholder="¿Por qué se reabre?"
+              className="w-full border border-input bg-background rounded-lg px-3 py-2.5 text-sm min-h-[84px] resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="cancelar" onClick={() => setReabrirOpen(false)} disabled={reabrirMutation.isPending}>Cancelar</Button>
+            <Button onClick={() => reabrirMutation.mutate()} disabled={reabrirMutation.isPending || !motivoReabrir.trim()}>
+              <RefreshCw className="h-4 w-4" /> Reabrir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

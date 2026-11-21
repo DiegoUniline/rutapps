@@ -237,7 +237,18 @@ export async function fetchDescargaFinancialsWithFallback(args: {
   };
 }
 
-/** Verifica si ya existe una liquidación enviada hoy (por carga, vendedor o user). */
+/** Columnas que el teléfono muestra de su liquidación (estado y motivo, F3). */
+const DESCARGA_ESTADO_COLS = 'id, status, notas_supervisor, fecha_aprobacion, motivo_reapertura';
+
+export interface DescargaEstado {
+  id: string;
+  status: string;
+  notas_supervisor?: string | null;
+  fecha_aprobacion?: string | null;
+  motivo_reapertura?: string | null;
+}
+
+/** Verifica si ya existe una liquidación enviada hoy (por carga, vendedor o user). La más reciente. */
 export async function fetchExistingDescargaWithFallback(args: {
   cargaId?: string | null;
   vendedorId?: string | null;
@@ -246,20 +257,21 @@ export async function fetchExistingDescargaWithFallback(args: {
 }) {
   const { cargaId, vendedorId, userId, today } = args;
   if (isOnline()) {
+    const ultima = { ascending: false } as const;
     try {
       if (cargaId) {
         // Solo la liquidación de ESTE vendedor (H16: antes cualquiera de la carga).
-        let q = supabase.from('descarga_ruta').select('id, status').eq('carga_id', cargaId);
+        let q = supabase.from('descarga_ruta').select(DESCARGA_ESTADO_COLS).eq('carga_id', cargaId);
         if (vendedorId) q = q.eq('vendedor_id', vendedorId);
-        const { data } = await q.limit(1).maybeSingle();
-        if (data) return data;
+        const { data } = await q.order('created_at', ultima).limit(1).maybeSingle();
+        if (data) return data as unknown as DescargaEstado;
       }
       if (vendedorId) {
-        const { data } = await supabase.from('descarga_ruta').select('id, status').eq('vendedor_id', vendedorId).lte('fecha_inicio', today).gte('fecha_fin', today).limit(1).maybeSingle();
-        if (data) return data;
+        const { data } = await supabase.from('descarga_ruta').select(DESCARGA_ESTADO_COLS).eq('vendedor_id', vendedorId).lte('fecha_inicio', today).gte('fecha_fin', today).order('created_at', ultima).limit(1).maybeSingle();
+        if (data) return data as unknown as DescargaEstado;
       }
-      const { data } = await supabase.from('descarga_ruta').select('id, status').eq('user_id', userId).eq('fecha', today).limit(1).maybeSingle();
-      return data ?? null;
+      const { data } = await supabase.from('descarga_ruta').select(DESCARGA_ESTADO_COLS).eq('user_id', userId).eq('fecha', today).order('created_at', ultima).limit(1).maybeSingle();
+      return (data as unknown as DescargaEstado) ?? null;
     } catch (err) {
       console.warn('[fetchExistingDescargaWithFallback] server failed, using cache:', err);
     }
@@ -271,7 +283,7 @@ export async function fetchExistingDescargaWithFallback(args: {
     if (d.user_id === userId && d.fecha === today) return true;
     return false;
   });
-  return hit ? { id: hit.id, status: hit.status } : null;
+  return hit ? { id: hit.id, status: hit.status, notas_supervisor: hit.notas_supervisor ?? null, fecha_aprobacion: hit.fecha_aprobacion ?? null } as DescargaEstado : null;
 }
 
 /**
