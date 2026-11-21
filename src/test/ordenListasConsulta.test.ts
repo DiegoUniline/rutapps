@@ -112,7 +112,7 @@ describe('encabezado ordenable desactivado', () => {
     const { SortableTh } = await import('@/hooks/useSortableTable');
     const props = { sortKey: 'cantidad', sort: { key: null, dir: 'asc' as const }, onToggle: () => undefined, className: 'th-odoo text-right' };
     const fila = (p: typeof props & { disabled?: boolean }) =>
-      renderToStaticMarkup(createElement('table', null, createElement('thead', null, createElement('tr', null, createElement(SortableTh, p, 'Cant.')))));
+      renderToStaticMarkup(createElement('table', null, createElement('thead', null, createElement('tr', null, createElement(SortableTh, { ...p, children: 'Cant.' })))));
     expect(fila(props)).toContain('aria-sort="none"');
     const inactivo = fila({ ...props, disabled: true });
     expect(inactivo).toContain('<th class="th-odoo text-right">Cant.</th>');

@@ -34,6 +34,7 @@ import { CobranzaTabs } from '@/components/CobranzaTabs';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { hasRealConnection } from '@/lib/connectivity';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { ordenarPorRelevancia } from '@/lib/busquedaRelevancia';
 
 
@@ -120,14 +121,16 @@ function useCobros(dateFrom?: string, dateTo?: string) {
       }
 
       try {
-        let q = supabase
-          .from('cobros')
-          .select('*, clientes(id, nombre, telefono), cobro_aplicaciones(venta_id, monto_aplicado, ventas(id, folio, tipo))')
-          .eq('empresa_id', empresaId);
-        if (dateFrom) q = q.gte('fecha', dateFrom);
-        if (dateTo) q = q.lt('fecha', diaSiguiente(dateTo));
-        const { data, error } = await q.order('fecha', { ascending: false });
-        if (error) throw error;
+        // Todas las filas del rango (antes se cortaba en 1000 en silencio).
+        const data = await fetchAllPages<any>((desde, hasta) => {
+          let q = supabase
+            .from('cobros')
+            .select('*, clientes(id, nombre, telefono), cobro_aplicaciones(venta_id, monto_aplicado, ventas(id, folio, tipo))')
+            .eq('empresa_id', empresaId);
+          if (dateFrom) q = q.gte('fecha', dateFrom);
+          if (dateTo) q = q.lt('fecha', diaSiguiente(dateTo));
+          return q.order('fecha', { ascending: false }).order('id', { ascending: true }).range(desde, hasta);
+        });
         try {
           const { offlineDb } = await import('@/lib/offlineDb');
           await purgeLocalCobros(!conRango && empresa?.licencia === '12324489' && (data?.length ?? 0) === 0);
