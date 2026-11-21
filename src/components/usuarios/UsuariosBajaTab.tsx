@@ -2,6 +2,7 @@ import { UserX, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { ProfileUser, AuthUser } from '@/hooks/useUsuarios';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Props {
   profiles: ProfileUser[];
@@ -26,6 +27,11 @@ export default function UsuariosBajaTab({ profiles, authUsers, ownerUserId, onRe
     const au = authUsers.find(a => a.id === userId);
     return au?.email || userId.slice(0, 8);
   };
+  const { sorted: bajasOrd, sort, toggle: toggleSort } = useSortableTable(bajas, (p: any, key) => {
+    if (key === 'email') return authUsers.find(au => au.id === p.user_id)?.email;
+    if (key === 'archivado_por') return p.archivado_por ? nombreDe(p.archivado_por) : null;
+    return p[key];
+  }, undefined, 'usuarios-baja');
 
   return (
     <div className="space-y-3">
@@ -40,16 +46,16 @@ export default function UsuariosBajaTab({ profiles, authUsers, ownerUserId, onRe
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-accent/50 border-b border-border">
-              <th className="text-left px-4 py-2.5 font-semibold text-foreground">Nombre</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-foreground">Email</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-foreground">Fecha de baja</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-foreground">Dado de baja por</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-foreground">Motivo</th>
+              <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="text-left px-4 py-2.5 font-semibold text-foreground">Nombre</SortableTh>
+              <SortableTh sortKey="email" sort={sort} onToggle={toggleSort} className="text-left px-4 py-2.5 font-semibold text-foreground">Email</SortableTh>
+              <SortableTh sortKey="archivado_en" sort={sort} onToggle={toggleSort} className="text-left px-4 py-2.5 font-semibold text-foreground">Fecha de baja</SortableTh>
+              <SortableTh sortKey="archivado_por" sort={sort} onToggle={toggleSort} className="text-left px-4 py-2.5 font-semibold text-foreground">Dado de baja por</SortableTh>
+              <SortableTh sortKey="archivado_motivo" sort={sort} onToggle={toggleSort} className="text-left px-4 py-2.5 font-semibold text-foreground">Motivo</SortableTh>
               <th className="w-20"></th>
             </tr>
           </thead>
           <tbody>
-            {bajas.map(p => {
+            {bajasOrd.map(p => {
               const authUser = authUsers.find(au => au.id === p.user_id);
               const isOwnerUser = ownerUserId === p.user_id;
               return (

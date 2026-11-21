@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { SortableTh, useSortState, ordenarFilas } from '@/hooks/useSortableTable';
 
 /**
  * Shows all tarifa_lineas that have comision_pct > 0,
@@ -112,6 +113,15 @@ export default function ComisionesReglasTab() {
     return r.tipo_calculo;
   };
 
+  // Orden por columna dentro de cada tarifa.
+  const { sort, toggle: toggleSort } = useSortState('comisiones-reglas');
+  const valorRegla = (r: any, key: string) => {
+    if (key === 'aplica') return aplicaLabel(r);
+    if (key === 'lista') return r.lista_precios?.nombre;
+    if (key === 'tipo') return tipoLabel(r);
+    return r.comision_pct ?? 0;
+  };
+
   if (isLoading) return <TableSkeleton />;
 
   return (
@@ -128,16 +138,16 @@ export default function ComisionesReglasTab() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-table-border">
-                  <th className="th-odoo text-left">Aplica a</th>
-                  <th className="th-odoo text-left">Lista</th>
-                  <th className="th-odoo text-left">Tipo precio</th>
-                  <th className="th-odoo text-right">% Comisión</th>
+                  <SortableTh sortKey="aplica" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Aplica a</SortableTh>
+                  <SortableTh sortKey="lista" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Lista</SortableTh>
+                  <SortableTh sortKey="tipo" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Tipo precio</SortableTh>
+                  <SortableTh sortKey="comision_pct" sort={sort} onToggle={toggleSort} align="right" className="th-odoo text-right">% Comisión</SortableTh>
                   <th className="th-odoo text-right">Ej. Venta {cs}100</th>
-                  <th className="th-odoo text-right">Comisión ganada</th>
+                  <SortableTh sortKey="comision_ganada" sort={sort} onToggle={toggleSort} align="right" className="th-odoo text-right">Comisión ganada</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {rules.map((r: any) => {
+                {ordenarFilas(rules, sort, valorRegla).map((r: any) => {
                   const exVenta = 100;
                   const comisionEj = (exVenta * (r.comision_pct ?? 0)) / 100;
                   const listaName = r.lista_precios?.nombre;

@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { Eye, RefreshCw, TrendingUp, TrendingDown, Scale, CheckCircle, XCircle } from 'lucide-react';
 import ConteoKardexModal from './ConteoKardexModal';
 import { useCurrency } from '@/hooks/useCurrency';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Props {
   conteoId: string;
@@ -62,6 +63,12 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
     },
   });
 
+  const { sorted: lineasOrd, sort, toggle: toggleSort } = useSortableTable<any>(lineas ?? [], (l, key) => {
+    if (key === 'producto') return l.productos?.nombre;
+    if (key === 'diferencia') return l.status === 'cerrado' ? (l.diferencia ?? 0) : null;
+    if (key === 'status') return STATUS_BADGE[l.status]?.label ?? l.status;
+    return l[key];
+  }, undefined, 'conteo-detalle');
   const cerradas = (lineas ?? []).filter((l: any) => l.status === 'cerrado');
   const positivas = cerradas.filter((l: any) => (l.diferencia ?? 0) > 0);
   const negativas = cerradas.filter((l: any) => (l.diferencia ?? 0) < 0);
@@ -184,16 +191,16 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[11px]">Producto</TableHead>
-                      <TableHead className="text-[11px] text-center">Contado</TableHead>
-                      <TableHead className="text-[11px] text-center">Esperado</TableHead>
-                      <TableHead className="text-[11px] text-center">Diferencia</TableHead>
-                      <TableHead className="text-[11px]">Estado</TableHead>
+                      <SortableTableHead sortKey="producto" sort={sort} onToggle={toggleSort} className="text-[11px]">Producto</SortableTableHead>
+                      <SortableTableHead sortKey="cantidad_contada" sort={sort} onToggle={toggleSort} align="center" className="text-[11px] text-center">Contado</SortableTableHead>
+                      <SortableTableHead sortKey="stock_esperado" sort={sort} onToggle={toggleSort} align="center" className="text-[11px] text-center">Esperado</SortableTableHead>
+                      <SortableTableHead sortKey="diferencia" sort={sort} onToggle={toggleSort} align="center" className="text-[11px] text-center">Diferencia</SortableTableHead>
+                      <SortableTableHead sortKey="status" sort={sort} onToggle={toggleSort} className="text-[11px]">Estado</SortableTableHead>
                       <TableHead className="text-[11px] text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(lineas ?? []).map((l: any) => {
+                    {lineasOrd.map((l: any) => {
                       const dif = l.diferencia ?? 0;
                       return (
                         <TableRow key={l.id}>

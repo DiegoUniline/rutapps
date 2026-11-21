@@ -9,6 +9,7 @@ import { FileText, Calendar } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, todayLocal } from '@/lib/utils';
 import { confirmDialog } from '@/lib/confirm';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface VendedorEsquema {
   id: string;
@@ -107,6 +108,16 @@ export default function ComisionesVolumenTab({ onAfterGenerar }: { onAfterGenera
     onError: (e: any) => toast.error(e.message),
   });
 
+  const { sorted: vendedoresOrd, sort, toggle: toggleSort } = useSortableTable(vendedores ?? [], (v, key) => {
+    const c = (calculos ?? {})[v.id];
+    if (key === 'esquema') return v.esquema?.nombre;
+    if (key === 'num') return c?.num_ventas ?? 0;
+    if (key === 'total') return c?.total_ventas ?? 0;
+    if (key === 'aplicacion') return v.esquema?.tipo;
+    if (key === 'comision') return c?.comision ?? 0;
+    return (v as any)[key];
+  }, undefined, 'comisiones-volumen');
+
   if (loadVend) return <TableSkeleton />;
   if (!vendedores || vendedores.length === 0) {
     return (
@@ -140,17 +151,17 @@ export default function ComisionesVolumenTab({ onAfterGenerar }: { onAfterGenera
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
-                <th className="th-odoo text-left">Vendedor</th>
-                <th className="th-odoo text-left">Esquema</th>
-                <th className="th-odoo text-right"># ventas</th>
-                <th className="th-odoo text-right">Total vendido</th>
-                <th className="th-odoo text-left">Aplicación</th>
-                <th className="th-odoo text-right">Comisión</th>
+                <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Vendedor</SortableTh>
+                <SortableTh sortKey="esquema" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Esquema</SortableTh>
+                <SortableTh sortKey="num" sort={sort} onToggle={toggleSort} align="right" className="th-odoo text-right"># ventas</SortableTh>
+                <SortableTh sortKey="total" sort={sort} onToggle={toggleSort} align="right" className="th-odoo text-right">Total vendido</SortableTh>
+                <SortableTh sortKey="aplicacion" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Aplicación</SortableTh>
+                <SortableTh sortKey="comision" sort={sort} onToggle={toggleSort} align="right" className="th-odoo text-right">Comisión</SortableTh>
                 <th className="th-odoo text-right">Acción</th>
               </tr>
             </thead>
             <tbody>
-              {(vendedores ?? []).map(v => {
+              {vendedoresOrd.map(v => {
                 const c = (calculos ?? {})[v.id];
                 const comision = c?.comision ?? 0;
                 return (

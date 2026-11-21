@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, RotateCcw } from 'lucide-react';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface DevolucionDetalle {
   id: string;
@@ -51,6 +52,14 @@ export function DevolucionDetalleDialog({ devolucionId, onClose }: { devolucionI
     },
   });
 
+  const { sorted: lineasOrd, sort, toggle: toggleSort } = useSortableTable<any>(dev?.devolucion_lineas ?? [], (l, key) => {
+    if (key === 'producto') return l.productos?.nombre;
+    if (key === 'destino') return l.destino ? (DESTINO_DEVOLUCION_CORTO[l.destino] ?? l.destino) : null;
+    if (key === 'motivo') return MOTIVO_DEVOLUCION_LABELS[l.motivo] ?? l.motivo;
+    if (key === 'accion') return l.aplica_venta ? 'Nota aplicada a la venta' : (ACCION_DEVOLUCION_LABELS[l.accion] ?? l.accion);
+    if (key === 'monto_credito') return Number(l.monto_credito) || 0;
+    return l[key];
+  }, undefined, 'devolucion-detalle');
   const total = (dev?.devolucion_lineas ?? []).reduce((s, l) => s + (Number(l.monto_credito) || 0), 0);
 
   const confirmar = async () => {
@@ -87,16 +96,16 @@ export function DevolucionDetalleDialog({ devolucionId, onClose }: { devolucionI
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-1.5 font-medium">Producto</th>
-                  <th className="text-right py-1.5 font-medium">Cant.</th>
-                  <th className="text-left py-1.5 font-medium pl-3">Destino</th>
-                  <th className="text-left py-1.5 font-medium">Motivo</th>
-                  <th className="text-left py-1.5 font-medium">Acción</th>
-                  <th className="text-right py-1.5 font-medium">Monto</th>
+                  <SortableTh sortKey="producto" sort={sort} onToggle={toggleSort} className="text-left py-1.5 font-medium">Producto</SortableTh>
+                  <SortableTh sortKey="cantidad" sort={sort} onToggle={toggleSort} align="right" className="text-right py-1.5 font-medium">Cant.</SortableTh>
+                  <SortableTh sortKey="destino" sort={sort} onToggle={toggleSort} className="text-left py-1.5 font-medium pl-3">Destino</SortableTh>
+                  <SortableTh sortKey="motivo" sort={sort} onToggle={toggleSort} className="text-left py-1.5 font-medium">Motivo</SortableTh>
+                  <SortableTh sortKey="accion" sort={sort} onToggle={toggleSort} className="text-left py-1.5 font-medium">Acción</SortableTh>
+                  <SortableTh sortKey="monto_credito" sort={sort} onToggle={toggleSort} align="right" className="text-right py-1.5 font-medium">Monto</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {dev.devolucion_lineas.map(l => (
+                {lineasOrd.map(l => (
                   <tr key={l.id} className="border-b border-border/60">
                     <td className="py-1.5">{l.productos?.nombre ?? '—'}</td>
                     <td className="py-1.5 text-right font-semibold tabular-nums">{l.cantidad}</td>

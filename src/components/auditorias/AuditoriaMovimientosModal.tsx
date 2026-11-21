@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Package } from 'lucide-react';
+import { SortableTableHead, useSortState, ordenarFilas } from '@/hooks/useSortableTable';
 
 interface Props {
   open: boolean;
@@ -40,6 +41,17 @@ export default function AuditoriaMovimientosModal({
   open, onOpenChange, productoId, productoNombre, productoCodigo,
   cantidadEsperada, apertura, cierre,
 }: Props) {
+
+  // Orden por columna dentro de cada grupo de movimientos.
+  const { sort, toggle: toggleSort } = useSortState('auditoria-movimientos');
+  const valorMov = (m: any, key: string) => {
+    if (key === 'tipo') return (TIPO_CONFIG[m.tipo] ?? TIPO_CONFIG.entrada).label;
+    if (key === 'almacen') return m.tipo === 'entrada'
+      ? m.almacen_dest?.nombre ?? m.almacenes?.nombre
+      : m.almacenes?.nombre ?? m.almacen_dest?.nombre;
+    if (key === 'referencia') return m.referencia_id ? `${REF_LABELS[m.referencia_tipo] ?? m.referencia_tipo} #${m.referencia_id.slice(0, 8)}` : null;
+    return m[key];
+  };
 
   const fmtDt = (d: string) => {
     try { return format(new Date(d), "dd/MM/yyyy HH:mm:ss", { locale: es }); } catch { return d; }
@@ -148,16 +160,16 @@ export default function AuditoriaMovimientosModal({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[160px]">Fecha / Hora</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Almacén</TableHead>
-                    <TableHead>Referencia</TableHead>
-                    <TableHead className="text-right w-[100px]">Cantidad</TableHead>
-                    <TableHead>Notas</TableHead>
+                    <SortableTableHead sortKey="created_at" sort={sort} onToggle={toggleSort} className="w-[160px]">Fecha / Hora</SortableTableHead>
+                    <SortableTableHead sortKey="tipo" sort={sort} onToggle={toggleSort}>Tipo</SortableTableHead>
+                    <SortableTableHead sortKey="almacen" sort={sort} onToggle={toggleSort}>Almacén</SortableTableHead>
+                    <SortableTableHead sortKey="referencia" sort={sort} onToggle={toggleSort}>Referencia</SortableTableHead>
+                    <SortableTableHead sortKey="cantidad" sort={sort} onToggle={toggleSort} align="right" className="text-right w-[100px]">Cantidad</SortableTableHead>
+                    <SortableTableHead sortKey="notas" sort={sort} onToggle={toggleSort}>Notas</SortableTableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((m: any) => {
+                  {ordenarFilas(items as any[], sort, valorMov).map((m: any) => {
                     const cfg = TIPO_CONFIG[m.tipo] ?? TIPO_CONFIG.entrada;
                     const Icon = cfg.icon;
                     const almNombre = m.tipo === 'entrada'
