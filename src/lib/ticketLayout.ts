@@ -1,9 +1,22 @@
 /**
  * Maquetación en columnas fijas del modelo único del ticket (`ticketModelo`).
- * La usan el HTML (bloque monoespaciado), el ESC/POS (impresora térmica) y el
- * texto para compartir, para que los tres acomoden los renglones igual.
+ * La usan el HTML (bloque monoespaciado), el ESC/POS (impresora térmica), el
+ * PDF (`ticketPdf`) y el texto para compartir, para que todos acomoden los
+ * renglones igual. También acomoda otros documentos de ticket (liquidación de
+ * ruta) que usan los mismos renglones (`DocumentoTicket`).
  */
-import type { ModeloTicket, RenglonTicket } from './ticketModelo';
+import type { EncabezadoTicket, RenglonTicket } from './ticketModelo';
+
+/**
+ * Lo que se dibuja de un ticket: encabezado de empresa, renglones, pie y marca.
+ * `ModeloTicket` (venta) lo cumple; la liquidación de ruta arma uno propio.
+ */
+export interface DocumentoTicket {
+  encabezado: EncabezadoTicket;
+  cuerpo: RenglonTicket[];
+  pie: string[];
+  marca: string[];
+}
 
 export interface ParteLinea { texto: string; tachado?: boolean }
 export interface LineaTicket {
@@ -99,7 +112,7 @@ function maquetarRenglon(r: RenglonTicket, cols: number, L: (s: string) => strin
       const w = Math.floor((cols - 2) / 2);
       return [
         simple(pad('_'.repeat(w), '_'.repeat(w), cols)),
-        simple(pad(centrarEn('Entrego', w), centrarEn('Recibio', w), cols)),
+        simple(pad(centrarEn(L(r.izq ?? 'Entrego'), w), centrarEn(L(r.der ?? 'Recibio'), w), cols)),
       ];
     }
   }
@@ -109,7 +122,7 @@ function maquetarRenglon(r: RenglonTicket, cols: number, L: (s: string) => strin
  * Acomoda el modelo a `cols` columnas. `limpiar` se aplica a cada texto antes de
  * medirlo (el ESC/POS lo usa para dejar solo ASCII y no descuadrar columnas).
  */
-export function maquetarTicket(modelo: ModeloTicket, cols: number, limpiar: (s: string) => string = s => s): TicketMaquetado {
+export function maquetarTicket(modelo: DocumentoTicket, cols: number, limpiar: (s: string) => string = s => s): TicketMaquetado {
   const L = limpiar;
   const envolverCentrado = (s: string, extra?: Partial<LineaTicket>) =>
     s.split('\n').flatMap(par => wrapText(L(par), cols)).map(x => simple(x, { centro: true, ...extra }));
@@ -128,7 +141,7 @@ export function maquetarTicket(modelo: ModeloTicket, cols: number, limpiar: (s: 
 }
 
 /** Texto plano del ticket (para compartir): encabezado, cuerpo, pie y marca. */
-export function ticketATexto(modelo: ModeloTicket, cols = 32): string {
+export function ticketATexto(modelo: DocumentoTicket, cols = 32): string {
   const m = maquetarTicket(modelo, cols);
   const centro = (l: LineaTicket) => (l.centro ? centerText(textoLinea(l), cols) : textoLinea(l)).replace(/\s+$/, '');
   return [...m.encabezado, ...m.cuerpo, ...m.pie, ...m.marca].map(centro).join('\n');

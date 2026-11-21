@@ -1,14 +1,15 @@
 /**
- * Ticket en HTML: dibuja el modelo único (`ticketModelo`) para pantalla, PNG,
- * imagen de WhatsApp e impresión por navegador. Qué lleva el ticket (secciones,
- * renglones, montos y textos) lo decide `construirModeloTicket`; aquí solo se
- * acomoda (`ticketLayout`) y se pinta.
+ * Ticket en HTML: dibuja el modelo único (`ticketModelo`) para la pantalla, la
+ * vista previa del diseñador y la impresión por navegador. Qué lleva el ticket
+ * (secciones, renglones, montos y textos) lo decide `construirModeloTicket`;
+ * aquí solo se acomoda (`ticketLayout`) y se pinta. Para compartir/descargar se
+ * usa el PDF por código (`ticketPdf`), nunca una captura de este HTML (D-051).
  *
- * Fuente monoespaciada + white-space:pre para que toPng() alinee las columnas
- * sin problemas de flexbox.
+ * Fuente monoespaciada + white-space:pre para que las columnas alineen igual
+ * que en la impresora térmica.
  */
 import { construirModeloTicket, type TicketCampos } from '@/lib/ticketModelo';
-import { maquetarTicket, centerText, type LineaTicket } from '@/lib/ticketLayout';
+import { maquetarTicket, centerText, type LineaTicket, type DocumentoTicket } from '@/lib/ticketLayout';
 
 export {
   getTicketTotalsSummary,
@@ -134,21 +135,28 @@ function lineaHtml(l: LineaTicket, cols: number): string {
  *   que la impresora térmica.
  */
 export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean; columnas?: number }): string {
+  return documentoTicketHTML(construirModeloTicket(data), { columnas: opts?.columnas, altLogo: data.empresa.nombre });
+}
+
+/**
+ * HTML de cualquier documento de ticket (venta o liquidación): encabezado de
+ * empresa centrado y cuerpo monoespaciado acomodado por `maquetarTicket`.
+ */
+export function documentoTicketHTML(documento: DocumentoTicket, opts?: { columnas?: number; altLogo?: string }): string {
   const cols = opts?.columnas ?? COLS_HTML;
-  const modelo = construirModeloTicket(data);
-  const enc = modelo.encabezado;
+  const enc = documento.encabezado;
 
   // ── Encabezado (HTML real, centrado) ──
   const hLines: string[] = [];
   if (enc.logoUrl) {
-    hLines.push(`<div style="margin-bottom:6px"><img src="${escapeHtml(enc.logoUrl)}" alt="${escapeHtml(data.empresa.nombre)}" style="max-width:160px;max-height:80px;margin:0 auto;display:block" crossorigin="anonymous" /></div>`);
+    hLines.push(`<div style="margin-bottom:6px"><img src="${escapeHtml(enc.logoUrl)}" alt="${escapeHtml(opts?.altLogo ?? enc.nombre ?? '')}" style="max-width:160px;max-height:80px;margin:0 auto;display:block" crossorigin="anonymous" /></div>`);
   }
   if (enc.nombre) hLines.push(`<div style="font-weight:700;font-size:22px">${escapeHtml(enc.nombre.toUpperCase())}</div>`);
   for (const l of enc.lineas) hLines.push(`<div style="font-size:${l.chico ? 13 : 14}px">${escapeHtml(l.texto)}</div>`);
   if (enc.textoLibre) hLines.push(`<div style="font-size:13px;white-space:pre-wrap;margin-top:4px">${escapeHtml(enc.textoLibre)}</div>`);
 
   // ── Cuerpo (bloque monoespaciado) ──
-  const m = maquetarTicket(modelo, cols);
+  const m = maquetarTicket(documento, cols);
   const bodyContent = [...m.cuerpo, ...m.pie, ...m.marca].map(l => lineaHtml(l, cols)).join('\n');
   const width = Math.round((cols * 380) / COLS_HTML);
 

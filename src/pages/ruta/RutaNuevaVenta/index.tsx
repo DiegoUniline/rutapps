@@ -3,6 +3,7 @@ import { ArrowLeft, X } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import TicketVenta from '@/components/ruta/TicketVenta';
+import { ticketAnchoDe } from '@/lib/ticketPdf';
 import { STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
 import { printTicket } from '@/lib/printTicketUtil';
@@ -99,6 +100,7 @@ function RutaNuevaVentaInner() {
     return (
       <TicketVenta
         {...ticketDatos}
+        ticketAncho={ticketAnchoDe(h.empresa)}
         onPrintTicket={handlePrintTicket}
         onClose={() => h.navigate('/ruta')}
       />

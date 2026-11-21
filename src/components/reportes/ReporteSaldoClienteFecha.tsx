@@ -5,6 +5,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasEmpresa, requireEmpresa } from '@/lib/empresaGuard';
 import { fmtDate, todayLocal } from '@/lib/utils';
+import { useRegistrarPdfReporte, type RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
+import { pdfDeReporte, periodoReporte } from '@/lib/reportePdf';
 
 interface SaldoRow {
   cliente_id: string;
@@ -19,7 +21,7 @@ interface SaldoRow {
  * abonos (cobros) acumulados hasta esa fecha, considerando todo el historial.
  * Se reconstruye en la BD con saldo_clientes_a_la_fecha().
  */
-export function ReporteSaldoClienteFecha({ hasta }: { desde: string; hasta: string }) {
+export function ReporteSaldoClienteFecha({ hasta, registrarPdf }: { desde: string; hasta: string; registrarPdf?: RegistrarPdfReporte }) {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
@@ -41,6 +43,28 @@ export function ReporteSaldoClienteFecha({ hasta }: { desde: string; hasta: stri
   const totalSaldo = conSaldo.reduce((s, r) => s + r.saldo, 0);
   const totalCargos = rows.reduce((s, r) => s + r.cargos, 0);
   const totalAbonos = rows.reduce((s, r) => s + r.abonos, 0);
+
+  // PDF por código con lo mismo que la pantalla (D-051).
+  useRegistrarPdfReporte(registrarPdf, async () => {
+    if (isLoading) return null;
+    return pdfDeReporte({
+      titulo: 'Saldo de clientes a la fecha',
+      periodo: `Al ${fmtDate(fecha)}`,
+      kpis: [
+        { label: 'Saldo total', value: fmt(totalSaldo) },
+        { label: 'Cargos', value: fmt(totalCargos) },
+        { label: 'Abonos', value: fmt(totalAbonos) },
+        { label: 'Clientes con saldo', value: String(conSaldo.length) },
+      ],
+      secciones: [{
+        columnas: [{ header: 'Cliente' }, { header: 'Cargos', align: 'right' }, { header: 'Abonos', align: 'right' }, { header: 'Saldo', align: 'right' }],
+        filas: conSaldo.map(r => [r.cliente, fmt(r.cargos), fmt(r.abonos), fmt(r.saldo)]),
+        pie: ['Total', fmt(totalCargos), fmt(totalAbonos), fmt(totalSaldo)],
+        vacio: 'Sin saldos a esta fecha',
+      }],
+      archivo: `Saldo_clientes_${fecha}`,
+    }, empresa ?? { nombre: '' });
+  });
 
   return (
     <div className="space-y-3">

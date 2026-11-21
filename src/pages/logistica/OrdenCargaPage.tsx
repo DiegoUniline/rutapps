@@ -12,6 +12,10 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { InlineEditCell } from '@/components/InlineEditCell';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { generarReportePdf } from '@/lib/reportePdf';
+import { reporteOrdenCargaPdf } from '@/lib/logisticaReportesPdf';
+import { abrirPdf } from '@/lib/pdfAcciones';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Borrador', variant: 'outline' },
@@ -19,6 +23,8 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
   en_ruta: { label: 'En ruta', variant: 'default' },
   completada: { label: 'Completada', variant: 'secondary' },
 };
+
+type Nombre = { nombre?: string | null } | null;
 
 interface ConsolidatedProduct {
   producto_id: string;
@@ -32,6 +38,7 @@ export default function OrdenCargaPage() {
   const { camionId } = useParams();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { empresa } = useAuth();
   const { data: carga, isLoading: loadingCarga } = useCarga(camionId);
   const { data: cargaPedidos, isLoading: loadingPedidos } = useCargaPedidos(camionId);
   const updateStatus = useUpdateCargaStatus();
@@ -106,8 +113,26 @@ export default function OrdenCargaPage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  // Imprimir = PDF por código con la misma tabla consolidada que la pantalla (D-051).
+  const handlePrint = async () => {
+    const info = carga as { vendedores?: Nombre; almacen_origen?: Nombre; almacen_destino?: Nombre } | null | undefined;
+    const reporte = reporteOrdenCargaPdf({
+      vendedor: info?.vendedores?.nombre ?? 'Sin vendedor',
+      origen: info?.almacen_origen?.nombre ?? '—',
+      destino: info?.almacen_destino?.nombre ?? '—',
+      estado: (statusConfig[carga?.status ?? 'pendiente'] ?? statusConfig.pendiente).label,
+      pedidosAsignados: (cargaPedidos ?? []).length,
+      productos: consolidated.map(p => ({
+        codigo: p.codigo, nombre: p.nombre, pedido: p.cantidadPedida,
+        surtido: surtido[p.producto_id] ?? p.cantidadPedida,
+      })),
+    });
+    try {
+      const blob = await generarReportePdf(reporte, empresa ?? { nombre: '' });
+      abrirPdf(blob, `${reporte.archivo}.pdf`);
+    } catch (err) {
+      toast.error(err instanceof Error ? `No se pudo generar el PDF: ${err.message}` : 'No se pudo generar el PDF');
+    }
   };
 
   if (loadingCarga) return <div className="p-6"><TableSkeleton /></div>;

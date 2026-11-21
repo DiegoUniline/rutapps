@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasEmpresa, requireEmpresa } from '@/lib/empresaGuard';
 import { fmtDate, todayLocal } from '@/lib/utils';
+import { useRegistrarPdfReporte, type RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
+import { pdfDeReporte, periodoReporte } from '@/lib/reportePdf';
 
 interface StockRow {
   producto_id: string;
@@ -20,7 +22,7 @@ const nf = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 });
  * reconstruida desde todo el ledger de movimientos_inventario en la BD
  * (stock_a_la_fecha): entradas, salidas, traspasos, ajustes, ventas, compras…
  */
-export function ReporteStockFecha({ hasta }: { desde: string; hasta: string }) {
+export function ReporteStockFecha({ hasta, registrarPdf }: { desde: string; hasta: string; registrarPdf?: RegistrarPdfReporte }) {
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
   // "A la fecha" usa UNA sola fecha de corte (no un rango). Default: hoy.
@@ -43,6 +45,27 @@ export function ReporteStockFecha({ hasta }: { desde: string; hasta: string }) {
   const totalUnidades = useMemo(() => rows.reduce((s, r) => s + Number(r.cantidad || 0), 0), [rows]);
   const productosUnicos = useMemo(() => new Set(rows.map(r => r.producto_id)).size, [rows]);
   const almacenesUnicos = useMemo(() => new Set(rows.map(r => r.almacen_id)).size, [rows]);
+
+  // PDF por código con lo mismo que la pantalla (D-051).
+  useRegistrarPdfReporte(registrarPdf, async () => {
+    if (isLoading || isError) return null;
+    return pdfDeReporte({
+      titulo: 'Stock a la fecha',
+      periodo: `Al ${fmtDate(fecha)}`,
+      kpis: [
+        { label: 'Unidades', value: nf.format(totalUnidades) },
+        { label: 'Productos', value: String(productosUnicos) },
+        { label: 'Almacenes', value: String(almacenesUnicos) },
+      ],
+      secciones: [{
+        columnas: [{ header: 'Producto' }, { header: 'Almacén' }, { header: 'Existencia', align: 'right' }],
+        filas: rows.map(r => [r.producto, r.almacen, nf.format(Number(r.cantidad || 0))]),
+        pie: ['Total', '', nf.format(totalUnidades)],
+        vacio: 'Sin existencias a esta fecha',
+      }],
+      archivo: `Stock_a_la_fecha_${fecha}`,
+    }, empresa ?? { nombre: '' });
+  });
 
   return (
     <div className="space-y-3">

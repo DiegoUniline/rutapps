@@ -2,13 +2,15 @@ import { Printer, Share2, X } from 'lucide-react';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { buildTicketHTML } from '@/lib/ticketHtml';
-import { construirModeloTicket } from '@/lib/ticketModelo';
-import { ticketATexto } from '@/lib/ticketLayout';
+import { generarTicketPdf, nombreArchivoTicket } from '@/lib/ticketPdf';
+import { compartirPdf } from '@/lib/pdfAcciones';
 import { printTicket } from '@/lib/printTicketUtil';
 import { ticketVentaADatos, type TicketVentaDatos } from '@/lib/ticketVentaData';
 import TicketHtmlVista from '@/components/ticket/TicketHtmlVista';
 
 interface TicketVentaProps extends TicketVentaDatos {
+  /** Ancho del diseñador ('58' | '80') para el PDF al compartir; por omisión 80 mm. */
+  ticketAncho?: string | null;
   onPrintTicket?: () => void;
   onClose: () => void;
 }
@@ -16,10 +18,10 @@ interface TicketVentaProps extends TicketVentaDatos {
 /**
  * Comprobante en pantalla tras la venta (ruta y POS). Muestra el ticket ÚNICO
  * (`buildTicketHTML` sobre `construirModeloTicket`): lo mismo que se imprime,
- * se manda por WhatsApp y se ve en la vista previa del diseñador.
+ * se comparte en PDF y se ve en la vista previa del diseñador.
  */
 export default function TicketVenta(props: TicketVentaProps) {
-  const { onPrintTicket, onClose, ...datos } = props;
+  const { onPrintTicket, onClose, ticketAncho, ...datos } = props;
   // Las props llegan como objeto nuevo en cada render del padre; el ticket se
   // recalcula solo cuando cambia su contenido.
   const clave = JSON.stringify(datos);
@@ -34,24 +36,14 @@ export default function TicketVenta(props: TicketVentaProps) {
   };
 
   const handleShare = async () => {
-    // Mismo contenido y configuración (ticket_campos) que el ticket impreso.
-    const text = ticketATexto(construirModeloTicket(ticketData));
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Ticket ${ticketData.folio}`, text });
-      } catch (err) {
-        // Cancelar el diálogo de compartir no es un error.
-        if (!(err instanceof DOMException && err.name === 'AbortError')) {
-          toast.error('No se pudo compartir el ticket');
-        }
-      }
-      return;
-    }
+    // Archivo PDF por código (D-051) con el mismo contenido y campos del
+    // diseñador que el ticket impreso; si no se pueden compartir archivos, se descarga.
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success('Ticket copiado');
-    } catch {
-      toast.error('No se pudo copiar el ticket');
+      const blob = await generarTicketPdf(ticketData, { ticketAncho });
+      const r = await compartirPdf(blob, nombreArchivoTicket(ticketData.folio), `Ticket ${ticketData.folio}`);
+      if (r === 'descargado') toast.success('Ticket descargado (PDF)');
+    } catch (err) {
+      toast.error(err instanceof Error ? `No se pudo generar el PDF: ${err.message}` : 'No se pudo generar el PDF');
     }
   };
 

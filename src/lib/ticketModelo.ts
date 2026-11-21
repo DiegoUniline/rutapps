@@ -220,7 +220,8 @@ export type RenglonTicket =
   | { tipo: 'producto'; texto: string; importe: string; gratis: boolean }
   /** Detalle sangrado bajo el producto (P.U., sugerido, descuento, «Antes» tachado). */
   | { tipo: 'detalle'; partes: { texto: string; tachado?: boolean }[] }
-  | { tipo: 'firmas' };
+  /** Dos líneas de firma; etiquetas por omisión «Entrego» / «Recibio». */
+  | { tipo: 'firmas'; izq?: string; der?: string };
 
 export interface EncabezadoTicket {
   logoUrl: string | null;
@@ -318,12 +319,12 @@ function renglonesProducto(l: TicketLinea, o: OpcionesTicket, idx: PromoIndex, f
   return out;
 }
 
-export function construirModeloTicket(data: TicketData, campos?: TicketCampos | null): ModeloTicket {
-  const o = resolverOpcionesTicket(campos === undefined ? data.empresa.ticket_campos : campos);
-  const { empresa } = data;
-  const fmt = crearFormatoTicket(empresa.moneda);
-
-  /* Encabezado */
+/**
+ * Encabezado de empresa según el diseñador (logo, nombre, razón social, RFC,
+ * dirección, teléfono, correo y texto libre). Lo usa el ticket de venta y los
+ * demás documentos de ticket (liquidación de ruta) para salir iguales.
+ */
+export function construirEncabezadoTicket(empresa: TicketData['empresa'], o: OpcionesTicket): EncabezadoTicket {
   const lineasEnc: EncabezadoTicket['lineas'] = [];
   if (o.razonSocial && empresa.razon_social) lineasEnc.push({ texto: empresa.razon_social, chico: false });
   if (o.rfc && empresa.rfc) lineasEnc.push({ texto: `RFC: ${empresa.rfc}`, chico: false });
@@ -333,12 +334,20 @@ export function construirModeloTicket(data: TicketData, campos?: TicketCampos | 
   if (o.direccion && dir2) lineasEnc.push({ texto: dir2, chico: true });
   if (o.telefono && empresa.telefono) lineasEnc.push({ texto: `Tel: ${empresa.telefono}`, chico: true });
   if (o.email && empresa.email) lineasEnc.push({ texto: empresa.email, chico: true });
-  const encabezado: EncabezadoTicket = {
+  return {
     logoUrl: o.logo && empresa.logo_url ? empresa.logo_url : null,
     nombre: o.nombre ? empresa.nombre : null,
     lineas: lineasEnc,
     textoLibre: o.textoEncabezado || null,
   };
+}
+
+export function construirModeloTicket(data: TicketData, campos?: TicketCampos | null): ModeloTicket {
+  const o = resolverOpcionesTicket(campos === undefined ? data.empresa.ticket_campos : campos);
+  const { empresa } = data;
+  const fmt = crearFormatoTicket(empresa.moneda);
+
+  const encabezado = construirEncabezadoTicket(empresa, o);
 
   /* Documento, cliente y vendedor */
   const c: RenglonTicket[] = [];

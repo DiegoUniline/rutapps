@@ -5,11 +5,14 @@ import { UserCheck, UserX } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { useRegistrarPdfReporte, type RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
+import { pdfDeReporte, periodoReporte } from '@/lib/reportePdf';
 
 interface Props {
   desde: string;
   hasta: string;
   vendedorIds?: string[];
+  registrarPdf?: RegistrarPdfReporte;
 }
 
 interface ClienteReporte {
@@ -25,7 +28,7 @@ interface ClienteReporte {
   ultima_visita: string | null;
 }
 
-export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props) {
+export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds, registrarPdf }: Props) {
   const { empresa } = useAuth();
 
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -150,6 +153,46 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
         grupos,
       };
     },
+  });
+
+  // PDF por código con lo mismo que la pantalla (D-051).
+  useRegistrarPdfReporte(registrarPdf, async ({ filtros }) => {
+    if (!data) return null;
+    const dias: Record<string, string> = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue', viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom' };
+    const fecha = (f: string | null) => {
+      if (!f) return '—';
+      try { return format(new Date(f + 'T12:00:00'), 'dd MMM yyyy', { locale: es }); } catch { return f; }
+    };
+    const ahora = Date.now();
+    return pdfDeReporte({
+      titulo: 'Clientes no visitados',
+      periodo: periodoReporte(desde, hasta),
+      filtros,
+      kpis: [
+        { label: 'Total clientes', value: String(data.totalClientes) },
+        { label: 'Visitados', value: String(data.totalVisitados) },
+        { label: 'No visitados', value: String(data.totalNoVisitados) },
+        { label: '% Sin visita', value: `${data.pctNoVisitados.toFixed(1)}%` },
+      ],
+      secciones: data.grupos.map(g => ({
+        titulo: g.vendedor,
+        resumen: `${g.total - g.noVisitados} visitados · ${g.noVisitados} sin visita · ${g.total} total`,
+        columnas: [
+          { header: '#' }, { header: 'Estado', align: 'center' as const }, { header: 'Código' }, { header: 'Cliente' },
+          { header: 'Última visita' }, { header: 'Días sin visita', align: 'right' as const }, { header: 'Días visita' }, { header: 'Teléfono' },
+        ],
+        filas: g.items.map((c, i) => {
+          const sinVisita = c.ultima_visita ? Math.floor((ahora - new Date(c.ultima_visita + 'T12:00:00').getTime()) / 86400000) : null;
+          return [
+            String(i + 1), c.visitado ? 'Sí' : 'No', c.codigo ?? '—', c.nombre, fecha(c.ultima_visita),
+            sinVisita !== null ? `${sinVisita} días` : 'Nunca visitado',
+            c.dia_visita.length > 0 ? c.dia_visita.map(d => dias[d] ?? d).join(', ') : '—',
+            c.telefono ?? '—',
+          ];
+        }),
+      })),
+      archivo: `Clientes_no_visitados_${desde}_${hasta}`,
+    }, empresa ?? { nombre: '' });
   });
 
   if (isLoading) return <div className="py-8 text-center text-muted-foreground text-[13px]">Cargando...</div>;

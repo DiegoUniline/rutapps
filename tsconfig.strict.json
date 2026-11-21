@@ -26,6 +26,12 @@
     "src/lib/ticketModelo.ts",
     "src/lib/ticketLayout.ts",
     "src/lib/ticketVentaData.ts",
-    "src/lib/posTicketDatos.ts"
+    "src/lib/posTicketDatos.ts",
+    "src/lib/ticketPdf.ts",
+    "src/lib/liquidacionTicketHtml.ts",
+    "src/lib/pdfAcciones.ts",
+    "src/lib/reportePdf.ts",
+    "src/lib/logisticaReportesPdf.ts",
+    "src/hooks/useRegistrarPdfReporte.ts"
   ]
 }

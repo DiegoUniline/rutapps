@@ -1,7 +1,7 @@
 # Estado del proyecto — DOCUMENTO VIVO
 > Se lee al iniciar cada sesión. Se actualiza tras decisiones confirmadas o cambios verificados (no por consultas).
 
-**Última actualización:** 2026-11-21 · **Agente:** desarrollador (F3 liquidación cerrada)
+**Última actualización:** 2026-11-21 · **Agente:** desarrollador (D-051 documentos por código)
 
 ## Dónde vamos
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
@@ -11,6 +11,7 @@
 - **Siguiente paso exacto:** orden de trabajo F1 devoluciones (D-049); antes, confirmar el 💡 de D-049 (cancelar la venta no cancela la devolución). Pendiente previo: decidir datos históricos (cobros sin aplicar, pagado > total, saldos negativos); luego orden de trabajo por fases: F0 seguridad RPC → F1 saldo único + saldo a favor (D-008, D-020, D-021) → F2 pedido↔entrega → F3 inventario (D-022). Corte a Supabase propio: `docs/migracion-corte.md`.
 
 ## Decisiones recientes (últimas 10)
+- [D-051](./decisiones.md#d-051) 2026-11-21 · Ningún documento por captura de pantalla: ticket compartido/descargado en PDF por código (80/58 mm, modelo único y diseñador), liquidación con el mismo motor, «Imprimir» de reportes = PDF por código.
 - [D-049](./decisiones.md#d-049) 2026-11-21 · Implementación F3: liquidación aprobada congela el efectivo esperado con desglose; aprobar/rechazar/reabrir solo con permiso (motivo e historial); re-aprobar ajusta inventario por diferencia; una por vendedor y día.
 - [D-050](./decisiones.md#d-050) 2026-11-20 · F0 devoluciones y liquidación: devolución de ruta guarda en una transacción; una sola fórmula de efectivo esperado (resta dinero devuelto y reembolsos sin caja); solo supervisores aprueban/cambian liquidaciones; cantidad > 0; ticket crédito sin doble resta.
 - [D-049](./decisiones.md#d-049) 2026-11-20 · Devoluciones F1 y liquidación F3: destino por renglón, sin tope a precio de lista, sin «Al almacén» ni «Descuento en venta»; reabrir liquidación aprobada solo con permiso.
@@ -20,13 +21,12 @@
 - [D-043](./decisiones.md#d-043) 2026-11-20 · «−/+» por caja en renglones por presentación (POS y ruta); teclado con decimales en devoluciones a granel.
 - [D-022](./decisiones.md#d-022) 2026-11-19 · Reasignar entrega o cambiar camión siempre mueve stock.
 - [D-021](./decisiones.md#d-021) 2026-11-19 · Borrador solo al inicio; confirmada no regresa a borrador, se edita con Editar venta.
-- [D-020](./decisiones.md#d-020) 2026-11-19 · Cancelar venta con pagos pregunta: cancelar pago o saldo a favor.
-- [D-019](./decisiones.md#d-019) 2026-11-19 · Lo entregado sigue el precio vivo del pedido.
 
 ## Propuestas pendientes de aprobación 💡
 - (ninguna)
 
 ## Pendientes / bloqueos
+- D-051 (2026-11-21) requiere `CONFIRMO`: quitar `html-to-image` de `package.json` (ya no se importa). Sin cambio: `wa-bot-webhook/ventaPdf.ts` (nota carta por código; unificar con el modelo del ticket exige empaquetarlo para Deno y desplegar). «Imprimir» abre el PDF en otra pestaña; si el navegador bloquea la ventana (Safari tras generar), se descarga.
 - Suscripciones, verificación puntual 2026-11-04 23:47 UTC: 48 reemplazos vinculados, activos y desbloqueados en RutApp; Stripe en `trialing` hasta cada corte original; 48 facturas iniciales de total/importe pagado $0, sin cargos desde la creación y sin duplicados activos. Planes, usuarios, descuentos y configuración manual/legacy sin diferencias. No se modificó código, esquema, funciones ni se publicó. Los cobros futuros dependen de la tarjeta y no están probados antes de su fecha.
 - Inventario Fase 1 hecho. Producción 2026-10-19: R-001, R-004…R-006 corregidos (PR #148) y **publicado**; Control de descuentos validado por el dueño con datos reales; portal del cliente y alertas WA (edge functions) sin confirmar; R-009 y huecos de R-010 resueltos (PR #150 aplicado por el dueño). Pendientes: PR #149 crédito (en espera de avisar vendedores), R-002, R-013, registrar migraciones en `supabase_migrations`.
 - F0 (D-050) — quedó fuera / por revisar: (a) «Al almacén» en ruta sigue sumando al camión (H2; se quita en F1); (b) un reembolso hecho por un admin desde oficina sin caja cuenta en la liquidación de **ese admin**, no del vendedor (la fórmula usa quién registró el reembolso); (c) al cancelar una venta cuya devolución se reembolsó con gasto (origen «devolucion» en cobro_excedentes) el gasto se cancela y ese dinero ya no resta en la liquidación — revisar en F1/F2; (d) antes del corte, contar en producción `devolucion_lineas` con cantidad ≤ 0 (el CHECK nuevo rechazaría esas filas al copiar datos); (e) ~~la pantalla de liquidaciones no oculta Aprobar/Rechazar a quien no tiene permiso~~ resuelto en F3.

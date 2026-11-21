@@ -7,9 +7,11 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
-import { buildTicketHTML, type TicketData } from '@/lib/ticketHtml';
+import type { TicketData } from '@/lib/ticketHtml';
+import { generarTicketPdf, nombreArchivoTicket } from '@/lib/ticketPdf';
+import { compartirPdf } from '@/lib/pdfAcciones';
+import { downloadBlob } from '@/lib/mergePdfs';
 import { printTicket } from '@/lib/printTicketUtil';
-import { toPng } from 'html-to-image';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { phoneWithLada } from '@/lib/phoneWithLada';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
@@ -541,49 +543,33 @@ export default function RutaEntregaDetalle() {
     await printTicket(td, { ticketAncho });
   };
 
+  // Ticket PDF por código (D-051) desde el modelo único; se reutiliza al Descargar y al Compartir.
+  const generarTicketPdfEntrega = async (): Promise<{ blob: Blob; fileName: string; folio: string } | null> => {
+    const td = getTicketData();
+    if (!td) return null;
+    const blob = await generarTicketPdf(td, { ticketAncho });
+    return { blob, fileName: nombreArchivoTicket(td.folio, 'Entrega'), folio: td.folio };
+  };
+
   const handleDownloadTicket = async () => {
-    let td = getTicketData();
-    if (!td) { toast.error('No hay datos para descargar'); return; }
-    if (td.empresa.logo_url && !td.empresa.logo_url.startsWith('data:')) {
-      try {
-        const resp = await fetch(td.empresa.logo_url, { mode: 'cors' });
-        const blob = await resp.blob();
-        td = { ...td, empresa: { ...td.empresa, logo_url: await new Promise<string>((res) => { const r = new FileReader(); r.onloadend = () => res(r.result as string); r.readAsDataURL(blob); }) } };
-      } catch { td = { ...td, empresa: { ...td.empresa, logo_url: null } }; }
-    }
-    const container = document.createElement('div');
-    container.style.cssText = 'position:fixed;left:-9999px;top:0';
-    container.innerHTML = buildTicketHTML(td, { ticketAncho });
-    document.body.appendChild(container);
     try {
-      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
-      const dataUrl = await toPng(container.firstElementChild as HTMLElement, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' });
-      const a = document.createElement('a'); a.href = dataUrl; a.download = `entrega-${entrega.folio ?? id}.png`; a.click();
+      const pdf = await generarTicketPdfEntrega();
+      if (!pdf) { toast.error('No hay datos para descargar'); return; }
+      downloadBlob(pdf.blob, pdf.fileName);
       toast.success('Ticket descargado');
-    } catch { toast.error('Error generando imagen'); }
-    finally { document.body.removeChild(container); }
+    } catch (err) {
+      toast.error(err instanceof Error ? `Error generando el PDF: ${err.message}` : 'Error generando el PDF');
+    }
   };
 
   const handleShareTicket = async () => {
-    const td = getTicketData();
-    if (!td) return;
-    const fmtM = (n: number) => `${fmt(n)}`;
-    const text = [
-      td.empresa.nombre, td.empresa.rfc ? `RFC: ${td.empresa.rfc}` : '', td.empresa.direccion ?? '',
-      '─'.repeat(30), `Folio: ${td.folio}`, `Fecha: ${td.fecha}`, `Cliente: ${td.clienteNombre}`,
-      '─'.repeat(30),
-      ...td.lineas.map(l => `${l.cantidad}x ${l.nombre} ${fmtM(l.total)}`),
-      '─'.repeat(30),
-      `Sub total: ${fmtM(td.subtotal)}`,
-      `Descuentos: ${fmtM(td.descuento ?? 0)}`,
-      `Impuestos: ${fmtM((td.iva ?? 0) + (td.ieps ?? 0))}`,
-      `Total pagado: ${fmtM(td.total)}`,
-      `Saldo: ${fmtM(td.saldoNuevo ?? 0)}`,
-    ].filter(Boolean).join('\n');
-    if (navigator.share) {
-      try { await navigator.share({ title: `Ticket ${td.folio}`, text }); } catch { }
-    } else {
-      await navigator.clipboard.writeText(text); toast.success('Copiado al portapapeles');
+    try {
+      const pdf = await generarTicketPdfEntrega();
+      if (!pdf) { toast.error('No hay datos para compartir'); return; }
+      const r = await compartirPdf(pdf.blob, pdf.fileName, `Ticket ${pdf.folio}`);
+      if (r === 'descargado') toast.success('Ticket descargado (PDF)');
+    } catch (err) {
+      toast.error(err instanceof Error ? `Error generando el PDF: ${err.message}` : 'Error generando el PDF');
     }
   };
 
@@ -594,7 +580,7 @@ export default function RutaEntregaDetalle() {
     setSendingWA(true);
     try {
       const { sendReceiptWhatsApp } = await import('@/lib/whatsappReceipt');
-      const result = await sendReceiptWhatsApp({ data: td, empresaId: empresa?.id ?? '', phone: waPhone, referencia_id: venta?.id ?? id ?? '' });
+      const result = await sendReceiptWhatsApp({ data: td, empresaId: empresa?.id ?? '', phone: waPhone, referencia_id: venta?.id ?? id ?? '', ticketAncho });
       if (result.success) { toast.success('Enviado por WhatsApp'); setShowWADialog(false); } else toast.error(result.error || 'Error');
     } catch (err: any) { toast.error(err.message); }
     finally { setSendingWA(false); }

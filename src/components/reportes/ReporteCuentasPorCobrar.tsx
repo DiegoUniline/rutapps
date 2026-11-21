@@ -9,6 +9,7 @@ import { ChevronDown, ChevronRight, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { generarCuentasPorCobrarPdf } from '@/lib/cuentasPorCobrarPdf';
+import { useRegistrarPdfReporte, type RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
 
 interface CxCRow {
   id: string;
@@ -34,7 +35,7 @@ interface DetalleVenta {
  * Filas clicables: expanden productos + pagos de esa nota.
  * Exporta PDF con el mismo diseño.
  */
-export function ReporteCuentasPorCobrar(_props: { desde: string; hasta: string }) {
+export function ReporteCuentasPorCobrar({ registrarPdf }: { desde: string; hasta: string; registrarPdf?: RegistrarPdfReporte }) {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
@@ -133,28 +134,36 @@ export function ReporteCuentasPorCobrar(_props: { desde: string; hasta: string }
     });
   }
 
+  // El mismo PDF por código de «Exportar PDF» (también lo usan Imprimir/PDF de la barra de Reportes, D-051).
+  async function generarPdfCxc(): Promise<{ blob: Blob; fileName: string }> {
+    const blob = await generarCuentasPorCobrarPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? 'Empresa',
+        razon_social: (empresa as any)?.razon_social ?? null,
+        rfc: (empresa as any)?.rfc ?? null,
+        direccion: (empresa as any)?.direccion ?? null,
+        telefono: (empresa as any)?.telefono ?? null,
+        moneda: (empresa as any)?.moneda ?? null,
+        logo_url: (empresa as any)?.logo_url ?? null,
+      },
+      rows: rows.map(r => ({
+        folio: r.folio, fecha: r.fecha, cliente: r.cliente, tipo: r.tipo,
+        vencimiento: r.vencimiento, total: r.total, abonado: r.abonado,
+        saldo: r.saldo, vencido: r.vencido, esSaldoInicial: r.esSaldoInicial,
+      })),
+    });
+    return { blob, fileName: `cuentas-por-cobrar-${hoy}.pdf` };
+  }
+
+  useRegistrarPdfReporte(registrarPdf, async () => (isLoading ? null : generarPdfCxc()));
+
   async function handlePdf() {
     if (!rows.length) { toast.info('No hay saldos por cobrar para exportar'); return; }
     setGeneratingPdf(true);
     try {
-      const blob = await generarCuentasPorCobrarPdf({
-        empresa: {
-          nombre: empresa?.nombre ?? 'Empresa',
-          razon_social: (empresa as any)?.razon_social ?? null,
-          rfc: (empresa as any)?.rfc ?? null,
-          direccion: (empresa as any)?.direccion ?? null,
-          telefono: (empresa as any)?.telefono ?? null,
-          moneda: (empresa as any)?.moneda ?? null,
-          logo_url: (empresa as any)?.logo_url ?? null,
-        },
-        rows: rows.map(r => ({
-          folio: r.folio, fecha: r.fecha, cliente: r.cliente, tipo: r.tipo,
-          vencimiento: r.vencimiento, total: r.total, abonado: r.abonado,
-          saldo: r.saldo, vencido: r.vencido, esSaldoInicial: r.esSaldoInicial,
-        })),
-      });
-      setPdfBlob(blob);
-      setPdfName(`cuentas-por-cobrar-${hoy}.pdf`);
+      const pdf = await generarPdfCxc();
+      setPdfBlob(pdf.blob);
+      setPdfName(pdf.fileName);
       setShowPdf(true);
     } catch (err: any) {
       toast.error(err.message || 'Error generando PDF');

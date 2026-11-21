@@ -1,5 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -25,7 +25,11 @@ import { ResumenGeneralVentas } from '@/components/reportes/ResumenGeneralVentas
 import { ReporteClientesNoVisitados } from '@/components/reportes/ReporteClientesNoVisitados';
 import { ReporteComisionesVentas } from '@/components/reportes/ReporteComisionesVentas';
 import { ExportButton } from '@/components/ExportButton';
-import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
+import { exportToExcel, exportToPDF, generarPdfExport, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
+import { abrirPdf } from '@/lib/pdfAcciones';
+import { downloadBlob } from '@/lib/mergePdfs';
+import type { GeneradorPdfReporte, RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
+import { toast } from 'sonner';
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
@@ -300,10 +304,23 @@ export default function ReportesPage() {
     );
   };
 
-  const handleExport = (format: 'excel' | 'pdf') => {
-    if (!data) return;
+  // Pestañas que cargan sus propios datos registran aquí su PDF por código (D-051).
+  const pdfPestana = useRef<GeneradorPdfReporte | null>(null);
+  const registrarPdf = useCallback<RegistrarPdfReporte>(g => { pdfPestana.current = g; }, []);
+
+  /** Mismo encabezado de filtros que la pantalla (ReportLayout). */
+  const filtrosPantalla = (): { label: string; value: string }[] => {
+    const f: { label: string; value: string }[] = [];
+    if (vendedorNames.length > 0) f.push({ label: 'Vendedor', value: vendedorNames.join(', ') });
+    if (selectedStatuses.length > 0) f.push({ label: 'Estado', value: selectedStatuses.map(st => statusOptions.find(o => o.value === st)?.label ?? st).join(', ') });
+    if (tipoFilter) f.push({ label: 'Tipo', value: tipoFilter === 'pedido' ? 'Preventa' : 'Venta directa' });
+    return f;
+  };
+
+  const configExport = (): ExportOptions | null => {
+    if (!data) return null;
     const config = getExportConfig(tab, data, desde, hasta);
-    if (!config) return;
+    if (!config) return null;
 
     // Attach resumen general to all exports
     config.resumenGeneral = {
@@ -318,9 +335,43 @@ export default function ReportesPage() {
       metodosPago: data.metodosPago ?? [],
     };
     config.empresa = empresa?.nombre;
+    config.empresaInfo = { nombre: empresa?.nombre ?? '', rfc: empresa?.rfc, email: empresa?.email, logo_url: empresa?.logo_url };
+    config.filtros = filtrosPantalla();
+    return config;
+  };
 
-    if (format === 'excel') exportToExcel(config);
-    else exportToPDF(config);
+  /** PDF por código de la pestaña activa: tabla del reporte o el PDF propio de la pestaña. */
+  const pdfPestanaActiva = async (): Promise<{ blob: Blob; fileName: string } | null> => {
+    const config = configExport();
+    if (config) return { blob: await generarPdfExport(config), fileName: `${config.fileName}.pdf` };
+    return pdfPestana.current ? pdfPestana.current({ filtros: filtrosPantalla() }) : null;
+  };
+
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    try {
+      const config = configExport();
+      if (format === 'excel') {
+        if (config) await exportToExcel(config);
+        return;
+      }
+      if (config) { await exportToPDF(config); return; }
+      const pdf = await pdfPestanaActiva();
+      if (!pdf) { toast.info('Espera a que cargue el reporte'); return; }
+      downloadBlob(pdf.blob, pdf.fileName);
+    } catch (err) {
+      toast.error(err instanceof Error ? `No se pudo generar el archivo: ${err.message}` : 'No se pudo generar el archivo');
+    }
+  };
+
+  // Imprimir = abrir el PDF por código en el visor (antes: window.print() de la pantalla).
+  const handlePrint = async () => {
+    try {
+      const pdf = await pdfPestanaActiva();
+      if (!pdf) { toast.info('Espera a que cargue el reporte'); return; }
+      abrirPdf(pdf.blob, pdf.fileName);
+    } catch (err) {
+      toast.error(err instanceof Error ? `No se pudo generar el PDF: ${err.message}` : 'No se pudo generar el PDF');
+    }
   };
 
   const vendedorNames = selectedVendedores
@@ -459,10 +510,10 @@ export default function ReportesPage() {
         {tab !== 'comisiones_ventas' && (
           <div className="flex items-center gap-2 ml-auto shrink-0">
             <ExportButton
-              onExcel={() => handleExport('excel')}
-              onPDF={() => handleExport('pdf')}
+              onExcel={() => void handleExport('excel')}
+              onPDF={() => void handleExport('pdf')}
             />
-            <button onClick={() => window.print()} className="btn-odoo-secondary h-8 flex items-center gap-1 print:hidden">
+            <button onClick={() => void handlePrint()} className="btn-odoo-secondary h-8 flex items-center gap-1 print:hidden">
               <Printer className="h-3.5 w-3.5" /> Imprimir
             </button>
           </div>
@@ -581,11 +632,11 @@ export default function ReportesPage() {
             {tab === 'cargas' && <ReporteCargas data={data} />}
             {tab === 'devoluciones' && <ReporteDevoluciones data={data} />}
             {tab === 'utilidad' && <ReporteUtilidad data={data} />}
-            {tab === 'promociones' && <ReportePromociones desde={desde} hasta={hasta} />}
-            {tab === 'cuentas_cobrar' && <ReporteCuentasPorCobrar desde={desde} hasta={hasta} />}
-            {tab === 'saldo_fecha' && <ReporteSaldoClienteFecha desde={desde} hasta={hasta} />}
-            {tab === 'stock_fecha' && <ReporteStockFecha desde={desde} hasta={hasta} />}
-            {tab === 'no_visitados' && <ReporteClientesNoVisitados desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} />}
+            {tab === 'promociones' && <ReportePromociones desde={desde} hasta={hasta} registrarPdf={registrarPdf} />}
+            {tab === 'cuentas_cobrar' && <ReporteCuentasPorCobrar desde={desde} hasta={hasta} registrarPdf={registrarPdf} />}
+            {tab === 'saldo_fecha' && <ReporteSaldoClienteFecha desde={desde} hasta={hasta} registrarPdf={registrarPdf} />}
+            {tab === 'stock_fecha' && <ReporteStockFecha desde={desde} hasta={hasta} registrarPdf={registrarPdf} />}
+            {tab === 'no_visitados' && <ReporteClientesNoVisitados desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} registrarPdf={registrarPdf} />}
             {tab === 'comisiones_ventas' && <ReporteComisionesVentas desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} />}
           </ReportLayout>
         );

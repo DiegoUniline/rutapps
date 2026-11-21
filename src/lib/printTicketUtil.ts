@@ -1,4 +1,3 @@
-import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { buildTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { buildEscPosBytes } from '@/lib/escpos';
@@ -63,7 +62,7 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   // ── 2) Fallback: browser print dialog ──
   const html = buildTicketHTML(td, { ticketAncho, forPrint: true });
 
-  // Use an iframe + window.print() — much more reliable than toPng on desktop
+  // Iframe + print() del navegador (mismo HTML del modelo único; sin capturas)
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.left = '-9999px';
