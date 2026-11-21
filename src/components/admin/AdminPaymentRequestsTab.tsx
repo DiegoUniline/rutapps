@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { BanknoteIcon, Search, Check, X, Eye, RotateCcw, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 interface SolicitudRow {
   id: string;
@@ -183,6 +184,12 @@ export default function AdminPaymentRequestsTab() {
     (s.empresas?.nombre || '').toLowerCase().includes(search.toLowerCase()) ||
     s.concepto.toLowerCase().includes(search.toLowerCase())
   );
+  const { sorted: filteredOrd, sort, toggle: toggleSort } = useSortableTable(filtered, (s, key) => {
+    if (key === 'fecha') return s.created_at;
+    if (key === 'empresa') return s.empresas?.nombre;
+    if (key === 'monto') return s.monto_centavos;
+    return (s as any)[key];
+  }, undefined, 'admin-solicitudes-pago');
 
   return (
     <>
@@ -214,12 +221,12 @@ export default function AdminPaymentRequestsTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Concepto</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableTableHead sortKey="fecha" sort={sort} onToggle={toggleSort}>Fecha</SortableTableHead>
+                  <SortableTableHead sortKey="empresa" sort={sort} onToggle={toggleSort}>Empresa</SortableTableHead>
+                  <SortableTableHead sortKey="tipo" sort={sort} onToggle={toggleSort}>Tipo</SortableTableHead>
+                  <SortableTableHead sortKey="concepto" sort={sort} onToggle={toggleSort}>Concepto</SortableTableHead>
+                  <SortableTableHead sortKey="monto" sort={sort} onToggle={toggleSort}>Monto</SortableTableHead>
+                  <SortableTableHead sortKey="status" sort={sort} onToggle={toggleSort}>Status</SortableTableHead>
                   <TableHead className="w-20"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -230,7 +237,7 @@ export default function AdminPaymentRequestsTab() {
                       Sin solicitudes de pago
                     </TableCell>
                   </TableRow>
-                ) : filtered.map(s => (
+                ) : filteredOrd.map(s => (
                   <TableRow key={s.id} className={s.status === 'pendiente' ? 'bg-amber-50/50 dark:bg-amber-950/10' : ''}>
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                       {format(new Date(s.created_at), 'dd MMM yy HH:mm', { locale: es })}

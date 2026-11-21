@@ -275,7 +275,7 @@ export default function AdminBillingAuditTab() {
     if (key === 'stripe_id') return row.stripe_subscription?.id ?? row.db_subscription?.stripe_subscription_id;
     if (key === 'resultado') return SEVERITY_ORDER[row.severity];
     return null;
-  });
+  }, undefined, 'admin-auditoria-cobro');
 
   function exportAudit() {
     const rows = sortedAuditRows.map(row => ({

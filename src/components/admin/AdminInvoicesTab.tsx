@@ -460,7 +460,7 @@ export default function AdminInvoicesTab() {
     if (key === 'saldo') return invoice.amount_remaining ?? invoice.amount_due - (invoice.amount_paid || 0);
     if (key === 'fecha') return invoice.created;
     return null;
-  }, { key: 'fecha', dir: 'desc' });
+  }, { key: 'fecha', dir: 'desc' }, 'admin-facturas');
   const paidInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'paid');
   const failedInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'failed');
   const pendingInvoices = baseFiltered.filter(invoice => getPaymentState(invoice) === 'pending');
@@ -566,7 +566,7 @@ export default function AdminInvoicesTab() {
     if (key === 'saldo') return group.balance;
     if (key === 'dobles') return group.duplicateCount;
     return null;
-  }, { key: 'facturado', dir: 'desc' });
+  }, { key: 'facturado', dir: 'desc' }, 'admin-facturas-grupos');
 
   const applyDatePreset = (preset: Exclude<DatePreset, 'custom'>) => {
     const now = new Date();

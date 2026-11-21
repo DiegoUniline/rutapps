@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Pencil, Ticket, Users, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Cupon {
   id: string;
@@ -171,6 +172,14 @@ export default function AdminCuponesTab() {
     }));
   }
 
+  const { sorted: cuponesOrd, sort, toggle: toggleSort } = useSortableTable(cupones, (c: any, key) => {
+    if (key === 'planes') return c.planes_aplicables?.length ? c.planes_aplicables.join(', ') : 'Todos';
+    if (key === 'vigencia') return c.vigencia_inicio || c.vigencia_fin;
+    return c[key];
+  }, undefined, 'admin-cupones');
+  const { sorted: usosOrd, sort: sortUsos, toggle: toggleUsos } = useSortableTable(usos, (u: any, key) =>
+    key === 'empresa' ? (u.empresas?.nombre || u.empresa_id) : u[key], undefined, 'admin-cupon-usos');
+
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
   return (
@@ -185,19 +194,19 @@ export default function AdminCuponesTab() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Descuento</TableHead>
-                <TableHead>Planes</TableHead>
-                <TableHead>Usos</TableHead>
-                <TableHead>Meses</TableHead>
-                <TableHead>Acumulable</TableHead>
-                <TableHead>Vigencia</TableHead>
-                <TableHead>Activo</TableHead>
+                <SortableTableHead sortKey="codigo" sort={sort} onToggle={toggleSort}>Código</SortableTableHead>
+                <SortableTableHead sortKey="descuento_pct" sort={sort} onToggle={toggleSort}>Descuento</SortableTableHead>
+                <SortableTableHead sortKey="planes" sort={sort} onToggle={toggleSort}>Planes</SortableTableHead>
+                <SortableTableHead sortKey="usos_actuales" sort={sort} onToggle={toggleSort}>Usos</SortableTableHead>
+                <SortableTableHead sortKey="meses_duracion" sort={sort} onToggle={toggleSort}>Meses</SortableTableHead>
+                <SortableTableHead sortKey="acumulable" sort={sort} onToggle={toggleSort}>Acumulable</SortableTableHead>
+                <SortableTableHead sortKey="vigencia" sort={sort} onToggle={toggleSort}>Vigencia</SortableTableHead>
+                <SortableTableHead sortKey="activo" sort={sort} onToggle={toggleSort}>Activo</SortableTableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cupones.map(c => (
+              {cuponesOrd.map(c => (
                 <TableRow key={c.id}>
                   <TableCell className="font-mono font-bold">{c.codigo}</TableCell>
                   <TableCell><Badge variant="secondary">{c.descuento_pct}%</Badge></TableCell>
@@ -331,13 +340,13 @@ export default function AdminCuponesTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Meses restantes</TableHead>
+                  <SortableTableHead sortKey="empresa" sort={sortUsos} onToggle={toggleUsos}>Empresa</SortableTableHead>
+                  <SortableTableHead sortKey="aplicado_at" sort={sortUsos} onToggle={toggleUsos}>Fecha</SortableTableHead>
+                  <SortableTableHead sortKey="meses_restantes" sort={sortUsos} onToggle={toggleUsos}>Meses restantes</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {usos.map(u => (
+                {usosOrd.map(u => (
                   <TableRow key={u.id}>
                     <TableCell>{(u.empresas as any)?.nombre || u.empresa_id.slice(0, 8)}</TableCell>
                     <TableCell className="text-sm">{format(new Date(u.aplicado_at), 'dd/MM/yyyy HH:mm')}</TableCell>

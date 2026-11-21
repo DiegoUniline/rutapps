@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Bell, Search, RotateCcw, MessageCircle, Mail, ExternalLink, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 interface NotificationRow {
   id: string;
@@ -107,6 +108,12 @@ export default function AdminNotificationsTab() {
     n.customer_email.toLowerCase().includes(search.toLowerCase()) ||
     (n.customer_phone || '').includes(search)
   );
+  const { sorted: filteredOrd, sort, toggle: toggleSort } = useSortableTable(filtered, (n: any, key) => {
+    if (key === 'fecha') return n.created_at;
+    if (key === 'cliente') return n.customer_email;
+    if (key === 'monto') return n.monto_centavos;
+    return n[key];
+  }, undefined, 'admin-notificaciones');
 
   return (
     <>
@@ -132,19 +139,19 @@ export default function AdminNotificationsTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Canal</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableTableHead sortKey="fecha" sort={sort} onToggle={toggleSort}>Fecha</SortableTableHead>
+                  <SortableTableHead sortKey="cliente" sort={sort} onToggle={toggleSort}>Cliente</SortableTableHead>
+                  <SortableTableHead sortKey="channel" sort={sort} onToggle={toggleSort}>Canal</SortableTableHead>
+                  <SortableTableHead sortKey="tipo" sort={sort} onToggle={toggleSort}>Tipo</SortableTableHead>
+                  <SortableTableHead sortKey="monto" sort={sort} onToggle={toggleSort}>Monto</SortableTableHead>
+                  <SortableTableHead sortKey="status" sort={sort} onToggle={toggleSort}>Status</SortableTableHead>
                   <TableHead className="w-28">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Sin notificaciones enviadas</TableCell></TableRow>
-                ) : filtered.map(n => (
+                ) : filteredOrd.map(n => (
                   <TableRow key={n.id}>
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                       {format(new Date(n.created_at), 'dd MMM yy HH:mm', { locale: es })}

@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner';
 import { CreditCard, Plus, Trash2, Loader2, Store, Building2, Search, CheckCircle, AlertCircle, MessageSquare, Mail, Copy, Send } from 'lucide-react';
 import { confirmDialog } from '@/lib/confirm';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 // ─── OpenPay helpers ───
 async function openpayAction(action: string, params: Record<string, any> = {}) {
@@ -540,6 +541,7 @@ function OpenPayPlansSection() {
     name: '', amount: '', repeat_unit: 'month', repeat_every: '1', trial_days: '0',
   });
   const [saving, setSaving] = useState(false);
+  const { sorted: plansOrd, sort, toggle: toggleSort } = useSortableTable(plans, undefined, undefined, 'openpay-planes');
 
   async function load() {
     setLoading(true);
@@ -596,11 +598,11 @@ function OpenPayPlansSection() {
       ) : (
         <Table>
           <TableHeader><TableRow>
-            <TableHead>Nombre</TableHead><TableHead>Monto</TableHead><TableHead>Frecuencia</TableHead>
-            <TableHead>Trial</TableHead><TableHead>ID</TableHead><TableHead className="w-16"></TableHead>
+            <SortableTableHead sortKey="name" sort={sort} onToggle={toggleSort}>Nombre</SortableTableHead><SortableTableHead sortKey="amount" sort={sort} onToggle={toggleSort}>Monto</SortableTableHead><SortableTableHead sortKey="repeat_unit" sort={sort} onToggle={toggleSort}>Frecuencia</SortableTableHead>
+            <SortableTableHead sortKey="trial_days" sort={sort} onToggle={toggleSort}>Trial</SortableTableHead><SortableTableHead sortKey="id" sort={sort} onToggle={toggleSort}>ID</SortableTableHead><TableHead className="w-16"></TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {plans.map(p => (
+            {plansOrd.map(p => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.name}</TableCell>
                 <TableCell>${p.amount} {p.currency}</TableCell>
@@ -673,6 +675,7 @@ function OpenPayPlansSection() {
 function OpenPayCustomersSection() {
   const [customers, setCustomers] = useState<OpenPayCustomer[]>([]);
   const [loading, setLoading] = useState(true);
+  const { sorted: customersOrd, sort, toggle: toggleSort } = useSortableTable(customers, undefined, undefined, 'openpay-clientes');
 
   async function load() {
     setLoading(true);
@@ -695,11 +698,11 @@ function OpenPayCustomersSection() {
       ) : (
         <Table>
           <TableHeader><TableRow>
-            <TableHead>Nombre</TableHead><TableHead>Email</TableHead><TableHead>Teléfono</TableHead>
-            <TableHead>Status</TableHead><TableHead>ID</TableHead>
+            <SortableTableHead sortKey="name" sort={sort} onToggle={toggleSort}>Nombre</SortableTableHead><SortableTableHead sortKey="email" sort={sort} onToggle={toggleSort}>Email</SortableTableHead><SortableTableHead sortKey="phone_number" sort={sort} onToggle={toggleSort}>Teléfono</SortableTableHead>
+            <SortableTableHead sortKey="status" sort={sort} onToggle={toggleSort}>Status</SortableTableHead><SortableTableHead sortKey="id" sort={sort} onToggle={toggleSort}>ID</SortableTableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {customers.map(c => (
+            {customersOrd.map(c => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.name}</TableCell>
                 <TableCell>{c.email}</TableCell>

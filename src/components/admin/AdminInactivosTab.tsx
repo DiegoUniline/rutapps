@@ -13,6 +13,7 @@ import { AlertTriangle, Trash2, RefreshCw, Loader2, Search, ShieldAlert } from '
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 interface InactivaRow {
   empresa_id: string;
@@ -83,6 +84,12 @@ export default function AdminInactivosTab() {
       (r.telefono || '').toLowerCase().includes(q)
     );
   }, [rows, search]);
+  const { sorted: filteredOrd, sort, toggle: toggleSort } = useSortableTable(filtered, (r, key) => {
+    if (key === 'contacto') return r.owner_email || r.email;
+    if (key === 'vencimiento') return r.fecha_vencimiento || r.trial_ends_at;
+    if (key === 'datos') return r.total_ventas;
+    return (r as any)[key];
+  }, undefined, 'admin-inactivos');
 
   const allSelected = filtered.length > 0 && filtered.every(r => selected.has(r.empresa_id));
   const toggleAll = () => {
@@ -196,13 +203,13 @@ export default function AdminInactivosTab() {
                 <TableHead className="w-10">
                   <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
                 </TableHead>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Contacto</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Última sesión</TableHead>
-                <TableHead>Vencimiento</TableHead>
-                <TableHead>Motivo</TableHead>
-                <TableHead className="text-right">Datos</TableHead>
+                <SortableTableHead sortKey="nombre" sort={sort} onToggle={toggleSort}>Empresa</SortableTableHead>
+                <SortableTableHead sortKey="contacto" sort={sort} onToggle={toggleSort}>Contacto</SortableTableHead>
+                <SortableTableHead sortKey="status" sort={sort} onToggle={toggleSort}>Estado</SortableTableHead>
+                <SortableTableHead sortKey="last_sign_in_at" sort={sort} onToggle={toggleSort}>Última sesión</SortableTableHead>
+                <SortableTableHead sortKey="vencimiento" sort={sort} onToggle={toggleSort}>Vencimiento</SortableTableHead>
+                <SortableTableHead sortKey="motivo" sort={sort} onToggle={toggleSort}>Motivo</SortableTableHead>
+                <SortableTableHead sortKey="datos" sort={sort} onToggle={toggleSort} align="right" className="text-right">Datos</SortableTableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -210,7 +217,7 @@ export default function AdminInactivosTab() {
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No hay empresas que cumplan los criterios</TableCell></TableRow>
-              ) : filtered.map(r => (
+              ) : filteredOrd.map(r => (
                 <TableRow key={r.empresa_id} className={selected.has(r.empresa_id) ? 'bg-destructive/5' : ''}>
                   <TableCell>
                     <Checkbox checked={selected.has(r.empresa_id)} onCheckedChange={() => toggleOne(r.empresa_id)} />

@@ -6,6 +6,7 @@ import { Download, Mail, FileText } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface CfdiHistoryProps {
   ventaId: string;
@@ -30,6 +31,14 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
       );
     },
   });
+  const { sorted: cfdisOrdenados, sort, toggle: toggleSort } = useSortableTable(cfdis ?? [], (c: any, key) => {
+    if (key === 'cfdi') return `${c.serie ?? ''}${c.folio ?? ''}`;
+    if (key === 'lineas') return lineas.filter(l => l.factura_cfdi_id === c.id).length;
+    if (key === 'total') return Number(c.total ?? 0);
+    if (key === 'fecha') return c.created_at;
+    if (key === 'estado') return c.status;
+    return c[key];
+  }, undefined, 'cfdi-history');
 
   if (!cfdis || cfdis.length === 0) {
     return <p className="text-muted-foreground text-sm">Sin facturas emitidas aún</p>;
@@ -41,16 +50,16 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
       <table className="w-full text-[13px]">
         <thead>
           <tr className="border-b border-table-border text-left">
-            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">CFDI</th>
-            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Líneas</th>
-            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">Total</th>
-            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Fecha</th>
-            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Estado</th>
+            <SortableTh sortKey="cfdi" sort={sort} onToggle={toggleSort} className="py-2 px-2 text-muted-foreground font-medium text-[11px]">CFDI</SortableTh>
+            <SortableTh sortKey="lineas" sort={sort} onToggle={toggleSort} className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Líneas</SortableTh>
+            <SortableTh sortKey="total" sort={sort} onToggle={toggleSort} align="right" className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">Total</SortableTh>
+            <SortableTh sortKey="fecha" sort={sort} onToggle={toggleSort} className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Fecha</SortableTh>
+            <SortableTh sortKey="estado" sort={sort} onToggle={toggleSort} className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Estado</SortableTh>
             <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {cfdis.map((cfdi: any) => {
+          {cfdisOrdenados.map((cfdi: any) => {
             const cfdiLineas = lineas.filter(l => l.factura_cfdi_id === cfdi.id);
             const lineasDesc = cfdiLineas.map(l => {
               const prod = productosList?.find((p: any) => p.id === l.producto_id);

@@ -12,6 +12,7 @@ import {
   Calculator, Receipt, ArrowDownCircle, ArrowUpCircle, Banknote, ShoppingCart,
   Clock, CheckCircle2, ClipboardList, Eye, Wallet, CreditCard, Smartphone, MoreHorizontal,
 } from 'lucide-react';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Empresa { id: string; nombre: string }
 
@@ -147,6 +148,8 @@ async function fetchTurnos(empresaId: string, soloCerrados = false) {
 function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: string) => void }) {
   const q = useQuery({ queryKey: ['admin-pos-turnos', empresaId], queryFn: () => fetchTurnos(empresaId) });
   const turnos = q.data ?? [];
+  const { sorted: turnosOrd, sort, toggle: toggleSort } = useSortableTable<any>(turnos, (t, key) =>
+    ['fondo_inicial', 'total_efectivo_esperado', 'diferencia'].includes(key) ? (t[key] == null ? null : Number(t[key])) : t[key], undefined, 'admin-pos-turnos');
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
   if (!turnos.length) return <Card className="p-6 text-center text-sm text-muted-foreground">Sin turnos registrados.</Card>;
 
@@ -155,19 +158,19 @@ function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-xs">
           <tr>
-            <th className="text-left px-3 py-2">Caja</th>
-            <th className="text-left px-3 py-2">Cajero</th>
-            <th className="text-left px-3 py-2">Apertura</th>
-            <th className="text-left px-3 py-2">Cierre</th>
-            <th className="text-right px-3 py-2">Fondo</th>
-            <th className="text-right px-3 py-2">Esperado</th>
-            <th className="text-right px-3 py-2">Diferencia</th>
-            <th className="text-center px-3 py-2">Estado</th>
+            <SortableTh sortKey="caja_nombre" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Caja</SortableTh>
+            <SortableTh sortKey="cajero_nombre" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Cajero</SortableTh>
+            <SortableTh sortKey="abierto_at" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Apertura</SortableTh>
+            <SortableTh sortKey="cerrado_at" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Cierre</SortableTh>
+            <SortableTh sortKey="fondo_inicial" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Fondo</SortableTh>
+            <SortableTh sortKey="total_efectivo_esperado" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Esperado</SortableTh>
+            <SortableTh sortKey="diferencia" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Diferencia</SortableTh>
+            <SortableTh sortKey="status" sort={sort} onToggle={toggleSort} align="center" className="text-center px-3 py-2">Estado</SortableTh>
             <th className="text-center px-3 py-2"></th>
           </tr>
         </thead>
         <tbody>
-          {turnos.map((t: any) => (
+          {turnosOrd.map((t: any) => (
             <tr key={t.id} className="border-t border-border/50 hover:bg-muted/30">
               <td className="px-3 py-2 font-medium">{t.caja_nombre}</td>
               <td className="px-3 py-2">{t.cajero_nombre}</td>
@@ -197,6 +200,8 @@ function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
 function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: string) => void }) {
   const q = useQuery({ queryKey: ['admin-pos-cortes', empresaId], queryFn: () => fetchTurnos(empresaId, true) });
   const turnos = q.data ?? [];
+  const { sorted: turnosOrd, sort, toggle: toggleSort } = useSortableTable<any>(turnos, (t, key) =>
+    key.startsWith('total_') || key === 'diferencia' ? Number(t[key] ?? 0) : t[key], undefined, 'admin-pos-cortes');
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
   if (!turnos.length) return <Card className="p-6 text-center text-sm text-muted-foreground">Aún no hay cortes (turnos cerrados).</Card>;
 
@@ -205,20 +210,20 @@ function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-xs">
           <tr>
-            <th className="text-left px-3 py-2">Caja</th>
-            <th className="text-left px-3 py-2">Cajero</th>
-            <th className="text-left px-3 py-2">Cierre</th>
-            <th className="text-right px-3 py-2">Efectivo esp.</th>
-            <th className="text-right px-3 py-2">Efectivo contado</th>
-            <th className="text-right px-3 py-2">Tarjeta</th>
-            <th className="text-right px-3 py-2">Transferencia</th>
-            <th className="text-right px-3 py-2">Otros</th>
-            <th className="text-right px-3 py-2">Diferencia</th>
+            <SortableTh sortKey="caja_nombre" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Caja</SortableTh>
+            <SortableTh sortKey="cajero_nombre" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Cajero</SortableTh>
+            <SortableTh sortKey="cerrado_at" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Cierre</SortableTh>
+            <SortableTh sortKey="total_efectivo_esperado" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Efectivo esp.</SortableTh>
+            <SortableTh sortKey="total_efectivo_contado" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Efectivo contado</SortableTh>
+            <SortableTh sortKey="total_tarjeta_contado" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Tarjeta</SortableTh>
+            <SortableTh sortKey="total_transferencia_contado" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Transferencia</SortableTh>
+            <SortableTh sortKey="total_otros_contado" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Otros</SortableTh>
+            <SortableTh sortKey="diferencia" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Diferencia</SortableTh>
             <th className="text-center px-3 py-2"></th>
           </tr>
         </thead>
         <tbody>
-          {turnos.map((t: any) => (
+          {turnosOrd.map((t: any) => (
             <tr key={t.id} className="border-t border-border/50 hover:bg-muted/30">
               <td className="px-3 py-2 font-medium">{t.caja_nombre}</td>
               <td className="px-3 py-2">{t.cajero_nombre}</td>
@@ -263,6 +268,8 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
   });
 
   const rows = (q.data ?? []) as any[];
+  const { sorted: rowsOrd, sort, toggle: toggleSort } = useSortableTable(rows, (r, key) =>
+    key === 'caja' ? r.caja_turnos?.caja_nombre : key === 'monto' ? Number(r.monto ?? 0) : r[key], undefined, 'admin-pos-movimientos');
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
   const total = rows.reduce((s, r) => s + (Number(r.monto) || 0), 0);
   const tone = tipo === 'deposito' ? 'success' : tipo === 'retiro' ? 'warning' : 'destructive';
@@ -279,15 +286,15 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs">
               <tr>
-                <th className="text-left px-3 py-2">Fecha</th>
-                <th className="text-left px-3 py-2">Caja</th>
-                <th className="text-left px-3 py-2">Usuario</th>
-                <th className="text-left px-3 py-2">Motivo</th>
-                <th className="text-right px-3 py-2">Monto</th>
+                <SortableTh sortKey="created_at" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Fecha</SortableTh>
+                <SortableTh sortKey="caja" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Caja</SortableTh>
+                <SortableTh sortKey="user_nombre" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Usuario</SortableTh>
+                <SortableTh sortKey="motivo" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Motivo</SortableTh>
+                <SortableTh sortKey="monto" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Monto</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => (
+              {rowsOrd.map(r => (
                 <tr key={r.id} className="border-t border-border/50 hover:bg-muted/30">
                   <td className="px-3 py-2 text-xs tabular-nums">{fmtDate(r.created_at)}</td>
                   <td className="px-3 py-2">{r.caja_turnos?.caja_nombre ?? '—'}</td>
@@ -320,6 +327,12 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
   });
 
   const rows = (q.data ?? []) as any[];
+  const { sorted: rowsOrd, sort, toggle: toggleSort } = useSortableTable(rows, (r, key) => {
+    if (key === 'cliente') return r.cliente?.nombre;
+    if (key === 'caja') return r.caja_turnos?.caja_nombre;
+    if (key === 'total') return Number(r.total ?? 0);
+    return r[key];
+  }, undefined, 'admin-pos-ventas');
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
   if (!rows.length) return <Card className="p-6 text-center text-sm text-muted-foreground">Sin ventas POS registradas.</Card>;
 
@@ -332,17 +345,17 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs">
             <tr>
-              <th className="text-left px-3 py-2">Folio</th>
-              <th className="text-left px-3 py-2">Fecha</th>
-              <th className="text-left px-3 py-2">Cliente</th>
-              <th className="text-left px-3 py-2">Caja</th>
-              <th className="text-left px-3 py-2">Pago</th>
-              <th className="text-left px-3 py-2">Estado</th>
-              <th className="text-right px-3 py-2">Total</th>
+              <SortableTh sortKey="folio" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Folio</SortableTh>
+              <SortableTh sortKey="fecha" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Fecha</SortableTh>
+              <SortableTh sortKey="cliente" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Cliente</SortableTh>
+              <SortableTh sortKey="caja" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Caja</SortableTh>
+              <SortableTh sortKey="condicion_pago" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Pago</SortableTh>
+              <SortableTh sortKey="status" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Estado</SortableTh>
+              <SortableTh sortKey="total" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Total</SortableTh>
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => (
+            {rowsOrd.map(r => (
               <tr key={r.id} className="border-t border-border/50 hover:bg-muted/30">
                 <td className="px-3 py-2 font-mono text-xs">{r.folio}</td>
                 <td className="px-3 py-2 text-xs tabular-nums">{r.fecha}</td>
@@ -389,6 +402,11 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
 
   const open = !!turnoId;
   const t = q.data?.turno as any;
+  const valorDetalle = (r: any, key: string) =>
+    key === 'cliente' ? r.cliente?.nombre : ['monto', 'total'].includes(key) ? Number(r[key] ?? 0) : r[key];
+  const { sorted: cobrosOrd, sort: sortCobros, toggle: toggleCobros } = useSortableTable<any>(q.data?.cobros ?? [], valorDetalle, undefined, 'admin-pos-turno-cobros');
+  const { sorted: movsOrd, sort: sortMovs, toggle: toggleMovs } = useSortableTable<any>(q.data?.movs ?? [], valorDetalle, undefined, 'admin-pos-turno-movs');
+  const { sorted: ventasOrd, sort: sortVentas, toggle: toggleVentas } = useSortableTable<any>(q.data?.ventas ?? [], valorDetalle, undefined, 'admin-pos-turno-ventas');
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -433,16 +451,16 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="text-left px-2 py-1.5">Fecha</th>
-                      <th className="text-left px-2 py-1.5">Cliente</th>
-                      <th className="text-left px-2 py-1.5">Método</th>
-                      <th className="text-left px-2 py-1.5">Referencia</th>
-                      <th className="text-left px-2 py-1.5">Estado</th>
-                      <th className="text-right px-2 py-1.5">Monto</th>
+                      <SortableTh sortKey="created_at" sort={sortCobros} onToggle={toggleCobros} className="text-left px-2 py-1.5">Fecha</SortableTh>
+                      <SortableTh sortKey="cliente" sort={sortCobros} onToggle={toggleCobros} className="text-left px-2 py-1.5">Cliente</SortableTh>
+                      <SortableTh sortKey="metodo_pago" sort={sortCobros} onToggle={toggleCobros} className="text-left px-2 py-1.5">Método</SortableTh>
+                      <SortableTh sortKey="referencia" sort={sortCobros} onToggle={toggleCobros} className="text-left px-2 py-1.5">Referencia</SortableTh>
+                      <SortableTh sortKey="status" sort={sortCobros} onToggle={toggleCobros} className="text-left px-2 py-1.5">Estado</SortableTh>
+                      <SortableTh sortKey="monto" sort={sortCobros} onToggle={toggleCobros} align="right" className="text-right px-2 py-1.5">Monto</SortableTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {(q.data?.cobros ?? []).map((c: any) => (
+                    {cobrosOrd.map((c: any) => (
                       <tr key={c.id} className="border-t border-border/50">
                         <td className="px-2 py-1.5 tabular-nums">{fmtDate(c.created_at)}</td>
                         <td className="px-2 py-1.5">{c.cliente?.nombre ?? '—'}</td>
@@ -466,14 +484,14 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="text-left px-2 py-1.5">Fecha</th>
-                      <th className="text-left px-2 py-1.5">Tipo</th>
-                      <th className="text-left px-2 py-1.5">Motivo</th>
-                      <th className="text-right px-2 py-1.5">Monto</th>
+                      <SortableTh sortKey="created_at" sort={sortMovs} onToggle={toggleMovs} className="text-left px-2 py-1.5">Fecha</SortableTh>
+                      <SortableTh sortKey="tipo" sort={sortMovs} onToggle={toggleMovs} className="text-left px-2 py-1.5">Tipo</SortableTh>
+                      <SortableTh sortKey="motivo" sort={sortMovs} onToggle={toggleMovs} className="text-left px-2 py-1.5">Motivo</SortableTh>
+                      <SortableTh sortKey="monto" sort={sortMovs} onToggle={toggleMovs} align="right" className="text-right px-2 py-1.5">Monto</SortableTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {(q.data?.movs ?? []).map((m: any) => (
+                    {movsOrd.map((m: any) => (
                       <tr key={m.id} className="border-t border-border/50">
                         <td className="px-2 py-1.5 tabular-nums">{fmtDate(m.created_at)}</td>
                         <td className="px-2 py-1.5 capitalize">{m.tipo}</td>
@@ -495,16 +513,16 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="text-left px-2 py-1.5">Folio</th>
-                      <th className="text-left px-2 py-1.5">Fecha</th>
-                      <th className="text-left px-2 py-1.5">Cliente</th>
-                      <th className="text-left px-2 py-1.5">Pago</th>
-                      <th className="text-left px-2 py-1.5">Estado</th>
-                      <th className="text-right px-2 py-1.5">Total</th>
+                      <SortableTh sortKey="folio" sort={sortVentas} onToggle={toggleVentas} className="text-left px-2 py-1.5">Folio</SortableTh>
+                      <SortableTh sortKey="fecha" sort={sortVentas} onToggle={toggleVentas} className="text-left px-2 py-1.5">Fecha</SortableTh>
+                      <SortableTh sortKey="cliente" sort={sortVentas} onToggle={toggleVentas} className="text-left px-2 py-1.5">Cliente</SortableTh>
+                      <SortableTh sortKey="condicion_pago" sort={sortVentas} onToggle={toggleVentas} className="text-left px-2 py-1.5">Pago</SortableTh>
+                      <SortableTh sortKey="status" sort={sortVentas} onToggle={toggleVentas} className="text-left px-2 py-1.5">Estado</SortableTh>
+                      <SortableTh sortKey="total" sort={sortVentas} onToggle={toggleVentas} align="right" className="text-right px-2 py-1.5">Total</SortableTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {(q.data?.ventas ?? []).map((v: any) => (
+                    {ventasOrd.map((v: any) => (
                       <tr key={v.id} className="border-t border-border/50">
                         <td className="px-2 py-1.5 font-mono">{v.folio}</td>
                         <td className="px-2 py-1.5 tabular-nums">{v.fecha}</td>

@@ -13,6 +13,7 @@ import { activeManagerOptions, directReportCounts } from '@/lib/commissionAdmin'
 import { Building2, Network, Pencil, ShieldCheck, UserRound, UsersRound } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CommissionAttribution, CommissionPerson } from './types';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 const NONE = '__none__';
 
@@ -64,6 +65,15 @@ export default function CommissionTeamPanel({
     }
     return counts;
   }, [attributions]);
+  const { sorted: peopleOrd, sort, toggle: toggleSort } = useSortableTable(people, (person, key) => {
+    if (key === 'persona') return person.name;
+    if (key === 'tipo') return person.person_type === 'partner' ? 'Partner' : 'Interno';
+    if (key === 'encargado') return person.manager_id ? peopleById.get(person.manager_id)?.name : null;
+    if (key === 'personas') return reportCounts.get(person.id) ?? 0;
+    if (key === 'clientes') return clientCounts.get(person.id) ?? 0;
+    if (key === 'estado') return person.is_active ? 'Activo' : 'Inactivo';
+    return null;
+  }, undefined, 'comisiones-equipo');
 
   const managerGroups = useMemo(() => people
     .filter(person => person.is_active && (reportCounts.get(person.id) ?? 0) > 0)
@@ -154,17 +164,17 @@ export default function CommissionTeamPanel({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[210px]">Persona</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="min-w-[170px]">Su encargado</TableHead>
-                <TableHead className="text-center">Personas a cargo</TableHead>
-                <TableHead className="text-center">Clientes a cargo</TableHead>
-                <TableHead>Estado</TableHead>
+                <SortableTableHead sortKey="persona" sort={sort} onToggle={toggleSort} className="min-w-[210px]">Persona</SortableTableHead>
+                <SortableTableHead sortKey="tipo" sort={sort} onToggle={toggleSort}>Tipo</SortableTableHead>
+                <SortableTableHead sortKey="encargado" sort={sort} onToggle={toggleSort} className="min-w-[170px]">Su encargado</SortableTableHead>
+                <SortableTableHead sortKey="personas" sort={sort} onToggle={toggleSort} align="center" className="text-center">Personas a cargo</SortableTableHead>
+                <SortableTableHead sortKey="clientes" sort={sort} onToggle={toggleSort} align="center" className="text-center">Clientes a cargo</SortableTableHead>
+                <SortableTableHead sortKey="estado" sort={sort} onToggle={toggleSort}>Estado</SortableTableHead>
                 <TableHead className="w-16" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {people.map(person => (
+              {peopleOrd.map(person => (
                 <TableRow key={person.id} className={!person.is_active ? 'opacity-60' : undefined}>
                   <TableCell>
                     <div className="font-semibold">{person.name}</div>

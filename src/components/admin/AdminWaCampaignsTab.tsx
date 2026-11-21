@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SortableTableHead, useSortState, ordenarFilas } from '@/hooks/useSortableTable';
 
 const FILTERS = [
   { value: 'all', label: 'Todos los usuarios', icon: '👥', desc: 'Todos los registrados con teléfono' },
@@ -103,6 +104,9 @@ export default function AdminWaCampaignsTab() {
     .filter((r: any) => !removedIds.has(String(r._idx)))
     .filter((r: any) => !r.telefono || !optouts.has(r.telefono.replace(/[\s\-\(\)]/g, '')))
     .sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
+  const { sort: sortDest, toggle: toggleDest } = useSortState('wa-campana-destinatarios');
+  const { sort: sortEnvios, toggle: toggleEnvios } = useSortState('wa-campana-envios');
+  const { sort: sortPend, toggle: togglePend } = useSortState('wa-campana-pendientes');
   const allSendTargets = [
     ...activeRecipients,
     ...extraNumbers.filter(n => n.phone.trim()),
@@ -667,13 +671,13 @@ export default function AdminWaCampaignsTab() {
                   <Table>
                     <TableHeader>
                       <TableRow className="text-[10px]">
-                        <TableHead className="py-1.5 px-2 text-[10px]">Nombre</TableHead>
-                        <TableHead className="py-1.5 px-2 text-[10px]">Teléfono</TableHead>
+                        <SortableTableHead sortKey="nombre" sort={sortDest} onToggle={toggleDest} className="py-1.5 px-2 text-[10px]">Nombre</SortableTableHead>
+                        <SortableTableHead sortKey="telefono" sort={sortDest} onToggle={toggleDest} className="py-1.5 px-2 text-[10px]">Teléfono</SortableTableHead>
                         <TableHead className="py-1.5 px-2 text-[10px] text-right">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {activeRecipients.map((r: any) => (
+                      {ordenarFilas(activeRecipients, sortDest).map((r: any) => (
                         <TableRow key={r._idx} className="text-xs group">
                           <TableCell className="py-1.5 px-2 font-medium">{r.nombre}</TableCell>
                           <TableCell className="py-1.5 px-2 text-muted-foreground font-mono text-[11px]">{r.telefono}</TableCell>
@@ -861,14 +865,14 @@ export default function AdminWaCampaignsTab() {
                             <Table>
                               <TableHeader>
                                 <TableRow className="text-[10px]">
-                                  <TableHead className="py-1.5 px-2 text-[10px]">Nombre</TableHead>
-                                  <TableHead className="py-1.5 px-2 text-[10px]">Teléfono</TableHead>
-                                  <TableHead className="py-1.5 px-2 text-[10px]">Empresa</TableHead>
-                                  <TableHead className="py-1.5 px-2 text-[10px] text-right">Status</TableHead>
+                                  <SortableTableHead sortKey="nombre" sort={sortEnvios} onToggle={toggleEnvios} className="py-1.5 px-2 text-[10px]">Nombre</SortableTableHead>
+                                  <SortableTableHead sortKey="telefono" sort={sortEnvios} onToggle={toggleEnvios} className="py-1.5 px-2 text-[10px]">Teléfono</SortableTableHead>
+                                  <SortableTableHead sortKey="empresa_nombre" sort={sortEnvios} onToggle={toggleEnvios} className="py-1.5 px-2 text-[10px]">Empresa</SortableTableHead>
+                                  <SortableTableHead sortKey="status" sort={sortEnvios} onToggle={toggleEnvios} align="right" className="py-1.5 px-2 text-[10px] text-right">Status</SortableTableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {(campaignSends[c.id] || []).map((s: any) => (
+                                {ordenarFilas(campaignSends[c.id] || [], sortEnvios).map((s: any) => (
                                   <TableRow key={s.id} className="text-xs">
                                     <TableCell className="py-1.5 px-2 font-medium">{s.nombre || '—'}</TableCell>
                                     <TableCell className="py-1.5 px-2 font-mono text-[11px] text-muted-foreground">{s.telefono}</TableCell>
@@ -925,13 +929,13 @@ export default function AdminWaCampaignsTab() {
                   <Table>
                     <TableHeader>
                       <TableRow className="text-[10px]">
-                        <TableHead className="py-1.5 px-3 text-[10px]">Nombre</TableHead>
-                        <TableHead className="py-1.5 px-3 text-[10px]">Teléfono</TableHead>
+                        <SortableTableHead sortKey="nombre" sort={sortPend} onToggle={togglePend} className="py-1.5 px-3 text-[10px]">Nombre</SortableTableHead>
+                        <SortableTableHead sortKey="telefono" sort={sortPend} onToggle={togglePend} className="py-1.5 px-3 text-[10px]">Teléfono</SortableTableHead>
                         <TableHead className="py-1.5 px-3 text-[10px] text-right">Quitar</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pendingModal.pending.map((r: any) => {
+                      {ordenarFilas(pendingModal.pending, sortPend).map((r: any) => {
                         const norm = (r.telefono || '').replace(/[\s\-\(\)]/g, '');
                         const isRemoved = pendingModal.removedPending.has(norm);
                         return (

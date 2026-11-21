@@ -33,7 +33,7 @@ export function ReporteVentasCliente({ data }: { data: any }) {
     return r?.[k];
   };
   const { filtered, filters, setFilter, hasActive, clearAll, uniqueValues } = useSmartColumnFilters(rawItems, FILTER_DEFS, getVal);
-  const { sorted, sort, toggle } = useSortableTable(filtered, getVal);
+  const { sorted, sort, toggle } = useSortableTable(filtered, getVal, undefined, 'reporte-ventas-cliente');
   const items = sorted;
   const totalVendido = items.reduce((s, c) => s + c.total, 0);
   const totalPendiente = items.reduce((s, c) => s + c.pendiente, 0);

@@ -16,6 +16,7 @@ import { Search, Edit2, Plus, Stamp, Users, CreditCard, CheckCircle2, AlertTrian
 import { format, differenceInDays, addDays, addMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 interface SubscriptionRow {
   id: string; empresa_id: string; plan_id: string | null; status: string;
@@ -125,6 +126,17 @@ export default function AdminSubscriptionsTab() {
       return nombre.toLowerCase().includes(q);
     });
   }, [subscriptions, empresasSinSub, tab, search]);
+  const { sorted: filteredOrd, sort, toggle: toggleSort } = useSortableTable<any>(filtered, (s: any, key) => {
+    if (key === 'empresa') return s.empresas?.nombre || s.nombre;
+    if (key === 'plan') return s.subscription_plans?.nombre;
+    if (key === 'usuarios') return s.max_usuarios;
+    if (key === 'timbres') return s.status === 'sin_sub' ? null : (timbresMap[s.empresa_id] ?? 0);
+    if (key === 'vence' || key === 'dias') {
+      const end = s.status === 'trial' ? s.trial_ends_at : s.current_period_end;
+      return end ? new Date(end).getTime() : null;
+    }
+    return s[key];
+  }, undefined, 'admin-suscripciones');
 
   // Edit dialog
   const [editingSub, setEditingSub] = useState<SubscriptionRow | null>(null);
@@ -303,19 +315,19 @@ export default function AdminSubscriptionsTab() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Empresa</TableHead>
-                        <TableHead>Plan</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Usuarios</TableHead>
-                        <TableHead>Timbres</TableHead>
-                        <TableHead>Vence</TableHead>
-                        <TableHead>Días</TableHead>
+                        <SortableTableHead sortKey="empresa" sort={sort} onToggle={toggleSort}>Empresa</SortableTableHead>
+                        <SortableTableHead sortKey="plan" sort={sort} onToggle={toggleSort}>Plan</SortableTableHead>
+                        <SortableTableHead sortKey="status" sort={sort} onToggle={toggleSort}>Status</SortableTableHead>
+                        <SortableTableHead sortKey="usuarios" sort={sort} onToggle={toggleSort}>Usuarios</SortableTableHead>
+                        <SortableTableHead sortKey="timbres" sort={sort} onToggle={toggleSort}>Timbres</SortableTableHead>
+                        <SortableTableHead sortKey="vence" sort={sort} onToggle={toggleSort}>Vence</SortableTableHead>
+                        <SortableTableHead sortKey="dias" sort={sort} onToggle={toggleSort}>Días</SortableTableHead>
                         <TableHead className="w-24"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {tab === 'sin_sub' ? (
-                        (filtered as any[]).map((e: any) => (
+                        (filteredOrd as any[]).map((e: any) => (
                           <TableRow key={e.id}>
                             <TableCell className="font-medium">{e.nombre}</TableCell>
                             <TableCell className="text-muted-foreground text-sm">—</TableCell>
@@ -332,7 +344,7 @@ export default function AdminSubscriptionsTab() {
                           </TableRow>
                         ))
                       ) : (
-                        (filtered as SubscriptionRow[]).map(sub => {
+                        (filteredOrd as SubscriptionRow[]).map(sub => {
                           const days = getDays(sub);
                           const timbres = timbresMap[sub.empresa_id] ?? 0;
                           return (
