@@ -24,18 +24,20 @@ import { ExportButton } from '@/components/ExportButton';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { MobileProductoQuickForm } from '@/components/MobileProductoQuickForm';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
-import { useProductosPaginated } from '@/hooks/useData';
+import { useProductosPaginated, PRODUCTOS_ORDEN_BD } from '@/hooks/useData';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import { useSortState, SortableTh } from '@/hooks/useSortableTable';
-import { cn, fmtNum } from '@/lib/utils';
+import { cn, fmtNum, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { getStockBreakdown } from '@/lib/stockPresentacion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { validarSinUsos } from '@/lib/registrosInactivos';
+import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibilityMenu';
+import { useColumnPreferences } from '@/hooks/useColumnPreferences';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 12 },
@@ -45,6 +47,136 @@ const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'cantidad', header: 'Stock', format: 'number', width: 10 },
   { key: 'status', header: 'Estado', width: 10 },
 ];
+
+interface CeldaCtx {
+  fmt: (v: number | null | undefined) => string;
+  thumb: (url: string, width: number) => string;
+  presentacionesByProducto: Map<string, any[]>;
+}
+
+const siNo = (v: any) => (v === null || v === undefined ? '—' : v ? 'Sí' : 'No');
+const dash = (v: any) => (v === null || v === undefined || v === '' ? '—' : String(v));
+const textoLargo = (v: any) => (v ? <span className="block max-w-[260px] truncate" title={String(v)}>{String(v)}</span> : '—');
+const COSTO_LABEL: Record<string, string> = { promedio: 'Promedio', ultimo: 'Último costo de compra', estandar: 'Estándar', manual: 'Manual', ultimo_compra: 'Último costo (compra directa)', ultimo_proveedor: 'Último costo del proveedor principal' };
+const IVA_FACTURA_LABEL: Record<string, string> = { tasa0: 'Tasa 0%', exento: 'Exento', no_objeto: 'No objeto' };
+const COMPRA_SUGERIDA_LABEL: Record<string, string> = { maximo: 'Al máximo', medio: 'A la mitad', minimo: 'Al mínimo', cobertura: 'Por cobertura (días)' };
+
+/** Todas las columnas disponibles en la tabla de productos (escritorio). */
+const PRODUCTOS_TABLE_COLUMNS: (ColumnDef & {
+  align?: 'left' | 'center' | 'right';
+  /** Clases de la celda (por omisión texto secundario chico). */
+  cellClass?: string;
+  render: (p: any, ctx: CeldaCtx) => React.ReactNode;
+})[] = [
+  {
+    key: 'imagen', label: 'Img', sub: 'Imagen', cellClass: '',
+    render: (p, { thumb }) => (p.imagen_url
+      ? <img src={thumb(p.imagen_url, 64)} alt="" className="h-7 w-7 rounded object-cover" />
+      : <div className="h-7 w-7 rounded bg-secondary flex items-center justify-center text-xxs text-muted-foreground">—</div>),
+  },
+  { key: 'codigo', label: 'Código', cellClass: 'font-mono text-xs', render: p => p.codigo },
+  { key: 'clave_alterna', label: 'Clave alterna', sub: 'Código de barras', cellClass: 'font-mono text-xs', render: p => dash(p.clave_alterna) },
+  {
+    key: 'nombre', label: 'Nombre', required: true, cellClass: 'font-medium max-w-[240px]',
+    render: p => (
+      <div className="flex items-center gap-1.5 truncate">
+        <ProductoLink id={p.id} className="truncate">{p.nombre}</ProductoLink>
+        {p.es_granel && (
+          <span className="text-xxs font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
+            Granel
+          </span>
+        )}
+      </div>
+    ),
+  },
+  { key: 'nombre_venta', label: 'Nombre venta', render: p => dash(p.nombre_venta) },
+  { key: 'nombre_compra', label: 'Nombre compra', render: p => dash(p.nombre_compra) },
+  { key: 'nombre_ticket', label: 'Nombre ticket', render: p => dash(p.nombre_ticket) },
+  { key: 'formula', label: 'Fórmula / descripción', render: p => textoLargo(p.formula) },
+  { key: 'clasificacion', label: 'Categoría', render: p => p.clasificaciones?.nombre ?? '—' },
+  { key: 'marca', label: 'Marca', render: p => p.marcas?.nombre ?? '—' },
+  { key: 'proveedor', label: 'Proveedor', render: p => p.proveedores?.nombre ?? '—' },
+  {
+    key: 'lote', label: 'Lote', align: 'center', cellClass: '',
+    render: p => (p.maneja_lote
+      ? <span className="inline-flex items-center gap-1 text-[11px] text-primary"><Boxes className="h-3 w-3" /> Sí</span>
+      : <span className="text-[11px] text-muted-foreground">—</span>),
+  },
+  { key: 'lista', label: 'Lista', render: p => p.listas?.nombre ?? '—' },
+  { key: 'unidad_compra', label: 'U. compra', align: 'center', render: p => p.unidades_compra?.abreviatura ?? '—' },
+  { key: 'unidad_venta', label: 'U. venta', align: 'center', render: p => p.unidades_venta?.abreviatura ?? '—' },
+  { key: 'factor', label: 'Factor', align: 'center', cellClass: 'font-mono text-xs', render: p => p.factor_conversion ?? 1 },
+  { key: 'precio', label: 'Precio', align: 'right', cellClass: 'font-medium tabular-nums', render: (p, { fmt }) => fmt(p.precio_principal) },
+  { key: 'precio_sugerido_publico', label: 'Precio público', align: 'right', cellClass: 'text-muted-foreground tabular-nums', render: (p, { fmt }) => fmt(p.precio_sugerido_publico) },
+  { key: 'costo', label: 'Costo', align: 'right', cellClass: 'text-muted-foreground tabular-nums', render: (p, { fmt }) => fmt((p.costo ?? 0) * (p.factor_conversion || 1)) },
+  { key: 'costo_unitario', label: 'C/U', sub: 'Costo unitario', align: 'right', cellClass: 'text-muted-foreground tabular-nums font-mono text-xs', render: (p, { fmt }) => fmt(p.costo ?? 0) },
+  { key: 'costo_incluye_impuestos', label: 'Costo con impuestos', align: 'center', render: p => siNo(p.costo_incluye_impuestos) },
+  { key: 'calculo_costo', label: 'Cálculo costo', render: p => (p.calculo_costo ? COSTO_LABEL[p.calculo_costo] ?? p.calculo_costo : '—') },
+  {
+    key: 'stock', label: 'Stock', align: 'right', cellClass: 'tabular-nums',
+    render: (p, { presentacionesByProducto }) => {
+      const bd = getStockBreakdown(
+        p.cantidad ?? 0,
+        presentacionesByProducto.get(p.id),
+        p.es_granel ? (p.unidad_granel || 'kg') : 'pz',
+      );
+      return (
+        <>
+          <span className={cn(
+            "font-medium",
+            (p.cantidad ?? 0) <= 0 ? "text-destructive" : (p.cantidad ?? 0) < (p.min ?? 0) ? "text-warning" : "text-foreground"
+          )}>
+            {fmtNum(p.cantidad ?? 0)}
+          </span>
+          {bd ? <div className="text-[10px] text-primary font-medium">{bd.texto}</div> : null}
+        </>
+      );
+    },
+  },
+  { key: 'min', label: 'Mínimo', align: 'right', cellClass: 'text-muted-foreground tabular-nums', render: p => (p.min != null ? fmtNum(p.min) : '—') },
+  { key: 'max', label: 'Máximo', align: 'right', cellClass: 'text-muted-foreground tabular-nums', render: p => (p.max != null ? fmtNum(p.max) : '—') },
+  {
+    key: 'iva', label: 'IVA', align: 'center', cellClass: '',
+    render: p => (p.tiene_iva
+      ? <span className="text-xxs font-medium text-success">{p.iva_pct ?? 16}%</span>
+      : <span className="text-xxs text-muted-foreground">No</span>),
+  },
+  { key: 'cfdi_iva_sin_iva', label: 'IVA en factura', render: p => (p.cfdi_iva_sin_iva ? IVA_FACTURA_LABEL[p.cfdi_iva_sin_iva] ?? p.cfdi_iva_sin_iva : '—') },
+  {
+    key: 'ieps', label: 'IEPS', align: 'center',
+    render: (p, { fmt }) => (p.tiene_ieps ? (p.ieps_tipo === 'cuota' ? fmt(p.ieps_pct) : `${p.ieps_pct ?? 0}%`) : 'No'),
+  },
+  { key: 'codigo_sat', label: 'Clave SAT', cellClass: 'font-mono text-xs', render: p => dash(p.codigo_sat) },
+  { key: 'se_puede_vender', label: 'Se vende', align: 'center', render: p => siNo(p.se_puede_vender) },
+  { key: 'se_puede_comprar', label: 'Se compra', align: 'center', render: p => siNo(p.se_puede_comprar) },
+  { key: 'se_puede_inventariar', label: 'Inventariable', align: 'center', render: p => siNo(p.se_puede_inventariar) },
+  { key: 'vender_sin_stock', label: 'Vende sin stock', align: 'center', render: p => siNo(p.vender_sin_stock) },
+  { key: 'permitir_descuento', label: 'Permite descuento', align: 'center', render: p => siNo(p.permitir_descuento) },
+  { key: 'monto_maximo', label: 'Descuento máx. (%)', align: 'right', cellClass: 'text-muted-foreground tabular-nums', render: p => (p.monto_maximo != null ? `${fmtNum(p.monto_maximo)}%` : '—') },
+  {
+    key: 'comision', label: 'Comisión', align: 'right', cellClass: 'text-muted-foreground tabular-nums',
+    render: (p, { fmt }) => (p.tiene_comision ? (p.tipo_comision === 'monto_fijo' ? fmt(p.pct_comision) : `${fmtNum(p.pct_comision ?? 0)}%`) : 'No'),
+  },
+  { key: 'es_granel', label: 'Granel', align: 'center', render: p => (p.es_granel ? `Sí (${p.unidad_granel || 'kg'})` : 'No') },
+  { key: 'es_combo', label: 'Combo', align: 'center', render: p => siNo(p.es_combo) },
+  { key: 'usa_listas_precio', label: 'Precio por listas', align: 'center', render: p => siNo(p.usa_listas_precio) },
+  { key: 'usa_presentaciones', label: 'Presentaciones', align: 'center', render: p => siNo(p.usa_presentaciones) },
+  { key: 'modo_compra_sugerida', label: 'Compra sugerida', render: p => (p.modo_compra_sugerida ? COMPRA_SUGERIDA_LABEL[p.modo_compra_sugerida] ?? p.modo_compra_sugerida : '—') },
+  { key: 'dias_cobertura', label: 'Días cobertura', align: 'right', cellClass: 'text-muted-foreground tabular-nums', render: p => dash(p.dias_cobertura) },
+  { key: 'lead_time_dias', label: 'Tiempo entrega (días)', align: 'right', cellClass: 'text-muted-foreground tabular-nums', render: p => dash(p.lead_time_dias) },
+  { key: 'codigo_origen', label: 'Código origen', cellClass: 'font-mono text-xs', render: p => dash(p.codigo_origen) },
+  { key: 'notas', label: 'Notas', render: p => textoLargo(p.notas) },
+  { key: 'created_at', label: 'Registrado', render: p => fmtDate(p.created_at) },
+  { key: 'updated_at', label: 'Última modificación', render: p => fmtDate(p.updated_at) },
+  { key: 'status', label: 'Status', align: 'center', cellClass: '', render: p => <StatusChip status={p.status} /> },
+];
+
+/** Por omisión se muestran TODAS; cada usuario oculta o mueve las que quiera (se guarda por usuario). */
+const PRODUCTOS_DEFAULT_COLUMNS: Record<string, boolean> = PRODUCTOS_TABLE_COLUMNS.reduce((acc, col) => {
+  acc[col.key] = true;
+  return acc;
+}, {} as Record<string, boolean>);
+const PRODUCTOS_COL_BY_KEY = new Map(PRODUCTOS_TABLE_COLUMNS.map(c => [c.key, c] as const));
 
 const DEFAULT_PAGE_SIZE: PageSizeOption = 50;
 const ALL_PAGE_SIZE = 100000;
@@ -303,6 +435,22 @@ export default function ProductosListPage() {
 
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
 
+  // Columnas: todas disponibles; el usuario oculta y ordena (se guarda por usuario).
+  // «Lote» solo existe si la empresa maneja lotes.
+  const { visible: colVisible, toggleColumn, setAll, reset, columnOrder, moveColumn, moveColumnTo, resetOrder } = useColumnPreferences('productos', PRODUCTOS_DEFAULT_COLUMNS);
+  const menuColumns = useMemo(
+    () => PRODUCTOS_TABLE_COLUMNS.filter(c => manejaLotes || c.key !== 'lote'),
+    [manejaLotes],
+  );
+  const activeColumns = useMemo(
+    () => columnOrder
+      .map(k => PRODUCTOS_COL_BY_KEY.get(k))
+      .filter((c): c is (typeof PRODUCTOS_TABLE_COLUMNS)[number] =>
+        !!c && (manejaLotes || c.key !== 'lote') && (!!c.required || !!colVisible[c.key])),
+    [colVisible, columnOrder, manejaLotes],
+  );
+  const cellCtx: CeldaCtx = { fmt, thumb, presentacionesByProducto };
+
   const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
     if (key === 'status') return (item.status ?? 'activo').charAt(0).toUpperCase() + (item.status ?? 'activo').slice(1);
     if (key === 'clasificacion') return item.clasificaciones?.nombre ?? 'Sin categoría';
@@ -319,29 +467,18 @@ export default function ProductosListPage() {
             <th className="th-odoo w-10 text-center">
               <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
             </th>
-             <th className="th-odoo w-10">Img</th>
-             <SortableTh sortKey="codigo" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left">Código</SortableTh>
-             <SortableTh sortKey="nombre" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left">Nombre</SortableTh>
-             <SortableTh sortKey="clasificacion" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left hidden lg:table-cell">Categoría</SortableTh>
-             <SortableTh sortKey="marca" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left hidden md:table-cell">Marca</SortableTh>
-             <SortableTh sortKey="proveedor" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left hidden xl:table-cell">Proveedor</SortableTh>
-             {manejaLotes && <SortableTh sortKey="lote" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden lg:table-cell">Lote</SortableTh>}
-             <SortableTh sortKey="lista" sort={sort} onToggle={onSort} align="left" className="th-odoo text-left hidden xl:table-cell">Lista</SortableTh>
-             <SortableTh sortKey="unidad_compra" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden xl:table-cell">U. compra</SortableTh>
-             <SortableTh sortKey="unidad_venta" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden xl:table-cell">U. venta</SortableTh>
-             <SortableTh sortKey="factor" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden xl:table-cell">Factor</SortableTh>
-             <SortableTh sortKey="precio" sort={sort} onToggle={onSort} align="right" className="th-odoo text-right">Precio</SortableTh>
-             <SortableTh sortKey="costo" sort={sort} onToggle={onSort} align="right" className="th-odoo text-right hidden md:table-cell">Costo</SortableTh>
-             <SortableTh sortKey="costo_unitario" sort={sort} onToggle={onSort} align="right" className="th-odoo text-right hidden xl:table-cell">C/U</SortableTh>
-             <SortableTh sortKey="stock" sort={sort} onToggle={onSort} align="right" className="th-odoo text-right hidden lg:table-cell">Stock</SortableTh>
-             <SortableTh sortKey="iva" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center hidden sm:table-cell">IVA</SortableTh>
-             <SortableTh sortKey="status" sort={sort} onToggle={onSort} align="center" className="th-odoo text-center">Status</SortableTh>
+            {activeColumns.map(col => (
+              // Columnas sin columna real en la BD (p. ej. la imagen) quedan sin orden.
+              <SortableTh key={col.key} sortKey={col.key} sort={sort} onToggle={onSort} align={col.align ?? 'left'} disabled={!PRODUCTOS_ORDEN_BD[col.key]} className={cn('th-odoo whitespace-nowrap', col.key === 'imagen' && 'w-10', col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left')}>
+                {col.label}
+              </SortableTh>
+            ))}
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
             <tr>
-              <td colSpan={16} className="text-center py-12 text-muted-foreground text-sm">No hay productos. Crea el primero.</td>
+              <td colSpan={activeColumns.length + 1} className="text-center py-12 text-muted-foreground text-sm">No hay productos. Crea el primero.</td>
             </tr>
           )}
           {items.map((p: any) => (
@@ -356,69 +493,18 @@ export default function ProductosListPage() {
               <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(p.id); }}>
                 <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)} className="rounded border-input" />
               </td>
-              <td className="py-1.5 px-2">
-                {p.imagen_url ? (
-                  <img src={thumb(p.imagen_url, 64)} alt="" className="h-7 w-7 rounded object-cover" />
-                ) : (
-                  <div className="h-7 w-7 rounded bg-secondary flex items-center justify-center text-xxs text-muted-foreground">—</div>
-                )}
-              </td>
-              <td className="py-1.5 px-3 font-mono text-xs">{p.codigo}</td>
-              <td className="py-1.5 px-3 font-medium max-w-[240px]">
-                <div className="flex items-center gap-1.5 truncate">
-                  <ProductoLink id={p.id} className="truncate">{p.nombre}</ProductoLink>
-                  {p.es_granel && (
-                    <span className="text-xxs font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
-                      Granel
-                    </span>
+              {activeColumns.map(col => (
+                <td
+                  key={col.key}
+                  className={cn(
+                    col.key === 'imagen' ? 'py-1.5 px-2' : 'py-1.5 px-3',
+                    col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : '',
+                    col.cellClass ?? 'text-muted-foreground text-xs',
                   )}
-                </div>
-              </td>
-              <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground text-xs">{p.clasificaciones?.nombre ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground text-xs">{p.marcas?.nombre ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.proveedores?.nombre ?? '—'}</td>
-               {manejaLotes && (
-                 <td className="py-1.5 px-3 hidden lg:table-cell text-center">
-                   {(p as any).maneja_lote
-                     ? <span className="inline-flex items-center gap-1 text-[11px] text-primary"><Boxes className="h-3 w-3" /> Sí</span>
-                     : <span className="text-[11px] text-muted-foreground">—</span>}
-                 </td>
-               )}
-               <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.listas?.nombre ?? '—'}</td>
-               <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_compra?.abreviatura ?? '—'}</td>
-               <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_venta?.abreviatura ?? '—'}</td>
-               <td className="py-1.5 px-3 hidden xl:table-cell text-center font-mono text-xs">{p.factor_conversion ?? 1}</td>
-               <td className="py-1.5 px-3 text-right font-medium tabular-nums">{fmt(p.precio_principal)}</td>
-               <td className="py-1.5 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt((p.costo ?? 0) * (p.factor_conversion || 1))}</td>
-               <td className="py-1.5 px-3 text-right hidden xl:table-cell text-muted-foreground tabular-nums font-mono text-xs">
-                 {fmt(p.costo ?? 0)}
-               </td>
-              <td className="py-1.5 px-3 text-right hidden lg:table-cell tabular-nums">
-                <span className={cn(
-                  "font-medium",
-                  (p.cantidad ?? 0) <= 0 ? "text-destructive" : (p.cantidad ?? 0) < (p.min ?? 0) ? "text-warning" : "text-foreground"
-                )}>
-                  {fmtNum(p.cantidad ?? 0)}
-                </span>
-                {(() => {
-                  const bd = getStockBreakdown(
-                    p.cantidad ?? 0,
-                    presentacionesByProducto.get(p.id),
-                    (p as any).es_granel ? ((p as any).unidad_granel || 'kg') : 'pz',
-                  );
-                  return bd ? <div className="text-[10px] text-primary font-medium">{bd.texto}</div> : null;
-                })()}
-              </td>
-              <td className="py-1.5 px-3 hidden sm:table-cell text-center">
-                {p.tiene_iva ? (
-                  <span className="text-xxs font-medium text-success">{p.iva_pct ?? 16}%</span>
-                ) : (
-                  <span className="text-xxs text-muted-foreground">No</span>
-                )}
-              </td>
-              <td className="py-1.5 px-3 text-center">
-                <StatusChip status={p.status} />
-              </td>
+                >
+                  {col.render(p, cellCtx)}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -521,6 +607,16 @@ export default function ProductosListPage() {
             )}
             {!isMobile && (
               <>
+                <ColumnVisibilityMenu
+                  columns={menuColumns}
+                  visible={colVisible}
+                  onToggle={toggleColumn}
+                  onShowAll={() => setAll(true)}
+                  onReset={() => { reset(); resetOrder(); }}
+                  order={columnOrder}
+                  onMove={moveColumn}
+                  onMoveTo={moveColumnTo}
+                />
                 <ExportButton
                   onExcel={() => exportToExcel({
                     fileName: 'Productos', title: 'Catálogo de Productos',

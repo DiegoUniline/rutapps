@@ -100,6 +100,15 @@ export const PRODUCTOS_ORDEN_BD: Record<string, string> = {
   unidad_compra: 'unidades_compra(abreviatura)', unidad_venta: 'unidades_venta(abreviatura)',
   factor: 'factor_conversion', precio: 'precio_principal', costo: 'costo', costo_unitario: 'costo',
   stock: 'cantidad', iva: 'tiene_iva', status: 'status',
+  clave_alterna: 'clave_alterna', nombre_venta: 'nombre_venta', nombre_compra: 'nombre_compra', nombre_ticket: 'nombre_ticket',
+  formula: 'formula', precio_sugerido_publico: 'precio_sugerido_publico', costo_incluye_impuestos: 'costo_incluye_impuestos',
+  calculo_costo: 'calculo_costo', min: 'min', max: 'max', cfdi_iva_sin_iva: 'cfdi_iva_sin_iva', ieps: 'ieps_pct',
+  codigo_sat: 'codigo_sat', se_puede_vender: 'se_puede_vender', se_puede_comprar: 'se_puede_comprar',
+  se_puede_inventariar: 'se_puede_inventariar', vender_sin_stock: 'vender_sin_stock', permitir_descuento: 'permitir_descuento',
+  monto_maximo: 'monto_maximo', comision: 'pct_comision', es_granel: 'es_granel', es_combo: 'es_combo',
+  usa_listas_precio: 'usa_listas_precio', usa_presentaciones: 'usa_presentaciones', modo_compra_sugerida: 'modo_compra_sugerida',
+  dias_cobertura: 'dias_cobertura', lead_time_dias: 'lead_time_dias', codigo_origen: 'codigo_origen', notas: 'notas',
+  created_at: 'created_at', updated_at: 'updated_at',
 };
 
 /** Paginated products for list views. When fetchAll=true, returns all matching rows (used for grouping). */
@@ -112,7 +121,7 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
     placeholderData: (prev) => prev,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre, status), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre)';
+      const SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre, status), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre), clave_alterna, nombre_venta, nombre_compra, nombre_ticket, precio_sugerido_publico, max, ieps_tipo, cfdi_iva_sin_iva, costo_incluye_impuestos, codigo_sat, se_puede_vender, se_puede_comprar, se_puede_inventariar, vender_sin_stock, permitir_descuento, monto_maximo, tiene_comision, tipo_comision, pct_comision, es_granel, unidad_granel, es_combo, usa_listas_precio, usa_presentaciones, modo_compra_sugerida, dias_cobertura, lead_time_dias, codigo_origen, notas, created_at, updated_at';
       const applyFilters = (q: any) => {
         // Orden elegido en el encabezado (toda la lista, no solo la página); sin orden: por nombre.
         q = aplicarOrdenConsulta(q.eq('empresa_id', empresa!.id), sort, PRODUCTOS_ORDEN_BD, { columna: 'nombre', asc: true });
