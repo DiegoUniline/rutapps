@@ -28,6 +28,8 @@ interface Props {
   setNotas: (v: string) => void;
   totals: { subtotal: number; total: number; iva?: number; ieps?: number; descuento?: number; descuentoDevolucion?: number; descuentoExtra?: number };
   totalACobrar: number;
+  /** D-049: nota de crédito de la devolución aplicada a esta venta (ya restada de lo que se cobra). */
+  notaAplicadaVenta?: number;
   cambio: number;
   saving: boolean;
   cart: CartItem[];
@@ -82,7 +84,7 @@ function getDynamicBills(total: number): { label: string; amount: number }[] {
 }
 
 export function StepPago(props: Props) {
-  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, saldoFavorDisp, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt, canApplyDiscount, descuentoExtraTipo, setDescuentoExtraTipo, descuentoExtraValor, setDescuentoExtraValor, descuentoExtraMotivo, setDescuentoExtraMotivo } = props;
+  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, saldoFavorDisp, notas, setNotas, totals, totalACobrar, notaAplicadaVenta, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt, canApplyDiscount, descuentoExtraTipo, setDescuentoExtraTipo, descuentoExtraValor, setDescuentoExtraValor, descuentoExtraMotivo, setDescuentoExtraMotivo } = props;
   const { symbol: s } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
   const canCredito = hasPermisoMovil('ruta.venta_credito');
@@ -427,8 +429,8 @@ export function StepPago(props: Props) {
             {descPromos > 0 && (
               <div className="flex justify-between text-[11px]"><span className="text-emerald-600 dark:text-emerald-400">🏷️ Promociones</span><span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">{fmt(descPromos)}</span></div>
             )}
-            {descDevolucion > 0 && (
-              <div className="flex justify-between text-[11px]"><span className="text-amber-600 dark:text-amber-400">🔄 Desc. devolución</span><span className="font-medium text-amber-600 dark:text-amber-400 tabular-nums">{fmt(descDevolucion)}</span></div>
+            {(notaAplicadaVenta ?? 0) > 0 && (
+              <div className="flex justify-between text-[11px]"><span className="text-muted-foreground">🧾 Nota de crédito aplicada (devolución)</span><span className="font-medium text-foreground tabular-nums">-{fmt(Math.min(notaAplicadaVenta ?? 0, totals.total))}</span></div>
             )}
             {descExtraAmt > 0 && (
               <div className="flex justify-between text-[11px]"><span className="text-rose-600 dark:text-rose-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Descuento {descuentoExtraTipo === 'porcentaje' ? `(${descuentoExtraValor}%)` : ''}</span><span className="font-medium text-rose-600 dark:text-rose-400 tabular-nums">-{fmt(descExtraAmt)}</span></div>

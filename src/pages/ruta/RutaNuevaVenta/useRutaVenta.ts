@@ -33,7 +33,8 @@ import { nextVisitDate } from '@/lib/nextVisitDate';
 import { getLotesDisponibles, pickFefo } from '@/lib/lotesFefo';
 import { paquetesParaCantidad } from '@/lib/ventaPresentacion';
 import { isPublicGeneralClient, resolvePublicGeneralClientId } from '@/lib/publicGeneralClient';
-import { esCantidadDevolucionValida } from '@/lib/devolucionGuardado';
+import { esCantidadDevolucionValida, destinoSugerido, encolarDevolucion, resumenDevolucion, type DestinoDevolucion } from '@/lib/devolucionGuardado';
+import { useMermaMotivoConfig } from '@/hooks/useDevoluciones';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -95,7 +96,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const { empresa, user, profile } = useAuth();
   const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<Step>('tipo');
+  // ?solo=devolucion (pantalla «Devolución» de ruta) entra directo al flujo «Solo devolución».
+  const [step, setStep] = useState<Step>(() => (searchParams.get('solo') === 'devolucion' ? (urlClienteId ? 'devoluciones' : 'cliente') : 'tipo'));
   const [clienteId, setClienteId] = useState<string | null>(urlClienteId);
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteCredito, setClienteCredito] = useState<{ credito: boolean; limite: number; dias: number } | null>(null);
@@ -129,7 +131,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [searchReemplazo, setSearchReemplazo] = useState('');
   const [ticketInfo, setTicketInfo] = useState<{ folio: string; fecha: string } | null>(null);
   const [sinCompra, setSinCompra] = useState(false);
-  const [soloDevolucion, setSoloDevolucion] = useState(false);
+  // «Devolución» de ruta (RutaDevolucion) abre directo el flujo «Solo devolución» (D-049).
+  const [soloDevolucion, setSoloDevolucion] = useState(searchParams.get('solo') === 'devolucion');
   const [sinImpuestos, setSinImpuestos] = useState(false);
   const [motivoSinCompra, setMotivoSinCompra] = useState('');
   const [savingSinCompra, setSavingSinCompra] = useState(false);
@@ -137,6 +140,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [descuentoExtraTipo, setDescuentoExtraTipo] = useState<DescuentoExtraTipo>('monto');
   const [descuentoExtraValor, setDescuentoExtraValor] = useState<number>(0);
   const [descuentoExtraMotivo, setDescuentoExtraMotivo] = useState<string>('');
+  // Sugerencia de destino por motivo (Configurar mermas); sin conexión: dañado/vencido/caducado → merma.
+  const { data: mermaMotivoConfig } = useMermaMotivoConfig();
 
   const { hasPermisoMovil, isOwner } = usePermisos();
   // En /ruta solo mandan los permisos móviles (sección "Permisos móviles" del rol).
@@ -793,11 +798,14 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return false;
   };
 
-  const addDevolucion = (p: any, defaults?: { motivo?: DevolucionItem['motivo']; accion?: DevolucionItem['accion'] }) => { if (!requireDevolucionesPermiso()) return; if (devoluciones.find(d => d.producto_id === p.id)) { updateDevQty(p.id, (devoluciones.find(d => d.producto_id === p.id)?.cantidad ?? 0) + 1); return; } setDevoluciones(prev => [...prev, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, cantidad: 1, motivo: defaults?.motivo ?? 'no_vendido', accion: defaults?.accion ?? 'reposicion', precio_unitario: p.precio_principal ?? 0 }]); };
+  // D-049: cualquier producto, sin tope; precio = lista de precios del cliente CON impuestos
+  // (mismo priceResolver que la venta). El motivo solo sugiere el destino.
+  const addDevolucion = (p: any, defaults?: { motivo?: DevolucionItem['motivo']; accion?: DevolucionItem['accion'] }) => { if (!requireDevolucionesPermiso()) return; if (devoluciones.find(d => d.producto_id === p.id)) { updateDevQty(p.id, (devoluciones.find(d => d.producto_id === p.id)?.cantidad ?? 0) + 1); return; } const motivo = defaults?.motivo ?? 'no_vendido'; setDevoluciones(prev => [...prev, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, cantidad: 1, motivo, accion: defaults?.accion ?? 'reposicion', precio_unitario: resolvePricingFull(p).displayPrice, destino: destinoSugerido(motivo, mermaMotivoConfig) }]); };
   const updateDevQty = (productoId: string, qty: number) => { if (!requireDevolucionesPermiso()) return; if (!esCantidadDevolucionValida(qty)) setDevoluciones(prev => prev.filter(d => d.producto_id !== productoId)); else setDevoluciones(prev => prev.map(d => d.producto_id === productoId ? { ...d, cantidad: qty } : d)); };
-  const updateDevMotivo = (productoId: string, motivo: DevolucionItem['motivo']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, motivo }; if (updated.accion === 'reposicion' && motivo !== 'cambio' && motivo !== 'danado' && motivo !== 'caducado' && motivo !== 'error_pedido') { /* keep accion */ } return updated; })); };
+  const updateDevMotivo = (productoId: string, motivo: DevolucionItem['motivo']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; return { ...d, motivo, destino: d.destinoElegido ? d.destino : destinoSugerido(motivo, mermaMotivoConfig) }; })); };
+  const updateDevDestino = (productoId: string, destino: DestinoDevolucion) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => d.producto_id === productoId ? { ...d, destino, destinoElegido: true } : d)); };
   const updateDevAccion = (productoId: string, accion: DevolucionItem['accion']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, accion }; if (accion !== 'reposicion') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };
-  const batchUpdateDevDefaults = (motivo: DevolucionItem['motivo'], accion: DevolucionItem['accion']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { const updated = { ...d, motivo, accion }; if (accion !== 'reposicion') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };
+  const batchUpdateDevDefaults = (motivo: DevolucionItem['motivo'], accion: DevolucionItem['accion']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { const updated = { ...d, motivo, accion, destino: d.destinoElegido ? d.destino : destinoSugerido(motivo, mermaMotivoConfig) }; if (accion !== 'reposicion') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };
   const setReemplazo = (devProductoId: string, p: any) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => d.producto_id === devProductoId ? { ...d, reemplazo_producto_id: p.id, reemplazo_nombre: p.nombre } : d)); setShowReemplazoFor(null); setSearchReemplazo(''); };
   const removeDevolucion = (productoId: string) => { setDevoluciones(prev => prev.filter(d => d.producto_id !== productoId)); };
 
@@ -924,25 +932,12 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return m;
   }, [promoResults]);
 
-  const descuentoDevolucion = useMemo(() => {
-    const r2 = (n: number) => Math.round(n * 100) / 100;
-    return devoluciones.filter(d => d.accion === 'descuento_venta').reduce((s, d) => {
-      const prod: any = productos?.find((p: any) => p.id === d.producto_id);
-      // Base price: from devolución, fallback to product, fallback to cart line
-      let base = d.precio_unitario;
-      if (!base || base <= 0) {
-        const cartLine = cart.find(c => c.producto_id === d.producto_id && !c.es_cambio);
-        base = prod?.precio_principal ?? cartLine?.precio_unitario ?? 0;
-      }
-      // Include taxes so the discount actually reduces the tax-inclusive total
-      let factor = 1;
-      if (!sinImpuestos && prod) {
-        if (prod.tiene_iva) factor += (prod.iva_pct ?? 16) / 100;
-        if (prod.tiene_ieps && prod.ieps_tipo !== 'cuota') factor += (prod.ieps_pct ?? 0) / 100;
-      }
-      return s + r2(base * factor) * d.cantidad;
-    }, 0);
-  }, [devoluciones, productos, cart, sinImpuestos]);
+  // D-049: «Descuento en venta» ya no existe. «Aplicar a la venta» = nota de crédito que
+  // paga esta venta (la registra la BD como cobro con saldo a favor ligado a la devolución).
+  const notaAplicadaVenta = useMemo(
+    () => (tipoVenta === 'venta_directa' && !soloDevolucion ? resumenDevolucion(devoluciones).notaAplicada : 0),
+    [devoluciones, tipoVenta, soloDevolucion],
+  );
 
   // Descuento EFECTIVO de promoción por producto.
   // El motor ya trabaja sobre el bruto cobrado, así que el descuento se aplica
@@ -985,19 +980,21 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       descuentoPromo += aplicado;
       items += item.cantidad;
     });
-    const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoDevolucion));
+    const preExtra = r2(Math.max(0, subtotal + ieps + iva));
     // Solo aplica si tiene permiso y valor > 0
     const extraVal = canApplyDiscount && descuentoExtraValor > 0 ? descuentoExtraValor : 0;
     const extraAmt = extraVal > 0
       ? r2(descuentoExtraTipo === 'porcentaje' ? preExtra * (extraVal / 100) : Math.min(extraVal, preExtra))
       : 0;
-    const totalDescuentos = r2(descuentoPromo + descuentoDevolucion + extraAmt);
+    const totalDescuentos = r2(descuentoPromo + extraAmt);
     const total = r2(Math.max(0, preExtra - extraAmt));
-    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoDevolucion: r2(descuentoDevolucion), descuentoExtra: extraAmt };
-  }, [cart, promoEffectiveByProduct, descuentoDevolucion, sinImpuestos, canApplyDiscount, descuentoExtraValor, descuentoExtraTipo]);
+    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoExtra: extraAmt };
+  }, [cart, promoEffectiveByProduct, sinImpuestos, canApplyDiscount, descuentoExtraValor, descuentoExtraTipo]);
 
 
 
+  // Lo que se cobra de ESTA venta de contado: el total menos la nota aplicada a la venta.
+  const netoVentaContado = r2(Math.max(0, totals.total - notaAplicadaVenta));
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
   const totalPagosLineas = pagos.reduce((s, p) => s + p.monto, 0);
@@ -1005,7 +1002,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   // Auto-distribute surplus payment to pending accounts (FIFO)
   useEffect(() => {
     if (condicionPago !== 'contado' || cuentasPendientes.length === 0) return;
-    const surplus = totalPagosLineas - totals.total;
+    const surplus = totalPagosLineas - netoVentaContado;
     if (surplus <= 0) {
       // Reset any auto-assigned amounts when payment doesn't cover current sale
       const hasAny = cuentasPendientes.some(c => c.montoAplicar > 0);
@@ -1021,10 +1018,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     // Only update if values actually changed to avoid infinite loop
     const changed = updated.some((u, i) => u.montoAplicar !== cuentasPendientes[i].montoAplicar);
     if (changed) setCuentasPendientes(updated);
-  }, [totalPagosLineas, totals.total, condicionPago, cuentasPendientes.length]);
+  }, [totalPagosLineas, netoVentaContado, condicionPago, cuentasPendientes.length]);
 
   const totalAplicarCuentas = cuentasPendientes.reduce((s, c) => s + c.montoAplicar, 0);
-  const totalACobrar = (condicionPago === 'contado' ? totals.total : 0) + totalAplicarCuentas;
+  const totalACobrar = (condicionPago === 'contado' ? netoVentaContado : 0) + totalAplicarCuentas;
   const montoRecibidoNum = totalPagosLineas;
   const cambio = pagos.some(p => p.metodo_pago === 'efectivo') ? Math.max(0, totalPagosLineas - totalACobrar) : 0;
 
@@ -1176,7 +1173,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         headerIva = r2(netoPorIdx.reduce((s, b) => s + b.iva, 0));
         headerIeps = r2(netoPorIdx.reduce((s, b) => s + b.ieps, 0));
         // La promoción ya está restada en las líneas: no se vuelve a restar aquí.
-        headerDescuento = r2(Math.max(0, (totals.descuentoDevolucion ?? 0) + extraAmtSaved));
+        headerDescuento = r2(Math.max(0, extraAmtSaved));
       }
 
       await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: null, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: headerSubtotal, iva_total: headerIva, ieps_total: headerIeps, descuento_total: headerDescuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
@@ -1278,46 +1275,21 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       // orden padre→hijo en el sync queue (evita FK 23503 y RLS 42501 en cascada).
       if (devoluciones.length > 0 && clienteId) {
         // Id determinístico de la devolución por venta → reintento no duplica.
+        // D-049: UNA operación (RPC registrar_devolucion) en la cola, después de la venta,
+        // sus renglones y cobros. Destino por renglón; reposición sin reemplazo sale del
+        // camión con la devolución (H13); con reemplazo va como renglón CAMBIO de la venta.
+        // La carga ya no suma «devuelto» por devoluciones de clientes (H15).
         const devId = await deterministicUuid('devventa', ventaId);
-        const cargaIdForDev = activeCarga?.id || null;
-        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, vendedor_id: profile?.id || profile?.id || null, cliente_id: clienteId, carga_id: cargaIdForDev, venta_id: ventaId, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
-        let devLineaIdx = -1;
-        for (const d of devoluciones) {
-          devLineaIdx++;
-          const montoCredito = (d.accion === 'nota_credito' || d.accion === 'devolucion_dinero' || d.accion === 'descuento_venta') ? d.precio_unitario * d.cantidad : 0;
-          await queueOperation('devolucion_lineas', 'insert', {
-            id: await deterministicUuid('devlinea', devId, devLineaIdx), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad,
-            motivo: d.motivo, accion: d.accion, reemplazo_producto_id: d.reemplazo_producto_id || null,
-            monto_credito: montoCredito, created_at: new Date().toISOString(),
-          });
-
-          // ── carga_lineas: registrar la cantidad devuelta de esta carga ──
-          if (activeCarga) {
-            try {
-              const cargaLineasTable = getOfflineTable('carga_lineas');
-              if (cargaLineasTable) {
-                const allCL = await cargaLineasTable.toArray();
-                const cl = allCL.find((l: any) => l.carga_id === activeCarga.id && l.producto_id === d.producto_id);
-                if (cl) {
-                  await queueOperation('carga_lineas', 'update', {
-                    id: cl.id, carga_id: cl.carga_id, producto_id: cl.producto_id,
-                    cantidad_cargada: cl.cantidad_cargada,
-                    cantidad_vendida: cl.cantidad_vendida ?? 0,
-                    cantidad_devuelta: (cl.cantidad_devuelta ?? 0) + d.cantidad,
-                  });
-                }
-              }
-            } catch (e) { console.error('Error updating carga devuelta:', e); }
-          }
-
-          // ── Reingreso al inventario: lo aplica SOLO el trigger de BD
-          // (apply_devolucion_linea_inventory sobre devolucion_lineas), igual que
-          // useDevoluciones.ts (la pantalla de Devoluciones). Antes esta ruta también
-          // ajustaba stock_almacen, productos.cantidad y creaba un movimiento
-          // 'devolucion' A MANO —además del trigger—, y por el orden del sync se
-          // DUPLICABA el reingreso (stock sumado 2×; movimientos 'devolucion' +
-          // 'devolucion_aplicada'). Se elimina el ajuste manual y se delega al trigger.
-        }
+        await encolarDevolucion(
+          { id: devId, empresa_id: empresa.id, vendedor_id: profile?.id || null, cliente_id: clienteId, carga_id: activeCarga?.id || null, venta_id: ventaId, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria) },
+          devoluciones.map(d => ({
+            producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo, destino: d.destino,
+            accion: tipoVenta === 'venta_directa' ? d.accion : (d.accion === 'aplicar_venta' ? 'nota_credito' : d.accion),
+            precio_unitario: d.precio_unitario,
+            reemplazo_producto_id: d.reemplazo_producto_id || null,
+            reposicion_en_venta: d.accion === 'reposicion' && !!d.reemplazo_producto_id,
+          })),
+        );
       }
 
 
@@ -1326,7 +1298,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         const cuentasSnapshot = cuentasPendientes
           .filter(c => c.montoAplicar > 0)
           .map(c => ({ id: c.id, montoAplicar: c.montoAplicar, saldo_pendiente: c.saldo_pendiente }));
-        let saleRemaining = condicionPago === 'contado' ? totals.total : 0;
+        let saleRemaining = condicionPago === 'contado' ? netoVentaContado : 0;
         let cuentaIdx = 0;
         const accountApplied = new Map<string, number>();
 
@@ -1456,42 +1428,17 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       // Id estable de la devolución: se genera una vez y se reusa en reintentos.
       if (!pendingDevIdRef.current) pendingDevIdRef.current = crypto.randomUUID();
       const devId = pendingDevIdRef.current;
-      const cargaIdForDev = activeCarga?.id || null;
-      await queueOperation('devoluciones', 'insert', {
-        id: devId, empresa_id: empresa.id, user_id: user.id,
-        vendedor_id: profile?.id || null, cliente_id: clienteId,
-        carga_id: cargaIdForDev, venta_id: null, tipo: 'tienda',
-        fecha: todayInTimezone(empresa.zona_horaria),
-        created_at: new Date().toISOString(),
-      });
-      let soloDevLineaIdx = -1;
-      for (const d of devoluciones) {
-        soloDevLineaIdx++;
-        const montoCredito = (d.accion === 'nota_credito' || d.accion === 'devolucion_dinero')
-          ? d.precio_unitario * d.cantidad : 0;
-        await queueOperation('devolucion_lineas', 'insert', {
-          id: await deterministicUuid('devlinea', devId, soloDevLineaIdx), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad,
-          motivo: d.motivo, accion: d.accion, reemplazo_producto_id: d.reemplazo_producto_id || null,
-          monto_credito: montoCredito, created_at: new Date().toISOString(),
-        });
-        if (activeCarga) {
-          try {
-            const cargaLineasTable = getOfflineTable('carga_lineas');
-            if (cargaLineasTable) {
-              const allCL = await cargaLineasTable.toArray();
-              const cl = allCL.find((l: any) => l.carga_id === activeCarga.id && l.producto_id === d.producto_id);
-              if (cl) {
-                await queueOperation('carga_lineas', 'update', {
-                  id: cl.id, carga_id: cl.carga_id, producto_id: cl.producto_id,
-                  cantidad_cargada: cl.cantidad_cargada,
-                  cantidad_vendida: cl.cantidad_vendida ?? 0,
-                  cantidad_devuelta: (cl.cantidad_devuelta ?? 0) + d.cantidad,
-                });
-              }
-            }
-          } catch (e) { console.error('Error updating carga devuelta:', e); }
-        }
-      }
+      // D-049: una sola vía (RPC registrar_devolucion encolada, idempotente por id).
+      // Sin venta: «Aplicar a la venta» no aplica; la reposición sale del camión (H13).
+      await encolarDevolucion(
+        { id: devId, empresa_id: empresa.id, vendedor_id: profile?.id || null, cliente_id: clienteId, carga_id: activeCarga?.id || null, venta_id: null, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria) },
+        devoluciones.map(d => ({
+          producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo, destino: d.destino,
+          accion: d.accion === 'aplicar_venta' ? 'nota_credito' : d.accion,
+          precio_unitario: d.precio_unitario,
+          reemplazo_producto_id: d.reemplazo_producto_id || null,
+        })),
+      );
       await saveVisita('devolucion');
       markVisited(clienteId);
       pendingDevIdRef.current = null;   // éxito → la siguiente devolución toma id nuevo
@@ -1669,13 +1616,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     entregaInmediata, stockAbordo, usandoAlmacen: useFallbackStock, clientes, productos, filteredClientes,
     filteredProductos, filteredDevProductos, filteredReemplazoProductos, pedidoSugerido,
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
-    totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
+    totalACobrar, notaAplicadaVenta, netoVentaContado, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
     currentStepIdx, routeSteps, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
     addToCart, addGranelLine, updateQty, removeFromCart, getItemInCart, getMaxQty, getDispSigned, setItemQty,
     pendingGratis, autoPromosOn,
     promosError, promosLoading, promocionesActivas, refetchPromos,
 
-    addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
+    addDevolucion, updateDevQty, updateDevMotivo, updateDevDestino, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
     handleSave, saveSoloDevolucion, setSoloDevolucion,
     // Insights & smart actions

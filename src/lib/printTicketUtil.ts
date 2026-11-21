@@ -156,7 +156,7 @@ export function buildTicketDataFromVenta(params: {
   pagoAplicado?: number;
   saldoNuevo?: number;
   pagos?: { metodo: string; monto: number; referencia?: string | null }[];
-  devoluciones?: { nombre: string; cantidad: number; motivo: string; accion: string; monto?: number }[];
+  devoluciones?: { nombre: string; cantidad: number; motivo: string; accion: string; monto?: number; destino?: string | null }[];
 }): TicketData {
   const { empresa, venta, clienteNombre, lineas } = params;
   return {

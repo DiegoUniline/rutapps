@@ -60,11 +60,13 @@ interface ExcedenteRow {
   ventas: { folio: string | null } | null;
 }
 interface NotaCreditoRow {
+  id: string;
   fecha: string;
   created_at: string | null;
   cancelado_at: string | null;
+  turno_id: string | null;
   ventas: { folio: string | null } | null;
-  devolucion_lineas: { monto_credito: number | null; accion: string | null }[] | null;
+  devolucion_lineas: { monto_credito: number | null; accion: string | null; aplica_venta: boolean | null }[] | null;
 }
 const ORIGEN_EXCEDENTE: Record<ExcedenteRow['origen'], string> = {
   cancelacion: 'Venta cancelada',
@@ -107,23 +109,29 @@ function useClienteDetalle(clienteId: string | null) {
           .eq('cliente_id', clienteId!)
           .order('created_at', { ascending: false }),
         supabase
-          .from('devoluciones')
-          .select('id, fecha, created_at, cancelado_at, ventas(folio), devolucion_lineas(monto_credito, accion)')
+          .from('devoluciones' as never)
+          .select('id, fecha, created_at, cancelado_at, turno_id, ventas(folio), devolucion_lineas(monto_credito, accion, aplica_venta)')
           .eq('empresa_id', empresa!.id)
           .eq('cliente_id', clienteId!),
       ]);
       if (excRes.error) throw excRes.error;
       if (ncRes.error) throw ncRes.error;
       const excedentes = (excRes.data ?? []) as unknown as ExcedenteRow[];
-      const notasCredito = ((ncRes.data ?? []) as unknown as NotaCreditoRow[])
-        .filter(d => !d.cancelado_at)
-        .map(d => ({
-          fecha: d.created_at ?? d.fecha,
-          folio: d.ventas?.folio ?? null,
-          monto: (d.devolucion_lineas ?? []).filter(l => l.accion === 'nota_credito').reduce((s, l) => s + (Number(l.monto_credito) || 0), 0),
-        }))
+      const devsVivas = ((ncRes.data ?? []) as unknown as NotaCreditoRow[]).filter(d => !d.cancelado_at);
+      const sumaLineas = (d: NotaCreditoRow, pred: (l: NonNullable<NotaCreditoRow['devolucion_lineas']>[number]) => boolean) =>
+        (d.devolucion_lineas ?? []).filter(pred).reduce((s, l) => s + (Number(l.monto_credito) || 0), 0);
+      // D-049: la nota aplicada a la venta se muestra como tal (y su uso como pago, abajo).
+      const notasCredito = devsVivas
+        .flatMap(d => [
+          { fecha: d.created_at ?? d.fecha, folio: d.ventas?.folio ?? null, aplicada: false, monto: sumaLineas(d, l => l.accion === 'nota_credito' && !l.aplica_venta) },
+          { fecha: d.created_at ?? d.fecha, folio: d.ventas?.folio ?? null, aplicada: true, monto: sumaLineas(d, l => l.accion === 'nota_credito' && !!l.aplica_venta) },
+        ])
         .filter(n => n.monto > 0.009);
-      return { ventas: ventasRes.data ?? [], cobros: cobrosRes.data ?? [], excedentes, notasCredito };
+      // Dinero devuelto por devoluciones de producto (D-032: con turno = retiro de caja).
+      const dineroDevoluciones = devsVivas
+        .map(d => ({ id: d.id, created_at: d.created_at ?? d.fecha, folio: d.ventas?.folio ?? null, turno_id: d.turno_id, monto: sumaLineas(d, l => l.accion === 'devolucion_dinero') }))
+        .filter(n => n.monto > 0.009);
+      return { ventas: ventasRes.data ?? [], cobros: cobrosRes.data ?? [], excedentes, notasCredito, dineroDevoluciones };
     },
   });
 }
@@ -254,13 +262,18 @@ export default function EstadoCuentaClientePage() {
     const totalCobrosRegistrados = detalle?.cobros.reduce((s, c) => s + (c.monto ?? 0), 0) ?? 0;
     // Saldo a favor: + notas de crédito y pagos que quedaron a favor; − lo usado como pago.
     const movFavor = [
-      ...(detalle?.notasCredito ?? []).map(n => ({ fecha: n.fecha, concepto: 'Nota de crédito (devolución)', folio: n.folio, monto: n.monto })),
+      ...(detalle?.notasCredito ?? []).map(n => ({ fecha: n.fecha, concepto: n.aplicada ? 'Nota de crédito (devolución) aplicada a la venta' : 'Nota de crédito (devolución)', folio: n.folio, monto: n.monto })),
       ...(detalle?.excedentes ?? []).filter(e => e.tipo === 'saldo_favor')
         .map(e => ({ fecha: e.created_at, concepto: `${ORIGEN_EXCEDENTE[e.origen]}: pago a favor`, folio: e.ventas?.folio ?? null, monto: Number(e.monto) })),
       ...(detalle?.cobros ?? []).filter(c => c.metodo_pago === 'saldo_favor')
         .map(c => ({ fecha: c.fecha, concepto: 'Usado como pago', folio: c.referencia ?? null, monto: -(Number(c.monto) || 0) })),
     ].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
-    const reembolsos = (detalle?.excedentes ?? []).filter(e => e.tipo === 'reembolso');
+    const reembolsos = [
+      ...(detalle?.excedentes ?? []).filter(e => e.tipo === 'reembolso')
+        .map(e => ({ id: e.id, created_at: e.created_at, motivo: ORIGEN_EXCEDENTE[e.origen], folio: e.ventas?.folio ?? null, turno_id: e.turno_id, monto: Number(e.monto) })),
+      ...(detalle?.dineroDevoluciones ?? [])
+        .map(d => ({ id: d.id, created_at: d.created_at, motivo: 'Devolución de producto', folio: d.folio, turno_id: d.turno_id, monto: d.monto })),
+    ].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
 
     return (
       <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-full">
@@ -370,8 +383,8 @@ export default function EstadoCuentaClientePage() {
                     {reembolsos.map(r => (
                       <TableRow key={r.id}>
                         <TableCell className="text-[12px]">{fmtDate(r.created_at)}</TableCell>
-                        <TableCell className="text-[12px]">{ORIGEN_EXCEDENTE[r.origen]}</TableCell>
-                        <TableCell className="font-mono text-[11px]">{r.ventas?.folio ?? '—'}</TableCell>
+                        <TableCell className="text-[12px]">{r.motivo}</TableCell>
+                        <TableCell className="font-mono text-[11px]">{r.folio ?? '—'}</TableCell>
                         <TableCell className="text-[11px] text-muted-foreground">{r.turno_id ? 'Retiro de turno' : 'Sin turno'}</TableCell>
                         <TableCell className="text-right text-[12px] font-semibold tabular-nums text-destructive">{fmt(Number(r.monto))}</TableCell>
                       </TableRow>

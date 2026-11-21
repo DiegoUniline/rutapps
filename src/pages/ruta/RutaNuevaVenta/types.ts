@@ -50,7 +50,8 @@ export interface LoteAsignacionCart {
   cantidad: number;
 }
 
-export type AccionDevolucion = 'reposicion' | 'nota_credito' | 'devolucion_dinero' | 'descuento_venta';
+// D-049: «Descuento en venta» ya no existe; «aplicar_venta» = nota de crédito aplicada a esta venta.
+export type AccionDevolucion = 'reposicion' | 'nota_credito' | 'devolucion_dinero' | 'aplicar_venta';
 export type MotivoDevolucion = 'no_vendido' | 'vencido' | 'danado' | 'cambio' | 'caducado' | 'error_pedido' | 'otro';
 
 export interface DevolucionItem {
@@ -60,7 +61,12 @@ export interface DevolucionItem {
   cantidad: number;
   motivo: MotivoDevolucion;
   accion: AccionDevolucion;
+  /** Precio de la lista de precios del cliente CON impuestos (D-049). */
   precio_unitario: number;
+  /** Destino obligatorio: vendible en camión o merma en camión (el motivo solo lo sugiere). */
+  destino: 'vendible' | 'merma';
+  /** El vendedor lo cambió a mano: cambiar el motivo ya no lo re-sugiere. */
+  destinoElegido?: boolean;
   reemplazo_producto_id?: string;
   reemplazo_nombre?: string;
 }
@@ -107,8 +113,8 @@ export const MOTIVOS: { value: MotivoDevolucion; label: string }[] = [
 export type DescuentoExtraTipo = 'monto' | 'porcentaje';
 
 export const ACCIONES: { value: AccionDevolucion; label: string; icon: string; desc: string }[] = [
-  { value: 'reposicion', label: 'Reposición', icon: '🔄', desc: 'Reponer con otro producto sin cargo' },
+  { value: 'reposicion', label: 'Reposición', icon: '🔄', desc: 'Se le entrega producto (sale del camión), sin dinero' },
   { value: 'nota_credito', label: 'Nota de crédito', icon: '📝', desc: 'Saldo a favor del cliente' },
   { value: 'devolucion_dinero', label: 'Devolver dinero', icon: '💰', desc: 'Reembolso directo al cliente' },
-  { value: 'descuento_venta', label: 'Descuento en venta', icon: '🏷️', desc: 'Aplicar valor como descuento' },
+  { value: 'aplicar_venta', label: 'Aplicar a la venta', icon: '🧾', desc: 'Nota de crédito que paga esta venta' },
 ];

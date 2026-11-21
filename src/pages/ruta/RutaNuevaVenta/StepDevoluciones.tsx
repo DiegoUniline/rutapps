@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Plus, Minus, Trash2, ChevronRight, Check, X } from 'lucide-react';
 import type { DevolucionItem, AccionDevolucion, MotivoDevolucion } from './types';
+import { DESTINO_DEVOLUCION_LABELS, montoDevolucionLinea, resumenDevolucion, type DestinoDevolucion } from '@/lib/devolucionGuardado';
 import { MOTIVOS, ACCIONES } from './types';
 import { leerCantidad } from '@/lib/ventaPresentacion';
 import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
@@ -15,6 +16,9 @@ interface Props {
   updateDevQty: (pid: string, qty: number) => void;
   updateDevMotivo: (pid: string, motivo: DevolucionItem['motivo']) => void;
   updateDevAccion: (pid: string, accion: AccionDevolucion) => void;
+  updateDevDestino: (pid: string, destino: DestinoDevolucion) => void;
+  /** «Aplicar a la venta» solo existe dentro de una venta inmediata. */
+  permitirAplicarVenta?: boolean;
   batchUpdateDevDefaults: (motivo: DevolucionItem['motivo'], accion: AccionDevolucion) => void;
   showReemplazoFor: string | null;
   setShowReemplazoFor: (v: string | null) => void;
@@ -127,11 +131,13 @@ function MotivoBadge({ motivo }: { motivo: MotivoDevolucion }) {
 export function StepDevoluciones(props: Props) {
   const {
     clienteNombre, searchDevProducto, setSearchDevProducto, filteredDevProductos,
-    devoluciones, addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults,
+    devoluciones, addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, updateDevDestino, batchUpdateDevDefaults,
     showReemplazoFor, setShowReemplazoFor, searchReemplazo, setSearchReemplazo,
     filteredReemplazoProductos, setReemplazo, processDevolucionesAndGoToProductos, fmt,
-    soloDevolucion, saveSoloDevolucion, saving,
+    soloDevolucion, saveSoloDevolucion, saving, permitirAplicarVenta,
   } = props;
+  const accionesDisponibles = ACCIONES.filter(a => a.value !== 'aplicar_venta' || (permitirAplicarVenta && !soloDevolucion));
+  const resumen = resumenDevolucion(devoluciones);
 
   // Global defaults
   const [defaultMotivo, setDefaultMotivo] = useState<MotivoDevolucion>('no_vendido');
@@ -357,6 +363,25 @@ export function StepDevoluciones(props: Props) {
                 )}
               </div>
 
+              {/* Destino obligatorio (D-049): el motivo solo lo sugiere. */}
+              {qty > 0 && dev && (
+                <div className="px-3 pb-1.5 grid grid-cols-2 gap-1.5" role="radiogroup" aria-label={`Destino de ${p.nombre}`}>
+                  {(['vendible', 'merma'] as DestinoDevolucion[]).map(op => {
+                    const activo = dev.destino === op;
+                    const tono = op === 'vendible'
+                      ? (activo ? 'bg-success/10 text-success ring-1.5 ring-success/40' : 'bg-accent/50 text-muted-foreground')
+                      : (activo ? 'bg-warning/10 text-warning ring-1.5 ring-warning/40' : 'bg-accent/50 text-muted-foreground');
+                    return (
+                      <button key={op} type="button" role="radio" aria-checked={activo}
+                        onClick={() => updateDevDestino(p.id, op)}
+                        className={`rounded-md px-2 py-1.5 text-[11px] font-semibold active:scale-[0.97] transition-all ${tono}`}>
+                        {activo ? '● ' : '○ '}{DESTINO_DEVOLUCION_LABELS[op]}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Expanded per-item override */}
               {qty > 0 && isExpanded && dev && (
                 <div className="px-3 pb-2 pt-1 border-t border-border/30">
@@ -394,9 +419,9 @@ export function StepDevoluciones(props: Props) {
                     </button>
                   )}
 
-                  {(dev.accion === 'nota_credito' || dev.accion === 'descuento_venta' || dev.accion === 'devolucion_dinero') && (
+                  {(dev.accion === 'nota_credito' || dev.accion === 'aplicar_venta' || dev.accion === 'devolucion_dinero') && (
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      Valor: <span className="font-semibold text-foreground">${fmt(dev.precio_unitario * dev.cantidad)}</span>
+                      Valor (lista del cliente, con impuestos): <span className="font-semibold text-foreground">${fmt(montoDevolucionLinea(dev.precio_unitario, dev.cantidad, dev.accion))}</span>
                     </p>
                   )}
                 </div>
@@ -421,7 +446,7 @@ export function StepDevoluciones(props: Props) {
       {sheetType === 'accion' && (
         <PickerSheet
           title="Acción a tomar"
-          options={ACCIONES}
+          options={accionesDisponibles}
           value={sheetTarget === 'global' ? defaultAccion : (devoluciones.find(d => d.producto_id === sheetTarget)?.accion ?? defaultAccion)}
           onSelect={handleSheetSelect}
           onClose={() => setSheetType(null)}
@@ -465,6 +490,13 @@ export function StepDevoluciones(props: Props) {
 
       {/* Bottom CTA */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
+        {(resumen.nota > 0 || resumen.notaAplicada > 0 || resumen.dinero > 0) && (
+          <div className="mb-1.5 flex flex-wrap gap-x-3 gap-y-0.5 justify-center text-[10.5px] text-muted-foreground">
+            {resumen.nota > 0 && <span>Nota de crédito <b className="text-foreground">${fmt(resumen.nota)}</b></span>}
+            {resumen.notaAplicada > 0 && <span>Aplicada a la venta <b className="text-foreground">${fmt(resumen.notaAplicada)}</b></span>}
+            {resumen.dinero > 0 && <span>Dinero a devolver <b className="text-foreground">${fmt(resumen.dinero)}</b></span>}
+          </div>
+        )}
         {soloDevolucion ? (
           <button
             onClick={() => saveSoloDevolucion?.()}

@@ -85,7 +85,10 @@ export const MOTIVO_DEVOLUCION_LABELS: Record<string, string> = {
 export const ACCION_DEVOLUCION_LABELS: Record<string, string> = {
   reposicion: 'Reposicion', nota_credito: 'Nota credito',
   devolucion_dinero: 'Dev. dinero', descuento_venta: 'Desc. venta',
+  aplicar_venta: 'Nota aplicada',
 };
+/** D-049: destino del producto devuelto. */
+export const DESTINO_DEVOLUCION_TICKET: Record<string, string> = { vendible: 'Vendible', merma: 'Merma' };
 
 /* ─── Montos ─── */
 
@@ -438,7 +441,8 @@ export function construirModeloTicket(data: TicketData, campos?: TicketCampos | 
       const accion = ACCION_DEVOLUCION_LABELS[d.accion] || d.accion;
       const motivo = MOTIVO_DEVOLUCION_LABELS[d.motivo] || d.motivo;
       c.push({ tipo: 'texto', texto: `${d.cantidad}x ${d.nombre}`, modo: 'recortar' });
-      c.push({ tipo: 'par', izq: `  ${motivo}`, der: (d.monto ?? 0) > 0 ? `${accion} ${fmt(d.monto!)}` : accion });
+      const destino = d.destino ? DESTINO_DEVOLUCION_TICKET[d.destino] ?? d.destino : '';
+      c.push({ tipo: 'par', izq: `  ${motivo}${destino ? ` · ${destino}` : ''}`, der: (d.monto ?? 0) > 0 ? `${accion} ${fmt(d.monto!)}` : accion });
     }
   }
 

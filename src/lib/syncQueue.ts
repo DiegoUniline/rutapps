@@ -21,6 +21,15 @@ type QueuedOperation = {
   keyField?: string;
 };
 
+/**
+ * Valor de la clave de una operación. Admite ruta con punto para RPC cuyos argumentos
+ * anidan el id (p. ej. `p_devolucion.id` en `rpc:registrar_devolucion`).
+ */
+export function valorClave(data: any, keyField: string): any {
+  if (!keyField.includes('.')) return data?.[keyField];
+  return keyField.split('.').reduce((v, k) => (v == null ? undefined : v[k]), data);
+}
+
 // Exponential backoff delay
 function getRetryDelay(retries: number): number {
   return Math.min(BASE_DELAY_MS * Math.pow(2, retries), 30000); // max 30s
@@ -68,7 +77,7 @@ export async function queueOperations(operations: QueuedOperation[]) {
       const isMany = op.operation === 'insert-many';
       // Para lotes, la clave de dedupe es el grupo (p.ej. venta_id) tomado de la
       // primera fila; así re-guardar la misma venta reemplaza su lote de líneas.
-      const keyValue = isMany ? (Array.isArray(op.data) && op.data.length ? op.data[0]?.[keyField] : undefined) : op.data[keyField];
+      const keyValue = isMany ? (Array.isArray(op.data) && op.data.length ? op.data[0]?.[keyField] : undefined) : valorClave(op.data, keyField);
       const localTable = getOfflineTable(op.table);
 
       if (localTable) {
@@ -166,6 +175,9 @@ const TABLE_PRIORITY: Record<string, number> = {
   stock_almacen: 30, movimientos_inventario: 30,
   // Edición completa de una venta ya en el servidor: después de cobros, antes de aplicaciones.
   'rpc:editar_venta': 22,
+  // Devolución completa (D-049): después de la venta, sus renglones, cobros y aplicaciones
+  // (la nota aplicada a la venta se topa al saldo que deja el pago de contado).
+  'rpc:registrar_devolucion': 26,
 };
 
 function priorityOf(table: string): number {

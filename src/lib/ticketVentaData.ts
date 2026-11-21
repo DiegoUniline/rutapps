@@ -43,7 +43,7 @@ export interface TicketVentaDatos {
   /** Descuento total del encabezado. Si no viene: devolución aplicada + promociones. */
   descuento?: number;
   descuentoDevolucion?: number;
-  devoluciones?: { nombre: string; cantidad: number; motivo: string; accion: string; monto: number }[];
+  devoluciones?: { nombre: string; cantidad: number; motivo: string; accion: string; monto: number; destino?: string | null }[];
   total: number;
   condicionPago: string;
   metodoPago?: string;

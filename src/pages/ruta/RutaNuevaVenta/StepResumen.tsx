@@ -12,6 +12,8 @@ interface Props {
   chargedItems: CartItem[];
   promoResults: PromoResult[];
   totals: { subtotal: number; iva: number; ieps: number; total: number; descuento: number; descuentoDevolucion?: number; descuentoExtra?: number };
+  /** D-049: nota de crédito de la devolución aplicada a esta venta. */
+  notaAplicadaVenta?: number;
   saldoPendienteTotal: number;
   setStep: (s: any) => void;
   goToPayment: () => void;
@@ -31,7 +33,7 @@ interface Props {
 
 export function StepResumen(props: Props) {
   const {
-    clienteNombre, devoluciones, cambioItems, chargedItems, promoResults, totals,
+    clienteNombre, devoluciones, cambioItems, chargedItems, promoResults, totals, notaAplicadaVenta,
     saldoPendienteTotal, setStep, goToPayment, navigate, cart, ticketLineas, fmt,
     canApplyDiscount, descuentoExtraTipo, setDescuentoExtraTipo,
     descuentoExtraValor, setDescuentoExtraValor,
@@ -58,8 +60,11 @@ export function StepResumen(props: Props) {
               <div key={d.producto_id} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0 text-[11px]">
                 <span className="text-foreground truncate flex-1 mr-2">{d.cantidad}x {d.nombre}</span>
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${d.accion === 'reposicion' ? 'bg-primary/10 text-primary' : d.accion === 'descuento_venta' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' : 'bg-accent text-muted-foreground'}`}>
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${d.accion === 'reposicion' ? 'bg-primary/10 text-primary' : 'bg-accent text-muted-foreground'}`}>
                     {ACCIONES.find(a => a.value === d.accion)?.label}
+                  </span>
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${d.destino === 'merma' ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}`}>
+                    {d.destino === 'merma' ? 'Merma' : 'Vendible'}
                   </span>
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-accent text-muted-foreground">
                     {MOTIVOS.find(m => m.value === d.motivo)?.label}
@@ -162,10 +167,10 @@ export function StepResumen(props: Props) {
             <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Subtotal</span><span className="font-medium text-foreground tabular-nums">{fmt(totals.subtotal)}</span></div>
             {totals.iva > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">IVA</span><span className="font-medium text-foreground tabular-nums">{fmt(totals.iva)}</span></div>}
             {((totals.descuento - (totals.descuentoDevolucion ?? 0) - descExtraAmt)) > 0 && <div className="flex justify-between text-[12px]"><span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Promociones</span><span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">{fmt(totals.descuento - (totals.descuentoDevolucion ?? 0) - descExtraAmt)}</span></div>}
-            {(totals.descuentoDevolucion ?? 0) > 0 && <div className="flex justify-between text-[12px]"><span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">🏷️ Desc. devolución</span><span className="font-medium text-amber-600 dark:text-amber-400 tabular-nums">{fmt(totals.descuentoDevolucion!)}</span></div>}
             {descExtraAmt > 0 && <div className="flex justify-between text-[12px]"><span className="text-rose-600 dark:text-rose-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Descuento {descuentoExtraTipo === 'porcentaje' ? `(${descuentoExtraValor}%)` : ''}</span><span className="font-medium text-rose-600 dark:text-rose-400 tabular-nums">-{fmt(descExtraAmt)}</span></div>}
           </div>
           <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60"><span className="text-[13px] font-semibold text-foreground">Total</span><span className="text-[18px] font-bold text-primary tabular-nums">{fmt(totals.total)}</span></div>
+          {(notaAplicadaVenta ?? 0) > 0 && <div className="flex justify-between text-[12px] mt-1"><span className="text-muted-foreground">🧾 Nota de crédito aplicada (devolución)</span><span className="font-medium text-foreground tabular-nums">-{fmt(Math.min(notaAplicadaVenta ?? 0, totals.total))}</span></div>}
         </section>
         {saldoPendienteTotal > 0 && (
           <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2.5">

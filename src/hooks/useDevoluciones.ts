@@ -1,70 +1,40 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { todayInTimezone } from '@/lib/utils';
-import { queueOperations } from '@/lib/syncQueue';
-import { deterministicUuid } from '@/lib/deterministicId';
-import { getOfflineTable } from '@/lib/offlineDb';
 import { toast } from 'sonner';
-import { accionDevolucionODefault, esCantidadDevolucionValida, registrarDevolucionRpc } from '@/lib/devolucionGuardado';
+import { supabase } from '@/lib/supabase';
+import type { TarifaLineaRule } from '@/lib/priceResolver';
+import { fetchAllPages } from '@/lib/supabasePaginate';
+import { precioDevolucionCliente, type ProductoPrecioDevolucion } from '@/lib/devolucionPrecio';
+import { esCantidadDevolucionValida, registrarDevolucionRpc, encolarDevolucion, lineasParaRpc, cancelarDevolucionRpc, type DevolucionLineaF1 } from '@/lib/devolucionGuardado';
 
 export function useSaveDevolucion() {
   const qc = useQueryClient();
-  const { empresa, profile } = useAuth();
+  const { empresa } = useAuth();
   return useMutation({
     mutationFn: async ({ devolucion, lineas }: {
-      devolucion: { vendedor_id?: string; cliente_id?: string; carga_id?: string; venta_id?: string; almacen_destino_id?: string; reembolso_efectivo?: boolean; reembolso_metodo?: string; tipo: string; fecha?: string; notas?: string; user_id: string };
-      lineas: { producto_id: string; cantidad: number; motivo: string; notas?: string; accion?: string; monto_credito?: number }[];
+      devolucion: {
+        id?: string; vendedor_id?: string; cliente_id?: string; carga_id?: string; venta_id?: string;
+        almacen_destino_id?: string; reembolso_metodo?: string; registrar_gasto?: boolean;
+        tipo: string; fecha?: string; notas?: string; reemplaza_id?: string; motivo_edicion?: string;
+      };
+      lineas: DevolucionLineaF1[];
     }) => {
       if (!empresa?.id) throw new Error('Sin empresa');
       if (lineas.length === 0) throw new Error('Agrega al menos un producto');
-      const malaCantidad = lineas.find(l => !esCantidadDevolucionValida(l.cantidad));
-      if (malaCantidad) throw new Error('La cantidad a devolver debe ser mayor a cero');
-      const fecha = devolucion.fecha ?? todayInTimezone(empresa.zona_horaria);
-      // H1: accion es NOT NULL en la BD. Sin elección de dinero (pantalla Devolución,
-      // «Al almacén» / «En tienda») va 'reposicion' — el default de la columna, que no
-      // genera nota de crédito ni devolución de dinero. Antes se mandaba null y el
-      // renglón se rechazaba: encabezado huérfano y cola offline atorada.
-      const lineasOk = lineas.map(l => ({ ...l, accion: accionDevolucionODefault(l.accion) }));
-
-      // OFFLINE-SAFE: sin conexión encola todo (antes fallaba y no guardaba
-      // nada). El reingreso a inventario lo hace el trigger de BD al sincronizar
-      // la línea. carga_lineas se ajusta con la caché local.
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        // Id DETERMINÍSTICO por contenido: reenviar la MISMA devolución (doble-
-        // toque, resync) coincide en id → el upsert no la duplica.
-        const firmaDev = lineas.map(l => `${l.producto_id}:${l.cantidad}:${l.accion ?? ''}:${l.motivo}`).sort().join(',');
-        const devId = await deterministicUuid('devhook', empresa.id, devolucion.cliente_id ?? '', devolucion.carga_id ?? '', devolucion.venta_id ?? '', fecha, firmaDev);
-        const ops: any[] = [
-          { table: 'devoluciones', operation: 'insert', data: { id: devId, ...devolucion, empresa_id: empresa.id, tipo: devolucion.tipo, fecha } },
-          ...await Promise.all(lineasOk.map(async (l, i) => ({
-            table: 'devolucion_lineas',
-            operation: 'insert' as const,
-            data: { id: await deterministicUuid('devlinea', devId, i), devolucion_id: devId, producto_id: l.producto_id, cantidad: l.cantidad, motivo: l.motivo, notas: l.notas || null, accion: l.accion, monto_credito: l.monto_credito ?? 0 },
-          }))),
-        ];
-        if (devolucion.carga_id && lineas.length > 0) {
-          const clTable = getOfflineTable('carga_lineas');
-          if (clTable) {
-            const allCl = (await clTable.toArray().catch(() => [])) as any[];
-            for (const l of lineas) {
-              const cl = allCl.find(c => c.carga_id === devolucion.carga_id && c.producto_id === l.producto_id);
-              if (cl) ops.push({ table: 'carga_lineas', operation: 'update', data: { id: cl.id, cantidad_devuelta: (cl.cantidad_devuelta ?? 0) + (l.cantidad ?? 0) } });
-            }
-          }
-        }
-        await queueOperations(ops);
-        return { id: devId };
-      }
-
-      // En línea: UNA transacción en la BD (registrar_devolucion) — encabezado,
-      // renglones y cantidad devuelta de la carga; si algo falla no queda nada a medias.
+      if (lineas.some(l => !esCantidadDevolucionValida(l.cantidad))) throw new Error('La cantidad a devolver debe ser mayor a cero');
+      if (lineas.some(l => l.destino !== 'vendible' && l.destino !== 'merma')) throw new Error('Elige el destino (vendible o merma) de cada producto');
       // Fecha en zona horaria de la empresa (no CURRENT_DATE UTC del server).
-      // El reingreso al inventario lo siguen aplicando los triggers de devolucion_lineas.
-      const devId = await registrarDevolucionRpc(
-        { ...devolucion, empresa_id: empresa.id, fecha },
-        lineasOk.map(l => ({ producto_id: l.producto_id, cantidad: l.cantidad, motivo: l.motivo, notas: l.notas || null, accion: l.accion, monto_credito: l.monto_credito ?? 0 })),
-      );
-      return { id: devId };
+      const fecha = devolucion.fecha ?? todayInTimezone(empresa.zona_horaria);
+      // Id estable: reintentar (doble toque, cola) no duplica la devolución.
+      const payload = { ...devolucion, id: devolucion.id ?? crypto.randomUUID(), empresa_id: empresa.id, fecha };
+
+      // D-049: una sola vía. En línea, la RPC transaccional; sin conexión, UNA operación
+      // idempotente en la cola (la misma RPC). Inventario, nota aplicada y caja: en la BD.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return { id: await encolarDevolucion(payload, lineas) };
+      }
+      return { id: await registrarDevolucionRpc(payload, lineasParaRpc(lineas)) };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['devoluciones'] });
@@ -76,9 +46,95 @@ export function useSaveDevolucion() {
       qc.invalidateQueries({ queryKey: ['cargas'] });
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['stock_almacen'] });
+      qc.invalidateQueries({ queryKey: ['saldo-favor'] });
+      qc.invalidateQueries({ queryKey: ['cliente-estado-cuenta'] });
     },
     onError: (error: any) => {
       toast.error(error?.message || 'Error inesperado');
     },
   });
+}
+
+/** F2: cancelar una devolución con motivo (revierte inventario, nota, cobro aplicado, caja y gasto). */
+export function useCancelarDevolucion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, motivo }: { id: string; motivo: string }) => {
+      if (!motivo.trim()) throw new Error('Escribe el motivo de la cancelación');
+      await cancelarDevolucionRpc(id, motivo.trim());
+    },
+    onSuccess: () => {
+      for (const k of ['devoluciones', 'venta-devoluciones', 'venta-pagos', 'venta', 'productos', 'stock_almacen', 'saldo-favor', 'cliente-estado-cuenta', 'gastos']) {
+        qc.invalidateQueries({ queryKey: [k] });
+      }
+      toast.success('Devolución cancelada');
+    },
+    onError: (error: Error) => {
+      toast.error(error?.message || 'No se pudo cancelar la devolución');
+    },
+  });
+}
+
+/**
+ * «Configurar mermas» (devolucion_motivo_config): qué motivos sugieren merma. Solo SUGIERE
+ * el destino; sin conexión o sin configuración se usa el default (dañado/vencido/caducado).
+ */
+export function useMermaMotivoConfig() {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['devolucion-motivo-config', empresa?.id],
+    enabled: !!empresa?.id && (typeof navigator === 'undefined' || navigator.onLine),
+    staleTime: 30 * 60 * 1000,
+    queryFn: async (): Promise<Record<string, boolean>> => {
+      const { data, error } = await supabase
+        .from('devolucion_motivo_config')
+        .select('motivo, a_mermas')
+        .eq('empresa_id', empresa!.id);
+      if (error) throw error;
+      const map: Record<string, boolean> = {};
+      for (const r of (data ?? []) as { motivo: string; a_mermas: boolean | null }[]) map[r.motivo] = !!r.a_mermas;
+      return map;
+    },
+  });
+}
+
+const SELECT_REGLAS = 'aplica_a, producto_ids, clasificacion_ids, grupos, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id';
+
+/**
+ * Escritorio: precio de devolución = lista de precios del cliente (D-049). Tarifa del
+ * cliente o, si no tiene, la tarifa general; lista = clientes.lista_precio_id (mismo
+ * criterio que la venta de ruta).
+ */
+export function usePrecioDevolucionCliente(clienteId?: string | null) {
+  const { empresa } = useAuth();
+  const { data, isLoading } = useQuery({
+    queryKey: ['precio-devolucion-cliente', empresa?.id, clienteId],
+    enabled: !!empresa?.id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      let tarifaId: string | null = null;
+      let listaId: string | null = null;
+      if (clienteId) {
+        const { data: cli, error } = await supabase.from('clientes').select('tarifa_id, lista_precio_id').eq('id', clienteId).maybeSingle();
+        if (error) throw error;
+        tarifaId = (cli as { tarifa_id: string | null } | null)?.tarifa_id ?? null;
+        listaId = (cli as { lista_precio_id: string | null } | null)?.lista_precio_id ?? null;
+      }
+      if (!tarifaId) {
+        const { data: gen, error } = await supabase.from('tarifas').select('id').eq('empresa_id', empresa!.id).eq('tipo', 'general').eq('activa', true).limit(1).maybeSingle();
+        if (error) throw error;
+        tarifaId = (gen as { id: string } | null)?.id ?? null;
+      }
+      let rules: TarifaLineaRule[] = [];
+      if (tarifaId) {
+        const tid = tarifaId;
+        rules = await fetchAllPages<TarifaLineaRule>((from, to) => supabase.from('tarifa_lineas')
+          .select(SELECT_REGLAS).eq('tarifa_id', tid).order('created_at').order('id').range(from, to));
+      }
+      return { rules, listaId };
+    },
+  });
+  const precio = (producto: ProductoPrecioDevolucion) =>
+    precioDevolucionCliente(data?.rules ?? [], producto, data?.listaId ?? null);
+  return { precio, cargando: isLoading };
 }

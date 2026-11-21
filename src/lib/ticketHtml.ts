@@ -76,6 +76,8 @@ export interface TicketDevolucion {
   motivo: string;
   accion: string;
   monto?: number;
+  /** D-049: vendible | merma (renglones anteriores a F1 no lo traen). */
+  destino?: string | null;
 }
 
 export interface TicketData {

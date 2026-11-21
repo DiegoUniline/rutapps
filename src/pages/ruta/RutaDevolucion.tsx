@@ -1,432 +1,224 @@
 import { RutaOperacionGate } from '@/components/ruta/RutaOperacionGate';
-import { clienteCoincide } from '@/lib/buscarCliente';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Plus, Minus, Trash2, RotateCcw, ChevronRight } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Plus, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCargaActiva } from '@/hooks/useCargas';
-import { useSaveDevolucion } from '@/hooks/useDevoluciones';
+import { useCancelarDevolucion } from '@/hooks/useDevoluciones';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { usePermisos } from '@/hooks/usePermisos';
 import MobileNoAccess from '@/components/ruta/MobileNoAccess';
-import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
 import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { fmtDate } from '@/lib/utils';
-import { leerCantidad } from '@/lib/ventaPresentacion';
-import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
-import { esCantidadDevolucionValida } from '@/lib/devolucionGuardado';
+import { DESTINO_DEVOLUCION_CORTO } from '@/lib/devolucionGuardado';
+import { ACCION_DEVOLUCION_LABELS, MOTIVO_DEVOLUCION_LABELS } from '@/lib/ticketModelo';
 
-interface DevItem {
+interface DevolucionRow {
+  id: string;
+  tipo: string;
+  fecha: string;
+  cliente_id: string | null;
+  cancelado_at?: string | null;
+  cancelado_motivo?: string | null;
+  _offline?: boolean;
+}
+interface LineaRow {
+  id: string;
+  devolucion_id: string;
   producto_id: string;
-  codigo: string;
-  nombre: string;
   cantidad: number;
-  motivo: 'no_vendido' | 'vencido' | 'danado' | 'cambio' | 'otro';
-  max: number;
-  granel?: boolean;
+  motivo: string;
+  accion: string;
+  monto_credito: number | null;
+  destino?: string | null;
+  aplica_venta?: boolean | null;
 }
 
-const MOTIVOS = [
-  { value: 'no_vendido', label: 'No vendido' },
-  { value: 'vencido', label: 'Vencido' },
-  { value: 'danado', label: 'Dañado' },
-  { value: 'cambio', label: 'Cambio' },
-  { value: 'otro', label: 'Otro' },
-];
-
-type Tipo = 'almacen' | 'tienda';
-type Step = 'tipo' | 'cliente' | 'items' | 'confirm';
-
+/**
+ * Devoluciones de ruta (D-049): ya no existe «Al almacén» (lo que sobra regresa con la
+ * descarga de la liquidación). «Nueva devolución» abre el flujo único con cliente
+ * (destino por renglón, precio de lista, acción de dinero). Aquí: historial, detalle y
+ * cancelar (F2).
+ */
 function RutaDevolucionInner() {
   const navigate = useNavigate();
-  const { user, profile, empresa } = useAuth();
+  const { profile, empresa } = useAuth();
   const { hasPermisoMovil } = usePermisos();
-  const [tipo, setTipo] = useState<Tipo>('almacen');
-  const [items, setItems] = useState<DevItem[]>([]);
-  const [keypadItem, setKeypadItem] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number } | null>(null);
-  const [notas, setNotas] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [clienteId, setClienteId] = useState<string | null>(null);
-  const [clienteNombre, setClienteNombre] = useState('');
-  const [searchCliente, setSearchCliente] = useState('');
-  const [searchProducto, setSearchProducto] = useState('');
-  const [step, setStep] = useState<Step>('tipo');
+  const { fmt } = useCurrency();
   const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
+  const cancelar = useCancelarDevolucion();
+  const [detalleId, setDetalleId] = useState<string | null>(null);
+  const [motivoCancel, setMotivoCancel] = useState('');
+  const [pidiendoMotivo, setPidiendoMotivo] = useState(false);
 
-  const saveDevolucion = useSaveDevolucion();
+  const vendedorId = profile?.id;
 
-  const vendedorId = profile?.id || profile?.id;
-  const { data: carga } = useCargaActiva(vendedorId);
-
-  const { data: clientes } = useOfflineQuery('clientes', {
-    empresa_id: empresa?.id,
-    status: 'activo',
-  }, { enabled: !!empresa?.id, orderBy: 'nombre' });
-
+  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const { data: historial } = useOfflineQuery('devoluciones', {
     empresa_id: empresa?.id,
     vendedor_id: vendedorId,
   }, { enabled: !!empresa?.id && !!vendedorId, orderBy: 'created_at', ascending: false });
+  const { data: lineas } = useOfflineQuery('devolucion_lineas',
+    detalleId ? { devolucion_id: detalleId } : undefined,
+    { enabled: !!detalleId });
 
-  const clienteMap = useMemo(() => new Map((clientes ?? []).map((c: any) => [c.id, c.nombre])), [clientes]);
+  const clienteMap = useMemo(() => new Map(((clientes ?? []) as { id: string; nombre: string }[]).map(c => [c.id, c.nombre])), [clientes]);
+  const productoMap = useMemo(() => new Map(((productos ?? []) as { id: string; nombre: string }[]).map(p => [p.id, p.nombre])), [productos]);
   const filteredHistorial = useMemo(
-    () => filterByDate((historial ?? []) as any[], 'fecha'),
-    [historial, filterByDate]
+    () => filterByDate((historial ?? []) as unknown as DevolucionRow[], 'fecha'),
+    [historial, filterByDate],
   );
-
-  const productosDisponibles = useMemo(() => {
-    if (!carga?.carga_lineas) return [];
-    return (carga.carga_lineas as any[]).map(l => {
-      const enMano = (l.cantidad_cargada ?? 0) - (l.cantidad_devuelta ?? 0) - (l.cantidad_vendida ?? 0);
-      return {
-        producto_id: l.producto_id,
-        codigo: l.productos?.codigo ?? '',
-        nombre: l.productos?.nombre ?? '',
-        max: Math.max(0, enMano),
-        granel: !!l.productos?.es_granel,
-      };
-    }).filter(p => p.max > 0);
-  }, [carga]);
-
-  const filteredProductos = useMemo(() => {
-    if (!searchProducto.trim()) return productosDisponibles;
-    const q = searchProducto.toLowerCase();
-    return productosDisponibles.filter(p =>
-      p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q)
-    );
-  }, [productosDisponibles, searchProducto]);
-
-  const filteredClientes = clientes?.filter(c => clienteCoincide(c, searchCliente));
-
-  const getItem = (pid: string) => items.find(i => i.producto_id === pid);
-
-  const addItem = (p: { producto_id: string; codigo: string; nombre: string; max: number; granel?: boolean }) => {
-    if (getItem(p.producto_id)) return;
-    // A granel puede quedar menos de 1 kg en mano: se propone lo que haya.
-    setItems(prev => [...prev, { ...p, cantidad: p.granel ? Math.min(1, p.max) : 1, motivo: 'no_vendido' }]);
-  };
-
-  const removeItem = (pid: string) => setItems(prev => prev.filter(i => i.producto_id !== pid));
-
-  const updateQty = (pid: string, delta: number) => {
-    setItems(prev => prev.map(item => {
-      if (item.producto_id !== pid) return item;
-      const min = item.granel ? Math.min(1, item.max) : 1;
-      const newQty = Math.round(Math.min(Math.max(min, item.cantidad + delta), item.max) * 1000) / 1000;
-      return { ...item, cantidad: newQty };
-    }));
-  };
-
-  const setQty = (pid: string, val: number) => {
-    if (!Number.isFinite(val)) return; // texto inválido: se conserva la cantidad anterior
-    setItems(prev => prev.map(item => {
-      if (item.producto_id !== pid) return item;
-      // A granel acepta fracciones (antes parseInt + mínimo 1: 0.5 kg no se podía devolver).
-      const min = item.granel ? 0.001 : 1;
-      return { ...item, cantidad: Math.min(Math.max(min, val), item.max) };
-    }));
-  };
-
-  const updateMotivo = (pid: string, motivo: DevItem['motivo']) => {
-    setItems(prev => prev.map(item => item.producto_id === pid ? { ...item, motivo } : item));
-  };
-
-  const totalItems = items.reduce((s, i) => s + i.cantidad, 0);
-
-  const handleSave = async () => {
-    if (items.length === 0) { toast.error('Agrega productos'); return; }
-    if (tipo === 'tienda' && !clienteId) { toast.error('Selecciona un cliente'); return; }
-    if (items.some(i => !esCantidadDevolucionValida(i.cantidad))) { toast.error('La cantidad a devolver debe ser mayor a cero'); return; }
-    setSaving(true);
-    try {
-      await saveDevolucion.mutateAsync({
-        devolucion: {
-          vendedor_id: vendedorId,
-          cliente_id: tipo === 'tienda' ? clienteId! : undefined,
-          carga_id: carga?.id,
-          tipo,
-          notas: notas || undefined,
-          user_id: user!.id,
-        },
-        lineas: items.map(i => ({
-          producto_id: i.producto_id,
-          cantidad: i.cantidad,
-          motivo: i.motivo,
-        })),
-      });
-      toast.success('Devolución registrada');
-      navigate('/ruta');
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const goBack = () => {
-    if (step === 'tipo') navigate('/ruta');
-    else if (step === 'cliente') setStep('tipo');
-    else if (step === 'items') setStep(tipo === 'tienda' ? 'cliente' : 'tipo');
-    else setStep('items');
-  };
-
-  const { fmt } = useCurrency();
+  const detalle = useMemo(
+    () => ((historial ?? []) as unknown as DevolucionRow[]).find(d => d.id === detalleId) ?? null,
+    [historial, detalleId],
+  );
+  const detalleLineas = (lineas ?? []) as unknown as LineaRow[];
 
   if (!hasPermisoMovil('ruta.devoluciones')) {
     return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite registrar devoluciones." />;
   }
 
+  const cerrarDetalle = () => { setDetalleId(null); setPidiendoMotivo(false); setMotivoCancel(''); };
+  const confirmarCancelacion = async () => {
+    if (!detalle) return;
+    await cancelar.mutateAsync({ id: detalle.id, motivo: motivoCancel });
+    cerrarDetalle();
+  };
+  const online = typeof navigator === 'undefined' || navigator.onLine;
+
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border pt-[max(0px,env(safe-area-inset-top))]">
         <div className="flex items-center gap-2 px-3 h-12">
-          <button onClick={goBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent">
+          <button onClick={() => navigate('/ruta')} aria-label="Regresar" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent">
             <ArrowLeft className="h-[18px] w-[18px] text-foreground" />
           </button>
           <span className="text-[15px] font-semibold text-foreground flex-1 flex items-center gap-2">
-            <RotateCcw className="h-4 w-4 text-primary" /> Devolución
+            <RotateCcw className="h-4 w-4 text-primary" /> Devoluciones
           </span>
-          {items.length > 0 && (
-            <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-              {totalItems} uds
-            </span>
-          )}
         </div>
       </header>
 
-      {/* ─── STEP: Tipo + Historial ─── */}
-      {step === 'tipo' && (
-        <div className="flex-1 overflow-auto px-4 py-4 space-y-4">
-          <div className="space-y-2">
-            <h2 className="text-[15px] font-bold text-foreground">Nueva devolución</h2>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => { setTipo('almacen'); setStep('items'); }}
-                className="rounded-xl border-2 border-primary bg-primary/5 p-3 text-left active:scale-[0.98] transition-all"
-              >
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-1.5">
-                  <span className="text-lg">🏭</span>
-                </div>
-                <p className="text-[13px] font-bold text-foreground">Al almacén</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">No vendido</p>
-              </button>
-              <button
-                onClick={() => { setTipo('tienda'); setStep('cliente'); }}
-                className="rounded-xl border-2 border-border bg-card p-3 text-left active:scale-[0.98] transition-all hover:border-primary/40"
-              >
-                <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center mb-1.5">
-                  <span className="text-lg">🏪</span>
-                </div>
-                <p className="text-[13px] font-bold text-foreground">En tienda</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Con cliente</p>
-              </button>
-            </div>
+      <div className="flex-1 overflow-auto px-4 py-4 space-y-4">
+        <button
+          onClick={() => navigate('/ruta/ventas/nueva?solo=devolucion')}
+          className="w-full rounded-xl bg-primary text-primary-foreground p-3.5 text-left active:scale-[0.98] transition-all flex items-center gap-3"
+        >
+          <div className="w-9 h-9 rounded-lg bg-primary-foreground/15 flex items-center justify-center shrink-0">
+            <Plus className="h-5 w-5" />
           </div>
+          <div className="min-w-0">
+            <p className="text-[14px] font-bold">Nueva devolución</p>
+            <p className="text-[11px] opacity-85">Cliente · vendible o merma en camión · nota, reposición o dinero</p>
+          </div>
+        </button>
 
-          <div className="space-y-2">
-            <h3 className="text-[13px] font-bold text-foreground">Historial</h3>
-            <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
-            <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
-            <div className="space-y-1.5">
-              {filteredHistorial.length === 0 && (
-                <p className="text-center text-muted-foreground text-[12px] py-6">Sin devoluciones en el periodo</p>
-              )}
-              {filteredHistorial.map((d: any) => (
-                <div key={d.id} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
-                    <RotateCcw className="h-4 w-4 text-destructive" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12.5px] font-semibold text-foreground truncate">
-                      {d.tipo === 'tienda' ? (clienteMap.get(d.cliente_id) ?? 'Cliente') : 'Al almacén'}
-                    </p>
-                    <p className="text-[10.5px] text-muted-foreground">
-                      {fmtDate(d.fecha)} · {d.tipo === 'tienda' ? 'Tienda' : 'Almacén'}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── STEP: Cliente (solo tienda) ─── */}
-      {step === 'cliente' && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-3 pt-2.5 pb-1.5">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input type="text" placeholder="Buscar cliente por nombre o código..."
-                className="w-full bg-accent/60 rounded-lg pl-8 pr-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
-                value={searchCliente} onChange={e => setSearchCliente(e.target.value)} autoFocus />
-            </div>
-          </div>
-          <div className="flex-1 overflow-auto px-3 pb-4 space-y-[3px]">
-            {filteredClientes?.map(c => (
-              <button key={c.id}
-                onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setStep('items'); }}
-                className={`w-full rounded-lg px-3 py-2.5 flex items-center gap-2.5 active:scale-[0.98] transition-all text-left ${
-                  clienteId === c.id ? 'bg-primary/[0.08] ring-1.5 ring-primary/40' : 'bg-card hover:bg-accent/30'
-                }`}
-              >
-                <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
-                  clienteId === c.id ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'
-                }`}>
-                  <span className="text-[11px] font-bold">{c.nombre.charAt(0)}</span>
+        <div className="space-y-2">
+          <h3 className="text-[13px] font-bold text-foreground">Historial</h3>
+          <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+          <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+          <div className="space-y-1.5">
+            {filteredHistorial.length === 0 && (
+              <p className="text-center text-muted-foreground text-[12px] py-6">Sin devoluciones en el periodo</p>
+            )}
+            {filteredHistorial.map(d => (
+              <button key={d.id} onClick={() => setDetalleId(d.id)}
+                className="w-full text-left bg-card border border-border rounded-xl p-3 flex items-center gap-3 active:scale-[0.99] transition-all">
+                <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                  <RotateCcw className="h-4 w-4 text-destructive" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12.5px] font-medium text-foreground truncate">{c.nombre}</p>
-                  {c.codigo && <p className="text-[10.5px] text-muted-foreground">{c.codigo}</p>}
+                  <p className="text-[12.5px] font-semibold text-foreground truncate">
+                    {d.cliente_id ? (clienteMap.get(d.cliente_id) ?? 'Cliente') : 'Al almacén (anterior)'}
+                  </p>
+                  <p className="text-[10.5px] text-muted-foreground">
+                    {fmtDate(d.fecha)}{d._offline ? ' · por sincronizar' : ''}
+                  </p>
                 </div>
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                {d.cancelado_at && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">Cancelada</span>
+                )}
               </button>
             ))}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* ─── STEP: Items (product selection like ventas) ─── */}
-      {step === 'items' && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Context chips */}
-          <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
-            <div className="inline-flex items-center gap-1 bg-accent/60 rounded-md px-2 py-0.5">
-              <span className="text-[10px] text-muted-foreground">Tipo:</span>
-              <span className="text-[10.5px] font-semibold text-foreground">{tipo === 'almacen' ? 'Al almacén' : 'En tienda'}</span>
+      {detalle && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border pt-[max(0px,env(safe-area-inset-top))]">
+            <div className="flex items-center gap-2 px-3 h-12">
+              <button onClick={cerrarDetalle} aria-label="Cerrar" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent">
+                <X className="h-[18px] w-[18px] text-foreground" />
+              </button>
+              <span className="text-[15px] font-semibold text-foreground flex-1 truncate">
+                Devolución · {detalle.cliente_id ? (clienteMap.get(detalle.cliente_id) ?? 'Cliente') : 'Almacén'}
+              </span>
             </div>
-            {tipo === 'tienda' && clienteNombre && (
-              <div className="inline-flex items-center gap-1 bg-accent/60 rounded-md px-2 py-0.5">
-                <span className="text-[10px] text-muted-foreground">Cliente:</span>
-                <span className="text-[10.5px] font-semibold text-foreground">{clienteNombre}</span>
+          </header>
+          <div className="flex-1 overflow-auto px-3 py-3 space-y-2">
+            <p className="text-[11px] text-muted-foreground">{fmtDate(detalle.fecha)}</p>
+            {detalle.cancelado_at && (
+              <div className="rounded-lg bg-destructive/10 text-destructive text-[12px] px-3 py-2">
+                Cancelada{detalle.cancelado_motivo ? `: ${detalle.cancelado_motivo}` : ''}
+              </div>
+            )}
+            <div className="bg-card rounded-lg divide-y divide-border/60">
+              {detalleLineas.map(l => (
+                <div key={l.id} className="px-3 py-2">
+                  <div className="flex justify-between gap-2 text-[12.5px]">
+                    <span className="font-medium text-foreground truncate">{l.cantidad}x {productoMap.get(l.producto_id) ?? 'Producto'}</span>
+                    {Number(l.monto_credito) > 0 && <span className="tabular-nums text-foreground shrink-0">{fmt(Number(l.monto_credito))}</span>}
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {l.destino && (
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${l.destino === 'merma' ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}`}>
+                        {DESTINO_DEVOLUCION_CORTO[l.destino] ?? l.destino}
+                      </span>
+                    )}
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent text-muted-foreground">
+                      {l.aplica_venta ? 'Nota aplicada a la venta' : (ACCION_DEVOLUCION_LABELS[l.accion] ?? l.accion)}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent text-muted-foreground">
+                      {MOTIVO_DEVOLUCION_LABELS[l.motivo] ?? l.motivo}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {detalleLineas.length === 0 && <p className="px-3 py-4 text-[12px] text-muted-foreground text-center">Sin renglones en el dispositivo</p>}
+            </div>
+
+            {!detalle.cancelado_at && pidiendoMotivo && (
+              <div className="bg-card rounded-lg p-3 space-y-2">
+                <label htmlFor="motivo-cancel" className="text-[12px] font-semibold text-foreground">Motivo de la cancelación</label>
+                <textarea id="motivo-cancel" rows={3} value={motivoCancel} onChange={e => setMotivoCancel(e.target.value)}
+                  className="w-full bg-accent/40 rounded-md px-2.5 py-2 text-[13px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                  placeholder="Ej. se capturó al cliente equivocado" />
+                <p className="text-[10.5px] text-muted-foreground">Se revierte el inventario, la nota de crédito, el pago aplicado y el dinero devuelto.</p>
               </div>
             )}
           </div>
-
-          {/* Search */}
-          <div className="px-3 pb-1.5">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input type="text" placeholder="Filtrar productos..."
-                className="w-full bg-accent/60 rounded-lg pl-8 pr-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
-                value={searchProducto} onChange={e => setSearchProducto(e.target.value)} />
-            </div>
-          </div>
-
-          {/* Product list */}
-          <div className="flex-1 overflow-auto px-3 space-y-[3px] pb-20">
-            {filteredProductos.length === 0 && (
-              <p className="text-muted-foreground text-[12px] p-4 text-center">No hay productos disponibles en la carga</p>
-            )}
-            {filteredProductos.map(p => {
-              const inList = getItem(p.producto_id);
-              return (
-                <div key={p.producto_id} className={`rounded-lg px-3 py-2 transition-all ${inList ? 'bg-primary/[0.04] ring-1 ring-primary/20' : 'bg-card'}`}>
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex-1 min-w-0" onClick={() => !inList && addItem(p)}>
-                      <p className="text-[12.5px] font-medium text-foreground truncate">{p.nombre}</p>
-                      <div className="flex items-center gap-1.5 mt-px">
-                        <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
-                        <span className="text-[10px] text-muted-foreground">·</span>
-                        <span className="text-[10px] font-medium text-green-600">
-                          {p.max} en mano
-                        </span>
-                      </div>
-                    </div>
-                    {inList ? (
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <button onClick={() => inList.cantidad === 1 ? removeItem(p.producto_id) : updateQty(p.producto_id, -1)}
-                          className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform">
-                          {inList.cantidad === 1 ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-foreground" />}
-                        </button>
-                        {p.granel ? (
-                          // D-043: a granel, teclado numérico con decimales (como la venta móvil).
-                          <button type="button" onClick={() => setKeypadItem({ producto_id: p.producto_id, nombre: p.nombre, cantidad: inList.cantidad, max: p.max })}
-                            className="min-w-[36px] px-1 h-7 text-center text-[13px] font-bold text-foreground active:bg-accent/40 rounded-md"
-                            aria-label="Editar cantidad">
-                            {inList.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })}
-                          </button>
-                        ) : (
-                        <input type="number" inputMode="numeric"
-                          className="w-9 text-center text-[13px] font-bold bg-transparent focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
-                          value={inList.cantidad}
-                          onChange={e => setQty(p.producto_id, leerCantidad(e.target.value, false) || 1)}
-                        />
-                        )}
-                        <button onClick={() => updateQty(p.producto_id, 1)}
-                          disabled={inList.cantidad >= p.max}
-                          className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30">
-                          <Plus className="h-3 w-3 text-foreground" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button onClick={() => addItem(p)}
-                        className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center active:scale-90 transition-transform">
-                        <Plus className="h-3.5 w-3.5 text-primary" />
-                      </button>
-                    )}
-                  </div>
-                  {/* Motivo selector — only visible when selected */}
-                  {inList && (
-                    <div className="mt-1.5 flex items-center gap-1.5">
-                      <span className="text-[10px] text-muted-foreground shrink-0">Motivo:</span>
-                      <select
-                        className="flex-1 bg-accent/40 rounded-md px-2 py-1 text-[11px] text-foreground border-0 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
-                        value={inList.motivo}
-                        onChange={e => updateMotivo(p.producto_id, e.target.value as DevItem['motivo'])}
-                      >
-                        {MOTIVOS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Notes area (collapsible at bottom) */}
-          {items.length > 0 && (
-            <div className="px-3 pb-1">
-              <input
-                type="text"
-                className="w-full bg-accent/40 rounded-md px-2.5 py-1.5 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
-                placeholder="Notas / observaciones..."
-                value={notas}
-                onChange={e => setNotas(e.target.value)}
-              />
-            </div>
-          )}
-
-          {/* Bottom action */}
-          {items.length > 0 && (
-            <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full bg-destructive text-destructive-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg flex items-center justify-center gap-1.5"
-              >
-                <RotateCcw className="h-4 w-4" />
-                {saving ? 'Procesando...' : `Registrar devolución (${totalItems} uds)`}
-              </button>
+          {!detalle.cancelado_at && !detalle._offline && (
+            <div className="px-3 pb-3 pt-1 safe-area-bottom">
+              {!online && <p className="text-[11px] text-muted-foreground text-center mb-1.5">Para cancelar necesitas conexión.</p>}
+              {pidiendoMotivo ? (
+                <button onClick={confirmarCancelacion} disabled={!online || cancelar.isPending || !motivoCancel.trim()}
+                  className="btn-cancelar w-full rounded-xl py-3 text-[14px] font-bold disabled:opacity-40">
+                  {cancelar.isPending ? 'Cancelando…' : 'Cancelar devolución'}
+                </button>
+              ) : (
+                <button onClick={() => setPidiendoMotivo(true)} disabled={!online}
+                  className="btn-cancelar w-full rounded-xl py-3 text-[14px] font-bold disabled:opacity-40">
+                  Cancelar devolución
+                </button>
+              )}
             </div>
           )}
         </div>
       )}
-
-      <NumericKeypadModal
-        open={!!keypadItem}
-        title="Cantidad a devolver"
-        subtitle={keypadItem?.nombre}
-        initialValue={keypadItem?.cantidad ?? 0}
-        allowDecimal
-        maxValue={keypadItem?.max}
-        onClose={() => setKeypadItem(null)}
-        onConfirm={v => { if (keypadItem) setQty(keypadItem.producto_id, leerCantidad(v, true)); }}
-      />
     </div>
   );
 }
