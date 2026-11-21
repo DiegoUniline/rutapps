@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, json, sesionVencida, verifyToken } from "../_shared/tiendaAuth.ts";
+import { corsHeaders, json, motivoRechazoPedidoTienda, sesionVencida, verifyToken } from "../_shared/tiendaAuth.ts";
 import { montosLinea, resolvePrice, type Prod } from "../_shared/tiendaPricing.ts";
 import { contextoPreciosTienda, PRODUCTO_COLS_PRECIO } from "../_shared/tiendaPreciosContexto.ts";
 
@@ -29,13 +29,26 @@ Deno.serve(async (req) => {
       return json({ error: "Tienda no disponible" }, 403);
     }
 
-    const { data: cliente } = await supabase
+    const { data: cliente, error: cliErr } = await supabase
       .from("clientes")
-      .select("id, nombre, tarifa_id, lista_precio_id")
+      .select("id, nombre, tarifa_id, lista_precio_id, status")
       .eq("id", payload.cliente_id)
       .eq("empresa_id", cfg.empresa_id)
       .maybeSingle();
+    if (cliErr) return json({ error: "No se pudo validar tu cuenta. Intenta de nuevo en un momento." }, 500);
     if (!cliente) return sesionVencida();
+
+    // Cliente bloqueado en la tienda (el token puede seguir vigente, D-045) o no activo en
+    // RutApp (la venta normal solo permite clientes activos): no se recibe el pedido.
+    const { data: acceso, error: accErr } = await supabase
+      .from("tienda_clientes")
+      .select("id, verificado, password_hash")
+      .eq("id", payload.tienda_cliente_id)
+      .eq("empresa_id", cfg.empresa_id)
+      .maybeSingle();
+    if (accErr) return json({ error: "No se pudo validar tu acceso. Intenta de nuevo en un momento." }, 500);
+    const rechazo = motivoRechazoPedidoTienda(cliente, acceso);
+    if (rechazo) return json(rechazo, 403);
 
     // Misma lista y reglas que el catálogo que vio el cliente (y que la app).
     const { listaPrecioId, rules } = await contextoPreciosTienda(supabase, cfg, cliente);
@@ -113,13 +126,12 @@ Deno.serve(async (req) => {
     const total = subtotal + iva_total + ieps_total;
     const round = (n: number) => Math.round(n * 100) / 100;
 
-    const folio = `WEB-${Date.now().toString().slice(-8)}`;
-
+    // Folio: lo asigna el trigger `trg_auto_folio_venta` (serie PED consecutiva por empresa,
+    // `next_folio`, con candado), igual que cualquier pedido. No se inventa serie aquí.
     const { data: venta, error: vErr } = await supabase
       .from("ventas")
       .insert({
         empresa_id: cfg.empresa_id,
-        folio,
         tipo: "pedido",
         status: "borrador",
         cliente_id: cliente.id,
@@ -154,7 +166,7 @@ Deno.serve(async (req) => {
     await supabase.from("internal_notifications").insert({
       empresa_id: cfg.empresa_id,
       title: "Nuevo pedido desde tu tienda en línea",
-      body: `${cliente.nombre} acaba de enviar el pedido ${folio} por ${round(total)}`,
+      body: `${cliente.nombre} acaba de enviar el pedido ${venta.folio} por ${round(total)}`,
       tipo: "info",
       link: `/ventas/${venta.id}`,
       entity_type: "venta",
