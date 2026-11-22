@@ -1,7 +1,7 @@
 /**
  * Listas blancas de orden por columna para las listas de logística paginadas por RPC.
  * Deben coincidir con las claves que acepta cada función en la BD
- * (supabase/migrations/20261122000000_orden_columnas_logistica.sql); una clave fuera de la lista
+ * (supabase/migrations/20261122020000_orden_columnas_logistica.sql); una clave fuera de la lista
  * no se envía (la lista queda en su orden de siempre) y la BD la rechazaría con error 22023.
  */
 

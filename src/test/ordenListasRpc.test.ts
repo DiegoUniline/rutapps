@@ -45,7 +45,7 @@ describe('ordenParaRpc (lista blanca)', () => {
 });
 
 describe('listas blancas = claves que acepta cada función en la BD', () => {
-  const sql = readFileSync(resolve(__dirname, '../../supabase/migrations/20261122000000_orden_columnas_logistica.sql'), 'utf8');
+  const sql = readFileSync(resolve(__dirname, '../../supabase/migrations/20261122020000_orden_columnas_logistica.sql'), 'utf8');
   const clavesDe = (fn: string) => {
     const desde = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
     expect(desde).toBeGreaterThanOrEqual(0);
