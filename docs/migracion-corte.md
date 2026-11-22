@@ -44,7 +44,7 @@ Después:
 SERVICE_ROLE_KEY='<service_role nuevo>' ./scripts/migracion/vault.sh "$db"
 psql -d "$db" -c "select cron.alter_job(jobid, active := true) from cron.job;"
 ```
-Y: secrets de proveedores, webhooks (Stripe, Openpay, Evolution/WhatsApp, Facturama) a `https://amybkerwkybffllaxpnz.supabase.co/functions/v1/...`, DNS `rutapp.mx` → Cloudflare Pages.
+Y: secrets de proveedores, webhooks (Stripe, Evolution/WhatsApp, Facturama; Openpay eliminado, D-053) a `https://amybkerwkybffllaxpnz.supabase.co/functions/v1/...`, DNS `rutapp.mx` → Cloudflare Pages.
 
 ## Auth (dashboard → Authentication → URL Configuration / SMTP)
 - Site URL: `https://rutapp.mx`
