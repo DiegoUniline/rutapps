@@ -11,6 +11,7 @@ const log = (step: string, details?: any) =>
   console.log(`[BILLING-CYCLE] ${step}${details ? ` — ${JSON.stringify(details)}` : ""}`);
 
 const DIAS_GRACIA = 3;
+const SITE = (Deno.env.get("SITE_URL") || "https://rutapp.mx").replace(/\/$/, "");
 
 async function sendWhatsApp(supabase: any, empresaId: string, message: string) {
   try {
@@ -321,7 +322,7 @@ Deno.serve(async (req) => {
         if (isTrialOrigin) {
           // Never paid → trial suspension message
           await sendWhatsApp(supabase, sub.empresa_id,
-            `👋 *Te extrañamos en Rutapp*\n\nHola, tu periodo de prueba de *${empresaNombre}* terminó y tu acceso ha sido pausado temporalmente.\n\nPero no te preocupes, *todos tus datos están guardados*. Solo activa tu plan y todo estará como lo dejaste:\n\n💳 *Activar mi plan:* https://rutapps.lovable.app/facturacion\n\n📺 Descubre todo lo que Rutapp puede hacer por tu negocio: https://www.youtube.com/@RutAppMx\n\n¿Tienes dudas? Escríbenos, con gusto te ayudamos. 😊`
+            `👋 *Te extrañamos en Rutapp*\n\nHola, tu periodo de prueba de *${empresaNombre}* terminó y tu acceso ha sido pausado temporalmente.\n\nPero no te preocupes, *todos tus datos están guardados*. Solo activa tu plan y todo estará como lo dejaste:\n\n💳 *Activar mi plan:* ${SITE}/facturacion\n\n📺 Descubre todo lo que Rutapp puede hacer por tu negocio: https://www.youtube.com/@RutAppMx\n\n¿Tienes dudas? Escríbenos, con gusto te ayudamos. 😊`
           );
         } else {
           // Was paying → account suspended message
@@ -337,7 +338,7 @@ Deno.serve(async (req) => {
 
         if (isTrialOrigin) {
           await sendWhatsApp(supabase, sub.empresa_id,
-            `👋 *Tu prueba de Rutapp terminó*\n\nHola, el periodo de prueba de *${empresaNombre}* ha finalizado.\n\n⏳ Te quedan *${diasRestantes} día${diasRestantes !== 1 ? "s" : ""}* antes de que tu acceso sea pausado.\n\n💳 Activa tu plan ahora: https://rutapps.lovable.app/facturacion\n\nTus datos están seguros y listos para cuando actives. 😊`
+            `👋 *Tu prueba de Rutapp terminó*\n\nHola, el periodo de prueba de *${empresaNombre}* ha finalizado.\n\n⏳ Te quedan *${diasRestantes} día${diasRestantes !== 1 ? "s" : ""}* antes de que tu acceso sea pausado.\n\n💳 Activa tu plan ahora: ${SITE}/facturacion\n\nTus datos están seguros y listos para cuando actives. 😊`
           );
         } else {
           await sendWhatsApp(supabase, sub.empresa_id,

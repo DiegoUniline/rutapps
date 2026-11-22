@@ -48,8 +48,12 @@ echo "== Leyendo backup"
 pg_restore -l "$BK" > "$W/toc.txt"
 pg_restore -s -n public -n auth -f "$W/esquema.sql" "$BK"
 
+# Tablas que el sistema ya no tiene (borradas a propósito): sus datos del backup se omiten.
+#   payment_links: Openpay, D-053.
+printf '%s\n' payment_links > "$W/retiradas.txt"
+
 # 1) Tablas: el backup debe ser subconjunto del destino.
-awk '$4=="TABLE" && $5=="public" {print $6}' "$W/toc.txt" | sort -u > "$W/tablas_backup.txt"
+awk '$4=="TABLE" && $5=="public" {print $6}' "$W/toc.txt" | sort -u | grep -vxF -f "$W/retiradas.txt" > "$W/tablas_backup.txt"
 psql -d "$DB" -Atc "select tablename from pg_tables where schemaname='public'" | sort -u > "$W/tablas_destino.txt"
 comm -23 "$W/tablas_backup.txt" "$W/tablas_destino.txt" > "$W/tablas_solo_backup.txt"
 if [ -s "$W/tablas_solo_backup.txt" ]; then
@@ -67,7 +71,9 @@ awk '
   /^CREATE TABLE (public|auth)\./ { split($3, p, "."); s = p[1]; t = p[2]; gsub(/"/, "", t); next }
   t && /^\);/ { t = ""; next }
   t && /^    [a-z_"]/ { c = $1; gsub(/"/, "", c); if (c != "CONSTRAINT") print s "." t "." c "\t" (index($0, " NOT NULL") ? "t" : "f") }
-' "$W/esquema.sql" | grep -E '^(public\.|auth\.(users|identities)\.)' | sort -u > "$W/cols_backup.txt"
+' "$W/esquema.sql" | grep -E '^(public\.|auth\.(users|identities)\.)' \
+  | awk -F'\t' 'NR==FNR {r["public." $0]=1; next} { split($1, p, "."); if (!((p[1] "." p[2]) in r)) print }' "$W/retiradas.txt" - \
+  | sort -u > "$W/cols_backup.txt"
 cut -f1 "$W/cols_backup.txt" | sort -u > "$W/cols_backup_k.txt"
 psql -d "$DB" -Atc "select table_schema||'.'||table_name||'.'||column_name from information_schema.columns
   where (table_schema='public' and table_name in (select tablename from pg_tables where schemaname='public'))
@@ -116,7 +122,7 @@ grep '^public\.' "$W/cols_backup.txt" | sed 's/^public\.//' > "$W/cols_backup_pu
 
 # 5) Lista de datos a cargar.
 grep -E '^[0-9]+; [0-9]+ [0-9]+ TABLE DATA public |^[0-9]+; [0-9]+ [0-9]+ TABLE DATA auth (users|identities) |^[0-9]+; [0-9]+ [0-9]+ SEQUENCE SET public ' \
-  "$W/toc.txt" > "$W/datos.list"
+  "$W/toc.txt" | awk 'NR==FNR {r[$0]=1; next} !($6=="public" && ($7 in r))' "$W/retiradas.txt" - > "$W/datos.list"
 echo "   entradas de datos: $(wc -l < "$W/datos.list" | tr -d ' ')"
 
 # 6) El rol debe poder apagar triggers con SET (en Supabase, set_config() no basta).

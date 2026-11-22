@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet, FlaskConical, ChevronDown, ScanSearch, CircleDollarSign, Target, UsersRound } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet, FlaskConical, ChevronDown, ScanSearch, CircleDollarSign, Target, UsersRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminInactivosTab from '@/components/admin/AdminInactivosTab';
@@ -19,7 +19,6 @@ import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 import AdminPaymentRequestsTab from '@/components/admin/AdminPaymentRequestsTab';
 import AdminAnunciosTab from '@/components/admin/AdminAnunciosTab';
 import AdminPublicidadTab from '@/components/admin/AdminPublicidadTab';
-import AdminCobrosTab from '@/components/admin/AdminCobrosTab';
 import AdminRegistrosIncompletosTab from '@/components/admin/AdminRegistrosIncompletosTab';
 import AdminCuponesTab from '@/components/admin/AdminCuponesTab';
 import AdminFeatureFlagsTab from '@/components/admin/AdminFeatureFlagsTab';
@@ -36,7 +35,7 @@ import AdminTeamTab from '@/components/admin/AdminTeamTab';
 
 type TabKey =
   | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'pagos' | 'whatsapp'
-  | 'notifications' | 'payment_requests' | 'anuncios' | 'publicidad' | 'cobros'
+  | 'notifications' | 'payment_requests' | 'anuncios' | 'publicidad'
   | 'incompletos' | 'trial_crm' | 'team' | 'flags' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'commissions' | 'inactivos' | 'control' | 'wa_bot' | 'broadcast' | 'billing_audit';
 
 type NavItem = { key: TabKey; label: string; icon: LucideIcon; danger?: boolean };
@@ -68,7 +67,6 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'invoices', label: 'Historial Facturas', icon: Receipt },
       { key: 'pagos', label: 'Pagos', icon: Wallet },
       { key: 'payment_requests', label: 'Pagos transferencia', icon: BanknoteIcon },
-      { key: 'cobros', label: 'Cobros', icon: Store },
       { key: 'cupones', label: 'Cupones', icon: Ticket },
       { key: 'pos', label: 'Punto de Venta', icon: Calculator },
     ],
@@ -290,7 +288,6 @@ export default function SuperAdminPage({ initialTab }: { initialTab?: TabKey }) 
               {tab === 'payment_requests' && <AdminPaymentRequestsTab />}
               {tab === 'anuncios' && <AdminAnunciosTab />}
               {tab === 'publicidad' && <AdminPublicidadTab />}
-              {tab === 'cobros' && <AdminCobrosTab />}
               {tab === 'incompletos' && <AdminRegistrosIncompletosTab />}
               {tab === 'flags' && <AdminFeatureFlagsTab />}
               {tab === 'cupones' && <AdminCuponesTab />}

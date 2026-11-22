@@ -351,3 +351,9 @@
 - **Decisión:** en la recarga del corte (D-018) no se corrige ni se mueve ningún dato histórico de Lovable: devoluciones con cantidad ≤ 0 y liquidaciones duplicadas se quedan (CHECK NOT VALID / índice único sin crear), no se recalculan pedidos (B1) ni inventario de canceladas con devoluciones (B2), y no se ajustan las entregas con producto repetido (C3). Refuerza D-023.
 - **Sí se aplica:** backfills A1–A3 de `post-carga.sql`, que no cambian montos, cantidades ni inventario; solo marcan estado ya ocurrido para que el sistema nuevo no lo re-aplique.
 - **Detalle:** `docs/migracion-corte.md`.
+
+## D-053
+- **Fecha:** 2026-11-22 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («openpay elimina todo lo que exista, no se usa para nada» · `CONFIRMO borrar openpay`)
+- **Decisión:** se quita Openpay del sistema: edge functions `openpay` y `openpay-public`, pestaña «Cobros» del Super Admin (`AdminCobrosTab`) y el pago con tarjeta Openpay de `/pagar/:token` (queda solo el link corto de factura Stripe `/pagar/in_...`). No se cargan `OPENPAY_*` ni su webhook en el proyecto nuevo.
+- **BD:** se borra la tabla `payment_links` (0 filas en destino, sin dependencias; migración `20261122010000_quitar_openpay.sql`); `recargar-datos.sh` omite sus datos del backup de Lovable.
+- **Pendiente fuera del repo:** borrar las funciones ya publicadas `openpay` y `openpay-public` en `amybkerwkybffllaxpnz`.
