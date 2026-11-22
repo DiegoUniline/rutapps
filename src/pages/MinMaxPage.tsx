@@ -5,6 +5,7 @@ import { useAlmacenes, useProductos } from '@/hooks/useData';
 import { useMinMaxConfigMap, useStockMatriz, useGuardarMinMaxBulk, cellKey, type MinMaxRow } from '@/hooks/useMinMaxMatriz';
 import MinMaxMatrixTable, { type CeldaValor } from '@/components/minmax/MinMaxMatrixTable';
 import CopiarConfigDialog from '@/components/minmax/CopiarConfigDialog';
+import { useSortState, ordenarFilas } from '@/hooks/useSortableTable';
 import AsignarValoresDialog from '@/components/minmax/AsignarValoresDialog';
 
 const PAGE_SIZE = 50;
@@ -129,9 +130,17 @@ export default function MinMaxPage() {
     });
   }, [productos, buscar, marcasSel, categoriasSel, proveedoresSel, estado, almacenes, config, pending, stock]);
 
-  const totalPages = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
+  // Orden por columna: se ordena TODA la lista filtrada y después se pagina.
+  const orden = useSortState('minmax');
+  const ordenados = useMemo(
+    () => ordenarFilas(filtrados, orden.sort, (p: any, k) => (k === 'unidad' ? p.unidades_venta?.abreviatura : p[k])),
+    [filtrados, orden.sort],
+  );
+  const toggleOrden = (key: string) => { orden.toggle(key); setPage(1); };
+
+  const totalPages = Math.max(1, Math.ceil(ordenados.length / PAGE_SIZE));
   const pageSafe = Math.min(page, totalPages);
-  const visibles = filtrados.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE).map(p => ({
+  const visibles = ordenados.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE).map(p => ({
     id: p.id, codigo: p.codigo, nombre: p.nombre, unidad: p.unidades_venta?.abreviatura ?? null,
   }));
 
@@ -272,6 +281,8 @@ export default function MinMaxPage() {
           })}
           onChange={setCelda}
           onColumnAction={onColumnAction}
+          sort={orden.sort}
+          onSort={toggleOrden}
         />
       )}
 

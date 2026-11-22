@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { ordenParaRpc, type SortState } from '@/hooks/useSortableTable';
+import { ORDEN_ENTREGAS } from '@/lib/ordenListasRpc';
 
 export type EntregaFechaTipo = 'programada' | 'real' | 'creacion' | 'levantamiento';
 
@@ -86,8 +88,8 @@ export function useEntregasWorkspaceCounts(search?: string, vendedorFilter?: str
 }
 
 /**
- * Lista operativa V2. Una sola llamada devuelve la página actual, el total y
- * los conteos por estado. Las líneas de producto siguen cargándose sólo al
+ * Lista operativa (RPC v3 = v2 + orden por columna). Una sola llamada devuelve la página
+ * actual, el total y los conteos por estado. Las líneas de producto siguen cargándose sólo al
  * expandir una entrega.
  */
 export function useEntregasWorkspaceList({
@@ -100,6 +102,7 @@ export function useEntregasWorkspaceList({
   fechaHasta,
   page = 0,
   pageSize = 50,
+  sort,
 }: {
   search?: string;
   vendedorFilter?: string;
@@ -110,14 +113,17 @@ export function useEntregasWorkspaceList({
   fechaHasta?: string;
   page?: number;
   pageSize?: number;
+  /** Orden por columna; se aplica en la BD a TODA la lista (no solo a la página). */
+  sort?: SortState;
 }) {
   const { empresa } = useAuth();
   const deferredSearch = useDebouncedValue((search ?? '').trim(), 350);
+  const orden = ordenParaRpc(sort, ORDEN_ENTREGAS);
 
   return useQuery({
     queryKey: [
       'entregas-list',
-      'workspace-v2',
+      'workspace-v3',
       empresa?.id,
       deferredSearch,
       vendedorFilter,
@@ -128,6 +134,8 @@ export function useEntregasWorkspaceList({
       fechaHasta,
       page,
       pageSize,
+      orden.p_orden,
+      orden.p_dir,
     ],
     enabled: !!empresa?.id,
     staleTime: 45_000,
@@ -135,7 +143,7 @@ export function useEntregasWorkspaceList({
     refetchOnWindowFocus: false,
     placeholderData: previous => previous,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc('fn_logistica_entregas_workspace_v2', {
+      const { data, error } = await (supabase as any).rpc('fn_logistica_entregas_workspace_v3', {
         p_empresa_id: empresa!.id,
         p_search: deferredSearch || null,
         p_vendedor_id: vendedorFilter && vendedorFilter !== 'todos' ? vendedorFilter : null,
@@ -146,6 +154,8 @@ export function useEntregasWorkspaceList({
         p_fecha_hasta: fechaHasta || null,
         p_page_size: pageSize,
         p_offset: page * pageSize,
+        p_orden: orden.p_orden,
+        p_dir: orden.p_dir,
       });
       if (error) throw error;
 

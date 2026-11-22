@@ -20,7 +20,8 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
+import { SortableTh, useSortableTable, useSortState, ordenParaRpc } from '@/hooks/useSortableTable';
+import { ORDEN_CONCENTRADO_PEDIDOS } from '@/lib/ordenListasRpc';
 
 
 function addDays(iso: string, n: number) {
@@ -55,6 +56,9 @@ export default function ConcentradoSurtidoPage() {
   const [viewMode, setViewMode] = useState<'pedidos' | 'productos'>('pedidos');
   const [pedidoPage, setPedidoPage] = useState(0);
   const [pedidoPageSize, setPedidoPageSize] = useState(50);
+  // Orden por columna de la vista «Pedidos»: lo aplica la BD (fn_logistica_concentrado_pedidos_v4) a TODA la lista.
+  const ordenPedidos = useSortState('concentrado-pedidos');
+  const ordenPedidosRpc = ordenParaRpc(ordenPedidos.sort, ORDEN_CONCENTRADO_PEDIDOS);
   const [expandedPedidoId, setExpandedPedidoId] = useState<string | null>(null);
 
   // Filtros nuevos: tipo (pedido/venta_directa) y vendedor (multi)
@@ -105,13 +109,13 @@ export default function ConcentradoSurtidoPage() {
     isFetching: isFetchingPedidos,
     refetch: refetchPedidos,
   } = useQuery({
-    queryKey: ['concentrado-pedidos-v3', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey, pedidoPage, pedidoPageSize],
+    queryKey: ['concentrado-pedidos-v3', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey, pedidoPage, pedidoPageSize, ordenPedidosRpc.p_orden, ordenPedidosRpc.p_dir],
     enabled: !!empresa?.id,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     placeholderData: previous => previous,
     queryFn: async () => {
-      const { data: payload, error } = await (supabase as any).rpc('fn_logistica_concentrado_pedidos_v3', {
+      const { data: payload, error } = await (supabase as any).rpc('fn_logistica_concentrado_pedidos_v4', {
         p_empresa_id: empresa!.id,
         p_fecha_desde: desde || null,
         p_fecha_hasta: hasta || null,
@@ -121,6 +125,8 @@ export default function ConcentradoSurtidoPage() {
         p_vendedor_ids: vendedorFilter.length > 0 ? vendedorFilter : null,
         p_page_size: pedidoPageSize,
         p_offset: pedidoPageSize === 0 ? 0 : pedidoPage * pedidoPageSize,
+        p_orden: ordenPedidosRpc.p_orden,
+        p_dir: ordenPedidosRpc.p_dir,
       });
       if (error) throw error;
       return {
@@ -190,6 +196,13 @@ export default function ConcentradoSurtidoPage() {
   const pedidoTotalPages = pedidoShowAll ? 1 : Math.max(1, Math.ceil(pedidoTotalCount / pedidoPageSize));
   const pedidoPageStart = pedidoTotalCount === 0 ? 0 : pedidoShowAll ? 1 : pedidoPage * pedidoPageSize + 1;
   const pedidoPageEnd = pedidoShowAll ? pedidoTotalCount : Math.min((pedidoPage + 1) * pedidoPageSize, pedidoTotalCount);
+  // Cambiar el orden vuelve a la página 1 (el orden aplica a toda la lista).
+  const toggleOrdenPedidos = (key: string) => {
+    ordenPedidos.toggle(key);
+    setPedidoPage(0);
+    setOpenGroups(new Set());
+    setExpandedPedidoId(null);
+  };
   const goPedidoPage = (nextPage: number) => {
     setOpenGroups(new Set());
     setExpandedPedidoId(null);
@@ -653,16 +666,16 @@ export default function ConcentradoSurtidoPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-muted/40 text-xs text-muted-foreground">
                     <tr>
-                      <th className="text-left px-3 py-2">Fecha entrega</th>
-                      <th className="text-left px-3 py-2">Folio</th>
-                      <th className="text-left px-3 py-2">Cliente</th>
-                      <th className="text-left px-3 py-2">Vendedor</th>
-                      <th className="text-left px-3 py-2">Tipo</th>
-                      <th className="text-left px-3 py-2">Estado pedido</th>
-                      <th className="text-right px-3 py-2">Requerido</th>
-                      <th className="text-right px-3 py-2">Surtido</th>
-                      <th className="text-right px-3 py-2">Falta surtir</th>
-                      <th className="text-left px-3 py-2">Estado surtido</th>
+                      <SortableTh sortKey="fecha_entrega" sort={ordenPedidos.sort} onToggle={toggleOrdenPedidos} className="text-left px-3 py-2">Fecha entrega</SortableTh>
+                      <SortableTh sortKey="folio" sort={ordenPedidos.sort} onToggle={toggleOrdenPedidos} className="text-left px-3 py-2">Folio</SortableTh>
+                      <SortableTh sortKey="cliente" sort={ordenPedidos.sort} onToggle={toggleOrdenPedidos} className="text-left px-3 py-2">Cliente</SortableTh>
+                      <SortableTh sortKey="vendedor" sort={ordenPedidos.sort} onToggle={toggleOrdenPedidos} className="text-left px-3 py-2">Vendedor</SortableTh>
+                      <SortableTh sortKey="tipo" sort={ordenPedidos.sort} onToggle={toggleOrdenPedidos} className="text-left px-3 py-2">Tipo</SortableTh>
+                      <SortableTh sortKey="status" sort={ordenPedidos.sort} onToggle={toggleOrdenPedidos} className="text-left px-3 py-2">Estado pedido</SortableTh>
+                      <SortableTh sortKey="requerido" sort={ordenPedidos.sort} onToggle={toggleOrdenPedidos} align="right" className="text-right px-3 py-2">Requerido</SortableTh>
+                      <SortableTh sortKey="entregado" sort={ordenPedidos.sort} onToggle={toggleOrdenPedidos} align="right" className="text-right px-3 py-2">Surtido</SortableTh>
+                      <SortableTh sortKey="pendiente" sort={ordenPedidos.sort} onToggle={toggleOrdenPedidos} align="right" className="text-right px-3 py-2">Falta surtir</SortableTh>
+                      <SortableTh sortKey="surtido_status" sort={ordenPedidos.sort} onToggle={toggleOrdenPedidos} className="text-left px-3 py-2">Estado surtido</SortableTh>
                     </tr>
                   </thead>
                   <tbody>

@@ -4,6 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreVertical } from 'lucide-react';
 import { cellKey } from '@/hooks/useMinMaxMatriz';
+import { SortableTh, type SortState } from '@/hooks/useSortableTable';
 
 export interface MatrizProducto {
   id: string;
@@ -25,6 +26,9 @@ interface Props {
   onToggleTodos: (checked: boolean) => void;
   onChange: (productoId: string, almacenId: string, campo: 'min' | 'max', valor: number | null) => void;
   onColumnAction: (almacenId: string, accion: 'copiar' | 'asignar' | 'limpiar') => void;
+  /** Orden por columna (Código, Producto, Unidad). Las columnas de almacén (editables) no se ordenan. */
+  sort?: SortState;
+  onSort?: (key: string) => void;
 }
 
 function focusCell(r: number, c: number, f: 'min' | 'max') {
@@ -33,8 +37,11 @@ function focusCell(r: number, c: number, f: 'min' | 'max') {
 }
 
 function MinMaxMatrixTableBase({
-  productos, almacenes, valor, esModificada, stock, seleccion, onToggle, onToggleTodos, onChange, onColumnAction,
+  productos, almacenes, valor, esModificada, stock, seleccion, onToggle, onToggleTodos, onChange, onColumnAction, sort, onSort,
 }: Props) {
+  const ordenable = !!sort && !!onSort;
+  const sinOrden: SortState = { key: null, dir: 'asc' };
+  const noop = () => {};
   const todosSel = productos.length > 0 && productos.every(p => seleccion.has(p.id));
 
   const handleKey = (e: React.KeyboardEvent<HTMLInputElement>, r: number, c: number, f: 'min' | 'max') => {
@@ -55,9 +62,9 @@ function MinMaxMatrixTableBase({
         <thead className="sticky top-0 z-30 bg-background">
           <tr className="border-b border-border">
             <th className="sticky left-0 z-40 bg-background px-2 py-2 w-9"><Checkbox checked={todosSel} onCheckedChange={v => onToggleTodos(!!v)} /></th>
-            <th className="sticky left-9 z-40 bg-background px-2 py-2 text-left w-28">Código</th>
-            <th className="sticky left-[8.75rem] z-40 bg-background px-2 py-2 text-left w-64 border-r border-border">Producto</th>
-            <th className="px-2 py-2 text-left w-20">Unidad</th>
+            <SortableTh sortKey="codigo" sort={sort ?? sinOrden} onToggle={onSort ?? noop} disabled={!ordenable} className="sticky left-9 z-40 bg-background px-2 py-2 text-left w-28">Código</SortableTh>
+            <SortableTh sortKey="nombre" sort={sort ?? sinOrden} onToggle={onSort ?? noop} disabled={!ordenable} className="sticky left-[8.75rem] z-40 bg-background px-2 py-2 text-left w-64 border-r border-border">Producto</SortableTh>
+            <SortableTh sortKey="unidad" sort={sort ?? sinOrden} onToggle={onSort ?? noop} disabled={!ordenable} className="px-2 py-2 text-left w-20">Unidad</SortableTh>
             {almacenes.map(a => (
               <th key={a.id} className="px-2 py-2 text-left min-w-[170px] border-l border-border">
                 <div className="flex items-center justify-between gap-1">
