@@ -1,5 +1,5 @@
 import React, { useState, useMemo, Fragment, useEffect, useRef, useCallback } from 'react';
-import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
+import { useSortableTable, useSortState, SortableTh, SortableTableHead } from '@/hooks/useSortableTable';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -252,6 +252,8 @@ export default function DemandaPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
+  // Orden por columna: lo aplica la BD (fn_logistica_pedidos_page_v5) a TODA la lista.
+  const ordenDemanda = useSortState('demanda');
 
   const debouncedSearch = useDebouncedValue(search, 350);
   const operationFilters = useMemo(() => ({
@@ -263,7 +265,8 @@ export default function DemandaPage() {
     tab,
     page,
     pageSize,
-  }), [desde, hasta, fechaTipo, vendedorFilter, debouncedSearch, tab, page, pageSize]);
+    sort: ordenDemanda.sort,
+  }), [desde, hasta, fechaTipo, vendedorFilter, debouncedSearch, tab, page, pageSize, ordenDemanda.sort]);
 
   const pageQuery = usePedidosOperacionPage(operationFilters);
   const countsQuery = usePedidosOperacionCounts(operationFilters);
@@ -298,6 +301,14 @@ export default function DemandaPage() {
     setSelectedIds(new Set());
     setExpanded(new Set());
   }, [desde, hasta, fechaTipo, vendedorFilter, debouncedSearch, tab]);
+
+  // Cambiar el orden vuelve a la página 1 (el orden aplica a toda la lista).
+  const toggleOrden = (key: string) => {
+    ordenDemanda.toggle(key);
+    setPage(0);
+    setSelectedIds(new Set());
+    setExpanded(new Set());
+  };
 
   const goToPage = (nextPage: number) => {
     const bounded = Math.min(Math.max(nextPage, 0), Math.max(totalPages - 1, 0));
@@ -1049,18 +1060,18 @@ export default function DemandaPage() {
                   onCheckedChange={toggleAll}
                 />
               </TableHead>
-              <TableHead className="text-[11px]">Folio</TableHead>
-              <TableHead className="text-[11px]">Cliente</TableHead>
-              <TableHead className="text-[11px]">Vendedor</TableHead>
-              <TableHead className="text-[11px]">Fecha</TableHead>
-              <TableHead className="text-[11px]">Repartidor</TableHead>
-              <TableHead className="text-[11px]">Programada entrega</TableHead>
-              <TableHead className="text-[11px]">Fecha entrega</TableHead>
-              <TableHead className="text-[11px] text-right">Total</TableHead>
-              <TableHead className="text-[11px] text-center w-28">Surtido</TableHead>
-              <TableHead className="text-[11px] text-center w-28">Entregado</TableHead>
-              <TableHead className="text-[11px] text-center w-20">Pendiente</TableHead>
-              <TableHead className="text-[11px] text-center w-28">Estado</TableHead>
+              <SortableTableHead sortKey="folio" sort={ordenDemanda.sort} onToggle={toggleOrden} className="text-[11px]">Folio</SortableTableHead>
+              <SortableTableHead sortKey="cliente" sort={ordenDemanda.sort} onToggle={toggleOrden} className="text-[11px]">Cliente</SortableTableHead>
+              <SortableTableHead sortKey="vendedor" sort={ordenDemanda.sort} onToggle={toggleOrden} className="text-[11px]">Vendedor</SortableTableHead>
+              <SortableTableHead sortKey="fecha" sort={ordenDemanda.sort} onToggle={toggleOrden} className="text-[11px]">Fecha</SortableTableHead>
+              <SortableTableHead sortKey="repartidor" sort={ordenDemanda.sort} onToggle={toggleOrden} className="text-[11px]">Repartidor</SortableTableHead>
+              <SortableTableHead sortKey="fecha_programada" sort={ordenDemanda.sort} onToggle={toggleOrden} className="text-[11px]">Programada entrega</SortableTableHead>
+              <SortableTableHead sortKey="fecha_entrega" sort={ordenDemanda.sort} onToggle={toggleOrden} className="text-[11px]">Fecha entrega</SortableTableHead>
+              <SortableTableHead sortKey="total" sort={ordenDemanda.sort} onToggle={toggleOrden} align="right" className="text-[11px] text-right">Total</SortableTableHead>
+              <SortableTableHead sortKey="surtido" sort={ordenDemanda.sort} onToggle={toggleOrden} align="center" className="text-[11px] text-center w-28">Surtido</SortableTableHead>
+              <SortableTableHead sortKey="entregado" sort={ordenDemanda.sort} onToggle={toggleOrden} align="center" className="text-[11px] text-center w-28">Entregado</SortableTableHead>
+              <SortableTableHead sortKey="pendiente" sort={ordenDemanda.sort} onToggle={toggleOrden} align="center" className="text-[11px] text-center w-20">Pendiente</SortableTableHead>
+              <SortableTableHead sortKey="estado" sort={ordenDemanda.sort} onToggle={toggleOrden} align="center" className="text-[11px] text-center w-28">Estado</SortableTableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -125,6 +125,19 @@ export function aplicarOrdenConsulta<Q extends { order: (col: string, opts?: any
   return q.order('id', { ascending: true });
 }
 
+/**
+ * Orden para listas paginadas por RPC con parámetros `p_orden`/`p_dir`. Solo envía claves de la
+ * lista blanca `permitidas` (la misma que valida la función en la BD); otra clave o sin orden →
+ * `p_orden: null`, que la función interpreta como su orden de siempre.
+ */
+export function ordenParaRpc(
+  sort: SortState | null | undefined,
+  permitidas: readonly string[],
+): { p_orden: string | null; p_dir: SortDir } {
+  if (!sort?.key || !permitidas.includes(sort.key)) return { p_orden: null, p_dir: 'asc' };
+  return { p_orden: sort.key, p_dir: sort.dir === 'desc' ? 'desc' : 'asc' };
+}
+
 interface SortableThProps {
   sortKey: string;
   sort: SortState;

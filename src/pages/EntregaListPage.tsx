@@ -22,7 +22,7 @@ import { ListaTarjetaMovil, ListaTarjetasMovil, PASO_MOVIL, type TonoPildora } f
 import BulkEntregasActionsDialog, { type BulkAction } from '@/components/entregas/BulkEntregasActionsDialog';
 import PedidosTabs from '@/components/PedidosTabs';
 import { ListPage, TABLE_CARD, SCROLL_AREA } from '@/components/layout/ListPage';
-import { useSortableTable, SortableTableHead } from '@/hooks/useSortableTable';
+import { useSortState, SortableTableHead } from '@/hooks/useSortableTable';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive'; className?: string }> = {
   borrador: { label: 'Por surtir', variant: 'secondary' },
@@ -57,8 +57,10 @@ export default function EntregaListPage() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
   const [cargarProgress, setCargarProgress] = useState<{ current: number; total: number; folio?: string; title?: string } | null>(null);
+  // Orden por columna: lo aplica la BD (fn_logistica_entregas_workspace_v3) a TODA la lista, paginada o «Todos».
+  const ordenEntregas = useSortState('entregas');
 
-  // V2: una sola llamada trae página + total + conteos. No descarga el histórico completo.
+  // Una sola llamada trae página + total + conteos. No descarga el histórico completo.
   const { data: entregasResult, isLoading, isFetching } = useEntregasWorkspaceList({
     search,
     vendedorFilter,
@@ -69,6 +71,7 @@ export default function EntregaListPage() {
     fechaHasta,
     page,
     pageSize,
+    sort: ordenEntregas.sort,
   });
   const allEntregas = entregasResult?.rows ?? [];
   const counts = entregasResult?.counts ?? { total: 0, borrador: 0, surtido: 0, asignado: 0, cargado: 0, en_ruta: 0, hecho: 0, no_entregado: 0, cancelado: 0 };
@@ -107,18 +110,13 @@ export default function EntregaListPage() {
   // Los filtros ya se aplicaron en PostgreSQL. Este memo mantiene la misma
   // variable usada por selección/acciones sin volver a recorrer filtros pesados.
   const filtered = useMemo(() => allEntregas ?? [], [allEntregas]);
-  // Orden por columna: la página la arma la BD (fn_logistica_entregas_workspace_v2, sin parámetro de orden),
-  // así que solo se ordena cuando están TODAS las entregas en pantalla («Todos»); paginado, el orden es el de la BD.
-  const ordenEntregas = useSortableTable(filtered, (e: any, k) => {
-    if (k === 'pedido') return e.ventas?.folio ?? '';
-    if (k === 'cliente') return e.clientes?.nombre ?? '';
-    if (k === 'vendedor') return e.vendedores?.nombre ?? '';
-    if (k === 'origen') return e.almacenes?.nombre ?? '';
-    if (k === 'destino') return e.vendedor_ruta?.almacen_destino?.nombre ?? e.vendedores?.almacen_destino?.nombre ?? '';
-    if (k === 'ruta') return e.vendedor_ruta?.nombre ?? '';
-    if (k === 'fecha_pedido') return e.ventas?.fecha ?? '';
-    return e?.[k];
-  }, undefined, 'entregas');
+  // Cambiar el orden vuelve a la página 1 (el orden aplica a toda la lista).
+  const toggleOrden = (key: string) => {
+    ordenEntregas.toggle(key);
+    setPage(0);
+    setSelectedIds(new Set());
+    setExpandedId(null);
+  };
 
   // borrador, surtido, asignado can be bulk-processed
   const selectableIds = useMemo(() =>
@@ -693,18 +691,18 @@ export default function EntregaListPage() {
                   onCheckedChange={toggleAll}
                 />
               </TableHead>
-              <SortableTableHead sortKey="folio" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Entrega</SortableTableHead>
-              <SortableTableHead sortKey="pedido" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Pedido</SortableTableHead>
-              <SortableTableHead sortKey="cliente" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Cliente</SortableTableHead>
-              <SortableTableHead sortKey="vendedor" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Vendedor</SortableTableHead>
-              <SortableTableHead sortKey="origen" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Almacén origen</SortableTableHead>
-              <SortableTableHead sortKey="destino" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Almacén destino</SortableTableHead>
-              <SortableTableHead sortKey="ruta" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Ruta asignada</SortableTableHead>
-              <SortableTableHead sortKey="fecha_pedido" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Fecha pedido</SortableTableHead>
-              <SortableTableHead sortKey="fecha" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Fecha programada</SortableTableHead>
-              <SortableTableHead sortKey="fecha_entrega" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Fecha real</SortableTableHead>
-              <SortableTableHead sortKey="created_at" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} className="text-[11px]">Creado</SortableTableHead>
-              <SortableTableHead sortKey="status" sort={ordenEntregas.sort} onToggle={ordenEntregas.toggle} disabled={!showAll} align="center" className="text-[11px] text-center">Status</SortableTableHead>
+              <SortableTableHead sortKey="folio" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Entrega</SortableTableHead>
+              <SortableTableHead sortKey="pedido" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Pedido</SortableTableHead>
+              <SortableTableHead sortKey="cliente" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Cliente</SortableTableHead>
+              <SortableTableHead sortKey="vendedor" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Vendedor</SortableTableHead>
+              <SortableTableHead sortKey="origen" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Almacén origen</SortableTableHead>
+              <SortableTableHead sortKey="destino" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Almacén destino</SortableTableHead>
+              <SortableTableHead sortKey="ruta" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Ruta asignada</SortableTableHead>
+              <SortableTableHead sortKey="fecha_pedido" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Fecha pedido</SortableTableHead>
+              <SortableTableHead sortKey="fecha" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Fecha programada</SortableTableHead>
+              <SortableTableHead sortKey="fecha_entrega" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Fecha real</SortableTableHead>
+              <SortableTableHead sortKey="created_at" sort={ordenEntregas.sort} onToggle={toggleOrden} className="text-[11px]">Creado</SortableTableHead>
+              <SortableTableHead sortKey="status" sort={ordenEntregas.sort} onToggle={toggleOrden} align="center" className="text-[11px] text-center">Status</SortableTableHead>
               <TableHead className="w-8" />
             </TableRow>
           </TableHeader>
@@ -720,7 +718,7 @@ export default function EntregaListPage() {
                 </TableCell>
               </TableRow>
             )}
-            {(showAll ? ordenEntregas.sorted : filtered).map((e: any) => {
+            {filtered.map((e: any) => {
               const badge = STATUS_BADGE[e.status] ?? STATUS_BADGE.borrador;
               const canSelect = selectableIds.has(e.id);
 

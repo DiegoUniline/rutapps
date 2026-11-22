@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useQuery, type QueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { ordenParaRpc, type SortState } from '@/hooks/useSortableTable';
+import { ORDEN_DEMANDA } from '@/lib/ordenListasRpc';
 
 export type PedidoOperacionTab = 'pendientes' | 'generadas' | 'surtidos' | 'en_ruta' | 'entregados' | 'cerrados' | 'todos';
 export type PedidoOperacionFechaTipo = 'fecha' | 'fecha_entrega';
@@ -15,6 +17,8 @@ export interface PedidoOperacionFilters {
   tab: PedidoOperacionTab;
   page: number;
   pageSize: number;
+  /** Orden por columna (solo la página; los conteos no dependen del orden). Se aplica en la BD. */
+  sort?: SortState;
 }
 
 export const EMPTY_PEDIDO_COUNTS = {
@@ -146,6 +150,7 @@ function commonArgs(empresaId: string, filters: PedidoOperacionFilters) {
 export function usePedidosOperacionPage(filters: PedidoOperacionFilters): UseQueryResult<PedidoOperacionPageResult> {
   const { empresa } = useAuth();
   const vendedoresKey = (filters.vendedorIds ?? []).slice().sort().join(',');
+  const orden = ordenParaRpc(filters.sort, ORDEN_DEMANDA);
 
   return useQuery<PedidoOperacionPageResult>({
     queryKey: [
@@ -159,6 +164,8 @@ export function usePedidosOperacionPage(filters: PedidoOperacionFilters): UseQue
       filters.tab,
       filters.page,
       filters.pageSize,
+      orden.p_orden,
+      orden.p_dir,
     ],
     enabled: !!empresa?.id,
     staleTime: 30_000,
@@ -166,10 +173,12 @@ export function usePedidosOperacionPage(filters: PedidoOperacionFilters): UseQue
     refetchOnWindowFocus: false,
     placeholderData: previous => previous,
     queryFn: async ({ signal }) => {
-      const payload = await rpcWithAbort('fn_logistica_pedidos_page_v4', {
+      const payload = await rpcWithAbort('fn_logistica_pedidos_page_v5', {
         ...commonArgs(empresa!.id, filters),
         p_page_size: filters.pageSize,
         p_offset: filters.pageSize === 0 ? 0 : filters.page * filters.pageSize,
+        p_orden: orden.p_orden,
+        p_dir: orden.p_dir,
       }, signal);
 
       const rows = (Array.isArray(payload.rows) ? payload.rows : []).map((row: any) => ({
