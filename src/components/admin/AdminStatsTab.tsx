@@ -25,6 +25,7 @@ import {
   startOfYear, endOfYear, differenceInDays, subMonths, eachMonthOfInterval,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { SortableTh, useSortableTable, useSortState, ordenarFilas } from '@/hooks/useSortableTable';
 
 interface DashboardStats {
   balance_available: number; balance_pending: number; total_invoiced: number;
@@ -611,6 +612,8 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
     pendiente: cumplimientoPago.reduce((s, r) => s + r.pendiente, 0),
     morosos: cumplimientoPago.filter(r => r.pendiente > 0).length,
   }), [cumplimientoPago]);
+  const { sorted: cumplimientoOrd, sort: sortCumpl, toggle: toggleCumpl } = useSortableTable(cumplimientoPago, (r, key) =>
+    key === 'status' ? (STATUS_LABELS[r.status] || r.status) : (r as any)[key], undefined, 'admin-stats-cumplimiento');
 
   // ── Conteo de alertas (badge) ──
   const alertasCount =
@@ -1034,7 +1037,7 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
           <ChartCard title="Detalle por empresa" subtitle="Esperado = facturas emitidas desde fin de trial · Pagado = facturas cobradas" icon={CreditCard}>
             {(() => {
               const grupos: Record<string, typeof cumplimientoPago> = {};
-              cumplimientoPago.forEach(r => {
+              cumplimientoOrd.forEach(r => {
                 const k = r.status || 'sin_sub';
                 (grupos[k] = grupos[k] || []).push(r);
               });
@@ -1043,7 +1046,7 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
                 const ia = orden.indexOf(a); const ib = orden.indexOf(b);
                 return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
               });
-              const tabs = [{ k: 'all', label: 'Todas', rows: cumplimientoPago },
+              const tabs = [{ k: 'all', label: 'Todas', rows: cumplimientoOrd },
                 ...statusKeys.map(k => ({ k, label: STATUS_LABELS[k] || k, rows: grupos[k] }))];
 
               return (
@@ -1088,15 +1091,15 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
                           <table className="w-full text-xs">
                             <thead className="bg-muted/40 text-muted-foreground">
                               <tr className="text-left">
-                                <th className="px-3 py-2 font-medium">Empresa</th>
-                                <th className="px-2 py-2 font-medium whitespace-nowrap">Fin trial</th>
-                                <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Meses</th>
-                                <th className="px-2 py-2 font-medium text-center whitespace-nowrap">Facturas</th>
-                                <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Esperado</th>
-                                <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Pagado</th>
-                                <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Pendiente</th>
-                                <th className="px-2 py-2 font-medium text-center whitespace-nowrap">% Cumpl.</th>
-                                <th className="px-2 py-2 font-medium whitespace-nowrap">Último pago</th>
+                                <SortableTh sortKey="nombre" sort={sortCumpl} onToggle={toggleCumpl} className="px-3 py-2 font-medium">Empresa</SortableTh>
+                                <SortableTh sortKey="finTrial" sort={sortCumpl} onToggle={toggleCumpl} className="px-2 py-2 font-medium whitespace-nowrap">Fin trial</SortableTh>
+                                <SortableTh sortKey="mesesTranscurridos" sort={sortCumpl} onToggle={toggleCumpl} align="right" className="px-2 py-2 font-medium text-right whitespace-nowrap">Meses</SortableTh>
+                                <SortableTh sortKey="facturasEmitidas" sort={sortCumpl} onToggle={toggleCumpl} align="center" className="px-2 py-2 font-medium text-center whitespace-nowrap">Facturas</SortableTh>
+                                <SortableTh sortKey="esperado" sort={sortCumpl} onToggle={toggleCumpl} align="right" className="px-2 py-2 font-medium text-right whitespace-nowrap">Esperado</SortableTh>
+                                <SortableTh sortKey="pagado" sort={sortCumpl} onToggle={toggleCumpl} align="right" className="px-2 py-2 font-medium text-right whitespace-nowrap">Pagado</SortableTh>
+                                <SortableTh sortKey="pendiente" sort={sortCumpl} onToggle={toggleCumpl} align="right" className="px-2 py-2 font-medium text-right whitespace-nowrap">Pendiente</SortableTh>
+                                <SortableTh sortKey="cumplimiento" sort={sortCumpl} onToggle={toggleCumpl} align="center" className="px-2 py-2 font-medium text-center whitespace-nowrap">% Cumpl.</SortableTh>
+                                <SortableTh sortKey="ultimoPago" sort={sortCumpl} onToggle={toggleCumpl} className="px-2 py-2 font-medium whitespace-nowrap">Último pago</SortableTh>
                                 <th className="px-2 py-2 font-medium text-center whitespace-nowrap">Acción</th>
                               </tr>
                             </thead>
@@ -1584,6 +1587,15 @@ function StripeInvoicesTable({ invoices, loading }: { invoices: any[]; loading: 
     return map;
   }, [invoices]);
 
+  const { sort: sortStripe, toggle: toggleStripe } = useSortState('admin-stats-stripe-facturas');
+  const valorStripe = (r: any, key: string) => {
+    if (key === 'folio') return r.number || r.id;
+    if (key === 'empresa') return r.empresa_nombre || r.customer_name;
+    if (key === 'suscripcion') return r.subscription_id || r.due_date;
+    if (key === 'fecha') return r.created;
+    return r[key];
+  };
+
   const order = ['paid', 'open', 'uncollectible', 'void', 'draft'];
   const statuses = order.filter(s => grouped[s]?.length).concat(
     Object.keys(grouped).filter(s => !order.includes(s))
@@ -1666,7 +1678,7 @@ function StripeInvoicesTable({ invoices, loading }: { invoices: any[]; loading: 
                       const mDue = monthRows.reduce((s, r) => s + (r.amount_due || 0) / 100, 0);
                       const mPaid = monthRows.reduce((s, r) => s + (r.amount_paid || 0) / 100, 0);
                       const mRem = monthRows.reduce((s, r) => s + (r.amount_remaining || 0) / 100, 0);
-                      const sortedRows = [...monthRows].sort((a, b) => (b.created || 0) - (a.created || 0));
+                      const sortedRows = sortStripe.key ? ordenarFilas(monthRows, sortStripe, valorStripe) : [...monthRows].sort((a, b) => (b.created || 0) - (a.created || 0));
                       return (
                         <div key={mk}>
                           <div className="flex items-center justify-between mb-1.5">
@@ -1677,14 +1689,14 @@ function StripeInvoicesTable({ invoices, loading }: { invoices: any[]; loading: 
                             <table className="w-full text-[11px]">
                               <thead className="bg-muted/40 text-muted-foreground">
                                 <tr>
-                                  <th className="text-left px-2 py-1.5 font-semibold">Folio</th>
-                                  <th className="text-left px-2 py-1.5 font-semibold">Empresa</th>
-                                  <th className="text-left px-2 py-1.5 font-semibold">Cliente Stripe</th>
-                                  <th className="text-left px-2 py-1.5 font-semibold">Suscripción</th>
-                                  <th className="text-left px-2 py-1.5 font-semibold">Fecha</th>
-                                  <th className="text-right px-2 py-1.5 font-semibold">Total</th>
-                                  <th className="text-right px-2 py-1.5 font-semibold">Pagado</th>
-                                  <th className="text-right px-2 py-1.5 font-semibold">Pendiente</th>
+                                  <SortableTh sortKey="folio" sort={sortStripe} onToggle={toggleStripe} className="text-left px-2 py-1.5 font-semibold">Folio</SortableTh>
+                                  <SortableTh sortKey="empresa" sort={sortStripe} onToggle={toggleStripe} className="text-left px-2 py-1.5 font-semibold">Empresa</SortableTh>
+                                  <SortableTh sortKey="customer_id" sort={sortStripe} onToggle={toggleStripe} className="text-left px-2 py-1.5 font-semibold">Cliente Stripe</SortableTh>
+                                  <SortableTh sortKey="suscripcion" sort={sortStripe} onToggle={toggleStripe} className="text-left px-2 py-1.5 font-semibold">Suscripción</SortableTh>
+                                  <SortableTh sortKey="fecha" sort={sortStripe} onToggle={toggleStripe} className="text-left px-2 py-1.5 font-semibold">Fecha</SortableTh>
+                                  <SortableTh sortKey="amount_due" sort={sortStripe} onToggle={toggleStripe} align="right" className="text-right px-2 py-1.5 font-semibold">Total</SortableTh>
+                                  <SortableTh sortKey="amount_paid" sort={sortStripe} onToggle={toggleStripe} align="right" className="text-right px-2 py-1.5 font-semibold">Pagado</SortableTh>
+                                  <SortableTh sortKey="amount_remaining" sort={sortStripe} onToggle={toggleStripe} align="right" className="text-right px-2 py-1.5 font-semibold">Pendiente</SortableTh>
                                   <th className="text-center px-2 py-1.5 font-semibold">Link</th>
                                 </tr>
                               </thead>
@@ -1791,6 +1803,13 @@ function EstadoCuentaModal({
     const pagosStripe = cobradas.filter(f => !!f.stripe_payment_intent_id).length;
     return { all, cobradas, pendientes, totalCobrado, totalPendiente, ultimoPago, pagosTransfer, pagosStripe };
   }, [empresa, facturas]);
+  const { sorted: movimientosOrd, sort: sortMov, toggle: toggleMov } = useSortableTable(data?.all ?? [], (f, key) => {
+    if (key === 'folio') return f.numero_factura || f.id;
+    if (key === 'concepto') return f.concepto || 'Suscripción';
+    if (key === 'metodo') return isCollected(f) ? methodLabel(f) : null;
+    if (key === 'total') return Number(f.total ?? 0);
+    return (f as any)[key];
+  }, undefined, 'admin-estado-cuenta');
 
   if (!empresa || !data) return null;
 
@@ -1841,21 +1860,21 @@ function EstadoCuentaModal({
             <table className="w-full text-[11px]">
               <thead className="bg-muted/40 text-muted-foreground">
                 <tr>
-                  <th className="text-left px-2 py-1.5 font-semibold">Folio</th>
-                  <th className="text-left px-2 py-1.5 font-semibold">Concepto</th>
-                  <th className="text-left px-2 py-1.5 font-semibold">Emitida</th>
-                  <th className="text-left px-2 py-1.5 font-semibold">Vence</th>
-                  <th className="text-left px-2 py-1.5 font-semibold">Pagada</th>
-                  <th className="text-left px-2 py-1.5 font-semibold">Método</th>
-                  <th className="text-right px-2 py-1.5 font-semibold">Total</th>
-                  <th className="text-center px-2 py-1.5 font-semibold">Estado</th>
+                  <SortableTh sortKey="folio" sort={sortMov} onToggle={toggleMov} className="text-left px-2 py-1.5 font-semibold">Folio</SortableTh>
+                  <SortableTh sortKey="concepto" sort={sortMov} onToggle={toggleMov} className="text-left px-2 py-1.5 font-semibold">Concepto</SortableTh>
+                  <SortableTh sortKey="fecha_emision" sort={sortMov} onToggle={toggleMov} className="text-left px-2 py-1.5 font-semibold">Emitida</SortableTh>
+                  <SortableTh sortKey="fecha_vencimiento" sort={sortMov} onToggle={toggleMov} className="text-left px-2 py-1.5 font-semibold">Vence</SortableTh>
+                  <SortableTh sortKey="fecha_pago" sort={sortMov} onToggle={toggleMov} className="text-left px-2 py-1.5 font-semibold">Pagada</SortableTh>
+                  <SortableTh sortKey="metodo" sort={sortMov} onToggle={toggleMov} className="text-left px-2 py-1.5 font-semibold">Método</SortableTh>
+                  <SortableTh sortKey="total" sort={sortMov} onToggle={toggleMov} align="right" className="text-right px-2 py-1.5 font-semibold">Total</SortableTh>
+                  <SortableTh sortKey="estado" sort={sortMov} onToggle={toggleMov} align="center" className="text-center px-2 py-1.5 font-semibold">Estado</SortableTh>
                 </tr>
               </thead>
               <tbody>
                 {data.all.length === 0 && (
                   <tr><td colSpan={8} className="text-center text-muted-foreground py-4">Sin facturas</td></tr>
                 )}
-                {data.all.map(f => {
+                {movimientosOrd.map(f => {
                   const pagada = isCollected(f);
                   const vencida = !pagada && f.fecha_vencimiento && new Date(f.fecha_vencimiento).getTime() < Date.now();
                   return (

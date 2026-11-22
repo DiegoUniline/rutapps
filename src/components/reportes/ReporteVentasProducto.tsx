@@ -34,7 +34,7 @@ export function ReporteVentasProducto({ data }: { data: any }) {
     return r?.[k];
   };
   const { filtered, filters, setFilter, hasActive, clearAll, uniqueValues } = useSmartColumnFilters(rawItems, FILTER_DEFS, getVal);
-  const { sorted, sort, toggle } = useSortableTable(filtered, getVal);
+  const { sorted, sort, toggle } = useSortableTable(filtered, getVal, undefined, 'reporte-ventas-producto');
   const items = sorted;
   const totalGeneral = items.reduce((s, p) => s + p.total, 0);
   const totalUnidades = items.reduce((s, p) => s + p.cantidad, 0);

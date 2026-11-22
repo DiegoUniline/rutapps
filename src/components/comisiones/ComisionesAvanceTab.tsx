@@ -7,6 +7,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { Calendar } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { cn, fmtDate } from '@/lib/utils';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface VendedorRow {
   id: string;
@@ -113,8 +114,18 @@ export default function ComisionesAvanceTab() {
   const ranking = useMemo(() => {
     return [...(vendedores ?? [])]
       .map(v => ({ v, c: (calculos ?? {})[v.id] }))
-      .sort((a, b) => (b.c?.total_ventas ?? 0) - (a.c?.total_ventas ?? 0));
+      .sort((a, b) => (b.c?.total_ventas ?? 0) - (a.c?.total_ventas ?? 0))
+      .map((item, idx) => ({ ...item, rank: idx + 1 }));
   }, [vendedores, calculos]);
+  const { sorted: rankingOrd, sort, toggle: toggleSort } = useSortableTable(ranking, (item: any, key) => {
+    if (key === 'rank') return item.rank;
+    if (key === 'nombre') return item.v.nombre;
+    if (key === 'esquema') return item.v.esquema?.nombre;
+    if (key === 'total') return item.c?.total_ventas ?? 0;
+    if (key === 'num') return item.c?.num_ventas ?? 0;
+    if (key === 'comision') return item.c?.comision ?? 0;
+    return null;
+  }, undefined, 'comisiones-avance');
 
   if (loadVend) return <TableSkeleton />;
   if (!vendedores || vendedores.length === 0) {
@@ -162,18 +173,18 @@ export default function ComisionesAvanceTab() {
             <table className="w-full text-sm">
               <thead className="border-b border-border">
                 <tr>
-                  <th className="th-odoo text-left w-10">#</th>
-                  <th className="th-odoo text-left">Vendedor</th>
-                  <th className="th-odoo text-left">Esquema</th>
-                  <th className="th-odoo text-right">Vendido</th>
-                  <th className="th-odoo text-right"># Ventas</th>
-                  <th className="th-odoo text-right">Comisión</th>
+                  <SortableTh sortKey="rank" sort={sort} onToggle={toggleSort} className="th-odoo text-left w-10">#</SortableTh>
+                  <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Vendedor</SortableTh>
+                  <SortableTh sortKey="esquema" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Esquema</SortableTh>
+                  <SortableTh sortKey="total" sort={sort} onToggle={toggleSort} align="right" className="th-odoo text-right">Vendido</SortableTh>
+                  <SortableTh sortKey="num" sort={sort} onToggle={toggleSort} align="right" className="th-odoo text-right"># Ventas</SortableTh>
+                  <SortableTh sortKey="comision" sort={sort} onToggle={toggleSort} align="right" className="th-odoo text-right">Comisión</SortableTh>
                   <th className="th-odoo text-left w-[28%]">Avance</th>
                 </tr>
               </thead>
               <tbody>
-                {ranking.map(({ v, c }, idx) => (
-                  <VendedorRowComp key={v.id} vendedor={v} calc={c} rank={idx + 1} fmt={fmt} desde={desde} />
+                {rankingOrd.map(({ v, c, rank }) => (
+                  <VendedorRowComp key={v.id} vendedor={v} calc={c} rank={rank} fmt={fmt} desde={desde} />
                 ))}
               </tbody>
             </table>

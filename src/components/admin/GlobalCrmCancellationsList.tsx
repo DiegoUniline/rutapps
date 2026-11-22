@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 type CancellationItem = {
   empresa_id: string;
@@ -84,6 +85,12 @@ export default function GlobalCrmCancellationsList() {
     if (!term) return items;
     return items.filter(item => `${item.empresa_nombre} ${item.licencia ?? ''} ${item.email ?? ''} ${item.telefono ?? ''} ${item.reason ?? ''} ${item.reason_detail ?? ''}`.toLocaleLowerCase('es').includes(term));
   }, [items, search]);
+  const { sorted: filteredOrd, sort, toggle: toggleSort } = useSortableTable(filtered, (item: any, key) => {
+    if (key === 'contacto') return item.telefono || item.email;
+    if (key === 'motivo') return item.reason ? (REASON_LABELS[item.reason] ?? item.reason) : null;
+    if (key === 'retencion') return item.offered_discount ? (item.discount_accepted ? 'Aceptó' : 'Rechazó') : 'Sin oferta';
+    return item[key];
+  }, undefined, 'crm-cancelaciones');
 
   if (!visible) return null;
 
@@ -118,17 +125,17 @@ export default function GlobalCrmCancellationsList() {
               <table className="w-full min-w-[1050px] text-xs">
                 <thead className="sticky top-0 bg-muted/95">
                   <tr className="border-b border-border">
-                    <th className="px-4 py-3 text-left">Empresa</th>
-                    <th className="px-3 py-3 text-left">Contacto</th>
-                    <th className="px-3 py-3 text-left">Motivo</th>
-                    <th className="px-3 py-3 text-left">Lo que escribió</th>
-                    <th className="px-3 py-3 text-center">Fecha</th>
-                    <th className="px-3 py-3 text-center">Retención</th>
+                    <SortableTh sortKey="empresa_nombre" sort={sort} onToggle={toggleSort} className="px-4 py-3 text-left">Empresa</SortableTh>
+                    <SortableTh sortKey="contacto" sort={sort} onToggle={toggleSort} className="px-3 py-3 text-left">Contacto</SortableTh>
+                    <SortableTh sortKey="motivo" sort={sort} onToggle={toggleSort} className="px-3 py-3 text-left">Motivo</SortableTh>
+                    <SortableTh sortKey="reason_detail" sort={sort} onToggle={toggleSort} className="px-3 py-3 text-left">Lo que escribió</SortableTh>
+                    <SortableTh sortKey="cancelled_at" sort={sort} onToggle={toggleSort} align="center" className="px-3 py-3 text-center">Fecha</SortableTh>
+                    <SortableTh sortKey="retencion" sort={sort} onToggle={toggleSort} align="center" className="px-3 py-3 text-center">Retención</SortableTh>
                     <th className="px-4 py-3 text-center">CRM</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(item => {
+                  {filteredOrd.map(item => {
                     const base = path.startsWith('/equipo') ? '/equipo' : '/super-admin';
                     return (
                       <tr key={`${item.empresa_id}-${item.cancelled_at}`} className="border-b border-border/70 hover:bg-muted/30">

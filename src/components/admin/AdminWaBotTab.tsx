@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 export default function AdminWaBotTab() {
   const { user } = useAuth();
@@ -54,6 +55,13 @@ export default function AdminWaBotTab() {
     if (!search) return true;
     return (e.nombre || '').toLowerCase().includes(search.toLowerCase());
   });
+  const { sorted: rowsOrd, sort, toggle: toggleSort } = useSortableTable(rows, (e: any, key) => {
+    if (key === 'bot') return !!e.addon?.wa_bot_enabled;
+    if (key === 'precio') return Number(e.addon?.wa_bot_monthly_price ?? 0);
+    if (key === 'activado') return e.addon?.wa_bot_activated_at;
+    if (key === 'solicitado') return e.addon?.wa_bot_requested_at;
+    return e[key];
+  }, undefined, 'admin-wa-bot');
 
   const pendingRequests = (empresasQ.data || []).filter(e => e.addon?.wa_bot_requested_at && !e.addon?.wa_bot_enabled);
 
@@ -84,15 +92,15 @@ export default function AdminWaBotTab() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Empresa</TableHead>
-              <TableHead className="text-center">Bot activo</TableHead>
-              <TableHead>Precio mensual</TableHead>
-              <TableHead>Activado</TableHead>
-              <TableHead>Solicitado</TableHead>
+              <SortableTableHead sortKey="nombre" sort={sort} onToggle={toggleSort}>Empresa</SortableTableHead>
+              <SortableTableHead sortKey="bot" sort={sort} onToggle={toggleSort} align="center" className="text-center">Bot activo</SortableTableHead>
+              <SortableTableHead sortKey="precio" sort={sort} onToggle={toggleSort}>Precio mensual</SortableTableHead>
+              <SortableTableHead sortKey="activado" sort={sort} onToggle={toggleSort}>Activado</SortableTableHead>
+              <SortableTableHead sortKey="solicitado" sort={sort} onToggle={toggleSort}>Solicitado</SortableTableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map(e => {
+            {rowsOrd.map(e => {
               const a = e.addon;
               return (
                 <TableRow key={e.id}>

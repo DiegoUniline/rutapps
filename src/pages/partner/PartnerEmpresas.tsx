@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tag, Link2 } from 'lucide-react';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 type PartnerAttribution = {
   id: string;
@@ -111,6 +112,8 @@ export default function PartnerEmpresas() {
     },
     enabled: !!partner?.id,
   });
+  const { sorted: empresasOrd, sort, toggle: toggleSort } = useSortableTable(empresas ?? [], (e, key) =>
+    key === 'cupon' ? (e.cupon_efectivo?.codigo ?? null) : (e as any)[key], undefined, 'partner-empresas');
 
   return (
     <div className="space-y-4 w-full">
@@ -119,15 +122,15 @@ export default function PartnerEmpresas() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Suscripción</TableHead>
-              <TableHead>Origen</TableHead>
-              <TableHead>Cupón aplicado</TableHead>
-              <TableHead>Fecha alta</TableHead>
+              <SortableTableHead sortKey="empresa_nombre" sort={sort} onToggle={toggleSort}>Empresa</SortableTableHead>
+              <SortableTableHead sortKey="sub_status" sort={sort} onToggle={toggleSort}>Suscripción</SortableTableHead>
+              <SortableTableHead sortKey="metodo" sort={sort} onToggle={toggleSort}>Origen</SortableTableHead>
+              <SortableTableHead sortKey="cupon" sort={sort} onToggle={toggleSort}>Cupón aplicado</SortableTableHead>
+              <SortableTableHead sortKey="created_at" sort={sort} onToggle={toggleSort}>Fecha alta</SortableTableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(empresas || []).map((e) => {
+            {empresasOrd.map((e) => {
               const cup = e.cupon_efectivo;
               const desc = cup
                 ? cup.descuento_pct

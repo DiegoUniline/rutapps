@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Wallet, Inbox, Users, Check, X, Copy, Pencil, Eye, Key } from 'lucide-react';
 import { toast } from 'sonner';
 import { promptDialog } from '@/lib/confirm';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 const REF_BASE = 'https://rutapp.mx/?ref=';
 
@@ -97,6 +98,11 @@ export default function PartnersInlineTab() {
       return data || [];
     },
   });
+
+  const { sorted: partnersOrd, sort, toggle: toggleSort } = useSortableTable<any>(partners ?? [], (p, key) =>
+    ['total_generado', 'total_pagado', 'saldo_pendiente'].includes(key) ? Number(p[key] ?? 0) : p[key], undefined, 'admin-partners');
+  const { sorted: clientesPartnerOrd, sort: sortCli, toggle: toggleCli } = useSortableTable<any>(clientesPartner ?? [], (a, key) =>
+    key === 'empresa' ? a.empresas?.nombre : a[key], undefined, 'admin-partner-clientes');
 
   const { data: solicitudes } = useQuery({
     queryKey: ['admin-partner-solicitudes'],
@@ -207,19 +213,19 @@ export default function PartnersInlineTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Partner</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>%</TableHead>
-                  <TableHead>Empresas</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Pagado</TableHead>
-                  <TableHead className="text-right">Pendiente</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <SortableTableHead sortKey="nombre" sort={sort} onToggle={toggleSort}>Partner</SortableTableHead>
+                  <SortableTableHead sortKey="ref_slug" sort={sort} onToggle={toggleSort}>Slug</SortableTableHead>
+                  <SortableTableHead sortKey="comision_pct" sort={sort} onToggle={toggleSort}>%</SortableTableHead>
+                  <SortableTableHead sortKey="empresas_referidas" sort={sort} onToggle={toggleSort}>Empresas</SortableTableHead>
+                  <SortableTableHead sortKey="total_generado" sort={sort} onToggle={toggleSort} align="right" className="text-right">Total</SortableTableHead>
+                  <SortableTableHead sortKey="total_pagado" sort={sort} onToggle={toggleSort} align="right" className="text-right">Pagado</SortableTableHead>
+                  <SortableTableHead sortKey="saldo_pendiente" sort={sort} onToggle={toggleSort} align="right" className="text-right">Pendiente</SortableTableHead>
+                  <SortableTableHead sortKey="estado" sort={sort} onToggle={toggleSort}>Estado</SortableTableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(partners || []).map((p: any) => (
+                {partnersOrd.map((p: any) => (
                   <TableRow key={p.partner_id}>
                     <TableCell className="font-medium">
                       {p.nombre}
@@ -402,14 +408,14 @@ export default function PartnersInlineTab() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Método</TableHead>
-                    <TableHead>Slug</TableHead>
-                    <TableHead>Atribuido</TableHead>
+                    <SortableTableHead sortKey="empresa" sort={sortCli} onToggle={toggleCli}>Empresa</SortableTableHead>
+                    <SortableTableHead sortKey="metodo" sort={sortCli} onToggle={toggleCli}>Método</SortableTableHead>
+                    <SortableTableHead sortKey="ref_slug" sort={sortCli} onToggle={toggleCli}>Slug</SortableTableHead>
+                    <SortableTableHead sortKey="created_at" sort={sortCli} onToggle={toggleCli}>Atribuido</SortableTableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clientesPartner.map((a: any) => (
+                  {clientesPartnerOrd.map((a: any) => (
                     <TableRow key={a.empresas?.id || a.created_at}>
                       <TableCell className="font-medium">{a.empresas?.nombre || '—'}</TableCell>
                       <TableCell><Badge variant="outline">{a.metodo}</Badge></TableCell>

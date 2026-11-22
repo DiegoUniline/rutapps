@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { hasEmpresa, requireEmpresa } from '@/lib/empresaGuard';
 import { useRegistrarPdfReporte, type RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
 import { pdfDeReporte, periodoReporte } from '@/lib/reportePdf';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 export function ReportePromociones({ desde, hasta, registrarPdf }: { desde: string; hasta: string; registrarPdf?: RegistrarPdfReporte }) {
   const { fmt } = useCurrency();
@@ -42,6 +43,7 @@ export function ReportePromociones({ desde, hasta, registrarPdf }: { desde: stri
       return Object.values(summary).sort((a, b) => b.totalDescuento - a.totalDescuento);
     },
   });
+  const { sorted: promocionesOrd, sort, toggle: toggleSort } = useSortableTable(promociones ?? [], undefined, undefined, 'reporte-promociones');
 
 
   // PDF por código con lo mismo que la pantalla (D-051).
@@ -100,14 +102,14 @@ export function ReportePromociones({ desde, hasta, registrarPdf }: { desde: stri
         <table className="w-full text-[11px]">
           <thead>
             <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-              <th className="text-left px-3 py-2 font-semibold">Promoción</th>
-              <th className="text-left px-3 py-2 font-semibold">Tipo</th>
-              <th className="text-right px-3 py-2 font-semibold">Veces aplicada</th>
-              <th className="text-right px-3 py-2 font-semibold">Total descuento</th>
+              <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2 font-semibold">Promoción</SortableTh>
+              <SortableTh sortKey="tipo" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2 font-semibold">Tipo</SortableTh>
+              <SortableTh sortKey="veces" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2 font-semibold">Veces aplicada</SortableTh>
+              <SortableTh sortKey="totalDescuento" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2 font-semibold">Total descuento</SortableTh>
             </tr>
           </thead>
           <tbody>
-            {(promociones ?? []).map((p, i) => (
+            {promocionesOrd.map((p, i) => (
               <tr key={i} className="border-b border-border/50">
                 <td className="px-3 py-2 font-medium">{p.nombre}</td>
                 <td className="px-3 py-2 text-muted-foreground">{p.tipo}</td>

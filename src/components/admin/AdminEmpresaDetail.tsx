@@ -27,6 +27,7 @@ import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { es } from 'date-fns/locale';
 import { confirmDialog } from '@/lib/confirm';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Props {
   empresaId: string;
@@ -730,6 +731,23 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
       }))
       .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
   }, [facturas]);
+  const { sorted: pagosOrd, sort: sortPagos, toggle: togglePagos } = useSortableTable(pagos, undefined, undefined, 'admin-empresa-pagos');
+  const facturasPorFecha = useMemo(
+    () => [...facturas].sort((a, b) => new Date(b.creado_en || b.fecha_emision || 0).getTime() - new Date(a.creado_en || a.fecha_emision || 0).getTime()),
+    [facturas],
+  );
+  const { sorted: facturasOrd, sort: sortFacturas, toggle: toggleFacturas } = useSortableTable<any>(facturasPorFecha, (f, key) => {
+    if (key === 'concepto') return f.concepto || 'Suscripción Rutapp';
+    if (key === 'total') return Number(f.total || 0);
+    if (key === 'estado') return f.estado || 'pendiente';
+    if (key === 'metodo') return f.estado === 'pagada' ? (f.metodo_pago || (f.stripe_payment_intent_id || f.stripe_invoice_id ? 'Stripe' : null)) : (f.stripe_invoice_id ? 'Stripe' : 'Manual');
+    return f[key];
+  }, undefined, 'admin-empresa-facturas');
+  const { sorted: usersOrd, sort: sortUsers, toggle: toggleUsers } = useSortableTable<any>(filteredUsers, (u, key) => {
+    if (key === 'estado') return classifyUser(u);
+    if (key === 'rol') return u.rol;
+    return u[key];
+  }, undefined, 'admin-empresa-usuarios');
 
   const historial = useMemo(() => {
     const items: any[] = [];
@@ -1052,18 +1070,18 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="font-semibold">Nombre</TableHead>
-                      <TableHead className="font-semibold">Email</TableHead>
-                      <TableHead className="font-semibold">Teléfono</TableHead>
-                      <TableHead className="font-semibold">Rol</TableHead>
-                      <TableHead className="font-semibold">Estado</TableHead>
-                      <TableHead className="font-semibold">Último acceso</TableHead>
-                      <TableHead className="font-semibold">Registro</TableHead>
+                      <SortableTableHead sortKey="nombre" sort={sortUsers} onToggle={toggleUsers} className="font-semibold">Nombre</SortableTableHead>
+                      <SortableTableHead sortKey="email" sort={sortUsers} onToggle={toggleUsers} className="font-semibold">Email</SortableTableHead>
+                      <SortableTableHead sortKey="telefono" sort={sortUsers} onToggle={toggleUsers} className="font-semibold">Teléfono</SortableTableHead>
+                      <SortableTableHead sortKey="rol" sort={sortUsers} onToggle={toggleUsers} className="font-semibold">Rol</SortableTableHead>
+                      <SortableTableHead sortKey="estado" sort={sortUsers} onToggle={toggleUsers} className="font-semibold">Estado</SortableTableHead>
+                      <SortableTableHead sortKey="last_sign_in_at" sort={sortUsers} onToggle={toggleUsers} className="font-semibold">Último acceso</SortableTableHead>
+                      <SortableTableHead sortKey="created_at" sort={sortUsers} onToggle={toggleUsers} className="font-semibold">Registro</SortableTableHead>
                       <TableHead className="font-semibold text-center w-32">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers.map((u: any) => {
+                    {usersOrd.map((u: any) => {
                       const est = classifyUser(u);
                       const estCls = est === 'activo'
                         ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30'
@@ -1133,18 +1151,18 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Folio</TableHead>
-                      <TableHead>Concepto / período</TableHead>
-                      <TableHead>Emitida</TableHead>
-                      <TableHead>Vence</TableHead>
-                      <TableHead className="text-right">Monto</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Método</TableHead>
+                      <SortableTableHead sortKey="numero_factura" sort={sortFacturas} onToggle={toggleFacturas}>Folio</SortableTableHead>
+                      <SortableTableHead sortKey="concepto" sort={sortFacturas} onToggle={toggleFacturas}>Concepto / período</SortableTableHead>
+                      <SortableTableHead sortKey="fecha_emision" sort={sortFacturas} onToggle={toggleFacturas}>Emitida</SortableTableHead>
+                      <SortableTableHead sortKey="fecha_vencimiento" sort={sortFacturas} onToggle={toggleFacturas}>Vence</SortableTableHead>
+                      <SortableTableHead sortKey="total" sort={sortFacturas} onToggle={toggleFacturas} align="right" className="text-right">Monto</SortableTableHead>
+                      <SortableTableHead sortKey="estado" sort={sortFacturas} onToggle={toggleFacturas}>Estado</SortableTableHead>
+                      <SortableTableHead sortKey="metodo" sort={sortFacturas} onToggle={toggleFacturas}>Método</SortableTableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[...facturas].sort((a, b) => new Date(b.creado_en || b.fecha_emision || 0).getTime() - new Date(a.creado_en || a.fecha_emision || 0).getTime()).map(f => {
+                    {facturasOrd.map(f => {
                       const stripeMatch = stripeInvoices.find((si: any) => si.id === f.stripe_invoice_id);
                       const hostedUrl = stripeMatch?.hosted_invoice_url || null;
                       const isPending = (f.estado || 'pendiente') !== 'pagada' && f.estado !== 'cancelada';
@@ -1265,16 +1283,16 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Factura</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                    <TableHead>Método</TableHead>
-                    <TableHead>Origen</TableHead>
-                    <TableHead>Referencia</TableHead>
+                    <SortableTableHead sortKey="fecha" sort={sortPagos} onToggle={togglePagos}>Fecha</SortableTableHead>
+                    <SortableTableHead sortKey="factura" sort={sortPagos} onToggle={togglePagos}>Factura</SortableTableHead>
+                    <SortableTableHead sortKey="monto" sort={sortPagos} onToggle={togglePagos} align="right" className="text-right">Monto</SortableTableHead>
+                    <SortableTableHead sortKey="metodo" sort={sortPagos} onToggle={togglePagos}>Método</SortableTableHead>
+                    <SortableTableHead sortKey="origen" sort={sortPagos} onToggle={togglePagos}>Origen</SortableTableHead>
+                    <SortableTableHead sortKey="referencia" sort={sortPagos} onToggle={togglePagos}>Referencia</SortableTableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pagos.map(p => (
+                  {pagosOrd.map(p => (
                     <TableRow key={p.id} className="hover:bg-muted/30">
                       <TableCell className="text-sm">{p.fecha ? format(new Date(p.fecha), 'dd MMM yyyy', { locale: es }) : '—'}</TableCell>
                       <TableCell className="font-mono text-sm">{p.factura || '—'}</TableCell>

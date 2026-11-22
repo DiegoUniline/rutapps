@@ -7,6 +7,7 @@ import { hasEmpresa, requireEmpresa } from '@/lib/empresaGuard';
 import { fmtDate, todayLocal } from '@/lib/utils';
 import { useRegistrarPdfReporte, type RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
 import { pdfDeReporte, periodoReporte } from '@/lib/reportePdf';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface SaldoRow {
   cliente_id: string;
@@ -40,6 +41,7 @@ export function ReporteSaldoClienteFecha({ hasta, registrarPdf }: { desde: strin
   });
 
   const conSaldo = useMemo(() => rows.filter(r => Math.abs(r.saldo) > 0.009), [rows]);
+  const { sorted: conSaldoOrd, sort, toggle: toggleSort } = useSortableTable(conSaldo, undefined, undefined, 'reporte-saldo-cliente-fecha');
   const totalSaldo = conSaldo.reduce((s, r) => s + r.saldo, 0);
   const totalCargos = rows.reduce((s, r) => s + r.cargos, 0);
   const totalAbonos = rows.reduce((s, r) => s + r.abonos, 0);
@@ -85,14 +87,14 @@ export function ReporteSaldoClienteFecha({ hasta, registrarPdf }: { desde: strin
         <table className="w-full text-[12px]">
           <thead className="bg-accent/40 text-muted-foreground uppercase text-[10px] font-semibold">
             <tr>
-              <th className="text-left px-3 py-2">Cliente</th>
-              <th className="text-right px-3 py-2">Cargos</th>
-              <th className="text-right px-3 py-2">Abonos</th>
-              <th className="text-right px-3 py-2">Saldo</th>
+              <SortableTh sortKey="cliente" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Cliente</SortableTh>
+              <SortableTh sortKey="cargos" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Cargos</SortableTh>
+              <SortableTh sortKey="abonos" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Abonos</SortableTh>
+              <SortableTh sortKey="saldo" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Saldo</SortableTh>
             </tr>
           </thead>
           <tbody>
-            {conSaldo.map(r => (
+            {conSaldoOrd.map(r => (
               <tr key={r.cliente_id} className="border-t border-border">
                 <td className="px-3 py-1.5">{r.cliente}</td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{fmt(r.cargos)}</td>

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Gauge, Download } from 'lucide-react';
 import { formatBytes, todayKey, flushDataUsage } from '@/lib/dataUsage';
 import { DataUsageCard } from '@/components/DataUsageCard';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface ConsumoRow {
   id: string;
@@ -92,6 +93,13 @@ export default function ConsumoDatosPage() {
       .sort((a, b) => b.bytes - a.bytes);
   }, [rows, nombrePorUser]);
 
+  const { sorted: porUsuarioOrd, sort: sortUsr, toggle: toggleUsr } = useSortableTable(porUsuario, undefined, undefined, 'consumo-datos-usuarios');
+  const { sorted: rowsOrd, sort, toggle: toggleSort } = useSortableTable(rows, (r, key) => {
+    if (key === 'usuario') return nombrePorUser[r.user_id] || 'Usuario';
+    if (['bytes_descarga', 'bytes_subida'].includes(key)) return Number((r as any)[key]);
+    return (r as any)[key];
+  }, undefined, 'consumo-datos');
+
   const exportarCsv = () => {
     const header = 'Fecha,Usuario,Origen,MB descargados,MB subidos,Peticiones\n';
     const body = rows
@@ -164,15 +172,15 @@ export default function ConsumoDatosPage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40">
                 <tr className="text-left">
-                  <th className="p-2">Usuario</th>
-                  <th className="p-2 text-right">Total</th>
-                  <th className="p-2 text-right">Promedio por día</th>
-                  <th className="p-2 text-right">Días activos</th>
-                  <th className="p-2 text-right">Peticiones</th>
+                  <SortableTh sortKey="nombre" sort={sortUsr} onToggle={toggleUsr} className="p-2">Usuario</SortableTh>
+                  <SortableTh sortKey="bytes" sort={sortUsr} onToggle={toggleUsr} align="right" className="p-2 text-right">Total</SortableTh>
+                  <SortableTh sortKey="promedioDia" sort={sortUsr} onToggle={toggleUsr} align="right" className="p-2 text-right">Promedio por día</SortableTh>
+                  <SortableTh sortKey="dias" sort={sortUsr} onToggle={toggleUsr} align="right" className="p-2 text-right">Días activos</SortableTh>
+                  <SortableTh sortKey="peticiones" sort={sortUsr} onToggle={toggleUsr} align="right" className="p-2 text-right">Peticiones</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {porUsuario.map(u => (
+                {porUsuarioOrd.map(u => (
                   <tr key={u.userId} className="border-t">
                     <td className="p-2">{u.nombre}</td>
                     <td className="p-2 text-right tabular-nums font-medium">{formatBytes(u.bytes)}</td>
@@ -199,16 +207,16 @@ export default function ConsumoDatosPage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 sticky top-0">
                 <tr className="text-left">
-                  <th className="p-2">Fecha</th>
-                  <th className="p-2">Usuario</th>
-                  <th className="p-2">Origen</th>
-                  <th className="p-2 text-right">Descarga</th>
-                  <th className="p-2 text-right">Subida</th>
-                  <th className="p-2 text-right">Peticiones</th>
+                  <SortableTh sortKey="fecha" sort={sort} onToggle={toggleSort} className="p-2">Fecha</SortableTh>
+                  <SortableTh sortKey="usuario" sort={sort} onToggle={toggleSort} className="p-2">Usuario</SortableTh>
+                  <SortableTh sortKey="origen" sort={sort} onToggle={toggleSort} className="p-2">Origen</SortableTh>
+                  <SortableTh sortKey="bytes_descarga" sort={sort} onToggle={toggleSort} align="right" className="p-2 text-right">Descarga</SortableTh>
+                  <SortableTh sortKey="bytes_subida" sort={sort} onToggle={toggleSort} align="right" className="p-2 text-right">Subida</SortableTh>
+                  <SortableTh sortKey="peticiones" sort={sort} onToggle={toggleSort} align="right" className="p-2 text-right">Peticiones</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {rows.map(r => (
+                {rowsOrd.map(r => (
                   <tr key={r.id} className="border-t">
                     <td className="p-2">{r.fecha.split('-').reverse().join('/')}</td>
                     <td className="p-2">{nombrePorUser[r.user_id] || 'Usuario'}</td>

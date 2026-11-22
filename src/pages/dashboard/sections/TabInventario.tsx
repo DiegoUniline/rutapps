@@ -1,6 +1,7 @@
 import { Package, AlertTriangle } from 'lucide-react';
 import { useDashboardInventarioCamion } from '../hooks/useDashboardInventarioCamion';
 import type { DateRange } from '@/hooks/useDashboardData';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Props {
   range: DateRange;
@@ -9,6 +10,7 @@ interface Props {
 
 export default function TabInventario({ range, money }: Props) {
   const { data, isLoading } = useDashboardInventarioCamion(range);
+  const { sorted: mermasOrd, sort, toggle: toggleSort } = useSortableTable<any>(data?.mermasList ?? [], undefined, undefined, 'dashboard-mermas');
 
   if (isLoading) return <div className="h-48 bg-accent/30 rounded-xl animate-pulse" />;
   if (!data) return null;
@@ -52,15 +54,15 @@ export default function TabInventario({ range, money }: Props) {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-accent/30 z-10">
                   <tr className="text-muted-foreground border-b border-border">
-                    <th className="text-left px-3 py-2 font-medium">Folio</th>
-                    <th className="text-left px-3 py-2 font-medium">Fecha</th>
-                    <th className="text-left px-3 py-2 font-medium">Motivo</th>
-                    <th className="text-right px-3 py-2 font-medium">Costo</th>
-                    <th className="text-right px-3 py-2 font-medium">Valor venta</th>
+                    <SortableTh sortKey="folio" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2 font-medium">Folio</SortableTh>
+                    <SortableTh sortKey="fecha" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2 font-medium">Fecha</SortableTh>
+                    <SortableTh sortKey="motivo" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2 font-medium">Motivo</SortableTh>
+                    <SortableTh sortKey="total_costo" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2 font-medium">Costo</SortableTh>
+                    <SortableTh sortKey="total_venta" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2 font-medium">Valor venta</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.mermasList.map((m) => (
+                  {mermasOrd.map((m) => (
                     <tr key={m.id} className="border-b border-border/40">
                       <td className="px-3 py-2 font-medium">{m.folio || '—'}</td>
                       <td className="px-3 py-2 text-xs">{m.fecha}</td>

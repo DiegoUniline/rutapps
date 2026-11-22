@@ -9,6 +9,7 @@ import {
 import { cn, fmtDate } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { confirmDialog } from '@/lib/confirm';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 /* ─── Types ─── */
 interface AppNotification {
@@ -335,6 +336,8 @@ export default function AdminAnunciosTab() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [form, setForm] = useState<ReturnType<typeof emptyForm>>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const { sorted: notificationsOrd, sort, toggle: toggleSort } = useSortableTable(notifications, (n, key) =>
+    key === 'type' ? TYPE_META[n.type]?.label : (n as any)[key], undefined, 'admin-anuncios');
 
   const load = async () => {
     setLoading(true);
@@ -683,16 +686,16 @@ export default function AdminAnunciosTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-card">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Tipo</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Título</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Estado</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Inicio</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Fin</th>
+                <SortableTh sortKey="type" sort={sort} onToggle={toggleSort} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Tipo</SortableTh>
+                <SortableTh sortKey="title" sort={sort} onToggle={toggleSort} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Título</SortableTh>
+                <SortableTh sortKey="is_active" sort={sort} onToggle={toggleSort} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Estado</SortableTh>
+                <SortableTh sortKey="start_date" sort={sort} onToggle={toggleSort} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Inicio</SortableTh>
+                <SortableTh sortKey="end_date" sort={sort} onToggle={toggleSort} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Fin</SortableTh>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {notifications.map(n => {
+              {notificationsOrd.map(n => {
                 const meta = TYPE_META[n.type];
                 return (
                   <tr key={n.id} className="border-t border-border hover:bg-card/50 transition-colors">

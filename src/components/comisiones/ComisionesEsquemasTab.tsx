@@ -10,6 +10,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { confirmDialog } from '@/lib/confirm';
 import EsquemaVigenciaDialog, { type ModoGuardado } from './EsquemaVigenciaDialog';
 import { fmtDate, todayLocal } from '@/lib/utils';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 type Tipo = 'volumen_pct' | 'volumen_tiers' | 'bono_meta' | 'lista_precios';
 type Periodo = 'semanal' | 'quincenal' | 'mensual';
@@ -140,6 +141,15 @@ export default function ComisionesEsquemasTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const { sorted: esquemasOrd, sort, toggle: toggleSort } = useSortableTable(esquemas ?? [], (e, key) => {
+    if (key === 'tipo') return TIPO_LABEL[e.tipo];
+    if (key === 'base') return BASE_LABEL[e.base];
+    if (key === 'config') return describeConfig(e, fmt);
+    return (e as any)[key];
+  }, undefined, 'comisiones-esquemas');
+  const { sorted: vendedoresOrd, sort: sortVend, toggle: toggleVend } = useSortableTable<any>(vendedores ?? [], (v, key) =>
+    key === 'esquema' ? ((esquemas ?? []).find(e => e.id === v.comision_esquema_id)?.nombre ?? null) : v[key], undefined, 'comisiones-asignacion');
+
   const openNuevo = () => setEditing({
     nombre: '', tipo: 'volumen_pct', periodo: 'mensual', base: 'cobradas', config: { pct: 5 }, activo: true,
     vigente_desde: todayLocal(),
@@ -164,17 +174,17 @@ export default function ComisionesEsquemasTab() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-table-border">
-                  <th className="th-odoo text-left">Nombre</th>
-                  <th className="th-odoo text-left">Tipo</th>
-                  <th className="th-odoo text-left">Base</th>
-                  <th className="th-odoo text-left">Configuración</th>
-                  <th className="th-odoo text-left">Vigente desde</th>
-                  <th className="th-odoo text-center">Activo</th>
+                  <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Nombre</SortableTh>
+                  <SortableTh sortKey="tipo" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Tipo</SortableTh>
+                  <SortableTh sortKey="base" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Base</SortableTh>
+                  <SortableTh sortKey="config" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Configuración</SortableTh>
+                  <SortableTh sortKey="vigente_desde" sort={sort} onToggle={toggleSort} className="th-odoo text-left">Vigente desde</SortableTh>
+                  <SortableTh sortKey="activo" sort={sort} onToggle={toggleSort} align="center" className="th-odoo text-center">Activo</SortableTh>
                   <th className="th-odoo text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {(esquemas ?? []).map(e => (
+                {esquemasOrd.map(e => (
                   <tr key={e.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                     <td className="py-1.5 px-3 text-xs font-medium">{e.nombre}</td>
                     <td className="py-1.5 px-3 text-xs">{TIPO_LABEL[e.tipo]}</td>
@@ -216,12 +226,12 @@ export default function ComisionesEsquemasTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
-                <th className="th-odoo text-left">Vendedor</th>
-                <th className="th-odoo text-left">Esquema de comisión</th>
+                <SortableTh sortKey="nombre" sort={sortVend} onToggle={toggleVend} className="th-odoo text-left">Vendedor</SortableTh>
+                <SortableTh sortKey="esquema" sort={sortVend} onToggle={toggleVend} className="th-odoo text-left">Esquema de comisión</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {(vendedores ?? []).map((v: any) => (
+              {vendedoresOrd.map((v: any) => (
                 <tr key={v.id} className="border-b border-table-border last:border-0">
                   <td className="py-1.5 px-3 text-xs font-medium">{v.nombre}</td>
                   <td className="py-1.5 px-3 text-xs">

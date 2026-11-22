@@ -16,6 +16,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { cn , todayLocal } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { buildPromoReporting } from '@/lib/promoReporting';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 
 export default function ReporteDiarioRuta() {
@@ -397,6 +398,29 @@ export default function ReporteDiarioRuta() {
     ? `Stock al cierre del ${fechaFin}`
     : 'Stock actual';
 
+  // Orden por columna de cada tabla del reporte (se recuerda por tabla).
+  const anidado = (row: any, key: string) => {
+    if (key === 'cliente') return row.clientes?.nombre ?? row.cliente;
+    if (key === 'pedido') return row.ventas?.folio;
+    if (key === 'total_pedido') return Number(row.ventas?.total) || 0;
+    if (key === 'tipo_venta') return TIPO_LABEL[row.tipo] ?? row.tipo ?? 'Directa';
+    if (key === 'estado_entrega') return ENTREGA_STATUS_LABELS[row.status] ?? row.status;
+    if (key === 'accion') return ACCION_LABELS[row.accion] || row.accion;
+    if (['total', 'monto'].includes(key)) return Number(row[key]) || 0;
+    return row[key];
+  };
+  const tStock = useSortableTable<any>(stockItems, anidado, undefined, 'diario-ruta-stock');
+  const tVentas = useSortableTable<any>(ventasActivas, anidado, undefined, 'diario-ruta-ventas');
+  const tEntregas = useSortableTable<any>(entregasList, anidado, undefined, 'diario-ruta-entregas');
+  const tCanceladas = useSortableTable<any>(ventasCanceladas, anidado, undefined, 'diario-ruta-canceladas');
+  const tProductos = useSortableTable<any>(productosArr, anidado, undefined, 'diario-ruta-productos');
+  const tCobrosMetodo = useSortableTable<any>(cobrosResumenMetodo, anidado, undefined, 'diario-ruta-cobros-metodo');
+  const tCobros = useSortableTable<any>(cobros || [], anidado, undefined, 'diario-ruta-cobros');
+  const tGastos = useSortableTable<any>(gastos || [], anidado, undefined, 'diario-ruta-gastos');
+  const tDevoluciones = useSortableTable<any>(devLineas, anidado, undefined, 'diario-ruta-devoluciones');
+  const tVisitas = useSortableTable<any>(visitasSinCompra, anidado, undefined, 'diario-ruta-visitas-sin-compra');
+  const tAbonos = useSortableTable<any>(abonosCreditoPrevio, anidado, undefined, 'diario-ruta-abonos-previos');
+
   const usuarioNombre = isAll
     ? `Todos los usuarios (${(usuarios || []).length})`
     : (usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '');
@@ -643,14 +667,14 @@ export default function ReporteDiarioRuta() {
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Código</th>
-                    <th className="text-left py-1.5">Producto</th>
-                    <th className="text-right py-1.5">Existencia</th>
-                    <th className="text-right py-1.5">Vendido</th>
+                    <SortableTh sortKey="codigo" sort={tStock.sort} onToggle={tStock.toggle} className="text-left py-1.5">Código</SortableTh>
+                    <SortableTh sortKey="nombre" sort={tStock.sort} onToggle={tStock.toggle} className="text-left py-1.5">Producto</SortableTh>
+                    <SortableTh sortKey="cantidad" sort={tStock.sort} onToggle={tStock.toggle} align="right" className="text-right py-1.5">Existencia</SortableTh>
+                    <SortableTh sortKey="vendido" sort={tStock.sort} onToggle={tStock.toggle} align="right" className="text-right py-1.5">Vendido</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {stockItems.map((p: any, i: number) => (
+                  {tStock.sorted.map((p: any, i: number) => (
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
                       <td className="py-1">{p.nombre}</td>
@@ -682,15 +706,15 @@ export default function ReporteDiarioRuta() {
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Folio</th>
-                    <th className="text-left py-1.5">Cliente</th>
-                    <th className="text-left py-1.5">Tipo</th>
-                    <th className="text-left py-1.5">Pago</th>
-                    <th className="text-right py-1.5">Total</th>
+                    <SortableTh sortKey="folio" sort={tVentas.sort} onToggle={tVentas.toggle} className="text-left py-1.5">Folio</SortableTh>
+                    <SortableTh sortKey="cliente" sort={tVentas.sort} onToggle={tVentas.toggle} className="text-left py-1.5">Cliente</SortableTh>
+                    <SortableTh sortKey="tipo_venta" sort={tVentas.sort} onToggle={tVentas.toggle} className="text-left py-1.5">Tipo</SortableTh>
+                    <SortableTh sortKey="condicion_pago" sort={tVentas.sort} onToggle={tVentas.toggle} className="text-left py-1.5">Pago</SortableTh>
+                    <SortableTh sortKey="total" sort={tVentas.sort} onToggle={tVentas.toggle} align="right" className="text-right py-1.5">Total</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {ventasActivas.map((v: any) => (
+                  {tVentas.sorted.map((v: any) => (
                     <tr key={v.id} className="border-b border-border/50">
                       <td className="py-1 font-mono">{v.folio ?? '—'}</td>
                       <td className="py-1">{v.clientes?.nombre ?? '—'}</td>
@@ -736,15 +760,15 @@ export default function ReporteDiarioRuta() {
                 <table className="w-full text-[11px]">
                   <thead>
                     <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                      <th className="text-left py-1.5">Entrega</th>
-                      <th className="text-left py-1.5">Pedido</th>
-                      <th className="text-left py-1.5">Cliente</th>
-                      <th className="text-left py-1.5">Estado</th>
-                      <th className="text-right py-1.5">Total pedido</th>
+                      <SortableTh sortKey="folio" sort={tEntregas.sort} onToggle={tEntregas.toggle} className="text-left py-1.5">Entrega</SortableTh>
+                      <SortableTh sortKey="pedido" sort={tEntregas.sort} onToggle={tEntregas.toggle} className="text-left py-1.5">Pedido</SortableTh>
+                      <SortableTh sortKey="cliente" sort={tEntregas.sort} onToggle={tEntregas.toggle} className="text-left py-1.5">Cliente</SortableTh>
+                      <SortableTh sortKey="estado_entrega" sort={tEntregas.sort} onToggle={tEntregas.toggle} className="text-left py-1.5">Estado</SortableTh>
+                      <SortableTh sortKey="total_pedido" sort={tEntregas.sort} onToggle={tEntregas.toggle} align="right" className="text-right py-1.5">Total pedido</SortableTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {entregasList.map((e: any) => {
+                    {tEntregas.sorted.map((e: any) => {
                       const hecha = e.status === 'hecho';
                       const fallida = e.status === 'no_entregado' || e.status === 'cancelado';
                       return (
@@ -783,13 +807,13 @@ export default function ReporteDiarioRuta() {
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Folio</th>
-                    <th className="text-left py-1.5">Cliente</th>
-                    <th className="text-right py-1.5">Total</th>
+                    <SortableTh sortKey="folio" sort={tCanceladas.sort} onToggle={tCanceladas.toggle} className="text-left py-1.5">Folio</SortableTh>
+                    <SortableTh sortKey="cliente" sort={tCanceladas.sort} onToggle={tCanceladas.toggle} className="text-left py-1.5">Cliente</SortableTh>
+                    <SortableTh sortKey="total" sort={tCanceladas.sort} onToggle={tCanceladas.toggle} align="right" className="text-right py-1.5">Total</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {ventasCanceladas.map((v: any) => (
+                  {tCanceladas.sorted.map((v: any) => (
                     <tr key={v.id} className="border-b border-border/50">
                       <td className="py-1 font-mono">{v.folio ?? '—'}</td>
                       <td className="py-1">{v.clientes?.nombre ?? '—'}</td>
@@ -816,14 +840,14 @@ export default function ReporteDiarioRuta() {
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Código</th>
-                    <th className="text-left py-1.5">Producto</th>
-                    <th className="text-right py-1.5">Cant.</th>
-                    <th className="text-right py-1.5">Total</th>
+                    <SortableTh sortKey="codigo" sort={tProductos.sort} onToggle={tProductos.toggle} className="text-left py-1.5">Código</SortableTh>
+                    <SortableTh sortKey="nombre" sort={tProductos.sort} onToggle={tProductos.toggle} className="text-left py-1.5">Producto</SortableTh>
+                    <SortableTh sortKey="cantidad" sort={tProductos.sort} onToggle={tProductos.toggle} align="right" className="text-right py-1.5">Cant.</SortableTh>
+                    <SortableTh sortKey="total" sort={tProductos.sort} onToggle={tProductos.toggle} align="right" className="text-right py-1.5">Total</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {productosArr.map((p, i) => (
+                  {tProductos.sorted.map((p, i) => (
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
                       <td className="py-1">{p.nombre}</td>
@@ -861,14 +885,14 @@ export default function ReporteDiarioRuta() {
                 <table className="w-full text-[11px]">
                   <thead>
                     <tr className="text-[9px] text-muted-foreground uppercase border-b border-border/50">
-                      <th className="text-left py-1.5 px-3">Método</th>
-                      <th className="text-right py-1.5 px-3 w-20">Cobros</th>
-                      <th className="text-right py-1.5 px-3">Total</th>
-                      <th className="text-right py-1.5 px-3 w-16">%</th>
+                      <SortableTh sortKey="label" sort={tCobrosMetodo.sort} onToggle={tCobrosMetodo.toggle} className="text-left py-1.5 px-3">Método</SortableTh>
+                      <SortableTh sortKey="count" sort={tCobrosMetodo.sort} onToggle={tCobrosMetodo.toggle} align="right" className="text-right py-1.5 px-3 w-20">Cobros</SortableTh>
+                      <SortableTh sortKey="total" sort={tCobrosMetodo.sort} onToggle={tCobrosMetodo.toggle} align="right" className="text-right py-1.5 px-3">Total</SortableTh>
+                      <SortableTh sortKey="pct" sort={tCobrosMetodo.sort} onToggle={tCobrosMetodo.toggle} align="right" className="text-right py-1.5 px-3 w-16">%</SortableTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {cobrosResumenMetodo.map((r) => (
+                    {tCobrosMetodo.sorted.map((r) => (
                       <tr key={r.metodo} className="border-b border-border/30 last:border-0">
                         <td className="py-1.5 px-3 font-medium">{r.label}</td>
                         <td className="py-1.5 px-3 text-right text-muted-foreground">{r.count}</td>
@@ -891,14 +915,14 @@ export default function ReporteDiarioRuta() {
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Cliente</th>
-                    <th className="text-left py-1.5">Método</th>
-                    <th className="text-left py-1.5">Referencia</th>
-                    <th className="text-right py-1.5">Monto</th>
+                    <SortableTh sortKey="cliente" sort={tCobros.sort} onToggle={tCobros.toggle} className="text-left py-1.5">Cliente</SortableTh>
+                    <SortableTh sortKey="metodo_pago" sort={tCobros.sort} onToggle={tCobros.toggle} className="text-left py-1.5">Método</SortableTh>
+                    <SortableTh sortKey="referencia" sort={tCobros.sort} onToggle={tCobros.toggle} className="text-left py-1.5">Referencia</SortableTh>
+                    <SortableTh sortKey="monto" sort={tCobros.sort} onToggle={tCobros.toggle} align="right" className="text-right py-1.5">Monto</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {(cobros || []).map((c: any) => (
+                  {tCobros.sorted.map((c: any) => (
                     <tr key={c.id} className="border-b border-border/50">
                       <td className="py-1">{c.clientes?.nombre ?? '—'}</td>
                       <td className="py-1 capitalize">{c.metodo_pago}</td>
@@ -927,13 +951,13 @@ export default function ReporteDiarioRuta() {
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Concepto</th>
-                    <th className="text-left py-1.5">Notas</th>
-                    <th className="text-right py-1.5">Monto</th>
+                    <SortableTh sortKey="concepto" sort={tGastos.sort} onToggle={tGastos.toggle} className="text-left py-1.5">Concepto</SortableTh>
+                    <SortableTh sortKey="notas" sort={tGastos.sort} onToggle={tGastos.toggle} className="text-left py-1.5">Notas</SortableTh>
+                    <SortableTh sortKey="monto" sort={tGastos.sort} onToggle={tGastos.toggle} align="right" className="text-right py-1.5">Monto</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {(gastos || []).map((g: any) => (
+                  {tGastos.sorted.map((g: any) => (
                     <tr key={g.id} className="border-b border-border/50">
                       <td className="py-1">{g.concepto}</td>
                       <td className="py-1 text-muted-foreground">{g.notas || '—'}</td>
@@ -960,15 +984,15 @@ export default function ReporteDiarioRuta() {
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Producto</th>
-                    <th className="text-left py-1.5">Cliente</th>
-                    <th className="text-left py-1.5">Motivo</th>
-                    <th className="text-left py-1.5">Acción</th>
-                    <th className="text-right py-1.5">Cant.</th>
+                    <SortableTh sortKey="nombre" sort={tDevoluciones.sort} onToggle={tDevoluciones.toggle} className="text-left py-1.5">Producto</SortableTh>
+                    <SortableTh sortKey="cliente" sort={tDevoluciones.sort} onToggle={tDevoluciones.toggle} className="text-left py-1.5">Cliente</SortableTh>
+                    <SortableTh sortKey="motivo" sort={tDevoluciones.sort} onToggle={tDevoluciones.toggle} className="text-left py-1.5">Motivo</SortableTh>
+                    <SortableTh sortKey="accion" sort={tDevoluciones.sort} onToggle={tDevoluciones.toggle} className="text-left py-1.5">Acción</SortableTh>
+                    <SortableTh sortKey="cantidad" sort={tDevoluciones.sort} onToggle={tDevoluciones.toggle} align="right" className="text-right py-1.5">Cant.</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {devLineas.map((d, i) => (
+                  {tDevoluciones.sorted.map((d, i) => (
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-1">{d.nombre} <span className="text-muted-foreground font-mono">{d.codigo}</span></td>
                       <td className="py-1">{d.cliente}</td>
@@ -1003,13 +1027,13 @@ export default function ReporteDiarioRuta() {
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Cliente</th>
-                    <th className="text-left py-1.5">Motivo</th>
-                    <th className="text-left py-1.5">Notas</th>
+                    <SortableTh sortKey="cliente" sort={tVisitas.sort} onToggle={tVisitas.toggle} className="text-left py-1.5">Cliente</SortableTh>
+                    <SortableTh sortKey="motivo" sort={tVisitas.sort} onToggle={tVisitas.toggle} className="text-left py-1.5">Motivo</SortableTh>
+                    <SortableTh sortKey="notas" sort={tVisitas.sort} onToggle={tVisitas.toggle} className="text-left py-1.5">Notas</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {visitasSinCompra.map((v: any, i: number) => (
+                  {tVisitas.sorted.map((v: any, i: number) => (
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-1">{v.clientes?.nombre ?? '—'}</td>
                       <td className="py-1 text-muted-foreground">{v.motivo || '—'}</td>
@@ -1033,17 +1057,17 @@ export default function ReporteDiarioRuta() {
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Cliente</th>
-                    <th className="text-left py-1.5">Venta</th>
-                    <th className="text-left py-1.5">F. Venta</th>
-                    <th className="text-right py-1.5">Días</th>
-                    <th className="text-left py-1.5">Método</th>
-                    <th className="text-left py-1.5">Ref.</th>
-                    <th className="text-right py-1.5">Monto</th>
+                    <SortableTh sortKey="cliente" sort={tAbonos.sort} onToggle={tAbonos.toggle} className="text-left py-1.5">Cliente</SortableTh>
+                    <SortableTh sortKey="venta_folio" sort={tAbonos.sort} onToggle={tAbonos.toggle} className="text-left py-1.5">Venta</SortableTh>
+                    <SortableTh sortKey="venta_fecha" sort={tAbonos.sort} onToggle={tAbonos.toggle} className="text-left py-1.5">F. Venta</SortableTh>
+                    <SortableTh sortKey="dias_atraso" sort={tAbonos.sort} onToggle={tAbonos.toggle} align="right" className="text-right py-1.5">Días</SortableTh>
+                    <SortableTh sortKey="metodo_pago" sort={tAbonos.sort} onToggle={tAbonos.toggle} className="text-left py-1.5">Método</SortableTh>
+                    <SortableTh sortKey="referencia" sort={tAbonos.sort} onToggle={tAbonos.toggle} className="text-left py-1.5">Ref.</SortableTh>
+                    <SortableTh sortKey="monto_aplicado" sort={tAbonos.sort} onToggle={tAbonos.toggle} align="right" className="text-right py-1.5">Monto</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {abonosCreditoPrevio.map((a, i) => (
+                  {tAbonos.sorted.map((a, i) => (
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-1">{a.cliente}</td>
                       <td className="py-1 font-mono">{a.venta_folio}</td>

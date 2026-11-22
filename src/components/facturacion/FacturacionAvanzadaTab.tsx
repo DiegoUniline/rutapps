@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import {
   Receipt, Users, Download, Mail, ShieldCheck, FileSearch, RefreshCw, Loader2, FileDown,
 } from 'lucide-react';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 /**
  * Secciones avanzadas de facturación (por permiso facturacion.cfdi, D-016).
@@ -84,6 +85,14 @@ export function ComplementosPagoSection() {
     },
   });
 
+  const { sorted: pendientesOrd, sort: sortPend, toggle: togglePend } = useSortableTable(pendientes ?? [], (p: any, key) =>
+    key === 'monto' ? Number(p.monto ?? 0) : p[key], undefined, 'rep-pendientes');
+  const { sorted: pagosOrd, sort: sortPagos, toggle: togglePagos } = useSortableTable(pagos ?? [], (p: any, key) => {
+    if (key === 'folio') return `${p.serie ?? ''}-${p.folio ?? ''}`;
+    if (key === 'monto') return Number(p.monto ?? 0);
+    return p[key];
+  }, undefined, 'cfdi-pagos');
+
   const refrescar = () => {
     qc.invalidateQueries({ queryKey: ['rep-pendientes'] });
     qc.invalidateQueries({ queryKey: ['cfdi_pagos'] });
@@ -121,15 +130,15 @@ export function ComplementosPagoSection() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha cobro</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Cobro</TableHead>
-                  <TableHead>Fecha límite</TableHead>
+                  <SortableTableHead sortKey="fecha" sort={sortPend} onToggle={togglePend}>Fecha cobro</SortableTableHead>
+                  <SortableTableHead sortKey="cliente" sort={sortPend} onToggle={togglePend}>Cliente</SortableTableHead>
+                  <SortableTableHead sortKey="monto" sort={sortPend} onToggle={togglePend} align="right">Cobro</SortableTableHead>
+                  <SortableTableHead sortKey="fecha_limite" sort={sortPend} onToggle={togglePend}>Fecha límite</SortableTableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pendientes.map((p: any) => (
+                {pendientesOrd.map((p: any) => (
                   <TableRow key={p.cobro_id}>
                     <TableCell>{p.fecha}</TableCell>
                     <TableCell className="truncate max-w-[200px]">{p.cliente || '—'}</TableCell>
@@ -157,17 +166,17 @@ export function ComplementosPagoSection() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Folio</TableHead>
-                  <TableHead>Fecha pago</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Forma</TableHead>
-                  <TableHead>UUID</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <SortableTableHead sortKey="folio" sort={sortPagos} onToggle={togglePagos}>Folio</SortableTableHead>
+                  <SortableTableHead sortKey="fecha_pago" sort={sortPagos} onToggle={togglePagos}>Fecha pago</SortableTableHead>
+                  <SortableTableHead sortKey="monto" sort={sortPagos} onToggle={togglePagos}>Monto</SortableTableHead>
+                  <SortableTableHead sortKey="forma_pago" sort={sortPagos} onToggle={togglePagos}>Forma</SortableTableHead>
+                  <SortableTableHead sortKey="folio_fiscal" sort={sortPagos} onToggle={togglePagos}>UUID</SortableTableHead>
+                  <SortableTableHead sortKey="status" sort={sortPagos} onToggle={togglePagos}>Estado</SortableTableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pagos.map((p: any) => {
+                {pagosOrd.map((p: any) => {
                   const st = REP_STATUS[p.status] ?? { label: p.status, variant: 'secondary' as const };
                   return (
                     <TableRow key={p.id}>
@@ -358,6 +367,11 @@ export function FacturaGlobalSection() {
     },
   });
 
+  const { sorted: ventasOrd, sort: sortVentas, toggle: toggleSortVentas } = useSortableTable(ventas ?? [], (v: any, key) => {
+    if (key === 'cliente') return v.clientes?.nombre;
+    if (key === 'total') return Number(v.total ?? 0);
+    return v[key];
+  }, undefined, 'factura-global-ventas');
   const elegidas = (ventas || []).filter((v: any) => seleccion.has(v.id));
   const total = elegidas.reduce((s: number, v: any) => s + Number(v.total || 0), 0);
   const toggle = (id: string) => setSeleccion(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -445,14 +459,14 @@ export function FacturaGlobalSection() {
                   <TableHead className="w-8">
                     <input type="checkbox" aria-label="Elegir todas" checked={seleccion.size > 0 && seleccion.size === ventas.length} onChange={toggleTodas} />
                   </TableHead>
-                  <TableHead>Folio</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
+                  <SortableTableHead sortKey="folio" sort={sortVentas} onToggle={toggleSortVentas}>Folio</SortableTableHead>
+                  <SortableTableHead sortKey="fecha" sort={sortVentas} onToggle={toggleSortVentas}>Fecha</SortableTableHead>
+                  <SortableTableHead sortKey="cliente" sort={sortVentas} onToggle={toggleSortVentas}>Cliente</SortableTableHead>
+                  <SortableTableHead sortKey="total" sort={sortVentas} onToggle={toggleSortVentas} align="right">Total</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ventas.map((v: any) => (
+                {ventasOrd.map((v: any) => (
                   <TableRow key={v.id} className="cursor-pointer" onClick={() => toggle(v.id)}>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" aria-label={`Elegir ${v.folio}`} checked={seleccion.has(v.id)} onChange={() => toggle(v.id)} />

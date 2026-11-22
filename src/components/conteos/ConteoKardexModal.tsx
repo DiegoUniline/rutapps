@@ -12,6 +12,7 @@ import {
   ShoppingCart, Truck, ArrowDownLeft, ArrowUpRight,
   RefreshCw, PackagePlus, PackageMinus, ArrowRightLeft,
 } from 'lucide-react';
+import { SortableTableHead, useSortState, ordenarFilas } from '@/hooks/useSortableTable';
 
 interface Props {
   conteoId: string;
@@ -124,6 +125,8 @@ export default function ConteoKardexModal({ conteoId, lineaId, open, onClose }: 
       };
     },
   });
+  // Orden por columna dentro de cada grupo de movimientos.
+  const { sort, toggle: toggleSort } = useSortState('conteo-kardex');
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
@@ -167,14 +170,14 @@ export default function ConteoKardexModal({ conteoId, lineaId, open, onClose }: 
                     <Table>
                       <TableHeader>
                         <TableRow className="text-[10px]">
-                          <TableHead className="text-[10px] py-1">Fecha/Hora</TableHead>
-                          <TableHead className="text-[10px] py-1">Referencia</TableHead>
-                          <TableHead className="text-[10px] py-1 text-right">Cantidad</TableHead>
-                          <TableHead className="text-[10px] py-1">Notas</TableHead>
+                          <SortableTableHead sortKey="created_at" sort={sort} onToggle={toggleSort} className="text-[10px] py-1">Fecha/Hora</SortableTableHead>
+                          <SortableTableHead sortKey="referencia_tipo" sort={sort} onToggle={toggleSort} className="text-[10px] py-1">Referencia</SortableTableHead>
+                          <SortableTableHead sortKey="cantidad" sort={sort} onToggle={toggleSort} align="right" className="text-[10px] py-1 text-right">Cantidad</SortableTableHead>
+                          <SortableTableHead sortKey="notas" sort={sort} onToggle={toggleSort} className="text-[10px] py-1">Notas</SortableTableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {items.map(m => (
+                        {ordenarFilas(items, sort).map(m => (
                           <TableRow key={m.id} className="text-[11px]">
                             <TableCell className="py-1 whitespace-nowrap font-mono">
                               {format(new Date(m.created_at), 'dd/MM HH:mm', { locale: es })}

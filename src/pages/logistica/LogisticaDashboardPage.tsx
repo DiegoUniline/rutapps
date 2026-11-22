@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { cn , todayLocal } from '@/lib/utils';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'outline' },
@@ -34,6 +35,14 @@ export default function LogisticaDashboardPage() {
   const [fecha] = useState(() => todayLocal());
   const { data: kpis, isLoading: loadingKpis } = useLogisticaKpis(fecha);
   const { data: cargas, isLoading: loadingCargas } = useCargasDia(fecha);
+  const { sorted: cargasOrd, sort, toggle: toggleSort } = useSortableTable<any>(cargas ?? [], (c, key) => {
+    if (key === 'vendedor') return c.vendedores?.nombre;
+    if (key === 'origen') return c.almacen_origen?.nombre;
+    if (key === 'destino') return c.almacen_destino?.nombre;
+    if (key === 'productos') return (c.carga_lineas ?? []).length;
+    if (key === 'status') return (statusConfig[c.status] ?? statusConfig.pendiente).label;
+    return c[key];
+  }, undefined, 'logistica-camiones-dia');
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-5">
@@ -64,18 +73,18 @@ export default function LogisticaDashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vendedor</TableHead>
-                  <TableHead>Origen</TableHead>
-                  <TableHead>Destino</TableHead>
-                  <TableHead>Productos</TableHead>
-                  <TableHead>Status carga</TableHead>
+                  <SortableTableHead sortKey="vendedor" sort={sort} onToggle={toggleSort}>Vendedor</SortableTableHead>
+                  <SortableTableHead sortKey="origen" sort={sort} onToggle={toggleSort}>Origen</SortableTableHead>
+                  <SortableTableHead sortKey="destino" sort={sort} onToggle={toggleSort}>Destino</SortableTableHead>
+                  <SortableTableHead sortKey="productos" sort={sort} onToggle={toggleSort}>Productos</SortableTableHead>
+                  <SortableTableHead sortKey="status" sort={sort} onToggle={toggleSort}>Status carga</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {(!cargas || cargas.length === 0) && (
                   <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Sin camiones para hoy</TableCell></TableRow>
                 )}
-                {cargas?.map((c: any) => {
+                {cargasOrd.map((c: any) => {
                   const sc = statusConfig[c.status] ?? statusConfig.pendiente;
                   return (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-accent/40" onClick={() => navigate(`/logistica/orden-carga/${c.id}`)}>

@@ -6,6 +6,7 @@ import { hasEmpresa, requireEmpresa } from '@/lib/empresaGuard';
 import { fmtDate, todayLocal } from '@/lib/utils';
 import { useRegistrarPdfReporte, type RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
 import { pdfDeReporte, periodoReporte } from '@/lib/reportePdf';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface StockRow {
   producto_id: string;
@@ -42,6 +43,8 @@ export function ReporteStockFecha({ hasta, registrarPdf }: { desde: string; hast
     },
   });
 
+  const { sorted: rowsOrd, sort, toggle: toggleSort } = useSortableTable(rows, (r, key) =>
+    key === 'cantidad' ? Number(r.cantidad || 0) : (r as any)[key], undefined, 'reporte-stock-fecha');
   const totalUnidades = useMemo(() => rows.reduce((s, r) => s + Number(r.cantidad || 0), 0), [rows]);
   const productosUnicos = useMemo(() => new Set(rows.map(r => r.producto_id)).size, [rows]);
   const almacenesUnicos = useMemo(() => new Set(rows.map(r => r.almacen_id)).size, [rows]);
@@ -93,13 +96,13 @@ export function ReporteStockFecha({ hasta, registrarPdf }: { desde: string; hast
         <table className="w-full text-[12px]">
           <thead className="bg-accent/40 text-muted-foreground uppercase text-[10px] font-semibold">
             <tr>
-              <th className="text-left px-3 py-2">Producto</th>
-              <th className="text-left px-3 py-2">Almacén</th>
-              <th className="text-right px-3 py-2">Existencia</th>
+              <SortableTh sortKey="producto" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Producto</SortableTh>
+              <SortableTh sortKey="almacen" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Almacén</SortableTh>
+              <SortableTh sortKey="cantidad" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Existencia</SortableTh>
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => (
+            {rowsOrd.map(r => (
               <tr key={`${r.producto_id}-${r.almacen_id}`} className="border-t border-border">
                 <td className="px-3 py-1.5">{r.producto}</td>
                 <td className="px-3 py-1.5 text-muted-foreground">{r.almacen}</td>

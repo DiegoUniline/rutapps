@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 interface CatRow {
   id: string;
@@ -68,6 +69,7 @@ function CatalogTable({ catalog }: { catalog: CatalogDef }) {
     const clave = (r.clave || '').toLowerCase();
     return desc.includes(q) || clave.includes(q);
   });
+  const { sorted, sort, toggle: toggleSort } = useSortableTable(filtered, undefined, undefined, `catalogo-sat-${catalog.key}`);
 
   if (isLoading) return <TableSkeleton rows={8} cols={3} />;
 
@@ -87,22 +89,22 @@ function CatalogTable({ catalog }: { catalog: CatalogDef }) {
             <TableRow className="bg-card">
               {catalog.isTasa ? (
                 <>
-                  <TableHead className="w-[200px]">Nombre</TableHead>
-                  <TableHead className="w-[120px]">Porcentaje</TableHead>
+                  <SortableTableHead sortKey="nombre" sort={sort} onToggle={toggleSort} className="w-[200px]">Nombre</SortableTableHead>
+                  <SortableTableHead sortKey="porcentaje" sort={sort} onToggle={toggleSort} className="w-[120px]">Porcentaje</SortableTableHead>
                 </>
               ) : catalog.isUnidad ? (
                 <>
-                  <TableHead className="w-[120px]">Clave</TableHead>
-                  <TableHead>Nombre</TableHead>
+                  <SortableTableHead sortKey="clave" sort={sort} onToggle={toggleSort} className="w-[120px]">Clave</SortableTableHead>
+                  <SortableTableHead sortKey="nombre" sort={sort} onToggle={toggleSort}>Nombre</SortableTableHead>
                 </>
               ) : (
                 <>
-                  <TableHead className="w-[100px]">Clave</TableHead>
-                  <TableHead>Descripción</TableHead>
+                  <SortableTableHead sortKey="clave" sort={sort} onToggle={toggleSort} className="w-[100px]">Clave</SortableTableHead>
+                  <SortableTableHead sortKey="descripcion" sort={sort} onToggle={toggleSort}>Descripción</SortableTableHead>
                   {catalog.hasPersona && (
                     <>
-                      <TableHead className="w-[100px] text-center">P. Física</TableHead>
-                      <TableHead className="w-[100px] text-center">P. Moral</TableHead>
+                      <SortableTableHead sortKey="persona_fisica" sort={sort} onToggle={toggleSort} align="center" className="w-[100px] text-center">P. Física</SortableTableHead>
+                      <SortableTableHead sortKey="persona_moral" sort={sort} onToggle={toggleSort} align="center" className="w-[100px] text-center">P. Moral</SortableTableHead>
                     </>
                   )}
                 </>
@@ -115,7 +117,7 @@ function CatalogTable({ catalog }: { catalog: CatalogDef }) {
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Sin resultados</TableCell>
               </TableRow>
             ) : (
-              filtered.map((row) => (
+              sorted.map((row) => (
                 <TableRow key={row.id} className="text-[13px]">
                   {catalog.isTasa ? (
                     <>

@@ -8,6 +8,7 @@ import {
 import type { DateRange } from '@/hooks/useDashboardData';
 import { startOfWeek, format, eachWeekOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Props {
   range: DateRange;
@@ -57,6 +58,8 @@ export default function TabCartera({ range, ventasMes, ventas, cobros, money }: 
     const a = document.createElement('a'); a.href = url; a.download = `cartera-vencida-${new Date().toISOString().slice(0,10)}.csv`;
     a.click(); URL.revokeObjectURL(url);
   };
+
+  const { sorted: vencidosOrd, sort, toggle: toggleSort } = useSortableTable<any>(data?.vencidos ?? [], undefined, undefined, 'dashboard-cartera-vencida');
 
   if (isLoading) return <div className="h-48 bg-accent/30 rounded-xl animate-pulse" />;
   if (!data) return null;
@@ -113,16 +116,16 @@ export default function TabCartera({ range, ventasMes, ventas, cobros, money }: 
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-accent/30 z-10">
                 <tr className="text-muted-foreground border-b border-border">
-                  <th className="text-left px-3 py-2 font-medium">Cliente</th>
-                  <th className="text-left px-3 py-2 font-medium">Folio</th>
-                  <th className="text-right px-3 py-2 font-medium">Saldo</th>
-                  <th className="text-right px-3 py-2 font-medium">Días vencido</th>
-                  <th className="text-left px-3 py-2 font-medium">Vendedor</th>
-                  <th className="text-left px-3 py-2 font-medium">Fecha</th>
+                  <SortableTh sortKey="cliente" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2 font-medium">Cliente</SortableTh>
+                  <SortableTh sortKey="folio" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2 font-medium">Folio</SortableTh>
+                  <SortableTh sortKey="saldo" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2 font-medium">Saldo</SortableTh>
+                  <SortableTh sortKey="diasVencido" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2 font-medium">Días vencido</SortableTh>
+                  <SortableTh sortKey="vendedor" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2 font-medium">Vendedor</SortableTh>
+                  <SortableTh sortKey="fecha" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2 font-medium">Fecha</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {data.vencidos.map((v) => (
+                {vencidosOrd.map((v) => (
                   <tr key={v.ventaId} className="border-b border-border/40">
                     <td className="px-3 py-2 font-medium">{v.cliente}</td>
                     <td className="px-3 py-2 text-muted-foreground">{v.folio || '—'}</td>

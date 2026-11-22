@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { SortableTableHead, useSortableTable, useSortState, ordenarFilas } from '@/hooks/useSortableTable';
 
 function useReporteEntregas(vendedorId: string, fechaDesde: Date, fechaHasta: Date) {
   const { empresa } = useAuth();
@@ -114,6 +115,21 @@ export function ReporteEntregas() {
     return Array.from(map.values()).sort((a, b) => a.fecha.localeCompare(b.fecha));
   }, [entregas]);
 
+  const { sorted: productSummaryOrd, sort: sortProd, toggle: toggleProd } = useSortableTable(productSummary, undefined, undefined, 'reporte-entregas-productos');
+  const { sorted: byRouteOrd, sort: sortRuta, toggle: toggleRuta } = useSortableTable(byRoute, (r: any, key) => {
+    if (key === 'entregas') return r.entregas.length;
+    if (key === 'pendientes') return r.entregas.filter((e: any) => e.status === 'confirmado').length;
+    if (key === 'entregadas') return r.entregas.filter((e: any) => e.status === 'entregado').length;
+    return r[key];
+  }, undefined, 'reporte-entregas-rutas');
+  const { sort: sortEnt, toggle: toggleEnt } = useSortState('reporte-entregas-detalle');
+  const valorEntrega = (e: any, key: string) => {
+    if (key === 'cliente') return e.clientes?.nombre;
+    if (key === 'ruta') return e.vendedores?.nombre;
+    if (key === 'lineas') return (e.venta_lineas ?? []).length;
+    return e[key];
+  };
+
   const totalMonto = entregas?.reduce((s, e) => s + ((e as any).total ?? 0), 0) ?? 0;
   const totalUnidades = productSummary.reduce((s, p) => s + p.cantidad, 0);
 
@@ -197,14 +213,14 @@ export function ReporteEntregas() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-[11px]">Código</TableHead>
-              <TableHead className="text-[11px]">Producto</TableHead>
-              <TableHead className="text-[11px] text-right">Cantidad total</TableHead>
-              <TableHead className="text-[11px] text-right">Monto total</TableHead>
+              <SortableTableHead sortKey="codigo" sort={sortProd} onToggle={toggleProd} className="text-[11px]">Código</SortableTableHead>
+              <SortableTableHead sortKey="nombre" sort={sortProd} onToggle={toggleProd} className="text-[11px]">Producto</SortableTableHead>
+              <SortableTableHead sortKey="cantidad" sort={sortProd} onToggle={toggleProd} align="right" className="text-[11px] text-right">Cantidad total</SortableTableHead>
+              <SortableTableHead sortKey="total" sort={sortProd} onToggle={toggleProd} align="right" className="text-[11px] text-right">Monto total</SortableTableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {productSummary.map(p => (
+            {productSummaryOrd.map(p => (
               <TableRow key={p.codigo}>
                 <TableCell className="font-mono text-[11px] text-muted-foreground py-1.5">{p.codigo}</TableCell>
                 <TableCell className="text-[12px] font-medium py-1.5">{p.nombre}</TableCell>
@@ -241,16 +257,16 @@ export function ReporteEntregas() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[10px]">Folio</TableHead>
-                  <TableHead className="text-[10px]">Cliente</TableHead>
-                  <TableHead className="text-[10px]">Ruta</TableHead>
-                  <TableHead className="text-[10px] text-center">Status</TableHead>
-                  <TableHead className="text-[10px] text-center">Líneas</TableHead>
-                  <TableHead className="text-[10px] text-right">Total</TableHead>
+                  <SortableTableHead sortKey="folio" sort={sortEnt} onToggle={toggleEnt} className="text-[10px]">Folio</SortableTableHead>
+                  <SortableTableHead sortKey="cliente" sort={sortEnt} onToggle={toggleEnt} className="text-[10px]">Cliente</SortableTableHead>
+                  <SortableTableHead sortKey="ruta" sort={sortEnt} onToggle={toggleEnt} className="text-[10px]">Ruta</SortableTableHead>
+                  <SortableTableHead sortKey="status" sort={sortEnt} onToggle={toggleEnt} align="center" className="text-[10px] text-center">Status</SortableTableHead>
+                  <SortableTableHead sortKey="lineas" sort={sortEnt} onToggle={toggleEnt} align="center" className="text-[10px] text-center">Líneas</SortableTableHead>
+                  <SortableTableHead sortKey="total" sort={sortEnt} onToggle={toggleEnt} align="right" className="text-[10px] text-right">Total</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {group.entregas.map((e: any) => (
+                {ordenarFilas(group.entregas as any[], sortEnt, valorEntrega).map((e: any) => (
                   <TableRow key={e.id}>
                     <TableCell className="font-mono text-[11px] font-bold py-1.5">{e.folio}</TableCell>
                     <TableCell className="text-[11px] font-medium py-1.5">{e.clientes?.nombre ?? '—'}</TableCell>
@@ -280,15 +296,15 @@ export function ReporteEntregas() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[11px]">Ruta / Vendedor</TableHead>
-                <TableHead className="text-[11px] text-center">Entregas</TableHead>
-                <TableHead className="text-[11px] text-center">Pendientes</TableHead>
-                <TableHead className="text-[11px] text-center">Entregadas</TableHead>
-                <TableHead className="text-[11px] text-right">Monto total</TableHead>
+                <SortableTableHead sortKey="vendedor" sort={sortRuta} onToggle={toggleRuta} className="text-[11px]">Ruta / Vendedor</SortableTableHead>
+                <SortableTableHead sortKey="entregas" sort={sortRuta} onToggle={toggleRuta} align="center" className="text-[11px] text-center">Entregas</SortableTableHead>
+                <SortableTableHead sortKey="pendientes" sort={sortRuta} onToggle={toggleRuta} align="center" className="text-[11px] text-center">Pendientes</SortableTableHead>
+                <SortableTableHead sortKey="entregadas" sort={sortRuta} onToggle={toggleRuta} align="center" className="text-[11px] text-center">Entregadas</SortableTableHead>
+                <SortableTableHead sortKey="total" sort={sortRuta} onToggle={toggleRuta} align="right" className="text-[11px] text-right">Monto total</SortableTableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {byRoute.map(r => (
+              {byRouteOrd.map(r => (
                 <TableRow key={r.vendedor}>
                   <TableCell className="text-[12px] font-semibold py-1.5">{r.vendedor}</TableCell>
                   <TableCell className="text-center text-[12px] py-1.5">{r.entregas.length}</TableCell>

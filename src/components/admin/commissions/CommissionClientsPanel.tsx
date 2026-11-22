@@ -19,6 +19,7 @@ import { getEffectiveCompanyStatus } from '@/lib/adminCompanyStatus';
 import { AlertCircle, AlertTriangle, CheckCircle2, Clock, Pencil, Search, UserRoundCheck, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CommissionAttribution, CommissionCompany, CommissionPerson } from './types';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 interface AssignmentForm {
   capturedById: string;
@@ -119,6 +120,16 @@ export default function CommissionClientsPanel({ companies, people, attributions
         .some(value => value?.toLocaleLowerCase('es').includes(term));
     });
   }, [attributionByCompany, companies, filter, peopleById, search, statusFilter]);
+  const { sorted: rowsOrd, sort, toggle: toggleSort } = useSortableTable(rows, (company, key) => {
+    const attribution = attributionByCompany.get(company.id);
+    if (key === 'cliente') return company.nombre;
+    if (key === 'estado') return getEffectiveCompanyStatus(company.subscriptions?.[0]);
+    if (key === 'consiguio') return attribution?.captured_by_id ? peopleById.get(attribution.captured_by_id)?.name : null;
+    if (key === 'encargado') return attribution?.managed_by_id ? peopleById.get(attribution.managed_by_id)?.name : null;
+    if (key === 'canal') return attribution ? commissionChannelLabel(attribution.channel) : null;
+    if (key === 'alta') return company.created_at;
+    return null;
+  }, undefined, 'comisiones-clientes');
 
   const openAssignment = (company: CommissionCompany) => {
     const attribution = attributionByCompany.get(company.id);
@@ -218,17 +229,17 @@ export default function CommissionClientsPanel({ companies, people, attributions
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[220px]">Cliente</TableHead>
-                <TableHead className="min-w-[125px]">Estado</TableHead>
-                <TableHead className="min-w-[170px]">Lo consiguió</TableHead>
-                <TableHead className="min-w-[170px]">Encargado actual</TableHead>
-                <TableHead className="min-w-[150px]">Canal</TableHead>
-                <TableHead className="min-w-[115px]">Alta</TableHead>
+                <SortableTableHead sortKey="cliente" sort={sort} onToggle={toggleSort} className="min-w-[220px]">Cliente</SortableTableHead>
+                <SortableTableHead sortKey="estado" sort={sort} onToggle={toggleSort} className="min-w-[125px]">Estado</SortableTableHead>
+                <SortableTableHead sortKey="consiguio" sort={sort} onToggle={toggleSort} className="min-w-[170px]">Lo consiguió</SortableTableHead>
+                <SortableTableHead sortKey="encargado" sort={sort} onToggle={toggleSort} className="min-w-[170px]">Encargado actual</SortableTableHead>
+                <SortableTableHead sortKey="canal" sort={sort} onToggle={toggleSort} className="min-w-[150px]">Canal</SortableTableHead>
+                <SortableTableHead sortKey="alta" sort={sort} onToggle={toggleSort} className="min-w-[115px]">Alta</SortableTableHead>
                 <TableHead className="w-16" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map(company => {
+              {rowsOrd.map(company => {
                 const attribution = attributionByCompany.get(company.id);
                 const captured = attribution?.captured_by_id ? peopleById.get(attribution.captured_by_id) : undefined;
                 const managed = attribution?.managed_by_id ? peopleById.get(attribution.managed_by_id) : undefined;

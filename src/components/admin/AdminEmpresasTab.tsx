@@ -469,6 +469,8 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
       if (key === 'stripe_id') return sub?.stripe_subscription_id;
       return null;
     },
+    undefined,
+    'admin-empresas',
   );
 
   const STATUS_ORDER = ['active', 'trial', 'past_due', 'gracia', 'suspended', 'cancelada', 'sin_sub', 'pendiente_pago'];

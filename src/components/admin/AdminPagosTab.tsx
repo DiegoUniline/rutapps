@@ -13,6 +13,7 @@ import { Wallet, Search, ExternalLink, Loader2, CalendarIcon, ChevronDown, Chevr
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { SortableTableHead, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Props {
   onSelectEmpresa: (empresaId: string, tab?: 'pagos') => void;
@@ -115,6 +116,7 @@ export default function AdminPagosTab({ onSelectEmpresa }: Props) {
   }, [rows, search, metodo, origen, empresaId, desde, hasta]);
 
   const total = useMemo(() => filtered.reduce((s, r) => s + r.monto, 0), [filtered]);
+  const { sorted: filteredOrd, sort, toggle: toggleSort } = useSortableTable(filtered, undefined, undefined, 'admin-pagos');
 
   const grouped = useMemo(() => {
     if (groupBy === 'ninguno') return null;
@@ -139,7 +141,7 @@ export default function AdminPagosTab({ onSelectEmpresa }: Props) {
       return k;
     };
     const map = new Map<string, Row[]>();
-    filtered.forEach((r) => {
+    filteredOrd.forEach((r) => {
       const k = keyOf(r);
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(r);
@@ -156,7 +158,7 @@ export default function AdminPagosTab({ onSelectEmpresa }: Props) {
       return b.total - a.total;
     });
     return out;
-  }, [filtered, groupBy]);
+  }, [filteredOrd, groupBy]);
 
   const toggleGroup = (k: string) => setOpenGroups((p) => ({ ...p, [k]: !p[k] }));
 
@@ -280,13 +282,13 @@ export default function AdminPagosTab({ onSelectEmpresa }: Props) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Factura</TableHead>
-                    <TableHead>Método</TableHead>
-                    <TableHead>Origen</TableHead>
-                    <TableHead>Referencia</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
+                    <SortableTableHead sortKey="fecha" sort={sort} onToggle={toggleSort}>Fecha</SortableTableHead>
+                    <SortableTableHead sortKey="empresa_nombre" sort={sort} onToggle={toggleSort}>Empresa</SortableTableHead>
+                    <SortableTableHead sortKey="factura" sort={sort} onToggle={toggleSort}>Factura</SortableTableHead>
+                    <SortableTableHead sortKey="metodo" sort={sort} onToggle={toggleSort}>Método</SortableTableHead>
+                    <SortableTableHead sortKey="origen" sort={sort} onToggle={toggleSort}>Origen</SortableTableHead>
+                    <SortableTableHead sortKey="referencia" sort={sort} onToggle={toggleSort}>Referencia</SortableTableHead>
+                    <SortableTableHead sortKey="monto" sort={sort} onToggle={toggleSort} align="right" className="text-right">Monto</SortableTableHead>
                     <TableHead className="text-right">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -333,7 +335,7 @@ export default function AdminPagosTab({ onSelectEmpresa }: Props) {
                       );
                     })
                   ) : (
-                    filtered.map((p) => (
+                    filteredOrd.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell className="whitespace-nowrap text-sm">
                           {p.fecha ? format(new Date(p.fecha), 'dd/MM/yyyy') : '—'}

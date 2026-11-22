@@ -6,6 +6,7 @@ import { EncabezadoListaMovil, ListaTarjetasMovil, ListaTarjetaMovil, estadoPild
 import type { AccionMovil } from '@/components/shared/MasAccionesMovil';
 import type { ProfileUser, AuthUser, UserRole, Almacen } from '@/hooks/useUsuarios';
 import type { Role } from '@/hooks/useRoles';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Props {
   profiles: ProfileUser[];
@@ -63,6 +64,15 @@ export default function UsuariosTab({
   }, [profiles, showArchived, search, authUsers, userRoles, roles, almacenes]);
   const isMobile = useIsMobile();
   const movil = useCargarMasMovil(visibleProfiles, `${search}|${showArchived}`);
+  const { sorted: profilesOrd, sort, toggle: toggleSort } = useSortableTable(visibleProfiles, (p: any, key) => {
+    if (key === 'email') return authUsers.find(au => au.id === p.user_id)?.email;
+    if (key === 'rol') {
+      const userRole = userRoles.find(ur => ur.user_id === p.user_id);
+      return userRole ? roles.find(r => r.id === userRole.role_id)?.nombre : null;
+    }
+    if (key === 'almacen') return almacenes.find(a => a.id === p.almacen_id)?.nombre;
+    return p[key];
+  }, undefined, 'usuarios');
 
   const buscador = (
       <div className="relative">
@@ -192,16 +202,16 @@ export default function UsuariosTab({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-accent/50 border-b border-border">
-              <th className="text-left px-4 py-2.5 font-semibold text-foreground">Nombre</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-foreground">Email</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-foreground">Rol</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-foreground">Almacén</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-foreground">Estado</th>
+              <SortableTh sortKey="nombre" sort={sort} onToggle={toggleSort} className="text-left px-4 py-2.5 font-semibold text-foreground">Nombre</SortableTh>
+              <SortableTh sortKey="email" sort={sort} onToggle={toggleSort} className="text-left px-4 py-2.5 font-semibold text-foreground">Email</SortableTh>
+              <SortableTh sortKey="rol" sort={sort} onToggle={toggleSort} className="text-left px-4 py-2.5 font-semibold text-foreground">Rol</SortableTh>
+              <SortableTh sortKey="almacen" sort={sort} onToggle={toggleSort} className="text-left px-4 py-2.5 font-semibold text-foreground">Almacén</SortableTh>
+              <SortableTh sortKey="estado" sort={sort} onToggle={toggleSort} className="text-left px-4 py-2.5 font-semibold text-foreground">Estado</SortableTh>
               <th className="w-28"></th>
             </tr>
           </thead>
           <tbody>
-            {visibleProfiles.map(p => {
+            {profilesOrd.map(p => {
               const userRole = userRoles.find(ur => ur.user_id === p.user_id);
               const authUser = authUsers.find(au => au.id === p.user_id);
               const isOwnerUser = ownerUserId === p.user_id;

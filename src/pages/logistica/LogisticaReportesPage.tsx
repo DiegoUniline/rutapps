@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { generarReportePdf } from '@/lib/reportePdf';
 import { reporteProductosCargadosPdf, reportePedidosEntregarPdf } from '@/lib/logisticaReportesPdf';
 import { abrirPdf } from '@/lib/pdfAcciones';
+import { SortableTh, useSortState, ordenarFilas, type SortState } from '@/hooks/useSortableTable';
 
 type Tab = 'productos_cargados' | 'pedidos_entregar';
 
@@ -347,6 +348,7 @@ function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; on
 // View: Productos cargados
 // ============================================================================
 function ProductosCargadosView({ isLoading, data, showByVendedor }: { isLoading: boolean; data: any; showByVendedor: boolean }) {
+  const { sort, toggle } = useSortState('logistica-productos-cargados');
   if (isLoading) return <div className="text-center py-12 text-muted-foreground">Cargando…</div>;
   if (!data || data.consolidado.length === 0) {
     return <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-lg">Sin cargas en el período seleccionado</div>;
@@ -365,7 +367,7 @@ function ProductosCargadosView({ isLoading, data, showByVendedor }: { isLoading:
       {/* Resumen consolidado */}
       <section>
         <h2 className="text-sm font-semibold text-foreground mb-2">Resumen consolidado</h2>
-        <ProductosTable rows={data.consolidado} />
+        <ProductosTable rows={data.consolidado} sort={sort} onToggle={toggle} />
       </section>
 
       {/* Desglose por vendedor */}
@@ -381,7 +383,7 @@ function ProductosCargadosView({ isLoading, data, showByVendedor }: { isLoading:
                     Cargado: <span className="font-semibold text-foreground">{v.totalCargado.toLocaleString()}</span> · Vendido: <span className="font-semibold text-foreground">{v.totalVendido.toLocaleString()}</span> · Devuelto: <span className="font-semibold text-foreground">{v.totalDevuelto.toLocaleString()}</span>
                   </div>
                 </div>
-                <ProductosTable rows={v.productos} />
+                <ProductosTable rows={v.productos} sort={sort} onToggle={toggle} />
               </div>
             ))}
           </div>
@@ -391,21 +393,21 @@ function ProductosCargadosView({ isLoading, data, showByVendedor }: { isLoading:
   );
 }
 
-function ProductosTable({ rows }: { rows: any[] }) {
+function ProductosTable({ rows, sort, onToggle }: { rows: any[]; sort: SortState; onToggle: (key: string) => void }) {
   return (
     <div className="border border-border rounded-lg overflow-x-auto">
       <table className="w-full text-[12px]">
         <thead className="bg-muted/40">
           <tr className="text-[10px] text-muted-foreground uppercase">
-            <th className="text-left px-3 py-2">Código</th>
-            <th className="text-left px-3 py-2">Producto</th>
-            <th className="text-right px-3 py-2">Cargado</th>
-            <th className="text-right px-3 py-2">Vendido</th>
-            <th className="text-right px-3 py-2">Devuelto</th>
+            <SortableTh sortKey="codigo" sort={sort} onToggle={onToggle} className="text-left px-3 py-2">Código</SortableTh>
+            <SortableTh sortKey="nombre" sort={sort} onToggle={onToggle} className="text-left px-3 py-2">Producto</SortableTh>
+            <SortableTh sortKey="cargado" sort={sort} onToggle={onToggle} align="right" className="text-right px-3 py-2">Cargado</SortableTh>
+            <SortableTh sortKey="vendido" sort={sort} onToggle={onToggle} align="right" className="text-right px-3 py-2">Vendido</SortableTh>
+            <SortableTh sortKey="devuelto" sort={sort} onToggle={onToggle} align="right" className="text-right px-3 py-2">Devuelto</SortableTh>
           </tr>
         </thead>
         <tbody>
-          {rows.map((p: any, i: number) => (
+          {ordenarFilas(rows, sort).map((p: any, i: number) => (
             <tr key={i} className="border-t border-border/50">
               <td className="px-3 py-1.5 font-mono text-muted-foreground">{p.codigo}</td>
               <td className="px-3 py-1.5">{p.nombre}</td>
@@ -424,6 +426,7 @@ function ProductosTable({ rows }: { rows: any[] }) {
 // View: Pedidos a entregar
 // ============================================================================
 function PedidosEntregarView({ isLoading, data, showByVendedor }: { isLoading: boolean; data: any; showByVendedor: boolean }) {
+  const { sort, toggle } = useSortState('logistica-pedidos-entregar');
   if (isLoading) return <div className="text-center py-12 text-muted-foreground">Cargando…</div>;
   if (!data || data.totalPedidos === 0) {
     return <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-lg">Sin pedidos en el período seleccionado</div>;
@@ -448,7 +451,7 @@ function PedidosEntregarView({ isLoading, data, showByVendedor }: { isLoading: b
                 </div>
               </div>
             )}
-            <PedidosTable pedidos={v.pedidos} />
+            <PedidosTable pedidos={v.pedidos} sort={sort} onToggle={toggle} />
           </section>
         ))}
       </div>
@@ -456,23 +459,29 @@ function PedidosEntregarView({ isLoading, data, showByVendedor }: { isLoading: b
   );
 }
 
-function PedidosTable({ pedidos }: { pedidos: any[] }) {
+function PedidosTable({ pedidos, sort, onToggle }: { pedidos: any[]; sort: SortState; onToggle: (key: string) => void }) {
+  const valorPedido = (p: any, key: string) => {
+    if (key === 'fecha') return p.fecha_entrega ?? p.fecha;
+    if (key === 'cliente') return p.clientes?.nombre;
+    if (key === 'direccion') return p.clientes?.direccion;
+    return p[key];
+  };
   return (
     <div className="border border-border rounded-lg overflow-x-auto">
       <table className="w-full text-[12px]">
         <thead className="bg-muted/40">
           <tr className="text-[10px] text-muted-foreground uppercase">
-            <th className="text-left px-3 py-2">Folio</th>
-            <th className="text-left px-3 py-2">Fecha</th>
-            <th className="text-left px-3 py-2">Cliente</th>
-            <th className="text-left px-3 py-2">Dirección</th>
-            <th className="text-right px-3 py-2">Piezas</th>
-            <th className="text-right px-3 py-2">Total</th>
-            <th className="text-left px-3 py-2">Status</th>
+            <SortableTh sortKey="folio" sort={sort} onToggle={onToggle} className="text-left px-3 py-2">Folio</SortableTh>
+            <SortableTh sortKey="fecha" sort={sort} onToggle={onToggle} className="text-left px-3 py-2">Fecha</SortableTh>
+            <SortableTh sortKey="cliente" sort={sort} onToggle={onToggle} className="text-left px-3 py-2">Cliente</SortableTh>
+            <SortableTh sortKey="direccion" sort={sort} onToggle={onToggle} className="text-left px-3 py-2">Dirección</SortableTh>
+            <SortableTh sortKey="piezas" sort={sort} onToggle={onToggle} align="right" className="text-right px-3 py-2">Piezas</SortableTh>
+            <SortableTh sortKey="total" sort={sort} onToggle={onToggle} align="right" className="text-right px-3 py-2">Total</SortableTh>
+            <SortableTh sortKey="status" sort={sort} onToggle={onToggle} className="text-left px-3 py-2">Status</SortableTh>
           </tr>
         </thead>
         <tbody>
-          {pedidos.map((p: any) => (
+          {ordenarFilas(pedidos, sort, valorPedido).map((p: any) => (
             <tr key={p.id} className="border-t border-border/50">
               <td className="px-3 py-1.5 font-mono text-muted-foreground">{p.folio ?? '—'}</td>
               <td className="px-3 py-1.5">{fmtDate(p.fecha_entrega ?? p.fecha)}</td>

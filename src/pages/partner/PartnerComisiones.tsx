@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Database } from '@/integrations/supabase/types';
+import { SortableTableHead, useSortState, useSortableTable, ordenarFilas } from '@/hooks/useSortableTable';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
 type CommissionRow = Database['public']['Tables']['partner_comisiones']['Row'] & { empresas: { nombre: string } | null };
@@ -38,21 +39,32 @@ export default function PartnerComisiones() {
     enabled: !!partner?.id,
   });
 
+  const { sort, toggle: toggleSort } = useSortState('partner-comisiones');
+  const valorComision = (c: CommissionRow, key: string) => {
+    if (key === 'empresa') return c.tipo === 'bono_nivel' ? 'Bono de nivel' : c.empresas?.nombre;
+    if (key === 'monto_factura') return c.tipo === 'bono_nivel' ? null : Number(c.monto_factura);
+    if (key === 'neto') return c.tipo === 'bono_nivel' ? null : Number(c.partner_pct) - Number(c.cupon_pct);
+    if (key === 'monto_comision') return Number(c.monto_comision);
+    return (c as any)[key];
+  };
+  const { sorted: pagosOrd, sort: sortPagos, toggle: togglePagos } = useSortableTable(pagos ?? [], (p, key) =>
+    key === 'monto' ? Number(p.monto) : (p as any)[key], undefined, 'partner-pagos');
+
   const renderTable = (rows: CommissionRow[]) => (
     <Card>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Periodo</TableHead>
-            <TableHead>Empresa</TableHead>
-            <TableHead>Factura</TableHead>
-            <TableHead>% Neto</TableHead>
-            <TableHead className="text-right">Comisión</TableHead>
-            <TableHead>Status</TableHead>
+            <SortableTableHead sortKey="periodo" sort={sort} onToggle={toggleSort}>Periodo</SortableTableHead>
+            <SortableTableHead sortKey="empresa" sort={sort} onToggle={toggleSort}>Empresa</SortableTableHead>
+            <SortableTableHead sortKey="monto_factura" sort={sort} onToggle={toggleSort}>Factura</SortableTableHead>
+            <SortableTableHead sortKey="neto" sort={sort} onToggle={toggleSort}>% Neto</SortableTableHead>
+            <SortableTableHead sortKey="monto_comision" sort={sort} onToggle={toggleSort} align="right" className="text-right">Comisión</SortableTableHead>
+            <SortableTableHead sortKey="status" sort={sort} onToggle={toggleSort}>Status</SortableTableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(c => (
+          {ordenarFilas(rows, sort, valorComision).map(c => (
             <TableRow key={c.id}>
               <TableCell>{c.periodo}</TableCell>
               <TableCell>{c.tipo === 'bono_nivel' ? <Badge className="bg-amber-100 text-amber-800">Bono de nivel</Badge> : c.empresas?.nombre || '—'}</TableCell>
@@ -86,10 +98,10 @@ export default function PartnerComisiones() {
           <Card>
             <Table>
               <TableHeader>
-                <TableRow><TableHead>Fecha</TableHead><TableHead>Método</TableHead><TableHead>Referencia</TableHead><TableHead className="text-right">Monto</TableHead></TableRow>
+                <TableRow><SortableTableHead sortKey="pagado_en" sort={sortPagos} onToggle={togglePagos}>Fecha</SortableTableHead><SortableTableHead sortKey="metodo" sort={sortPagos} onToggle={togglePagos}>Método</SortableTableHead><SortableTableHead sortKey="referencia" sort={sortPagos} onToggle={togglePagos}>Referencia</SortableTableHead><SortableTableHead sortKey="monto" sort={sortPagos} onToggle={togglePagos} align="right" className="text-right">Monto</SortableTableHead></TableRow>
               </TableHeader>
               <TableBody>
-                {(pagos || []).map(p => (
+                {pagosOrd.map(p => (
                   <TableRow key={p.id}>
                     <TableCell>{new Date(p.pagado_en).toLocaleDateString('es-MX')}</TableCell>
                     <TableCell>{p.metodo || '—'}</TableCell>

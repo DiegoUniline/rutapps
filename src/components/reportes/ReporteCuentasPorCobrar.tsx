@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { generarCuentasPorCobrarPdf } from '@/lib/cuentasPorCobrarPdf';
 import { useRegistrarPdfReporte, type RegistrarPdfReporte } from '@/hooks/useRegistrarPdfReporte';
+import { SortableTh, useSortState, ordenarFilas } from '@/hooks/useSortableTable';
 
 interface CxCRow {
   id: string;
@@ -100,6 +101,19 @@ export function ReporteCuentasPorCobrar({ registrarPdf }: { desde: string; hasta
         return { cliente, num: idx + 1, items, cargos, abonos, saldos };
       });
   }, [rows]);
+
+  // Orden por columna: «Cliente» ordena los grupos; las demás columnas ordenan dentro de cada cliente.
+  const { sort, toggle: toggleSort } = useSortState('reporte-cuentas-por-cobrar');
+  const gruposOrd = useMemo(() => {
+    if (!sort.key) return grupos;
+    if (sort.key === 'cliente') return sort.dir === 'asc' ? grupos : [...grupos].reverse();
+    const valorCxC = (r: CxCRow, key: string) => {
+      if (key === 'concepto') return r.esSaldoInicial ? 'Saldo inicial' : 'Nota de venta';
+      if (key === 'vencimiento') return r.vencimiento || r.fecha;
+      return (r as any)[key];
+    };
+    return grupos.map(g => ({ ...g, items: ordenarFilas(g.items, sort, valorCxC) }));
+  }, [grupos, sort]);
 
   const totalCargos = grupos.reduce((s, g) => s + g.cargos, 0);
   const totalAbonos = grupos.reduce((s, g) => s + g.abonos, 0);
@@ -196,19 +210,19 @@ export function ReporteCuentasPorCobrar({ registrarPdf }: { desde: string; hasta
         <table className="w-full text-[12px]">
           <thead className="text-muted-foreground text-[10px] font-semibold uppercase border-b border-border">
             <tr>
-              <th className="text-left px-3 py-2 w-10">Cliente</th>
-              <th className="text-left px-3 py-2">Concepto</th>
-              <th className="text-left px-3 py-2">Documento</th>
+              <SortableTh sortKey="cliente" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2 w-10">Cliente</SortableTh>
+              <SortableTh sortKey="concepto" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Concepto</SortableTh>
+              <SortableTh sortKey="folio" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Documento</SortableTh>
               <th className="text-center px-2 py-2">Num.</th>
-              <th className="text-left px-3 py-2">Fecha aplic.</th>
-              <th className="text-left px-3 py-2">Fecha venc.</th>
-              <th className="text-right px-3 py-2">Cargos</th>
-              <th className="text-right px-3 py-2">Abonos</th>
-              <th className="text-right px-3 py-2">Saldos</th>
+              <SortableTh sortKey="fecha" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Fecha aplic.</SortableTh>
+              <SortableTh sortKey="vencimiento" sort={sort} onToggle={toggleSort} className="text-left px-3 py-2">Fecha venc.</SortableTh>
+              <SortableTh sortKey="total" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Cargos</SortableTh>
+              <SortableTh sortKey="abonado" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Abonos</SortableTh>
+              <SortableTh sortKey="saldo" sort={sort} onToggle={toggleSort} align="right" className="text-right px-3 py-2">Saldos</SortableTh>
             </tr>
           </thead>
           <tbody>
-            {grupos.map(g => (
+            {gruposOrd.map(g => (
               <Fragment key={g.cliente}>
                 <tr className="bg-accent/30 border-t border-border">
                   <td className="px-3 py-1.5 font-semibold tabular-nums">{g.num}</td>

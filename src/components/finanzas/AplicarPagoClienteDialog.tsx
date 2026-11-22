@@ -14,6 +14,7 @@ import { printTicket } from '@/lib/printTicketUtil';
 import { buildCobroTicketData } from '@/lib/cobroTicket';
 import { enviarReciboCobro } from '@/lib/enviarReciboCobro';
 import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 type MetodoPago = 'efectivo' | 'transferencia' | 'tarjeta';
 
@@ -98,6 +99,9 @@ export default function AplicarPagoClienteDialog({ open, onOpenChange, cliente, 
   const fmt = (n: number) => fmtCurrency(roundMoney(n));
   const totalPendiente = useMemo(() => roundMoney(ventas.reduce((s, v) => s + v.saldo_pendiente, 0)), [ventas]);
   const totalDistribuido = useMemo(() => roundMoney(ventas.reduce((s, v) => s + v.montoAplicar, 0)), [ventas]);
+  // Solo cambia el orden en pantalla; la distribución automática sigue el orden original.
+  const { sorted: ventasOrd, sort, toggle: toggleSort } = useSortableTable(ventas, (v: any, key) =>
+    key === 'condicion_pago' ? (CONDICION_LABELS[v.condicion_pago] ?? v.condicion_pago) : v[key], undefined, 'aplicar-pago-cliente');
   const montoNum = roundMoney(parseFloat(montoRecibido) || 0);
   const sinDistribuir = roundMoney(montoNum - totalDistribuido);
 
@@ -286,16 +290,16 @@ export default function AplicarPagoClienteDialog({ open, onOpenChange, cliente, 
               <table className="w-full min-w-[760px] text-[12px]">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b">
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Folio</th>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Fecha</th>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Condición</th>
-                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">Total</th>
-                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">Saldo</th>
+                    <SortableTh sortKey="folio" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left font-medium text-muted-foreground">Folio</SortableTh>
+                    <SortableTh sortKey="fecha" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left font-medium text-muted-foreground">Fecha</SortableTh>
+                    <SortableTh sortKey="condicion_pago" sort={sort} onToggle={toggleSort} className="px-3 py-2 text-left font-medium text-muted-foreground">Condición</SortableTh>
+                    <SortableTh sortKey="total" sort={sort} onToggle={toggleSort} align="right" className="px-3 py-2 text-right font-medium text-muted-foreground">Total</SortableTh>
+                    <SortableTh sortKey="saldo_pendiente" sort={sort} onToggle={toggleSort} align="right" className="px-3 py-2 text-right font-medium text-muted-foreground">Saldo</SortableTh>
                     <th className="px-3 py-2 text-right font-medium text-muted-foreground w-[150px]">Aplicar</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ventas.map(v => (
+                  {ventasOrd.map(v => (
                     <tr key={v.id} className="border-b last:border-0">
                       <td className="px-3 py-2 font-mono font-semibold">{v.folio ?? v.id.slice(0, 8)}</td>
                       <td className="px-3 py-2">{fmtDate(v.fecha)}</td>

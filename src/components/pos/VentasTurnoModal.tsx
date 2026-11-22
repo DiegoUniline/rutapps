@@ -17,6 +17,7 @@ import { cancelarVenta as cancelarVentaBd } from '@/lib/cancelarVenta';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useState, useMemo } from 'react';
+import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 interface Props {
   open: boolean;
@@ -167,6 +168,14 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
     });
   }, [ventasPos, search, productosMap, metodosMap]);
 
+  const valorTurno = (r: any, key: string) => {
+    if (key === 'cliente') return r.cliente?.nombre;
+    if (key === 'total' || key === 'monto') return Number(r[key] ?? 0);
+    return r[key];
+  };
+  const { sorted: ventasOrd, sort: sortVentas, toggle: toggleVentas } = useSortableTable<any>(ventasPosFiltradas, valorTurno, undefined, 'pos-turno-ventas');
+  const { sorted: cobrosOrd, sort: sortCobros, toggle: toggleCobros } = useSortableTable<any>(cobros, valorTurno, undefined, 'pos-turno-cobros');
+  const { sorted: movsOrd, sort: sortMovs, toggle: toggleMovs } = useSortableTable<any>(movs, valorTurno, undefined, 'pos-turno-movimientos');
   const totalVentas = ventasPos.filter(v => v.status !== 'cancelado').reduce((s, v) => s + Number(v.total || 0), 0);
   const totalCobros = cobros.reduce((s, c) => s + Number(c.monto || 0), 0);
   const totalDepositos = movs.filter(m => m.tipo === 'deposito').reduce((s, m) => s + Number(m.monto || 0), 0);
@@ -260,17 +269,17 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
                     <thead className="bg-background text-muted-foreground text-xs border-b border-border">
                       <tr>
                         <th className="w-8 px-2 py-2"></th>
-                        <th className="text-left px-3 py-2">Hora</th>
-                        <th className="text-left px-3 py-2">Folio</th>
-                        <th className="text-left px-3 py-2">Cliente</th>
-                        <th className="text-left px-3 py-2">Condición</th>
-                        <th className="text-left px-3 py-2">Estado</th>
-                        <th className="text-right px-3 py-2">Total</th>
+                        <SortableTh sortKey="created_at" sort={sortVentas} onToggle={toggleVentas} className="text-left px-3 py-2">Hora</SortableTh>
+                        <SortableTh sortKey="folio" sort={sortVentas} onToggle={toggleVentas} className="text-left px-3 py-2">Folio</SortableTh>
+                        <SortableTh sortKey="cliente" sort={sortVentas} onToggle={toggleVentas} className="text-left px-3 py-2">Cliente</SortableTh>
+                        <SortableTh sortKey="condicion_pago" sort={sortVentas} onToggle={toggleVentas} className="text-left px-3 py-2">Condición</SortableTh>
+                        <SortableTh sortKey="status" sort={sortVentas} onToggle={toggleVentas} className="text-left px-3 py-2">Estado</SortableTh>
+                        <SortableTh sortKey="total" sort={sortVentas} onToggle={toggleVentas} align="right" className="text-right px-3 py-2">Total</SortableTh>
                         <th className="text-right px-3 py-2 w-24">Acción</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {ventasPosFiltradas.map(v => {
+                      {ventasOrd.map(v => {
                         const isCancelled = v.status === 'cancelado';
                         const isExpanded = expandedId === v.id;
                         return (
@@ -328,14 +337,14 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-muted-foreground text-xs">
                       <tr>
-                        <th className="text-left px-3 py-2">Hora</th>
-                        <th className="text-left px-3 py-2">Cliente</th>
-                        <th className="text-left px-3 py-2">Método</th>
-                        <th className="text-right px-3 py-2">Monto</th>
+                        <SortableTh sortKey="created_at" sort={sortCobros} onToggle={toggleCobros} className="text-left px-3 py-2">Hora</SortableTh>
+                        <SortableTh sortKey="cliente" sort={sortCobros} onToggle={toggleCobros} className="text-left px-3 py-2">Cliente</SortableTh>
+                        <SortableTh sortKey="metodo_pago" sort={sortCobros} onToggle={toggleCobros} className="text-left px-3 py-2">Método</SortableTh>
+                        <SortableTh sortKey="monto" sort={sortCobros} onToggle={toggleCobros} align="right" className="text-right px-3 py-2">Monto</SortableTh>
                       </tr>
                     </thead>
                     <tbody>
-                      {cobros.map(c => (
+                      {cobrosOrd.map(c => (
                         <tr key={c.id} className="border-t border-border/50 hover:bg-muted/30">
                           <td className="px-3 py-2 tabular-nums text-muted-foreground text-xs">{fmtTime(c.created_at)}</td>
                           <td className="px-3 py-2">{c.cliente?.nombre || '—'}</td>
@@ -357,14 +366,14 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-muted-foreground text-xs">
                       <tr>
-                        <th className="text-left px-3 py-2">Hora</th>
-                        <th className="text-left px-3 py-2">Tipo</th>
-                        <th className="text-left px-3 py-2">Motivo</th>
-                        <th className="text-right px-3 py-2">Monto</th>
+                        <SortableTh sortKey="created_at" sort={sortMovs} onToggle={toggleMovs} className="text-left px-3 py-2">Hora</SortableTh>
+                        <SortableTh sortKey="tipo" sort={sortMovs} onToggle={toggleMovs} className="text-left px-3 py-2">Tipo</SortableTh>
+                        <SortableTh sortKey="motivo" sort={sortMovs} onToggle={toggleMovs} className="text-left px-3 py-2">Motivo</SortableTh>
+                        <SortableTh sortKey="monto" sort={sortMovs} onToggle={toggleMovs} align="right" className="text-right px-3 py-2">Monto</SortableTh>
                       </tr>
                     </thead>
                     <tbody>
-                      {movs.map(m => (
+                      {movsOrd.map(m => (
                         <tr key={m.id} className="border-t border-border/50 hover:bg-muted/30">
                           <td className="px-3 py-2 tabular-nums text-muted-foreground text-xs">{fmtTime(m.created_at)}</td>
                           <td className="px-3 py-2 capitalize">{m.tipo}</td>
