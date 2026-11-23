@@ -30,3 +30,17 @@ describe('D-057 cobros a las 9:00 am CDMX', () => {
     expect(sp).toContain('now.getUTCMonth() + 1, 1, 15, 0, 0)');
   });
 });
+
+describe('D-057 webhook y ajuste de hora', () => {
+  const wh = readFileSync('supabase/functions/stripe-webhook/index.ts', 'utf8');
+  const ra = readFileSync('supabase/functions/billing-reanchor-9am-cdmx/index.ts', 'utf8');
+  it('trialing de una suscripción ya pagada no la marca «trial» en RutApp', () => {
+    expect(wh).toContain('internalStatus = sigueActivaEnTrial ? "active" : "trial"');
+    expect(wh).toContain('md.reanchor_9am_cdmx === "true"');
+    expect(wh).toContain('if (trialEndsAt && !sigueActivaEnTrial) payload.trial_ends_at');
+  });
+  it('cobro a medianoche UTC toma el día UTC; el resto, el día CDMX', () => {
+    expect(ra).toContain('d.getUTCHours() === 0 && d.getUTCMinutes() === 0');
+    expect(ra).toContain('CONFIRMO mover cobros 9am');
+  });
+});

@@ -299,8 +299,26 @@ Deno.serve(async (req) => {
           ? sub.default_payment_method
           : (sub.default_payment_method as any)?.id ?? null;
 
+        // D-057: Stripe pone «trialing» también a suscripciones YA PAGADAS cuando solo se
+        // les movió la fecha/hora de cobro (restauración D-017 o ajuste a las 9:00 am CDMX).
+        // Esas siguen siendo clientes activos: no se marcan «prueba» en RutApp.
+        let sigueActivaEnTrial = false;
+        if (sub.status === "trialing") {
+          const md = sub.metadata || {};
+          if (md.reanchor_9am_cdmx === "true" || md.restored_from_subscription || md.restoration_no_charge_before) {
+            sigueActivaEnTrial = true;
+          } else {
+            const { data: actual } = await supabase
+              .from("subscriptions")
+              .select("status")
+              .eq("empresa_id", empresa_id)
+              .maybeSingle();
+            sigueActivaEnTrial = actual?.status === "active";
+          }
+        }
+
         let internalStatus: string | null = null;
-        if (sub.status === "trialing") internalStatus = "trial";
+        if (sub.status === "trialing") internalStatus = sigueActivaEnTrial ? "active" : "trial";
         else if (sub.status === "active") internalStatus = "active";
         else if (sub.status === "past_due") internalStatus = "past_due";
         else if (sub.status === "canceled") internalStatus = "cancelled";
@@ -311,7 +329,7 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         };
         if (internalStatus) payload.status = internalStatus;
-        if (trialEndsAt) payload.trial_ends_at = trialEndsAt;
+        if (trialEndsAt && !sigueActivaEnTrial) payload.trial_ends_at = trialEndsAt;
         if (cpe) {
           payload.current_period_end = cpe;
           payload.fecha_vencimiento = cpe.slice(0, 10);

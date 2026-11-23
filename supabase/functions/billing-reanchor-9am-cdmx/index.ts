@@ -15,9 +15,14 @@ const CONFIRMACION = "CONFIRMO mover cobros 9am";
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });
 
-/** Mismo día (en CDMX) de `d`, a las 09:00 CDMX = 15:00 UTC. */
+/** Día que le toca a las 09:00 CDMX (= 15:00 UTC). Si el cobro está a la medianoche UTC
+ *  (18:00 CDMX del día anterior) se toma el día UTC (p. ej. el 1°), decisión del dueño;
+ *  en los demás casos, el mismo día en CDMX. */
 export function a9amMismoDia(d: Date): Date {
-  const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  const medianocheUtc = d.getUTCHours() === 0 && d.getUTCMinutes() === 0;
+  const ymd = medianocheUtc
+    ? d.toISOString().slice(0, 10)
+    : new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
   return new Date(`${ymd}T15:00:00.000Z`);
 }
 const cdmx = (d: Date) => d.toLocaleString("es-MX", { timeZone: TZ, dateStyle: "medium", timeStyle: "short" });
