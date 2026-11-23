@@ -10,10 +10,10 @@ Repo: `DiegoUniline/rutapps` (desconectado de Lovable el 2026-11-16).
 | 76 edge functions | ✅ (rama `claude/ecstatic-bohr-9mairg`) |
 | Secrets internos (SITE_URL, CRON_SECRET, TIENDA_JWT_SECRET, BILLING_BRIDGE_INTERNAL_SECRET) | ✅ |
 | IA → Gemini, correo → Resend, front sin ref fijo | ✅ código |
-| Secrets de proveedores | ❌ al corte |
+| Secrets de proveedores | 🔄 2026-11-23 cargando: Stripe (+ webhook nuevo creado y APAGADO hasta el corte), Facturama, Gemini, Maps, Routes (clave sin restricción de sitio, solo Routes API), ORS, Resend. Sin Evolution/WhatsAPI (D-054) ni Openpay (D-053) |
 | Crons (13, copiados de `cron.job` del origen) | ✅ creados APAGADOS (`scripts/migracion/crons.sql`) |
 | Storage (archivos) | ❌ `scripts/migracion/copiar-storage.mjs` listo |
-| Auth (URLs, SMTP) | ❌ |
+| Auth (URLs, SMTP) | ❌ · Resend: dominio `rutapp.mx` Verified 2026-11-22 (DNS hoy en GoDaddy; al pasar a Cloudflare conservar los registros de Resend) |
 | Cloudflare Pages | ❓ |
 
 ## Congelar desde ya
