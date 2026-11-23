@@ -14,6 +14,7 @@ Repo: `DiegoUniline/rutapps` (desconectado de Lovable el 2026-11-16).
 | Crons (13, copiados de `cron.job` del origen) | ✅ creados APAGADOS (`scripts/migracion/crons.sql`) |
 | Storage (archivos) | ❌ `scripts/migracion/copiar-storage.mjs` listo |
 | Auth (URLs, SMTP) | ❌ · Resend: dominio `rutapp.mx` Verified 2026-11-22 (DNS hoy en GoDaddy; al pasar a Cloudflare conservar los registros de Resend) |
+| Mantenimiento | ACTIVO desde 2026-11-23 (`src/lib/mantenimiento.ts`): solo diego.leon@uniline.mx; quitar al terminar el corte |
 | Cloudflare (Worker `rutapps`) | ✅ publicado en `https://rutapps.diego-leon.workers.dev` (Production, rama main). Dominio `rutapp.mx` se conecta SOLO al final del corte (Domains → Add) |
 
 ## Congelar desde ya

@@ -263,3 +263,4 @@
 - 2026-11-22 · desarrollador · billing-cycle publicada en amybkerwkybffllaxpnz (v4, verify_jwt igual) con link SITE_URL; migración 20261122010000_quitar_openpay aplicada (payment_links ya no existe).
 - 2026-11-23 · desarrollador · D-053: openpay y openpay-public publicadas reemplazadas por versión que responde 410 (sin código Openpay ni lectura de claves).
 - 2026-11-23 · coordinador · D-054: corte sin secretos de Evolution/WhatsAPI; WhatsApp con Zernio será módulo nuevo.
+- 2026-11-23 · desarrollador · Aviso de mantenimiento para el corte (pedido del dueño): src/lib/mantenimiento.ts (activo, solo diego.leon@uniline.mx entra) + MantenimientoAviso en App.tsx (tras login y en /tienda/). Liberar: activo:false y subir a main. typecheck:strict, 705 pruebas y build OK.

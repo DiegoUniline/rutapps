@@ -214,6 +214,8 @@ import PendientesSincronizarPage from "@/pages/ruta/PendientesSincronizarPage";
 import RutaNuevoCliente from "@/pages/ruta/RutaNuevoCliente";
 import RutaClienteDetalle from "@/pages/ruta/RutaClienteDetalle";
 import RutaIniciarPage from "@/pages/ruta/RutaIniciarPage";
+import MantenimientoAviso from "@/components/MantenimientoAviso";
+import { MANTENIMIENTO, bloqueadoPorMantenimiento } from "@/lib/mantenimiento";
 const VehiculosPage = lazy(() => import("@/pages/VehiculosPage"));
 const JornadasRutaPage = lazy(() => import("@/pages/JornadasRutaPage"));
 
@@ -304,6 +306,7 @@ function AppRoutes() {
   // Tienda en línea pública: siempre disponible sin importar auth/loading
   const location = useLocation();
   if (location.pathname.startsWith("/tienda/")) {
+    if (MANTENIMIENTO.activo) return <MantenimientoAviso />;
     return <TiendaPublicRoutes />;
   }
 
@@ -489,6 +492,10 @@ function AuthenticatedAppRoutes() {
         </Routes>
       </Suspense>
     );
+  }
+
+  if (bloqueadoPorMantenimiento(user.email)) {
+    return <MantenimientoAviso onSalir={() => signOut()} />;
   }
 
   // Force password change if flagged
