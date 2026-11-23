@@ -4,6 +4,7 @@ import { ArrowLeft, Search, Send, Save, PackagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
+import { useAlmacenRutaVista } from '@/hooks/useAlmacenRutaVista';
 import { queueOperation, queueInsertMany } from '@/lib/syncQueue';
 import { fmtNum } from '@/lib/utils';
 import { SOLICITUD_STATUS_LABELS, type StatusSolicitudTraspaso } from '@/hooks/useSolicitudesTraspaso';
@@ -28,7 +29,7 @@ const nuevoId = () => crypto.randomUUID();
 export default function RutaSolicitudTraspaso() {
   const navigate = useNavigate();
   const { empresa, profile, user } = useAuth();
-  const almacenId = profile?.almacen_id;
+  const { almacenId, necesitaVendedor } = useAlmacenRutaVista();
 
   const [search, setSearch] = useState('');
   const [observaciones, setObservaciones] = useState('');
@@ -94,6 +95,7 @@ export default function RutaSolicitudTraspaso() {
   };
 
   const enviar = async (enviarAprobacion: boolean) => {
+    if (necesitaVendedor) { toast.error('Elige un vendedor en la barra de arriba'); return; }
     if (!almacenId) { toast.error('Tu usuario no tiene almacén asignado'); return; }
     if (lineas.length === 0) { toast.error('Agrega al menos un producto'); return; }
     setGuardando(true);
