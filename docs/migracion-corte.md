@@ -14,7 +14,7 @@ Repo: `DiegoUniline/rutapps` (desconectado de Lovable el 2026-11-16).
 | Crons (13, copiados de `cron.job` del origen) | ✅ creados APAGADOS (`scripts/migracion/crons.sql`) |
 | Storage (archivos) | ❌ `scripts/migracion/copiar-storage.mjs` listo |
 | Auth (URLs, SMTP) | ❌ · Resend: dominio `rutapp.mx` Verified 2026-11-22 (DNS hoy en GoDaddy; al pasar a Cloudflare conservar los registros de Resend) |
-| Cloudflare Pages | ❓ |
+| Cloudflare (Worker `rutapps`) | ✅ publicado en `https://rutapps.diego-leon.workers.dev` (Production, rama main). Dominio `rutapp.mx` se conecta SOLO al final del corte (Domains → Add) |
 
 ## Congelar desde ya
 ✅ Confirmado por el dueño 2026-11-19: esquema congelado en origen, solo crecen datos. Desde 2026-11-21 el destino tiene **más** que el origen (42 migraciones posteriores a la base): `recargar-datos.sh` acepta que el destino sea **superconjunto** y aborta solo si el backup trae tablas/columnas que el destino no tiene, o si una columna nueva del destino es NOT NULL sin default.
@@ -48,7 +48,7 @@ Y: secrets de proveedores, webhooks (Stripe, Evolution/WhatsApp, Facturama; Open
 
 ## Auth (dashboard → Authentication → URL Configuration / SMTP)
 - Site URL: `https://rutapp.mx`
-- Redirect URLs: `https://rutapp.mx/**`, `https://*.pages.dev/**`, `http://localhost:8080/**`
+- Redirect URLs: `https://rutapp.mx/**`, `https://rutapps.diego-leon.workers.dev/**`, `http://localhost:8080/**`
 - 401/401 usuarios con email confirmado en origen (login email+password, reset de password, signUp con `emailRedirectTo`).
 - SMTP Resend: `smtp.resend.com:465`, usuario `resend`, password = RESEND_API_KEY, remitente `noreply@rutapp.mx`.
 
