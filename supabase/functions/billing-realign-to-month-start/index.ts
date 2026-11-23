@@ -1,7 +1,7 @@
 // billing-realign-to-month-start
 // Cobra el prorrateo faltante hasta el ÚLTIMO DÍA del mes en curso (CDMX) a
-// las suscripciones desfasadas y las re-ancla al 1° del mes siguiente 08:00
-// CDMX (14:00 UTC), para que a partir de ahí todas cobren el día 1° normal.
+// las suscripciones desfasadas y las re-ancla al 1° del mes siguiente 09:00
+// CDMX (15:00 UTC, D-057), para que a partir de ahí todas cobren el día 1° normal.
 //
 // Uso:
 //   POST { dryRun: true }                             -> preview de TODAS las desfasadas
@@ -34,9 +34,9 @@ function lastDayOfMonthMx(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0);
 }
 
-// Próximo 1° del mes a las 08:00 CDMX (14:00 UTC).
+// Próximo 1° del mes a las 09:00 CDMX (15:00 UTC, D-057).
 function nextFirstOfMonthAnchorUtc(after: Date): Date {
-  return new Date(Date.UTC(after.getUTCFullYear(), after.getUTCMonth() + 1, 1, 14, 0, 0));
+  return new Date(Date.UTC(after.getUTCFullYear(), after.getUTCMonth() + 1, 1, 15, 0, 0));
 }
 
 Deno.serve(async (req) => {

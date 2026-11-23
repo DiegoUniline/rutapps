@@ -19,3 +19,14 @@ describe('D-056 cobro de usuarios en Stripe', () => {
     expect(bc).toContain('proration_behavior: qty > currentStripeQty ? "always_invoice" : "none"');
   });
 });
+
+// D-057: los cobros de Stripe de suscripciones nuevas se anclan a las 09:00 CDMX (15:00 UTC).
+describe('D-057 cobros a las 9:00 am CDMX', () => {
+  it('suscripciones nuevas anclan a las 15:00 UTC', () => {
+    const wh = readFileSync('supabase/functions/stripe-webhook/index.ts', 'utf8');
+    const sp = readFileSync('supabase/functions/select-plan/index.ts', 'utf8');
+    expect(wh).toContain('-01T15:00:00.000Z`');
+    expect(wh).not.toContain('-01T14:00:00.000Z`');
+    expect(sp).toContain('now.getUTCMonth() + 1, 1, 15, 0, 0)');
+  });
+});

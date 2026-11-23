@@ -374,3 +374,10 @@
 - **Decisión:** lo cobrado en Stripe sigue a los usuarios activos (estado `activo` y sin archivar; nunca menos del mínimo del plan). **Alta** (crear, reactivar o subir cantidad) → se cobra de inmediato la parte proporcional del periodo (`proration_behavior: always_invoice`). **Baja** (archivar o bajar cantidad) → sin devolución ni saldo a favor (`none`); la cantidad menor se cobra desde la siguiente renovación.
 - **Dónde:** `manage-subscription` (`sync_active_users`, `update_quantity`, vista previa) y `billing-cycle` parte 5 (corrección diaria). Prueba `src/test/cobroUsuariosStripe.test.ts`.
 - **Casos borde:** archivar y reactivar al mismo usuario dentro del mismo periodo vuelve a cobrar la parte proporcional. Si el cobro del alta falla, el usuario queda creado y Stripe reintenta la factura (solo «subir cantidad» manual bloquea si no se paga). Cambio de plan (`change_plan`) no se tocó.
+
+## D-057
+- **Fecha:** 2026-11-23 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («los cobros tienen que hacerse a las 9 am CDMX… corre en la fecha que les toca» · «A, todo tiene que ser a horario CDMX»)
+- **Decisión:** todo cobro corre a las **09:00 America/Mexico_City (15:00 UTC; sin horario de verano)** en la fecha que le toca a cada cliente, sin importar la hora en que se suscribió.
+- **Hecho:** crons `billing-cycle-daily`, `daily-billing-cron` y `create-invoice-reminder-daily` a `0 15 * * *`. Suscripciones nuevas de Stripe anclan al 1° a las 15:00 UTC (`stripe-webhook`, `select-plan`, `billing-realign-to-month-start`).
+- **Pendiente (con simulación y CONFIRMO):** mover las suscripciones de Stripe ya existentes a las 09:00 CDMX de su misma fecha. Stripe solo permite fijar la hora con `trial_end` + `proration_behavior: none`: la suscripción queda «trialing» hasta esa hora y el webhook la marcaría `trial` en RutApp → antes hay que hacer que el webhook conserve `active` en esos casos.
+- **No se tocó:** `billing-reanchor-to-cdmx-8am` (herramienta manual que mueve al día 1 a las 08:00; contradice esta decisión, no usarla) y `billing-align-bridge-aug2026` (puente histórico de agosto 2026).

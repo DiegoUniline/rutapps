@@ -208,9 +208,8 @@ Deno.serve(async (req) => {
             customerId = nc.id;
           }
 
-          // 1° del mes siguiente a las 08:00 CDMX (= 14:00 UTC) para evitar
-          // que Stripe cobre en la madrugada mexicana.
-          const nextFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 14, 0, 0));
+          // 1° del mes siguiente a las 09:00 CDMX (= 15:00 UTC; D-057: cobros a las 9:00 am CDMX).
+          const nextFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 15, 0, 0));
 
           let discounts: any[] = [];
           const descPct = currentSub?.descuento_porcentaje || 0;
