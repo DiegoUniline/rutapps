@@ -11,7 +11,8 @@ interface OdooPaginationProps {
   pageSizeOptions?: number[];
 }
 
-export function OdooPagination({ from, to, total, onPrev, onNext, pageSize, onPageSizeChange, pageSizeOptions = [10, 50, 80, 200, 500, 0] }: OdooPaginationProps) {
+// Fase 3: sin «Todos» (0) por defecto; máximo 500 por página.
+export function OdooPagination({ from, to, total, onPrev, onNext, pageSize, onPageSizeChange, pageSizeOptions = [10, 50, 80, 200, 500] }: OdooPaginationProps) {
   return (
     <div className="flex items-center justify-end gap-2 py-2 px-3 text-xs text-muted-foreground">
       {pageSize !== undefined && onPageSizeChange && (

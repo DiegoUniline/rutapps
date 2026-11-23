@@ -14,6 +14,7 @@
 
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { claveIdempotencia } from "../_shared/stripeIdempotency.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -102,7 +103,7 @@ Deno.serve(async (req) => {
     // Todos los periodos usan setup mode. Así evitamos que Stripe cobre
     // un semestre/año completo al terminar el trial en una fecha intermedia.
     // La suscripción recurrente se crea en stripe-webhook y se ancla al día 1.
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       mode: "setup",
       payment_method_types: ["card"],
@@ -112,6 +113,10 @@ Deno.serve(async (req) => {
         metadata: commonMeta,
       },
       metadata: commonMeta,
+    };
+    // Fase 3: doble clic o reintento en 10 min devuelve la misma sesión (no abre dos cobros).
+    const session = await stripe.checkout.sessions.create(sessionParams, {
+      idempotencyKey: claveIdempotencia("checkout-prueba", [profile.empresa_id], { parametros: sessionParams, ventanaMinutos: 10 }),
     });
 
     await supabase

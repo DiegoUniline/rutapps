@@ -19,7 +19,10 @@ interface TablePaginationProps {
   isLoading?: boolean;
   /** Compact = single line, no labels. Default true. Use false for legacy inline use. */
   compact?: boolean;
-  /** Large transactional tables can hide "Todos" to keep requests bounded. */
+  /**
+   * Fase 3: «Todos» ya no se ofrece por defecto (pedía o pintaba miles de filas y
+   * congelaba la pantalla); el máximo es 500. Solo una tabla chica podría activarlo.
+   */
   allowAll?: boolean;
   className?: string;
 }
@@ -29,6 +32,7 @@ const SIZE_OPTIONS: { value: PageSizeOption; label: string }[] = [
   { value: 50, label: '50' },
   { value: 100, label: '100' },
   { value: 200, label: '200' },
+  { value: 500, label: '500' },
   { value: 'all', label: 'Todos' },
 ];
 
@@ -41,7 +45,7 @@ const SIZE_OPTIONS: { value: PageSizeOption; label: string }[] = [
 export function TablePagination({
   from, to, total, page, totalPages, pageSize,
   onPageSizeChange, onPrev, onNext,
-  isLoading, compact = true, allowAll = true, className,
+  isLoading, compact = true, allowAll = false, className,
 }: TablePaginationProps) {
   if (total === 0 && !isLoading) return null;
 

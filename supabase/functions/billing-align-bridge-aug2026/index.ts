@@ -22,6 +22,7 @@
 
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { claveIdempotencia } from "../_shared/stripeIdempotency.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -208,6 +209,9 @@ Deno.serve(async (req) => {
             period_start_unix: String(cpeUnix),
             period_end_unix: String(ANCHOR_UNIX),
           },
+        }, {
+          // Fase 3: el puente de una suscripción para un periodo dado se cobra una sola vez.
+          idempotencyKey: claveIdempotencia("puente-ago26-item", [row.sub_id, cpeUnix], { fecha: null }),
         });
         r.invoice_item_id = item.id;
 
@@ -225,6 +229,8 @@ Deno.serve(async (req) => {
             period_end: "2026-08-01",
             days: String(days),
           },
+        }, {
+          idempotencyKey: claveIdempotencia("puente-ago26-factura", [row.sub_id, cpeUnix], { fecha: null }),
         });
         r.invoice_id = invoice.id;
 

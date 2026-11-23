@@ -4,8 +4,11 @@ const DEFAULT_STORAGE_KEY = 'table-page-size';
 
 export type PageSizeOption = 25 | 50 | 100 | 200 | 500 | 'all';
 
+/** Fase 3: el máximo por página es 500; una preferencia vieja «Todos» se lee como 500. */
+export const MAX_PAGE_SIZE = 500;
+
 function coerce(raw: string | null): PageSizeOption | null {
-  if (raw === 'all') return 'all';
+  if (raw === 'all') return MAX_PAGE_SIZE;
   const n = Number(raw);
   if (n === 25 || n === 50 || n === 100 || n === 200 || n === 500) return n as PageSizeOption;
   return null;

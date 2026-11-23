@@ -6,6 +6,7 @@ import {
   invoiceMetadataPeriod,
   periodsOverlap,
 } from "../_shared/billing-safety.ts";
+import { claveIdempotencia, idStripe } from "../_shared/stripeIdempotency.ts";
 
 const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
 
@@ -443,10 +444,16 @@ Deno.serve(async (req) => {
         }
 
         if (previousStripeUsers !== expectedUsers || stripeSub.metadata?.num_usuarios !== String(expectedUsers)) {
-          await stripe.subscriptions.update(localSub.stripe_subscription_id, {
+          const params: Stripe.SubscriptionUpdateParams = {
             items,
             proration_behavior: "none",
             metadata: { ...stripeSub.metadata, num_usuarios: String(expectedUsers) },
+          };
+          // Fase 3: un reintento del mismo cambio el mismo día no se vuelve a aplicar.
+          await stripe.subscriptions.update(localSub.stripe_subscription_id, params, {
+            idempotencyKey: claveIdempotencia("qty", [
+              localSub.stripe_subscription_id, `${previousStripeUsers}>${expectedUsers}`, idStripe(stripeSub.latest_invoice),
+            ], { parametros: params }),
           });
         }
       }

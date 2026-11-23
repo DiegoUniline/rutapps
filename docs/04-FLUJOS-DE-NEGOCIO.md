@@ -232,6 +232,25 @@ precio, impuestos, promoción, presentación y lote).
   suspensión automática a los 4 días de impago (`daily-billing`).
 - Vistas: `/facturacion`, `/facturacion-cfdi`, `/mi-suscripcion`, `/super-admin`.
 
+### 10.1 Claves de idempotencia de Stripe (fase 3, 2026-11-23)
+
+Stripe guarda 24 h la respuesta de cada `idempotencyKey`: misma clave + mismos parámetros = no se vuelve a ejecutar (no cobra dos veces). La clave describe la intención (`supabase/functions/_shared/stripeIdempotency.ts`, prueba `src/test/stripeIdempotency.test.ts`):
+`rutapp:<intención>:<partes>:<fecha CDMX>:<huella de los parámetros>`. Otro cambio, otro punto de partida u otro día → otra clave → sí pasa. La lógica de cobro no cambió (D-056, D-057).
+
+| Intención | Dónde | Partes | Por qué así |
+|---|---|---|---|
+| `qty` | `manage-subscription` (sync_active_users, update_quantity alta/baja), `billing-cycle` parte 5, `admin-billing` (sincronizar asientos) | id suscripción · `antes>después` (usuarios, o `xN>xM` extras) · última factura de Stripe | La última factura cambia con cada alta cobrada: archivar y reactivar el mismo día vuelve a cobrar (D-056). |
+| `plan` | `manage-subscription` change_plan | id suscripción · `precio actual>nuevo` · última factura | |
+| `seat-meta` | `billing-cycle` parte 5 (solo metadata) | id suscripción · usuarios | Sin cobro. |
+| `alta-sub` | `stripe-webhook` (checkout setup → crea la suscripción) | id de la sesión de Checkout, **sin fecha** | Un reenvío del webhook no crea 2ª suscripción. `trial_end` = `event.created` + 7 días (antes «ahora» + 7 días; segundos de diferencia) para que los parámetros sean idénticos. |
+| `checkout-plan` · `checkout-suscripcion` · `checkout-timbres` · `checkout-rutas` · `checkout-prueba` | `select-plan`, `create-checkout`, `purchase-timbres`, `purchase-route-credits`, `create-trial-checkout` | empresa · ventana de 10 min | Crear la sesión no cobra; evita dos sesiones por doble clic. Si los parámetros cambian (cupón nuevo, `accepted_terms_at`), la clave cambia y no deduplica (sin daño). |
+| `puente-ago26-item` · `puente-ago26-factura` | `billing-align-bridge-aug2026` | id suscripción · fin de periodo, sin fecha | El puente de una suscripción se cobra una vez. |
+| `rutapp-reminder-<sub>-<periodo>-invoice/item` | `create-invoice-reminder` | (ya existía) suscripción · periodo | Sin cambio. |
+| `rutapp-additional/renewal/pro-renewal-<empresa>-<request_id>` | `admin-billing` facturas manuales | (ya existía) `request_id` del panel | Sin cambio. |
+
+- Alta con cargo inmediato (`update_quantity`, `error_if_incomplete`): si Stripe repite por la clave un **rechazo de pago** guardado (402 con `idempotent-replayed: true`), nada se aplicó, así que se reintenta una vez con clave nueva (el cliente pudo cambiar de tarjeta).
+- Sin clave a propósito: `invoices.pay` / `finalizeInvoice` (una factura solo se paga una vez; una clave guardaría el rechazo y bloquearía 24 h el reintento tras cambiar tarjeta), cancelar/reactivar/cupón (no cobran), `customers.create`, y las herramientas manuales `billing-realign-to-month-start`, `billing-reanchor-9am-cdmx`, `billing-reanchor-to-cdmx-8am`.
+
 ## 11. Reportes, dashboard y control
 
 - `/dashboard` → `src/pages/DashboardPage.tsx` + `src/components/dashboard/`

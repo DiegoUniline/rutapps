@@ -24,7 +24,7 @@ import { ExportButton } from '@/components/ExportButton';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { MobileProductoQuickForm } from '@/components/MobileProductoQuickForm';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
-import { useProductosPaginated, PRODUCTOS_ORDEN_BD } from '@/hooks/useData';
+import { useProductosPaginated, useCargarProductosLista, PRODUCTOS_ORDEN_BD } from '@/hooks/useData';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData } from '@/hooks/useListPreferences';
@@ -406,6 +406,18 @@ export default function ProductosListPage() {
   const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, isMobile ? 1 : page, effectivePageSize, clasificacionFilter, marcaFilter, !!groupBy, proveedorFilter, manejaLoteFilter, sort);
 
   const productos = productosData?.rows ?? [];
+  // Fase 3: exportar trae todo lo filtrado en páginas (ya no hay «Todos» en pantalla).
+  const cargarProductosLista = useCargarProductosLista();
+  const exportarProductos = async (formato: 'excel' | 'pdf') => {
+    try {
+      const data = await cargarProductosLista({ search: debouncedSearch, statusFilter, clasificacionFilter, marcaFilter, proveedorFilter, manejaLoteFilter, sort });
+      const opciones = { fileName: 'Productos', title: 'Catálogo de Productos', columns: PRODUCTOS_COLUMNS, data };
+      if (formato === 'excel') await exportToExcel(opciones);
+      else await exportToPDF(opciones);
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo exportar el catálogo de productos');
+    }
+  };
   const { data: allPresentaciones } = useAllPresentaciones();
   const presentacionesByProducto = useMemo(() => {
     const map = new Map<string, any[]>();
@@ -618,14 +630,8 @@ export default function ProductosListPage() {
                   onMoveTo={moveColumnTo}
                 />
                 <ExportButton
-                  onExcel={() => exportToExcel({
-                    fileName: 'Productos', title: 'Catálogo de Productos',
-                    columns: PRODUCTOS_COLUMNS, data: productos ?? [],
-                  })}
-                  onPDF={() => exportToPDF({
-                    fileName: 'Productos', title: 'Catálogo de Productos',
-                    columns: PRODUCTOS_COLUMNS, data: productos ?? [],
-                  })}
+                  onExcel={() => void exportarProductos('excel')}
+                  onPDF={() => void exportarProductos('pdf')}
                 />
                 <button
                   onClick={() => setConfirmAllPriceListsOpen(true)}

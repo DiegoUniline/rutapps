@@ -85,7 +85,9 @@ async function buildAlertas(empresaId: string): Promise<string | null> {
       .select("nombre, limite_credito")
       .eq("empresa_id", empresaId)
       .gt("limite_credito", 0);
-    const { data: saldosRpc } = await admin.rpc("wa_clientes_saldos", { p_empresa_id: empresaId, p_limit: 200 });
+    // Fase 3: el parámetro de la función es `p_empresa` (antes `p_empresa_id` → error y sin alerta de crédito).
+    const { data: saldosRpc, error: saldosErr } = await admin.rpc("wa_clientes_saldos", { p_empresa: empresaId, p_limit: 200 });
+    if (saldosErr) console.warn("credito alerts: wa_clientes_saldos falló", saldosErr.message);
     if (cli && saldosRpc) {
       const sMap = new Map((saldosRpc as any[]).map((s) => [s.nombre, Number(s.saldo || 0)]));
       const excedidos = (cli as any[])

@@ -22,7 +22,7 @@ import { ExportButton } from '@/components/ExportButton';
 import { ListaTarjetaMovil, ListaTarjetasMovil, EncabezadoListaMovil, estadoPildora, PASO_MOVIL } from '@/components/layout/ListaTarjetaMovil';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
-import { useClientesPaginated, CLIENTES_ORDEN_BD } from '@/hooks/useClientes';
+import { useClientesPaginated, useCargarClientesLista, CLIENTES_ORDEN_BD } from '@/hooks/useClientes';
 import { useSortState, SortableTh } from '@/hooks/useSortableTable';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -356,8 +356,8 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const creditoFilter = filters.credito;
   const diaVisitaFilter = filters.dia_visita;
   const clientesRaw = clientesData?.rows ?? [];
-  const clientes = useMemo(() => {
-    let rows = clientesRaw;
+  const filtrarClientesLocal = (base: typeof clientesRaw) => {
+    let rows = base;
     if (creditoFilter && creditoFilter.length > 0) {
       rows = rows.filter(c => creditoFilter.includes(c.credito ? 'si' : 'no'));
     }
@@ -371,7 +371,25 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
       });
     }
     return rows;
-  }, [clientesRaw, creditoFilter, diaVisitaFilter]);
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const clientes = useMemo(() => filtrarClientesLocal(clientesRaw), [clientesRaw, creditoFilter, diaVisitaFilter]);
+  // Fase 3: exportar trae todo lo filtrado en páginas (ya no hay «Todos» en pantalla).
+  const cargarClientesLista = useCargarClientesLista();
+  const exportarClientes = async (formato: 'excel' | 'pdf') => {
+    try {
+      const todos = filtrarClientesLocal(await cargarClientesLista({ search: debouncedSearch, statusFilter, vendedorFilter, zonaFilter, sort }));
+      const opciones = {
+        fileName: 'Clientes', title: 'Catálogo de Clientes',
+        columns: CLIENTES_COLUMNS,
+        data: todos.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
+      };
+      if (formato === 'excel') await exportToExcel(opciones);
+      else await exportToPDF(opciones);
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo exportar el catálogo de clientes');
+    }
+  };
   const total = clientesData?.total ?? 0;
   const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
   const to = Math.min(page * numericPageSize, total);
@@ -532,17 +550,8 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
                   onMoveTo={moveColumnTo}
                 />
                 <ExportButton
-
-                  onExcel={() => exportToExcel({
-                    fileName: 'Clientes', title: 'Catálogo de Clientes',
-                    columns: CLIENTES_COLUMNS,
-                    data: clientes.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
-                  })}
-                  onPDF={() => exportToPDF({
-                    fileName: 'Clientes', title: 'Catálogo de Clientes',
-                    columns: CLIENTES_COLUMNS,
-                    data: clientes.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
-                  })}
+                  onExcel={() => void exportarClientes('excel')}
+                  onPDF={() => void exportarClientes('pdf')}
                 />
                 {canCreate && (
                   <button onClick={() => setImportOpen(true)} className="btn-odoo-secondary shrink-0 gap-1">

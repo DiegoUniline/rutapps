@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { claveIdempotencia, idStripe } from "../_shared/stripeIdempotency.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -587,11 +588,17 @@ Deno.serve(async (req) => {
               } else if (desiredExtras > 0) {
                 items.push({ price: planRow.stripe_price_id_extra, quantity: desiredExtras });
               }
-              await stripe.subscriptions.update(sub.stripe_subscription_id, {
+              const params: Stripe.SubscriptionUpdateParams = {
                 items,
                 // D-056: más usuarios → cobro proporcional inmediato; menos → sin devolución.
                 proration_behavior: desiredExtras > currentExtras ? "always_invoice" : "none",
                 metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
+              };
+              // Fase 3: si la corrida se repite el mismo día, Stripe no vuelve a cobrar el mismo cambio.
+              await stripe.subscriptions.update(sub.stripe_subscription_id, params, {
+                idempotencyKey: claveIdempotencia("qty", [
+                  sub.stripe_subscription_id, `x${currentExtras}>x${desiredExtras}`, idStripe(stripeSub.latest_invoice),
+                ], { parametros: params }),
               });
               stripeWasUpdated = true;
               log("Stripe extras synced", { empresa: sub.empresa_id, prev: currentExtras, new: desiredExtras });
@@ -602,11 +609,16 @@ Deno.serve(async (req) => {
             if (!item) continue;
             const currentStripeQty = item.quantity || 0;
             if (qty !== currentStripeQty) {
-              await stripe.subscriptions.update(sub.stripe_subscription_id, {
+              const params: Stripe.SubscriptionUpdateParams = {
                 items: [{ id: item.id, quantity: qty }],
                 // D-056: más usuarios → cobro proporcional inmediato; menos → sin devolución.
                 proration_behavior: qty > currentStripeQty ? "always_invoice" : "none",
                 metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
+              };
+              await stripe.subscriptions.update(sub.stripe_subscription_id, params, {
+                idempotencyKey: claveIdempotencia("qty", [
+                  sub.stripe_subscription_id, `${currentStripeQty}>${qty}`, idStripe(stripeSub.latest_invoice),
+                ], { parametros: params }),
               });
               stripeWasUpdated = true;
               log("Stripe quantity synced (legacy)", { empresa: sub.empresa_id, prev: currentStripeQty, new: qty });
@@ -614,9 +626,12 @@ Deno.serve(async (req) => {
           }
 
           if (!stripeWasUpdated && stripeSub.metadata?.num_usuarios !== String(qty)) {
-            await stripe.subscriptions.update(sub.stripe_subscription_id, {
+            const paramsMeta: Stripe.SubscriptionUpdateParams = {
               metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
               proration_behavior: "none",
+            };
+            await stripe.subscriptions.update(sub.stripe_subscription_id, paramsMeta, {
+              idempotencyKey: claveIdempotencia("seat-meta", [sub.stripe_subscription_id, qty], { parametros: paramsMeta }),
             });
             log("Stripe seat metadata synced", { empresa: sub.empresa_id, qty });
           }

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -111,6 +111,54 @@ export const PRODUCTOS_ORDEN_BD: Record<string, string> = {
   created_at: 'created_at', updated_at: 'updated_at',
 };
 
+/** Columnas de la lista de productos (pantalla y exportación). */
+const PRODUCTOS_LISTA_SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre, status), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre), clave_alterna, nombre_venta, nombre_compra, nombre_ticket, precio_sugerido_publico, max, ieps_tipo, cfdi_iva_sin_iva, costo_incluye_impuestos, codigo_sat, se_puede_vender, se_puede_comprar, se_puede_inventariar, vender_sin_stock, permitir_descuento, monto_maximo, tiene_comision, tipo_comision, pct_comision, es_granel, unidad_granel, es_combo, usa_listas_precio, usa_presentaciones, modo_compra_sugerida, dias_cobertura, lead_time_dias, codigo_origen, notas, created_at, updated_at';
+
+/** Filtros de la lista de productos (los mismos para la página y para exportar todo). */
+interface FiltrosListaProductos {
+  empresaId: string;
+  search?: string;
+  statusFilter?: string;
+  clasificacionFilter?: string;
+  marcaFilter?: string;
+  proveedorFilter?: string;
+  manejaLoteFilter?: string;
+  sort?: SortState;
+}
+
+function aplicarFiltrosListaProductos(q: any, f: FiltrosListaProductos) {
+  // Orden elegido en el encabezado (toda la lista, no solo la página); sin orden: por nombre.
+  q = aplicarOrdenConsulta(q.eq('empresa_id', f.empresaId), f.sort, PRODUCTOS_ORDEN_BD, { columna: 'nombre', asc: true });
+  if (f.search) {
+    // D-047: código o código de barras (clave alterna) exacto también entra.
+    const exacto = filtroCoincidenciaExacta(['codigo', 'clave_alterna'], f.search);
+    q = q.or(`nombre.ilike.%${f.search}%,codigo.ilike.%${f.search}%,formula.ilike.%${f.search}%${exacto ? `,${exacto}` : ''}`);
+  }
+  if (f.statusFilter && f.statusFilter !== 'todos') {
+    const arr = f.statusFilter.split(',');
+    if (arr.length > 1) q = q.in('status', arr as any);
+    else q = q.eq('status', f.statusFilter as Producto['status']);
+  }
+  if (f.clasificacionFilter && f.clasificacionFilter !== 'todos') {
+    const arr = f.clasificacionFilter.split(',');
+    if (arr.length > 1) q = q.in('clasificacion_id', arr as any);
+    else q = q.eq('clasificacion_id', f.clasificacionFilter);
+  }
+  if (f.marcaFilter && f.marcaFilter !== 'todos') {
+    const arr = f.marcaFilter.split(',');
+    if (arr.length > 1) q = q.in('marca_id', arr as any);
+    else q = q.eq('marca_id', f.marcaFilter);
+  }
+  if (f.proveedorFilter && f.proveedorFilter !== 'todos') {
+    const arr = f.proveedorFilter.split(',');
+    if (arr.length > 1) q = q.in('proveedor_preferido_id', arr as any);
+    else q = q.eq('proveedor_preferido_id', f.proveedorFilter);
+  }
+  if (f.manejaLoteFilter === 'si') q = q.eq('maneja_lote', true);
+  else if (f.manejaLoteFilter === 'no') q = q.or('maneja_lote.is.null,maneja_lote.eq.false');
+  return q;
+}
+
 /** Paginated products for list views. When fetchAll=true, returns all matching rows (used for grouping). */
 export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, clasificacionFilter?: string, marcaFilter?: string, fetchAll = false, proveedorFilter?: string, manejaLoteFilter?: string, sort?: SortState) {
   const { empresa } = useAuth();
@@ -121,39 +169,9 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
     placeholderData: (prev) => prev,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const SELECT = 'id, codigo, nombre, formula, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre, activo), clasificacion_id, clasificaciones(nombre, activo), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre, status), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura, activo), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura, activo), factor_conversion, calculo_costo, lista_id, listas(nombre), clave_alterna, nombre_venta, nombre_compra, nombre_ticket, precio_sugerido_publico, max, ieps_tipo, cfdi_iva_sin_iva, costo_incluye_impuestos, codigo_sat, se_puede_vender, se_puede_comprar, se_puede_inventariar, vender_sin_stock, permitir_descuento, monto_maximo, tiene_comision, tipo_comision, pct_comision, es_granel, unidad_granel, es_combo, usa_listas_precio, usa_presentaciones, modo_compra_sugerida, dias_cobertura, lead_time_dias, codigo_origen, notas, created_at, updated_at';
-      const applyFilters = (q: any) => {
-        // Orden elegido en el encabezado (toda la lista, no solo la página); sin orden: por nombre.
-        q = aplicarOrdenConsulta(q.eq('empresa_id', empresa!.id), sort, PRODUCTOS_ORDEN_BD, { columna: 'nombre', asc: true });
-        if (search) {
-          // D-047: código o código de barras (clave alterna) exacto también entra.
-          const exacto = filtroCoincidenciaExacta(['codigo', 'clave_alterna'], search);
-          q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%,formula.ilike.%${search}%${exacto ? `,${exacto}` : ''}`);
-        }
-        if (statusFilter && statusFilter !== 'todos') {
-          const arr = statusFilter.split(',');
-          if (arr.length > 1) q = q.in('status', arr as any);
-          else q = q.eq('status', statusFilter as Producto['status']);
-        }
-        if (clasificacionFilter && clasificacionFilter !== 'todos') {
-          const arr = clasificacionFilter.split(',');
-          if (arr.length > 1) q = q.in('clasificacion_id', arr as any);
-          else q = q.eq('clasificacion_id', clasificacionFilter);
-        }
-        if (marcaFilter && marcaFilter !== 'todos') {
-          const arr = marcaFilter.split(',');
-          if (arr.length > 1) q = q.in('marca_id', arr as any);
-          else q = q.eq('marca_id', marcaFilter);
-        }
-        if (proveedorFilter && proveedorFilter !== 'todos') {
-          const arr = proveedorFilter.split(',');
-          if (arr.length > 1) q = q.in('proveedor_preferido_id', arr as any);
-          else q = q.eq('proveedor_preferido_id', proveedorFilter);
-        }
-        if (manejaLoteFilter === 'si') q = q.eq('maneja_lote', true);
-        else if (manejaLoteFilter === 'no') q = q.or('maneja_lote.is.null,maneja_lote.eq.false');
-        return q;
-      };
+      const SELECT = PRODUCTOS_LISTA_SELECT;
+      const filtros: FiltrosListaProductos = { empresaId: empresa!.id, search, statusFilter, clasificacionFilter, marcaFilter, proveedorFilter, manejaLoteFilter, sort };
+      const applyFilters = (q: any) => aplicarFiltrosListaProductos(q, filtros);
 
       if (fetchAll) {
         const rows = await fetchAllPages((from, to) => applyFilters(supabase.from('productos').select(SELECT).range(from, to)));
@@ -176,6 +194,21 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
       return { rows: marcarCatalogosInactivos(pagina.rows) as unknown as Producto[], total: pagina.total };
     },
   });
+}
+
+/**
+ * Fase 3: carga TODOS los productos que cumplen los filtros de la lista (en páginas de 1000)
+ * para exportar sin pintarlos en pantalla. Reemplaza el viejo «Todos» del tamaño de página.
+ */
+export function useCargarProductosLista() {
+  const { empresa } = useAuth();
+  return useCallback(async (f: Omit<FiltrosListaProductos, 'empresaId'>): Promise<Producto[]> => {
+    if (!empresa?.id) throw new Error('Sin empresa');
+    const filtros: FiltrosListaProductos = { ...f, empresaId: empresa.id };
+    const rows = await fetchAllPages((from, to) =>
+      aplicarFiltrosListaProductos(supabase.from('productos').select(PRODUCTOS_LISTA_SELECT).range(from, to), filtros));
+    return marcarCatalogosInactivos(rows ?? []) as unknown as Producto[];
+  }, [empresa?.id]);
 }
 
 /** Categoría/marca/unidad/proveedor dado de baja que el producto conserva: se muestra marcado «(inactiva/o)». */

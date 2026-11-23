@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { toast } from 'sonner';
@@ -29,6 +30,49 @@ export const CLIENTES_ORDEN_BD: Record<string, string> = {
 };
 
 
+/** Columnas de la lista de clientes (pantalla y exportación). */
+const CLIENTES_LISTA_SELECT = 'id, codigo, nombre, telefono, lada, contacto, email, direccion, colonia, requiere_factura, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, facturama_rfc, facturama_razon_social, facturama_regimen_fiscal, facturama_uso_cfdi, facturama_cp, facturama_forma_pago, facturama_correo_facturacion, facturama_direccion_fiscal, rfc_validado_status, rfc_validado_at, notas_fiscales, es_publico_general, recibir_notificaciones, notas, fecha_alta, created_at, updated_at';
+
+/** Filtros de la lista de clientes (los mismos para la página y para exportar todo). */
+interface FiltrosListaClientes {
+  empresaId: string;
+  /** Visibilidad «propios»: solo los clientes de este vendedor. */
+  soloVendedorId: string | null;
+  search?: string;
+  statusFilter?: string;
+  vendedorFilter?: string;
+  zonaFilter?: string;
+  sort?: SortState;
+}
+
+function aplicarFiltrosListaClientes(q: any, f: FiltrosListaClientes) {
+  // Orden elegido en el encabezado (toda la lista, no solo la página); sin orden: por nombre.
+  q = aplicarOrdenConsulta(q.eq('empresa_id', f.empresaId), f.sort, CLIENTES_ORDEN_BD, { columna: 'nombre', asc: true });
+  if (f.soloVendedorId) q = q.eq('vendedor_id', f.soloVendedorId);
+  if (f.search) {
+    const s = f.search.replace(/'/g, "''");
+    // D-047: el código exacto (o mismo número: «C-002000» → C-2000) también entra.
+    const exacto = filtroCoincidenciaExacta(['codigo'], f.search);
+    q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%,telefono.ilike.%${s}%,contacto.ilike.%${s}%,email.ilike.%${s}%,direccion.ilike.%${s}%,colonia.ilike.%${s}%${exacto ? `,${exacto}` : ''}`);
+  }
+  if (f.statusFilter && f.statusFilter !== 'todos') {
+    const arr = f.statusFilter.split(',');
+    if (arr.length > 1) q = q.in('status', arr as any);
+    else q = q.eq('status', f.statusFilter as Cliente['status']);
+  }
+  if (f.vendedorFilter && f.vendedorFilter !== 'todos') {
+    const arr = f.vendedorFilter.split(',');
+    if (arr.length > 1) q = q.in('vendedor_id', arr as any);
+    else q = q.eq('vendedor_id', f.vendedorFilter);
+  }
+  if (f.zonaFilter && f.zonaFilter !== 'todos') {
+    const arr = f.zonaFilter.split(',');
+    if (arr.length > 1) q = q.in('zona_id', arr as any);
+    else q = q.eq('zona_id', f.zonaFilter);
+  }
+  return q;
+}
+
 /** Paginated clients for list views. When fetchAll=true, returns all matching rows (used for grouping). */
 export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, vendedorFilter?: string, zonaFilter?: string, fetchAll = false, sort?: SortState) {
   const { empresa } = useAuth();
@@ -51,34 +95,9 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
       // el cliente con `enrichClientes` a partir de los catálogos pequeños
       // ya cacheados por useBootstrapPrefetch. La forma de la fila se
       // preserva: consumidores siguen leyendo cliente.zonas?.nombre, etc.
-      const SELECT = 'id, codigo, nombre, telefono, lada, contacto, email, direccion, colonia, requiere_factura, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, facturama_rfc, facturama_razon_social, facturama_regimen_fiscal, facturama_uso_cfdi, facturama_cp, facturama_forma_pago, facturama_correo_facturacion, facturama_direccion_fiscal, rfc_validado_status, rfc_validado_at, notas_fiscales, es_publico_general, recibir_notificaciones, notas, fecha_alta, created_at, updated_at';
-      const applyFilters = (q: any) => {
-        // Orden elegido en el encabezado (toda la lista, no solo la página); sin orden: por nombre.
-        q = aplicarOrdenConsulta(q.eq('empresa_id', empresa!.id), sort, CLIENTES_ORDEN_BD, { columna: 'nombre', asc: true });
-        if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
-        if (search) {
-          const s = search.replace(/'/g, "''");
-          // D-047: el código exacto (o mismo número: «C-002000» → C-2000) también entra.
-          const exacto = filtroCoincidenciaExacta(['codigo'], search);
-          q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%,telefono.ilike.%${s}%,contacto.ilike.%${s}%,email.ilike.%${s}%,direccion.ilike.%${s}%,colonia.ilike.%${s}%${exacto ? `,${exacto}` : ''}`);
-        }
-        if (statusFilter && statusFilter !== 'todos') {
-          const arr = statusFilter.split(',');
-          if (arr.length > 1) q = q.in('status', arr as any);
-          else q = q.eq('status', statusFilter as Cliente['status']);
-        }
-        if (vendedorFilter && vendedorFilter !== 'todos') {
-          const arr = vendedorFilter.split(',');
-          if (arr.length > 1) q = q.in('vendedor_id', arr as any);
-          else q = q.eq('vendedor_id', vendedorFilter);
-        }
-        if (zonaFilter && zonaFilter !== 'todos') {
-          const arr = zonaFilter.split(',');
-          if (arr.length > 1) q = q.in('zona_id', arr as any);
-          else q = q.eq('zona_id', zonaFilter);
-        }
-        return q;
-      };
+      const SELECT = CLIENTES_LISTA_SELECT;
+      const filtros: FiltrosListaClientes = { empresaId: empresa!.id, soloVendedorId: filterByVendedor ? profileId! : null, search, statusFilter, vendedorFilter, zonaFilter, sort };
+      const applyFilters = (q: any) => aplicarFiltrosListaClientes(q, filtros);
 
       // Garantiza los catálogos en caché antes de resolver nombres (evita
       // nombres en blanco en recarga dura parado en la lista).
@@ -107,6 +126,27 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
       return { rows: enriched as unknown as Cliente[], total: pagina.total };
     },
   });
+}
+
+/**
+ * Fase 3: carga TODOS los clientes que cumplen los filtros de la lista (en páginas de 1000,
+ * con la misma visibilidad que la lista) para exportar sin pintarlos en pantalla.
+ * Reemplaza el viejo «Todos» del tamaño de página.
+ */
+export function useCargarClientesLista() {
+  const { empresa } = useAuth();
+  const qc = useQueryClient();
+  const { seeAll, profileId, clientesVisibilidad, blocked } = useDataVisibility('clientes');
+  const filterByVendedor = clientesVisibilidad === 'propios' && !seeAll && !!profileId;
+  return useCallback(async (f: Omit<FiltrosListaClientes, 'empresaId' | 'soloVendedorId'>): Promise<Cliente[]> => {
+    if (!empresa?.id) throw new Error('Sin empresa');
+    if (blocked) throw new Error('No se pudo comprobar qué clientes puedes ver');
+    const filtros: FiltrosListaClientes = { ...f, empresaId: empresa.id, soloVendedorId: filterByVendedor ? profileId! : null };
+    await ensureCatalogsForEnrich(qc, empresa.id);
+    const rows = await fetchAllPages<any>((from, to) =>
+      aplicarFiltrosListaClientes(supabase.from('clientes').select(CLIENTES_LISTA_SELECT).range(from, to), filtros));
+    return enrichClientes(rows ?? [], qc, empresa.id) as unknown as Cliente[];
+  }, [empresa?.id, qc, blocked, filterByVendedor, profileId]);
 }
 
 /** All clients (for lookups/selectors — not for list pages) */

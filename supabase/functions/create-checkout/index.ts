@@ -1,6 +1,7 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { resolverEmpresaUsuario } from "../_shared/empresaAcceso.ts";
+import { claveIdempotencia } from "../_shared/stripeIdempotency.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -280,7 +281,10 @@ Deno.serve(async (req) => {
 
     if (discounts.length > 0) sessionParams.discounts = discounts;
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    // Fase 3: doble clic o reintento en 10 min devuelve la misma sesión (no abre dos cobros).
+    const session = await stripe.checkout.sessions.create(sessionParams, {
+      idempotencyKey: claveIdempotencia("checkout-suscripcion", [empresa_id], { parametros: sessionParams, ventanaMinutos: 10 }),
+    });
 
     // Save session ref for webhook reconciliation
     await supabase

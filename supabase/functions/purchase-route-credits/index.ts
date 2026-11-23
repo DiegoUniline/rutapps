@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { claveIdempotencia } from "../_shared/stripeIdempotency.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://rutapp.mx";
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       customer_email: customerId ? undefined : userEmail,
       line_items: [{ price: PACK_PRICE_ID, quantity: 1 }],
@@ -85,6 +86,10 @@ Deno.serve(async (req) => {
         user_id: userId,
         tipo: "route_credits_pack_100",
       },
+    };
+    // Fase 3: doble clic o reintento en 10 min devuelve la misma sesión (no abre dos cobros).
+    const session = await stripe.checkout.sessions.create(sessionParams, {
+      idempotencyKey: claveIdempotencia("checkout-rutas", [profile.empresa_id], { parametros: sessionParams, ventanaMinutos: 10 }),
     });
 
     // Registrar la compra como pendiente

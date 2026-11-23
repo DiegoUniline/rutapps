@@ -1,6 +1,7 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { acreditarTimbresCheckout } from "../_shared/timbres.ts";
+import { claveIdempotencia } from "../_shared/stripeIdempotency.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -65,7 +66,7 @@ Deno.serve(async (req) => {
 
       const origin = req.headers.get("origin") || "https://rutapp.mx";
 
-      const session = await stripe.checkout.sessions.create({
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
         customer: customerId,
         line_items: [{ price: TIMBRES_PRICE_ID, quantity: qty }],
         mode: "payment",
@@ -77,6 +78,10 @@ Deno.serve(async (req) => {
         },
         success_url: `${origin}/configuracion?timbres_session={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/configuracion?timbres=cancelled`,
+      };
+      // Fase 3: doble clic o reintento en 10 min devuelve la misma sesión (no abre dos cobros).
+      const session = await stripe.checkout.sessions.create(sessionParams, {
+        idempotencyKey: claveIdempotencia("checkout-timbres", [profile.empresa_id], { parametros: sessionParams, ventanaMinutos: 10 }),
       });
 
       return new Response(JSON.stringify({ url: session.url, session_id: session.id }), {

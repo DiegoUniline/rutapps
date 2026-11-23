@@ -1,6 +1,7 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { accionRequiereAdmin, puedeAdministrarSuscripcion } from "../_shared/empresaAcceso.ts";
+import { claveIdempotencia, esRechazoRepetidoPorIdempotencia, idStripe } from "../_shared/stripeIdempotency.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -114,6 +115,15 @@ Deno.serve(async (req) => {
       return item ? [{ id: item.id, quantity: qty }] : [];
     }
 
+    // Usuarios que Stripe cobra hoy (mismo cálculo que sync_active_users); entra en la clave de idempotencia.
+    function stripeUsersActuales(stripeSub: Stripe.Subscription): number {
+      if (isTwoItem) {
+        const extraItem = stripeSub.items.data.find((it: any) => it.price?.id === planRow.stripe_price_id_extra);
+        return Number(planRow.usuarios_incluidos || 0) + Number(extraItem?.quantity || 0);
+      }
+      return Number(stripeSub.items.data[0]?.quantity || 0);
+    }
+
     // Helper: count active users for the empresa
     async function countActiveUsers(): Promise<number> {
       const { count } = await supabase
@@ -147,10 +157,16 @@ Deno.serve(async (req) => {
         if (previousStripeUsers !== qty || stripeSub.metadata?.num_usuarios !== String(qty)) {
           // D-056: alta de usuarios → se cobra ya la parte proporcional del periodo;
           // baja → sin devolución, deja de cobrarse desde la siguiente renovación.
-          await stripe.subscriptions.update(sub.stripe_subscription_id, {
+          const params: Stripe.SubscriptionUpdateParams = {
             items,
             proration_behavior: qty > previousStripeUsers ? "always_invoice" : "none",
             metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
+          };
+          // Fase 3: un reintento del mismo cambio (mismo punto de partida, mismo día) no cobra dos veces.
+          await stripe.subscriptions.update(sub.stripe_subscription_id, params, {
+            idempotencyKey: claveIdempotencia("qty", [
+              sub.stripe_subscription_id, `${previousStripeUsers}>${qty}`, idStripe(stripeSub.latest_invoice),
+            ], { parametros: params }),
           });
         }
       }
@@ -263,12 +279,26 @@ Deno.serve(async (req) => {
           // STRICT: charge immediately. If payment fails, do NOT activate extra users.
           // payment_behavior: "error_if_incomplete" => if the prorated invoice can't be paid
           // right away, Stripe rejects the update with an error and quantity stays the same.
+          const params: Stripe.SubscriptionUpdateParams = {
+            items,
+            proration_behavior: "always_invoice",
+            payment_behavior: "error_if_incomplete",
+          };
+          // Fase 3: misma intención (cantidad de partida → nueva, mismo día) = misma clave.
+          const clave = claveIdempotencia("qty", [
+            sub.stripe_subscription_id, `${stripeUsersActuales(stripeSub)}>${qty}`, idStripe(stripeSub.latest_invoice),
+          ], { parametros: params });
           try {
-            await stripe.subscriptions.update(sub.stripe_subscription_id, {
-              items,
-              proration_behavior: "always_invoice",
-              payment_behavior: "error_if_incomplete",
-            });
+            try {
+              await stripe.subscriptions.update(sub.stripe_subscription_id, params, { idempotencyKey: clave });
+            } catch (e) {
+              // Stripe repitió el rechazo de un intento anterior (nada se aplicó): si el
+              // cliente ya cambió de tarjeta, el nuevo intento va con clave nueva.
+              if (!esRechazoRepetidoPorIdempotencia(e)) throw e;
+              await stripe.subscriptions.update(sub.stripe_subscription_id, params, {
+                idempotencyKey: `${clave}:r${Date.now()}`,
+              });
+            }
           } catch (e: any) {
             const msg = e?.raw?.message || e?.message || "No se pudo procesar el cobro";
             return new Response(JSON.stringify({
@@ -293,9 +323,14 @@ Deno.serve(async (req) => {
         }
 
         // Downgrade (D-056): sin devolución ni saldo a favor; la cantidad menor se cobra desde la siguiente renovación.
-        await stripe.subscriptions.update(sub.stripe_subscription_id, {
+        const paramsBaja: Stripe.SubscriptionUpdateParams = {
           items,
           proration_behavior: "none",
+        };
+        await stripe.subscriptions.update(sub.stripe_subscription_id, paramsBaja, {
+          idempotencyKey: claveIdempotencia("qty", [
+            sub.stripe_subscription_id, `${stripeUsersActuales(stripeSub)}>${qty}`, idStripe(stripeSub.latest_invoice),
+          ], { parametros: paramsBaja }),
         });
       }
 
@@ -324,9 +359,14 @@ Deno.serve(async (req) => {
       const itemId = stripeSub.items.data[0]?.id;
       if (!itemId) throw new Error("No subscription item found");
 
-      await stripe.subscriptions.update(sub.stripe_subscription_id, {
+      const paramsPlan: Stripe.SubscriptionUpdateParams = {
         items: [{ id: itemId, price: new_price_id }],
         proration_behavior: "create_prorations",
+      };
+      await stripe.subscriptions.update(sub.stripe_subscription_id, paramsPlan, {
+        idempotencyKey: claveIdempotencia("plan", [
+          sub.stripe_subscription_id, `${idStripe(stripeSub.items.data[0]?.price)}>${new_price_id}`, idStripe(stripeSub.latest_invoice),
+        ], { parametros: paramsPlan }),
       });
 
       return new Response(JSON.stringify({ success: true }), {

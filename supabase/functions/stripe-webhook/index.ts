@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { acreditarTimbresCheckout, acreditarTimbresFacturaPagada } from "../_shared/timbres.ts";
 import { notifyBillingEvent } from "../_shared/billing-notify-utils.ts";
 import { invoiceAffectsSubscription, invoiceMetadataPeriod } from "../_shared/billing-safety.ts";
+import { claveIdempotencia } from "../_shared/stripeIdempotency.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -171,8 +172,10 @@ Deno.serve(async (req) => {
           items.push({ price: mainPriceId, quantity: qty });
         }
 
-        // trial_end = ahora + 7 días
-        const trialEndUnix = Math.floor(Date.now() / 1000) + 7 * 86400;
+        // trial_end = momento del evento + 7 días. Fase 3: se toma `event.created` (igual en
+        // cada reenvío del mismo evento, segundos de diferencia con «ahora») para que los
+        // parámetros sean idénticos y la clave de idempotencia evite una 2ª suscripción.
+        const trialEndUnix = event.created + 7 * 86400;
         // billing_cycle_anchor = 1° del mes siguiente al fin de trial, 09:00 CDMX
         // (= 15:00 UTC; D-057: todos los cobros a las 9:00 am CDMX).
         const trialEndDate = new Date(trialEndUnix * 1000);
@@ -204,6 +207,9 @@ Deno.serve(async (req) => {
             flow: "trial_signup_setup",
             alignment: "first_of_month_cdmx",
           },
+        }, {
+          // Fase 3: Stripe reenvía el webhook si no recibe 2xx; la misma sesión no crea 2 suscripciones (24 h).
+          idempotencyKey: claveIdempotencia("alta-sub", [session.id], { fecha: null }),
         });
 
         await supabase
