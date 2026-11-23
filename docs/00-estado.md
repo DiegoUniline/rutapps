@@ -12,6 +12,7 @@
 - **Siguiente paso exacto:** CORTE HECHO 2026-11-23 (D-055). Pendientes: vault.sh + 2 crons, webhook Stripe, fotos de Storage, rotar contraseña BD. Antes: corte (D-018) y correr el ensayo de `recargar-datos.sh` con el backup fresco de Lovable; datos viejos sin corregir ([D-052](./decisiones.md#d-052)). Orden A→Z por columna: terminado en todas las listas (incl. Entregas, Demanda, Concentrado y MinMax, 2026-11-22). Después: revisión del dueño de F1/F2, F3 y D-051.
 
 ## Decisiones recientes (últimas 10)
+- [D-056](./decisiones.md#d-056) 2026-11-23 · Usuarios en Stripe: altas se cobran proporcional de inmediato; bajas sin devolución desde la siguiente renovación.
 - [D-055](./decisiones.md#d-055) 2026-11-23 · Corte hecho: RutApp opera en Supabase propio + Cloudflare; código de Lovable eliminado; fotos pendientes.
 - [D-054](./decisiones.md#d-054) 2026-11-23 · WhatsApp: sin Evolution ni WhatsAPI en el corte; se rehará con Zernio (módulo nuevo).
 - [D-053](./decisiones.md#d-053) 2026-11-22 · Openpay eliminado (funciones, pestaña Cobros del Super Admin, pago Openpay en /pagar, tabla `payment_links`).

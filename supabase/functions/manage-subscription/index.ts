@@ -120,9 +120,11 @@ Deno.serve(async (req) => {
         const items = buildItemsForQty(stripeSub, qty);
         if (!items.length) throw new Error("No se encontró el renglón de la suscripción");
         if (previousStripeUsers !== qty || stripeSub.metadata?.num_usuarios !== String(qty)) {
+          // D-056: alta de usuarios → se cobra ya la parte proporcional del periodo;
+          // baja → sin devolución, deja de cobrarse desde la siguiente renovación.
           await stripe.subscriptions.update(sub.stripe_subscription_id, {
             items,
-            proration_behavior: "none",
+            proration_behavior: qty > previousStripeUsers ? "always_invoice" : "none",
             metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
           });
         }
@@ -183,7 +185,8 @@ Deno.serve(async (req) => {
               subscription: sub.stripe_subscription_id,
               subscription_details: {
                 items: previewItems,
-                proration_behavior: isUpgrade ? "always_invoice" : "create_prorations",
+                // D-056: bajar usuarios no genera saldo a favor.
+                proration_behavior: isUpgrade ? "always_invoice" : "none",
               },
             });
             // Sum proration line items (immediate effect)
@@ -264,10 +267,10 @@ Deno.serve(async (req) => {
           }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
-        // Downgrade => no charge, just credit for next invoice. Apply immediately.
+        // Downgrade (D-056): sin devolución ni saldo a favor; la cantidad menor se cobra desde la siguiente renovación.
         await stripe.subscriptions.update(sub.stripe_subscription_id, {
           items,
-          proration_behavior: "create_prorations",
+          proration_behavior: "none",
         });
       }
 

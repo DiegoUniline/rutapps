@@ -534,9 +534,9 @@ Deno.serve(async (req) => {
     }
 
     // ═══ PART 5: Sync Stripe subscription quantity with active users (daily) ═══
-    // Ensures that any extra users added beyond the plan limit get billed on the
-    // next Stripe renewal invoice. proration_behavior:"none" => no immediate
-    // proration charge; the new quantity simply applies to the upcoming invoice.
+    // D-056: si hay más usuarios activos que los cobrados, se cobra ya la parte
+    // proporcional (always_invoice); si hay menos, sin devolución (none) y la
+    // cantidad menor aplica desde la siguiente renovación.
     if (stripe) {
       const { data: stripeSubs } = await supabase
         .from("subscriptions")
@@ -589,7 +589,8 @@ Deno.serve(async (req) => {
               }
               await stripe.subscriptions.update(sub.stripe_subscription_id, {
                 items,
-                proration_behavior: "none",
+                // D-056: más usuarios → cobro proporcional inmediato; menos → sin devolución.
+                proration_behavior: desiredExtras > currentExtras ? "always_invoice" : "none",
                 metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
               });
               stripeWasUpdated = true;
@@ -603,7 +604,8 @@ Deno.serve(async (req) => {
             if (qty !== currentStripeQty) {
               await stripe.subscriptions.update(sub.stripe_subscription_id, {
                 items: [{ id: item.id, quantity: qty }],
-                proration_behavior: "none",
+                // D-056: más usuarios → cobro proporcional inmediato; menos → sin devolución.
+                proration_behavior: qty > currentStripeQty ? "always_invoice" : "none",
                 metadata: { ...stripeSub.metadata, num_usuarios: String(qty) },
               });
               stripeWasUpdated = true;
