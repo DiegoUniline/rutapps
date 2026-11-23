@@ -304,3 +304,4 @@
 2026-11-23 · desarrollador · Ventas y utilidad del Dashboard y Reportes→Utilidad solo lo realmente vendido (pedidos por fecha de entrega); Gastos muestra utilidad neta sin restar compras; migración 20261123050000 (sin aplicar a prod) · D-060
 2026-11-23 · desarrollador · Incidente GAMA/Tampico: celulares reenviaban cobros viejos desde un respaldo de cola de versión anterior (servidor los rechazó; sin cobros duplicados ni ventas borradas). Corrección: solo se restaura respaldo con formato actual y de las últimas 48 h
 2026-11-23 · desarrollador · Dashboard: Cobrado excluye cobros sin dinero (ajuste de liquidación, saldo a favor); caso Global Trade HNL 5.58M de ajustes
+2026-11-23 · desarrollador · Dashboard: Cartera (KPI, antigüedad y Equipo) suma todo saldo pendiente sin borradores ni cancelados; Equipo cobrado sin cobros sin dinero
