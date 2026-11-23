@@ -44,6 +44,14 @@ BEGIN
     n_fail := n_fail + 1; RAISE NOTICE 'fallo | EXECUTE solo service_role';
   END IF;
 
+  -- 2b. Respaldo: todo lo que la purga borraría ya está en el archivo y nadie más lo lee.
+  SELECT count(*) INTO n FROM public.vendedor_ubicaciones_historial h
+  WHERE h.recorded_at < now() - interval '30 days'
+    AND NOT EXISTS (SELECT 1 FROM public.vendedor_ubicaciones_historial_archivo a WHERE a.id = h.id);
+  IF n = 0 AND NOT has_table_privilege('authenticated', 'public.vendedor_ubicaciones_historial_archivo', 'SELECT') THEN
+    n_ok := n_ok + 1; RAISE NOTICE 'ok | respaldo completo y solo service_role';
+  ELSE n_fail := n_fail + 1; RAISE NOTICE 'fallo | respaldo → % filas sin copia', n; END IF;
+
   -- 3. Purga: borra lo de más de 30 días y conserva lo reciente.
   INSERT INTO public.vendedor_ubicaciones_historial (id, user_id, empresa_id, lat, lng, recorded_at)
   VALUES (viejo, u, e, 19.4326, -99.1332, now() - interval '31 days'),
