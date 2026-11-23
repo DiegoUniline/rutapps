@@ -13,6 +13,7 @@ import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useVendedorRutaVista } from '@/hooks/useVendedorRutaVista';
 import { useZonaFiltroRuta, clienteEnZona } from '@/components/ruta/ZonaFiltroRuta';
+import { useClienteOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 
 type StatusFilter = 'todos' | 'pendientes' | 'hecho' | 'no_entregado';
 
@@ -122,6 +123,7 @@ export default function RutaEntregas() {
   const [filter, setFilter] = useState<StatusFilter>('todos');
   // Zona universal: las entregas se filtran por la zona de su cliente.
   const { zona, setZona } = useZonaFiltroRuta();
+  const { ordenMap } = useClienteOrdenRuta(vendedorId, diaHoy);
 
   const { data: entregasOffline } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,
@@ -150,7 +152,7 @@ export default function RutaEntregas() {
     queryKey: ['sa-ruta-entregas-clientes', empresa?.id],
     enabled: !!empresa?.id && desdeServidor,
     queryFn: () => fetchAllPages((from, to) => supabase
-      .from('clientes').select('id, nombre, direccion, colonia, gps_lat, gps_lng, status, vendedor_id, dia_visita, zona_id')
+      .from('clientes').select('id, nombre, direccion, colonia, gps_lat, gps_lng, status, vendedor_id, dia_visita, zona_id, orden')
       .eq('empresa_id', empresa!.id).order('id').range(from, to)),
   });
 
@@ -258,12 +260,22 @@ export default function RutaEntregas() {
     if (filter === 'pendientes') list = list.filter(e => e.status === 'cargado' || e.status === 'en_ruta');
     else if (filter === 'hecho') list = list.filter(e => e.status === 'hecho');
     else if (filter === 'no_entregado') list = list.filter(e => e.status === 'no_entregado');
-    // sort: pendientes first, then no_entregado, then hecho
+    // Pendientes, luego no entregadas, luego entregadas; dentro de cada grupo, el mismo
+    // orden de ruta del cliente que la pestaña Clientes (cliente_orden_ruta del día → clientes.orden).
+    const ordenCliente = (e: any) => ordenMap.get(e.cliente_id) ?? null;
     return [...list].sort((a, b) => {
       const order: Record<string, number> = { cargado: 0, en_ruta: 0, no_entregado: 1, hecho: 2 };
-      return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+      const g = (order[a.status] ?? 3) - (order[b.status] ?? 3);
+      if (g !== 0) return g;
+      const oa = ordenCliente(a), ob = ordenCliente(b);
+      if (oa != null && ob != null && oa !== ob) return oa - ob;
+      if (oa != null && ob == null) return -1;
+      if (ob != null && oa == null) return 1;
+      const la = a._cliente?.orden ?? 9999, lb = b._cliente?.orden ?? 9999;
+      if (la !== lb) return la - lb;
+      return String(a.fecha ?? '').localeCompare(String(b.fecha ?? '')) || String(a.folio ?? '').localeCompare(String(b.folio ?? ''));
     });
-  }, [entregas, filter]);
+  }, [entregas, filter, ordenMap]);
 
   const tabs: { key: StatusFilter; label: string; count: number }[] = [
     { key: 'todos', label: 'Todas', count: counts.todos },
