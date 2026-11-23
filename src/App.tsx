@@ -286,6 +286,14 @@ const TiendaMisPedidosPage = lazy(() => import("@/pages/tienda/TiendaMisPedidosP
 const TiendaCambiarPasswordPage = lazy(() => import("@/pages/tienda/TiendaCambiarPasswordPage"));
 const TiendaConfigPage = lazy(() => import("@/pages/configuracion/TiendaConfigPage"));
 
+/** true cuando RutApp corre como app instalada (pantalla completa), no en el navegador. */
+function esAppInstalada(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+  } catch { return false; }
+}
+
 function TiendaPublicRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -458,7 +466,8 @@ function AuthenticatedAppRoutes() {
     return (
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          {/* App instalada (PWA): abre directo en el login, sin la página de inicio. */}
+          <Route path="/" element={esAppInstalada() ? <Navigate to="/login" replace /> : <LandingPage />} />
           <Route path="/modulos" element={<ModulosMktPage />} />
           <Route path="/precios" element={<PreciosMktPage />} />
           <Route path="/giros" element={<GirosMktIndexPage />} />
@@ -488,7 +497,7 @@ function AuthenticatedAppRoutes() {
           <Route path="/tutoriales" element={<TutorialesPage />} />
           <Route path="/soporte" element={<SoportePage />} />
           <Route path="/auditoria-movil/:auditoria_id" element={<AuditoriaMobilePage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to={esAppInstalada() ? '/login' : '/'} replace />} />
         </Routes>
       </Suspense>
     );

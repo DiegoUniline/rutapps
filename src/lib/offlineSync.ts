@@ -605,6 +605,19 @@ export async function downloadAllData(
 
 export const LS_LAST_EMPRESA = 'offline-empresa-id';
 
+export const SYNC_EPOCH = '2026-11-23-corte';
+export const LS_SYNC_EPOCH = 'offline-sync-epoch';
+
+/** Si el dispositivo no está en la época actual, borra los cursores (descarga completa una vez). */
+export async function aplicarEpocaSync(): Promise<boolean> {
+  let actual: string | null = null;
+  try { actual = localStorage.getItem(LS_SYNC_EPOCH); } catch { /* ignore */ }
+  if (actual === SYNC_EPOCH) return false;
+  try { await offlineDb.cacheTimestamps.clear(); } catch (e) { console.warn('[sync] no se pudieron limpiar cursores', e); return false; }
+  try { localStorage.setItem(LS_SYNC_EPOCH, SYNC_EPOCH); } catch { /* ignore */ }
+  return true;
+}
+
 /**
  * AISLAMIENTO MULTI-EMPRESA EN EL DISPOSITIVO.
  *
@@ -684,6 +697,12 @@ async function downloadAllDataInternal(
 
   // Antes de bajar nada: fuera cualquier dato de otra empresa.
   await purgeForeignTenantData(empresaId);
+
+  // Corte de época (migración fuera de Lovable, 2026-11-23): el dominio es el mismo, así
+  // que los celulares conservaban cursores de la base anterior y el delta por updated_at
+  // nunca bajaba filas con fecha más vieja (p. ej. stock de «Ruta Grande» en cero).
+  // Al cambiar SYNC_EPOCH, cada dispositivo olvida sus cursores UNA vez y baja todo completo.
+  await aplicarEpocaSync();
 
   // Las tablas de lotes solo se descargan en empresas que manejan lotes; en las
   // demás serían megas tirados a la basura.

@@ -300,3 +300,4 @@
 2026-11-23 · desarrollador · Botón «Cobrar» en entregas ya entregadas con saldo (detalle y lista) · D-059
 2026-11-23 · desarrollador · Pedido de contado: no se entrega sin cobrar («Cobrar y entregar»; se marca al completar el cobro) · D-059
 2026-11-23 · desarrollador · Móvil: Stock y Solicitud de traspaso usan el almacén del vendedor elegido por el super admin (antes el del SA, de otra empresa → stock vacío); con «Todos» pide elegir vendedor
+2026-11-23 · desarrollador · Sync: SYNC_EPOCH (cada celular baja todo completo una vez; cursores de antes del corte dejaban stock viejo, caso Ruta Grande). App instalada sin sesión abre en /login
