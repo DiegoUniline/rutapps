@@ -57,6 +57,7 @@ Y: secrets de proveedores, webhooks (Stripe, Evolution/WhatsApp, Facturama; Open
 Buckets privados (`csf`, `cfdi-archivos`, `recibos-cobros`, `tienda-assets`, `email-assets`, `wa-bot-reports`) solo se leen con service_role del origen → función temporal `scripts/migracion/export-storage-lovable.ts` publicada en Lovable con nombre `migracion-export-storage`; borrarla al terminar. `database_export_*` se omiten.
 
 ## Notas
+- 2026-11-23: la integración GitHub↔Supabase despliega las edge functions al subir a `main` (versiones suben solas). Subir a `main` un cambio de función = publicarla en producción.
 - `fn_notify_empresa_alta` (trigger en `empresas`) manda webhook a hadesai.com.mx: altas de empresa hechas en el entorno de prueba también lo disparan.
 - Crons que leen Vault: `create-invoice-reminder-daily` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) y `billing-align-bridge-aug2026-daily` (BILLING_BRIDGE_INTERNAL_SECRET) → `vault.sh`.
 
