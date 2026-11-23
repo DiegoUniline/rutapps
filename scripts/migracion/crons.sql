@@ -3,6 +3,7 @@
 -- Se crean APAGADOS. Se encienden el día del corte con la última sentencia.
 -- Requiere en Vault: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, BILLING_BRIDGE_INTERNAL_SECRET.
 -- Idempotente: si el job ya existe, cron.schedule lo actualiza por nombre.
+-- D-057 + escalonado (2026-11-23): cobros a las 9 CDMX en orden: daily-billing 15:00, billing-cycle 15:05, create-invoice-reminder 15:10 UTC.
 begin;
 
 select cron.schedule('subscription-cleanup-daily', '0 6 * * *', $$
@@ -12,7 +13,7 @@ select cron.schedule('subscription-cleanup-daily', '0 6 * * *', $$
     body := '{}'::jsonb) as request_id;
 $$);
 
-select cron.schedule('create-invoice-reminder-daily', '0 7 * * *', $$
+select cron.schedule('create-invoice-reminder-daily', '10 15 * * *', $$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'SUPABASE_URL' limit 1) || '/functions/v1/create-invoice-reminder',
     headers := jsonb_build_object('Content-Type', 'application/json',
@@ -27,14 +28,14 @@ select cron.schedule('billing-notify-daily', '0 14 * * *', $$
     body := '{}'::jsonb) as request_id;
 $$);
 
-select cron.schedule('billing-cycle-daily', '0 8 * * *', $$
+select cron.schedule('billing-cycle-daily', '5 15 * * *', $$
   select net.http_post(
     url := 'https://amybkerwkybffllaxpnz.supabase.co/functions/v1/billing-cycle',
     headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFteWJrZXJ3a3liZmZsbGF4cG56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4Mzk4MDEsImV4cCI6MjExMDQxNTgwMX0.7V3Y2fGbbRUUq9Qgix90dDsTgsXBz8o6v-iLBPqcOZc"}'::jsonb,
     body := concat('{"time": "', now(), '"}')::jsonb) as request_id;
 $$);
 
-select cron.schedule('daily-billing-cron', '0 14 * * *', $$
+select cron.schedule('daily-billing-cron', '0 15 * * *', $$
   select net.http_post(
     url := 'https://amybkerwkybffllaxpnz.supabase.co/functions/v1/daily-billing',
     headers := jsonb_build_object('Content-Type', 'application/json',
