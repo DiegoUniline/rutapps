@@ -2,7 +2,7 @@
 //
 // A PRUEBA DE FALLOS: si no hay VITE_SENTRY_DSN configurado, TODO esto es un
 // no-op — la app funciona igual, no se rompe nada. Se activa en cuanto pongas el
-// token (DSN) en las variables de entorno de Lovable/producción.
+// token (DSN) en las variables de entorno de producción (Cloudflare).
 //
 // Configurado para NO gastar cuota de más: solo errores (sin performance
 // tracing ni session replay), y sin enviar datos personales por defecto.
@@ -12,20 +12,12 @@ import { APP_VERSION } from '@/lib/appVersion';
 
 let initialized = false;
 
-/** No inicializar en dev, iframe de Lovable, ni hosts de preview. */
+/** No inicializar en dev ni dentro de un iframe. */
 function isRefusedContext(): boolean {
   if (!import.meta.env.PROD) return true;
   try {
     if (window.self !== window.top) return true;
   } catch {
-    return true;
-  }
-  const host = window.location.hostname;
-  if (
-    host.includes('id-preview--') ||
-    host.includes('lovableproject.com') ||
-    host.includes('lovableproject-dev.com')
-  ) {
     return true;
   }
   return false;

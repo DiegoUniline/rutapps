@@ -3,7 +3,7 @@
  * salvo los correos de `permitidos`. Para liberar: poner `activo: false` y subir a main.
  */
 export const MANTENIMIENTO = {
-  activo: true,
+  activo: false,
   permitidos: ['diego.leon@uniline.mx'],
   mensaje: 'Estamos actualizando RutApp. El sistema se libera en aproximadamente 2 horas.',
 };

@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { sendTemplateEmail } from './transactional-email-templates/send-email.ts'
 
 /**
- * Sends a registered template through Lovable's managed email API and records
+ * Sends a registered template through Resend (send-email.ts) and records
  * the outcome in email_send_log (append-only, notification purposes only —
  * the log never gates a send).
  */

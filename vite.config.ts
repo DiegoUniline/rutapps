@@ -2,7 +2,6 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
-import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // === Auto-bump de versión en cada build/dev ===
@@ -103,7 +102,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     appVersionMeta(),
     publicHtmlEnv(loadEnv(mode, process.cwd(), "VITE_").VITE_SUPABASE_URL || ""),
-    mode === "development" && componentTagger(),
+
     VitePWA({
       registerType: "prompt",
       // El SW se registra manualmente desde src/pwa/registerSW.ts SOLO dentro

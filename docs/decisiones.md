@@ -363,3 +363,8 @@
 - **Decisión:** en el corte no se cargan `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `WHATSAPI_GLOBAL_TOKEN`, `WHATSAPP_OTP_TOKEN` ni `ADMIN_WHATSAPP_TOKEN`. WhatsApp se rehace con Zernio (cada empresa conecta su propia cuenta) como **módulo nuevo** (requiere diseño y `APROBADO R<n>`).
 - **Impacto mientras no exista Zernio:** sin bot, bienvenida, mensajes programados, campañas, avisos de cobro por WhatsApp ni «Reenviar OTP» de Registros incompletos. El registro de cuentas NO depende de WhatsApp (`SignupPage.tsx`: `isVerified` no se usa).
 - **Pendiente:** quitar el código de Evolution/WhatsAPI cuando se construya Zernio.
+
+## D-055
+- **Fecha:** 2026-11-23 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («elimina cualquier relación a Lovable… las fotos luego las subimos, activa mientras todo lo demás ya porque mañana operan con ella» · `CONFIRMO activar producción`)
+- **Decisión:** RutApp opera desde 2026-11-23 en Supabase `amybkerwkybffllaxpnz` + Cloudflare (`rutapp.mx`). Se quitó el aviso de mantenimiento, se encendieron 11 crons, se borró el código de Lovable (sesión del editor `previewAuthStorage`, revisiones de hosts de Lovable, `lovable-tagger` en vite, funciones de correo de Lovable `handle-email-events` y `preview-transactional-email`, publicadas desactivadas con 410).
+- **Pendiente:** Vault (`vault.sh`) y crons `create-invoice-reminder-daily` y `billing-align-bridge-aug2026-daily`; encender webhook nuevo de Stripe y apagar el de Lovable; archivos de Storage (5,793 URLs de fotos aún apuntan a `pkdwemunxxpafpmiqxiq`); quitar `lovable-tagger` de package.json junto con resincronizar `package-lock.json` (ya estaba desfasado: faltan drizzle-kit/drizzle-orm); rotar contraseña de la BD.

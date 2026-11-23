@@ -61,9 +61,6 @@ verify_jwt = false
 [functions.void-stripe-invoice]
 verify_jwt = false
 
-[functions.preview-transactional-email]
-verify_jwt = false
-
 [functions.send-cobro-recibo]
 verify_jwt = true
 

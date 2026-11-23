@@ -39,13 +39,9 @@ startAutoBackup();
 // without users needing to clear cache.
 
 const isInIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
-const isPreviewHost =
-  window.location.hostname.includes("id-preview--") ||
-  window.location.hostname.includes("lovableproject.com");
-
-if (isPreviewHost || isInIframe) {
-  // Kill-switch: aggressively unregister any existing SW and clear caches in
-  // Lovable preview / iframe contexts (never register an SW here).
+if (isInIframe) {
+  // Kill-switch: aggressively unregister any existing SW and clear caches
+  // inside an iframe (never register an SW here).
   (async () => {
     if (!navigator.serviceWorker) return;
     const regs = await navigator.serviceWorker.getRegistrations();

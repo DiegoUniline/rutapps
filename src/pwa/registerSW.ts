@@ -1,6 +1,6 @@
 // Single-source SW registration wrapper.
 // Registers the PWA service worker ONLY inside the authenticated app,
-// never on the public landing or in Lovable preview/dev contexts.
+// never on the public landing, in dev or inside an iframe.
 //
 // Public marketing pages (/, /partners, etc.) must NEVER call this — they
 // rely on the host CDN's cache headers so new deploys appear immediately.
@@ -10,18 +10,12 @@ let registered = false;
 function isRefusedContext(): boolean {
   if (!import.meta.env.PROD) return true;
 
-  // Inside an iframe (Lovable editor preview embeds the app in an iframe)
+  // Inside an iframe
   try {
     if (window.self !== window.top) return true;
   } catch {
     return true;
   }
-
-  const host = window.location.hostname;
-  if (host.startsWith("id-preview--") || host.startsWith("preview--")) return true;
-  if (host === "lovableproject.com" || host.endsWith(".lovableproject.com")) return true;
-  if (host === "lovableproject-dev.com" || host.endsWith(".lovableproject-dev.com")) return true;
-  if (host === "beta.lovable.dev" || host.endsWith(".beta.lovable.dev")) return true;
 
   // Kill switch
   if (new URLSearchParams(window.location.search).get("sw") === "off") return true;
@@ -48,7 +42,7 @@ async function unregisterAppSW() {
 
 /**
  * Register the PWA service worker. Safe to call multiple times.
- * Refuses to register in dev, Lovable preview, iframes, or with ?sw=off.
+ * Refuses to register in dev, iframes, or with ?sw=off.
  */
 export async function registerAppSW() {
   if (registered) return;

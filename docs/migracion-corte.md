@@ -11,10 +11,10 @@ Repo: `DiegoUniline/rutapps` (desconectado de Lovable el 2026-11-16).
 | Secrets internos (SITE_URL, CRON_SECRET, TIENDA_JWT_SECRET, BILLING_BRIDGE_INTERNAL_SECRET) | ✅ |
 | IA → Gemini, correo → Resend, front sin ref fijo | ✅ código |
 | Secrets de proveedores | 🔄 2026-11-23 cargando: Stripe (+ webhook nuevo creado y APAGADO hasta el corte), Facturama, Gemini, Maps, Routes (clave sin restricción de sitio, solo Routes API), ORS, Resend. Sin Evolution/WhatsAPI (D-054) ni Openpay (D-053) |
-| Crons (13, copiados de `cron.job` del origen) | ✅ creados APAGADOS (`scripts/migracion/crons.sql`) |
+| Crons (13) | ✅ 11 encendidos 2026-11-23; faltan `create-invoice-reminder-daily` y `billing-align-bridge-aug2026-daily` (necesitan `vault.sh`) |
 | Storage (archivos) | ❌ `scripts/migracion/copiar-storage.mjs` listo |
 | Auth (URLs, SMTP) | ❌ · Resend: dominio `rutapp.mx` Verified 2026-11-22 (DNS hoy en GoDaddy; al pasar a Cloudflare conservar los registros de Resend) |
-| Mantenimiento | ACTIVO desde 2026-11-23 (`src/lib/mantenimiento.ts`): solo diego.leon@uniline.mx; quitar al terminar el corte |
+| Mantenimiento | Quitado 2026-11-23 (`activo: false` en `src/lib/mantenimiento.ts`) |
 | Cloudflare (Worker `rutapps`) | ✅ publicado en `https://rutapps.diego-leon.workers.dev` (Production, rama main). Dominio `rutapp.mx` se conecta SOLO al final del corte (Domains → Add) |
 
 ## Congelar desde ya
