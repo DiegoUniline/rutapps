@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { mensajeError } from '@/lib/errorTranslator';
 import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle, Tag, Sparkles, FileText, Check, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Seo } from '@/components/seo/Seo';
@@ -356,24 +357,19 @@ export default function SignupPage() {
         return;
       }
 
-      const { data: existingEmail } = await supabase
-        .from('empresas')
-        .select('id')
-        .eq('email', form.email.trim().toLowerCase())
-        .maybeSingle();
-      if (existingEmail) {
-        toast.error('Ya existe una empresa registrada con este correo electrónico');
+      // empresas no se puede leer sin sesión (RLS): la revisión va por RPC.
+      const { data: disponible, error: dispError } = await (supabase.rpc as any)('fn_registro_disponible', {
+        p_email: form.email.trim().toLowerCase(),
+        p_telefono: fullPhone,
+      });
+      if (dispError) throw dispError;
+      if (disponible?.email_en_uso) {
+        toast.error('Este correo ya tiene una cuenta. Inicia sesión o usa «¿Olvidaste tu contraseña?».');
         setLoading(false);
         return;
       }
-
-      const { data: existingPhone } = await supabase
-        .from('empresas')
-        .select('id')
-        .eq('telefono', fullPhone)
-        .maybeSingle();
-      if (existingPhone) {
-        toast.error('Ya existe una empresa registrada con este número de teléfono');
+      if (disponible?.telefono_en_uso) {
+        toast.error('Ya existe una empresa registrada con este número de teléfono. Usa otro número o inicia sesión con tu cuenta.');
         setLoading(false);
         return;
       }
@@ -427,14 +423,8 @@ export default function SignupPage() {
       const { data: { session } } = await supabase.auth.getSession();
       navigate(session ? `/completar-registro${planQuery}` : '/login');
     } catch (err: any) {
-      const msg = err.message || 'Error al crear la cuenta';
-      if (msg.includes('duplicate') && msg.includes('email')) {
-        toast.error('Este correo electrónico ya está registrado');
-      } else if (msg.includes('duplicate') && msg.includes('telefono')) {
-        toast.error('Este número de teléfono ya está registrado');
-      } else {
-        toast.error(msg);
-      }
+      console.error('[registro]', err);
+      toast.error(mensajeError(err));
     } finally {
       setLoading(false);
     }

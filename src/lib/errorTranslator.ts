@@ -10,6 +10,61 @@ interface ErrorExplanation {
 }
 
 const patterns: Array<{ test: RegExp | ((msg: string) => boolean); result: ErrorExplanation }> = [
+  // Registro / inicio de sesión (mensajes de Supabase Auth en inglés)
+  {
+    test: /user already registered|already been registered|email.*already.*(registered|exists|in use)/i,
+    result: {
+      title: 'Correo ya registrado',
+      message: 'Ya existe una cuenta con este correo electrónico.',
+      suggestion: 'Inicia sesión con ese correo o usa «¿Olvidaste tu contraseña?».',
+      icon: 'auth',
+    },
+  },
+  {
+    test: /empresas_telefono_unique/i,
+    result: {
+      title: 'Teléfono ya registrado',
+      message: 'Ya existe una empresa registrada con este número de teléfono.',
+      suggestion: 'Usa otro número o inicia sesión con la cuenta que ya tiene ese teléfono.',
+      icon: 'data',
+    },
+  },
+  {
+    test: /database error saving new user/i,
+    result: {
+      title: 'No se pudo crear la cuenta',
+      message: 'El correo o el teléfono ya están registrados en otra cuenta, o algún dato no es válido.',
+      suggestion: 'Revisa correo y teléfono. Si ya tienes cuenta, inicia sesión.',
+      icon: 'auth',
+    },
+  },
+  {
+    test: /invalid login credentials/i,
+    result: {
+      title: 'Correo o contraseña incorrectos',
+      message: 'El correo o la contraseña no coinciden con ninguna cuenta.',
+      suggestion: 'Revisa que estén bien escritos. Si no recuerdas la contraseña, usa «¿Olvidaste tu contraseña?».',
+      icon: 'auth',
+    },
+  },
+  {
+    test: /email not confirmed/i,
+    result: {
+      title: 'Correo sin confirmar',
+      message: 'Tu cuenta existe, pero el correo todavía no se ha confirmado.',
+      suggestion: 'Abre el correo de confirmación que te enviamos (revisa spam) y vuelve a intentarlo.',
+      icon: 'auth',
+    },
+  },
+  {
+    test: /password should be at least|weak password/i,
+    result: {
+      title: 'Contraseña muy corta',
+      message: 'La contraseña no cumple el mínimo de caracteres.',
+      suggestion: 'Usa al menos 6 caracteres.',
+      icon: 'auth',
+    },
+  },
   // Network / connectivity
   {
     test: /fetch|network|failed to fetch|net::err|load failed|cors|aborted|timeout/i,
@@ -140,6 +195,21 @@ const patterns: Array<{ test: RegExp | ((msg: string) => boolean); result: Error
   },
 ];
 
+const TECNICO = /violates|constraint|relation|column|function|syntax|null value|duplicate key|PGRST|JWT|fetch|undefined|TypeError|ReferenceError|status code|\bat [A-Za-z_$.]+ \(/i;
+
+/**
+ * ¿Es un mensaje escrito para el usuario por nosotros (RAISE EXCEPTION en la BD, edge
+ * function o `throw new Error('…')` en el front)? Esos se muestran tal cual: ya dicen qué pasó.
+ */
+export function esMensajePropio(error: unknown, msg: string): boolean {
+  const m = msg.trim();
+  if (!m || m.length > 400 || TECNICO.test(m)) return false;
+  const code = error && typeof error === 'object' && 'code' in error ? String((error as any).code) : '';
+  if (code === 'P0001') return true;
+  return /[áéíóúñ¿¡]/i.test(m)
+    || /^(no |ya |el |la |los |las |debe|debes|falta|sin |solo |hay |este |esta |selecciona|ingresa|captura|primero )/i.test(m);
+}
+
 export function translateError(error: unknown): ErrorExplanation {
   let msg = '';
   if (error instanceof Error) {
@@ -150,6 +220,15 @@ export function translateError(error: unknown): ErrorExplanation {
     msg = String((error as any).message);
   } else {
     msg = String(error);
+  }
+
+  if (esMensajePropio(error, msg)) {
+    return {
+      title: 'No se pudo completar',
+      message: msg.trim(),
+      suggestion: 'Corrige lo que indica el mensaje y vuelve a intentarlo.',
+      icon: 'data',
+    };
   }
 
   for (const p of patterns) {
@@ -163,6 +242,12 @@ export function translateError(error: unknown): ErrorExplanation {
     suggestion: 'Intenta de nuevo. Si el problema persiste, contacta soporte técnico.',
     icon: 'generic',
   };
+}
+
+/** Texto de una sola línea para un toast: el mensaje propio tal cual, o la explicación traducida. */
+export function mensajeError(error: unknown): string {
+  const t = translateError(error);
+  return t.icon === 'data' && t.title === 'No se pudo completar' ? t.message : `${t.title}. ${t.message}`;
 }
 
 export function getRawMessage(error: unknown): string {
