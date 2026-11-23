@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { ChevronRight, Package, MapPin, Navigation, CheckCircle2, XCircle } from 'lucide-react';
+import { ChevronRight, Package, MapPin, Navigation, CheckCircle2, XCircle, Banknote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { fmtDate, cn, todayLocal } from '@/lib/utils';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
@@ -77,6 +77,15 @@ function EntregaCard({ e, idx, navigate }: { e: any; idx: number; navigate: (pat
           )}
         </div>
 
+        {hecho && e._saldo > 0.009 && e.pedido_id && (
+          <button
+            onClick={(ev) => { ev.stopPropagation(); navigate(`/ruta/ventas/${e.pedido_id}?cobrar=1`); }}
+            className="h-7 px-2 rounded-md bg-primary text-primary-foreground flex items-center gap-1 text-[11px] font-semibold active:scale-90 transition-transform shrink-0"
+            title="Cobrar"
+          >
+            <Banknote className="h-3.5 w-3.5" /> Cobrar
+          </button>
+        )}
         {hasGps && !hecho && (
           <button
             onClick={openMaps}
@@ -110,6 +119,8 @@ export default function RutaEntregas() {
     empresa_id: empresa?.id,
   }, { enabled: !!empresa?.id && !desdeServidor, orderBy: 'fecha' });
   const { data: clientesOffline } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id && !desdeServidor });
+  // Saldo del pedido de cada entrega (para el botón Cobrar en las ya entregadas).
+  const { data: ventasOffline } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id && !desdeServidor });
 
   const { data: entregasServidor } = useQuery({
     queryKey: ['sa-ruta-entregas', empresa?.id, vendedorId],
@@ -180,6 +191,9 @@ export default function RutaEntregas() {
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c]));
   const productoMap = new Map((productos ?? []).map((p: any) => [p.id, p]));
 
+  const saldoPorPedido = new Map<string, number>(
+    ((ventasOffline ?? []) as any[]).map((v: any) => [v.id, Number(v.saldo_pendiente) || 0])
+  );
   const entregas = (allEntregas ?? [])
     .filter((e: any) =>
       ['cargado', 'en_ruta', 'hecho', 'no_entregado'].includes(e.status) &&
@@ -198,7 +212,8 @@ export default function RutaEntregas() {
       const totalEntregado = lineas.reduce((acc: number, l: any) => acc + (Number(l.cantidad_entregada) || 0), 0);
       const totalPedido = lineas.reduce((acc: number, l: any) => acc + (Number(l.cantidad_pedida) || 0), 0);
       const totalPiezas = lineas.reduce((acc: number, l: any) => acc + (l.cantidad_entregada || l.cantidad_pedida || 0), 0);
-      return { ...e, _cliente: cliente, _lineas: lineas, _totalPiezas: totalPiezas, _totalEntregado: totalEntregado, _totalPedido: totalPedido };
+      const saldo = Number(saldoPorPedido.get(e.pedido_id) ?? 0);
+      return { ...e, _cliente: cliente, _lineas: lineas, _totalPiezas: totalPiezas, _totalEntregado: totalEntregado, _totalPedido: totalPedido, _saldo: saldo };
     });
 
 

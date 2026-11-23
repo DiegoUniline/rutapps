@@ -392,4 +392,5 @@
 ## D-059
 - **Fecha:** 2026-11-23 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («se estaban marcando entregas automáticamente y no debe de ser así, tienen que picarle y ahí dice cobrar o no»)
 - **Decisión:** una entrega solo pasa a «Entregado» cuando el repartidor toca «Marcar entregado» (o la acción masiva explícita de Demanda). Se quitó: (1) el marcado automático al abrir el detalle de una entrega pagada/no crédito (`RutaEntregaDetalle.tsx`) y (2) el marcado al cobrar un pedido o una cuenta pendiente hasta dejarla en cero (`useVentaDetalle.ts`).
+- **Si no se pudo cobrar al entregar:** la entrega ya entregada con saldo muestra «Cobrar» en el detalle y en su renglón de la lista (abre el cobro del pedido).
 - **Al tocar:** el botón espera a que cargue el saldo; con saldo pendiente pregunta «¿Vas a cobrar?» (Entregar y cobrar / Solo entregar); sin saldo entrega directo. Pruebas: `src/test/rutaEntregaPreguntaCobro.test.ts`.

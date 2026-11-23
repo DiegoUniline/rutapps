@@ -31,3 +31,16 @@ describe('ruta: la entrega solo se marca al tocar «Marcar entregado»', () => {
     expect(cobro).not.toContain('ventasLiquidadas');
   });
 });
+
+// Si al entregar no se pudo cobrar, queda el botón Cobrar en la entrega ya entregada.
+describe('ruta: botón Cobrar en entregas entregadas con saldo', () => {
+  it('detalle', () => {
+    const det = readFileSync('src/pages/ruta/RutaEntregaDetalle.tsx', 'utf8');
+    expect(det).toContain('(ventaSaldo > 0 || totalSaldoPendiente > 0) && (!isClosedState || isDelivered)');
+  });
+  it('lista', () => {
+    const lista = readFileSync('src/pages/ruta/RutaEntregas.tsx', 'utf8');
+    expect(lista).toContain('hecho && e._saldo > 0.009 && e.pedido_id');
+    expect(lista).toContain('/ruta/ventas/${e.pedido_id}?cobrar=1');
+  });
+});
