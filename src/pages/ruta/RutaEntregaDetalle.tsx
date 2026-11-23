@@ -232,6 +232,16 @@ export default function RutaEntregaDetalle() {
   // Sin el pedido y las cuentas del cliente cargados, el saldo parece 0 y se entregaba sin
   // preguntar si se cobra: el botón espera a que carguen.
   const saldoCargando = (!!pedidoId && ventaCargando) || (!!clienteId && cuentasCargando);
+  // Pedido de contado: no se entrega sin cobrar. Se cobra primero y la entrega se marca
+  // al completar el cobro (useVentaDetalle, parámetro `entregar`). Se exige lo que falte
+  // del pedido, sin pasar de lo que va en esta entrega (si el cliente rechazó producto).
+  const esContado = (venta as any)?.condicion_pago === 'contado';
+  const cobroRequerido = Math.round(Math.max(0, entregaTotal > 0 ? Math.min(ventaSaldo, entregaTotal) : ventaSaldo) * 100) / 100;
+  const exigeCobro = esContado && cobroRequerido > 0.009;
+  const cobrarYEntregar = () => {
+    if (!pedidoId) { toast.error('No hay pedido asociado'); return; }
+    navigate(`/ruta/ventas/${pedidoId}?cobrar=1&entregar=${id}&minimo=${cobroRequerido}`);
+  };
   const handleMarcarClick = () => {
     if (saldoCargando) return;
     // If there's any pending balance (this order or other accounts), prompt
@@ -585,6 +595,7 @@ export default function RutaEntregaDetalle() {
 
   const goToCobrar = () => {
     if (!pedidoId) { toast.error('No hay pedido asociado'); return; }
+    if (exigeCobro && !isClosedState) { cobrarYEntregar(); return; }
     // Abrir directamente el modal de cobro sobre el pedido asociado
     navigate(`/ruta/ventas/${pedidoId}?cobrar=1`);
   };
@@ -821,14 +832,28 @@ export default function RutaEntregaDetalle() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onClick={() => setShowCobrarPrompt(false)}>
           <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-[15px] font-bold text-foreground">¿Vas a cobrar?</h3>
+              <h3 className="text-[15px] font-bold text-foreground">{exigeCobro ? 'Pedido de contado' : '¿Vas a cobrar?'}</h3>
               <button onClick={() => setShowCobrarPrompt(false)} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
             </div>
-            <p className="text-[13px] text-muted-foreground">
+            {exigeCobro ? (
+              <p className="text-[13px] text-muted-foreground">
+                Este pedido es de contado: cobra <span className="font-bold text-destructive">{fmt(cobroRequerido)}</span> para poder entregarlo.
+                La entrega se marca al completar el cobro.
+              </p>
+            ) : (
+              <p className="text-[13px] text-muted-foreground">
               Este cliente tiene un saldo pendiente de <span className="font-bold text-destructive">{fmt(Math.max(ventaSaldo, totalSaldoPendiente))}</span>.
               ¿Deseas cobrarlo ahora o marcar como entregado y cobrar después?
-            </p>
+              </p>
+            )}
             <div className="flex flex-col gap-2 pt-1">
+              {exigeCobro ? (
+                <button
+                  onClick={() => { setShowCobrarPrompt(false); cobrarYEntregar(); }}
+                  className="w-full bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5">
+                  <Banknote className="h-4 w-4" /> Cobrar y entregar
+                </button>
+              ) : (<>
               <button
                 onClick={() => { setShowCobrarPrompt(false); void marcarEntregado(true); }}
                 disabled={saving}
@@ -841,6 +866,7 @@ export default function RutaEntregaDetalle() {
                 className="w-full bg-success text-success-foreground rounded-xl py-3 text-[14px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
                 <Check className="h-4 w-4" /> Solo entregar (cobrar después)
               </button>
+              </>)}
               <button className="btn-cancelar w-full bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium"
                 onClick={() => setShowCobrarPrompt(false)}
                 >

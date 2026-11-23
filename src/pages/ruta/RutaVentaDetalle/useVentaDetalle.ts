@@ -19,6 +19,7 @@ import { isBluetoothAvailable, connectPrinter, sendBytes } from '@/lib/bluetooth
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import type { View, CuentaPendiente, EditLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
+import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 import { useSaldoFavor } from '@/hooks/useSaldoFavor';
 import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { resolveProductPricing, type ProductForPricing, type TarifaLineaRule } from '@/lib/priceResolver';
@@ -559,14 +560,20 @@ export function useVentaDetalle() {
   // por id determinístico, pero online la RPC crearía dos). El ref bloquea de
   // inmediato la segunda llamada.
   const cobrarRef = useRef(false);
+  // Pedido de contado (desde la entrega): la entrega se marca al completar el cobro.
+  const [entregaPorCobrar, setEntregaPorCobrar] = useState<{ id: string; minimo: number } | null>(null);
   useEffect(() => {
     if (autoCobrarRef.current) return;
     if (!venta) return;
     if (searchParams.get('cobrar') !== '1') return;
     autoCobrarRef.current = true;
+    const entregarId = searchParams.get('entregar');
+    if (entregarId) setEntregaPorCobrar({ id: entregarId, minimo: roundMoney(Number(searchParams.get('minimo')) || 0) });
     initCobrar();
     const next = new URLSearchParams(searchParams);
     next.delete('cobrar');
+    next.delete('entregar');
+    next.delete('minimo');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [venta, searchParams]);
@@ -694,7 +701,24 @@ export function useVentaDetalle() {
         import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroId, empresa.id));
       }
 
-      // Cobrar no marca entregas: solo se entrega cuando el repartidor toca «Marcar entregado».
+      // Cobrar no marca entregas por sí solo (D-059). Excepción: pedido de contado que el
+      // repartidor mandó a «Cobrar y entregar»; se entrega solo si cubrió lo requerido.
+      if (entregaPorCobrar) {
+        const pagado = roundMoney(montoAplicarActual);
+        if (pagado + 0.01 >= entregaPorCobrar.minimo) {
+          const ahora = new Date().toISOString();
+          if (online) {
+            await marcarEntregaHechaYSincronizarPedido(entregaPorCobrar.id, venta.id, ahora);
+          } else {
+            await queueOperation('entregas', 'update', { id: entregaPorCobrar.id, status: 'hecho', validado_at: ahora, fecha_entrega: ahora });
+          }
+          toast.success('¡Entrega completada!');
+          setEntregaPorCobrar(null);
+        } else {
+          toast.warning(`Cobro parcial: la entrega sigue pendiente. Falta ${fmt(roundMoney(entregaPorCobrar.minimo - pagado))} para entregar.`);
+          setEntregaPorCobrar({ ...entregaPorCobrar, minimo: roundMoney(entregaPorCobrar.minimo - pagado) });
+        }
+      }
 
       setTicketData({ monto: roundMoney(totalACobrar), cambio: roundMoney(cambio), metodo: metodoPago, folio: venta.folio ?? 'Sin folio', fecha: new Date().toLocaleString('es-MX'), aplicaciones: ticketApps });
       setView('ticket');

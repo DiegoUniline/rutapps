@@ -298,3 +298,4 @@
 2026-11-23 · desarrollador · Móvil: llave de Maps cargada (get-maps-key 200); lista de entregas estilo Clientes; entregar espera saldo y pregunta «¿Vas a cobrar?»
 2026-11-23 · desarrollador · Entregas ya no se marcan solas (al abrir ni al cobrar); solo al tocar «Marcar entregado» · D-059
 2026-11-23 · desarrollador · Botón «Cobrar» en entregas ya entregadas con saldo (detalle y lista) · D-059
+2026-11-23 · desarrollador · Pedido de contado: no se entrega sin cobrar («Cobrar y entregar»; se marca al completar el cobro) · D-059
