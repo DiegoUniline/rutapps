@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { resolverEmpresaUsuario } from "../_shared/empresaAcceso.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,10 +54,35 @@ Deno.serve(async (req) => {
     const { data: userData, error: userErr } = await anonClient.auth.getUser(token);
     if (userErr || !userData.user?.email) throw new Error("No autenticado");
 
-    const { price_id, quantity, empresa_id } = await req.json();
-    if (!price_id || !quantity || !empresa_id) {
-      throw new Error("price_id, quantity y empresa_id son requeridos");
+    const { price_id, quantity, empresa_id: empresaIdBody } = await req.json();
+    if (!price_id || !quantity) {
+      throw new Error("price_id y quantity son requeridos");
     }
+
+    // S-06 (seguridad fase 1): la empresa sale del perfil del usuario autenticado. El
+    // empresa_id del body solo se acepta si coincide con la suya o si es super admin.
+    const [perfilRes, superAdminRes] = await Promise.all([
+      supabase.from("profiles")
+        .select("empresa_id, super_admin_override_empresa_id")
+        .eq("user_id", userData.user.id)
+        .maybeSingle(),
+      supabase.from("super_admins").select("user_id").eq("user_id", userData.user.id).maybeSingle(),
+    ]);
+    if (perfilRes.error) throw perfilRes.error;
+    if (superAdminRes.error) throw superAdminRes.error;
+    const acceso = resolverEmpresaUsuario({
+      empresaId: perfilRes.data?.empresa_id ?? null,
+      overrideEmpresaId: perfilRes.data?.super_admin_override_empresa_id ?? null,
+      esSuperAdmin: !!superAdminRes.data,
+    }, empresaIdBody);
+    if (!acceso.ok) {
+      log("Empresa rechazada", { user: userData.user.id, status: acceso.status });
+      return new Response(JSON.stringify({ error: acceso.error }), {
+        status: acceso.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const empresa_id = acceso.empresaId;
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 

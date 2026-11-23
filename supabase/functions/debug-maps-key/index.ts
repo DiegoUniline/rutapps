@@ -1,8 +1,19 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 // Temporary diagnostic: tests GOOGLE_MAPS_API_KEY against each Google API.
+// Seguridad fase 1 (auditoría 2026-11-23): era pública (verify_jwt=false), mostraba el prefijo
+// de la llave y gastaba cuota de Google. Retirada: responde 410 sin tocar la llave. El código
+// de abajo queda solo como referencia; para borrarla del proyecto se pide CONFIRMO aparte.
+const RETIRADA = true;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (RETIRADA) {
+    return new Response(JSON.stringify({ error: 'Función retirada' }), {
+      status: 410,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   const key = Deno.env.get('GOOGLE_MAPS_API_KEY') ?? '';
   const results: Record<string, unknown> = {

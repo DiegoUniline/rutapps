@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { accionRequiereAdmin, puedeAdministrarSuscripcion } from "../_shared/empresaAcceso.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,6 +40,30 @@ Deno.serve(async (req) => {
       .eq("user_id", userData.user.id)
       .maybeSingle();
     if (!profile?.empresa_id) throw new Error("Sin empresa");
+
+    // S-17 (seguridad fase 1): cambiar cantidad/plan, cancelar, reactivar o aplicar descuento
+    // solo lo hace el dueño de la empresa, un Administrador (is_empresa_admin) o super admin.
+    if (accionRequiereAdmin(action)) {
+      const [empresaRes, adminRes, superAdminRes] = await Promise.all([
+        supabase.from("empresas").select("owner_user_id").eq("id", profile.empresa_id).maybeSingle(),
+        supabase.rpc("is_empresa_admin", { p_user_id: userData.user.id, p_empresa_id: profile.empresa_id }),
+        supabase.from("super_admins").select("user_id").eq("user_id", userData.user.id).maybeSingle(),
+      ]);
+      if (empresaRes.error) throw empresaRes.error;
+      if (adminRes.error) throw adminRes.error;
+      if (superAdminRes.error) throw superAdminRes.error;
+      const permitido = puedeAdministrarSuscripcion({
+        userId: userData.user.id,
+        ownerUserId: empresaRes.data?.owner_user_id ?? null,
+        esAdminEmpresa: adminRes.data === true,
+        esSuperAdmin: !!superAdminRes.data,
+      });
+      if (!permitido) {
+        return new Response(JSON.stringify({
+          error: "Solo el dueño o un administrador de la empresa puede cambiar la suscripción.",
+        }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
 
     // Get subscription
     const { data: sub } = await supabase
