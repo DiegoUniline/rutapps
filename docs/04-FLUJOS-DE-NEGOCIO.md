@@ -120,6 +120,30 @@ ventas ──┬─ venta_lineas ──┬─ productos
   redondeo, descuento manual, descuento por promoción, IEPS e IVA. Ver
   `src/lib/ventaLineaDesglose.ts`.
 
+**Convertir pedido en venta directa (D-062, 2026-11-23).** Botón «Convertir a venta directa» en el
+detalle del pedido (web `/ventas/:id` y móvil `/ruta/ventas/:id`), visible solo para un pedido en
+borrador o confirmado, no cerrado a lo entregado, sin entregas activas (las canceladas no cuentan) y
+con permiso de editar ventas (`src/lib/convertirPedido.ts` · `puedeConvertirPedido`). El diálogo
+(`src/components/venta/ConvertirPedidoDialog.tsx`) pide el almacén de salida (preseleccionado: el del
+pedido; si no tiene, el de su vendedor) y avisa «Se descontará el stock ahora». Una sola RPC
+transaccional `fn_convertir_pedido_a_venta(p_venta_id, p_almacen_id)`
+(`supabase/migrations/20261123070000_d062_convertir_pedido_a_venta.sql`):
+- Valida empresa (`fn_assert_empresa`), permiso `ventas·editar` (mismo criterio que `editar_venta`),
+  tipo/estado/cierre, «Este pedido tiene entregas; termínalo desde Entregas», productos, almacén
+  activo de la misma empresa y que los lotes ya asignados sean de ese almacén.
+- Pone `tipo='venta_directa'`, `entrega_inmediata=true`, `almacen_id`, `status='confirmado'` (un
+  borrador se confirma; la BD no tiene más validaciones de confirmar). **No valida stock**: puede
+  quedar negativo (decisión del dueño).
+- Libera el apartado (`stock_apartado`), descuenta con `fn_sync_venta_inventario` (delta,
+  idempotente; con esos campos el sync aplica y ya no lo omite la regla de pedidos con entregas),
+  recalcula `saldo_pendiente` (`fn_recalc_venta_saldo`: ahora debe el total menos lo cobrado) y
+  registra `venta_historial` `convertido_a_venta_directa` con el almacén.
+- Conserva folio, fecha, líneas, precios, cobros y condición de pago. Repetir no duplica
+  (`ya_convertido`). Sale de Logística (el resumen de pedidos solo lleva `tipo='pedido'`).
+- Al terminar, si queda saldo se abre el cobro como en cualquier venta. En móvil requiere conexión
+  («Necesitas conexión para convertir»); actualiza la copia local de la venta.
+- Sin acción masiva. Verificación sin dejar datos: `docs/sql/2026-11-23_verificar_d062.sql`.
+
 Vistas:
 - Listado `/ventas` → `src/pages/VentasListPage.tsx` + `src/pages/ventas/*`
   (`VentasDesktopTable.tsx`, `VentaExpandedRow.tsx`, `ventasConstants.ts`).

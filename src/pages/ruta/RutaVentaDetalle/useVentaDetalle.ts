@@ -31,6 +31,8 @@ import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
 import { useCancelarPagoPrompt } from '@/components/venta/CancelarPagoDialog';
 import { cancelarVenta, type DestinoPagoCancelacion } from '@/lib/cancelarVenta';
 import { ejecutarConExcedente, type RpcSinTipos as RpcEditar } from '@/lib/excedente';
+import { usePermisos } from '@/hooks/usePermisos';
+import { puedeConvertirPedido, type ResultadoConversion } from '@/lib/convertirPedido';
 
 export function useVentaDetalle() {
   const { id } = useParams();
@@ -42,6 +44,7 @@ export function useVentaDetalle() {
   const { pedirDestino, excedenteDialog } = useExcedentePrompt();
   const { pedirDestinoPago, cancelarPagoDialog } = useCancelarPagoPrompt();
   const { data: venta, isLoading } = useVenta(id);
+  const { hasPermiso } = usePermisos();
 
   const [view, setView] = useState<View>('detalle');
   const [metodoPago, setMetodoPago] = useState<'efectivo' | 'transferencia' | 'tarjeta' | 'saldo_favor'>('efectivo');
@@ -219,6 +222,28 @@ export function useVentaDetalle() {
       total: roundMoney(Math.max(0, totalLineas - extraMonto)),
     };
   }, [editLineas, (venta as any)?.descuento_extra, (venta as any)?.descuento_extra_tipo]);
+
+  // D-062: entregas no canceladas del pedido (servidor; sin señal, la caché local).
+  const esPedido = (venta as { tipo?: string } | undefined)?.tipo === 'pedido';
+  const { data: entregasActivasPedido } = useQuery({
+    queryKey: ['ruta-pedido-entregas-activas', empresa?.id, id],
+    enabled: !!id && !!empresa?.id && esPedido,
+    networkMode: 'always',
+    queryFn: async () => {
+      try {
+        const { count, error } = await supabase.from('entregas').select('id', { count: 'exact', head: true })
+          .eq('empresa_id', empresa!.id).eq('pedido_id', id!).neq('status', 'cancelado');
+        if (error) throw error;
+        return count ?? 0;
+      } catch {
+        const t = getOfflineTable('entregas');
+        const all = t ? ((await t.toArray().catch(() => [])) as { pedido_id?: string; status?: string }[]) : [];
+        return all.filter(e => e.pedido_id === id && e.status !== 'cancelado').length;
+      }
+    },
+  });
+  const puedeConvertir = entregasActivasPedido !== undefined
+    && puedeConvertirPedido(venta as Parameters<typeof puedeConvertirPedido>[0], { entregasActivas: entregasActivasPedido, tienePermiso: hasPermiso('ventas', 'editar') });
 
   const saldoPendienteOtras = ventasPendientesCredito ?? 0;
   const creditoDisponible = clienteData ? (clienteData.limite_credito ?? 0) - saldoPendienteOtras : 0;
@@ -533,7 +558,8 @@ export function useVentaDetalle() {
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
-  const initCobrar = () => {
+  const initCobrar = () => abrirCobro(saldoActual);
+  const abrirCobro = (saldoVenta: number) => {
     if (otrasPendientes?.length) {
       setCuentasPendientes(otrasPendientes.map(v => ({
         id: v.id,
@@ -547,8 +573,8 @@ export function useVentaDetalle() {
       setCuentasPendientes([]);
     }
     setMetodoPago('efectivo');
-    setMontoAplicarActual(roundMoney(saldoActual));
-    setMontoRecibido(saldoActual > 0 ? roundMoney(saldoActual).toFixed(2) : '');
+    setMontoAplicarActual(roundMoney(saldoVenta));
+    setMontoRecibido(saldoVenta > 0 ? roundMoney(saldoVenta).toFixed(2) : '');
     setReferenciaPago('');
     setView('cobrar');
   };
@@ -793,6 +819,24 @@ export function useVentaDetalle() {
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
+  // D-062: tras convertir (RPC en línea) se refresca la venta y, si queda saldo, se abre el cobro.
+  const onPedidoConvertido = async (r: ResultadoConversion) => {
+    const vt = getOfflineTable('ventas');
+    if (vt && id) {
+      await vt.update(id, {
+        tipo: 'venta_directa', entrega_inmediata: true, status: r.status,
+        almacen_id: r.almacen_id, saldo_pendiente: r.saldo_pendiente,
+      }).catch(() => toast.error('La venta se convirtió, pero la copia del teléfono se verá al sincronizar.'));
+    }
+    queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
+    queryClient.invalidateQueries({ queryKey: ['ruta-pedido-entregas-activas', empresa?.id, id] });
+    queryClient.invalidateQueries({ queryKey: ['productos'] });
+    queryClient.invalidateQueries({ queryKey: ['stock-almacen'] });
+    queryClient.invalidateQueries({ queryKey: ['inventario-dashboard'] });
+    await queryClient.invalidateQueries({ queryKey: ['venta', empresa?.id, id] });
+    if (r.saldo_pendiente > 0.005) abrirCobro(r.saldo_pendiente);
+  };
+
   const handleVolverBorrador = async () => {
     if (!venta || venta.status === 'borrador' || venta.status === 'cancelado') return;
     const activasVB = await entregasActivasDelPedido();
@@ -1033,6 +1077,7 @@ export function useVentaDetalle() {
     // Lotes en edición
     manejaLotesEmpresa, productoManejaLote, lotePendienteEdit, setEditLineaLotes, almacenLotesBase,
     handleSaveEdits, initCobrar, updateCuentaMonto, liquidarTodas, handleCobrar,
+    puedeConvertir, onPedidoConvertido,
     excedenteDialog,
     cancelarPagoDialog,
     handleCancelar, handleVolverBorrador, handleWhatsAppSend, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta,

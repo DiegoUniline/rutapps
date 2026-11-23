@@ -305,3 +305,4 @@
 2026-11-23 · desarrollador · Incidente GAMA/Tampico: celulares reenviaban cobros viejos desde un respaldo de cola de versión anterior (servidor los rechazó; sin cobros duplicados ni ventas borradas). Corrección: solo se restaura respaldo con formato actual y de las últimas 48 h
 2026-11-23 · desarrollador · Dashboard: Cobrado excluye cobros sin dinero (ajuste de liquidación, saldo a favor); caso Global Trade HNL 5.58M de ajustes
 2026-11-23 · desarrollador · Dashboard: Cartera (KPI, antigüedad y Equipo) suma todo saldo pendiente sin borradores ni cancelados; Equipo cobrado sin cobros sin dinero
+2026-11-23 · desarrollador · Convertir pedido en venta directa (botón web y móvil, RPC fn_convertir_pedido_a_venta; migración 20261123070000 sin aplicar a prod; verificación local 7/7) · D-062

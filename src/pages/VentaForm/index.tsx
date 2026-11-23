@@ -44,6 +44,8 @@ import { nextVisitDate } from '@/lib/nextVisitDate';
 import { RepriceListaDialog } from '@/components/venta/RepriceListaDialog';
 import { useVendedores, usePerfilesNombres } from '@/hooks/useClientes';
 import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
+import { ConvertirPedidoDialog } from '@/components/venta/ConvertirPedidoDialog';
+import { puedeConvertirPedido, type ResultadoConversion } from '@/lib/convertirPedido';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -57,6 +59,7 @@ export default function VentaFormPage() {
   const [showPago, setShowPago] = useState(false);
   const [checkoutSaving, setCheckoutSaving] = useState(false);
   const [showDevolucion, setShowDevolucion] = useState(false);
+  const [showConvertir, setShowConvertir] = useState(false);
   const h = useVentaForm();
   const { data: vendedoresList } = useVendedores();
   const { data: perfilesNombres } = usePerfilesNombres();
@@ -76,6 +79,21 @@ export default function VentaFormPage() {
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell, changeLineListaPrecio,
   } = h;
   const { fmt: fmtMoneda } = useCurrency();
+  // D-062: pedido en borrador/confirmado sin entregas activas → «Convertir a venta directa».
+  const puedeConvertir = !isNew && !h.editandoConfirmada
+    && puedeConvertirPedido(form as Parameters<typeof puedeConvertirPedido>[0], { entregasActivas: entregasActivas.length, tienePermiso: hasPermiso('ventas', 'editar') });
+  const abrirConvertir = () => {
+    if (h.dirty) { toast.error('Guarda los cambios del pedido antes de convertirlo'); return; }
+    setShowConvertir(true);
+  };
+  const onPedidoConvertido = async (r: ResultadoConversion) => {
+    for (const k of ['venta-pagos', 'ventas', 'cxc', 'saldos', 'stock-almacen-form', 'productos', 'apartado-disponible']) {
+      queryClient.invalidateQueries({ queryKey: k === 'venta-pagos' ? [k, form.id] : [k] });
+    }
+    await h.recargarVenta();
+    // Igual que una venta: si queda saldo se abre el cobro.
+    if (r.saldo_pendiente > 0.005) setShowPago(true);
+  };
 
   // Wrap handleSave: for venta_directa, open checkout modal after save+confirm
   const handleSave = useCallback(async (autoConfirm = false) => {
@@ -470,11 +488,15 @@ export default function VentaFormPage() {
           cobrar: !h.editandoConfirmada && form.status !== 'borrador' && form.status !== 'cancelado' && saldoPendiente > 0.005 ? () => setShowPago(true) : undefined,
           editar: h.puedeEditarConfirmada ? h.iniciarEdicionConfirmada : undefined,
           cancelarEdicion: h.editandoConfirmada ? h.cancelarEdicionConfirmada : undefined,
+          convertir: puedeConvertir ? abrirConvertir : undefined,
         } : undefined}
         accionesFinales={!isNew ? (
           <>
             {!h.editandoConfirmada && form.status !== 'borrador' && form.status !== 'cancelado' && saldoPendiente > 0.005 && (
               <button className="btn-odoo-primary text-xs" onClick={() => setShowPago(true)}>Cobrar</button>
+            )}
+            {puedeConvertir && (
+              <button className="btn-odoo-primary text-xs" onClick={abrirConvertir}>Convertir a venta directa</button>
             )}
             {h.editandoConfirmada && (
               <button className="btn-odoo-secondary text-xs" onClick={h.cancelarEdicionConfirmada}>Cancelar edición</button>
@@ -689,6 +711,15 @@ export default function VentaFormPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {showConvertir && form.id && (
+        <ConvertirPedidoDialog
+          open={showConvertir}
+          onClose={() => setShowConvertir(false)}
+          venta={{ id: form.id, folio: form.folio, almacen_id: (form.almacen_id as string | null | undefined) ?? null, vendedor_id: (form.vendedor_id as string | null | undefined) ?? null }}
+          almacenUsuarioId={profile?.almacen_id ?? null}
+          onConvertido={onPedidoConvertido}
+        />
+      )}
       {showDevolucion && !isNew && (
         <DevolucionVentaModal
           venta={{ id: form.id!, folio: form.folio, cliente_id: form.cliente_id }}

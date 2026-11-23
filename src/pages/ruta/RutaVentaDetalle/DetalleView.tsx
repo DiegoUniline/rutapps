@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, Lock, ChevronRight } from 'lucide-react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, Lock, ChevronRight, ArrowRightLeft } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { ConvertirPedidoDialog } from '@/components/venta/ConvertirPedidoDialog';
+import type { ResultadoConversion } from '@/lib/convertirPedido';
 import { cn, fmtDate } from '@/lib/utils';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { phoneWithLada } from '@/lib/phoneWithLada';
@@ -35,6 +39,9 @@ interface Props {
   initCobrar: () => void;
   handleCancelar: () => void;
   handleVolverBorrador: () => void;
+  /** D-062: pedido convertible a venta directa (borrador/confirmado, sin entregas activas, con permiso). */
+  puedeConvertir: boolean;
+  onPedidoConvertido: (r: ResultadoConversion) => void | Promise<void>;
   onBack: () => void;
   fmt: (n: number) => string;
 }
@@ -42,6 +49,8 @@ interface Props {
 export function DetalleView(p: Props) {
   const { symbol: s } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
+  const { profile } = useAuth();
+  const [showConvertir, setShowConvertir] = useState(false);
   const [showTax, setShowTax] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedLinea, setSelectedLinea] = useState<any | null>(null);
@@ -54,7 +63,10 @@ export function DetalleView(p: Props) {
       <Header {...p} showCancelChip={showCancelChip} onCancelClick={() => setShowCancelModal(true)} />
       <WADialog {...p} s={s} />
       <div className="p-4 space-y-4 pb-28">
-        <ActionsBar {...p} />
+        <ActionsBar {...p} onConvertirClick={() => {
+          if (typeof navigator !== 'undefined' && navigator.onLine === false) { toast.error('Necesitas conexión para convertir'); return; }
+          setShowConvertir(true);
+        }} />
         <PedidoEntregaResumen venta={p.venta} fmt={p.fmt} />
         <TotalCard venta={p.venta} fmt={p.fmt} s={s} />
         <InfoCard venta={p.venta} clienteNombre={p.clienteNombre} vendedorNombre={p.vendedorNombre} />
@@ -73,6 +85,15 @@ export function DetalleView(p: Props) {
         handleCancelar={p.handleCancelar}
         fmt={p.fmt}
       />
+      {showConvertir && (
+        <ConvertirPedidoDialog
+          open={showConvertir}
+          onClose={() => setShowConvertir(false)}
+          venta={{ id: p.venta.id, folio: p.venta.folio, almacen_id: p.venta.almacen_id ?? null, vendedor_id: p.venta.vendedor_id ?? null }}
+          almacenUsuarioId={profile?.almacen_id ?? null}
+          onConvertido={p.onPedidoConvertido}
+        />
+      )}
       <VentaLineaDesgloseModal
         open={showLineaModal}
         onClose={() => setShowLineaModal(false)}
@@ -104,7 +125,7 @@ function Header({ venta, onBack, showCancelChip, onCancelClick }: Props & { show
 }
 
 
-function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar, handleCancelar }: Props) {
+function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar, puedeConvertir, onConvertirClick }: Props & { onConvertirClick: () => void }) {
   const { hasPermiso } = usePermisos();
   const actions: { icon: any; label: string; color: string; onClick: () => void }[] = [
     { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
@@ -120,6 +141,9 @@ function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPD
     actions.push({ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar });
   }
   // D-021: una venta confirmada ya no regresa a borrador; se corrige con Editar.
+  if (puedeConvertir) {
+    actions.push({ icon: ArrowRightLeft, label: 'Convertir a venta directa', color: 'text-primary', onClick: onConvertirClick });
+  }
 
   return (
     <div className="grid grid-cols-3 gap-1">

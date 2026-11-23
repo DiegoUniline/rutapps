@@ -1371,9 +1371,17 @@ export function useVentaForm() {
     setRecargaVenta(n => n + 1);
   };
 
+  /** Vuelve a leer la venta del servidor y reemplaza el formulario (p. ej. tras convertir un pedido, D-062). */
+  const recargarVenta = async () => {
+    await ventaQuery.refetch();
+    setDirty(false);
+    loadedVentaIdRef.current = null;
+    setRecargaVenta(n => n + 1);
+  };
+
   return {
     id, isNew, form, lineas, setLineas, dirty, readOnly, isLoading,
-    editandoConfirmada, puedeEditarConfirmada, iniciarEdicionConfirmada, cancelarEdicionConfirmada,
+    editandoConfirmada, puedeEditarConfirmada, iniciarEdicionConfirmada, cancelarEdicionConfirmada, recargarVenta,
     ventaLoadError,
     catalogLoadError: clientesQuery.error ?? productosQuery.error ?? tarifasQuery.error ?? almacenesQuery.error,
     retryInitialLoad: async () => {

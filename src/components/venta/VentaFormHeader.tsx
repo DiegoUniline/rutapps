@@ -43,7 +43,7 @@ interface VentaFormHeaderProps {
   /** Botones al final del renglón (Cobrar, Editar venta). */
   accionesFinales?: React.ReactNode;
   /** Teléfono: las mismas acciones finales como callbacks (Cobrar a la vista; Editar en «⋯»). */
-  movil?: { cobrar?: () => void; editar?: () => void; cancelarEdicion?: () => void };
+  movil?: { cobrar?: () => void; editar?: () => void; cancelarEdicion?: () => void; convertir?: () => void };
 }
 
 export function VentaFormHeader({
@@ -78,6 +78,7 @@ export function VentaFormHeader({
     else if (puedeFacturar) principal = { key: 'facturar', label: 'Facturar', icon: Receipt, onClick: onFacturar };
     const menu: AccionMovil[] = [
       ...(isNew ? [{ key: 'borrador', label: 'Guardar borrador', icon: Save, onClick: () => onSave(), disabled: isSaving }] : []),
+      ...(movil?.convertir ? [{ key: 'convertir', label: 'Convertir a venta directa', onClick: movil.convertir }] : []),
       ...(movil?.editar ? [{ key: 'editar', label: 'Editar venta', onClick: movil.editar }] : []),
       ...(movil?.cancelarEdicion ? [{ key: 'cancelar-ed', label: 'Cancelar edición', onClick: movil.cancelarEdicion }] : []),
       ...(!isNew && status === 'borrador' && principal?.key !== 'confirmar' && principal?.key !== 'guardar' ? [{ key: 'confirmar', label: 'Confirmar', icon: Check, onClick: () => onStatusChange('confirmado') }] : []),
