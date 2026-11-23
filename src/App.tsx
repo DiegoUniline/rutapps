@@ -682,7 +682,7 @@ function AuthenticatedAppRoutes() {
         <Route path="/ruta/descarga" element={<RutaDescarga />} />
       <Route path="/ruta/solicitud-traspaso" element={<RutaSolicitudTraspaso />} />
         <Route path="/ruta/mapa" element={<RutaMapaPage />} />
-        <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
+        <Route path="/ruta/navegacion" element={<Suspense fallback={<PageLoader />}><RutaNavegacionPage /></Suspense>} />
         <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
         <Route path="/ruta/pendientes" element={<PendientesSincronizarPage />} />
 
