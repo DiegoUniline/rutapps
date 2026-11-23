@@ -21,9 +21,9 @@ export function useDashboardAging() {
         .from('ventas')
         .select('id, folio, cliente_id, saldo_pendiente, fecha, fecha_vencimiento, vendedor_id, clientes(nombre)')
         .eq('empresa_id', eId)
-        .eq('condicion_pago', 'credito')
+        // Todo saldo pendiente (no solo crédito), sin borradores ni cancelados.
         .gt('saldo_pendiente', 0)
-        .neq('status', 'cancelado')
+        .not('status', 'in', '(cancelado,borrador)')
         .range(from, to));
 
       // vendedor names

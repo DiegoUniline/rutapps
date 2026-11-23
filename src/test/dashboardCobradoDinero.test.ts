@@ -13,3 +13,14 @@ describe('dashboard: cobrado sin cobros que no son dinero', () => {
     expect(cartera).toContain('!esCobroSinDinero(c.metodo_pago)');
   });
 });
+
+// Cartera = todo saldo pendiente (no solo crédito), sin borradores ni cancelados.
+describe('dashboard: cartera con todo saldo pendiente', () => {
+  for (const f of ['src/hooks/useDashboardData.ts', 'src/pages/dashboard/hooks/useDashboardAging.ts', 'src/pages/dashboard/hooks/useDashboardEquipo.ts']) {
+    it(f, () => {
+      const src = readFileSync(f, 'utf8');
+      expect(src).not.toContain("eq('condicion_pago', 'credito')");
+      expect(src).toContain("'(cancelado,borrador)'");
+    });
+  }
+});

@@ -242,9 +242,9 @@ export function useDashboardCartera() {
           .from('ventas')
           .select('id, fecha, total, saldo_pendiente, cliente_id, clientes(nombre), condicion_pago')
           .eq('empresa_id', empresa!.id)
-          .eq('condicion_pago', 'credito')
+          // Cartera = todo saldo pendiente (contado, crédito o por definir), sin borradores ni cancelados.
           .gt('saldo_pendiente', 0)
-          .neq('status', 'cancelado' as any)
+          .not('status', 'in', '(cancelado,borrador)' as any)
           .order('fecha', { ascending: true })
           .range(from, to)
       );

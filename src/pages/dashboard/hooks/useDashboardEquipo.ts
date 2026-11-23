@@ -48,11 +48,13 @@ export function useDashboardEquipo(range: DateRange, metaMes: number) {
         fetchAllPages((from, to) => sb.from('cobros')
           .select('monto, fecha, user_id')
           .eq('empresa_id', eId).neq('status', 'cancelado')
+          // Solo dinero real: sin ajuste de liquidación ni saldo a favor.
+          .not('metodo_pago', 'in', '(saldo_favor,ajuste_liquidacion)')
           .gte('fecha', fromIso).lte('fecha', toIso).range(from, to)),
         fetchAllPages((from, to) => sb.from('ventas')
           .select('vendedor_id, saldo_pendiente, fecha_vencimiento, fecha')
-          .eq('empresa_id', eId).eq('condicion_pago', 'credito').gt('saldo_pendiente', 0)
-          .neq('status', 'cancelado').range(from, to)),
+          .eq('empresa_id', eId).gt('saldo_pendiente', 0)
+          .not('status', 'in', '(cancelado,borrador)').range(from, to)),
         fetchAllPages((from, to) => sb.from('visitas')
           .select('user_id, fecha, venta_id')
           .eq('empresa_id', eId).gte('fecha', fromIso).lte('fecha', toIso).range(from, to)),
