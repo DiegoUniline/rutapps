@@ -35,7 +35,8 @@ export default function TabCartera({ range, ventasMes, ventas, cobros, money }: 
     return weeks.map((w) => {
       const wEnd = new Date(w); wEnd.setDate(wEnd.getDate() + 6);
       const vendido = (ventas ?? []).reduce((s, v: any) => {
-        const f = new Date(v.fecha);
+        // D-060: pedidos cuentan en la semana de su entrega (fecha_venta).
+        const f = new Date(v.fecha_venta ?? v.fecha);
         return f >= w && f <= wEnd ? s + Number(v.total || 0) : s;
       }, 0);
       const cobrado = (cobros ?? []).reduce((s, c: any) => {

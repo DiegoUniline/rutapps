@@ -1,7 +1,7 @@
 # Estado del proyecto — DOCUMENTO VIVO
 > Se lee al iniciar cada sesión. Se actualiza tras decisiones confirmadas o cambios verificados (no por consultas).
 
-**Última actualización:** 2026-11-21 · **Agente:** desarrollador (recarga del corte con esquema nuevo)
+**Última actualización:** 2026-11-23 · **Agente:** desarrollador (D-060 ventas realizadas en Dashboard y Utilidad)
 
 ## Dónde vamos
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
@@ -12,6 +12,7 @@
 - **Siguiente paso exacto:** Fase 3 publicada y verificada 6/6 ([D-058](./decisiones.md#d-058)); siguiente: fase 4 (monitoreo y pruebas); crons de cobro escalonados 9:00/9:05/9:10 CDMX (D-057). CORTE HECHO 2026-11-23 (D-055). Pendientes: vault.sh + 2 crons, webhook Stripe, fotos de Storage, rotar contraseña BD. Antes: corte (D-018) y correr el ensayo de `recargar-datos.sh` con el backup fresco de Lovable; datos viejos sin corregir ([D-052](./decisiones.md#d-052)). Orden A→Z por columna: terminado en todas las listas (incl. Entregas, Demanda, Concentrado y MinMax, 2026-11-22). Después: revisión del dueño de F1/F2, F3 y D-051.
 
 ## Decisiones recientes (últimas 10)
+- [D-060](./decisiones.md#d-060) 2026-11-23 · Ventas y utilidad (Dashboard y Reportes → Utilidad) solo lo realmente vendido: directas confirmadas/entregadas/facturadas por fecha; pedidos entregados/facturados por fecha de entrega. «Gastos» muestra utilidad neta sin restar compras. Migración `20261123050000` pendiente de aplicar.
 - [D-057](./decisiones.md#d-057) 2026-11-23 · Cobros a las 9:00 am CDMX en la fecha de cada cliente (crons hechos; suscripciones existentes pendientes).
 - [D-056](./decisiones.md#d-056) 2026-11-23 · Usuarios en Stripe: altas se cobran proporcional de inmediato; bajas sin devolución desde la siguiente renovación.
 - [D-055](./decisiones.md#d-055) 2026-11-23 · Corte hecho: RutApp opera en Supabase propio + Cloudflare; código de Lovable eliminado; fotos pendientes.
@@ -31,9 +32,11 @@
 - [D-021](./decisiones.md#d-021) 2026-11-19 · Borrador solo al inicio; confirmada no regresa a borrador, se edita con Editar venta.
 
 ## Propuestas pendientes de aprobación 💡
-- (ninguna)
+- (D-060) `ventas.fecha_entrega` no siempre es la fecha real de entrega: en pedidos entregados desde 2026-09, 1,950 de 10,864 (18%) difieren de la entrega «hecho» (708 por +1 día —🟡 inferido: el front guarda `now` en UTC en una columna `date`, `src/lib/entregaStatus.ts:38`—; el resto parece conservar la fecha programada: `fn_sync_status_pedido` marca entregado sin tocar `fecha_entrega`); 397 caen en otro mes. 💡 Al marcar entregado, poner `fecha_entrega` = fecha local de la última entrega «hecho» (en BD) — decisión del dueño.
+- (D-060) Alinear a la misma base: pestaña Equipo, avance de Metas, PDF programado de Reportes generales (edge function) y Resumen/Ventas del reporte si se quiere que «Ventas» del Resumen coincida con la base de utilidad.
 
 ## Pendientes / bloqueos
+- D-060: aplicar en producción `supabase/migrations/20261123050000_dashboard_utilidad_entregado.sql` (requiere `CONFIRMO`); probada en Postgres local (casos de `src/test/ventasRealizadasD060.test.ts`: costo 593 / 81 con vendedor; permisos iguales a prod). Hasta aplicarla, la tarjeta Utilidad del Dashboard mezcla ventas D-060 con costo de la base anterior.
 - F1/F2 devoluciones — por revisar: (a) cancelar una devolución cuya mercancía vendible ya se vendió o descargó falla con «Stock insuficiente» (no se fuerza negativo); (b) si la liquidación del día ya se aprobó (F3), cancelar una devolución con dinero sin caja no cambia lo congelado (aparece como movimiento posterior); (c) «No entregado» con Bueno/Merma actualiza renglones y luego la entrega en pasos separados (mismo patrón que «Quitar producto»); 💡 pasarlo a una RPC; (d) sin conexión, la nota aplicada a la venta no cuenta como saldo a favor disponible (su cobro lo crea el servidor al sincronizar); (e) `src/integrations/supabase/types.ts` no tiene aún las columnas nuevas (se consultan con cast); regenerar tras aplicar la migración.
 - D-051 (2026-11-21) requiere `CONFIRMO`: quitar `html-to-image` de `package.json` (ya no se importa). Sin cambio: `wa-bot-webhook/ventaPdf.ts` (nota carta por código; unificar con el modelo del ticket exige empaquetarlo para Deno y desplegar). «Imprimir» abre el PDF en otra pestaña; si el navegador bloquea la ventana (Safari tras generar), se descarga.
 - Suscripciones, verificación puntual 2026-11-04 23:47 UTC: 48 reemplazos vinculados, activos y desbloqueados en RutApp; Stripe en `trialing` hasta cada corte original; 48 facturas iniciales de total/importe pagado $0, sin cargos desde la creación y sin duplicados activos. Planes, usuarios, descuentos y configuración manual/legacy sin diferencias. No se modificó código, esquema, funciones ni se publicó. Los cobros futuros dependen de la tarjeta y no están probados antes de su fecha.

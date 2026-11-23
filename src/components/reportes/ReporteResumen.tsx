@@ -14,17 +14,19 @@ function KPI({ label, value, sub }: { label: string; value: string; sub?: string
 export function ReporteResumen({ data }: { data: any }) {
   const { fmt } = useCurrency();
   const maxDaily = Math.max(...data.dailyVentas.map((d: any) => d.total), 1);
+  // D-060: costo y utilidad se calculan sobre lo realmente vendido (no sobre el listado).
+  const baseUtilidad: number = data.ventasUtilidad ?? data.totalVentas;
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <KPI label="Ventas" value={fmt(data.totalVentas)} sub={`${data.numVentas} ventas`} />
         <KPI label="Costo mercancía" value={fmt(data.costoTotal)} />
-        <KPI label="Utilidad bruta" value={fmt(data.utilidadBruta)} sub={data.totalVentas > 0 ? `${Math.round((data.utilidadBruta / data.totalVentas) * 100)}% margen` : ''} />
+        <KPI label="Utilidad bruta" value={fmt(data.utilidadBruta)} sub={baseUtilidad > 0 ? `${Math.round((data.utilidadBruta / baseUtilidad) * 100)}% margen s/ ${fmt(baseUtilidad)} entregado` : ''} />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KPI label="Gastos" value={fmt(data.totalGastos)} />
-        <KPI label="Utilidad neta" value={fmt(data.utilidadNeta)} sub={data.totalVentas > 0 ? `${Math.round((data.utilidadNeta / data.totalVentas) * 100)}% margen` : ''} />
+        <KPI label="Utilidad neta" value={fmt(data.utilidadNeta)} sub={baseUtilidad > 0 ? `${Math.round((data.utilidadNeta / baseUtilidad) * 100)}% margen` : ''} />
         <KPI label="Cobros" value={fmt(data.totalCobros)} sub="dinero recibido" />
         <KPI label="Por cobrar" value={fmt(data.totalPendiente)} />
       </div>
