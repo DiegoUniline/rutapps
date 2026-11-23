@@ -5,6 +5,13 @@ import { captureAppError } from './observability';
 const BACKUP_KEY = 'uniline_sync_backup';
 const BACKUP_TS_KEY = 'uniline_backup_ts';
 const AUTO_BACKUP_INTERVAL = 30_000; // 30 seconds
+// Formato del respaldo. Los respaldos de versiones anteriores (no eran espejo de la cola y
+// nunca se limpiaban) traían operaciones ya subidas hace semanas: al restaurarlas se
+// reenviaban cobros viejos (2026-11-23, GAMA/Tampico). Sin esta marca, no se restauran.
+const BACKUP_FORMATO_KEY = 'uniline_backup_formato';
+const BACKUP_FORMATO = '2026-11-23-espejo';
+/** Solo se recupera lo encolado en las últimas 48 h (lo pendiente de verdad, no historia). */
+export const RESPALDO_MAX_EDAD_MS = 48 * 60 * 60 * 1000;
 
 // ── Auto-backup syncQueue to localStorage as redundant safety net ──
 //
@@ -45,6 +52,7 @@ export function backupSyncQueueToStorage(): Promise<number> {
     if (items.length > 0) {
       localStorage.setItem(BACKUP_KEY, JSON.stringify(items));
       localStorage.setItem(BACKUP_TS_KEY, String(Date.now()));
+      localStorage.setItem(BACKUP_FORMATO_KEY, BACKUP_FORMATO);
     } else {
       clearStorageBackup();
     }
@@ -83,6 +91,20 @@ async function restaurarRespaldo(): Promise<number> {
   const currentCount = await offlineDb.syncQueue.count();
   if (currentCount > 0) return 0; // Already has data, skip
 
+  // Respaldo de una versión anterior: no es confiable (trae lo ya subido). Se descarta.
+  if (localStorage.getItem(BACKUP_FORMATO_KEY) !== BACKUP_FORMATO) {
+    reportarFallaRespaldo(new Error(`Respaldo de cola de versión anterior descartado (${items.length} operaciones)`));
+    clearStorageBackup();
+    return 0;
+  }
+  const limite = Date.now() - RESPALDO_MAX_EDAD_MS;
+  const recientes = items.filter(it => Number(it?.createdAt ?? 0) >= limite);
+  if (recientes.length < items.length) {
+    reportarFallaRespaldo(new Error(`Respaldo de cola: ${items.length - recientes.length} operaciones de más de 48 h no se restauraron`));
+  }
+  items = recientes;
+  if (items.length === 0) { clearStorageBackup(); return 0; }
+
   let restored = 0;
   await offlineDb.transaction('rw', offlineDb.syncQueue, async () => {
     for (const item of items) {
@@ -98,6 +120,7 @@ async function restaurarRespaldo(): Promise<number> {
 export function clearStorageBackup() {
   localStorage.removeItem(BACKUP_KEY);
   localStorage.removeItem(BACKUP_TS_KEY);
+  localStorage.removeItem(BACKUP_FORMATO_KEY);
 }
 
 export function getBackupTimestamp(): number | null {

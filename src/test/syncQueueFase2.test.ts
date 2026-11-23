@@ -196,6 +196,25 @@ describe('cola: el respaldo de localStorage no hace reaparecer lo subido ni lo d
     expect(await respaldo.restoreFromStorageBackup()).toBe(0);
   });
 
+  it('un respaldo de una versión anterior (sin marca de formato) no se restaura y se borra', async () => {
+    localStorage.setItem(BACKUP_KEY, JSON.stringify([
+      { operation: 'insert', table: 'cobro_aplicaciones', data: { id: 'ca-viejo' }, keyField: 'id', keyValue: 'ca-viejo', createdAt: Date.now(), retries: 0 },
+    ]));
+    expect(await respaldo.restoreFromStorageBackup()).toBe(0);
+    expect(await offlineDb.syncQueue.count()).toBe(0);
+    expect(localStorage.getItem(BACKUP_KEY)).toBeNull();
+  });
+
+  it('del respaldo solo se recupera lo de las últimas 48 h', async () => {
+    await cola.queueOperation('ventas', 'insert', { id: 'v-nueva', empresa_id: EMP });
+    const raw = JSON.parse(localStorage.getItem(BACKUP_KEY) ?? '[]');
+    raw.push({ ...raw[0], keyValue: 'v-vieja', data: { id: 'v-vieja', empresa_id: EMP }, createdAt: Date.now() - respaldo.RESPALDO_MAX_EDAD_MS - 60_000 });
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(raw));
+    await offlineDb.syncQueue.clear(); // simula que el sistema borró IndexedDB
+    expect(await respaldo.restoreFromStorageBackup()).toBe(1);
+    expect((await offlineDb.syncQueue.toArray()).map(i => i.keyValue)).toEqual(['v-nueva']);
+  });
+
   it('si IndexedDB pierde lo pendiente, el respaldo lo recupera', async () => {
     await cola.queueOperation('ventas', 'insert', { id: 'v1', empresa_id: EMP });
     await offlineDb.syncQueue.clear(); // simula que el sistema borró IndexedDB

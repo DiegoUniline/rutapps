@@ -302,3 +302,4 @@
 2026-11-23 · desarrollador · Móvil: Stock y Solicitud de traspaso usan el almacén del vendedor elegido por el super admin (antes el del SA, de otra empresa → stock vacío); con «Todos» pide elegir vendedor
 2026-11-23 · desarrollador · Sync: SYNC_EPOCH (cada celular baja todo completo una vez; cursores de antes del corte dejaban stock viejo, caso Ruta Grande). App instalada sin sesión abre en /login
 2026-11-23 · desarrollador · Ventas y utilidad del Dashboard y Reportes→Utilidad solo lo realmente vendido (pedidos por fecha de entrega); Gastos muestra utilidad neta sin restar compras; migración 20261123050000 (sin aplicar a prod) · D-060
+2026-11-23 · desarrollador · Incidente GAMA/Tampico: celulares reenviaban cobros viejos desde un respaldo de cola de versión anterior (servidor los rechazó; sin cobros duplicados ni ventas borradas). Corrección: solo se restaura respaldo con formato actual y de las últimas 48 h
