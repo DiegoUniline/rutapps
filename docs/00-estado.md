@@ -1,7 +1,7 @@
 # Estado del proyecto — DOCUMENTO VIVO
 > Se lee al iniciar cada sesión. Se actualiza tras decisiones confirmadas o cambios verificados (no por consultas).
 
-**Última actualización:** 2026-11-23 · **Agente:** desarrollador (D-061 pedidos cuentan al confirmar en empresas sin Entregas)
+**Última actualización:** 2026-11-23 · **Agente:** desarrollador (D-063 Editar venta: fecha de entrega y almacén)
 
 ## Dónde vamos
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
@@ -12,6 +12,7 @@
 - **Siguiente paso exacto:** Fase 3 publicada y verificada 6/6 ([D-058](./decisiones.md#d-058)); siguiente: fase 4 (monitoreo y pruebas); crons de cobro escalonados 9:00/9:05/9:10 CDMX (D-057). CORTE HECHO 2026-11-23 (D-055). Pendientes: vault.sh + 2 crons, webhook Stripe, fotos de Storage, rotar contraseña BD. Antes: corte (D-018) y correr el ensayo de `recargar-datos.sh` con el backup fresco de Lovable; datos viejos sin corregir ([D-052](./decisiones.md#d-052)). Orden A→Z por columna: terminado en todas las listas (incl. Entregas, Demanda, Concentrado y MinMax, 2026-11-22). Después: revisión del dueño de F1/F2, F3 y D-051.
 
 ## Decisiones recientes (últimas 10)
+- [D-063](./decisiones.md#d-063) 2026-11-23 · «Editar venta»: fecha de entrega y almacén editables; al cambiar almacén el stock vuelve al anterior y sale del nuevo (bloqueado con entregas activas). Migración `20261123080000` pendiente de aplicar.
 - [D-062](./decisiones.md#d-062) 2026-11-23 · Botón «Convertir a venta directa» en pedidos (borrador/confirmado, sin entregas activas): descuenta stock del almacén elegido y abre el cobro si queda saldo. Migración `20261123070000` pendiente de aplicar.
 - [D-061](./decisiones.md#d-061) 2026-11-23 · «Según uso de Entregas»: ajuste por empresa `pedidos_cuentan_al_confirmar`; con true los pedidos confirmados/entregados/facturados cuentan por fecha del pedido (empresas sin Entregas, p. ej. GLOBAL TRADE). Migraciones `20261123050000` y `20261123060000` APLICADAS y verificadas en producción (18 empresas en true; costo GT oct 2,308,656 HNL).
 - [D-060](./decisiones.md#d-060) 2026-11-23 · Ventas y utilidad (Dashboard y Reportes → Utilidad) solo lo realmente vendido: directas confirmadas/entregadas/facturadas por fecha; pedidos entregados/facturados por fecha de entrega. «Gastos» muestra utilidad neta sin restar compras. Migración `20261123050000` pendiente de aplicar.
@@ -38,6 +39,7 @@
 - (D-060) Alinear a la misma base: pestaña Equipo, avance de Metas, PDF programado de Reportes generales (edge function) y Resumen/Ventas del reporte si se quiere que «Ventas» del Resumen coincida con la base de utilidad.
 
 ## Pendientes / bloqueos
+- D-063: aplicar en producción `supabase/migrations/20261123080000_d063_editar_venta_almacen_fecha_entrega.sql` (subir a `main` la aplica; requiere `CONFIRMO`) y después correr `docs/sql/2026-11-23_verificar_d063.sql` (termina en RAISE: no deja datos; esperado 12/12). Front y migración deben salir juntos: con la función anterior el almacén y la fecha de entrega se ignoran sin error. Visto sin tocar: con solo `cambiar_precio` (sin `ventas·editar`) `editar_venta` ya deja cambiar cliente/fecha/vendedor del encabezado; ahora también la fecha de entrega (el almacén no).
 - D-062: aplicar en producción `supabase/migrations/20261123070000_d062_convertir_pedido_a_venta.sql` (requiere `CONFIRMO`) y después correr `docs/sql/2026-11-23_verificar_d062.sql` (termina en RAISE: no deja datos); hasta aplicarla el botón responde «función no encontrada». ❓ Fecha de la venta convertida (se conserva la del pedido; con D-060 cuenta en ese día).
 - D-061: APLICADA en producción 2026-11-23 (`CONFIRMO publicar pedidos sin entregas`); probada en Postgres local (inicialización, costo/top/evolución con y sin ajuste, autorización, permisos, reaplicable). La lista de empresas en true se calcula al aplicarla (últimos 90 días). Tras aplicarla, regenerar `types.ts` (la columna se lee con cast en `useAjusteVentasRealizadas.ts`). Visto sin tocar: la política RLS «Users can update their empresa» deja actualizar `empresas` a cualquier usuario de la empresa (el permiso `configuracion.general` solo se valida en la UI).
 - D-060: aplicar en producción `supabase/migrations/20261123050000_dashboard_utilidad_entregado.sql` (requiere `CONFIRMO`); probada en Postgres local (casos de `src/test/ventasRealizadasD060.test.ts`: costo 593 / 81 con vendedor; permisos iguales a prod). Hasta aplicarla, la tarjeta Utilidad del Dashboard mezcla ventas D-060 con costo de la base anterior.

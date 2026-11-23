@@ -77,6 +77,9 @@ const ACCION_LABELS: Record<string, string> = {
   entrega_editada: 'Entrega editada',
   entrega_cancelada: 'Entrega cancelada',
   entrega_no_entregada: 'Entrega no realizada',
+  // D-063
+  almacen_cambiado: 'Almacén cambiado',
+  fecha_entrega_cambiada: 'Fecha de entrega cambiada',
 };
 
 interface Props {

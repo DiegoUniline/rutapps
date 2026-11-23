@@ -30,6 +30,7 @@ import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
 import { useCancelarPagoPrompt } from '@/components/venta/CancelarPagoDialog';
 import { cancelarVenta } from '@/lib/cancelarVenta';
 import { ejecutarConExcedente } from '@/lib/excedente';
+import { cambioAlmacen, encabezadoAlmacenEntrega } from '@/lib/editarVentaEncabezado';
 
 /** Campos de ventas que el tipo Venta no declara y usa la edición de confirmadas. */
 type VentaEdicionCampos = { updated_at?: string; cerrado_at?: string | null; descuento_extra?: number; descuento_extra_tipo?: string };
@@ -181,15 +182,17 @@ export function useVentaForm() {
   // para ella cuenta como disponible, si no la línea diría "sin stock" justo por su propia salida.
   const tomadoPorEstaVenta = useMemo(() => {
     const m = new Map<string, number>();
-    const v = existingVenta as { tipo?: string; status?: string; entrega_inmediata?: boolean; venta_lineas?: { producto_id?: string | null; cantidad?: number | null }[] } | undefined;
+    const v = existingVenta as { tipo?: string; status?: string; entrega_inmediata?: boolean; almacen_id?: string | null; venta_lineas?: { producto_id?: string | null; cantidad?: number | null }[] } | undefined;
     if (!v || v.tipo !== 'venta_directa' || v.status === 'borrador' || v.status === 'cancelado') return m;
     if (!v.entrega_inmediata && v.status !== 'entregado' && v.status !== 'facturado') return m;
+    // D-063: si se eligió otro almacén, lo tomado está en el anterior (no suma en el nuevo).
+    if (cambioAlmacen(v.almacen_id, form.almacen_id)) return m;
     for (const l of v.venta_lineas ?? []) {
       if (!l.producto_id) continue;
       m.set(l.producto_id, (m.get(l.producto_id) ?? 0) + (Number(l.cantidad) || 0));
     }
     return m;
-  }, [existingVenta]);
+  }, [existingVenta, form.almacen_id]);
   const productosList = useMemo(() => {
     if (!productosListRaw) return productosListRaw;
     const stockMap = stockAlmacenData ?? new Map<string, number>();
@@ -950,7 +953,9 @@ export function useVentaForm() {
             const prod = prodMap.get(l.producto_id);
             if (prod?.vender_sin_stock) continue;
             // Al editar una venta ya aplicada, lo que ya tiene tomado cuenta como disponible.
-            const yaTomado = editandoConfirmada && (form.entrega_inmediata || form.status === 'entregado') ? (cantidadesOriginalesRef.current.get(l.producto_id) ?? 0) : 0;
+            // D-063: con otro almacén, lo tomado se regresa al anterior y no cuenta en el nuevo.
+            const mismoAlmacen = !cambioAlmacen((existingVenta as { almacen_id?: string | null } | undefined)?.almacen_id, form.almacen_id);
+            const yaTomado = editandoConfirmada && mismoAlmacen && (form.entrega_inmediata || form.status === 'entregado') ? (cantidadesOriginalesRef.current.get(l.producto_id) ?? 0) : 0;
             const disponible = (stockMap.get(l.producto_id) ?? 0) + yaTomado;
             const qty = Number(l.cantidad) || 0;
             if (qty > disponible) {
@@ -1093,6 +1098,8 @@ export function useVentaForm() {
             notas: form.notas ?? null, descuento_extra: formExt.descuento_extra ?? 0, descuento_extra_tipo: formExt.descuento_extra_tipo ?? 'porcentaje',
             // D-028: también cliente, fecha, condición de pago y vendedor.
             cliente_id: form.cliente_id ?? null, fecha: form.fecha ?? null, condicion_pago: form.condicion_pago ?? null, vendedor_id: form.vendedor_id ?? null,
+            // D-063: almacén (mueve el stock en la BD) y fecha de entrega del pedido.
+            ...encabezadoAlmacenEntrega(form),
             ...(excedente ? { excedente } : {}),
           },
           p_promos: pPromos,
@@ -1382,6 +1389,8 @@ export function useVentaForm() {
   return {
     id, isNew, form, lineas, setLineas, dirty, readOnly, isLoading,
     editandoConfirmada, puedeEditarConfirmada, iniciarEdicionConfirmada, cancelarEdicionConfirmada, recargarVenta,
+    // D-063: almacén guardado (para avisar al cambiarlo en «Editar venta»).
+    almacenOriginalId: ((existingVenta as { almacen_id?: string | null } | undefined)?.almacen_id ?? null) as string | null,
     ventaLoadError,
     catalogLoadError: clientesQuery.error ?? productosQuery.error ?? tarifasQuery.error ?? almacenesQuery.error,
     retryInitialLoad: async () => {

@@ -7,6 +7,7 @@ import { FileText } from 'lucide-react';
 import { useAllListasPrecios } from '@/hooks/useData';
 import { useVendedores, usePerfilesNombres, opcionesUsuarioConAsignado } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
+import { AVISO_CAMBIO_ALMACEN, cambioAlmacen } from '@/lib/editarVentaEncabezado';
 
 interface Props {
   form: Record<string, any>;
@@ -20,13 +21,18 @@ interface Props {
   totalPagado: number;
   saldoPendiente: number;
   canEditCondicion?: boolean;
-  /** Editando una venta confirmada: tipo, almacén y entrega no se cambian (mueven inventario). */
+  /** Editando una venta confirmada: el tipo no se cambia (para eso «Convertir a venta directa», D-062).
+   *  Almacén y fecha de entrega sí (D-063), salvo `almacenBloqueadoMotivo`. */
   bloquearTipoAlmacen?: boolean;
+  /** D-063: motivo por el que el almacén no se puede cambiar (pedido con entregas activas). */
+  almacenBloqueadoMotivo?: string | null;
+  /** D-063: almacén guardado de la venta en edición; si se elige otro, se avisa que el stock se mueve. */
+  almacenOriginalId?: string | null;
   set: (field: string, val: any) => void;
   onClienteChange: (cId: string) => void;
 }
 
-export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, canEditCondicion = true, bloquearTipoAlmacen = false, set, onClienteChange }: Props) {
+export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, canEditCondicion = true, bloquearTipoAlmacen = false, almacenBloqueadoMotivo = null, almacenOriginalId = null, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
@@ -111,9 +117,22 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
     </div>
   );
 
-  const renderAlmacen = () => (readOnly || bloquearTipoAlmacen)
-    ? <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenOptions.find(a => a.value === form.almacen_id)?.label || 'Sin almacén'}</div>
-    : <SearchableSelect options={almacenOptions} value={form.almacen_id ?? ''} onChange={val => set('almacen_id', val || null)} placeholder="Buscar almacén..." />;
+  const renderAlmacen = () => (readOnly || almacenBloqueadoMotivo)
+    ? (
+      <>
+        <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenOptions.find(a => a.value === form.almacen_id)?.label || 'Sin almacén'}</div>
+        {!readOnly && almacenBloqueadoMotivo && <div className="text-[11px] text-muted-foreground px-1">{almacenBloqueadoMotivo}</div>}
+      </>
+    )
+    : (
+      <>
+        {/* D-063: en «Editar venta» no se deja vaciar el almacén (la BD lo ignoraría). */}
+        <SearchableSelect options={almacenOptions} value={form.almacen_id ?? ''} onChange={val => { if (val || !bloquearTipoAlmacen) set('almacen_id', val || null); }} placeholder="Buscar almacén..." />
+        {bloquearTipoAlmacen && cambioAlmacen(almacenOriginalId, form.almacen_id) && (
+          <div role="status" className="mt-1 rounded border border-warning/40 bg-warning/10 px-2 py-1 text-[11.5px] text-foreground">{AVISO_CAMBIO_ALMACEN}</div>
+        )}
+      </>
+    );
 
   const requiereFechaEntrega = form.tipo !== 'venta_directa' && !form.entrega_inmediata;
 
@@ -124,7 +143,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
       </label>
       {form.tipo === 'venta_directa' || form.entrega_inmediata
         ? <div className="text-xs text-muted-foreground py-1.5 px-1">{isMobile ? 'Inmediata' : 'Entrega inmediata'}</div>
-        : (readOnly || bloquearTipoAlmacen)
+        : readOnly
           ? <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha_entrega ? fmtDate(form.fecha_entrega) : '—'}</div>
           : <OdooDatePicker value={form.fecha_entrega} onChange={v => set('fecha_entrega', v)} placeholder="Fecha entrega" />
       }

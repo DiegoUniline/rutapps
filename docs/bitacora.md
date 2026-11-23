@@ -309,3 +309,4 @@
 2026-11-23 · desarrollador · CONFIRMO publicar pedidos sin entregas: migraciones 20261123050000 (D-060) y 20261123060000 (D-061) aplicadas; 18 empresas con pedidos_cuentan_al_confirmar; costo GT oct HNL 2,308,656 verificado como usuario GT · D-061
 2026-11-23 · desarrollador · Convertir pedido en venta directa (botón web y móvil, RPC fn_convertir_pedido_a_venta; migración 20261123070000 sin aplicar a prod; verificación local 7/7) · D-062
 2026-11-23 · desarrollador · CONFIRMO publicar convertir pedido: migración 20261123070000 aplicada; verificación en prod 7/7 (todo se deshizo) · D-062
+2026-11-23 · desarrollador · Editar venta: fecha de entrega y almacén editables (stock regresa al almacén anterior y sale del nuevo; bloqueado con entregas activas; lotes con existencia en el nuevo); migración 20261123080000 sin aplicar a prod; verificación local 12/12 · D-063

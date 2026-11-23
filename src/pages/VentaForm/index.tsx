@@ -46,6 +46,7 @@ import { useVendedores, usePerfilesNombres } from '@/hooks/useClientes';
 import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
 import { ConvertirPedidoDialog } from '@/components/venta/ConvertirPedidoDialog';
 import { puedeConvertirPedido, type ResultadoConversion } from '@/lib/convertirPedido';
+import { motivoAlmacenBloqueado } from '@/lib/editarVentaEncabezado';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -545,7 +546,9 @@ export default function VentaFormPage() {
               Esta venta llegó sin sus productos: el equipo móvil registró el total pero las partidas todavía no se subieron. Pide al vendedor que abra la App Móvil con señal para completar el envío.
             </div>
           )}
-          <VentaFormFields form={form} readOnly={readOnly} bloquearTipoAlmacen={h.editandoConfirmada} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
+          <VentaFormFields form={form} readOnly={readOnly} bloquearTipoAlmacen={h.editandoConfirmada}
+            almacenBloqueadoMotivo={motivoAlmacenBloqueado({ editando: h.editandoConfirmada, tipo: form.tipo, entregasActivas: entregasActivas.length })}
+            almacenOriginalId={h.editandoConfirmada ? h.almacenOriginalId : null} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} clienteNotasFiscales={clienteNotasFiscales} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
         </div>
         <div className="border-t border-border">
           <OdooTabs tabs={[

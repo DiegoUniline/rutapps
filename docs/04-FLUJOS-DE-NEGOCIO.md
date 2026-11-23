@@ -144,6 +144,29 @@ transaccional `fn_convertir_pedido_a_venta(p_venta_id, p_almacen_id)`
   («Necesitas conexión para convertir»); actualiza la copia local de la venta.
 - Sin acción masiva. Verificación sin dejar datos: `docs/sql/2026-11-23_verificar_d062.sql`.
 
+**Editar venta: fecha de entrega y almacén (D-063, 2026-11-23).** En «Editar venta» (venta o pedido
+confirmado/entregado, RPC `editar_venta`, migración
+`supabase/migrations/20261123080000_d063_editar_venta_almacen_fecha_entrega.sql`) el tipo sigue fijo
+(para eso «Convertir a venta directa»), pero ahora se editan:
+- **Fecha de entrega** (pedidos sin entrega inmediata): solo cambia `ventas.fecha_entrega`; cada
+  entrega conserva su propia fecha (`entregas.fecha`). Con D-060 un pedido entregado cuenta en
+  Ventas/Utilidad por esa fecha, así que cambiarla lo mueve de día en los reportes. Vacía o igual se
+  ignora. Historial `fecha_entrega_cambiada`. Se permite aunque el pedido tenga entregas.
+- **Almacén**: bloqueado si el pedido tiene entregas activas («El pedido ya tiene entregas: el almacén no
+  se puede cambiar aquí…»; las canceladas no cuentan). Debe ser activo y de la misma empresa; los lotes
+  elegidos a mano deben tener existencia en el nuevo almacén («El lote X de «producto» no tiene
+  existencia en el almacén…»). Requiere `ventas·editar` (no basta `cambiar_precio`). Al elegir otro
+  almacén la pantalla avisa «Se regresará el stock al almacén anterior y saldrá del nuevo».
+  En la BD: `fn_sync_venta_inventario` compara por producto/lote **sin almacén**, así que cambiar
+  `almacen_id` solo no movía stock; `editar_venta` regresa lo ya aplicado a su almacén (entrada
+  `reverso_borrador`, nota «Cambio de almacén venta …», `stock_almacen` y `stock_lotes`) y al guardar
+  el almacén nuevo el trigger DEFERRED corre `fn_sync_venta_inventario`, que lo saca del nuevo (lote
+  elegido o FEFO). Repetir con el mismo almacén no mueve nada. Ventas que aún no aplican inventario
+  (pedido confirmado, venta directa sin entrega inmediata) solo cambian de almacén. Renglones
+  (`venta_lineas.almacen_id`) y reparto por lote pasan al nuevo almacén (el apartado los sigue).
+  Historial `almacen_cambiado` con lo regresado. Verificación sin dejar datos:
+  `docs/sql/2026-11-23_verificar_d063.sql`.
+
 Vistas:
 - Listado `/ventas` → `src/pages/VentasListPage.tsx` + `src/pages/ventas/*`
   (`VentasDesktopTable.tsx`, `VentaExpandedRow.tsx`, `ventasConstants.ts`).
