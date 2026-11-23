@@ -98,7 +98,7 @@ export default function RutaEntregaDetalle() {
   });
 
   const pedidoId = (entrega as any)?.pedido_id;
-  const { data: venta } = useQuery({
+  const { data: venta, isLoading: ventaCargando } = useQuery({
     queryKey: ['ruta-entrega-venta', pedidoId],
     enabled: !!pedidoId,
     networkMode: 'always',
@@ -108,7 +108,7 @@ export default function RutaEntregaDetalle() {
   });
 
   const clienteId = (entrega as any)?.cliente_id;
-  const { data: otrasPendientes } = useQuery({
+  const { data: otrasPendientes, isLoading: cuentasCargando } = useQuery({
     queryKey: ['ruta-entrega-cuentas', clienteId],
     enabled: !!clienteId,
     networkMode: 'always',
@@ -253,7 +253,11 @@ export default function RutaEntregaDetalle() {
   const entregaTotal = entregaTotals.total;
 
 
+  // Sin el pedido y las cuentas del cliente cargados, el saldo parece 0 y se entregaba sin
+  // preguntar si se cobra: el botón espera a que carguen.
+  const saldoCargando = (!!pedidoId && ventaCargando) || (!!clienteId && cuentasCargando);
   const handleMarcarClick = () => {
+    if (saldoCargando) return;
     // If there's any pending balance (this order or other accounts), prompt
     const tienePendiente = (ventaSaldo > 0) || (totalSaldoPendiente > 0);
     if (tienePendiente) {
@@ -826,10 +830,10 @@ export default function RutaEntregaDetalle() {
                 className="flex-1 bg-card border border-destructive/40 text-destructive rounded-xl py-3.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
                 <XCircle className="h-4 w-4" /> No entregado
               </button>
-              <button onClick={handleMarcarClick} disabled={saving}
+              <button onClick={handleMarcarClick} disabled={saving || saldoCargando}
                 className="flex-1 bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-success/20 flex items-center justify-center gap-1.5 disabled:opacity-40">
-                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
-                {saving ? 'Entregando...' : 'Marcar entregado'}
+                {saving || saldoCargando ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
+                {saving ? 'Entregando...' : saldoCargando ? 'Cargando saldo...' : 'Marcar entregado'}
               </button>
             </div>
           )}
@@ -840,7 +844,7 @@ export default function RutaEntregaDetalle() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onClick={() => setShowCobrarPrompt(false)}>
           <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-[15px] font-bold text-foreground">Saldo pendiente</h3>
+              <h3 className="text-[15px] font-bold text-foreground">¿Vas a cobrar?</h3>
               <button onClick={() => setShowCobrarPrompt(false)} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
             </div>
             <p className="text-[13px] text-muted-foreground">

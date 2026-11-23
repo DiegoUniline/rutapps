@@ -4,9 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Truck, ChevronRight, Package, MapPin, Navigation, CheckCircle2, XCircle } from 'lucide-react';
+import { ChevronRight, Package, MapPin, Navigation, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { fmtDate, cn, todayLocal } from '@/lib/utils';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
@@ -18,95 +17,77 @@ import { useClienteOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 type StatusFilter = 'todos' | 'pendientes' | 'hecho' | 'no_entregado';
 
 const statusMeta: Record<string, { label: string; className: string }> = {
-  cargado: { label: 'Cargado', className: 'border-warning text-warning' },
-  en_ruta: { label: 'En ruta', className: 'border-warning text-warning' },
-  hecho: { label: 'Entregado', className: 'border-green-600/60 text-green-600' },
-  no_entregado: { label: 'No entregado', className: 'border-destructive/60 text-destructive' },
+  cargado: { label: 'Cargado', className: 'text-warning' },
+  en_ruta: { label: 'En ruta', className: 'text-warning' },
+  hecho: { label: 'Entregado', className: 'text-emerald-600' },
+  no_entregado: { label: 'No entregado', className: 'text-destructive' },
 };
 
-function EntregaCard({ e, navigate, dimmed }: { e: any; navigate: (path: string) => void; dimmed?: boolean }) {
+function EntregaCard({ e, idx, navigate }: { e: any; idx: number; navigate: (path: string) => void }) {
   const esParcial = e.status === 'hecho' && (e._lineas ?? []).some((l: any) => {
     const ent = Number(l.cantidad_entregada ?? 0);
     const ped = Number(l.cantidad_pedida ?? 0);
     return ped > 0 && ent < ped;
   });
-  const baseMeta = statusMeta[e.status] ?? { label: e.status, className: 'border-border text-muted-foreground' };
-  const meta = esParcial
-    ? { label: 'Entregado parcial', className: 'border-amber-500/60 text-amber-600 dark:text-amber-400' }
-    : baseMeta;
+  const baseMeta = statusMeta[e.status] ?? { label: e.status, className: 'text-muted-foreground' };
+  const meta = esParcial ? { label: 'Parcial', className: 'text-amber-600 dark:text-amber-400' } : baseMeta;
+  const hecho = e.status === 'hecho';
+  const noEntregado = e.status === 'no_entregado';
   const hasGps = !!e._cliente?.gps_lat && !!e._cliente?.gps_lng;
+  const piezas = esParcial
+    ? `${e._totalEntregado}/${e._totalPedido} pza`
+    : `${e._totalPiezas} pza${e._totalPiezas !== 1 ? 's' : ''}`;
   const openMaps = (ev: React.MouseEvent) => {
     ev.stopPropagation();
-    const nombre = e._cliente?.nombre ?? '';
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${e._cliente.gps_lat},${e._cliente.gps_lng}&destination_place_id=${encodeURIComponent(nombre)}`,
-      '_blank'
-    );
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${e._cliente.gps_lat},${e._cliente.gps_lng}`, '_blank');
   };
+  const direccion = [e._cliente?.direccion, e._cliente?.colonia].filter(Boolean).join(', ');
   return (
     <div
+      role="button"
+      onClick={() => navigate(`/ruta/entregas/${e.id}`)}
       className={cn(
-        'w-full bg-card border border-border rounded-2xl overflow-hidden transition-transform',
-        dimmed && 'opacity-60'
+        'bg-card border rounded-xl px-2.5 py-2 active:bg-accent/50 transition-colors cursor-pointer',
+        hecho ? 'border-emerald-500/40 bg-emerald-500/5' : noEntregado ? 'border-destructive/30' : 'border-border'
       )}
     >
-      <button
-        onClick={() => navigate(`/ruta/entregas/${e.id}`)}
-        className="w-full text-left active:scale-[0.98] transition-transform"
-      >
-        <div className="p-4 space-y-2">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[11px] font-mono text-muted-foreground">{e.folio}</p>
-              <p className="text-[15px] font-semibold text-foreground">{e._cliente?.nombre ?? '—'}</p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Badge variant="outline" className={cn('text-[10px]', meta.className)}>
-                {meta.label}
-              </Badge>
-              <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
-            </div>
-          </div>
-
-
-          {(e._cliente?.direccion || e._cliente?.colonia) && (
-            <div className="flex items-start gap-1.5 text-[12px] text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              <span>{[e._cliente?.direccion, e._cliente?.colonia].filter(Boolean).join(', ')}</span>
-            </div>
-          )}
-
-          {e.status === 'no_entregado' && e.motivo_no_entrega && (
-            <div className="flex items-start gap-1.5 text-[11px] text-destructive">
-              <XCircle className="h-3 w-3 mt-0.5 shrink-0" />
-              <span className="font-medium">{e.motivo_no_entrega}</span>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] text-muted-foreground">
-              {e.status === 'hecho' && e.fecha_entrega
-                ? `Entregado ${fmtDate(e.fecha_entrega)}`
-                : fmtDate(e.fecha)}
-            </p>
-            <p className="text-[12px] font-medium text-foreground">
-              {esParcial
-                ? `${e._totalEntregado}/${e._totalPedido} pza · ${e._lineas.length} línea${e._lineas.length !== 1 ? 's' : ''}`
-                : `${e._totalPiezas} pza${e._totalPiezas !== 1 ? 's' : ''} · ${e._lineas.length} línea${e._lineas.length !== 1 ? 's' : ''}`}
-            </p>
-
-          </div>
+      <div className="flex items-center gap-2">
+        <div className={cn(
+          'w-7 h-7 rounded-md flex items-center justify-center shrink-0',
+          hecho ? 'bg-emerald-500 text-white' : noEntregado ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
+        )}>
+          {hecho ? <CheckCircle2 className="h-3.5 w-3.5" /> : noEntregado ? <XCircle className="h-3.5 w-3.5" /> : <span className="font-bold text-[11px]">{idx + 1}</span>}
         </div>
-      </button>
 
-      {hasGps && (
-        <button
-          onClick={openMaps}
-          className="w-full flex items-center justify-center gap-1.5 py-2 border-t border-border bg-brand-orange/10 text-brand-orange text-[12px] font-semibold active:bg-brand-orange/20"
-        >
-          <Navigation className="h-3.5 w-3.5" /> Navegar a este cliente
-        </button>
-      )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1">
+            <p className={cn('text-[13px] font-semibold truncate flex-1 min-w-0', hecho ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground')}>
+              {e._cliente?.nombre ?? '—'}
+            </p>
+            <span className="text-[10px] text-muted-foreground font-mono shrink-0">{e.folio}</span>
+          </div>
+          <p className="text-[11px] text-muted-foreground flex items-center gap-1 truncate leading-tight">
+            {direccion && <><MapPin className="h-2.5 w-2.5 shrink-0" /><span className="truncate">{direccion}</span><span className="shrink-0">·</span></>}
+            <span className="shrink-0">{piezas}</span>
+            <span className="shrink-0">·</span>
+            <span className={cn('shrink-0 font-medium', meta.className)}>{meta.label}</span>
+          </p>
+          {noEntregado && e.motivo_no_entrega && (
+            <p className="text-[10px] text-destructive truncate leading-tight">{e.motivo_no_entrega}</p>
+          )}
+        </div>
+
+        {hasGps && !hecho && (
+          <button
+            onClick={openMaps}
+            className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform shrink-0"
+            title="Navegar a este cliente"
+          >
+            <Navigation className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+      </div>
     </div>
   );
 }
@@ -120,7 +101,7 @@ export default function RutaEntregas() {
   const { vendedorId, desdeServidor } = useVendedorRutaVista();
   const today = todayLocal();
   const diaHoy = diaFromDate(today);
-  const [filter, setFilter] = useState<StatusFilter>('todos');
+  const [filter, setFilter] = useState<StatusFilter>('pendientes');
   // Zona universal: las entregas se filtran por la zona de su cliente.
   const { zona, setZona } = useZonaFiltroRuta();
   const { ordenMap } = useClienteOrdenRuta(vendedorId, diaHoy);
@@ -278,45 +259,50 @@ export default function RutaEntregas() {
   }, [entregas, filter, ordenMap]);
 
   const tabs: { key: StatusFilter; label: string; count: number }[] = [
-    { key: 'todos', label: 'Todas', count: counts.todos },
     { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
     { key: 'hecho', label: 'Entregadas', count: counts.hecho },
-    { key: 'no_entregado', label: 'No entregadas', count: counts.no_entregado },
+    { key: 'no_entregado', label: 'No entreg.', count: counts.no_entregado },
+    { key: 'todos', label: 'Todas', count: counts.todos },
   ];
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="px-4 pt-2 pb-4 space-y-2">
       <div className="flex items-center gap-2">
-        <Truck className="h-5 w-5 text-primary" />
         <h1 className="text-[18px] font-bold text-foreground">Entregas</h1>
         <Badge variant="secondary" className="text-[11px]">{counts.pendientes} pendientes</Badge>
         {paradasNavegablesHoy > 0 && (
-          <Button
-            size="sm"
-            className="ml-auto rounded-xl gap-1.5 text-[11px]"
+          <button
             onClick={() => navigate('/ruta/navegacion')}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
           >
             <Navigation className="h-3.5 w-3.5" /> Navegar
-          </Button>
+          </button>
         )}
       </div>
 
-      {/* Status filter chips */}
-      <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1">
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setFilter(t.key)}
-            className={cn(
-              'shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors',
-              filter === t.key
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-card text-muted-foreground border-border'
-            )}
-          >
-            {t.label} <span className="opacity-70">({t.count})</span>
-          </button>
-        ))}
+      <div className="flex gap-0.5 bg-accent rounded-lg p-[4px]">
+        {tabs.map(t => {
+          const activo = filter === t.key;
+          const verde = t.key === 'hecho';
+          return (
+            <button
+              key={t.key}
+              onClick={() => setFilter(t.key)}
+              className={cn(
+                'flex-1 py-1.5 rounded-md text-[11px] font-semibold transition-colors whitespace-nowrap',
+                activo ? (verde ? 'bg-emerald-600 text-white shadow-sm' : 'bg-primary text-primary-foreground shadow-sm') : 'text-muted-foreground'
+              )}
+            >
+              {t.label}
+              {t.key !== 'todos' && t.count > 0 && (
+                <span className={cn(
+                  'ml-0.5 text-[9px] px-1 py-px rounded-full font-bold',
+                  activo ? 'bg-white/20' : verde ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary/10 text-primary'
+                )}>{t.count}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {visible.length === 0 && (
@@ -333,8 +319,8 @@ export default function RutaEntregas() {
         </div>
       )}
 
-      {visible.map((e: any) => (
-        <EntregaCard key={e.id} e={e} navigate={navigate} dimmed={e.status === 'hecho' || e.status === 'no_entregado'} />
+      {visible.map((e: any, idx: number) => (
+        <EntregaCard key={e.id} e={e} idx={idx} navigate={navigate} />
       ))}
     </div>
   );
