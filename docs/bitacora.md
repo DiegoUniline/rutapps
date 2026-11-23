@@ -312,3 +312,4 @@
 2026-11-23 · desarrollador · Dashboard con filtro de vendedor: cobro cuenta para quien cobró (decisión del dueño; caso Multi $54 Omar/Ana). Ventas: «Pagado» solo cobros reales y «Al entregar» en pedidos D-034 sin entregar (caso PED-0250 Multi)
 2026-11-23 · desarrollador · CONFIRMO dar editar a Vendedor GT: role_permisos ventas.editar=true en rol «Vendedor» de GLOBAL TRADE LOGISTICS (4 usuarios); vuelve Editar y Convertir en móvil
 2026-11-23 · desarrollador · Editar venta: fecha de entrega y almacén editables (stock regresa al almacén anterior y sale del nuevo; bloqueado con entregas activas; lotes con existencia en el nuevo); migración 20261123080000 sin aplicar a prod; verificación local 12/12 · D-063
+2026-11-23 · desarrollador · CONFIRMO publicar editar venta: migración 20261123080000 aplicada; verificación en prod 12/12 (todo se deshizo) · D-063
