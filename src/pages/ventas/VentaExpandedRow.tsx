@@ -21,7 +21,7 @@ import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
 import { CerrarPedidoButton } from '@/components/venta/CerrarPedidoButton';
 import { usePermisos } from '@/hooks/usePermisos';
 
-import { saldoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
+import { saldoRealVenta, totalEfectivoVenta, pagadoRealVenta } from '@/lib/ventaCerrada';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
 import { VentaLineaLotesDialog } from '@/components/lotes/VentaLineaLotesDialog';
 
@@ -181,7 +181,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   // separado → Total. No cambia ningún dato guardado.
   const resumen = useMemo(() => computeResumenFromLineas(lineas), [lineas]);
   const totalReal = Number(venta.total) || 0;
-  const pagado = Math.max(0, totalEfectivoVenta(venta) - saldoRealVenta(venta));
+  const pagado = pagadoRealVenta(venta);
   const saldoPend = saldoRealVenta(venta);
 
   // Promociones aplicadas al carrito (para el badge por línea y la tarjeta).

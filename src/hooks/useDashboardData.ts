@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
-import { atribuirCobrosAVendedor, type DashboardCobroAplicacion } from '@/lib/dashboardCobros';
 import { fetchVentasRealizadas, fechaVentaRealizada } from '@/lib/ventasRealizadas';
 import { useAjusteVentasRealizadas } from '@/hooks/useAjusteVentasRealizadas';
 
@@ -122,7 +121,7 @@ export function useDashboardCobros(range: DateRange, vendedorId?: string) {
       const rows = await fetchAllPages((from, to) => {
         const q = supabase
           .from('cobros')
-          .select('id, fecha, monto, metodo_pago, cliente_id')
+          .select('id, fecha, monto, metodo_pago, cliente_id, user_id')
           .eq('empresa_id', empresa!.id)
           .neq('status', 'cancelado')
           .gte('fecha', fmt(range.from))
@@ -140,51 +139,20 @@ export function useDashboardCobros(range: DateRange, vendedorId?: string) {
 
       if (rows.length === 0) return [];
 
-      const cobroIds = rows.map((c: any) => c.id);
-      const aplicaciones: DashboardCobroAplicacion[] = [];
-      const batchSize = 200;
-
-      // Un cobro puede liquidar varias ventas, incluso de vendedores distintos.
-      // Se consulta el monto aplicado por venta para atribuir solo la fracción
-      // correspondiente al vendedor seleccionado y evitar duplicados.
-      for (let i = 0; i < cobroIds.length; i += batchSize) {
-        const batch = cobroIds.slice(i, i + batchSize);
-        const { data, error } = await supabase
-          .from('cobro_aplicaciones')
-          .select('cobro_id, monto_aplicado, ventas!inner(vendedor_id, status)')
-          .in('cobro_id', batch);
-        if (error) throw error;
-        aplicaciones.push(...((data ?? []) as unknown as DashboardCobroAplicacion[]));
-      }
-
-      const cobrosConAplicacion = new Set(aplicaciones.map((a) => a.cobro_id));
-      const clienteIdsSinAplicacion = Array.from(new Set(
-        rows
-          .filter((c: any) => !cobrosConAplicacion.has(c.id))
-          .map((c: any) => c.cliente_id)
-          .filter(Boolean),
-      )) as string[];
-
-      const clienteVendedorMap = new Map<string, string | null>();
-      for (let i = 0; i < clienteIdsSinAplicacion.length; i += 500) {
-        const batch = clienteIdsSinAplicacion.slice(i, i + 500);
-        const { data, error } = await supabase
-          .from('clientes')
-          .select('id, vendedor_id')
-          .eq('empresa_id', empresa!.id)
-          .in('id', batch);
-        if (error) throw error;
-        for (const cliente of data ?? []) {
-          clienteVendedorMap.set(cliente.id, cliente.vendedor_id);
-        }
-      }
-
-      return atribuirCobrosAVendedor(
-        rows as any[],
-        vendedorId,
-        aplicaciones,
-        clienteVendedorMap,
-      );
+      // Decisión del dueño (2026-11-23): con filtro de vendedor, el cobro cuenta para QUIEN
+      // COBRÓ (cobros.user_id del perfil elegido), igual que el resumen móvil y la lista de
+      // cobros. Antes se atribuía al vendedor de la venta cobrada.
+      const { data: perfil, error: perfilErr } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('id', vendedorId)
+        .eq('empresa_id', empresa!.id)
+        .maybeSingle();
+      if (perfilErr) throw perfilErr;
+      const userId = (perfil as { user_id?: string | null } | null)?.user_id;
+      if (!userId) return [];
+      const delVendedor = (rows as any[]).filter((c) => c.user_id === userId);
+      return filtrarCobrosDeVentasCanceladas(delVendedor);
     },
   });
 }
