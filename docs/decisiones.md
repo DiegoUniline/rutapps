@@ -420,3 +420,4 @@
 - **Pruebas:** `src/test/convertirPedidoD062.test.ts`; `docs/sql/2026-11-23_verificar_d062.sql` 7/7 en Postgres local con todas las migraciones (descuenta una vez, repetir no duplica, con entrega falla, borrador con entrega cancelada sí, almacén y usuario de otra empresa fallan, sin permiso falla).
 - **Pendiente:** aplicar la migración en producción (`CONFIRMO`) y regenerar `types.ts`. ❓ La venta convertida conserva la `fecha` del pedido: con D-060 cuenta en Ventas/Utilidad en la fecha en que se levantó el pedido, no en la de la conversión (decisión del dueño si debe ser la de hoy).
 
+- **Fecha al convertir (2026-11-23, decisión del dueño «Fecha del pedido»):** la venta convertida conserva la fecha del pedido; cuenta en Ventas/Utilidad y en el kardex con esa fecha.
