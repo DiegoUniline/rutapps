@@ -388,3 +388,8 @@
 - **Decisión:** la purga diaria del GPS (`purge_old_gps_history`, 03:00 UTC, 30 días por `recorded_at`) vuelve a correr; antes de habilitarla se respaldó todo lo anterior a 29 días en `vendedor_ubicaciones_historial_archivo` (221,000 filas; solo service_role). El archivo NO se purga y no recibe copias nuevas: es un respaldo único del histórico 17-abr → 25-oct-2026.
 - **Fase 3 publicada:** idempotencia en las llamadas de Stripe que cobran (`_shared/stripeIdempotency.ts`, catálogo en `docs/04-FLUJOS-DE-NEGOCIO.md` § 10.1), `wa_clientes_saldos` con `p_empresa`, listas sin «Todos» (máx. 500; exportar Clientes/Productos trae todo lo filtrado). `billing-cycle`, `admin-billing`, `select-plan`, `create-trial-checkout` y `wa-scheduler-alertas-semanal` pasan a `supabase/config.toml` (se publican al subir a main).
 - **Verificado:** `docs/sql/2026-11-23_verificar_fase3.sql` en producción 6/6 (todo se deshizo).
+
+## D-059
+- **Fecha:** 2026-11-23 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («se estaban marcando entregas automáticamente y no debe de ser así, tienen que picarle y ahí dice cobrar o no»)
+- **Decisión:** una entrega solo pasa a «Entregado» cuando el repartidor toca «Marcar entregado» (o la acción masiva explícita de Demanda). Se quitó: (1) el marcado automático al abrir el detalle de una entrega pagada/no crédito (`RutaEntregaDetalle.tsx`) y (2) el marcado al cobrar un pedido o una cuenta pendiente hasta dejarla en cero (`useVentaDetalle.ts`).
+- **Al tocar:** el botón espera a que cargue el saldo; con saldo pendiente pregunta «¿Vas a cobrar?» (Entregar y cobrar / Solo entregar); sin saldo entrega directo. Pruebas: `src/test/rutaEntregaPreguntaCobro.test.ts`.

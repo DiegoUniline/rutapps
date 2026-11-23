@@ -19,7 +19,6 @@ import { isBluetoothAvailable, connectPrinter, sendBytes } from '@/lib/bluetooth
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import type { View, CuentaPendiente, EditLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
-import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 import { useSaldoFavor } from '@/hooks/useSaldoFavor';
 import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { resolveProductPricing, type ProductForPricing, type TarifaLineaRule } from '@/lib/priceResolver';
@@ -695,30 +694,7 @@ export function useVentaDetalle() {
         import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroId, empresa.id));
       }
 
-      const ventasLiquidadas = [
-        ...(montoAplicarActual > 0 && roundMoney(saldoActual - montoAplicarActual) <= 0.01 ? [venta.id] : []),
-        ...cuentasPendientes
-          .filter(cuenta => cuenta.montoAplicar > 0 && roundMoney(cuenta.saldo_pendiente - cuenta.montoAplicar) <= 0.01)
-          .map(cuenta => cuenta.id),
-      ];
-
-      if (online) {
-        for (const ventaId of ventasLiquidadas) {
-          const { data: entregasVenta, error: entregasErr } = await supabase
-            .from('entregas')
-            .select('id, status')
-            .eq('pedido_id', ventaId)
-            .limit(10);
-          if (entregasErr) throw entregasErr;
-
-          const entregasPendientes = (entregasVenta ?? []).filter((entrega: any) => ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(entrega.status));
-          if (entregasPendientes.length === 1) {
-            await marcarEntregaHechaYSincronizarPedido(entregasPendientes[0].id, ventaId);
-          } else if ((entregasVenta ?? []).length > 0 && entregasPendientes.length === 0) {
-            await marcarEntregaHechaYSincronizarPedido((entregasVenta ?? [])[0].id, ventaId);
-          }
-        }
-      }
+      // Cobrar no marca entregas: solo se entrega cuando el repartidor toca «Marcar entregado».
 
       setTicketData({ monto: roundMoney(totalACobrar), cambio: roundMoney(cambio), metodo: metodoPago, folio: venta.folio ?? 'Sin folio', fecha: new Date().toLocaleString('es-MX'), aplicaciones: ticketApps });
       setView('ticket');

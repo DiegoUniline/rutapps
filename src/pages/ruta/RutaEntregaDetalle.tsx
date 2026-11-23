@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { AjustarEntregaDialog } from '@/components/entregas/AjustarEntregaDialog';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -165,32 +165,8 @@ export default function RutaEntregaDetalle() {
     },
   });
 
-  // Auto-marcar como entregado si la venta ya fue cobrada totalmente
-  const autoMarkedRef = useRef(false);
-  useEffect(() => {
-    if (!entrega || !venta || autoMarkedRef.current) return;
-    const status = (entrega as any).status;
-    const saldo = (venta as any).saldo_pendiente ?? 0;
-    const condicion = (venta as any).condicion_pago;
-    // Solo auto-marcar si está en estados activos de ruta y saldo está en 0 (contado/pagado)
-    if (navigator.onLine && saldo <= 0 && condicion !== 'credito' && ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(status)) {
-      autoMarkedRef.current = true;
-      const now = new Date().toISOString();
-      marcarEntregaHechaYSincronizarPedido(id!, pedidoId, now)
-        .then(() => {
-          toast.success('Entrega marcada como entregada automáticamente');
-          queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
-          queryClient.invalidateQueries({ queryKey: ['entregas'] });
-          queryClient.invalidateQueries({ queryKey: ['entregas-list'] });
-          queryClient.invalidateQueries({ queryKey: ['venta', pedidoId] });
-          queryClient.invalidateQueries({ queryKey: ['ventas'] });
-          queryClient.invalidateQueries({ queryKey: ['logistica-pedidos'] });
-        })
-        .catch(() => {
-          autoMarkedRef.current = false;
-        });
-    }
-  }, [entrega, venta, id, pedidoId, queryClient]);
+  // Ya no se marca la entrega sola al abrirla (aunque esté pagada): el repartidor toca
+  // «Marcar entregado» y ahí se pregunta si cobra.
 
 
   if (isLoading) return <div className="min-h-[100dvh] bg-background flex items-center justify-center"><p className="text-muted-foreground text-[13px]">Cargando...</p></div>;

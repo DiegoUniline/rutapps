@@ -16,3 +16,18 @@ describe('ruta: entregar espera el saldo antes de preguntar el cobro', () => {
     expect(src).toContain('Solo entregar (cobrar después)');
   });
 });
+
+// Ninguna entrega se marca sola: ni al abrirla pagada ni al cobrar el pedido.
+describe('ruta: la entrega solo se marca al tocar «Marcar entregado»', () => {
+  const det = readFileSync('src/pages/ruta/RutaEntregaDetalle.tsx', 'utf8');
+  const cobro = readFileSync('src/pages/ruta/RutaVentaDetalle/useVentaDetalle.ts', 'utf8');
+  it('abrir el detalle no la marca', () => {
+    expect(det).not.toContain('autoMarkedRef');
+    expect(det).not.toContain('marcada como entregada automáticamente');
+    expect(det.match(/marcarEntregaHechaYSincronizarPedido\(/g)?.length).toBe(1);
+  });
+  it('cobrar no la marca', () => {
+    expect(cobro).not.toContain('marcarEntregaHechaYSincronizarPedido');
+    expect(cobro).not.toContain('ventasLiquidadas');
+  });
+});

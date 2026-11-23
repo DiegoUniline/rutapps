@@ -296,3 +296,4 @@
 2026-11-23 · desarrollador · CONFIRMO fase 3: migración purga GPS + respaldo (221,000 filas) aplicada, 11 funciones publicadas, verificación 6/6 · D-058
 2026-11-23 · desarrollador · CONFIRMO escalonar crons: billing-cycle 15:05 y create-invoice-reminder 15:10 UTC (daily-billing 15:00) · D-057
 2026-11-23 · desarrollador · Móvil: llave de Maps cargada (get-maps-key 200); lista de entregas estilo Clientes; entregar espera saldo y pregunta «¿Vas a cobrar?»
+2026-11-23 · desarrollador · Entregas ya no se marcan solas (al abrir ni al cobrar); solo al tocar «Marcar entregado» · D-059
