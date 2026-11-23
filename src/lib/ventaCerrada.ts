@@ -74,6 +74,17 @@ export function sumCobrosActivos(v: any): number {
   return s;
 }
 
+/** D-034: pedido que se cobra por lo entregado (su saldo lo calcula la BD sobre lo entregado). */
+export function esPedidoCobroAlEntregar(v: any): boolean {
+  return v?.tipo === 'pedido' && v?.politica_cobro === 'entregado' && !isCerradaParcial(v) && v?.status !== 'cancelado';
+}
+
+/** Pedido D-034 todavía no entregado y sin pagar completo: se cobra al entregar. */
+export function porCobrarAlEntregar(v: any): number {
+  if (!esPedidoCobroAlEntregar(v) || v?.status === 'entregado' || v?.status === 'facturado') return 0;
+  return Math.max(0, Math.round((totalEfectivoVenta(v) - sumCobrosActivos(v)) * 100) / 100);
+}
+
 /**
  * Saldo "real" para mostrar en listas: Total efectivo − cobros activos.
  * Nunca negativo. Prefiere esto sobre `venta.saldo_pendiente` cuando la venta

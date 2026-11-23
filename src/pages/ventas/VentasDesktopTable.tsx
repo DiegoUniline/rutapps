@@ -7,7 +7,7 @@ import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { VentaExpandedRow } from './VentaExpandedRow';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import { useSortableTable, SortableTh, type SortState } from '@/hooks/useSortableTable';
-import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel, saldoRealVenta } from '@/lib/ventaCerrada';
+import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel, saldoRealVenta, pagadoRealVenta, porCobrarAlEntregar } from '@/lib/ventaCerrada';
 import { isVentaEntregadaParcial } from '@/lib/ventaEntregaParcial';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
 
@@ -94,7 +94,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     if (k === 'descuento') return resById[r.id]?.descuento ?? 0;
     if (k === 'iva') return resById[r.id]?.impuestos ?? 0;
     if (k === 'saldo') return saldoRealVenta(r);
-    if (k === 'pagado') return Math.max(0, totalEfectivoVenta(r) - saldoRealVenta(r));
+    if (k === 'pagado') return pagadoRealVenta(r);
     return r?.[k];
   });
   const sort = ordenServidor ? ordenServidor.sort : enMemoria.sort;
@@ -220,7 +220,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 )}
 
                 {v('pagado') && (() => {
-                  const pagado = Math.max(0, totalEfectivoVenta(row) - saldoRealVenta(row));
+                  const pagado = pagadoRealVenta(row);
                   return (
                     <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums">
                       {pagado > 0 ? (
@@ -233,10 +233,13 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 })()}
                 {v('saldo') && (() => {
                   const saldo = saldoRealVenta(row);
+                  const alEntregar = porCobrarAlEntregar(row);
                   return (
                     <td className="py-2 px-3 text-right hidden 2xl:table-cell tabular-nums">
                       {saldo > 0 ? (
                         <span className="text-warning font-medium">{fmt(saldo)}</span>
+                      ) : alEntregar > 0 ? (
+                        <span className="text-muted-foreground" title="Pedido sin entregar: se cobra al entregar">Al entregar {fmt(alEntregar)}</span>
                       ) : (
                         <span className="text-muted-foreground">$0.00</span>
                       )}
@@ -289,7 +292,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
         const totIva = items.reduce((s: number, r: any) => s + (resById[r.id]?.impuestos ?? 0), 0);
         const totTotal = items.reduce((s: number, r: any) => s + totalEfectivoVenta(r), 0);
         const totSaldo = items.reduce((s: number, r: any) => s + saldoRealVenta(r), 0);
-        const totPagado = items.reduce((s: number, r: any) => s + Math.max(0, totalEfectivoVenta(r) - saldoRealVenta(r)), 0);
+        const totPagado = items.reduce((s: number, r: any) => s + pagadoRealVenta(r), 0);
         return (
           <tfoot>
             <tr className="bg-card border-t border-border font-semibold text-[12px]">

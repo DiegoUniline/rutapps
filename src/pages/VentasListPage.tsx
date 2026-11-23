@@ -34,7 +34,7 @@ import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { mergePdfBlobs } from '@/lib/mergePdfs';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { usePinAuth } from '@/hooks/usePinAuth';
-import { totalEfectivoVenta, saldoRealVenta } from '@/lib/ventaCerrada';
+import { totalEfectivoVenta, saldoRealVenta, pagadoRealVenta } from '@/lib/ventaCerrada';
 import { computeResumenFromLineas } from '@/lib/ventaResumen';
 import { BulkCerrarPedidosDialog } from '@/components/venta/BulkCerrarPedidosDialog';
 
@@ -426,7 +426,7 @@ export default function VentasListPage() {
   // Cantidad neta (vendido − devuelto): de la vista en el resumen, de las partidas en la página.
   const cantidadResumen = Math.round(resumenSource.reduce((s, v: any) => s + cantidadNetaVenta(v), 0) * 1000) / 1000;
   const cantidadPagina = Math.round(ventas.reduce((s, v: any) => s + cantidadNetaVenta(v), 0) * 1000) / 1000;
-  const totalPagado = resumenSource.reduce((s, v: any) => s + Math.max(0, totalEfectivoVenta(v) - saldoRealVenta(v)), 0);
+  const totalPagado = resumenSource.reduce((s, v: any) => s + pagadoRealVenta(v), 0);
   // Vista Productos: totales de todo el filtro (fallback a la página al agrupar/cargar).
   const totalLineas = (!groupBy && lineasResumenAll) ? lineasResumenAll.total : productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
   const totalCantidad = (!groupBy && lineasResumenAll) ? lineasResumenAll.cantidad : productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
@@ -441,7 +441,7 @@ export default function VentasListPage() {
     const desc = Math.max(lineDesc, promo, Number(v.descuento_total) || 0);
     const teff = totalEfectivoVenta(v); const sal = saldoRealVenta(v);
     acc.subtotal += grav + desc; acc.descuento += desc; acc.impuestos += imp;
-    acc.total += teff; acc.pagado += Math.max(0, teff - sal); acc.saldo += sal;
+    acc.total += teff; acc.pagado += pagadoRealVenta(v); acc.saldo += sal;
     return acc;
   }, { subtotal: 0, descuento: 0, impuestos: 0, total: 0, pagado: 0, saldo: 0 });
   const pageProdTotal = productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
