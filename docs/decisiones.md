@@ -356,4 +356,4 @@
 - **Fecha:** 2026-11-22 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («openpay elimina todo lo que exista, no se usa para nada» · `CONFIRMO borrar openpay`)
 - **Decisión:** se quita Openpay del sistema: edge functions `openpay` y `openpay-public`, pestaña «Cobros» del Super Admin (`AdminCobrosTab`) y el pago con tarjeta Openpay de `/pagar/:token` (queda solo el link corto de factura Stripe `/pagar/in_...`). No se cargan `OPENPAY_*` ni su webhook en el proyecto nuevo.
 - **BD:** se borra la tabla `payment_links` (0 filas en destino, sin dependencias; migración `20261122010000_quitar_openpay.sql`); `recargar-datos.sh` omite sus datos del backup de Lovable.
-- **Pendiente fuera del repo:** borrar las funciones ya publicadas `openpay` y `openpay-public` en `amybkerwkybffllaxpnz`.
+- **Funciones publicadas:** `openpay` y `openpay-public` en `amybkerwkybffllaxpnz` reemplazadas 2026-11-23 por una versión que solo responde 410 (no hay forma de borrarlas desde el entorno de desarrollo). Borrado definitivo opcional: Supabase → Edge Functions → la función → Delete.
