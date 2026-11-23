@@ -110,7 +110,9 @@ awk '
   t && /^\);/ { t = ""; next }
   t && /^    CONSTRAINT / { print t "." limpia($2); next }
   /^ALTER TABLE (ONLY )?public\./ { a = ($3 == "ONLY") ? $4 : $3; a = limpia(a); next }
-  a && /^    ADD CONSTRAINT / { print a "." limpia($3); a = ""; next }
+  # Los NOT VALID del backup no se cumplen en filas viejas: se tratan como nuevos (se quitan
+  # para el COPY y se reponen NOT VALID, igual que en el origen).
+  a && /^    ADD CONSTRAINT / { if ($0 !~ / NOT VALID;$/) print a "." limpia($3); a = ""; next }
   /^CREATE (UNIQUE )?INDEX / {
     i = ($2 == "UNIQUE") ? $4 : $3
     for (k = 1; k <= NF; k++) if ($k == "ON") { tb = ($(k+1) == "ONLY") ? $(k+2) : $(k+1); break }
