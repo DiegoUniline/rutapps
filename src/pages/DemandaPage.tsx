@@ -998,7 +998,6 @@ export default function DemandaPage() {
                   <SelectItem value="100">100</SelectItem>
                   <SelectItem value="200">200</SelectItem>
                   <SelectItem value="500">500</SelectItem>
-                  <SelectItem value="0">Todo</SelectItem>
                 </SelectContent>
               </Select>
               {showAll && <span className="text-[10px] text-amber-600">Puede tardar más</span>}
