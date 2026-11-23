@@ -6,7 +6,7 @@ Repo: `DiegoUniline/rutapps` (desconectado de Lovable el 2026-11-16).
 ## Estado (2026-11-19)
 | Pieza | Estado |
 |---|---|
-| Esquema ✅ · datos: base de PRUEBA limpia 2026-11-19 (2 empresas, sin transacciones); el corte recarga todo con `recargar-datos.sh` | ✅ |
+| Datos | ✅ CARGADOS 2026-11-23 (recargar-datos.sh --ejecutar, backup rutapps_261123): 409 usuarios, 262 empresas, 82,285 ventas, 21,167 clientes, 22,961 productos, 587,813 movimientos; última venta 2026-11-23 00:41 UTC |
 | 76 edge functions | ✅ (rama `claude/ecstatic-bohr-9mairg`) |
 | Secrets internos (SITE_URL, CRON_SECRET, TIENDA_JWT_SECRET, BILLING_BRIDGE_INTERNAL_SECRET) | ✅ |
 | IA → Gemini, correo → Resend, front sin ref fijo | ✅ código |
