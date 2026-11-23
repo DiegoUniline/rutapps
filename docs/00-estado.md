@@ -12,6 +12,7 @@
 - **Siguiente paso exacto:** corte HOY 2026-11-22 (D-018) y correr el ensayo de `recargar-datos.sh` con el backup fresco de Lovable; datos viejos sin corregir ([D-052](./decisiones.md#d-052)). Orden A→Z por columna: terminado en todas las listas (incl. Entregas, Demanda, Concentrado y MinMax, 2026-11-22). Después: revisión del dueño de F1/F2, F3 y D-051.
 
 ## Decisiones recientes (últimas 10)
+- [D-054](./decisiones.md#d-054) 2026-11-23 · WhatsApp: sin Evolution ni WhatsAPI en el corte; se rehará con Zernio (módulo nuevo).
 - [D-053](./decisiones.md#d-053) 2026-11-22 · Openpay eliminado (funciones, pestaña Cobros del Super Admin, pago Openpay en /pagar, tabla `payment_links`).
 - [D-052](./decisiones.md#d-052) 2026-11-21 · Corte: lo histórico de Lovable se queda como está (sin recalcular pedidos ni inventario, sin corregir duplicados ni devoluciones ≤ 0).
 - [D-049](./decisiones.md#d-049) 2026-11-21 · Implementación F1+F2 devoluciones: destino Vendible/Merma por renglón, precio de lista del cliente, «Aplicar a la venta», sin «Al almacén», reposición sale del camión, cancelar devolución con motivo revierte todo, cancelar la venta no la cancela.

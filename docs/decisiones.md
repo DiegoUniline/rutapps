@@ -357,3 +357,9 @@
 - **Decisión:** se quita Openpay del sistema: edge functions `openpay` y `openpay-public`, pestaña «Cobros» del Super Admin (`AdminCobrosTab`) y el pago con tarjeta Openpay de `/pagar/:token` (queda solo el link corto de factura Stripe `/pagar/in_...`). No se cargan `OPENPAY_*` ni su webhook en el proyecto nuevo.
 - **BD:** se borra la tabla `payment_links` (0 filas en destino, sin dependencias; migración `20261122010000_quitar_openpay.sql`); `recargar-datos.sh` omite sus datos del backup de Lovable.
 - **Funciones publicadas:** `openpay` y `openpay-public` en `amybkerwkybffllaxpnz` reemplazadas 2026-11-23 por una versión que solo responde 410 (no hay forma de borrarlas desde el entorno de desarrollo). Borrado definitivo opcional: Supabase → Edge Functions → la función → Delete.
+
+## D-054
+- **Fecha:** 2026-11-23 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («ya no usamos evolution para nada, todo será con zernio» · «hagámoslo desde cero, ya no usamos el token, ahora crean su cuenta directo»)
+- **Decisión:** en el corte no se cargan `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `WHATSAPI_GLOBAL_TOKEN`, `WHATSAPP_OTP_TOKEN` ni `ADMIN_WHATSAPP_TOKEN`. WhatsApp se rehace con Zernio (cada empresa conecta su propia cuenta) como **módulo nuevo** (requiere diseño y `APROBADO R<n>`).
+- **Impacto mientras no exista Zernio:** sin bot, bienvenida, mensajes programados, campañas, avisos de cobro por WhatsApp ni «Reenviar OTP» de Registros incompletos. El registro de cuentas NO depende de WhatsApp (`SignupPage.tsx`: `isVerified` no se usa).
+- **Pendiente:** quitar el código de Evolution/WhatsAPI cuando se construya Zernio.
