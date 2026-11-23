@@ -13,6 +13,12 @@ export interface SyncQueueItem {
   retries: number;
   lastError?: string;
   lastAttemptAt?: number;
+  /**
+   * Versión del elemento: sube cada vez que se vuelve a encolar la misma fila (merge de
+   * cambios). Si cambia mientras se está subiendo, al terminar NO se borra: se vuelve a
+   * subir con lo último (antes el segundo cambio se perdía).
+   */
+  rev?: number;
 }
 
 

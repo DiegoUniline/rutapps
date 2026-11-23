@@ -2,16 +2,57 @@ import { offlineDb, type SyncQueueItem, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
 import { markAsSynced } from './syncVerify';
 import { isDataSaverEnabled } from './dataSaver';
-import { backupSyncQueueToStorage, clearStorageBackup } from './offlineBackup';
+import { backupSyncQueueToStorage } from './offlineBackup';
 import { hasRealConnection } from './connectivity';
 import { classifySyncError } from './syncErrorClassify';
 import { mergeLocalRow } from './localRowMerge';
 import { EVENTO_DATOS_LOCALES } from './refresco/eventos';
 import { esCantidadDevolucionValida, sanearDevolucionLinea } from './devolucionGuardado';
+import { asegurarSesionParaSubir, type EstadoSesion } from './syncSesion';
+import { copiasLocalesDeRpc, COLA_REGISTRAR_VENTA_RUTA } from './pendientesLocales';
+import { captureAppError } from './observability';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
-let activeProcessPromise: Promise<{ success: number; failed: number }> | null = null;
+let activeProcessPromise: Promise<SyncPassResult> | null = null;
+
+export interface SyncPassResult {
+  success: number;
+  failed: number;
+  /** La sesión venció y no se pudo renovar: no se subió nada y la cola quedó intacta. */
+  authRequired?: boolean;
+}
+
+/**
+ * Evento de ventana con el estado visible de la sincronización (para el vendedor, no solo
+ * la consola). `detail`: { tipo: 'sesion_vencida' | 'fallido' | 'error', mensaje, tabla? }.
+ */
+export const EVENTO_SYNC_ESTADO = 'uniline:sync-estado';
+export type DetalleSyncEstado = {
+  tipo: 'sesion_vencida' | 'fallido' | 'error';
+  mensaje: string;
+  tabla?: string;
+};
+
+function avisarEstado(detalle: DetalleSyncEstado) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<DetalleSyncEstado>(EVENTO_SYNC_ESTADO, { detail: detalle }));
+}
+
+/** Error de una subida automática (en segundo plano): se avisa y se reporta, nunca se calla. */
+function reportarErrorDeFondo(err: unknown) {
+  captureAppError(err, { origen: 'syncQueue.autoSync' });
+  avisarEstado({ tipo: 'error', mensaje: err instanceof Error ? err.message : 'No se pudo sincronizar' });
+}
+
+/** Deja el respaldo de localStorage igual que la cola (sin lo ya subido ni lo descartado). */
+async function respaldarCola() {
+  try {
+    await backupSyncQueueToStorage();
+  } catch (err) {
+    captureAppError(err, { origen: 'syncQueue.respaldarCola' });
+  }
+}
 
 type QueuedOperation = {
   /** Para 'rpc', `table` es `rpc:<función>` y `data` sus argumentos. */
@@ -69,6 +110,14 @@ export async function queueOperations(operations: QueuedOperation[]) {
   for (const op of operations) {
     const localTable = getOfflineTable(op.table);
     if (localTable) txTables.add(localTable);
+    // Una RPC (p. ej. la venta de ruta completa) deja su copia local en varias tablas, en la
+    // MISMA transacción que la cola: o queda todo (cola + copia) o nada.
+    if (op.operation === 'rpc') {
+      for (const copia of copiasLocalesDeRpc(op.table, op.data)) {
+        const t = getOfflineTable(copia.tabla);
+        if (t) txTables.add(t);
+      }
+    }
   }
 
   await offlineDb.transaction('rw', Array.from(txTables), async () => {
@@ -79,6 +128,13 @@ export async function queueOperations(operations: QueuedOperation[]) {
       // primera fila; así re-guardar la misma venta reemplaza su lote de líneas.
       const keyValue = isMany ? (Array.isArray(op.data) && op.data.length ? op.data[0]?.[keyField] : undefined) : valorClave(op.data, keyField);
       const localTable = getOfflineTable(op.table);
+
+      if (op.operation === 'rpc') {
+        for (const copia of copiasLocalesDeRpc(op.table, op.data)) {
+          const t = getOfflineTable(copia.tabla);
+          if (t && copia.filas.length > 0) await t.bulkPut(copia.filas);
+        }
+      }
 
       if (localTable) {
         if (op.operation === 'delete') await localTable.delete(keyValue);
@@ -97,7 +153,17 @@ export async function queueOperations(operations: QueuedOperation[]) {
         .filter(item => item.keyValue === keyValue && item.operation === op.operation)
         .first();
       if (existing && existing.id) {
-        await offlineDb.syncQueue.update(existing.id, { data: op.data, createdAt: Date.now(), retries: 0 });
+        // Dos cambios parciales a la misma fila se COMBINAN (antes el segundo borraba al
+        // primero: p. ej. {cliente_id} y luego {status}). Altas/RPC/lotes: manda lo último.
+        const data = op.operation === 'update'
+          ? { ...(existing.data ?? {}), ...(op.data ?? {}) }
+          : op.data;
+        await offlineDb.syncQueue.update(existing.id, {
+          data,
+          createdAt: Date.now(),
+          retries: 0,
+          rev: (existing.rev ?? 0) + 1,
+        });
       } else {
         await offlineDb.syncQueue.add({
           table: op.table,
@@ -107,15 +173,20 @@ export async function queueOperations(operations: QueuedOperation[]) {
           keyValue,
           createdAt: Date.now(),
           retries: 0,
+          rev: 0,
         });
       }
     }
   });
 
+  // El respaldo de localStorage refleja la cola al momento (no cada 30 s).
+  await respaldarCola();
+
   // Las pantallas que leen estas tablas de IndexedDB (useOfflineQuery) re-leen la copia local
   // al instante: lo recién guardado se ve sin esperar a sincronizar (útil sin señal).
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(EVENTO_DATOS_LOCALES, { detail: { tablas: [...new Set(operations.map(o => o.table))] } }));
+    const tablas = operations.flatMap(o => [o.table, ...(o.operation === 'rpc' ? copiasLocalesDeRpc(o.table, o.data).map(c => c.tabla) : [])]);
+    window.dispatchEvent(new CustomEvent(EVENTO_DATOS_LOCALES, { detail: { tablas: [...new Set(tablas)] } }));
   }
 
   // Try to sync immediately if online AND auto-sync is enabled AND data saver is off
@@ -123,13 +194,13 @@ export async function queueOperations(operations: QueuedOperation[]) {
   const autoSyncEnabled = autoSync === null ? true : autoSync === 'true';
   if (autoSyncEnabled && !isDataSaverEnabled()) {
     hasRealConnection().then(online => {
-      if (online) processSyncQueue().catch(console.warn);
-    }).catch(console.warn);
+      if (online) processSyncQueue().catch(reportarErrorDeFondo);
+    }).catch(reportarErrorDeFondo);
   }
 }
 
 // Process all pending items in the sync queue
-export async function processSyncQueue(): Promise<{ success: number; failed: number }> {
+export async function processSyncQueue(): Promise<SyncPassResult> {
   if (activeProcessPromise) return activeProcessPromise;
 
   // Candado ENTRE PESTAÑAS: si el vendedor tiene 2 pestañas/instancias abiertas,
@@ -178,20 +249,32 @@ const TABLE_PRIORITY: Record<string, number> = {
   // Devolución completa (D-049): después de la venta, sus renglones, cobros y aplicaciones
   // (la nota aplicada a la venta se topa al saldo que deja el pago de contado).
   'rpc:registrar_devolucion': 26,
+  // Venta de ruta completa (bandera ruta_venta_rpc): después de clientes/cargas creados sin
+  // señal (padres), antes de la devolución de esa venta y de su visita.
+  [COLA_REGISTRAR_VENTA_RUTA]: 12,
 };
 
 function priorityOf(table: string): number {
   return TABLE_PRIORITY[table] ?? 50;
 }
 
-async function processSyncQueueInternal(): Promise<{ success: number; failed: number }> {
+async function processSyncQueueInternal(): Promise<SyncPassResult> {
   // Backup before processing as safety net
-  await backupSyncQueueToStorage();
+  await respaldarCola();
+
+  // Sesión vencida tras horas sin red: renovarla ANTES de subir. Si no se puede, no se
+  // toca la cola (no se gastan intentos) y se pide iniciar sesión.
+  if ((await offlineDb.syncQueue.count()) === 0) return { success: 0, failed: 0 };
+  const sesion = await asegurarSesion();
+  if (sesion === 'vencida') return { success: 0, failed: 0, authRequired: true };
+  if (sesion === 'sin_red') return { success: 0, failed: 0 };
 
   let success = 0;
   let failed = 0;
+  let detenerPasada = false;
+  let authRequired = false;
 
-  const runItem = async (item: SyncQueueItem) => {
+  const runItem = async (item: SyncQueueItem, reintentoTrasSesion = false): Promise<{ handled: boolean }> => {
     // Skip items that have exceeded max retries recently (backoff)
     if (item.retries > 0) {
       const delay = getRetryDelay(item.retries);
@@ -201,23 +284,40 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
 
     try {
       await processItem(item);
-      await offlineDb.syncQueue.delete(item.id!);
+      // Si mientras subía se volvió a encolar la misma fila (rev distinta), NO se borra:
+      // queda para la siguiente vuelta con el cambio combinado.
+      const borrado = await offlineDb.transaction('rw', offlineDb.syncQueue, async () => {
+        const actual = await offlineDb.syncQueue.get(item.id!);
+        if (actual && (actual.rev ?? 0) !== (item.rev ?? 0)) return false;
+        await offlineDb.syncQueue.delete(item.id!);
+        return true;
+      });
+      if (borrado) await respaldarCola();
       if (item.keyValue) markAsSynced(item.table, item.keyValue);
       success++;
       return { handled: true };
     } catch (err: any) {
-      console.error(`Sync failed for ${item.table}/${item.operation}:`, err);
-
-      const isConflict = err?.code === '23505';
       const newRetries = (item.retries ?? 0) + 1;
       const errorMsg = (err?.message || err?.error_description || String(err)).slice(0, 300);
 
-      if (isConflict && item.operation === 'insert') {
-        console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
-      }
-
       // Decisión centralizada en una función PURA (testeada en syncQueueClassify.test.ts).
       const action = classifySyncError({ err, table: item.table, newRetries, maxRetries: MAX_RETRIES });
+
+      if (action === 'auth') {
+        // El token venció a la mitad: renovar y reintentar UNA vez este elemento. Si no se
+        // puede, se detiene la pasada SIN gastar intentos (la cola queda intacta).
+        if (!reintentoTrasSesion) {
+          const estado = await asegurarSesion(true);
+          if (estado === 'ok') return runItem(item, true);
+          if (estado === 'vencida') authRequired = true;
+        } else {
+          authRequired = true;
+          avisarSesionVencida();
+        }
+        await offlineDb.syncQueue.update(item.id!, { lastError: errorMsg, lastAttemptAt: Date.now() });
+        detenerPasada = true;
+        return { handled: false };
+      }
 
       if (action === 'transient') {
         // Falla de RED: reintentar con backoff acotado, SIN gastar el presupuesto
@@ -244,13 +344,15 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
       }
 
       if (action === 'dead-letter') {
-        console.error(`Item ${item.table}/${item.id} → dead-letter: ${errorMsg}`);
         await offlineDb.syncQueue.update(item.id!, {
           retries: MAX_RETRIES + 1,
           createdAt: Date.now(),
           lastError: errorMsg,
           lastAttemptAt: Date.now(),
         });
+        // Visible para el vendedor (aviso + Pendientes) y reportado a monitoreo.
+        captureAppError(err, { origen: 'syncQueue.deadLetter', tabla: item.table, operacion: item.operation });
+        avisarEstado({ tipo: 'fallido', mensaje: errorMsg, tabla: item.table });
         failed++;
         return { handled: true };
       }
@@ -272,7 +374,7 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
   // single initial snapshot, a cobro may upload before its application exists in
   // that snapshot, leaving a temporary orphan until another sync event runs. Fresh
   // rounds pick up items added during this pass and keep parent→child ordering.
-  for (let round = 0; round < 25; round++) {
+  for (let round = 0; round < 25 && !detenerPasada; round++) {
     const items = await offlineDb.syncQueue.orderBy('createdAt').toArray();
     if (items.length === 0) break;
 
@@ -285,21 +387,41 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
 
     let handledThisRound = 0;
     for (const item of items) {
+      if (detenerPasada) break;
       const result = await runItem(item);
       if (result?.handled) handledThisRound++;
     }
     if (handledThisRound === 0) break;
   }
 
-  // Limpiar el respaldo SOLO cuando la cola quedó completamente vacía (nada
-  // pendiente ni diferido). Antes se limpiaba con failed===0 aunque quedaran
-  // ítems diferidos → se perdía la red de seguridad con cosas aún sin subir.
-  const remaining = await offlineDb.syncQueue.count();
-  if (remaining === 0) {
-    clearStorageBackup();
-  }
+  // El respaldo queda igual que la cola: vacío si ya no hay nada pendiente.
+  await respaldarCola();
 
-  return { success, failed };
+  return authRequired ? { success, failed, authRequired } : { success, failed };
+}
+
+let ultimoAvisoSesion = 0;
+function avisarSesionVencida() {
+  // Un aviso por minuto como máximo (cada pasada automática lo detectaría de nuevo).
+  if (Date.now() - ultimoAvisoSesion < 60_000) return;
+  ultimoAvisoSesion = Date.now();
+  avisarEstado({
+    tipo: 'sesion_vencida',
+    mensaje: 'Tu sesión venció. Inicia sesión para subir lo pendiente; no se perdió nada.',
+  });
+}
+
+async function asegurarSesion(forzar = false): Promise<EstadoSesion> {
+  let estado: EstadoSesion;
+  try {
+    estado = await asegurarSesionParaSubir(supabase.auth, { forzar });
+  } catch (err) {
+    // Falla inesperada al leer/renovar la sesión: no se sube nada en esta pasada.
+    captureAppError(err, { origen: 'syncQueue.asegurarSesion' });
+    return 'sin_red';
+  }
+  if (estado === 'vencida') avisarSesionVencida();
+  return estado;
 }
 
 
@@ -337,8 +459,19 @@ async function processItem(item: SyncQueueItem) {
   // Operación de servidor completa (una sola transacción en la BD).
   if (operation === 'rpc') {
     const fn = table.replace(/^rpc:/, '');
-    const { error } = await (supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ error: unknown }>)(fn, data);
+    const { data: resultado, error } = await (supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)(fn, data);
     if (error) throw error;
+    // Venta de ruta completa: un abono a OTRA nota cuyo saldo cambió en el servidor no se
+    // aplica (la venta sí se guarda). Se avisa al vendedor y se reporta.
+    const rechazadas = (resultado as { aplicaciones_rechazadas?: unknown[] } | null)?.aplicaciones_rechazadas;
+    if (Array.isArray(rechazadas) && rechazadas.length > 0) {
+      captureAppError(new Error('Abonos no aplicados al registrar venta de ruta'), { origen: 'syncQueue.rpc', fn, rechazadas });
+      avisarEstado({
+        tipo: 'error',
+        mensaje: `${rechazadas.length} abono${rechazadas.length === 1 ? '' : 's'} a otras notas no se aplicó: su saldo cambió en el servidor. La venta sí se guardó; revisa la cobranza del cliente.`,
+        tabla: table,
+      });
+    }
     return;
   }
 
@@ -372,7 +505,11 @@ async function processItem(item: SyncQueueItem) {
 
   switch (operation) {
     case 'insert': {
-      const { data: returned, error } = await (supabase.from as any)(table).upsert(cleanData).select();
+      // Alta IDEMPOTENTE por id: si ya existe (reenvío tras respuesta perdida, respaldo
+      // restaurado), NO se pisa lo que el servidor cambió después (p. ej. una cancelación).
+      const { data: returned, error } = await (supabase.from as any)(table)
+        .upsert(cleanData, { onConflict: keyField || 'id', ignoreDuplicates: true })
+        .select();
       if (error) throw error;
       // Update local cache with server-generated fields (folio, codigo, etc.)
       if (returned && returned.length > 0) {
@@ -454,6 +591,7 @@ export async function resurrectDeadLetters(tables: string[]): Promise<number> {
 // Clear entire sync queue (use with caution)
 export async function clearSyncQueue() {
   await offlineDb.syncQueue.clear();
+  await respaldarCola();
 }
 
 // ============================================================
@@ -493,6 +631,57 @@ export async function retryQueueItem(id: number): Promise<void> {
 // Discard a single item from the queue WITHOUT touching the local cache
 export async function discardQueueItem(id: number): Promise<void> {
   await offlineDb.syncQueue.delete(id);
+  // Sin esto el respaldo de localStorage lo hacía reaparecer en el siguiente arranque.
+  await respaldarCola();
+}
+
+export interface ContextoDescarte {
+  motivo: string;
+  empresaId: string;
+  userId: string;
+  dispositivo?: string | null;
+}
+
+/**
+ * Descarta una operación pendiente DEJANDO REGISTRO en el servidor (tabla sync_descartes):
+ * quién, cuándo, qué y por qué. El registro se encola (sube cuando haya red) en la misma
+ * transacción local en que se quita la operación. El permiso se valida en la pantalla.
+ */
+export async function descartarConRegistro(id: number, ctx: ContextoDescarte): Promise<void> {
+  const motivo = ctx.motivo.trim();
+  if (motivo.length < 3) throw new Error('Escribe el motivo del descarte');
+  if (!ctx.empresaId || !ctx.userId) throw new Error('Sin sesión: no se puede registrar el descarte');
+  const registroId = crypto.randomUUID();
+  await offlineDb.transaction('rw', offlineDb.syncQueue, async () => {
+    const item = await offlineDb.syncQueue.get(id);
+    if (!item) throw new Error('La operación ya no está pendiente');
+    await offlineDb.syncQueue.delete(id);
+    await offlineDb.syncQueue.add({
+      table: 'sync_descartes',
+      operation: 'insert',
+      data: {
+        id: registroId,
+        empresa_id: ctx.empresaId,
+        user_id: ctx.userId,
+        tabla: item.table,
+        operacion: item.operation,
+        clave: item.keyValue != null ? String(item.keyValue) : null,
+        datos: item.data ?? null,
+        motivo,
+        ultimo_error: item.lastError ?? null,
+        reintentos: item.retries ?? 0,
+        encolado_at: new Date(item.createdAt).toISOString(),
+        descartado_at: new Date().toISOString(),
+        dispositivo: ctx.dispositivo ?? null,
+      },
+      keyField: 'id',
+      keyValue: registroId,
+      createdAt: Date.now(),
+      retries: 0,
+      rev: 0,
+    });
+  });
+  await respaldarCola();
 }
 
 // Retry every item (pending, retrying and failed) and trigger a sync pass

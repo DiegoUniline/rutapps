@@ -4,6 +4,8 @@ import { todayInTimezone , todayLocal, roundMoney } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { queueOperation, queueOperations, queueInsertMany } from '@/lib/syncQueue';
+import { armarPayloadVentaRuta, COLA_REGISTRAR_VENTA_RUTA, vendidoPorProducto, ventaRutaRpcHabilitado, type CargaVendida, type CobroVentaRuta, type FilaVenta } from '@/lib/ventaRutaRpc';
+import { captureAppError } from '@/lib/observability';
 import { deterministicUuid } from '@/lib/deterministicId';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { supabase } from '@/lib/supabase';
@@ -1029,19 +1031,34 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const liquidarTodas = () => { setCuentasPendientes(prev => prev.map(c => ({ ...c, montoAplicar: c.saldo_pendiente }))); };
   const updateCuentaMonto = (id: string, monto: number) => { setCuentasPendientes(prev => prev.map(c => c.id === id ? { ...c, montoAplicar: Math.min(Math.max(0, monto), c.saldo_pendiente) } : c)); };
 
-  const updateCargaVendidaOffline = async (items: CartItem[]) => {
+  // Lo vendido a la carga del camión. El servidor lo suma por DELTA (fn_ruta_carga_sumar_vendido
+  // o dentro de fn_ruta_registrar_venta), así no pisa recargas del admin ni devoluciones.
+  // Antes el teléfono escribía cantidad_cargada/vendida/devuelta absolutas de su copia local.
+  const cargaVendidaDe = async (items: CartItem[]): Promise<CargaVendida | null> => {
+    const cargasTable = getOfflineTable('cargas');
+    if (!cargasTable) return null;
+    const allCargas = await cargasTable.toArray();
+    const ac = allCargas.filter((c: any) => c.empresa_id === empresa?.id && c.status === 'en_ruta').sort((a: any, b: any) => (b.fecha > a.fecha ? 1 : -1))[0];
+    if (!ac) return null;
+    const lineas = vendidoPorProducto(items);
+    return lineas.length > 0 ? { carga_id: ac.id, lineas } : null;
+  };
+
+  // Copia local (solo para mostrar «en mano» al instante); el valor real lo suma el servidor.
+  const reflejarCargaVendidaLocal = async (carga: CargaVendida) => {
     try {
-      const cargasTable = getOfflineTable('cargas'); const cargaLineasTable = getOfflineTable('carga_lineas');
-      if (!cargasTable || !cargaLineasTable) return;
-      const allCargas = await cargasTable.toArray();
-      const ac = allCargas.filter((c: any) => c.empresa_id === empresa?.id && c.status === 'en_ruta').sort((a: any, b: any) => (b.fecha > a.fecha ? 1 : -1))[0];
-      if (!ac) return;
-      const allLineas = await cargaLineasTable.toArray();
-      for (const item of items) {
-        const cl = allLineas.find((l: any) => l.carga_id === ac.id && l.producto_id === item.producto_id);
-        if (cl) await queueOperation('carga_lineas', 'update', { id: cl.id, carga_id: cl.carga_id, producto_id: cl.producto_id, cantidad_cargada: cl.cantidad_cargada, cantidad_vendida: (cl.cantidad_vendida ?? 0) + item.cantidad, cantidad_devuelta: cl.cantidad_devuelta ?? 0 });
+      const cargaLineasTable = getOfflineTable('carga_lineas');
+      if (!cargaLineasTable) return;
+      const allLineas = await cargaLineasTable.where('carga_id').equals(carga.carga_id).toArray();
+      for (const l of carga.lineas) {
+        const cl: any = allLineas.find((x: any) => x.producto_id === l.producto_id);
+        if (cl) await cargaLineasTable.put({ ...cl, cantidad_vendida: (Number(cl.cantidad_vendida) || 0) + l.cantidad });
       }
-    } catch (e) { console.error('Error updating carga offline:', e); }
+    } catch (e) {
+      // La venta ya quedó en la cola; solo el contador local no se refrescó.
+      captureAppError(e, { origen: 'useRutaVenta.reflejarCargaVendidaLocal' });
+      toast.warning('No se pudo actualizar el contador de la carga en el teléfono; se corrige al sincronizar.');
+    }
   };
 
   const handleSave = async () => {
@@ -1176,7 +1193,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         headerDescuento = r2(Math.max(0, extraAmtSaved));
       }
 
-      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: null, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: headerSubtotal, iva_total: headerIva, ieps_total: headerIeps, descuento_total: headerDescuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+      // Bandera ruta_venta_rpc: la venta completa sube como UNA operación (fn_ruta_registrar_venta).
+      const usarRpc = ventaRutaRpcHabilitado((empresa as any)?.licencia);
+      const ventaRow: FilaVenta = { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: null, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: headerSubtotal, iva_total: headerIva, ieps_total: headerIeps, descuento_total: headerDescuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() };
+      if (!usarRpc) await queueOperation('ventas', 'insert', ventaRow);
 
 
       const promoLineIdByProduct = new Map<string, string>();
@@ -1248,12 +1268,15 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           } catch { /* cache local; el trigger del backend crea el apartado real */ }
         }
       }
-      await queueInsertMany('venta_lineas', lineasBatch, 'venta_id');
-      // Los lotes van DESPUÉS de las líneas (FK venta_linea_id).
-      if (lineaLotesBatch.length > 0) await queueInsertMany('venta_linea_lotes', lineaLotesBatch, 'venta_id');
+      if (!usarRpc) {
+        await queueInsertMany('venta_lineas', lineasBatch, 'venta_id');
+        // Los lotes van DESPUÉS de las líneas (FK venta_linea_id).
+        if (lineaLotesBatch.length > 0) await queueInsertMany('venta_linea_lotes', lineaLotesBatch, 'venta_id');
+      }
 
 
       // Desglose informativo de promociones (para reportes). No altera totales.
+      const promoRowsRpc: FilaVenta[] = [];
       if (promoPersistHabilitado((empresa as any)?.licencia)) {
         const promoRows = buildPromoAplicadaRows({
           ventaId,
@@ -1265,34 +1288,41 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         for (const row of promoRows) {
           // Id determinístico por (venta, promoción, línea) → reintento no duplica.
           const stableId = await deterministicUuid('promoapl', ventaId, row.promocion_id, row.venta_linea_id);
-          await queueOperation('promocion_aplicada', 'insert', { ...row, id: stableId });
+          if (usarRpc) promoRowsRpc.push({ ...row, id: stableId });
+          else await queueOperation('promocion_aplicada', 'insert', { ...row, id: stableId });
         }
       }
 
 
 
-      // ── Devoluciones: encolar DESPUÉS de venta + venta_lineas para garantizar
-      // orden padre→hijo en el sync queue (evita FK 23503 y RLS 42501 en cascada).
-      if (devoluciones.length > 0 && clienteId) {
-        // Id determinístico de la devolución por venta → reintento no duplica.
-        // D-049: UNA operación (RPC registrar_devolucion) en la cola, después de la venta,
-        // sus renglones y cobros. Destino por renglón; reposición sin reemplazo sale del
-        // camión con la devolución (H13); con reemplazo va como renglón CAMBIO de la venta.
-        // La carga ya no suma «devuelto» por devoluciones de clientes (H15).
-        const devId = await deterministicUuid('devventa', ventaId);
-        await encolarDevolucion(
-          { id: devId, empresa_id: empresa.id, vendedor_id: profile?.id || null, cliente_id: clienteId, carga_id: activeCarga?.id || null, venta_id: ventaId, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria) },
-          devoluciones.map(d => ({
-            producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo, destino: d.destino,
-            accion: tipoVenta === 'venta_directa' ? d.accion : (d.accion === 'aplicar_venta' ? 'nota_credito' : d.accion),
-            precio_unitario: d.precio_unitario,
-            reemplazo_producto_id: d.reemplazo_producto_id || null,
-            reposicion_en_venta: d.accion === 'reposicion' && !!d.reemplazo_producto_id,
-          })),
-        );
-      }
+      const encolarDevolucionDeVenta = async () => {
+        // ── Devoluciones: encolar DESPUÉS de venta + venta_lineas para garantizar
+        // orden padre→hijo en el sync queue (evita FK 23503 y RLS 42501 en cascada).
+        if (devoluciones.length > 0 && clienteId) {
+          // Id determinístico de la devolución por venta → reintento no duplica.
+          // D-049: UNA operación (RPC registrar_devolucion) en la cola, después de la venta,
+          // sus renglones y cobros. Destino por renglón; reposición sin reemplazo sale del
+          // camión con la devolución (H13); con reemplazo va como renglón CAMBIO de la venta.
+          // La carga ya no suma «devuelto» por devoluciones de clientes (H15).
+          const devId = await deterministicUuid('devventa', ventaId);
+          await encolarDevolucion(
+            { id: devId, empresa_id: empresa.id, vendedor_id: profile?.id || null, cliente_id: clienteId, carga_id: activeCarga?.id || null, venta_id: ventaId, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria) },
+            devoluciones.map(d => ({
+              producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo, destino: d.destino,
+              accion: tipoVenta === 'venta_directa' ? d.accion : (d.accion === 'aplicar_venta' ? 'nota_credito' : d.accion),
+              precio_unitario: d.precio_unitario,
+              reemplazo_producto_id: d.reemplazo_producto_id || null,
+              reposicion_en_venta: d.accion === 'reposicion' && !!d.reemplazo_producto_id,
+            })),
+          );
+        }
+      };
+      // Camino de siempre: la devolución se encola aquí. Con la venta en una operación se
+      // encola DESPUÉS de ella (abajo), para que nunca intente subir antes que su venta.
+      if (!usarRpc) await encolarDevolucionDeVenta();
 
 
+      const cobrosRpc: CobroVentaRuta[] = [];
       if (applyPayment && ventaClienteId && pagos.length > 0) {
         // Snapshot pending accounts to avoid mutating React state
         const cuentasSnapshot = cuentasPendientes
@@ -1346,19 +1376,17 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           const cobroId = await deterministicUuid('cobro-venta', ventaId, pagoIdx, pago.metodo_pago, montoCobro);
 
           const nowIso = new Date().toISOString();
-          await queueOperations([
-            {
-              table: 'cobros',
-              operation: 'insert',
-              data: { id: cobroId, empresa_id: empresa.id, cliente_id: ventaClienteId, user_id: user.id, monto: montoCobro, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: nowIso },
-            },
-            ...await Promise.all(aplicaciones.map(async ap => ({
-              table: 'cobro_aplicaciones',
-              operation: 'insert' as const,
-              // Id determinístico por (cobro, venta) → la aplicación tampoco se duplica.
-              data: { id: await deterministicUuid('capp', cobroId, ap.venta_id), cobro_id: cobroId, venta_id: ap.venta_id, monto_aplicado: ap.monto, created_at: nowIso },
-            }))),
-          ]);
+          const cobroRow = { id: cobroId, empresa_id: empresa.id, cliente_id: ventaClienteId, user_id: user.id, monto: montoCobro, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: nowIso };
+          // Id determinístico por (cobro, venta) → la aplicación tampoco se duplica.
+          const aplicacionRows = await Promise.all(aplicaciones.map(async ap => ({ id: await deterministicUuid('capp', cobroId, ap.venta_id), cobro_id: cobroId, venta_id: ap.venta_id, monto_aplicado: ap.monto, created_at: nowIso })));
+          if (usarRpc) {
+            cobrosRpc.push({ ...cobroRow, aplicaciones: aplicacionRows });
+          } else {
+            await queueOperations([
+              { table: 'cobros', operation: 'insert', data: cobroRow },
+              ...aplicacionRows.map(data => ({ table: 'cobro_aplicaciones', operation: 'insert' as const, data })),
+            ]);
+          }
         }
 
         // El saldo_pendiente lo recalcula EXCLUSIVAMENTE el trigger de BD
@@ -1384,7 +1412,21 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         }
       }
 
-      await updateCargaVendidaOffline(cart);
+      const cargaVendida = await cargaVendidaDe(cart);
+      if (usarRpc) {
+        // UNA operación: encabezado, renglones, lotes, promociones, cobros y carga en una
+        // transacción del servidor; su copia local se escribe junto con la cola.
+        await queueOperations([{
+          table: COLA_REGISTRAR_VENTA_RUTA,
+          operation: 'rpc',
+          data: armarPayloadVentaRuta({ venta: ventaRow, lineas: lineasBatch, lineas_lotes: lineaLotesBatch, promociones: promoRowsRpc, cobros: cobrosRpc, carga: cargaVendida }),
+          keyField: 'p_venta.venta.id',
+        }]);
+        await encolarDevolucionDeVenta();
+      } else if (cargaVendida) {
+        await queueOperation('rpc:fn_ruta_carga_sumar_vendido', 'rpc', { p_venta_id: ventaId, p_carga_id: cargaVendida.carga_id, p_lineas: cargaVendida.lineas }, 'p_venta_id');
+      }
+      if (cargaVendida) await reflejarCargaVendidaLocal(cargaVendida);
       await saveVisita(tipoVenta === 'pedido' ? 'pedido' : 'venta', { ventaId });
       if (clienteId) markVisited(clienteId);
       toast.success('¡Venta registrada! Se sincronizará automáticamente');

@@ -8,6 +8,7 @@ import { supabase } from './supabase';
 import { fetchAllPages } from './supabasePaginate';
 import { getSyncScope, syncV2Habilitado, vendedorScopeActivo, vendedorScopeTransaccional, syncHijosScopedHabilitado } from './syncScope';
 import { getFeatureFlagsCache, setFeatureFlagsCache, type FeatureFlag } from './featureFlags';
+import { reaplicarPendientesEnTabla } from './pendientesLocales';
 
 
 const TABLES_TO_CACHE = [
@@ -400,6 +401,26 @@ async function clearLocalScope(table: CacheTable, empresaId: string, parentIds: 
   await localTable.clear();
 }
 
+/**
+ * Escribe lo descargado en la copia local y, en la MISMA transacción, vuelve a poner encima
+ * lo que la cola aún no sube (ventas, cobros, cambios hechos sin señal). Así una descarga
+ * completa nunca borra del teléfono lo pendiente (auditoría 2026-11-23, Offline).
+ * `reemplazar`: borra antes el alcance (descarga completa); sin él, solo mezcla (delta).
+ */
+export async function escribirDescarga(
+  table: CacheTable,
+  rows: any[],
+  reemplazar: { empresaId: string; parentIds: string[] | null } | null,
+): Promise<void> {
+  const localTable = getOfflineTable(table);
+  if (!localTable) return;
+  await offlineDb.transaction('rw', [localTable, offlineDb.syncQueue], async () => {
+    if (reemplazar) await clearLocalScope(table, reemplazar.empresaId, reemplazar.parentIds);
+    if (rows.length > 0) await localTable.bulkPut(rows);
+    await reaplicarPendientesEnTabla(localTable, table);
+  });
+}
+
 async function withTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -763,7 +784,7 @@ async function downloadAllDataInternal(
         const isDeltaPull = !!cursor || !!lastTableSync;
 
         if (parentIds && parentIds.length === 0) {
-          if (!isDeltaPull) await clearLocalScope(table, empresaId, parentIds);
+          if (!isDeltaPull) await escribirDescarga(table, [], { empresaId, parentIds });
           await offlineDb.cacheTimestamps.put({
             table,
             lastSync: nowMs,
@@ -877,8 +898,7 @@ async function downloadAllDataInternal(
         //    el scope local: así no quedan cobros/ventas fantasma tras borrados físicos.
         let allData = await paginate(isDeltaPull ? 'delta' : 'full');
         if (localTable) {
-          if (!isDeltaPull) await clearLocalScope(table, empresaId, parentIds);
-          if (allData.length > 0) await localTable.bulkPut(allData);
+          await escribirDescarga(table, allData, isDeltaPull ? null : { empresaId, parentIds });
         }
 
         // COBRADOR: con el filtro por vendedor solo bajaban las ventas que la
@@ -887,7 +907,7 @@ async function downloadAllDataInternal(
         if (table === 'ventas' && localTable && scopeAplica(VENDOR_SCOPED_TABLES.ventas)) {
           const deCobranza = await fetchVentasDeCobranza(empresaId, selectStr);
           if (deCobranza.length > 0) {
-            await localTable.bulkPut(deCobranza);
+            await escribirDescarga(table, deCobranza, null);
             allData = allData.concat(deCobranza);
           }
         }
@@ -928,8 +948,7 @@ async function downloadAllDataInternal(
           const needsPeriodic = !lastFullAt || (nowMs - lastFullAt) > FULL_RECONCILE_MS;
           if (mismatch || needsPeriodic) {
             const full = await paginate('full');
-            await clearLocalScope(table, empresaId, parentIds);
-            if (full.length > 0) await localTable.bulkPut(full);
+            await escribirDescarga(table, full, { empresaId, parentIds });
             allData = full;
             newCursor = maxUpdatedAt(full);
             lastFullAt = nowMs;

@@ -1,20 +1,29 @@
 import { todayLocal } from '@/lib/utils';
 import { offlineDb, type SyncQueueItem } from './offlineDb';
+import { captureAppError } from './observability';
 
 const BACKUP_KEY = 'uniline_sync_backup';
 const BACKUP_TS_KEY = 'uniline_backup_ts';
 const AUTO_BACKUP_INTERVAL = 30_000; // 30 seconds
 
 // ── Auto-backup syncQueue to localStorage as redundant safety net ──
+//
+// El respaldo es un ESPEJO de la cola: tras cada cambio (encolar, subir, descartar) queda
+// exactamente lo pendiente. Antes solo se escribía cuando había elementos y no se limpiaba
+// al descartar: lo descartado o ya subido «resucitaba» al reiniciar la app con la cola vacía.
 
 let autoBackupTimer: ReturnType<typeof setInterval> | null = null;
+
+function reportarFallaRespaldo(err: unknown) {
+  captureAppError(err, { origen: 'offlineBackup' });
+}
 
 export function startAutoBackup() {
   if (autoBackupTimer) return;
   // Immediate first backup
-  backupSyncQueueToStorage().catch(console.warn);
+  backupSyncQueueToStorage().catch(reportarFallaRespaldo);
   autoBackupTimer = setInterval(() => {
-    backupSyncQueueToStorage().catch(console.warn);
+    backupSyncQueueToStorage().catch(reportarFallaRespaldo);
   }, AUTO_BACKUP_INTERVAL);
 }
 
@@ -25,45 +34,64 @@ export function stopAutoBackup() {
   }
 }
 
-/** Backup pending syncQueue items to localStorage (redundant copy) */
-export async function backupSyncQueueToStorage(): Promise<number> {
-  try {
+// Las escrituras del espejo van en fila: cada una lee la cola en su turno, así una lectura
+// vieja nunca pisa a una más nueva (p. ej. el temporizador contra un descarte).
+let colaRespaldo: Promise<number> = Promise.resolve(0);
+
+/** Deja en localStorage una copia EXACTA de la cola (vacía = sin respaldo). */
+export function backupSyncQueueToStorage(): Promise<number> {
+  const tarea = colaRespaldo.catch(() => 0).then(async () => {
     const items = await offlineDb.syncQueue.toArray();
     if (items.length > 0) {
       localStorage.setItem(BACKUP_KEY, JSON.stringify(items));
       localStorage.setItem(BACKUP_TS_KEY, String(Date.now()));
+    } else {
+      clearStorageBackup();
     }
     return items.length;
-  } catch (err) {
-    console.warn('Backup to localStorage failed:', err);
-    return 0;
-  }
+  });
+  colaRespaldo = tarea;
+  return tarea;
 }
 
-/** Restore syncQueue items from localStorage backup (if IndexedDB was cleared) */
-export async function restoreFromStorageBackup(): Promise<number> {
+/**
+ * Restore syncQueue items from localStorage backup (if IndexedDB was cleared).
+ * Como el respaldo es espejo de la cola, solo trae de vuelta lo que seguía pendiente
+ * cuando se perdió IndexedDB (nunca lo ya subido ni lo descartado).
+ */
+export function restoreFromStorageBackup(): Promise<number> {
+  // En la misma fila que el espejo: ninguna escritura del espejo corre antes de restaurar.
+  const tarea = colaRespaldo.catch(() => 0).then(restaurarRespaldo);
+  colaRespaldo = tarea;
+  return tarea;
+}
+
+async function restaurarRespaldo(): Promise<number> {
+  const raw = localStorage.getItem(BACKUP_KEY);
+  if (!raw) return 0;
+  let items: SyncQueueItem[];
   try {
-    const raw = localStorage.getItem(BACKUP_KEY);
-    if (!raw) return 0;
-    const items: SyncQueueItem[] = JSON.parse(raw);
-    if (!Array.isArray(items) || items.length === 0) return 0;
-
-    // Check if syncQueue is empty (meaning IndexedDB was cleared)
-    const currentCount = await offlineDb.syncQueue.count();
-    if (currentCount > 0) return 0; // Already has data, skip
-
-    let restored = 0;
-    for (const item of items) {
-      const { id, ...rest } = item; // Remove old id
-      await offlineDb.syncQueue.add(rest as any);
-      restored++;
-    }
-    console.log(`Restored ${restored} sync items from localStorage backup`);
-    return restored;
+    items = JSON.parse(raw);
   } catch (err) {
-    console.warn('Restore from localStorage failed:', err);
+    // Respaldo corrupto: se reporta y se conserva tal cual para revisión manual.
+    reportarFallaRespaldo(err);
     return 0;
   }
+  if (!Array.isArray(items) || items.length === 0) return 0;
+
+  // Check if syncQueue is empty (meaning IndexedDB was cleared)
+  const currentCount = await offlineDb.syncQueue.count();
+  if (currentCount > 0) return 0; // Already has data, skip
+
+  let restored = 0;
+  await offlineDb.transaction('rw', offlineDb.syncQueue, async () => {
+    for (const item of items) {
+      const { id: _id, ...rest } = item; // Remove old id
+      await offlineDb.syncQueue.add(rest as SyncQueueItem);
+      restored++;
+    }
+  });
+  return restored;
 }
 
 /** Clear the localStorage backup (call after successful full sync) */

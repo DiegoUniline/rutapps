@@ -11,7 +11,7 @@ import SolicitudCompraProveedorPublicaPage from "./pages/SolicitudCompraProveedo
 import "./index.css";
 import "./inventario-ubicaciones.css";
 import { startAutoBackup, restoreFromStorageBackup } from "./lib/offlineBackup";
-import { initObservability } from "./lib/observability";
+import { initObservability, captureAppError } from "./lib/observability";
 import { installDataUsageMeter } from "./lib/dataUsage";
 
 // Monitoreo de errores en producción (no-op si no hay VITE_SENTRY_DSN).
@@ -20,11 +20,11 @@ initObservability();
 // Medidor real de megas consumidos (por fecha, Ruta y Escritorio).
 installDataUsageMeter();
 
-// Start auto-backup of pending sync items & restore if needed
-restoreFromStorageBackup().then(count => {
-  if (count > 0) console.log(`Restored ${count} sync items from backup`);
-});
-startAutoBackup();
+// Respaldo espejo de la cola offline: restaura SOLO si IndexedDB perdió lo pendiente
+// (el respaldo ya no guarda lo subido ni lo descartado), y después lo mantiene al día.
+restoreFromStorageBackup()
+  .catch((err) => captureAppError(err, { origen: 'main.restoreFromStorageBackup' }))
+  .finally(() => startAutoBackup());
 
 // Apply saved theme before first paint
 (function() {

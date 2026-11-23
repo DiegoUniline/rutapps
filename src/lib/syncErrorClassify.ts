@@ -28,8 +28,32 @@ export const CHILD_TABLES_RLS_DEFER = [
  * - 'dead-letter' : diferible que agotó reintentos (huérfano), tabla inexistente,
  *                   o error real que llegó al tope. Se marca fallido.
  * - 'retry'       : error de dato desconocido, aún con reintentos disponibles.
+ * - 'auth'        : la sesión (JWT) venció o no es válida. NO es culpa del dato: se
+ *                   refresca la sesión y se reintenta sin gastar intentos; si no se
+ *                   puede, la cola se conserva intacta y se pide iniciar sesión.
  */
-export type SyncErrorAction = 'transient' | 'defer' | 'dead-letter' | 'retry';
+export type SyncErrorAction = 'transient' | 'defer' | 'dead-letter' | 'retry' | 'auth';
+
+/** Códigos de PostgREST de JWT vencido / inválido / ausente. */
+const AUTH_CODES = ['PGRST301', 'PGRST302', 'PGRST303'];
+
+/** ¿El error es de sesión (token vencido o inválido) y no del dato? */
+type ErrorParecido = {
+  code?: unknown;
+  status?: unknown;
+  message?: unknown;
+  error_description?: unknown;
+  originalError?: { status?: unknown } | null;
+};
+export function esErrorDeSesion(err: unknown): boolean {
+  if (err == null || typeof err !== 'object') return false;
+  const e = err as ErrorParecido;
+  if (typeof e.code === 'string' && AUTH_CODES.includes(e.code)) return true;
+  const httpStatus = e.status ?? e.originalError?.status;
+  if (httpStatus === 401) return true;
+  const msg = String(e.message || e.error_description || '');
+  return /jwt expired|invalid jwt|jwt.*(expired|invalid|malformed)|token.*expired/i.test(msg);
+}
 
 export function classifySyncError(params: {
   err: any;
@@ -56,7 +80,11 @@ export function classifySyncError(params: {
   );
   const isDeferrable = isFkMissing || isRlsViolation || isDevolucionEnumIssue || isRowNotYet;
 
+  // Sesión vencida tras horas sin red: se refresca y se reintenta; nunca dead-letter.
+  if (esErrorDeSesion(err)) return 'auth';
   if (isTransient) return 'transient';
+  // RPC aún no publicada (orden de despliegue front/BD): esperar sin gastar intentos.
+  if (table.startsWith('rpc:') && code === 'PGRST202') return 'transient';
   // Una RPC rechazada por regla de negocio (permiso, versión, validación) no cambia al reintentar.
   if (table.startsWith('rpc:') && ['P0001', 'P0002', '22023', '40001', '42501'].includes(code)) return 'dead-letter';
   if (isDeferrable) return newRetries >= maxRetries ? 'dead-letter' : 'defer';

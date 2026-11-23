@@ -5,9 +5,14 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { usePendingQueue } from '@/hooks/usePendingQueue';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePermisos } from '@/hooks/usePermisos';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { captureAppError } from '@/lib/observability';
 import {
   retryQueueItem,
-  discardQueueItem,
+  descartarConRegistro,
   retryAllQueueItems,
   processSyncQueue,
   type PendingQueueItem,
@@ -31,12 +36,19 @@ const TABLE_LABEL: Record<string, string> = {
   carga_lineas: 'Línea de carga',
   descarga_ruta: 'Liquidación de ruta',
   cotizaciones: 'Cotización',
+  'rpc:fn_ruta_registrar_venta': 'Venta completa',
+  'rpc:fn_ruta_carga_sumar_vendido': 'Vendido de la carga',
+  'rpc:registrar_devolucion': 'Devolución',
+  'rpc:editar_venta': 'Edición de venta',
+  sync_descartes: 'Registro de descarte',
 };
 
 const OP_LABEL: Record<string, string> = {
   insert: 'Crear',
   update: 'Actualizar',
   delete: 'Eliminar',
+  'insert-many': 'Crear',
+  rpc: 'Registrar',
 };
 
 function formatAgo(ts: number): string {
@@ -75,6 +87,12 @@ export default function PendientesSincronizarPage() {
   const { items, pending, retrying, failed, total, loading, reload } = usePendingQueue();
   const [busyId, setBusyId] = useState<number | null>(null);
   const [busyAll, setBusyAll] = useState(false);
+  const { user, empresa } = useAuth();
+  const { hasPermiso } = usePermisos();
+  // Descartar = perder la operación: mismo permiso que eliminar ventas (el dueño siempre lo tiene).
+  const puedeDescartar = hasPermiso('ventas', 'eliminar');
+  const [porDescartar, setPorDescartar] = useState<PendingQueueItem | null>(null);
+  const [motivo, setMotivo] = useState('');
 
   // Auto-reprocess every 15s while page is visible and online — recovers items
   // stuck from older builds without forcing the user to tap "Reintentar todo".
@@ -82,7 +100,8 @@ export default function PendientesSincronizarPage() {
     if (!isOnline || total === 0) return;
     const t = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
-      processSyncQueue().then(() => reload()).catch(() => {});
+      // Error de la subida en segundo plano: se reporta (y el aviso global lo muestra).
+      processSyncQueue().then(() => reload()).catch((e) => captureAppError(e, { origen: 'PendientesSincronizar.auto' }));
     }, 15000);
     return () => clearInterval(t);
   }, [isOnline, total, reload]);
@@ -102,17 +121,39 @@ export default function PendientesSincronizarPage() {
     }
   };
 
-  const handleDiscard = async (item: PendingQueueItem) => {
+  const handleDiscard = (item: PendingQueueItem) => {
     if (!item.id) return;
-    const label = `${OP_LABEL[item.operation] || item.operation} · ${TABLE_LABEL[item.table] || item.table}`;
-    if (!confirm(`¿Descartar esta operación pendiente?\n\n${label} (${getReference(item)})\n\nNo se enviará al servidor. Esta acción no se puede deshacer.`)) return;
+    if (!puedeDescartar) {
+      toast.error('No tienes permiso para descartar', { description: 'Pide a tu supervisor que lo revise.' });
+      return;
+    }
+    setMotivo('');
+    setPorDescartar(item);
+  };
+
+  const confirmarDescarte = async () => {
+    const item = porDescartar;
+    if (!item?.id) return;
+    if (!puedeDescartar) return;
+    if (!empresa?.id || !user?.id) {
+      toast.error('Sin sesión: no se puede registrar el descarte');
+      return;
+    }
     setBusyId(item.id);
     try {
-      await discardQueueItem(item.id);
-      toast.success('Operación descartada');
+      let dispositivo: string | null = null;
+      try {
+        dispositivo = localStorage.getItem('uniline_device_id');
+      } catch (e) {
+        // Sin acceso a localStorage: el registro va sin dispositivo (no impide descartar).
+        dispositivo = e instanceof Error ? `sin-id (${e.name})` : 'sin-id';
+      }
+      await descartarConRegistro(item.id, { motivo, empresaId: empresa.id, userId: user.id, dispositivo });
+      toast.success('Operación descartada', { description: 'Quedó registrada para el administrador.' });
+      setPorDescartar(null);
       await reload();
-    } catch (e: any) {
-      toast.error('No se pudo descartar', { description: e?.message });
+    } catch (e) {
+      toast.error('No se pudo descartar', { description: e instanceof Error ? e.message : String(e) });
     } finally {
       setBusyId(null);
     }
@@ -267,14 +308,16 @@ export default function PendientesSincronizarPage() {
                         : <RefreshCw className="h-3.5 w-3.5" />}
                       Reintentar
                     </button>
-                    <button
-                      onClick={() => handleDiscard(item)}
-                      disabled={busyId === item.id}
-                      className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-red-200 text-red-700 text-xs font-semibold active:scale-[0.98] disabled:opacity-50"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Descartar
-                    </button>
+                    {puedeDescartar && (
+                      <button
+                        onClick={() => handleDiscard(item)}
+                        disabled={busyId === item.id}
+                        className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-red-200 text-red-700 text-xs font-semibold active:scale-[0.98] disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Descartar
+                      </button>
+                    )}
                   </div>
                 </li>
               );
@@ -293,6 +336,39 @@ export default function PendientesSincronizarPage() {
           </div>
         )}
       </main>
+
+      <Dialog open={!!porDescartar} onOpenChange={(o) => { if (!o) setPorDescartar(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>¿Descartar esta operación?</DialogTitle>
+            <DialogDescription>
+              {porDescartar && `${OP_LABEL[porDescartar.operation] || porDescartar.operation} · ${TABLE_LABEL[porDescartar.table] || porDescartar.table} (${getReference(porDescartar)}). `}
+              No se enviará al servidor y no se puede deshacer. Quedará registrado quién la descartó y por qué.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Motivo (obligatorio)"
+            rows={3}
+          />
+          <DialogFooter className="gap-2">
+            <button
+              onClick={() => setPorDescartar(null)}
+              className="h-9 px-3 rounded-md border border-border text-xs font-semibold"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmarDescarte}
+              disabled={motivo.trim().length < 3 || busyId === porDescartar?.id}
+              className="h-9 px-3 rounded-md bg-destructive text-destructive-foreground text-xs font-semibold disabled:opacity-50"
+            >
+              Descartar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

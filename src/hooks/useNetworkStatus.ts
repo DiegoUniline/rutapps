@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { getPendingCount, getDeadLetterCount, processSyncQueue } from '@/lib/syncQueue';
+import { getPendingCount, getDeadLetterCount, processSyncQueue, EVENTO_SYNC_ESTADO, type DetalleSyncEstado } from '@/lib/syncQueue';
 import { downloadAllData, getLastSyncTime, isCacheStale, MOBILE_QUICK_SYNC_TABLES } from '@/lib/offlineSync';
 import { verifySyncedItems } from '@/lib/syncVerify';
 import { useAuth } from '@/contexts/AuthContext';
@@ -90,6 +90,26 @@ export function useNetworkStatus() {
     };
   }, []);
 
+  // Avisos de la cola visibles para el vendedor (no solo en consola). Los «fallidos» ya
+  // se avisan abajo al subir el conteo; aquí: sesión vencida y errores de la subida automática.
+  useEffect(() => {
+    const onEstado = (e: Event) => {
+      const d = (e as CustomEvent<DetalleSyncEstado>).detail;
+      if (!d) return;
+      if (d.tipo === 'sesion_vencida') {
+        toast.warning('Tu sesión venció', {
+          id: 'sync-sesion-vencida',
+          description: 'Lo pendiente sigue guardado en el teléfono. Inicia sesión para subirlo.',
+          duration: 10000,
+        });
+      } else if (d.tipo === 'error') {
+        toast.error('No se pudo sincronizar', { id: 'sync-error-fondo', description: d.mensaje, duration: 8000 });
+      }
+    };
+    window.addEventListener(EVENTO_SYNC_ESTADO, onEstado);
+    return () => window.removeEventListener(EVENTO_SYNC_ESTADO, onEstado);
+  }, []);
+
   // Refresh pending count periodically (respects data saver)
   useEffect(() => {
     const config = getSyncConfig();
@@ -163,14 +183,15 @@ export function useNetworkStatus() {
       if (!online) return { ok: false, rowsDownloaded: 0, pendingCount, reason: 'Sin conexión real' };
 
       const result = await processSyncQueue();
-      console.log(`Sync: ${result.success} uploaded, ${result.failed} failed`);
       const { rowsDownloaded } = await downloadAllData(empresa.id, false, undefined, { tables: MOBILE_QUICK_SYNC_TABLES });
       const count = await getPendingCount();
       return {
-        ok: result.failed === 0,
+        ok: result.failed === 0 && !result.authRequired,
         rowsDownloaded,
         pendingCount: count,
-        reason: result.failed > 0 ? `${result.failed} cambios quedaron pendientes` : undefined,
+        reason: result.authRequired
+          ? 'Sesión vencida: inicia sesión para subir lo pendiente (se conserva en el teléfono)'
+          : result.failed > 0 ? `${result.failed} cambios quedaron pendientes` : undefined,
       };
     })();
 

@@ -112,6 +112,17 @@ export default function RutaSincronizarPage() {
     setDownloadResult(null);
     setDownloadProgress([]);
     try {
+      // Primero se sube lo pendiente. Lo que no suba (sin red, sesión vencida, error) se
+      // CONSERVA: la descarga completa lo vuelve a poner encima en el teléfono.
+      if ((await getPendingCount()) > 0) {
+        const subida = await processSyncQueue();
+        const quedan = await getPendingCount();
+        if (subida.authRequired) {
+          toast.warning('Tu sesión venció: lo pendiente se conserva en el teléfono. Inicia sesión para subirlo.');
+        } else if (quedan > 0) {
+          toast.info(`${quedan} cambio${quedan === 1 ? '' : 's'} sin subir se conservan en el teléfono y se subirán después.`);
+        }
+      }
       const result = await downloadAllData(empresa.id, true, (progress) => {
         setDownloadProgress(progress);
       });
@@ -133,7 +144,9 @@ export default function RutaSincronizarPage() {
     try {
       const result = await processSyncQueue();
       setUploadResult(result);
-      if (result.failed === 0) {
+      if (result.authRequired) {
+        toast.warning('Tu sesión venció: no se subió nada y todo se conserva. Inicia sesión para enviarlo.');
+      } else if (result.failed === 0) {
         toast.success(`✅ ${result.success} cambios enviados correctamente al servidor`);
       } else {
         toast.warning(`⚠️ ${result.success} enviados, ${result.failed} fallaron (se reintentarán)`);
