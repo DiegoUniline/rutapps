@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { CreditCard, Users, Loader2, Crown, Plus, Minus, ExternalLink, Stamp, BanknoteIcon, Building2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { mensajeError } from '@/lib/errorTranslator';
 import { useSearchParams } from 'react-router-dom';
 
 const PLANS = [
@@ -25,7 +26,7 @@ const BANK_INFO = {
 };
 
 export default function SubscriptionCard() {
-  const { user, empresa } = useAuth();
+  const { user, empresa, loading: authLoading } = useAuth();
   const sub = useSubscription();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -57,9 +58,13 @@ export default function SubscriptionCard() {
   const [pendingSolicitudes, setPendingSolicitudes] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!empresa?.id) return;
+    // Sin empresa (ya terminó de cargar la sesión): no hay suscripción que mostrar; no se queda «Cargando».
+    if (!empresa?.id) {
+      if (!authLoading) setLoading(false);
+      return;
+    }
     loadData();
-  }, [empresa?.id]);
+  }, [empresa?.id, authLoading]);
 
   useEffect(() => {
     const sessionId = searchParams.get('timbres_session');
@@ -72,16 +77,24 @@ export default function SubscriptionCard() {
 
   async function loadData() {
     setLoading(true);
-    const [subRes, timbresRes, solRes] = await Promise.all([
-      supabase.from('subscriptions').select('*').eq('empresa_id', empresa!.id).maybeSingle(),
-      supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
-      supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
-    ]);
-    setSubData(subRes.data);
-    setTimbresBalance(timbresRes.data?.saldo ?? 0);
-    setPendingSolicitudes(solRes.data || []);
-    if (subRes.data) setNewQty(subRes.data.max_usuarios || 3);
-    setLoading(false);
+    try {
+      const [subRes, timbresRes, solRes] = await Promise.all([
+        supabase.from('subscriptions').select('*').eq('empresa_id', empresa!.id).maybeSingle(),
+        supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
+        supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
+      ]);
+      const err = subRes.error || timbresRes.error || solRes.error;
+      if (err) throw err;
+      setSubData(subRes.data);
+      setTimbresBalance(timbresRes.data?.saldo ?? 0);
+      setPendingSolicitudes(solRes.data || []);
+      if (subRes.data) setNewQty(subRes.data.max_usuarios || 3);
+    } catch (e) {
+      console.error('[suscripción] no se pudo cargar', e);
+      toast.error('No se pudo cargar tu suscripción. ' + mensajeError(e));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function verifyTimbresPurchase(sessionId: string) {
