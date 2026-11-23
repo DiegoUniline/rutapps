@@ -810,7 +810,7 @@ export default function DashboardPage() {
   const monthRange = useMemo(() => ({ from: startOfMonthFn(new Date()), to: endOfMonthFn(new Date()) }), []);
   const { data: ventasMesData } = useDashboardVentas(monthRange);
   const { data: cobrosMesData } = useDashboardCobros(monthRange);
-  const { data: comprasMesData } = useDashboardCompras(monthRange);
+  const { data: costoMesData } = useDashboardVentaLineasIS(monthRange);
   const { data: gastosMesData } = useDashboardGastos(monthRange);
   const { data: visitasPeriodo } = useDashboardVisitas(dateRange, vendedorId || undefined);
   const { data: clientesActivos = [] } = useClientesActivos();
@@ -846,6 +846,14 @@ export default function DashboardPage() {
     return { totalUnidades, totalCredito, count: (devoluciones ?? []).length, motivoChart, tipoChart, vendedorChart };
   }, [devoluciones]);
 
+  // === UTILIDAD (misma fuente de verdad que Reportes → Generales → Utilidad; base D-060) ===
+  const utilidadResumen = useMemo(() => {
+    return calcularUtilidadConCosto(
+      (ventas ?? []) as any[],
+      ventaLineasIS?.costoTotal ?? 0,
+    );
+  }, [ventas, ventaLineasIS]);
+
   // KPI calculations
   const kpis = useMemo(() => {
     const totalVentas = (ventas ?? []).reduce((s, v) => s + Number(v.total ?? 0), 0);
@@ -867,16 +875,18 @@ export default function DashboardPage() {
     const productosBajoMinimo = (stock ?? []).filter(p => Number(p.cantidad ?? 0) <= Number(p.min ?? 0) && Number(p.min ?? 0) > 0).length;
     const valorInventario = (stock ?? []).reduce((s, p) => s + Number(p.cantidad ?? 0) * Number(p.costo ?? 0), 0);
 
-    const utilidadBruta = totalVentas - totalCompras - totalGastos;
+    // Utilidad neta = utilidad bruta (ventas − costo de lo vendido) − gastos.
+    // Las compras NO se restan: comprar mercancía no es costo de lo vendido.
+    const utilidadNeta = utilidadResumen.utilidadBruta - totalGastos;
 
     return {
       totalVentas, numVentas, ticketPromedio, pedidos, ventasDirectas,
       totalCobrado, totalCartera, clientesMorosos,
       totalCompras, saldoProveedores,
-      totalGastos, utilidadBruta,
+      totalGastos, utilidadNeta,
       productosTotal, productosBajoMinimo, valorInventario,
     };
-  }, [ventas, cobros, compras, gastos, cartera, stock]);
+  }, [ventas, cobros, compras, gastos, cartera, stock, utilidadResumen]);
 
   const lowStockProducts = useMemo(() =>
     (stock ?? [])
@@ -931,20 +941,12 @@ export default function DashboardPage() {
     const ventasMes = (ventasMesData ?? []).reduce((s, v: any) => s + Number(v.total || 0), 0);
     const cobradoMes = (cobrosMesData ?? []).reduce((s, c: any) => s + Number(c.monto || 0), 0);
     const gastosMes = (gastosMesData ?? []).reduce((s, g: any) => s + Number(g.monto || 0), 0);
-    const comprasMes = (comprasMesData ?? []).reduce((s, c: any) => s + Number(c.total || 0), 0);
-    const margenMonto = ventasMes - comprasMes;
+    // Margen = utilidad bruta del mes (ventas − costo de lo vendido), no ventas − compras.
+    const margenMonto = calcularUtilidadConCosto((ventasMesData ?? []) as any[], costoMesData?.costoTotal ?? 0).utilidadBruta;
     return { ventasMes, cobradoMes, gastosMes, margenMonto };
-  }, [ventasMesData, cobrosMesData, gastosMesData, comprasMesData]);
+  }, [ventasMesData, cobrosMesData, gastosMesData, costoMesData]);
 
   const devolucionesPct = kpis.totalVentas > 0 ? (devStats.totalCredito / kpis.totalVentas) * 100 : 0;
-
-  // === UTILIDAD (misma fuente de verdad que Reportes → Generales → Utilidad) ===
-  const utilidadResumen = useMemo(() => {
-    return calcularUtilidadConCosto(
-      (ventas ?? []) as any[],
-      ventaLineasIS?.costoTotal ?? 0,
-    );
-  }, [ventas, ventaLineasIS]);
 
   const utilidadLoading = loadingVentas || loadingUtilidadDetalle;
   const utilidadError = errorVentas || errorUtilidadDetalle;
@@ -1033,7 +1035,7 @@ export default function DashboardPage() {
             <KpiCard title="Cobrado" value={money(kpis.totalCobrado)} subtitle={`${(cobros ?? []).length} cobros · ant. ${money(prevKpis.cobros)}`} icon={Wallet} color="bg-[hsl(var(--success))]" trend={calcTrend(kpis.totalCobrado, prevKpis.cobros)} />
             <KpiCard title="Cartera" value={money(kpis.totalCartera)} subtitle={`${kpis.clientesMorosos} clientes`} icon={CreditCard} color="bg-[hsl(var(--warning))]" />
             <KpiCard title="Compras" value={money(kpis.totalCompras)} subtitle={`Pendiente: ${money(kpis.saldoProveedores)}`} icon={Package} color="bg-[hsl(var(--chart-3))]" trend={calcTrend(kpis.totalCompras, prevKpis.compras)} />
-            <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={`Utilidad: ${money(kpis.utilidadBruta)}`} icon={DollarSign} color={kpis.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} trend={calcTrend(kpis.totalGastos, prevKpis.gastos)} />
+            <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={utilidadError ? 'Utilidad neta: no se pudo calcular' : utilidadLoading ? 'Utilidad neta: calculando…' : `Utilidad neta: ${money(kpis.utilidadNeta)}`} icon={DollarSign} color={utilidadError || utilidadLoading || kpis.utilidadNeta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} trend={calcTrend(kpis.totalGastos, prevKpis.gastos)} />
             <KpiCard
               title="Utilidad"
               value={utilidadError ? 'Error' : utilidadLoading ? 'Calculando…' : money(utilidadResumen.utilidadBruta)}
@@ -1331,7 +1333,8 @@ export default function DashboardPage() {
               pedidos: kpis.pedidos, ventasDirectas: kpis.ventasDirectas,
               totalCobrado: kpis.totalCobrado, totalCartera: kpis.totalCartera, clientesMorosos: kpis.clientesMorosos,
               totalCompras: kpis.totalCompras, saldoProveedores: kpis.saldoProveedores,
-              totalGastos: kpis.totalGastos, utilidadBruta: kpis.utilidadBruta,
+              totalGastos: kpis.totalGastos,
+              costoVentas: utilidadResumen.costoTotal, utilidadBruta: utilidadResumen.utilidadBruta, utilidadNeta: kpis.utilidadNeta,
               productosBajoMinimo: kpis.productosBajoMinimo, valorInventario: kpis.valorInventario,
             },
             top5Productos: (topProductos ?? []).slice(0, 5).map((p: any) => ({ nombre: p.nombre, total: p.total, uds: p.qty })),

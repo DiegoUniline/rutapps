@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { atribuirCobrosAVendedor, type DashboardCobroAplicacion } from '@/lib/dashboardCobros';
+import { fetchVentasRealizadas, fechaVentaRealizada } from '@/lib/ventasRealizadas';
 
 export type DateRange = { from: Date; to: Date };
 
@@ -26,25 +27,32 @@ function fmt(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
+/** Fila de venta del tablero (base D-060). */
+export type VentaDashboardRow = {
+  id: string; fecha: string; fecha_entrega: string | null; fecha_venta?: string;
+  total: number | null; total_efectivo: number | null; cerrado_at: string | null; cerrado_snapshot: unknown;
+  subtotal: number | null; iva_total: number | null; tipo: string; status: string; condicion_pago: string | null;
+  vendedor_id: string | null; saldo_pendiente: number | null; cliente_id: string | null;
+  clientes: { nombre: string } | null; vendedores: { nombre: string } | null;
+};
+
 export function useDashboardVentas(range: DateRange, vendedorId?: string) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['dashboard-ventas', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      return fetchAllPages((from, to) => {
-        let q = supabase
-          .from('ventas')
-          .select('id, fecha, total, total_efectivo, cerrado_at, cerrado_snapshot, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
-          .eq('empresa_id', empresa!.id)
-          .eq('es_saldo_inicial', false)
-          .gte('fecha', fmt(range.from))
-          .lte('fecha', fmt(range.to))
-          .neq('status', 'cancelado' as any)
-          .range(from, to);
-        if (vendedorId) q = q.eq('vendedor_id', vendedorId);
-        return q;
+      // D-060: solo lo realmente vendido (directas confirmadas/entregadas/facturadas por
+      // fecha; pedidos entregados/facturados por fecha de entrega). `fecha_venta` es la
+      // fecha con la que cuenta cada operación (para agrupar por día).
+      const filas = await fetchVentasRealizadas<VentaDashboardRow>(supabase, {
+        empresaId: empresa!.id,
+        desde: fmt(range.from),
+        hasta: fmt(range.to),
+        select: 'id, fecha, fecha_entrega, total, total_efectivo, cerrado_at, cerrado_snapshot, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)',
+        vendedorIds: vendedorId ? [vendedorId] : undefined,
       });
+      return filas.map(v => ({ ...v, fecha_venta: fechaVentaRealizada(v) ?? v.fecha }));
     },
   });
 }
@@ -366,21 +374,14 @@ export function useDashboardVentasPorMes(months: number = 12, enabled = true) {
       const now = new Date();
       const from = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
       const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      const data = await fetchAllPages((f, t) =>
-        supabase
-          .from('ventas')
-          .select('fecha, total')
-          .eq('empresa_id', empresa!.id)
-          .eq('es_saldo_inicial', false)
-          .neq('status', 'cancelado')
-          .gte('fecha', fmt(from))
-          .lte('fecha', fmt(to))
-          .range(f, t),
-      );
+      // D-060: solo lo realmente vendido; pedidos en el mes de su entrega.
+      const data = await fetchVentasRealizadas<{ id: string; tipo: string; status: string; fecha: string; fecha_entrega: string | null; total: number | null }>(supabase, {
+        empresaId: empresa!.id, desde: fmt(from), hasta: fmt(to), select: 'total',
+      });
       const meses = monthsBack(months);
       const map = new Map<string, { total: number; count: number }>();
-      data.forEach((v: any) => {
-        const k = String(v.fecha).slice(0, 7);
+      data.forEach((v) => {
+        const k = String(fechaVentaRealizada(v) ?? v.fecha).slice(0, 7);
         const cur = map.get(k) ?? { total: 0, count: 0 };
         cur.total += Number(v.total ?? 0);
         cur.count += 1;
@@ -409,18 +410,12 @@ export function useDashboardVentasUsuarioMes(enabled = true) {
       const startCur = new Date(now.getFullYear(), now.getMonth(), 1);
       const startPrev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const endCur = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      const data = await fetchAllPages((f, t) =>
-        supabase
-          .from('ventas')
-          .select('vendedor_id, fecha, total, vendedores:profiles!vendedor_id(nombre)')
-          .eq('empresa_id', empresa!.id)
-          .eq('es_saldo_inicial', false)
-          .neq('status', 'cancelado')
-          .gte('fecha', fmt(startPrev))
-          .lte('fecha', fmt(endCur))
-          .not('vendedor_id', 'is', null)
-          .range(f, t),
-      );
+      // D-060: solo lo realmente vendido; pedidos en el mes de su entrega.
+      const data = (await fetchVentasRealizadas<any>(supabase, {
+        empresaId: empresa!.id, desde: fmt(startPrev), hasta: fmt(endCur),
+        select: 'vendedor_id, total, vendedores:profiles!vendedor_id(nombre)',
+        extra: (q) => q.not('vendedor_id', 'is', null),
+      })).map((v: any) => ({ ...v, fecha: fechaVentaRealizada(v) ?? v.fecha }));
       const curKey = `${startCur.getFullYear()}-${String(startCur.getMonth() + 1).padStart(2, '0')}`;
       const prevKey = `${startPrev.getFullYear()}-${String(startPrev.getMonth() + 1).padStart(2, '0')}`;
       const map = new Map<string, { nombre: string; cur: number; prev: number; curCount: number; prevCount: number }>();
@@ -448,12 +443,18 @@ export function useDashboardVentasUsuarioMes(enabled = true) {
   });
 }
 
-type VentaDashboard = { fecha: string; total: number | null; vendedor_id: string | null; vendedores?: { nombre: string } | null };
+type VentaDashboard = { fecha: string; fecha_venta?: string | null; total: number | null; vendedor_id: string | null; vendedores?: { nombre: string } | null };
 
-/** Ventas por día del rango, a partir de las filas de useDashboardVentas (mismos filtros; antes se volvían a bajar). */
+/**
+ * Ventas por día del rango, a partir de las filas de useDashboardVentas (mismos filtros; antes se volvían a bajar).
+ * Agrupa por `fecha_venta` (D-060: pedidos por fecha de entrega) y, si no viene, por `fecha`.
+ */
 export function ventasPorDia(rows: VentaDashboard[], range: DateRange) {
   const map = new Map<string, number>();
-  rows.forEach(v => map.set(v.fecha, (map.get(v.fecha) ?? 0) + Number(v.total ?? 0)));
+  rows.forEach(v => {
+    const dia = v.fecha_venta ?? v.fecha;
+    map.set(dia, (map.get(dia) ?? 0) + Number(v.total ?? 0));
+  });
   const result: { date: string; total: number }[] = [];
   const d = new Date(range.from);
   while (d <= range.to) {
@@ -484,18 +485,12 @@ export function useDashboardVentasPorVendedor(range: DateRange, enabled = true) 
     queryKey: ['dashboard-ventas-vendedor', empresa?.id, fmt(range.from), fmt(range.to)],
     enabled: !!empresa?.id && enabled,
     queryFn: async () => {
-      const data = await fetchAllPages((from, to) =>
-        supabase
-          .from('ventas')
-          .select('vendedor_id, total, vendedores:profiles!vendedor_id(nombre)')
-          .eq('empresa_id', empresa!.id)
-          .eq('es_saldo_inicial', false)
-          .gte('fecha', fmt(range.from))
-          .lte('fecha', fmt(range.to))
-          .neq('status', 'cancelado')
-          .not('vendedor_id', 'is', null)
-          .range(from, to)
-      );
+      // D-060: misma base que useDashboardVentas (solo lo realmente vendido).
+      const data = await fetchVentasRealizadas<any>(supabase, {
+        empresaId: empresa!.id, desde: fmt(range.from), hasta: fmt(range.to),
+        select: 'vendedor_id, total, vendedores:profiles!vendedor_id(nombre)',
+        extra: (q) => q.not('vendedor_id', 'is', null),
+      });
 
       const map = new Map<string, { nombre: string; total: number; count: number }>();
       data.forEach((v: any) => {
@@ -650,14 +645,12 @@ export function useDashboardHoy(vendedorId?: string, enabled = true) {
         .neq('status', 'cancelado');
       const entregasQ = vendedorId ? baseEntregas.eq('vendedor_id', vendedorId) : baseEntregas;
 
-      const baseVentas = supabase
-        .from('ventas')
-        .select('id, total, tipo, vendedor_id', { count: 'exact' })
-        .eq('empresa_id', eid)
-        .eq('es_saldo_inicial', false)
-        .neq('status', 'cancelado' as any)
-        .eq('fecha', today);
-      const ventasQ = vendedorId ? baseVentas.eq('vendedor_id', vendedorId) : baseVentas;
+      // D-060: ventas de hoy = lo realmente vendido hoy (pedidos por fecha de entrega).
+      const ventasQ = fetchVentasRealizadas<any>(supabase, {
+        empresaId: eid, desde: today, hasta: today,
+        select: 'total, vendedor_id',
+        vendedorIds: vendedorId ? [vendedorId] : undefined,
+      }).then(data => ({ data }));
 
       const cobrosQ = supabase
         .from('cobros')

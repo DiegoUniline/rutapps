@@ -35,6 +35,7 @@
     "src/lib/pdfAcciones.ts",
     "src/lib/reportePdf.ts",
     "src/lib/logisticaReportesPdf.ts",
-    "src/hooks/useRegistrarPdfReporte.ts"
+    "src/hooks/useRegistrarPdfReporte.ts",
+    "src/lib/ventasRealizadas.ts"
   ]
 }

@@ -299,3 +299,4 @@
 2026-11-23 · desarrollador · Entregas ya no se marcan solas (al abrir ni al cobrar); solo al tocar «Marcar entregado» · D-059
 2026-11-23 · desarrollador · Botón «Cobrar» en entregas ya entregadas con saldo (detalle y lista) · D-059
 2026-11-23 · desarrollador · Pedido de contado: no se entrega sin cobrar («Cobrar y entregar»; se marca al completar el cobro) · D-059
+2026-11-23 · desarrollador · Ventas y utilidad del Dashboard y Reportes→Utilidad solo lo realmente vendido (pedidos por fecha de entrega); Gastos muestra utilidad neta sin restar compras; migración 20261123050000 (sin aplicar a prod) · D-060

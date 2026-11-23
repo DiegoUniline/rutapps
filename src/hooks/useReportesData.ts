@@ -6,6 +6,7 @@ import { totalEfectivoVenta } from '@/lib/ventaCerrada';
 import { SALDO_FAVOR_METODO, esCobroSinDinero } from '@/lib/saldoFavor';
 import { buildPromoReporting } from '@/lib/promoReporting';
 import { calcularUtilidadBruta } from '@/lib/utilidadFinanciera';
+import { fetchVentasRealizadas } from '@/lib/ventasRealizadas';
 
 
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa', reportKey?: string, queryEnabled = true) {
@@ -27,6 +28,8 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       const needsCargas = !reportKey || reportKey === 'cargas';
       const needsDevoluciones = !reportKey || reportKey === 'devoluciones';
       const needsEntregas = !reportKey || reportKey === 'entregas';
+      // Utilidad (Resumen y Utilidad): base D-060, independiente del filtro de status del listado.
+      const needsUtilidad = !reportKey || reportKey === 'resumen' || reportKey === 'utilidad';
 
       const activeStatuses = (statusFilter && statusFilter.length > 0 ? statusFilter : ['borrador', 'confirmado', 'entregado', 'facturado']) as any;
 
@@ -48,14 +51,19 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         for (let i = 0; i < ids.length; i += size) out.push(ids.slice(i, i + size));
         return out;
       };
+      const fetchLineasDe = (ids: string[]) => fetchAllPages<any>((from, to) => supabase.from('venta_lineas')
+        .select('id, producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id')
+        .eq('empresa_id', eid).in('venta_id', ids).order('id').range(from, to).abortSignal(signal));
+      const fetchPromoDe = (ids: string[]) => fetchAllPages<any>((from, to) => supabase.from('promocion_aplicada')
+        .select('venta_linea_id, descuento_aplicado, venta_id')
+        .in('venta_id', ids).order('id').range(from, to).abortSignal(signal));
+
       const ventaLineasPromise = needsVentaLineas
         ? ventasPromise.then(async (ventasRows) => {
             const byId = new Map<string, any>(ventasRows.map((v: any) => [v.id, v]));
             const res: any[] = [];
             for (const ids of chunkIds([...byId.keys()])) {
-              const rows = await fetchAllPages<any>((from, to) => supabase.from('venta_lineas')
-                .select('id, producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id')
-                .eq('empresa_id', eid).in('venta_id', ids).order('id').range(from, to).abortSignal(signal));
+              const rows = await fetchLineasDe(ids);
               for (const l of rows) {
                 const v = byId.get(l.venta_id);
                 res.push({ ...l, ventas: v ? { empresa_id: eid, fecha: v.fecha, status: v.status, tipo: v.tipo, cliente_id: v.cliente_id, vendedor_id: v.vendedor_id, clientes: v.clientes, vendedores: v.vendedores } : null });
@@ -71,9 +79,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
             const byId = new Map<string, any>(ventasRows.map((v: any) => [v.id, v]));
             const res: any[] = [];
             for (const ids of chunkIds([...byId.keys()])) {
-              const rows = await fetchAllPages<any>((from, to) => supabase.from('promocion_aplicada')
-                .select('venta_linea_id, descuento_aplicado, venta_id')
-                .in('venta_id', ids).order('id').range(from, to).abortSignal(signal));
+              const rows = await fetchPromoDe(ids);
               for (const p of rows) {
                 const v = byId.get(p.venta_id);
                 res.push({ ...p, ventas: v ? { empresa_id: eid, fecha: v.fecha, status: v.status, tipo: v.tipo, vendedor_id: v.vendedor_id } : null });
@@ -135,7 +141,20 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
           })
         : Promise.resolve([]);
 
-      const [ventas, ventaLineas, promoAplicadas, cobrosAll, gastosBase, cajaGastosRaw, cargas, devoluciones, entregas] = await Promise.all([
+      // D-060: ventas realizadas del periodo para UTILIDAD (directas confirmadas/entregadas/
+      // facturadas por fecha; pedidos entregados/facturados por fecha de entrega). Respeta
+      // vendedor y tipo; NO el filtro de status del listado (que puede incluir borradores).
+      const realizadasPromise = needsUtilidad
+        ? fetchVentasRealizadas<any>(supabase, {
+            empresaId: eid, desde, hasta,
+            select: 'id, total, total_efectivo, cerrado_at, cerrado_snapshot, cliente_id, vendedor_id',
+            vendedorIds: hasVendorFilter ? vendedorIds : undefined,
+            tipo: tipoFilter,
+            signal,
+          })
+        : Promise.resolve([] as any[]);
+
+      const [ventas, ventaLineas, promoAplicadas, cobrosAll, gastosBase, cajaGastosRaw, cargas, devoluciones, entregas, ventasRealizadas] = await Promise.all([
         ventasPromise,
         ventaLineasPromise,
         promoAplicadasPromise,
@@ -145,6 +164,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         cargasPromise,
         devolucionesPromise,
         entregasPromise,
+        realizadasPromise,
       ]);
 
       // Descuento por línea proveniente de promociones (p.ej. producto gratis).
@@ -295,16 +315,58 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       const topVendedores = Object.entries(vendMap).map(([id, v]) => ({ id, ...v, costo: vendCostoMap[id] ?? 0, utilidad: vendUtilMap[id] ?? 0 })).sort((a, b) => b.total - a.total);
 
       // === UTILIDAD ===
-      // Fuente compartida con Dashboard: misma definición de utilidad bruta.
+      // Fuente compartida con Dashboard: misma definición de utilidad bruta y misma
+      // base de ventas (D-060). Las líneas de ventas que ya vinieron en el listado se
+      // reutilizan; solo se piden las de ventas realizadas que no estaban (p. ej.
+      // pedidos levantados antes del periodo y entregados dentro de él).
+      const idsRealizadas = new Set<string>(ventasRealizadas.map((v: any) => v.id));
+      const idsListado = new Set<string>(ventas.map((v: any) => v.id));
+      const faltantes = [...idsRealizadas].filter(id => !idsListado.has(id));
+      const lineasExtra: any[] = [];
+      const promoExtra: any[] = [];
+      if (needsUtilidad && needsVentaLineas) {
+        for (const ids of chunkIds(faltantes)) {
+          const [ls, ps] = await Promise.all([fetchLineasDe(ids), fetchPromoDe(ids)]);
+          lineasExtra.push(...ls);
+          promoExtra.push(...ps);
+        }
+      }
+      const lineasUtilidad = [
+        ...(ventaLineas as any[]).filter(l => idsRealizadas.has(l.venta_id)),
+        ...lineasExtra,
+      ];
+      const promoUtilidad = [
+        ...(promoAplicadas as any[]).filter(p => idsRealizadas.has(p.venta_id)),
+        ...promoExtra,
+      ];
       const costosPorProducto = new Map<string, number>(
         productos.map((p: any) => [p.id, Number(p.costo ?? 0) || 0]),
       );
       const utilidadCalc = calcularUtilidadBruta(
-        ventas as any[],
-        ventaLineas as any[],
+        ventasRealizadas as any[],
+        lineasUtilidad,
         costosPorProducto,
       );
       const costoTotal = utilidadCalc.costoTotal;
+
+      // Utilidad por producto con la misma base (exportación de la pestaña Utilidad).
+      const { lineTotalEfectivo: lineTotalUtilidad } = buildPromoReporting({
+        ventas: ventasRealizadas as any[],
+        lineas: lineasUtilidad,
+        promoAplicadas: promoUtilidad,
+      });
+      const utilProdMap: Record<string, { codigo: string; nombre: string; cantidad: number; total: number; costo_total: number }> = {};
+      for (const l of lineasUtilidad) {
+        const pid = l.producto_id ?? '';
+        if (!utilProdMap[pid]) utilProdMap[pid] = { codigo: (l.productos as any)?.codigo ?? '', nombre: (l.productos as any)?.nombre ?? '', cantidad: 0, total: 0, costo_total: 0 };
+        const cantidad = Number(l.cantidad ?? 0) || 0;
+        utilProdMap[pid].cantidad += cantidad;
+        utilProdMap[pid].total += lineTotalUtilidad(l);
+        utilProdMap[pid].costo_total += (costosPorProducto.get(pid) ?? 0) * cantidad;
+      }
+      const utilidadPorProducto = Object.entries(utilProdMap)
+        .map(([id, v]) => ({ id, ...v, utilidad: v.total - v.costo_total }))
+        .sort((a, b) => b.total - a.total);
 
       const gastosPorConcepto: Record<string, number> = {};
       for (const g of gastos) {
@@ -388,6 +450,10 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         ventasPorCliente,
         topVendedores,
         costoTotal, gastosDesglose,
+        // Base de la utilidad (D-060): lo realmente vendido en el periodo.
+        ventasUtilidad: utilidadCalc.totalVentas,
+        numVentasUtilidad: ventasRealizadas.length,
+        utilidadPorProducto,
         utilidadBruta: utilidadCalc.utilidadBruta,
         utilidadNeta: utilidadCalc.utilidadBruta - totalGastos,
         entregas, entregasPorRuta: Object.values(entregasPorRuta),

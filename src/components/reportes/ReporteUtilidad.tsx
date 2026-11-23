@@ -2,7 +2,10 @@ import { useCurrency } from '@/hooks/useCurrency';
 
 export function ReporteUtilidad({ data }: { data: any }) {
   const { fmt } = useCurrency();
-  const { totalVentas, costoTotal, totalGastos, utilidadBruta, utilidadNeta, gastosDesglose } = data;
+  const { costoTotal, totalGastos, utilidadBruta, utilidadNeta, gastosDesglose } = data;
+  // D-060: la utilidad se calcula solo sobre lo realmente vendido (directas confirmadas
+  // y pedidos entregados por fecha de entrega), no sobre el listado con borradores.
+  const totalVentas: number = data.ventasUtilidad ?? data.totalVentas;
   const margenBruto = totalVentas > 0 ? Math.round((utilidadBruta / totalVentas) * 100) : 0;
   const margenNeto = totalVentas > 0 ? Math.round((utilidadNeta / totalVentas) * 100) : 0;
 
@@ -14,6 +17,7 @@ export function ReporteUtilidad({ data }: { data: any }) {
       <div className="bg-card border border-border rounded-lg p-4">
         <h3 className="text-xs font-bold text-muted-foreground uppercase mb-3 border-b border-border pb-1">Estado de resultados</h3>
         <div className="space-y-1 text-[12px]">
+          <p className="text-[10px] text-muted-foreground pb-1">Solo lo realmente vendido: ventas directas confirmadas y pedidos entregados (por fecha de entrega). No incluye borradores, cancelados ni pedidos sin entregar.</p>
           <div className="flex justify-between font-semibold">
             <span>Ventas totales</span>
             <span>{fmt2(totalVentas)}</span>
