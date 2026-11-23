@@ -7,6 +7,7 @@ import { ReportarMermaSheet } from '@/components/ruta/ReportarMermaSheet';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
+import { useAlmacenRutaVista } from '@/hooks/useAlmacenRutaVista';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
 import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
@@ -20,7 +21,7 @@ export default function RutaStock() {
   const canViewPrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver') || hasPermiso('productos', 'ver');
   const [search, setSearch] = useState('');
   const [detalleProducto, setDetalleProducto] = useState<any | null>(null);
-  const almacenId = profile?.almacen_id;
+  const { almacenId, necesitaVendedor } = useAlmacenRutaVista();
   // Disponible = stock a bordo que se puede vender. Merma = lo que este vendedor reportó como
   // merma desde su ruta (ya salió de su stock hacia el almacén Mermas; no se puede vender).
   const [vista, setVista] = useState<'disponible' | 'merma'>('disponible');
@@ -98,6 +99,16 @@ export default function RutaStock() {
 
   const conStock = productosConStock.filter((p: any) => (p.stockRuta ?? 0) > 0).length;
   const sinStock = productosConStock.filter((p: any) => (p.stockRuta ?? 0) <= 0).length;
+
+  if (necesitaVendedor) {
+    return (
+      <div className="p-6 text-center space-y-2">
+        <Package className="h-10 w-10 mx-auto text-muted-foreground/30" />
+        <p className="text-[14px] font-semibold text-foreground">Elige un vendedor</p>
+        <p className="text-[12px] text-muted-foreground">Selecciona un vendedor en la barra de arriba para ver el stock de su almacén de ruta.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
