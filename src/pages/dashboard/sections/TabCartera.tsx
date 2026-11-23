@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { esCobroSinDinero } from '@/lib/saldoFavor';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDashboardAging } from '../hooks/useDashboardAging';
@@ -41,7 +42,7 @@ export default function TabCartera({ range, ventasMes, ventas, cobros, money }: 
       }, 0);
       const cobrado = (cobros ?? []).reduce((s, c: any) => {
         const f = new Date(c.fecha);
-        return f >= w && f <= wEnd ? s + Number(c.monto || 0) : s;
+        return f >= w && f <= wEnd && !esCobroSinDinero(c.metodo_pago) ? s + Number(c.monto || 0) : s;
       }, 0);
       return { semana: format(w, "d MMM", { locale: es }), vendido, cobrado };
     });

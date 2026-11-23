@@ -46,6 +46,7 @@ import { useDashboardVisitas, useClientesActivos, useUltimaCompraPorCliente } fr
 import { Target, Route, Wrench, Sparkles } from 'lucide-react';
 import { startOfMonth as startOfMonthFn, endOfMonth as endOfMonthFn } from 'date-fns';
 import { calcularUtilidadConCosto } from '@/lib/utilidadFinanciera';
+import { esCobroSinDinero } from '@/lib/saldoFavor';
 import { SortableTh, useSortableTable } from '@/hooks/useSortableTable';
 
 const PRESETS = [
@@ -794,7 +795,7 @@ export default function DashboardPage() {
   const { data: gastosPrev } = useDashboardGastos(prevRange, vendedorId || undefined);
   const prevKpis = useMemo(() => {
     const v = (ventasPrev ?? []).reduce((s, r) => s + Number(r.total ?? 0), 0);
-    const c = (cobrosPrev ?? []).reduce((s, r) => s + Number(r.monto ?? 0), 0);
+    const c = (cobrosPrev ?? []).filter((r: any) => !esCobroSinDinero(r.metodo_pago)).reduce((s, r) => s + Number(r.monto ?? 0), 0);
     const co = (comprasPrev ?? []).reduce((s, r) => s + Number(r.total ?? 0), 0);
     const g = (gastosPrev ?? []).reduce((s, r) => s + Number(r.monto ?? 0), 0);
     const n = (ventasPrev ?? []).length;
@@ -862,7 +863,8 @@ export default function DashboardPage() {
     const pedidos = (ventas ?? []).filter(v => v.tipo === 'pedido').length;
     const ventasDirectas = numVentas - pedidos;
 
-    const totalCobrado = (cobros ?? []).reduce((s, c) => s + Number(c.monto ?? 0), 0);
+    // Cobrado = dinero real: sin «Ajuste de liquidación» ni saldo a favor (igual que Reportes y Ruta).
+    const totalCobrado = (cobros ?? []).filter((c: any) => !esCobroSinDinero(c.metodo_pago)).reduce((s, c) => s + Number(c.monto ?? 0), 0);
     const totalCartera = (cartera ?? []).reduce((s, v) => s + Number(v.saldo_pendiente ?? 0), 0);
     const clientesMorosos = new Set((cartera ?? []).map(v => v.cliente_id)).size;
 
@@ -939,7 +941,7 @@ export default function DashboardPage() {
 
   const metaMesData = useMemo(() => {
     const ventasMes = (ventasMesData ?? []).reduce((s, v: any) => s + Number(v.total || 0), 0);
-    const cobradoMes = (cobrosMesData ?? []).reduce((s, c: any) => s + Number(c.monto || 0), 0);
+    const cobradoMes = (cobrosMesData ?? []).filter((c: any) => !esCobroSinDinero(c.metodo_pago)).reduce((s, c: any) => s + Number(c.monto || 0), 0);
     const gastosMes = (gastosMesData ?? []).reduce((s, g: any) => s + Number(g.monto || 0), 0);
     // Margen = utilidad bruta del mes (ventas − costo de lo vendido), no ventas − compras.
     const margenMonto = calcularUtilidadConCosto((ventasMesData ?? []) as any[], costoMesData?.costoTotal ?? 0).utilidadBruta;

@@ -303,3 +303,4 @@
 2026-11-23 · desarrollador · Sync: SYNC_EPOCH (cada celular baja todo completo una vez; cursores de antes del corte dejaban stock viejo, caso Ruta Grande). App instalada sin sesión abre en /login
 2026-11-23 · desarrollador · Ventas y utilidad del Dashboard y Reportes→Utilidad solo lo realmente vendido (pedidos por fecha de entrega); Gastos muestra utilidad neta sin restar compras; migración 20261123050000 (sin aplicar a prod) · D-060
 2026-11-23 · desarrollador · Incidente GAMA/Tampico: celulares reenviaban cobros viejos desde un respaldo de cola de versión anterior (servidor los rechazó; sin cobros duplicados ni ventas borradas). Corrección: solo se restaura respaldo con formato actual y de las últimas 48 h
+2026-11-23 · desarrollador · Dashboard: Cobrado excluye cobros sin dinero (ajuste de liquidación, saldo a favor); caso Global Trade HNL 5.58M de ajustes
