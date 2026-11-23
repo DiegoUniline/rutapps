@@ -1,7 +1,7 @@
 # Estado del proyecto — DOCUMENTO VIVO
 > Se lee al iniciar cada sesión. Se actualiza tras decisiones confirmadas o cambios verificados (no por consultas).
 
-**Última actualización:** 2026-11-23 · **Agente:** desarrollador (D-060 ventas realizadas en Dashboard y Utilidad)
+**Última actualización:** 2026-11-23 · **Agente:** desarrollador (D-061 pedidos cuentan al confirmar en empresas sin Entregas)
 
 ## Dónde vamos
 - **Paso:** Operación / evolución — sistema en producción (no aplica Vuelta 0)
@@ -13,6 +13,7 @@
 
 ## Decisiones recientes (últimas 10)
 - [D-062](./decisiones.md#d-062) 2026-11-23 · Botón «Convertir a venta directa» en pedidos (borrador/confirmado, sin entregas activas): descuenta stock del almacén elegido y abre el cobro si queda saldo. Migración `20261123070000` pendiente de aplicar.
+- [D-061](./decisiones.md#d-061) 2026-11-23 · «Según uso de Entregas»: ajuste por empresa `pedidos_cuentan_al_confirmar`; con true los pedidos confirmados/entregados/facturados cuentan por fecha del pedido (empresas sin Entregas, p. ej. GLOBAL TRADE). Migración `20261123060000` pendiente de aplicar (después de `20261123050000`).
 - [D-060](./decisiones.md#d-060) 2026-11-23 · Ventas y utilidad (Dashboard y Reportes → Utilidad) solo lo realmente vendido: directas confirmadas/entregadas/facturadas por fecha; pedidos entregados/facturados por fecha de entrega. «Gastos» muestra utilidad neta sin restar compras. Migración `20261123050000` pendiente de aplicar.
 - [D-057](./decisiones.md#d-057) 2026-11-23 · Cobros a las 9:00 am CDMX en la fecha de cada cliente (crons hechos; suscripciones existentes pendientes).
 - [D-056](./decisiones.md#d-056) 2026-11-23 · Usuarios en Stripe: altas se cobran proporcional de inmediato; bajas sin devolución desde la siguiente renovación.
@@ -38,6 +39,7 @@
 
 ## Pendientes / bloqueos
 - D-062: aplicar en producción `supabase/migrations/20261123070000_d062_convertir_pedido_a_venta.sql` (requiere `CONFIRMO`) y después correr `docs/sql/2026-11-23_verificar_d062.sql` (termina en RAISE: no deja datos); hasta aplicarla el botón responde «función no encontrada». ❓ Fecha de la venta convertida (se conserva la del pedido; con D-060 cuenta en ese día).
+- D-061: aplicar en producción `supabase/migrations/20261123060000_pedidos_cuentan_al_confirmar.sql` junto con/después de `20261123050000` (requiere `CONFIRMO`); probada en Postgres local (inicialización, costo/top/evolución con y sin ajuste, autorización, permisos, reaplicable). La lista de empresas en true se calcula al aplicarla (últimos 90 días). Tras aplicarla, regenerar `types.ts` (la columna se lee con cast en `useAjusteVentasRealizadas.ts`). Visto sin tocar: la política RLS «Users can update their empresa» deja actualizar `empresas` a cualquier usuario de la empresa (el permiso `configuracion.general` solo se valida en la UI).
 - D-060: aplicar en producción `supabase/migrations/20261123050000_dashboard_utilidad_entregado.sql` (requiere `CONFIRMO`); probada en Postgres local (casos de `src/test/ventasRealizadasD060.test.ts`: costo 593 / 81 con vendedor; permisos iguales a prod). Hasta aplicarla, la tarjeta Utilidad del Dashboard mezcla ventas D-060 con costo de la base anterior.
 - F1/F2 devoluciones — por revisar: (a) cancelar una devolución cuya mercancía vendible ya se vendió o descargó falla con «Stock insuficiente» (no se fuerza negativo); (b) si la liquidación del día ya se aprobó (F3), cancelar una devolución con dinero sin caja no cambia lo congelado (aparece como movimiento posterior); (c) «No entregado» con Bueno/Merma actualiza renglones y luego la entrega en pasos separados (mismo patrón que «Quitar producto»); 💡 pasarlo a una RPC; (d) sin conexión, la nota aplicada a la venta no cuenta como saldo a favor disponible (su cobro lo crea el servidor al sincronizar); (e) `src/integrations/supabase/types.ts` no tiene aún las columnas nuevas (se consultan con cast); regenerar tras aplicar la migración.
 - D-051 (2026-11-21) requiere `CONFIRMO`: quitar `html-to-image` de `package.json` (ya no se importa). Sin cambio: `wa-bot-webhook/ventaPdf.ts` (nota carta por código; unificar con el modelo del ticket exige empaquetarlo para Deno y desplegar). «Imprimir» abre el PDF en otra pestaña; si el navegador bloquea la ventana (Safari tras generar), se descarga.

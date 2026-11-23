@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { atribuirCobrosAVendedor, type DashboardCobroAplicacion } from '@/lib/dashboardCobros';
 import { fetchVentasRealizadas, fechaVentaRealizada } from '@/lib/ventasRealizadas';
+import { useAjusteVentasRealizadas } from '@/hooks/useAjusteVentasRealizadas';
 
 export type DateRange = { from: Date; to: Date };
 
@@ -38,21 +39,24 @@ export type VentaDashboardRow = {
 
 export function useDashboardVentas(range: DateRange, vendedorId?: string) {
   const { empresa } = useAuth();
+  const ajuste = useAjusteVentasRealizadas();
   return useQuery({
-    queryKey: ['dashboard-ventas', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
-    enabled: !!empresa?.id,
+    queryKey: ['dashboard-ventas', empresa?.id, fmt(range.from), fmt(range.to), vendedorId, ajuste.pedidosAlConfirmar],
+    enabled: !!empresa?.id && ajuste.listo,
     queryFn: async () => {
       // D-060: solo lo realmente vendido (directas confirmadas/entregadas/facturadas por
-      // fecha; pedidos entregados/facturados por fecha de entrega). `fecha_venta` es la
-      // fecha con la que cuenta cada operación (para agrupar por día).
+      // fecha; pedidos entregados/facturados por fecha de entrega). D-061: si la empresa no
+      // usa Entregas, pedidos confirmados por fecha. `fecha_venta` es la fecha con la que
+      // cuenta cada operación (para agrupar por día).
       const filas = await fetchVentasRealizadas<VentaDashboardRow>(supabase, {
+        pedidosAlConfirmar: ajuste.pedidosAlConfirmar,
         empresaId: empresa!.id,
         desde: fmt(range.from),
         hasta: fmt(range.to),
         select: 'id, fecha, fecha_entrega, total, total_efectivo, cerrado_at, cerrado_snapshot, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)',
         vendedorIds: vendedorId ? [vendedorId] : undefined,
       });
-      return filas.map(v => ({ ...v, fecha_venta: fechaVentaRealizada(v) ?? v.fecha }));
+      return filas.map(v => ({ ...v, fecha_venta: fechaVentaRealizada(v, ajuste) ?? v.fecha }));
     },
   });
 }
@@ -366,9 +370,10 @@ export function useDashboardEvolucionMensual(months: number = 12, enabled = true
 // ============ Mensual: total ventas por mes con crecimiento ============
 export function useDashboardVentasPorMes(months: number = 12, enabled = true) {
   const { empresa } = useAuth();
+  const ajuste = useAjusteVentasRealizadas();
   return useQuery({
-    queryKey: ['dashboard-ventas-por-mes', empresa?.id, months],
-    enabled: !!empresa?.id && enabled,
+    queryKey: ['dashboard-ventas-por-mes', empresa?.id, months, ajuste.pedidosAlConfirmar],
+    enabled: !!empresa?.id && enabled && ajuste.listo,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const now = new Date();
@@ -377,11 +382,12 @@ export function useDashboardVentasPorMes(months: number = 12, enabled = true) {
       // D-060: solo lo realmente vendido; pedidos en el mes de su entrega.
       const data = await fetchVentasRealizadas<{ id: string; tipo: string; status: string; fecha: string; fecha_entrega: string | null; total: number | null }>(supabase, {
         empresaId: empresa!.id, desde: fmt(from), hasta: fmt(to), select: 'total',
+        pedidosAlConfirmar: ajuste.pedidosAlConfirmar,
       });
       const meses = monthsBack(months);
       const map = new Map<string, { total: number; count: number }>();
       data.forEach((v) => {
-        const k = String(fechaVentaRealizada(v) ?? v.fecha).slice(0, 7);
+        const k = String(fechaVentaRealizada(v, ajuste) ?? v.fecha).slice(0, 7);
         const cur = map.get(k) ?? { total: 0, count: 0 };
         cur.total += Number(v.total ?? 0);
         cur.count += 1;
@@ -401,9 +407,10 @@ export function useDashboardVentasPorMes(months: number = 12, enabled = true) {
 // ============ Por usuario: mes actual vs anterior ============
 export function useDashboardVentasUsuarioMes(enabled = true) {
   const { empresa } = useAuth();
+  const ajuste = useAjusteVentasRealizadas();
   return useQuery({
-    queryKey: ['dashboard-ventas-usuario-mes', empresa?.id],
-    enabled: !!empresa?.id && enabled,
+    queryKey: ['dashboard-ventas-usuario-mes', empresa?.id, ajuste.pedidosAlConfirmar],
+    enabled: !!empresa?.id && enabled && ajuste.listo,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const now = new Date();
@@ -415,7 +422,8 @@ export function useDashboardVentasUsuarioMes(enabled = true) {
         empresaId: empresa!.id, desde: fmt(startPrev), hasta: fmt(endCur),
         select: 'vendedor_id, total, vendedores:profiles!vendedor_id(nombre)',
         extra: (q) => q.not('vendedor_id', 'is', null),
-      })).map((v: any) => ({ ...v, fecha: fechaVentaRealizada(v) ?? v.fecha }));
+        pedidosAlConfirmar: ajuste.pedidosAlConfirmar,
+      })).map((v: any) => ({ ...v, fecha: fechaVentaRealizada(v, ajuste) ?? v.fecha }));
       const curKey = `${startCur.getFullYear()}-${String(startCur.getMonth() + 1).padStart(2, '0')}`;
       const prevKey = `${startPrev.getFullYear()}-${String(startPrev.getMonth() + 1).padStart(2, '0')}`;
       const map = new Map<string, { nombre: string; cur: number; prev: number; curCount: number; prevCount: number }>();
@@ -481,15 +489,17 @@ export function ventasPorVendedor(rows: VentaDashboard[]) {
 /** Solo hace falta con un vendedor elegido (las filas del periodo ya vienen filtradas a él). */
 export function useDashboardVentasPorVendedor(range: DateRange, enabled = true) {
   const { empresa } = useAuth();
+  const ajuste = useAjusteVentasRealizadas();
   return useQuery({
-    queryKey: ['dashboard-ventas-vendedor', empresa?.id, fmt(range.from), fmt(range.to)],
-    enabled: !!empresa?.id && enabled,
+    queryKey: ['dashboard-ventas-vendedor', empresa?.id, fmt(range.from), fmt(range.to), ajuste.pedidosAlConfirmar],
+    enabled: !!empresa?.id && enabled && ajuste.listo,
     queryFn: async () => {
       // D-060: misma base que useDashboardVentas (solo lo realmente vendido).
       const data = await fetchVentasRealizadas<any>(supabase, {
         empresaId: empresa!.id, desde: fmt(range.from), hasta: fmt(range.to),
         select: 'vendedor_id, total, vendedores:profiles!vendedor_id(nombre)',
         extra: (q) => q.not('vendedor_id', 'is', null),
+        pedidosAlConfirmar: ajuste.pedidosAlConfirmar,
       });
 
       const map = new Map<string, { nombre: string; total: number; count: number }>();
@@ -615,9 +625,10 @@ export function useDashboardClientesEnRiesgo(range: DateRange, vendedorId?: stri
 
 export function useDashboardHoy(vendedorId?: string, enabled = true) {
   const { empresa } = useAuth();
+  const ajuste = useAjusteVentasRealizadas();
   return useQuery({
-    queryKey: ['dashboard-hoy', empresa?.id, vendedorId],
-    enabled: !!empresa?.id && enabled,
+    queryKey: ['dashboard-hoy', empresa?.id, vendedorId, ajuste.pedidosAlConfirmar],
+    enabled: !!empresa?.id && enabled && ajuste.listo,
     staleTime: 3 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
@@ -650,6 +661,7 @@ export function useDashboardHoy(vendedorId?: string, enabled = true) {
         empresaId: eid, desde: today, hasta: today,
         select: 'total, vendedor_id',
         vendedorIds: vendedorId ? [vendedorId] : undefined,
+        pedidosAlConfirmar: ajuste.pedidosAlConfirmar,
       }).then(data => ({ data }));
 
       const cobrosQ = supabase

@@ -9,14 +9,27 @@
  * Nunca borradores, cancelados ni pedidos sin entregar. Siempre
  * `es_saldo_inicial = false` y filtrado por empresa.
  *
+ * D-061 «según uso de Entregas»: si la empresa tiene el ajuste
+ * `empresas.pedidos_cuentan_al_confirmar = true` (no usa Entregas), el pedido
+ * confirmado / entregado / facturado cuenta por `fecha` del pedido. Con el ajuste
+ * en false (default) se queda la regla D-060 de arriba.
+ *
  * La misma regla vive en SQL (RPC dashboard_costo_ventas, dashboard_top_productos,
- * dashboard_evolucion_mensual; migración 20261123050000_dashboard_utilidad_entregado.sql).
- * Si cambia aquí, cambia allá.
+ * dashboard_evolucion_mensual; migraciones 20261123050000_dashboard_utilidad_entregado.sql
+ * y 20261123060000_pedidos_cuentan_al_confirmar.sql). Si cambia aquí, cambia allá.
  */
 import { fetchAllPages } from './supabasePaginate';
 
 export const STATUS_VENTA_DIRECTA_REALIZADA = ['confirmado', 'entregado', 'facturado'] as const;
 export const STATUS_PEDIDO_REALIZADO = ['entregado', 'facturado'] as const;
+/** D-061: status de pedido que cuentan cuando la empresa no usa Entregas. */
+export const STATUS_PEDIDO_AL_CONFIRMAR = ['confirmado', 'entregado', 'facturado'] as const;
+
+/** Ajuste de la empresa que cambia la regla (D-061). */
+export interface AjusteVentasRealizadas {
+  /** `empresas.pedidos_cuentan_al_confirmar`: true = pedidos cuentan al confirmarse, por `fecha`. */
+  pedidosAlConfirmar?: boolean | null;
+}
 
 export interface VentaRealizadaCampos {
   tipo?: string | null;
@@ -28,25 +41,33 @@ export interface VentaRealizadaCampos {
 
 const soloFecha = (f: string | null | undefined): string | null => (f ? String(f).slice(0, 10) : null);
 
+/** Status de pedido que cuentan según el ajuste de la empresa. */
+export function statusPedidoRealizado(ajuste?: AjusteVentasRealizadas): readonly string[] {
+  return ajuste?.pedidosAlConfirmar ? STATUS_PEDIDO_AL_CONFIRMAR : STATUS_PEDIDO_REALIZADO;
+}
+
 /** ¿La operación cuenta como venta realizada (sin importar la fecha)? */
-export function esVentaRealizada(v: VentaRealizadaCampos): boolean {
+export function esVentaRealizada(v: VentaRealizadaCampos, ajuste?: AjusteVentasRealizadas): boolean {
   if (v.es_saldo_inicial) return false;
   const status = String(v.status ?? '');
   if (v.tipo === 'venta_directa') return (STATUS_VENTA_DIRECTA_REALIZADA as readonly string[]).includes(status);
-  if (v.tipo === 'pedido') return (STATUS_PEDIDO_REALIZADO as readonly string[]).includes(status);
+  if (v.tipo === 'pedido') return statusPedidoRealizado(ajuste).includes(status);
   return false;
 }
 
-/** Fecha en que la operación cuenta como venta: pedidos por entrega (fallback fecha); directas por fecha. */
-export function fechaVentaRealizada(v: VentaRealizadaCampos): string | null {
-  if (v.tipo === 'pedido') return soloFecha(v.fecha_entrega) ?? soloFecha(v.fecha);
+/**
+ * Fecha en que la operación cuenta como venta: directas por fecha; pedidos por entrega
+ * (fallback fecha) o, con el ajuste D-061, por fecha del pedido.
+ */
+export function fechaVentaRealizada(v: VentaRealizadaCampos, ajuste?: AjusteVentasRealizadas): string | null {
+  if (v.tipo === 'pedido' && !ajuste?.pedidosAlConfirmar) return soloFecha(v.fecha_entrega) ?? soloFecha(v.fecha);
   return soloFecha(v.fecha);
 }
 
 /** ¿Cuenta como venta realizada dentro de [desde, hasta] (fechas YYYY-MM-DD inclusivas)? */
-export function ventaRealizadaEnRango(v: VentaRealizadaCampos, desde: string, hasta: string): boolean {
-  if (!esVentaRealizada(v)) return false;
-  const f = fechaVentaRealizada(v);
+export function ventaRealizadaEnRango(v: VentaRealizadaCampos, desde: string, hasta: string, ajuste?: AjusteVentasRealizadas): boolean {
+  if (!esVentaRealizada(v, ajuste)) return false;
+  const f = fechaVentaRealizada(v, ajuste);
   return f != null && f >= desde && f <= hasta;
 }
 
@@ -65,7 +86,7 @@ export function unirSinDuplicados<T extends { id?: string | null }>(...listas: T
   return out;
 }
 
-export interface FiltroVentasRealizadas {
+export interface FiltroVentasRealizadas extends AjusteVentasRealizadas {
   empresaId: string;
   desde: string;
   hasta: string;
@@ -106,8 +127,9 @@ export function filtroPedidosPorEntrega(desde: string, hasta: string): string {
 /**
  * Trae, paginado, las ventas realizadas del rango según D-060: dos consultas
  * (directas por fecha; pedidos entregados por fecha de entrega con respaldo en
- * fecha), unidas y sin repetidos. Al final se vuelve a aplicar la regla en
- * memoria como red de seguridad.
+ * fecha), unidas y sin repetidos. Con `pedidosAlConfirmar` (D-061) la consulta de
+ * pedidos trae confirmados/entregados/facturados por `fecha`. Al final se vuelve a
+ * aplicar la regla en memoria como red de seguridad.
  */
 export async function fetchVentasRealizadas<T extends VentaRealizadaCampos & { id?: string | null }>(
   client: { from: (tabla: string) => any }, // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -137,17 +159,19 @@ export async function fetchVentasRealizadas<T extends VentaRealizadaCampos & { i
           .range(from, to),
       ));
 
+  const ajuste: AjusteVentasRealizadas = { pedidosAlConfirmar: !!f.pedidosAlConfirmar };
   const pedidos = f.tipo === 'venta_directa'
     ? Promise.resolve([] as T[])
-    : fetchAllPages<T>((from, to) => conSignal(
-        comun(client.from('ventas').select(select))
+    : fetchAllPages<T>((from, to) => {
+        const base = comun(client.from('ventas').select(select))
           .eq('tipo', 'pedido')
-          .in('status', [...STATUS_PEDIDO_REALIZADO])
-          .or(filtroPedidosPorEntrega(f.desde, f.hasta))
-          .order('id')
-          .range(from, to),
-      ));
+          .in('status', [...statusPedidoRealizado(ajuste)]);
+        const porFecha = ajuste.pedidosAlConfirmar
+          ? base.gte('fecha', f.desde).lte('fecha', f.hasta)
+          : base.or(filtroPedidosPorEntrega(f.desde, f.hasta));
+        return conSignal(porFecha.order('id').range(from, to));
+      });
 
   const [d, p] = await Promise.all([directas, pedidos]);
-  return unirSinDuplicados(d, p).filter(v => ventaRealizadaEnRango(v, f.desde, f.hasta));
+  return unirSinDuplicados(d, p).filter(v => ventaRealizadaEnRango(v, f.desde, f.hasta, ajuste));
 }
