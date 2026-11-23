@@ -20,6 +20,7 @@ import TicketDisenadorPreview from '@/components/configuracion/TicketDisenadorPr
 import { DEFAULT_CAMPOS, CAMPO_SECCIONES, CAMPO_LABELS, CAMPO_DEPENDE_DE, TICKET_TEXTOS, TICKET_TEXTO_MAX } from '@/lib/ticketCamposConfig';
 import { campoOn, campoTexto, leerTicketCampos, type TicketCampos } from '@/lib/ticketModelo';
 import { ticketAnchoEmpresa } from '@/lib/ticketPdf';
+import { AJUSTE_VENTAS_REALIZADAS_KEY } from '@/hooks/useAjusteVentasRealizadas';
 
 function useEmpresaConfig() {
   const { empresa } = useAuth();
@@ -141,6 +142,8 @@ export default function ConfiguracionPage() {
   const [apartadoAlmacenesIds, setApartadoAlmacenesIds] = useState<string[]>([]);
   const [politicaCobro, setPoliticaCobro] = useState<'pedido' | 'entregado'>('pedido');
   const [manejaLotes, setManejaLotes] = useState(false);
+  // D-061: pedidos cuentan como venta al confirmarse (empresa sin Entregas).
+  const [pedidosAlConfirmar, setPedidosAlConfirmar] = useState(false);
 
   // Reset initialized when empresa changes (e.g. super admin switches)
   const empresaId = empresa?.id;
@@ -200,13 +203,14 @@ export default function ConfiguracionPage() {
     setApartadoSoloConStock(!!(config as any).apartado_solo_con_stock);
     setPoliticaCobro(((config as any).politica_cobro === 'entregado') ? 'entregado' : 'pedido');
     setManejaLotes(!!(config as any).maneja_lotes);
+    setPedidosAlConfirmar(!!(config as any).pedidos_cuentan_al_confirmar);
     setLogoFile(null);
     setInitialized(true);
     setInitializedForId(config.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configId, initialized]);
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ticketAnchoEmpresa(config) || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || apartarStockPedidos !== !!((config as any)?.apartar_stock_pedidos) || apartadoSoloConStock !== !!((config as any)?.apartado_solo_con_stock) || JSON.stringify([...apartadoAlmacenesIds].sort()) !== JSON.stringify([...(((config as any)?.apartado_almacenes_ids ?? []) as string[])].sort()) || politicaCobro !== (((config as any)?.politica_cobro === 'entregado') ? 'entregado' : 'pedido') || manejaLotes !== !!((config as any)?.maneja_lotes) || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ticketAnchoEmpresa(config) || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || apartarStockPedidos !== !!((config as any)?.apartar_stock_pedidos) || apartadoSoloConStock !== !!((config as any)?.apartado_solo_con_stock) || JSON.stringify([...apartadoAlmacenesIds].sort()) !== JSON.stringify([...(((config as any)?.apartado_almacenes_ids ?? []) as string[])].sort()) || politicaCobro !== (((config as any)?.politica_cobro === 'entregado') ? 'entregado' : 'pedido') || manejaLotes !== !!((config as any)?.maneja_lotes) || pedidosAlConfirmar !== !!((config as any)?.pedidos_cuentan_al_confirmar) || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
@@ -221,6 +225,9 @@ export default function ConfiguracionPage() {
       Object.keys(CAMPO_LABELS).some(k => campoOn(campos, k) !== campoOn(origCampos, k)) ||
       TICKET_TEXTOS.some(k => campoTexto(campos, k) !== campoTexto(origCampos, k));
   })());
+
+  // D-061: el interruptor solo existe si la columna ya está en la BD (select('*') la trae).
+  const tieneAjustePedidos = !!config && Object.prototype.hasOwnProperty.call(config, 'pedidos_cuentan_al_confirmar');
 
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -271,6 +278,7 @@ export default function ConfiguracionPage() {
           apartado_solo_con_stock: apartarStockPedidos ? apartadoSoloConStock : false,
           politica_cobro: politicaCobro,
           maneja_lotes: manejaLotes,
+          ...(tieneAjustePedidos ? { pedidos_cuentan_al_confirmar: pedidosAlConfirmar } : {}),
         } as any)
         .eq('id', empresa!.id)
         .select('*')
@@ -294,6 +302,12 @@ export default function ConfiguracionPage() {
       qc.invalidateQueries({ queryKey: ['empresa-config'] });
       qc.invalidateQueries({ queryKey: ['empresa'] });
       qc.invalidateQueries({ queryKey: ['empresa-jornada'] });
+      // D-061: Dashboard y Reportes dependen del ajuste de pedidos.
+      qc.invalidateQueries({ queryKey: [AJUSTE_VENTAS_REALIZADAS_KEY] });
+      qc.invalidateQueries({ predicate: (q) => {
+        const k = String(q.queryKey[0] ?? '');
+        return k.startsWith('dashboard-') || k === 'reportes-full';
+      } });
     },
     onError: (e: any) => {
       const msg = e.message?.includes('empresas_email_unique')
@@ -603,6 +617,27 @@ export default function ConfiguracionPage() {
               ))}
             </div>
           </div>
+
+          {/* D-061: cuándo cuenta un pedido como venta en Dashboard y Reportes */}
+          {tieneAjustePedidos && (
+            <div className="bg-card border border-border rounded-lg p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <label htmlFor="pedidos-al-confirmar" className="text-[13px] font-medium text-foreground cursor-pointer">
+                    Los pedidos cuentan como venta al confirmarse (no uso Entregas)
+                  </label>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Actívalo si no registras entregas: en el Dashboard y en Reportes → Utilidad los pedidos confirmados cuentan como venta en la fecha del pedido. Apagado, un pedido cuenta hasta que se marca entregado, en la fecha de entrega.
+                  </p>
+                </div>
+                <Switch
+                  id="pedidos-al-confirmar"
+                  checked={pedidosAlConfirmar}
+                  onCheckedChange={setPedidosAlConfirmar}
+                />
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         {/* ── TAB: Fiscal y dirección ── */}

@@ -7,13 +7,15 @@ import { SALDO_FAVOR_METODO, esCobroSinDinero } from '@/lib/saldoFavor';
 import { buildPromoReporting } from '@/lib/promoReporting';
 import { calcularUtilidadBruta } from '@/lib/utilidadFinanciera';
 import { fetchVentasRealizadas } from '@/lib/ventasRealizadas';
+import { useAjusteVentasRealizadas } from '@/hooks/useAjusteVentasRealizadas';
 
 
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa', reportKey?: string, queryEnabled = true) {
   const { empresa } = useAuth();
+  const ajuste = useAjusteVentasRealizadas();
   return useQuery({
-    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter, tipoFilter, reportKey],
-    enabled: !!empresa?.id && queryEnabled,
+    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter, tipoFilter, reportKey, ajuste.pedidosAlConfirmar],
+    enabled: !!empresa?.id && queryEnabled && ajuste.listo,
     staleTime: 2 * 60 * 1000, // 2 min stale for reports
     queryFn: async ({ signal }) => {
       const eid = empresa!.id;
@@ -142,7 +144,8 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         : Promise.resolve([]);
 
       // D-060: ventas realizadas del periodo para UTILIDAD (directas confirmadas/entregadas/
-      // facturadas por fecha; pedidos entregados/facturados por fecha de entrega). Respeta
+      // facturadas por fecha; pedidos entregados/facturados por fecha de entrega; D-061: si la
+      // empresa no usa Entregas, pedidos confirmados por fecha). Respeta
       // vendedor y tipo; NO el filtro de status del listado (que puede incluir borradores).
       const realizadasPromise = needsUtilidad
         ? fetchVentasRealizadas<any>(supabase, {
@@ -151,6 +154,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
             vendedorIds: hasVendorFilter ? vendedorIds : undefined,
             tipo: tipoFilter,
             signal,
+            pedidosAlConfirmar: ajuste.pedidosAlConfirmar,
           })
         : Promise.resolve([] as any[]);
 
