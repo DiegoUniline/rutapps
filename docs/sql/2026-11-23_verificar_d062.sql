@@ -4,6 +4,8 @@
 -- SIEMPRE con RAISE EXCEPTION: todo se deshace (no toca pedidos reales; folios, stock e historial
 -- vuelven a como estaban). Correr completo en el SQL editor con un rol que pueda fijar
 -- request.jwt.claims (postgres). Resultado esperado: «D-062 OK (n/n): …».
+-- (2026-11-23) Los datos de prueba se crean sin sesión: con sesión, next_folio/fn_assert_empresa exige
+-- que la empresa sea la de get_my_empresa_id() del usuario simulado. Verificado en prod: 7/7.
 DO $verificar$
 DECLARE
   v_a uuid; v_owner_a uuid; v_b uuid; v_owner_b uuid; v_sin_permiso uuid;
@@ -12,19 +14,22 @@ DECLARE
   v_r jsonb; v_stock numeric; v_movs int; v_msg text; v_ok int := 0; v_total int := 0;
   v_log text := '';
 BEGIN
-  SELECT e.id, e.owner_user_id INTO v_a, v_owner_a FROM public.empresas e
-   WHERE e.owner_user_id IS NOT NULL
-     AND EXISTS (SELECT 1 FROM public.profiles p WHERE p.user_id = e.owner_user_id AND p.empresa_id = e.id)
-   ORDER BY e.created_at LIMIT 1;
-  SELECT e.id, e.owner_user_id INTO v_b, v_owner_b FROM public.empresas e
-   WHERE e.owner_user_id IS NOT NULL AND e.id <> v_a
-     AND EXISTS (SELECT 1 FROM public.profiles p WHERE p.user_id = e.owner_user_id AND p.empresa_id = e.id)
-   ORDER BY e.created_at LIMIT 1;
-  IF v_a IS NULL OR v_b IS NULL THEN RAISE EXCEPTION 'D-062: se necesitan dos empresas con dueño'; END IF;
-
-  -- Sesión: dueño de A.
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_owner_a, 'role', 'authenticated')::text, true);
-
+  -- Empresa A = la que el sistema asigna a su dueño (get_my_empresa_id), para pasar fn_assert_empresa.
+  FOR v_owner_a IN SELECT e.owner_user_id FROM public.empresas e WHERE e.owner_user_id IS NOT NULL
+                    AND NOT public.is_super_admin(e.owner_user_id) ORDER BY e.created_at LOOP
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_owner_a, 'role', 'authenticated')::text, true);
+    v_a := public.get_my_empresa_id();
+    EXIT WHEN v_a IS NOT NULL;
+  END LOOP;
+  FOR v_owner_b IN SELECT e.owner_user_id FROM public.empresas e WHERE e.owner_user_id IS NOT NULL
+                    AND NOT public.is_super_admin(e.owner_user_id) AND e.owner_user_id <> v_owner_a ORDER BY e.created_at LOOP
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_owner_b, 'role', 'authenticated')::text, true);
+    v_b := public.get_my_empresa_id();
+    EXIT WHEN v_b IS NOT NULL AND v_b <> v_a;
+  END LOOP;
+  IF v_a IS NULL OR v_b IS NULL OR v_a = v_b THEN RAISE EXCEPTION 'D-062: se necesitan dos empresas con dueño'; END IF;
+  -- Datos de prueba sin sesión (conexión directa); la sesión se simula solo para llamar la función.
+  PERFORM set_config('request.jwt.claims', '', true);
   INSERT INTO public.almacenes(empresa_id, nombre) VALUES (v_a, 'ZZ D-062 prueba') RETURNING id INTO v_alm;
   INSERT INTO public.almacenes(empresa_id, nombre) VALUES (v_b, 'ZZ D-062 prueba B') RETURNING id INTO v_alm_b;
   INSERT INTO public.productos(empresa_id, nombre, codigo) VALUES (v_a, 'ZZ D-062 producto', 'ZZD062') RETURNING id INTO v_prod;
@@ -39,6 +44,7 @@ BEGIN
   SET CONSTRAINTS ALL IMMEDIATE; SET CONSTRAINTS ALL DEFERRED;
 
   -- Caso 1: convierte y descuenta exactamente una vez.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_owner_a, 'role', 'authenticated')::text, true);
   v_total := v_total + 1;
   v_r := public.fn_convertir_pedido_a_venta(v_ped, v_alm);
   SET CONSTRAINTS ALL IMMEDIATE; SET CONSTRAINTS ALL DEFERRED;  -- dispara los triggers DEFERRED
