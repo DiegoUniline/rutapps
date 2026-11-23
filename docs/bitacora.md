@@ -310,3 +310,4 @@
 2026-11-23 · desarrollador · Convertir pedido en venta directa (botón web y móvil, RPC fn_convertir_pedido_a_venta; migración 20261123070000 sin aplicar a prod; verificación local 7/7) · D-062
 2026-11-23 · desarrollador · CONFIRMO publicar convertir pedido: migración 20261123070000 aplicada; verificación en prod 7/7 (todo se deshizo) · D-062
 2026-11-23 · desarrollador · Dashboard con filtro de vendedor: cobro cuenta para quien cobró (decisión del dueño; caso Multi $54 Omar/Ana). Ventas: «Pagado» solo cobros reales y «Al entregar» en pedidos D-034 sin entregar (caso PED-0250 Multi)
+2026-11-23 · desarrollador · CONFIRMO dar editar a Vendedor GT: role_permisos ventas.editar=true en rol «Vendedor» de GLOBAL TRADE LOGISTICS (4 usuarios); vuelve Editar y Convertir en móvil
