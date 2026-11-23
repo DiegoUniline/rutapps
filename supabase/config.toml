@@ -84,3 +84,19 @@ verify_jwt = false
 
 [functions.solicitud-compra-proveedor]
 verify_jwt = false
+
+# Fase 3 (2026-11-23): se publican solas al subir a main (antes a mano). verify_jwt igual que en producción.
+[functions.billing-cycle]
+verify_jwt = true
+
+[functions.admin-billing]
+verify_jwt = true
+
+[functions.select-plan]
+verify_jwt = true
+
+[functions.create-trial-checkout]
+verify_jwt = true
+
+[functions.wa-scheduler-alertas-semanal]
+verify_jwt = true
