@@ -48,6 +48,7 @@ interface Props {
   setSinImpuestos?: (v: boolean) => void;
   readOnlyForm?: boolean;
   saldoPendiente?: number;
+  totalPagado?: number;
   currencyCode?: string | null;
   cerradoSnapshot?: { lineas?: Array<{ producto_id: string; pedido: number; entregado: number }> } | null;
   canChangePrice?: boolean;
@@ -70,7 +71,7 @@ export function VentaLineasTab(props: Props) {
   const { symbol, fmt } = useCurrency();
   const {
     readOnly, totals, onAddLine, pricingReady = true, sinImpuestos, setSinImpuestos,
-    readOnlyForm, saldoPendiente, promoResults, currencyCode, cerradoSnapshot,
+    readOnlyForm, saldoPendiente, totalPagado, promoResults, currencyCode, cerradoSnapshot,
     canApplyDiscount, descuentoExtraValor, descuentoExtraTipo,
     onDescuentoExtraChange, onToggleDescuentoExtraTipo,
   } = props;
@@ -305,7 +306,7 @@ export function VentaLineasTab(props: Props) {
 
         <div className="flex w-full justify-end">
           <div className="w-full lg:w-96">
-            <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} descuentoExtraValor={descuentoExtraValor} descuentoExtraTipo={descuentoExtraTipo} canEditDescuentoExtra={!readOnly && !!canApplyDiscount} onDescuentoExtraChange={onDescuentoExtraChange} onToggleDescuentoExtraTipo={onToggleDescuentoExtraTipo} sinImpuestos={sinImpuestos} canToggleSinImpuestos={!readOnlyForm && !!setSinImpuestos} onSinImpuestosChange={setSinImpuestos} currencyCode={currencyCode} promoTotalGuardado={readOnly ? lineas.reduce((s, l) => s + (Number((l as any).descuento_promocion_monto) || 0), 0) : null} subtotalNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const lista = Number((l as any).precio_lista_unitario); const qty = Number((l as any).cantidad) || 0; return s + (Number.isFinite(lista) ? Math.round(lista * qty * 100) / 100 : 0); }, 0) * 100) / 100 : null} descuentoNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const a = l as any; const desc = (Number(a.descuento_promocion_monto) || 0) + (Number(a.descuento_manual_monto) || 0); if (desc <= 0) return s; const divisor = (1 + (Number(a.ieps_pct) || 0) / 100) * (1 + (Number(a.iva_pct) || 0) / 100); return s + Math.round((divisor > 0 ? desc / divisor : desc) * 100) / 100; }, 0) * 100) / 100 : null} />
+            <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} totalPagado={totalPagado} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} descuentoExtraValor={descuentoExtraValor} descuentoExtraTipo={descuentoExtraTipo} canEditDescuentoExtra={!readOnly && !!canApplyDiscount} onDescuentoExtraChange={onDescuentoExtraChange} onToggleDescuentoExtraTipo={onToggleDescuentoExtraTipo} sinImpuestos={sinImpuestos} canToggleSinImpuestos={!readOnlyForm && !!setSinImpuestos} onSinImpuestosChange={setSinImpuestos} currencyCode={currencyCode} promoTotalGuardado={readOnly ? lineas.reduce((s, l) => s + (Number((l as any).descuento_promocion_monto) || 0), 0) : null} subtotalNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const lista = Number((l as any).precio_lista_unitario); const qty = Number((l as any).cantidad) || 0; return s + (Number.isFinite(lista) ? Math.round(lista * qty * 100) / 100 : 0); }, 0) * 100) / 100 : null} descuentoNetoGuardado={readOnly ? Math.round(lineas.reduce((s, l) => { const a = l as any; const desc = (Number(a.descuento_promocion_monto) || 0) + (Number(a.descuento_manual_monto) || 0); if (desc <= 0) return s; const divisor = (1 + (Number(a.ieps_pct) || 0) / 100) * (1 + (Number(a.iva_pct) || 0) / 100); return s + Math.round((divisor > 0 ? desc / divisor : desc) * 100) / 100; }, 0) * 100) / 100 : null} />
           </div>
         </div>
       </div>

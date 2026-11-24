@@ -12,6 +12,8 @@ interface VentaTotalsProps {
   total: number;
   isMobile: boolean;
   saldoPendiente?: number;
+  /** Pagado real (cobros activos aplicados). Si no viene, no se muestra «Pagado». */
+  totalPagado?: number;
   promoResults?: PromoResult[];
   descuento_promo?: number;
   descuento_extra_amt?: number;
@@ -37,7 +39,7 @@ interface VentaTotalsProps {
 }
 
 export function VentaTotals({
-  subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente,
+  subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, totalPagado,
   promoResults, descuento_promo, descuento_extra_amt, descuentoExtraValor = 0,
   descuentoExtraTipo = 'porcentaje', canEditDescuentoExtra = false,
   onDescuentoExtraChange, onToggleDescuentoExtraTipo, sinImpuestos = false,
@@ -79,7 +81,9 @@ export function VentaTotals({
   // Con datos guardados, el gravable se deriva de las líneas para que la resta cuadre.
   const gravableShown = useGuardado ? r2(grossSubtotal - totalDescuentos) : gravable;
 
-  const pagadoAmt = saldoPendiente != null ? Math.max(0, (total || 0) - saldoPendiente) : null;
+  // «Pagado» sale de los cobros reales, no de total − saldo: en una venta nueva el saldo aún es 0
+  // (total guardado = 0) y mostraba el total completo como si ya se hubiera cobrado.
+  const pagadoAmt = totalPagado != null ? Math.max(0, totalPagado) : null;
 
   return (
     <div className="flex justify-end pt-2 max-lg:sticky max-lg:bottom-0 lg:sticky lg:top-4 bg-card pb-2">
