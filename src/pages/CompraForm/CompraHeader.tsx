@@ -205,7 +205,8 @@ function CompraHeaderMovil(p: Props) {
                 {p.saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {p.saving ? 'Guardando…' : 'Guardar'}
               </button>
             )}
-            {puedeConfirmar && !p.isEditable && (
+            {/* Un borrador siempre es editable: Confirmar va junto a Guardar, igual que en computadora. */}
+            {puedeConfirmar && (
               <button onClick={() => setConfirmDialog({ open: true, action: 'confirmada', title: 'Confirmar compra', description: '¿Confirmar esta compra?' })} className={botonPrincipal}>
                 <CheckCircle2 className="h-4 w-4" /> Confirmar
               </button>
