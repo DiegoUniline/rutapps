@@ -15,6 +15,8 @@ import { programarSaludDispositivo, telemetriaHabilitada } from './telemetriaRun
 import type { EstadoSaludDispositivo } from './saludDispositivo';
 
 const MAX_RETRIES = 5;
+/** Un fallido (dead-letter) se reintenta solo cada 30 min (o con «Reintentar»). */
+export const DEAD_LETTER_RETRY_MS = 30 * 60_000;
 const BASE_DELAY_MS = 1000;
 let activeProcessPromise: Promise<SyncPassResult> | null = null;
 
@@ -332,7 +334,9 @@ async function processSyncQueueInternal(): Promise<SyncPassResult> {
   const runItem = async (item: SyncQueueItem, reintentoTrasSesion = false): Promise<{ handled: boolean }> => {
     // Skip items that have exceeded max retries recently (backoff)
     if (item.retries > 0) {
-      const delay = getRetryDelay(item.retries);
+      // Fallido (dead-letter): ya no se reintenta en cada pasada (cada ~30 s golpeaba al
+      // servidor con el mismo error); se reintenta solo cada 30 min o con «Reintentar».
+      const delay = item.retries > MAX_RETRIES ? DEAD_LETTER_RETRY_MS : getRetryDelay(item.retries);
       const elapsed = Date.now() - item.createdAt;
       if (elapsed < delay) return { handled: false };
     }

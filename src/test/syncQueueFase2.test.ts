@@ -382,3 +382,24 @@ describe('venta de ruta como una operación', () => {
     expect(avisos.join(' ')).toMatch(/abono/);
   });
 });
+
+describe('D-065: fallidos no se reintentan en cada pasada', () => {
+  it('un fallido reciente NO se reintenta; pasado el intervalo sí, y si ya está en el servidor sale de la cola', async () => {
+    await offlineDb.syncQueue.add({
+      table: 'cobro_aplicaciones', operation: 'insert', keyField: 'id', keyValue: 'ca-1',
+      data: { id: 'ca-1', cobro_id: 'c1', venta_id: 'v1', monto_aplicado: 78 },
+      retries: cola.SYNC_QUEUE_MAX_RETRIES + 1, createdAt: Date.now() - 60_000,
+    } as any);
+    const antes = servidor.llamadas;
+    await cola.processSyncQueue();
+    expect(servidor.llamadas).toBe(antes); // no tocó el servidor
+    expect(await offlineDb.syncQueue.count()).toBe(1);
+
+    const [item] = await offlineDb.syncQueue.toArray();
+    await offlineDb.syncQueue.update(item.id!, { createdAt: Date.now() - cola.DEAD_LETTER_RETRY_MS - 1000 });
+    tabla('cobro_aplicaciones').set('ca-1', { id: 'ca-1', monto_aplicado: 78 }); // ya estaba en el servidor
+    await cola.processSyncQueue();
+    expect(servidor.llamadas).toBe(antes + 1);
+    expect(await offlineDb.syncQueue.count()).toBe(0);
+  });
+});
