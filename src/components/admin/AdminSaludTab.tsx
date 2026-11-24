@@ -27,6 +27,9 @@ import {
 
 type RpcLibre = (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
 const rpc: RpcLibre = (fn, args) => (supabase.rpc as unknown as RpcLibre)(fn, args);
+type ConsultaConfig = {
+  select: (c: string) => { eq: (k: string, v: number) => { maybeSingle: () => PromiseLike<{ data: unknown; error: { message: string } | null }> } };
+};
 
 const fecha = (s: string | null) => (s ? new Date(s).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
@@ -52,10 +55,10 @@ export default function AdminSaludTab() {
         rpc('admin_salud_dispositivos'),
         rpc('admin_salud_crons', { p_horas: horas }),
         // Tabla nueva (D-064): aún no está en types.ts (se regenera tras aplicar la migración).
-        (supabase.from as any)('alertas_config')
+        (supabase.from as unknown as (t: string) => ConsultaConfig)('alertas_config')
           .select('destinatarios, activo, umbral_errores_hora, horas_pendientes').eq('id', 1).maybeSingle(),
       ]);
-      const primero = e.error ?? d.error ?? c.error ?? (cfg.error as { message: string } | null);
+      const primero = e.error ?? d.error ?? c.error ?? cfg.error;
       if (primero) throw new Error(primero.message);
       setErrores((e.data as ErrorAgrupado[]) ?? []);
       setDispositivos((d.data as DispositivoPanel[]) ?? []);
