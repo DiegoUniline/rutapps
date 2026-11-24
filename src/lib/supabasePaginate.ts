@@ -27,10 +27,22 @@ export async function fetchAllPages<T = any>(
   const all: T[] = [];
   const parallelism = Math.max(1, Math.floor(concurrency) || 1);
 
+  // Orden estable: sin un ORDER BY único, Postgres puede devolver las páginas en distinto
+  // orden entre peticiones (filas repetidas y otras faltantes). Se agrega `id` como desempate;
+  // si la tabla/vista no tiene `id` (42703), se repite sin él, como antes.
+  let ordenEstable = true;
   const fetchPage = async (page: number): Promise<T[]> => {
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    const { data, error } = await buildQuery(from, to);
+    const intento = async (conOrden: boolean) => {
+      const q = buildQuery(from, to);
+      return conOrden ? conDesempatePorId(q) : q;
+    };
+    let { data, error } = await intento(ordenEstable);
+    if (error && ordenEstable && page === 0 && esColumnaInexistente(error)) {
+      ordenEstable = false;
+      ({ data, error } = await intento(false));
+    }
     if (error) throw error;
     return (data ?? []) as T[];
   };
@@ -85,4 +97,17 @@ export async function fetchAllPages<T = any>(
   }
 
   return all;
+}
+
+/** Agrega `id.asc` como último criterio de orden a un builder de PostgREST (si no lo tiene ya). */
+export function conDesempatePorId<Q>(q: Q): Q {
+  const b = q as any;
+  if (!b || typeof b.order !== 'function' || !(b.url instanceof URL)) return q;
+  const actual: string = b.url.searchParams.get('order') ?? '';
+  if (actual.split(',').some(c => c === 'id' || c.startsWith('id.'))) return q;
+  return b.order('id', { ascending: true });
+}
+
+function esColumnaInexistente(error: any): boolean {
+  return error?.code === '42703' || /column .*id.* does not exist/i.test(String(error?.message ?? ''));
 }
