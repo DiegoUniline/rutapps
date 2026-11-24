@@ -355,14 +355,14 @@ export default function VentaFormPage() {
   };
 
   const handlePrintTicket = async () => {
+    // Saldo de la cuenta del cliente (otras ventas + esta) en computadora y celular por igual;
+    // antes solo en computadora y el ticket del celular mostraba solo el saldo de este pedido.
     let saldoCuenta: { saldoAnterior: number; saldoNuevo: number } | undefined;
-    if (!isMobile) {
-      try {
-        saldoCuenta = await fetchVentaDesktopTicketSaldo(empresa?.id, form.cliente_id, form.id, saldoPendiente);
-      } catch {
-        toast.error('No se pudo consultar el saldo anterior. Intenta imprimir nuevamente.');
-        return;
-      }
+    try {
+      saldoCuenta = await fetchVentaDesktopTicketSaldo(empresa?.id, form.cliente_id, form.id, saldoPendiente);
+    } catch {
+      toast.error('No se pudo consultar el saldo anterior. Intenta imprimir nuevamente.');
+      return;
     }
     const clienteData = clientesList?.find(c => c.id === form.cliente_id);
     const vendedorNombreTicket = (form as any).vendedores?.nombre ?? profile?.nombre ?? '';
