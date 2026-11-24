@@ -107,6 +107,7 @@ export function usePromocionesActivas() {
                 await offlineDb.cacheTimestamps.put({
                   ...previous,
                   table: 'promociones',
+                  empresaId: empresaId!,
                   lastSync: now,
                   lastSuccessAt: now,
                   lastFullAt: now,

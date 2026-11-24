@@ -1,4 +1,4 @@
-// Monitoreo de errores en producción (Sentry).
+// Monitoreo de errores en producción: Sentry (opcional, con DSN) + tabla interna app_errores (D-064).
 //
 // A PRUEBA DE FALLOS: si no hay VITE_SENTRY_DSN configurado, TODO esto es un
 // no-op — la app funciona igual, no se rompe nada. Se activa en cuanto pongas el
@@ -58,10 +58,18 @@ export function setObservabilityUser(userId?: string | null, empresaId?: string 
   Sentry.setTag('empresa_id', empresaId ?? undefined);
 }
 
-/** Reporta un error ya manejado, con contexto opcional. */
+/**
+ * Reporta un error ya manejado, con contexto opcional.
+ * - Sentry: solo si hay VITE_SENTRY_DSN (sin cambios).
+ * - D-064: SIEMPRE (en producción) a la tabla interna `app_errores` por RPC, sin datos
+ *   personales. Se carga aparte (import dinámico) y nunca rompe: si falla, console.warn.
+ */
 export function captureAppError(error: unknown, context?: Record<string, unknown>): void {
-  if (!initialized) return;
-  Sentry.captureException(error, context ? { extra: context } : undefined);
+  if (initialized) Sentry.captureException(error, context ? { extra: context } : undefined);
+  if (isRefusedContext()) return; // dev, pruebas o iframe: no se reporta
+  import('@/lib/telemetriaRuntime')
+    .then((m) => m.reportarErrorInterno(error, context))
+    .catch((e) => console.warn('[telemetría] no se pudo cargar el reporte interno', e));
 }
 
 export { Sentry };

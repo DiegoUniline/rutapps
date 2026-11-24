@@ -965,6 +965,18 @@ function ReconnectRefreshMount() {
   return null;
 }
 
+import { reportarSaludDispositivo } from "@/lib/syncQueue";
+
+/** D-064: al abrir la app (o cambiar de usuario/empresa) se reporta la salud de la cola. */
+function SaludDispositivoMount() {
+  const { user, empresa } = useAuth();
+  useEffect(() => {
+    if (!user?.id || !empresa?.id) return;
+    void reportarSaludDispositivo(true);
+  }, [user?.id, empresa?.id]);
+  return null;
+}
+
 const App = () => (
   <GlobalErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -981,6 +993,7 @@ const App = () => (
               <FacturaPendienteModal />
               <PWAUpdatePrompt />
               <BroadcastListener />
+              <SaludDispositivoMount />
             </BrowserRouter>
           </AuthProvider>
         </TooltipProvider>

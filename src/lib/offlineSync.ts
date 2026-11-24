@@ -3,12 +3,13 @@
  * Uses created_at timestamps for delta sync to minimize data usage.
  * Reports per-table progress via callback.
  */
-import { offlineDb, getOfflineTable } from './offlineDb';
+import { offlineDb, getOfflineTable, type CacheTimestamp } from './offlineDb';
 import { supabase } from './supabase';
 import { fetchAllPages } from './supabasePaginate';
 import { getSyncScope, syncV2Habilitado, vendedorScopeActivo, vendedorScopeTransaccional, syncHijosScopedHabilitado } from './syncScope';
 import { getFeatureFlagsCache, setFeatureFlagsCache, type FeatureFlag } from './featureFlags';
 import { reaplicarPendientesEnTabla } from './pendientesLocales';
+import { captureAppError } from './observability';
 
 
 const TABLES_TO_CACHE = [
@@ -605,6 +606,18 @@ export async function downloadAllData(
 
 export const LS_LAST_EMPRESA = 'offline-empresa-id';
 
+/**
+ * D-064 · El cursor de sincronización es POR EMPRESA: la entrada guarda `empresaId` y, si es de
+ * otra empresa (p. ej. el super admin cambió de empresa a media descarga), se descarta y la
+ * tabla baja completa. Las entradas sin `empresaId` (anteriores a este cambio) se aceptan:
+ * `purgeForeignTenantData` ya borra los cursores cuando detecta cambio de empresa.
+ */
+export function cursorDeEmpresa(entry: CacheTimestamp | undefined, empresaId: string): CacheTimestamp | undefined {
+  if (!entry) return undefined;
+  if (entry.empresaId && entry.empresaId !== empresaId) return undefined;
+  return entry;
+}
+
 export const SYNC_EPOCH = '2026-11-23-corte';
 export const LS_SYNC_EPOCH = 'offline-sync-epoch';
 
@@ -758,7 +771,7 @@ async function downloadAllDataInternal(
       notify();
 
       try {
-        const cacheEntry = await offlineDb.cacheTimestamps.get(table);
+        const cacheEntry = cursorDeEmpresa(await offlineDb.cacheTimestamps.get(table), empresaId);
         const nowMs = Date.now();
         const isUpdatedAtDelta = UPDATED_AT_DELTA_TABLES.has(table);
         const isUpdatedAtWindow = UPDATED_AT_WINDOW_TABLES.has(table);
@@ -806,6 +819,7 @@ async function downloadAllDataInternal(
           if (!isDeltaPull) await escribirDescarga(table, [], { empresaId, parentIds });
           await offlineDb.cacheTimestamps.put({
             table,
+            empresaId,
             lastSync: nowMs,
             lastSuccessAt: nowMs,
             cursor: cacheEntry?.cursor,
@@ -979,6 +993,7 @@ async function downloadAllDataInternal(
 
         await offlineDb.cacheTimestamps.put({
           table,
+          empresaId,
           lastSync: nowMs,
           lastSuccessAt: nowMs,
           cursor: newCursor,
@@ -993,13 +1008,19 @@ async function downloadAllDataInternal(
         notify();
       } catch (err: any) {
         console.error(`Failed to cache ${table}:`, err);
+        // D-064: error de descarga al monitoreo interno (los de red y los tiempos agotados no).
+        if (!/tardó demasiado/.test(String(err?.message ?? ''))) {
+          captureAppError(err, { origen: 'offlineSync.descarga', tabla: table });
+        }
         // Persist failure metadata WITHOUT touching lastSync/cursor — so the
         // next sync retries from the same position and the UI can flag pending
         // tables even after a reload.
         try {
-          const prev = await offlineDb.cacheTimestamps.get(table);
+          // Cursor de otra empresa: no se conserva (D-064).
+          const prev = cursorDeEmpresa(await offlineDb.cacheTimestamps.get(table), empresaId);
           await offlineDb.cacheTimestamps.put({
             table,
+            empresaId,
             lastSync: prev?.lastSync ?? 0,
             lastSuccessAt: prev?.lastSuccessAt,
             cursor: prev?.cursor,

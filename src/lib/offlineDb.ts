@@ -34,6 +34,8 @@ export interface CacheTimestamp {
   // Delta incremental por updated_at (reloj del servidor, sin problemas de
   // desfase de reloj del cliente): mayor updated_at ya descargado.
   cursor?: string;
+  // D-064: empresa dueña del cursor; si no coincide con la activa, el cursor no se usa.
+  empresaId?: string;
   // Última vez que se hizo una descarga COMPLETA de la tabla (para reconciliar
   // borrados físicos periódicamente en tablas con delta por updated_at).
   lastFullAt?: number;

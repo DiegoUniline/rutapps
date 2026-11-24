@@ -100,3 +100,8 @@ verify_jwt = true
 
 [functions.wa-scheduler-alertas-semanal]
 verify_jwt = true
+
+# D-064 (Fase 4): alertas de salud por correo; la llama el cron alertas-salud-horaria con
+# x-cron-secret (la función valida con isPrivilegedCaller, igual que billing-notify-email).
+[functions.alertas-salud]
+verify_jwt = false

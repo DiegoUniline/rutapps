@@ -11,6 +11,8 @@ import { esCantidadDevolucionValida, sanearDevolucionLinea } from './devolucionG
 import { asegurarSesionParaSubir, type EstadoSesion } from './syncSesion';
 import { copiasLocalesDeRpc, COLA_REGISTRAR_VENTA_RUTA } from './pendientesLocales';
 import { captureAppError } from './observability';
+import { programarSaludDispositivo, telemetriaHabilitada } from './telemetriaRuntime';
+import type { EstadoSaludDispositivo } from './saludDispositivo';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -215,8 +217,58 @@ export async function processSyncQueue(): Promise<SyncPassResult> {
     return await run();
   })().finally(() => {
     activeProcessPromise = null;
+    // D-064: estado de la cola al servidor (freno 1/min; nunca lanza).
+    void reportarSaludDispositivo();
   });
   return activeProcessPromise;
+}
+
+// ── D-064 · Salud del dispositivo ────────────────────────────────────────────────────
+export const LS_ULTIMO_SYNC_OK = 'uniline_ultimo_sync_ok';
+
+/** La cola quedó vacía tras una pasada (o ya lo estaba): última sincronización correcta. */
+async function marcarSyncOkSiColaVacia() {
+  try {
+    if ((await offlineDb.syncQueue.count()) === 0) localStorage.setItem(LS_ULTIMO_SYNC_OK, String(Date.now()));
+  } catch (err) {
+    console.warn('[salud] no se pudo guardar la última sincronización correcta', err);
+  }
+}
+
+/** Pendientes, fallidas (dead-letter), último error y última sincronización correcta. */
+export async function estadoSaludCola(): Promise<EstadoSaludDispositivo> {
+  const items = await offlineDb.syncQueue.toArray();
+  let pendientes = 0;
+  let fallidas = 0;
+  let ultimo: SyncQueueItem | null = null;
+  for (const it of items) {
+    if ((it.retries ?? 0) > MAX_RETRIES) fallidas++;
+    else pendientes++;
+    if (it.lastError && (!ultimo || (it.lastAttemptAt ?? 0) > (ultimo.lastAttemptAt ?? 0))) ultimo = it;
+  }
+  let ultimoSyncOk: number | null = null;
+  try {
+    const v = Number(localStorage.getItem(LS_ULTIMO_SYNC_OK));
+    ultimoSyncOk = Number.isFinite(v) && v > 0 ? v : null;
+  } catch (err) {
+    console.warn('[salud] no se pudo leer la última sincronización correcta', err);
+  }
+  return {
+    pendientes,
+    fallidas,
+    ultimoError: ultimo ? `${ultimo.table}: ${ultimo.lastError}` : null,
+    ultimoSyncOk,
+  };
+}
+
+/** Reporta la salud de la cola de este dispositivo (solo producción). Nunca lanza. */
+export async function reportarSaludDispositivo(forzar = false): Promise<void> {
+  if (!telemetriaHabilitada()) return;
+  try {
+    await programarSaludDispositivo(await estadoSaludCola(), forzar);
+  } catch (err) {
+    console.warn('[salud] no se pudo reportar la salud del dispositivo', err);
+  }
 }
 
 // Parent tables go before their children — guarantees FK/RLS-safe order
@@ -264,7 +316,10 @@ async function processSyncQueueInternal(): Promise<SyncPassResult> {
 
   // Sesión vencida tras horas sin red: renovarla ANTES de subir. Si no se puede, no se
   // toca la cola (no se gastan intentos) y se pide iniciar sesión.
-  if ((await offlineDb.syncQueue.count()) === 0) return { success: 0, failed: 0 };
+  if ((await offlineDb.syncQueue.count()) === 0) {
+    await marcarSyncOkSiColaVacia();
+    return { success: 0, failed: 0 };
+  }
   const sesion = await asegurarSesion();
   if (sesion === 'vencida') return { success: 0, failed: 0, authRequired: true };
   if (sesion === 'sin_red') return { success: 0, failed: 0 };
@@ -396,6 +451,7 @@ async function processSyncQueueInternal(): Promise<SyncPassResult> {
 
   // El respaldo queda igual que la cola: vacío si ya no hay nada pendiente.
   await respaldarCola();
+  if (!authRequired) await marcarSyncOkSiColaVacia();
 
   return authRequired ? { success, failed, authRequired } : { success, failed };
 }
