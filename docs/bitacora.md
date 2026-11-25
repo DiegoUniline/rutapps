@@ -324,3 +324,4 @@
 2026-11-24 · desarrollador · Compras en celular: botón Confirmar no aparecía en borrador (CompraHeader.tsx exigía !isEditable y un borrador siempre es editable). Ahora igual que en computadora. 958 pruebas OK.
 2026-11-24 · desarrollador · Venta web (Ventas → nueva venta/pedido): «Pagado» mostraba el total (calculado total − saldo con total guardado 0). Ahora sale de cobros reales; en venta nueva no se muestra. Solo visual. 962 pruebas OK.
 2026-11-24 · desarrollador · Ticket desde Ventas (web) en celular: «Saldo» mostraba solo el del pedido (consulta de saldo anterior dentro de if (!isMobile) en VentaForm/index.tsx). Ahora suma la cuenta del cliente igual que en computadora. 964 pruebas OK.
+2026-11-25 · desarrollador · D-066 (dueño: activar versión nueva sola): skipWaiting/clientsClaim en el SW; causa de ventas en base vieja tras el corte. 965 pruebas OK. Recuperación de 164 ventas/177 cobros de la base vieja en preparación (export del dueño).

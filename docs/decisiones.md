@@ -450,3 +450,10 @@
 - **Problema (evidencia):** las validaciones BEFORE INSERT de `cobro_aplicaciones` (`fn_validate_cobro_aplicacion_no_excede_saldo`, `fn_validate_cobro_no_sobreaplicado`) contaban la propia fila ya guardada; el reenvío idempotente del celular (`upsert … ignoreDuplicates`) fallaba con «excede el saldo pendiente» (reproducido en prod: VTA-3129). Además, `processSyncQueue` reintentaba los fallidos en cada pasada (~30 s): ≈3,800 errores/día en Postgres.
 - **Decisión:** (1) si ya existe una aplicación con el mismo id, las validaciones no aplican (el ON CONFLICT la ignora y el celular la quita de su cola). Un pago NUEVO que excede sigue rechazado. (2) Un fallido se reintenta solo cada 30 min o con «Reintentar». No se borra nada a ciegas: lo que no está en el servidor sigue en Pendientes.
 - **Archivos:** `supabase/migrations/20261124010000_d065_reenvio_cobro_aplicacion_idempotente.sql`, `src/lib/syncQueue.ts`, `src/test/syncQueueFase2.test.ts`, `docs/sql/2026-11-24_verificar_d065.sql`.
+
+## D-066 — La app instalada se actualiza sola (sin esperar «Actualizar»)
+- **Fecha:** 2026-11-25 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Activar la versión nueva sola»).
+- **Problema (evidencia):** tras el corte (D-055), celulares que nunca tocaron «Actualizar» siguieron con la app de antes del corte y guardaron en la base vieja de Lovable: 164 ventas y 177 cobros del 22-nov 6:41 pm al 24-nov (export del dueño). `vite.config.ts` tenía `registerType: "prompt"`, `skipWaiting: false`.
+- **Decisión:** `skipWaiting: true` y `clientsClaim: true`: el SW nuevo se activa al descargarse; la siguiente apertura carga la versión nueva y la cola offline (mismo origen) sube a la base nueva.
+- **Riesgo aceptado:** si el SW cambia mientras el vendedor está en la app y abre una pantalla aún no cargada, la app puede recargarse (GlobalErrorBoundary maneja chunks viejos) y perder una captura sin guardar.
+- **Archivos:** `vite.config.ts`, `src/test/pwaActivacionInmediata.test.ts`.

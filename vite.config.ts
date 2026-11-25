@@ -132,10 +132,12 @@ export default defineConfig(({ mode }) => ({
           /^\/tutoriales/,
           /^\/soporte/,
         ],
-        // La nueva versión queda esperando hasta que el usuario toque Actualizar.
-        // Esto evita recargas/bloqueos mientras capturan ventas, cobros o formularios.
-        skipWaiting: false,
-        clientsClaim: false,
+        // La versión nueva se activa sola en cuanto el celular la descarga (decisión del dueño
+        // 2026-11-25): celulares que nunca tocaron «Actualizar» seguían con la app de antes del
+        // corte guardando en la base vieja. La siguiente apertura ya carga la versión nueva y la
+        // cola offline (mismo origen) sube a la base nueva.
+        skipWaiting: true,
+        clientsClaim: true,
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
