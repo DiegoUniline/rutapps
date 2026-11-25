@@ -21,3 +21,12 @@ Distribuidora Tampico (41cdb6df), Dulces Jersey (27d242e0), Grupo Imperio (c80ff
 
 Inventario: Aguas Madero −31 piezas (6 productos, ya negativos antes), Grupo Imperio −19 (5 productos), RubiPets −1. Sin negativos nuevos.
 Perfil inexistente 97806dba (vendedor/cobrador del cliente de HOLKAN) → NULL.
+
+## Parte 04 — 2026-11-25 · md5 OK · se deshizo (salida truncada a la mitad por la herramienta; se repite al final con reporte compacto)
+Empresas: Distribuidora MG (2deead6d), 0f476f87, f8bc6fdc.
+- Distribuidora MG: 1 venta (PED-5049→PED-5086, $68), 7 cobros ($1,394), 11 entregas insertadas (68 renglones), 7 entregas en
+  conflicto «pedido_ya_tiene_entrega_en_nueva» (ENT-5076..5081 y 5092 viejas = ENT-5075..5081 ya capturadas en la nueva para
+  PED-5048..5043 y PED-5032), folios ENT reasignados (ENT-5075→5082 … ENT-5091→5092), inventario almacén Quiche −63
+  (33 productos, 2 negativos nuevos), pedidos previos PED-5037..5042 confirmado→entregado con saldo→0.
+- f8bc6fdc: 4 ventas recapturadas omitidas (VTA-2083=VTA-2090, VTA-2086=VTA-2085, VTA-2090=VTA-2087, VTA-2095=VTA-2136),
+  folios VTA-2082..2113 ya usados en la nueva → reasignados a VTA-2175..2200 (folio viejo en notas), 79 movimientos de inventario.

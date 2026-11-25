@@ -350,7 +350,7 @@ BEGIN
     ELSIF EXISTS (SELECT 1 FROM jsonb_array_elements(v_arr) a WHERE NOT EXISTS (SELECT 1 FROM public.ventas v WHERE v.id = (a->>'venta_id')::uuid)) THEN
       v_motivo := 'venta_inexistente';
     ELSE
-      SELECT string_agg(DISTINCT c.id::text || ' $' || ca.monto_aplicado || ' ' || c.fecha || ' ' || c.metodo_pago, '; ') INTO v_det
+      SELECT string_agg(DISTINCT left(c.id::text, 8) || ' $' || ca.monto_aplicado || ' ' || c.fecha || ' ' || c.metodo_pago, '; ') INTO v_det
         FROM jsonb_array_elements(v_arr) a
         JOIN public.cobro_aplicaciones ca ON ca.venta_id = (a->>'venta_id')::uuid
         JOIN public.cobros c ON c.id = ca.cobro_id
@@ -483,11 +483,20 @@ BEGIN
     'entrega_lineas', (SELECT count(*) FROM public.entrega_lineas el JOIN public.entregas e ON e.id = el.entrega_id WHERE e.id = ANY(v_ie) AND e.empresa_id = em.id),
     'visitas', (SELECT count(*) FROM public.visitas x WHERE x.id = ANY(v_ivis) AND x.empresa_id = em.id),
     'gastos', (SELECT count(*) FROM public.gastos g WHERE g.id = ANY(v_igas) AND g.empresa_id = em.id),
-    'folios_reasignados', (SELECT jsonb_agg(f - 'empresa') FROM jsonb_array_elements(v_folios) f WHERE f->>'empresa' = em.id::text),
-    'recapturadas_omitidas', (SELECT jsonb_agg(f - 'empresa') FROM jsonb_array_elements(v_dups) f WHERE f->>'empresa' = em.id::text),
-    'conflictos', (SELECT jsonb_agg(f - 'empresa') FROM jsonb_array_elements(v_conf) f WHERE f->>'empresa' = em.id::text),
-    'ventas_previas_afectadas', (SELECT jsonb_agg(jsonb_build_object('folio', v.folio,
-                 'status', (v_antes->v.id::text->>'status') || '→' || v.status, 'saldo', (v_antes->v.id::text->>'saldo') || '→' || v.saldo_pendiente))
+    -- Reporte compacto (texto) para que quepa en la salida de un ensayo.
+    'folios_reasignados', (SELECT jsonb_agg((f->>'tabla') || ' ' || (f->>'viejo') || '→' || (f->>'nuevo') || ' (' || left(f->>'id', 8) || ')')
+               FROM jsonb_array_elements(v_folios) f WHERE f->>'empresa' = em.id::text),
+    'recapturadas_omitidas', (SELECT jsonb_agg((f->>'vieja_folio') || ' $' || (f->>'vieja_total') || ' ' || (f->>'vieja_fecha') || ' = nueva '
+                 || (f->>'nueva_folio') || ' $' || (f->>'nueva_total') || ' ' || (f->>'nueva_fecha') || ' ' || (f->>'nueva_status'))
+               FROM jsonb_array_elements(v_dups) f WHERE f->>'empresa' = em.id::text),
+    'conflictos', (SELECT jsonb_agg(CASE f->>'tipo'
+                   WHEN 'cobro' THEN 'cobro ' || left(f->>'id', 8) || ' $' || (f->>'monto') || ' ' || (f->>'fecha') || ' ' || (f->>'metodo') || ' ' || (f->>'status')
+                        || ' → ' || coalesce((SELECT string_agg((x->>'folio') || ' $' || (x->>'aplicado'), ', ') FROM jsonb_array_elements(f->'ventas') x), '?')
+                   ELSE 'entrega ' || (f->>'folio') || ' (' || (f->>'status') || ') pedido ' || coalesce(f->>'pedido_folio', '?') END
+                 || ': ' || (f->>'motivo') || coalesce(' [' || (f->>'detalle') || ']', ''))
+               FROM jsonb_array_elements(v_conf) f WHERE f->>'empresa' = em.id::text),
+    'ventas_previas_afectadas', (SELECT jsonb_agg(v.folio || ' ' || (v_antes->v.id::text->>'status') || '→' || v.status
+                 || ' saldo ' || (v_antes->v.id::text->>'saldo') || '→' || v.saldo_pendiente ORDER BY v.folio)
                FROM public.ventas v WHERE v.id = ANY(v_pre) AND v.empresa_id = em.id
                 AND (v.status::text IS DISTINCT FROM v_antes->v.id::text->>'status' OR v.saldo_pendiente IS DISTINCT FROM (v_antes->v.id::text->>'saldo')::numeric)),
     'movimientos_inventario', (SELECT count(*) FROM public.movimientos_inventario mi WHERE mi.empresa_id = em.id AND mi.created_at = now()),
