@@ -52,3 +52,8 @@ Quesos y Carnes Frías La Vaquita (ebebc168, POS): 47 ventas ($53,515.32; 44 con
 VTA-2410 $393.51 + VTA-2413 $178 sin cobro), 135 renglones, 45 cobros POS aceptados ($51,612.37 activos + $1,331.44
 cancelados; el turno POS b3eb486c sigue abierto en la nueva). Folios VTA-2372..2418 ya usados → VTA-2426..2472.
 Sin recapturas ni conflictos. Inventario almacén «Ruta 2» −475.285 (36 productos; 35 ya negativos, 0 nuevos). 130 movimientos.
+
+## Parte 04 regenerada (Distribuidora Dylan, ab70fcd8) — 2026-11-25 · md5 OK · se deshizo (plantilla recortada, misma lógica)
+1 cliente (CLI-0864→CLI-0873), 26 ventas ($8,654.06, saldo 0), 132 renglones, 26 cobros ($8,654.06), 26 visitas.
+Folios VTA-1466..1491 ya usados → VTA-1505..1530. Sin recapturas ni conflictos. Inventario Almacén General −705 (62 productos,
+1 negativo nuevo, 3 en total). 132 movimientos.
