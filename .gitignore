@@ -32,3 +32,4 @@ copiar-storage.errores.txt
 
 # Copias de trabajo de agentes (no se versionan)
 .claude/worktrees/
+__pycache__/

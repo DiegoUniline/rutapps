@@ -1,6 +1,6 @@
 # Recuperación de lo capturado en la base vieja después del corte (2026-11-25)
 
-Estado: **PREPARADO Y ENSAYADO, NO APLICADO.** Aplicarlo requiere `CONFIRMO aplicar recuperación base vieja` del dueño.
+Estado: **APLICADO 2026-11-25** (`CONFIRMO aplicar recuperación base vieja` del dueño). Ver «Aplicación» al final.
 
 - Archivo a aplicar: `docs/sql/2026-11-25_recuperar_base_vieja.sql` (generado; 6 partes, 439 KB; trae los datos del export).
 - Generador: `scripts/migracion/recuperar_base_vieja.py` (el export queda fuera del repo, en el scratchpad de la sesión).
@@ -129,3 +129,20 @@ filas sin pagos/facturas (D-035). Folios y notas reasignados quedan como evidenc
 - Distribuidora MG se ensayó dentro de una parte cuya salida llegó truncada; los conteos clave sí se leyeron.
 - El resultado puede cambiar al aplicar si en la nueva se capturan más ventas/cobros de esos días (eso solo aumenta las
   recapturas/conflictos detectados; no duplica).
+
+## Aplicación (2026-11-25)
+- Forma: la misma lógica del archivo, cargada en un esquema temporal `recup_tmp` (payload por parte verificado con md5 =
+  el del archivo; función con la plantilla del archivo) y ejecutada por parte con `ENSAYO_TOTAL` (todo deshecho) y luego
+  `APLICAR`. Probado antes en Postgres local: mismo estado final que el archivo original. `recup_tmp` se borró al terminar.
+- Ensayo total previo: idéntico al ensayo anterior salvo folios (GAMA 13 negativos nuevos en vez de 12).
+- Resultado aplicado: **148 ventas ($177,797.27)**, 107 cobros ($115,993.47 activos + $1,331.44 cancelados), 238 visitas,
+  11 entregas (68 renglones), 5 clientes, 1 gasto. 15 recapturadas omitidas; 63 cobros y 7 entregas en conflicto (no insertados).
+- Verificación: segunda corrida por parte = 0 filas en todas las tablas (idempotente); ventas con nota «Recuperada de base
+  anterior» = 148 / $177,797.27 por empresa como en la tabla; sin folios duplicados en ventas/entregas ni aplicaciones duplicadas.
+- Folios finales: GAMA VTA-9383..9403 → VTA-9588..9607 · GLOBAL TRADE PED-7693..7712 → PED-7801..7818, CLI-1216 → CLI-1222 ·
+  La Vaquita VTA-2372..2418 → VTA-2426..2472 · Dylan VTA-1466..1491 → VTA-1514..1539, CLI-0864 → CLI-0878 ·
+  Super Dulces VTA-2082..2113 → VTA-2173..2200 · MAYAKIL VTA-1943/1944 → VTA-1958/1959 · MG PED-5049 → PED-5086,
+  ENT-5075..5091 → ENT-5082..5092 · CARIOKA PED-1046 → PED-1059, CLI-0337 → CLI-0340 · Aguas Madero VTA-1075/1076 →
+  VTA-1094/1095 · Grupo Imperio VTA-3676/3677 → VTA-3682/3683 · RubiPets VTA-5539 → VTA-5601 · HOLKAN CLI-0001 → CLI-0009.
+- Pendiente: export nuevo de la base vieja para lo capturado después de 2026-11-24 18:25 (misma consulta; carga idempotente)
+  y las ❓ del dueño (recapturas, PED-7576 $260, inventario negativo, diferencias previas de GLOBAL TRADE).
