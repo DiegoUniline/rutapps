@@ -50,11 +50,13 @@ def b64(u):
     return base64.b64encode(uuid.UUID(u).bytes).decode().rstrip('=')
 
 
-def ts_off(v):
+def ts_off(v, segundos=False):
     m = TS.match(v)
     y, mo, dd, h, mi, s, frac = m.groups()
     dt = datetime(int(y), int(mo), int(dd), int(h), int(mi), int(s), tzinfo=timezone.utc)
     secs = int((dt - BASE_TS).total_seconds())
+    if segundos:
+        return '@' + str(secs)
     return '@' + str(secs) + (('.' + frac.rstrip('0')) if frac and frac.rstrip('0') else '')
 
 
@@ -128,7 +130,11 @@ INFORMATIVAS = {
 }
 
 
-def codificar(filas, cols_tabla, x, reducido=False):
+# Hojas sin hijos ni referencias de otras tablas: en --compacto su id se genera (md5 de parte+tabla+n) en vez de viajar.
+HOJAS = ('venta_lineas', 'cobro_aplicaciones', 'visitas', 'entrega_lineas')
+
+
+def codificar(filas, cols_tabla, x, reducido=False, compacto=False):
     cnt = Counter()
     for rows in filas.values():
         for r in rows:
@@ -147,7 +153,7 @@ def codificar(filas, cols_tabla, x, reducido=False):
             if UU.match(v):
                 return ('~%d' % idx[v]) if (k != 'id' and v in idx) else '^' + b64(v)
             if TS.match(v):
-                return ts_off(v)
+                return ts_off(v, compacto)
         return v
 
     out = {'u': [b64(u) for u in dic], 't': {}, 'x': {k: [b64(i) for i in sorted(v)] for k, v in x.items()}}
@@ -155,7 +161,8 @@ def codificar(filas, cols_tabla, x, reducido=False):
         rows = filas.get(t) or []
         if not rows:
             continue
-        todas = [c for c in cols_tabla[t] if not (reducido and c in INFORMATIVAS.get(t, []))]
+        todas = [c for c in cols_tabla[t] if not (reducido and c in INFORMATIVAS.get(t, []))
+                 and not (compacto and t in HOJAS and c == 'id')]
         cols = [c for c in todas if any(r.get(c) is not None for r in rows)]
         nulas = [c for c in todas if c not in cols]
         const = {}
@@ -198,7 +205,9 @@ BEGIN
     SELECT coalesce(jsonb_agg(z.o ORDER BY z.n), '[]') INTO v_arr FROM (
       SELECT rw.n, coalesce((SELECT jsonb_object_agg(kk.key, kk.value) FROM jsonb_each(p->'t'->v_tab->'k') kk), '{}'::jsonb)
                    || coalesce((SELECT jsonb_object_agg(cc.col, vv.val) FROM jsonb_array_elements_text(p->'t'->v_tab->'c') WITH ORDINALITY cc(col, i)
-                                 JOIN jsonb_array_elements(rw.fila) WITH ORDINALITY vv(val, j) ON cc.i = vv.j), '{}'::jsonb) AS o
+                                 JOIN jsonb_array_elements(rw.fila) WITH ORDINALITY vv(val, j) ON cc.i = vv.j), '{}'::jsonb)
+                   || CASE WHEN p->'t'->v_tab->'c' ? 'id' THEN '{}'::jsonb   -- --compacto: id de hoja generado
+                           ELSE jsonb_build_object('id', md5('__PARTE__:' || v_tab || ':' || rw.n)::uuid) END AS o
         FROM jsonb_array_elements(p->'t'->v_tab->'r') WITH ORDINALITY rw(fila, n)) z;
     -- marcadores ~ ^ @
     SELECT coalesce(jsonb_agg((SELECT jsonb_object_agg(e.key,
@@ -213,7 +222,8 @@ BEGIN
     SELECT string_agg(quote_ident(c), ', ') INTO v_sql FROM (
       SELECT jsonb_array_elements_text(p->'t'->v_tab->'c') c
       UNION ALL SELECT jsonb_object_keys(p->'t'->v_tab->'k')
-      UNION ALL SELECT jsonb_array_elements_text(p->'t'->v_tab->'n')) s;
+      UNION ALL SELECT jsonb_array_elements_text(p->'t'->v_tab->'n')
+      UNION ALL SELECT 'id' WHERE NOT (p->'t'->v_tab->'c' ? 'id')) s;
     k := k || jsonb_build_object(v_tab, v_sql);
   END LOOP;
   FOREACH v_tab IN ARRAY ARRAY['clientes','ventas','venta_lineas','cobros','cobro_aplicaciones','entregas','entrega_lineas','visitas','gastos'] LOOP
@@ -528,15 +538,19 @@ def main():
     ap.add_argument('--salida', required=True)
     ap.add_argument('--partes-dir')
     ap.add_argument('--max-kb', type=int, default=60, help='tamaño objetivo de datos por parte')
+    ap.add_argument('--compacto', action='store_true',
+                    help='además de --reducido: ids de hojas generados y fechas al segundo (solo para ensayar en producción)')
     ap.add_argument('--reducido', action='store_true',
                     help='omite columnas INFORMATIVAS (solo para ensayar; el archivo final debe ir completo)')
     args = ap.parse_args()
+    if args.compacto:
+        args.reducido = True
     d, ex = cargar(args)
     cols = {t: columnas(d, t) for t in TABLAS}
     por, x = agrupar(d, ex)
     empresas = [e for e in sorted(set(por) | set(x)) if any(por.get(e, {}).get(t) for t in TABLAS)]
     # Partes: empresas completas, agrupadas hasta ~max-kb de datos.
-    tam = {e: len(codificar(por[e], cols, x.get(e, {}), args.reducido)) for e in empresas}
+    tam = {e: len(codificar(por[e], cols, x.get(e, {}), args.reducido, args.compacto)) for e in empresas}
     partes, actual, acum = [], [], 0
     for e in sorted(empresas, key=lambda e: -tam[e]):
         if actual and acum + tam[e] > args.max_kb * 1024:
@@ -552,7 +566,7 @@ def main():
                 filas[t].extend(por[e].get(t, []))
             for t, ids in x.get(e, {}).items():
                 xx[t].extend(ids)
-        payload = codificar(filas, cols, xx, args.reducido)
+        payload = codificar(filas, cols, xx, args.reducido, args.compacto)
         b = bloque(n, emps, payload)
         cuerpo.append(b)
         resumen.append((n, emps, {t: len(filas[t]) for t in TABLAS if filas[t]}, len(b)))
