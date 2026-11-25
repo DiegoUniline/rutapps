@@ -465,4 +465,5 @@
 - **Decisión:** en pedidos «a lo entregado», `fn_venta_cobrable` cuenta las cantidades de toda entrega que no esté `cancelado` ni `no_entregado` (borrador lleva 0 hasta surtirse). El estado del pedido (Entregado/Confirmado) sigue contando solo entregas «hecho». Al borrar una entrega o renglón se recalcula el pedido.
 - **Alcance:** «de aquí en adelante» (dueño): sin recálculo masivo; cada pedido toma la regla en el siguiente cambio de su entrega o cobro.
 - **Impacto si se recalculara todo (ensayo deshecho, NO se aplica):** Tampico 90 pedidos $108.28 → $58,487.02 (87 en ruta), MG 69 $11,498 → $12,083.89, Multi 6 $0 → $497; Richard, Dylan, Renee, Reginata y Demo sin cambio. Entregas viejas sin validar (cargado desde sep/oct en Dylan, Reginata, Renee, Richard) ya cuentan como deuda.
+- **Saldos previos:** el dueño los deja como están («déjalos así, de aquí en adelante»): PED-5021/PED-5031 de MG y 47 pedidos aún sin entrega con saldo = total.
 - **Archivos:** `supabase/migrations/20261125010000_d067_saldo_desde_entrega.sql`, `docs/sql/2026-11-25_verificar_d067.sql`.
