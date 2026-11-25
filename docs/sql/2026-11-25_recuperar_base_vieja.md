@@ -146,3 +146,10 @@ filas sin pagos/facturas (D-035). Folios y notas reasignados quedan como evidenc
   VTA-1094/1095 · Grupo Imperio VTA-3676/3677 → VTA-3682/3683 · RubiPets VTA-5539 → VTA-5601 · HOLKAN CLI-0001 → CLI-0009.
 - Pendiente: export nuevo de la base vieja para lo capturado después de 2026-11-24 18:25 (misma consulta; carga idempotente)
   y las ❓ del dueño (recapturas, PED-7576 $260, inventario negativo, diferencias previas de GLOBAL TRADE).
+
+## Segunda carga (2026-11-25, export de las 08:49)
+- El export nuevo solo trae 5 pedidos más de GLOBAL TRADE (capturados 2026-11-24 21:43–21:48 CDMX) con sus 5 visitas; nada
+  más nuevo ni cambiado. Mismo generador con `--existentes` leído de producción; plantilla idéntica a la aplicada.
+- Ensayo total: solo esos 5 entran; recapturas y conflictos iguales que en la primera carga. Aplicado:
+  PED-7713..7717 → **PED-7823..7827** ($1,081, $1,260, $950, $10,224 confirmados; $1,684.24 borrador; total $15,199.24).
+- Verificado: segunda corrida 0 filas, sin folios duplicados. `recup_tmp` borrado.
