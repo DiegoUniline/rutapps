@@ -185,10 +185,12 @@ DECLARE
   v_xv uuid[]; v_xc uuid[]; v_xe uuid[]; v_emps uuid[]; v_pre uuid[];
   v_iv uuid[] := '{}'; v_dup uuid[] := '{}'; v_usadas uuid[] := '{}'; v_ic uuid[] := '{}'; v_ie uuid[] := '{}';
   v_ivis uuid[] := '{}'; v_icli uuid[] := '{}'; v_igas uuid[] := '{}';
-  v_folios jsonb := '[]'; v_dups jsonb := '[]'; v_conf jsonb := '[]'; v_nulos jsonb := '[]'; v_antes jsonb; v_rep jsonb;
+  v_folios jsonb := '[]'; v_dups jsonb := '[]'; v_conf jsonb := '[]'; v_nulos jsonb := '[]'; v_antes jsonb; v_rep jsonb; v_stock jsonb;
 BEGIN
   IF md5(c_txt) <> c_md5 THEN RAISE EXCEPTION 'Recuperación: los datos incrustados no coinciden con su md5 (copia alterada)'; END IF;
-  IF v_modo NOT IN ('ENSAYO', 'APLICAR') THEN RAISE EXCEPTION 'rutapp.recuperacion_modo debe ser ENSAYO o APLICAR (es %)', v_modo; END IF;
+  IF v_modo NOT IN ('ENSAYO', 'ENSAYO_TOTAL', 'APLICAR') THEN
+    RAISE EXCEPTION 'rutapp.recuperacion_modo debe ser ENSAYO, ENSAYO_TOTAL o APLICAR (es %)', v_modo;
+  END IF;
   p := c_txt::jsonb;
 
   -- 0. Decodificar. k = lista de columnas por tabla (las del export: variables + constantes + nulas).
@@ -240,6 +242,8 @@ BEGIN
     RAISE EXCEPTION 'Recuperación: hay renglones/aplicaciones/entregas que cruzan empresas';
   END IF;
 
+  -- ENSAYO_TOTAL: la carga de esta parte corre en un subbloque que se deshace solo (deja su resumen en _recup_reporte).
+  BEGIN
   -- Ventas previas (ya en la nueva) que tocarán cobros/entregas recuperados: foto de antes.
   SELECT array_agg(DISTINCT v.id) INTO v_pre FROM public.ventas v
    WHERE v.id IN (SELECT (a->>'venta_id')::uuid FROM jsonb_array_elements(d->'cobro_aplicaciones') a
@@ -247,6 +251,9 @@ BEGIN
   v_pre := coalesce(v_pre, '{}');
   SELECT coalesce(jsonb_object_agg(v.id, jsonb_build_object('status', v.status, 'saldo', v.saldo_pendiente)), '{}')
     INTO v_antes FROM public.ventas v WHERE v.id = ANY(v_pre);
+  -- Existencias de antes (para reportar el efecto neto en inventario por almacén).
+  SELECT coalesce(jsonb_object_agg(sa.almacen_id::text || '|' || sa.producto_id::text, sa.cantidad), '{}')
+    INTO v_stock FROM public.stock_almacen sa WHERE sa.empresa_id = ANY(v_emps);
 
   -- 1. Clientes (código que choca → nuevo con next_folio, el viejo a notas).
   FOR v_obj IN SELECT e FROM jsonb_array_elements(d->'clientes') e ORDER BY e->>'created_at', e->>'id' LOOP
@@ -473,19 +480,32 @@ BEGIN
                  'status', (v_antes->v.id::text->>'status') || '→' || v.status, 'saldo', (v_antes->v.id::text->>'saldo') || '→' || v.saldo_pendiente))
                FROM public.ventas v WHERE v.id = ANY(v_pre) AND v.empresa_id = em.id
                 AND (v.status::text IS DISTINCT FROM v_antes->v.id::text->>'status' OR v.saldo_pendiente IS DISTINCT FROM (v_antes->v.id::text->>'saldo')::numeric)),
-    'inventario', (SELECT jsonb_agg(jsonb_build_object('almacen', a.nombre, 'salidas', s.sal, 'entradas', s.ent, 'movs', s.n, 'productos', s.np))
-               FROM (SELECT coalesce(mi.almacen_origen_id, mi.almacen_destino_id) alm, sum(mi.cantidad) FILTER (WHERE mi.tipo::text = 'salida') sal,
-                            sum(mi.cantidad) FILTER (WHERE mi.tipo::text <> 'salida') ent, count(*) n, count(DISTINCT mi.producto_id) np
-                       FROM public.movimientos_inventario mi WHERE mi.empresa_id = em.id AND mi.created_at = now() GROUP BY 1) s
-               LEFT JOIN public.almacenes a ON a.id = s.alm),
-    'negativos', (SELECT count(*) FROM public.stock_almacen sa WHERE sa.empresa_id = em.id AND sa.cantidad < 0
-                   AND EXISTS (SELECT 1 FROM public.movimientos_inventario mi WHERE mi.empresa_id = em.id AND mi.created_at = now()
-                                 AND mi.producto_id = sa.producto_id AND sa.almacen_id IN (mi.almacen_origen_id, mi.almacen_destino_id)))
+    'movimientos_inventario', (SELECT count(*) FROM public.movimientos_inventario mi WHERE mi.empresa_id = em.id AND mi.created_at = now()),
+    'inventario', (SELECT jsonb_agg(jsonb_build_object('almacen', a.nombre, 'productos', s.np, 'neto', s.neto, 'quedan_negativos', s.neg,
+                                                       'negativos_nuevos', s.negn) ORDER BY a.nombre)
+               FROM (SELECT sa.almacen_id alm, count(*) np,
+                            sum(sa.cantidad - coalesce((v_stock->>(sa.almacen_id::text || '|' || sa.producto_id::text))::numeric, 0)) neto,
+                            count(*) FILTER (WHERE sa.cantidad < 0) neg,
+                            count(*) FILTER (WHERE sa.cantidad < 0
+                                              AND coalesce((v_stock->>(sa.almacen_id::text || '|' || sa.producto_id::text))::numeric, 0) >= 0) negn
+                       FROM public.stock_almacen sa
+                      WHERE sa.empresa_id = em.id
+                        AND sa.cantidad IS DISTINCT FROM (v_stock->>(sa.almacen_id::text || '|' || sa.producto_id::text))::numeric
+                      GROUP BY 1) s
+               LEFT JOIN public.almacenes a ON a.id = s.alm)
   ) ORDER BY em.nombre) INTO v_rep FROM public.empresas em WHERE em.id = ANY(v_emps);
-  v_rep := jsonb_build_object('modo', v_modo, 'perfiles_inexistentes_en_null', v_nulos, 'empresas', v_rep);
+  v_rep := jsonb_build_object('parte', '__PARTE__', 'modo', v_modo, 'perfiles_inexistentes_en_null', v_nulos, 'empresas', v_rep);
+  IF v_modo = 'ENSAYO_TOTAL' THEN RAISE EXCEPTION 'recup_ensayo_parte_ok'; END IF;
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'recup_ensayo_parte_ok' THEN RAISE; END IF;
+    CREATE TEMP TABLE IF NOT EXISTS _recup_reporte (parte text, reporte jsonb);
+    INSERT INTO _recup_reporte VALUES ('__PARTE__', v_rep);
+  END;
 
   IF v_modo = 'APLICAR' THEN
     RAISE NOTICE 'RECUPERACION APLICADA %', v_rep::text;
+  ELSIF v_modo = 'ENSAYO_TOTAL' THEN
+    RAISE NOTICE 'ENSAYO parte __PARTE__ (deshecha) %', v_rep::text;
   ELSE
     RAISE EXCEPTION 'ENSAYO (se deshizo todo) %', v_rep::text;
   END IF;
@@ -496,7 +516,7 @@ END $recup_parte$;
 def bloque(n, empresas, payload):
     md5 = hashlib.md5(payload.encode('utf-8')).hexdigest()
     b = (PLANTILLA.replace('__CORTE__', CORTE).replace('__MD5__', md5).replace('__TAG__', TAG)
-         .replace('$recup_parte$', f'$recup_parte{n:02d}$'))
+         .replace('$recup_parte$', f'$recup_parte{n:02d}$').replace('__PARTE__', f'{n:02d}'))
     b = b.replace('__PAYLOAD__', payload)  # al final: el payload no se vuelve a tocar
     return f'\n-- Parte {n:02d}: empresas {", ".join(empresas)}\n' + b
 
@@ -545,7 +565,12 @@ def main():
 -- GENERADO por scripts/migracion/recuperar_base_vieja.py (no editar a mano: regenerar).
 -- Corte = último dato del respaldo: {CORTE}. Destino: proyecto amybkerwkybffllaxpnz (rutapp).
 --
--- MODO POR DEFECTO = ENSAYO: cada parte termina con RAISE EXCEPTION y su resumen; no queda nada escrito.
+-- MODO POR DEFECTO = ENSAYO: cada parte termina con RAISE EXCEPTION y su resumen; no queda nada escrito
+--   (en el archivo completo solo se ve la primera parte; sirve para ensayar las partes una por una).
+-- ENSAYO_TOTAL (recomendado para el archivo completo): en la MISMA sesión
+--     SET rutapp.recuperacion_modo = 'ENSAYO_TOTAL';
+--   y correr el archivo: cada parte se deshace sola y el último bloque termina con RAISE EXCEPTION con el
+--   resumen de todas las partes (nada queda escrito; ni siquiera si se corre una parte suelta).
 -- APLICAR (solo con «CONFIRMO …» del dueño), en la MISMA sesión:
 --     SET rutapp.recuperacion_modo = 'APLICAR';
 --   y correr el archivo completo (BEGIN … COMMIT: todo o nada). Cada parte deja su resumen con RAISE NOTICE.
@@ -555,7 +580,15 @@ def main():
 """
     for n, emps, c, size in resumen:
         cab += f'-- Parte {n:02d} ({size // 1024} KB): {", ".join(e[:8] for e in emps)} · ' + ', '.join(f'{t}={k}' for t, k in c.items()) + '\n'
-    sql = cab + '\nBEGIN;\n' + ''.join(cuerpo) + '\nCOMMIT;\n'
+    fin = """
+DO $recup_fin$
+BEGIN
+  IF upper(coalesce(nullif(current_setting('rutapp.recuperacion_modo', true), ''), 'ENSAYO')) = 'ENSAYO_TOTAL' THEN
+    RAISE EXCEPTION 'ENSAYO_TOTAL (se deshizo todo) %', (SELECT jsonb_agg(reporte ORDER BY parte) FROM _recup_reporte)::text;
+  END IF;
+END $recup_fin$;
+"""
+    sql = cab + '\nBEGIN;\n' + ''.join(cuerpo) + fin + '\nCOMMIT;\n'
     with open(args.salida, 'w', encoding='utf-8') as f:
         f.write(sql)
     print(f'{args.salida}: {len(sql)} bytes, {len(partes)} partes', file=sys.stderr)
