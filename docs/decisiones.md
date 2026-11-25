@@ -195,6 +195,7 @@
 
 ## D-034
 - **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO
+- **Nota:** la parte de saldo la reemplaza [D-067](#d-067) (2026-11-25).
 - **Decisión:** el **pedido** dice qué se pidió; las **entregas** dicen qué se entregó de verdad. Solo cuenta lo de entregas **validadas (hecho)** —no surtido, cargado ni en ruta—. El pedido queda **Entregado** cuando todas sus cantidades están entregadas; si falta algo queda/regresa a **Confirmado** (parcial), también al cancelar o reabrir una entrega. El **saldo de todo pedido (contado o crédito) es por lo entregado** (antes contado debía el total).
 - **Implementación:** `fn_venta_cobrable`, `fn_pedido_entregado_completo`, `fn_sync_status_pedido`, triggers `auto_venta_entregado` y `ajustar_pedido_por_entregado`; en pantalla el saldo de esos pedidos se toma de la BD (migración 20261120030000). Cierra H4, H5 y H8 de la auditoría.
 
@@ -457,3 +458,10 @@
 - **Decisión:** `skipWaiting: true` y `clientsClaim: true`: el SW nuevo se activa al descargarse; la siguiente apertura carga la versión nueva y la cola offline (mismo origen) sube a la base nueva.
 - **Riesgo aceptado:** si el SW cambia mientras el vendedor está en la app y abre una pantalla aún no cargada, la app puede recargarse (GlobalErrorBoundary maneja chunks viejos) y perder una captura sin guardar.
 - **Archivos:** `vite.config.ts`, `src/test/pwaActivacionInmediata.test.ts`.
+
+## D-067 — El saldo de un pedido nace al generar la entrega (reemplaza la parte de saldo de D-034)
+- **Fecha:** 2026-11-25 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («En cuanto se genera la entrega ya es una cuenta por cobrar, a menos de que se cancele»; opción «Desde que se genera»). Publicación pendiente de `CONFIRMO`.
+- **Problema (evidencia):** con D-034 solo contaban entregas «hecho». Un pedido de contado en ruta (Multi PED-0251, $65, entrega ENT-0218 cargada) tenía saldo $0: en la app el botón «Cobrar» solo mostraba otras cuentas, el cobro del pedido salía en $0 (`useVentaDetalle.ts:251`) y no se exigía cobrar al entregar (`RutaEntregaDetalle.tsx:239`).
+- **Decisión:** en pedidos «a lo entregado», `fn_venta_cobrable` cuenta las cantidades de toda entrega que no esté `cancelado` ni `no_entregado` (borrador lleva 0 hasta surtirse). El estado del pedido (Entregado/Confirmado) sigue contando solo entregas «hecho». Al borrar una entrega o renglón se recalcula el pedido.
+- **Impacto medido en el ensayo (deshecho):** Tampico 90 pedidos $108.28 → $58,487.02 (87 en ruta), MG 69 $11,498 → $12,083.89, Multi 6 $0 → $497; Richard, Dylan, Renee, Reginata y Demo sin cambio. Entregas viejas sin validar (cargado desde sep/oct en Dylan, Reginata, Renee, Richard) ya cuentan como deuda.
+- **Archivos:** `supabase/migrations/20261125010000_d067_saldo_desde_entrega.sql`, `docs/sql/2026-11-25_verificar_d067.sql`.
