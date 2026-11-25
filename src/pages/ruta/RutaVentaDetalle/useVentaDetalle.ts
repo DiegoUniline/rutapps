@@ -1027,7 +1027,7 @@ export function useVentaDetalle() {
   const handleEstadoCuenta = async () => {
     if (!empresa || !clienteData) { toast.error('Cargando datos...'); return; }
     try {
-      const [ventasRes, cobrosRes] = await Promise.all([supabase.from('ventas').select('id, folio, fecha, total, saldo_pendiente, status, condicion_pago').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).neq('status', 'cancelado').order('fecha', { ascending: false }).limit(200), supabase.from('cobros').select('id, fecha, monto, metodo_pago, referencia').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).order('fecha', { ascending: false }).limit(200)]);
+      const [ventasRes, cobrosRes] = await Promise.all([supabase.from('ventas').select('id, folio, fecha, total, saldo_pendiente, status, condicion_pago').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).in('status', ESTADOS_CXC as any).order('fecha', { ascending: false }).limit(200), supabase.from('cobros').select('id, fecha, monto, metodo_pago, referencia').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).order('fecha', { ascending: false }).limit(200)]);
       const ventaIds = (ventasRes.data ?? []).map(v => v.id);
       let productosVendidos: { nombre: string; cantidad: number; total: number }[] = [];
       let productosDevueltos: { nombre: string; cantidad: number; motivo?: string }[] = [];
