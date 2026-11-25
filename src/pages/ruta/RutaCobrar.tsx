@@ -123,36 +123,26 @@ function RutaCobrarInner() {
     if (c) selectCliente(c);
   }, [preselectedClienteId, clienteId, clientes]);
 
-  // Notas preseleccionadas desde CxC: arma la distribución (más antigua primero)
-  // con el saldo completo de cada nota y salta al paso de cuentas.
-  const preaplicadoRef = useRef(false);
-  useEffect(() => {
-    if (preaplicadoRef.current) return;
-    if (!preselectedVentaIds || preselectedVentaIds.length === 0) return;
-    if (!clienteId || (ventasPendientes ?? []).length === 0) return;
+  // Notas preseleccionadas desde CxC: el cobro se limita a esas notas, pero primero
+  // se pregunta «¿Cuánto te entrega el cliente?» (sugiere el saldo de las notas).
+  const seleccionCxC = useMemo(() => {
+    if (!preselectedVentaIds || preselectedVentaIds.length === 0) return null;
     const sel = (ventasPendientes ?? []).filter(v => preselectedVentaIds.includes(v.id));
-    if (sel.length === 0) return;
-    preaplicadoRef.current = true;
-    const distribucion = sel.map(v => ({
-      id: v.id,
-      folio: v.folio,
-      fecha: v.fecha,
-      total: v.total ?? 0,
-      saldo_pendiente: v.saldo_pendiente ?? 0,
-      montoAplicar: Math.round((v.saldo_pendiente ?? 0) * 100) / 100,
-    }));
-    const suma = distribucion.reduce((s, d) => s + d.montoAplicar, 0);
-    setCuentas(distribucion);
-    setMontoRecibido(String(Math.round(suma * 100) / 100));
-    setStep('cuentas');
-  }, [preselectedVentaIds, clienteId, ventasPendientes]);
-
-
+    return sel.length > 0 ? sel : null;
+  }, [preselectedVentaIds, ventasPendientes]);
+  const ventasObjetivo = seleccionCxC ?? ventasPendientes;
 
   const totalPendienteCliente = useMemo(() =>
-    (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0),
-    [ventasPendientes]
+    (ventasObjetivo ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0),
+    [ventasObjetivo]
   );
+
+  const preaplicadoRef = useRef(false);
+  useEffect(() => {
+    if (preaplicadoRef.current || !seleccionCxC || step !== 'monto') return;
+    preaplicadoRef.current = true;
+    setMontoRecibido(String(Math.round(totalPendienteCliente * 100) / 100));
+  }, [seleccionCxC, step, totalPendienteCliente]);
 
   // Saldo a favor (crédito por nota de crédito) disponible del cliente.
   const { disponible: saldoFavorDisp } = useSaldoFavor(clienteId);
@@ -195,7 +185,7 @@ function RutaCobrarInner() {
   const proceedToDistribution = () => {
     const monto = parseFloat(montoRecibido);
     if (isNaN(monto) || monto <= 0) return;
-    const distributed = autoApply(monto, ventasPendientes ?? []);
+    const distributed = autoApply(monto, ventasObjetivo ?? []);
     setCuentas(distributed);
     setStep('cuentas');
   };
@@ -425,8 +415,8 @@ function RutaCobrarInner() {
                 <p className="text-sm font-semibold text-foreground truncate">{clienteNombre}</p>
                 {totalPendienteCliente > 0 && (
                   <p className="text-xs text-destructive font-medium">
-                    Deuda total: {fmt(totalPendienteCliente)}
-                    {ventasPendientes && ventasPendientes.length > 0 && ` · ${ventasPendientes.length} cuenta${ventasPendientes.length > 1 ? 's' : ''}`}
+                    {seleccionCxC ? 'Notas seleccionadas' : 'Deuda total'}: {fmt(totalPendienteCliente)}
+                    {ventasObjetivo && ventasObjetivo.length > 0 && ` · ${ventasObjetivo.length} cuenta${ventasObjetivo.length > 1 ? 's' : ''}`}
                   </p>
                 )}
                 {loadingVentas && <p className="text-xs text-muted-foreground">Cargando cuentas...</p>}
@@ -434,7 +424,7 @@ function RutaCobrarInner() {
             </div>
 
             {/* Pending invoices preview (oldest first) */}
-            {ventasPendientes && ventasPendientes.length > 0 && (
+            {ventasObjetivo && ventasObjetivo.length > 0 && (
               <div className="bg-card rounded-xl p-4 space-y-2">
                 <div className="flex items-center gap-2">
                   <Info className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -443,7 +433,7 @@ function RutaCobrarInner() {
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  {ventasPendientes.map((v, i) => {
+                  {ventasObjetivo.map((v, i) => {
                     const dias = daysSince(v.fecha);
                     return (
                       <div key={v.id} className="flex items-center justify-between py-1.5">
