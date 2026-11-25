@@ -2,6 +2,7 @@
  * Offline-first helpers for entrega/descarga views.
  * All readers try Supabase first when online, then fall back to IndexedDB.
  */
+import { ESTADOS_CXC } from '@/lib/mobileReceivables';
 import { supabase } from './supabase';
 import { getOfflineTable } from './offlineDb';
 import { calcularEfectivoEsperado, fetchLiquidacionEsperado } from './liquidacion';
@@ -108,7 +109,7 @@ export async function fetchOtrasPendientesWithFallback(clienteId: string) {
         .select('id, folio, fecha, total, saldo_pendiente')
         .eq('cliente_id', clienteId)
         .gt('saldo_pendiente', 0)
-        .in('status', ['borrador', 'confirmado', 'entregado', 'facturado'])
+        .in('status', ESTADOS_CXC as any)
         .order('fecha', { ascending: true });
       if (error) throw error;
       return data ?? [];
@@ -120,7 +121,7 @@ export async function fetchOtrasPendientesWithFallback(clienteId: string) {
   return all
     .filter((v: any) => v.cliente_id === clienteId
       && Number(v.saldo_pendiente ?? 0) > 0
-      && ['borrador', 'confirmado', 'entregado', 'facturado'].includes(v.status))
+      && ESTADOS_CXC.includes(v.status))
     .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)))
     .map((v: any) => ({ id: v.id, folio: v.folio, fecha: v.fecha, total: v.total, saldo_pendiente: v.saldo_pendiente }));
 }

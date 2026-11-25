@@ -7,16 +7,22 @@ export interface MobileReceivableSale {
 }
 
 /**
+ * Solo documentos confirmados generan cuenta por cobrar (misma regla que la web, CuentasCobrarPage):
+ * un borrador (aún no confirmado) o un cancelado no se cobran aunque traigan saldo guardado.
+ */
+export const ESTADOS_CXC = ['confirmado', 'entregado', 'facturado'];
+
+/**
  * Regla única de Cuentas por cobrar en App Móvil.
- * Una nota con saldo puede cobrarse mientras no esté cancelada, sin importar
- * si nació como crédito, contado o con condición pendiente de definir.
+ * Una nota confirmada con saldo puede cobrarse sin importar si nació como crédito,
+ * contado o con condición pendiente de definir.
  */
 export function isMobileReceivable(sale: MobileReceivableSale): boolean {
   return Boolean(
     sale.id &&
     sale.cliente_id &&
     Number(sale.saldo_pendiente ?? 0) > 0 &&
-    sale.status !== 'cancelado',
+    ESTADOS_CXC.includes(sale.status ?? ''),
   );
 }
 
