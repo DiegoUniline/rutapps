@@ -1,0 +1,72 @@
+filas 81 sin_dif_campos 11 {'status': 11, 'saldo': 16, 'fecha_entrega': 1, 'tipo': 51, 'total': 12}
+no comparadas {'496856c9', '5583be2f', '2ca3ac1a', '8a2e9c00', 'c4fa8768', 'd8720676', '4e8686ca'}
+1f5c4acc PED-0470 ['status vieja=borrador nueva=confirmado'] cobros_vieja_post_corte=0 (0) apl_nueva=0:0 entregas_vieja=[] entregas_nueva=-
+2deead6d PED-5032 ['saldo vieja=138 nueva=0'] cobros_vieja_post_corte=0 (0) apl_nueva=0:0 entregas_vieja=['ENT-5092/cargado'] entregas_nueva=ENT-5081/cargado/df5346fc/11-24 04:24
+2deead6d PED-5036 ['status vieja=entregado nueva=confirmado', 'saldo vieja=0 nueva=153'] cobros_vieja_post_corte=153 (1) apl_nueva=0:0 entregas_vieja=['ENT-5088/hecho'] entregas_nueva=-
+2deead6d PED-5037 ['status vieja=entregado nueva=confirmado', 'saldo vieja=0 nueva=47', 'fecha_entrega vieja=2026-11-23 nueva=2026-11-28'] cobros_vieja_post_corte=47 (1) apl_nueva=0:0 entregas_vieja=['ENT-5087/hecho'] entregas_nueva=-
+2deead6d PED-5038 ['status vieja=entregado nueva=confirmado', 'saldo vieja=0 nueva=136'] cobros_vieja_post_corte=136 (1) apl_nueva=0:0 entregas_vieja=['ENT-5086/hecho'] entregas_nueva=-
+2deead6d PED-5039 ['status vieja=entregado nueva=confirmado', 'saldo vieja=0 nueva=221'] cobros_vieja_post_corte=221 (1) apl_nueva=0:0 entregas_vieja=['ENT-5085/hecho'] entregas_nueva=-
+2deead6d PED-5040 ['status vieja=entregado nueva=confirmado', 'saldo vieja=0 nueva=375'] cobros_vieja_post_corte=375 (1) apl_nueva=0:0 entregas_vieja=['ENT-5084/hecho'] entregas_nueva=-
+2deead6d PED-5041 ['status vieja=entregado nueva=confirmado', 'saldo vieja=0 nueva=73'] cobros_vieja_post_corte=73 (1) apl_nueva=0:0 entregas_vieja=['ENT-5083/hecho'] entregas_nueva=-
+2deead6d PED-5042 ['status vieja=entregado nueva=confirmado', 'saldo vieja=0 nueva=389'] cobros_vieja_post_corte=389 (1) apl_nueva=0:0 entregas_vieja=['ENT-5082/hecho'] entregas_nueva=-
+2deead6d PED-5043 ['saldo vieja=60 nueva=0'] cobros_vieja_post_corte=0 (0) apl_nueva=0:0 entregas_vieja=['ENT-5081/cargado'] entregas_nueva=ENT-5080/cargado/e997c4e2/11-24 04:24
+2deead6d PED-5044 ['saldo vieja=93 nueva=0'] cobros_vieja_post_corte=0 (0) apl_nueva=0:0 entregas_vieja=['ENT-5080/cargado'] entregas_nueva=ENT-5079/cargado/b0ccc82f/11-24 04:24
+2deead6d PED-5045 ['saldo vieja=130 nueva=0'] cobros_vieja_post_corte=0 (0) apl_nueva=0:0 entregas_vieja=['ENT-5079/cargado'] entregas_nueva=ENT-5078/cargado/1e093415/11-24 04:24
+2deead6d PED-5046 ['saldo vieja=102 nueva=0'] cobros_vieja_post_corte=0 (0) apl_nueva=0:0 entregas_vieja=['ENT-5078/cargado'] entregas_nueva=ENT-5077/cargado/8c65c663/11-24 04:24
+2deead6d PED-5047 ['saldo vieja=56 nueva=0'] cobros_vieja_post_corte=0 (0) apl_nueva=0:0 entregas_vieja=['ENT-5077/cargado'] entregas_nueva=ENT-5076/cargado/a5180e54/11-24 04:24
+2deead6d PED-5048 ['saldo vieja=135 nueva=0'] cobros_vieja_post_corte=0 (0) apl_nueva=0:0 entregas_vieja=['ENT-5076/cargado'] entregas_nueva=ENT-5075/cargado/968b541b/11-24 04:24
+49d2b8d2 PED-7564 ['tipo vieja=venta_directa nueva=pedido', 'total vieja=1140.24 nueva=1110.24'] cobros_vieja_post_corte=1140.24 (1) apl_nueva=1140.24:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7565 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=284 (1) apl_nueva=284:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7566 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=717 (1) apl_nueva=717:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7567 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=330 (1) apl_nueva=330:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7568 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=350 (1) apl_nueva=350:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7569 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=364 (1) apl_nueva=364:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7571 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=726 (1) apl_nueva=726:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7572 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=650 (1) apl_nueva=650:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7574 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=752 (1) apl_nueva=752:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7576 ['tipo vieja=venta_directa nueva=pedido', 'saldo vieja=0.0 nueva=260.00'] cobros_vieja_post_corte=680 (1) apl_nueva=420:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7581 ['total vieja=639.0 nueva=509.00'] cobros_vieja_post_corte=639 (1) apl_nueva=639:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7584 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1136 (1) apl_nueva=1136:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7587 ['tipo vieja=venta_directa nueva=pedido', 'total vieja=856 nueva=670.00'] cobros_vieja_post_corte=856 (1) apl_nueva=856:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7591 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=755 (1) apl_nueva=755:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7592 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=105 (1) apl_nueva=105:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7593 ['total vieja=18642.0 nueva=17922.00'] cobros_vieja_post_corte=18642 (1) apl_nueva=18642:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7594 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=2716.16 (1) apl_nueva=2716.16:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7596 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=960 (1) apl_nueva=960:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7599 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=2430 (1) apl_nueva=2430:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7603 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1958 (1) apl_nueva=1958:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7604 ['tipo vieja=venta_directa nueva=pedido', 'total vieja=5124.0 nueva=4740.00'] cobros_vieja_post_corte=5124 (1) apl_nueva=5124:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7606 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=3160 (1) apl_nueva=3160:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7608 ['status vieja=borrador nueva=confirmado', 'tipo vieja=venta_directa nueva=pedido', 'total vieja=1210.24 nueva=1180.24'] cobros_vieja_post_corte=1210.24 (1) apl_nueva=1210.24:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7609 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1997 (1) apl_nueva=1997:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7611 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=797 (1) apl_nueva=797:1 entregas_vieja=[] entregas_nueva=ENT-0059/borrador/c9136e1e/11-23 19:53
+49d2b8d2 PED-7612 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1504.16 (1) apl_nueva=1504.16:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7613 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=630 (1) apl_nueva=630:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7618 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1224 (1) apl_nueva=1224:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7621 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1400 (1) apl_nueva=1400:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7622 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1610 (1) apl_nueva=1610:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7623 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=960 (1) apl_nueva=960:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7624 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=852 (1) apl_nueva=852:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7625 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=400 (1) apl_nueva=400:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7627 ['status vieja=confirmado nueva=borrador'] cobros_vieja_post_corte=738 (1) apl_nueva=738:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7628 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=400 (1) apl_nueva=400:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7629 ['tipo vieja=venta_directa nueva=pedido', 'total vieja=1350.0 nueva=860.00'] cobros_vieja_post_corte=1350 (1) apl_nueva=1350.00:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7631 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1234 (1) apl_nueva=1234:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7632 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=386 (1) apl_nueva=386:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7633 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=930 (1) apl_nueva=930:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7634 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1410 (1) apl_nueva=1410:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7638 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1343 (1) apl_nueva=1343:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7639 ['tipo vieja=venta_directa nueva=pedido', 'total vieja=1014 nueva=952.00'] cobros_vieja_post_corte=1014 (1) apl_nueva=1014:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7640 ['tipo vieja=venta_directa nueva=pedido', 'total vieja=1386.0 nueva=1200.00'] cobros_vieja_post_corte=1386 (1) apl_nueva=1386:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7641 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=450 (1) apl_nueva=450:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7642 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1600 (1) apl_nueva=1600:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7647 ['tipo vieja=venta_directa nueva=pedido', 'total vieja=1354.0 nueva=982.00'] cobros_vieja_post_corte=1354 (1) apl_nueva=1354:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7648 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=3256.24 (1) apl_nueva=3256.24:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7649 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=408 (1) apl_nueva=408:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7652 ['status vieja=confirmado nueva=borrador'] cobros_vieja_post_corte=980 (1) apl_nueva=980:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7655 ['tipo vieja=venta_directa nueva=pedido', 'total vieja=945.0 nueva=635.00'] cobros_vieja_post_corte=945 (1) apl_nueva=945:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7659 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1286 (1) apl_nueva=1286:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7662 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1285 (1) apl_nueva=1285:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7666 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=1085 (1) apl_nueva=1085:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7667 ['tipo vieja=venta_directa nueva=pedido'] cobros_vieja_post_corte=900 (1) apl_nueva=900:1 entregas_vieja=[] entregas_nueva=-
+49d2b8d2 PED-7675 ['tipo vieja=pedido nueva=venta_directa', 'total vieja=1776.0 nueva=1752.00', 'saldo vieja=1776.0 nueva=0'] cobros_vieja_post_corte=0 (0) apl_nueva=1752:1 entregas_vieja=[] entregas_nueva=-
