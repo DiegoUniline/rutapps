@@ -36,3 +36,11 @@ GPO ABARROTERO GAMA (5d2d9498): 20 ventas ($50,657.17, saldo $8,732.83, 243 reng
 Folios VTA-9383..9403 ya usados en la nueva → VTA-9583..9602 (folio viejo en notas). Recapturada omitida: VTA-9388 $55.90
 = VTA-9528 nueva (24-nov); su cobro $55.90 queda como conflicto «venta_recapturada_en_nueva». Inventario Almacén General
 −1,407 piezas en 177 productos; 12 negativos nuevos (13 en total). 243 movimientos de inventario.
+
+## Parte 02 — 2026-11-25 · md5 OK · se deshizo
+GLOBAL TRADE LOGISTICS (49d2b8d2): 1 cliente (CLI-1216→CLI-1220), 18 pedidos ($41,666.32; 17 confirmados + 1 borrador; sin
+entrega → sin movimiento de inventario), 118 renglones, 18 visitas. Folios PED-7693..7712 ya usados → PED-7793..7810.
+Recapturados omitidos: PED-7692 (= PED-7692 nueva, mismo total), PED-7705 (= PED-7743), PED-7710 $44,280 (= PED-7792).
+Cobros: 0 insertados; los 56 cobros viejos del 22-nov (todos a pedidos anteriores al corte PED-7564..7667) ya se capturaron
+en la nueva el 23-nov con el mismo monto → conflicto «venta_ya_cobrada_en_nueva». Única diferencia de monto: cobro f8115271
+$680 a PED-7576, en la nueva solo hay $420 (posible faltante de $260: revisar con el dueño).
