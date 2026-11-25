@@ -1,3 +1,4 @@
+import { ESTADOS_CXC } from '@/lib/mobileReceivables';
 import { useState } from 'react';
 import { AjustarEntregaDialog } from '@/components/entregas/AjustarEntregaDialog';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -580,7 +581,7 @@ export default function RutaEntregaDetalle() {
     if (!empresa || !cliente) { toast.error('Cargando datos...'); return; }
     try {
       const [ventasRes, cobrosRes] = await Promise.all([
-        supabase.from('ventas').select('id, folio, fecha, total, saldo_pendiente, status, condicion_pago').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).neq('status', 'cancelado').order('fecha', { ascending: false }).limit(200),
+        supabase.from('ventas').select('id, folio, fecha, total, saldo_pendiente, status, condicion_pago').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).in('status', ESTADOS_CXC as any).order('fecha', { ascending: false }).limit(200),
         supabase.from('cobros').select('id, fecha, monto, metodo_pago, referencia').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).neq('status', 'cancelado').order('fecha', { ascending: false }).limit(200),
       ]);
       const blob = await generarEstadoCuentaPdf({
