@@ -1,3 +1,4 @@
+import { ESTADOS_CXC } from '@/lib/mobileReceivables';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { queueOperation, queueOperations } from '@/lib/syncQueue';
 import { getOfflineTable } from '@/lib/offlineDb';
@@ -136,11 +137,11 @@ export function useVentaDetalle() {
     queryKey: ['ruta-cuentas-pendientes-detalle', clienteId, id], enabled: !!clienteId && view === 'cobrar', networkMode: 'always',
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from('ventas').select('id, folio, fecha, total, saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!).in('status', ['borrador', 'confirmado', 'entregado', 'facturado']).order('fecha', { ascending: true });
+        const { data, error } = await supabase.from('ventas').select('id, folio, fecha, total, saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!).in('status', ESTADOS_CXC as any).order('fecha', { ascending: true });
         if (error) throw error; return data ?? [];
       } catch {
         return (await ventasLocalesDelCliente())
-          .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.id !== id && ['borrador', 'confirmado', 'entregado', 'facturado'].includes(v.status))
+          .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.id !== id && ESTADOS_CXC.includes(v.status))
           .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
       }
     },
@@ -151,11 +152,11 @@ export function useVentaDetalle() {
     enabled: !!clienteId && !!id, networkMode: 'always',
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from('ventas').select('saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!).in('status', ['borrador', 'confirmado', 'entregado', 'facturado']);
+        const { data, error } = await supabase.from('ventas').select('saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!).in('status', ESTADOS_CXC as any);
         if (error) throw error; return (data ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
       } catch {
         return (await ventasLocalesDelCliente())
-          .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.id !== id && ['borrador', 'confirmado', 'entregado', 'facturado'].includes(v.status))
+          .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.id !== id && ESTADOS_CXC.includes(v.status))
           .reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
       }
     },

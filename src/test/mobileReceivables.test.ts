@@ -3,7 +3,8 @@ import { getMobileReceivables, isMobileReceivable } from '@/lib/mobileReceivable
 
 const sales = [
   { id: 'old', cliente_id: 'client-a', fecha: '2026-08-01', saldo_pendiente: 100, status: 'confirmado', condicion_pago: 'credito' },
-  { id: 'new', cliente_id: 'client-a', fecha: '2026-09-03', saldo_pendiente: 250, status: 'borrador', condicion_pago: 'por_definir' },
+  { id: 'new', cliente_id: 'client-a', fecha: '2026-09-03', saldo_pendiente: 250, status: 'confirmado', condicion_pago: 'por_definir' },
+  { id: 'draft', cliente_id: 'client-a', fecha: '2026-09-05', saldo_pendiente: 122, status: 'borrador', condicion_pago: 'contado' },
   { id: 'cash', cliente_id: 'client-a', fecha: '2026-09-04', saldo_pendiente: 75, status: 'confirmado', condicion_pago: 'contado' },
   { id: 'cancelled', cliente_id: 'client-a', fecha: '2026-09-02', saldo_pendiente: 80, status: 'cancelado', condicion_pago: 'credito' },
   { id: 'paid', cliente_id: 'client-a', fecha: '2026-09-01', saldo_pendiente: 0, status: 'facturado', condicion_pago: 'credito' },
@@ -11,14 +12,15 @@ const sales = [
 ];
 
 describe('mobile receivables', () => {
-  it('mantiene cobrable una nota reciente con saldo aunque no sea crédito ni tenga estado final', () => {
+  it('mantiene cobrable una nota confirmada con saldo aunque no sea crédito', () => {
     expect(isMobileReceivable(sales[1])).toBe(true);
-    expect(isMobileReceivable(sales[2])).toBe(true);
+    expect(isMobileReceivable(sales[3])).toBe(true);
   });
 
-  it('excluye notas canceladas o sin saldo', () => {
-    expect(isMobileReceivable(sales[3])).toBe(false);
+  it('excluye borradores, notas canceladas o sin saldo', () => {
+    expect(isMobileReceivable(sales[2])).toBe(false);
     expect(isMobileReceivable(sales[4])).toBe(false);
+    expect(isMobileReceivable(sales[5])).toBe(false);
   });
 
   it('devuelve todas las notas cobrables del cliente y conserva el orden por fecha', () => {

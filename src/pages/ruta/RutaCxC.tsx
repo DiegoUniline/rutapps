@@ -7,7 +7,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { fmtDate } from '@/lib/utils';
-import { isMobileReceivable } from '@/lib/mobileReceivables';
+import { isMobileReceivable, ESTADOS_CXC } from '@/lib/mobileReceivables';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
@@ -43,7 +43,7 @@ export default function RutaCxC() {
       .select('id, folio, fecha, cliente_id, vendedor_id, saldo_pendiente, status')
       .eq('empresa_id', empresa!.id)
       .gt('saldo_pendiente', 0)
-      .neq('status', 'cancelado')
+      .in('status', ESTADOS_CXC as any)
       .order('id')
       .range(from, to)),
   });
