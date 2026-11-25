@@ -44,3 +44,11 @@ Recapturados omitidos: PED-7692 (= PED-7692 nueva, mismo total), PED-7705 (= PED
 Cobros: 0 insertados; los 56 cobros viejos del 22-nov (todos a pedidos anteriores al corte PED-7564..7667) ya se capturaron
 en la nueva el 23-nov con el mismo monto → conflicto «venta_ya_cobrada_en_nueva». Única diferencia de monto: cobro f8115271
 $680 a PED-7576, en la nueva solo hay $420 (posible faltante de $260: revisar con el dueño).
+
+## Parte 03 (regenerada con --max-kb 12: una empresa por parte) — 2026-11-25 · md5 OK · se deshizo
+Para que cupiera en una llamada se transcribió la plantilla sin las secciones vacías para esta empresa (clientes, entregas,
+visitas, gastos, revisión multiempresa); la lógica de ventas, renglones y cobros es la misma del generador.
+Quesos y Carnes Frías La Vaquita (ebebc168, POS): 47 ventas ($53,515.32; 44 confirmadas + 3 canceladas; saldo $571.51 =
+VTA-2410 $393.51 + VTA-2413 $178 sin cobro), 135 renglones, 45 cobros POS aceptados ($51,612.37 activos + $1,331.44
+cancelados; el turno POS b3eb486c sigue abierto en la nueva). Folios VTA-2372..2418 ya usados → VTA-2426..2472.
+Sin recapturas ni conflictos. Inventario almacén «Ruta 2» −475.285 (36 productos; 35 ya negativos, 0 nuevos). 130 movimientos.
