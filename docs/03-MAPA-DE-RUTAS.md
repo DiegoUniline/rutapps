@@ -21,7 +21,7 @@
 | `cupones` | `PartnerCupones` | `@/pages/partner/PartnerCupones` |
 | `comisiones` | `PartnerComisiones` | `@/pages/partner/PartnerComisiones` |
 | `perfil` | `PartnerPerfil` | `@/pages/partner/PartnerPerfil` |
-| `/` | `LandingPage` | `@/pages/LandingPage` |
+| `/` | `esAppInstalada` | — |
 | `/modulos` | `ModulosMktPage` | `@/pages/marketing/ModulosPage` |
 | `/precios` | `PreciosMktPage` | `@/pages/marketing/PreciosPage` |
 | `/giros` | `GirosMktIndexPage` | `@/pages/marketing/GirosIndexPage` |
@@ -83,12 +83,13 @@
 | `/ruta/descarga` | `RutaDescarga` | `@/pages/ruta/RutaDescarga` |
 | `/ruta/solicitud-traspaso` | `RutaSolicitudTraspaso` | `@/pages/ruta/RutaSolicitudTraspaso` |
 | `/ruta/mapa` | `RutaMapaPage` | `@/pages/ruta/RutaMapaPage` |
-| `/ruta/navegacion` | `RutaNavegacionPage` | `@/pages/ruta/RutaNavegacionPage` |
+| `/ruta/navegacion` | `PageLoader` | — |
 | `/ruta/sincronizar` | `RutaSincronizarPage` | `@/pages/ruta/RutaSincronizarPage` |
 | `/ruta/pendientes` | `PendientesSincronizarPage` | `@/pages/ruta/PendientesSincronizarPage` |
 | `/ruta/iniciar` | `RutaIniciarPage` | `@/pages/ruta/RutaIniciarPage` |
 | `/conteo/:countId` | `PageLoader` | — |
 | `/pos` | `PuntoVentaPage` | `@/pages/PuntoVentaPage` |
+| `/ruta/navegacion` | `RutaNavegacionPage` | `@/pages/ruta/RutaNavegacionPage` |
 | `/conteo/:countId` | `ConteoFisicoPage` | `@/pages/ConteoFisicoPage` |
 | `/` | `HomeRedirect` | — |
 | `/login` | `HomeRedirect` | — |

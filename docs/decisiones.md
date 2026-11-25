@@ -460,7 +460,7 @@
 - **Archivos:** `vite.config.ts`, `src/test/pwaActivacionInmediata.test.ts`.
 
 ## D-067 — El saldo de un pedido nace al generar la entrega (reemplaza la parte de saldo de D-034)
-- **Fecha:** 2026-11-25 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («En cuanto se genera la entrega ya es una cuenta por cobrar, a menos de que se cancele»; opción «Desde que se genera»). Publicación pendiente de `CONFIRMO`.
+- **Fecha:** 2026-11-25 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («En cuanto se genera la entrega ya es una cuenta por cobrar, a menos de que se cancele»; opción «Desde que se genera»; «corrige de aquí en adelante»). **Aplicada 2026-11-25** (`CONFIRMO aplicar D-067 saldo desde la entrega`).
 - **Problema (evidencia):** con D-034 solo contaban entregas «hecho». Un pedido de contado en ruta (Multi PED-0251, $65, entrega ENT-0218 cargada) tenía saldo $0: en la app el botón «Cobrar» solo mostraba otras cuentas, el cobro del pedido salía en $0 (`useVentaDetalle.ts:251`) y no se exigía cobrar al entregar (`RutaEntregaDetalle.tsx:239`).
 - **Decisión:** en pedidos «a lo entregado», `fn_venta_cobrable` cuenta las cantidades de toda entrega que no esté `cancelado` ni `no_entregado` (borrador lleva 0 hasta surtirse). El estado del pedido (Entregado/Confirmado) sigue contando solo entregas «hecho». Al borrar una entrega o renglón se recalcula el pedido.
 - **Alcance:** «de aquí en adelante» (dueño): sin recálculo masivo; cada pedido toma la regla en el siguiente cambio de su entrega o cobro.
