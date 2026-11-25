@@ -99,20 +99,5 @@ DROP TRIGGER IF EXISTS trg_recalc_pedido_entrega_linea_borrada ON public.entrega
 CREATE TRIGGER trg_recalc_pedido_entrega_linea_borrada AFTER DELETE ON public.entrega_lineas
   FOR EACH ROW EXECUTE FUNCTION public.fn_recalc_pedido_por_entrega_borrada();
 
--- Pedidos «a lo entregado» con entregas vigentes sin validar: su saldo se recalcula con la regla nueva.
-DO $$
-DECLARE r record;
-BEGIN
-  FOR r IN
-    SELECT DISTINCT v.id
-    FROM public.ventas v
-    JOIN public.entregas e ON e.pedido_id = v.id
-    WHERE v.tipo::text = 'pedido'
-      AND v.politica_cobro IS NOT DISTINCT FROM 'entregado'
-      AND v.status::text <> 'cancelado'
-      AND v.cerrado_at IS NULL
-      AND e.status::text NOT IN ('hecho', 'cancelado', 'no_entregado')
-  LOOP
-    PERFORM public.fn_recalc_venta_saldo(r.id);
-  END LOOP;
-END $$;
+-- Sin recálculo masivo (dueño: «corrige de aquí en adelante»): cada pedido toma la regla nueva la próxima vez
+-- que su entrega o sus renglones cambian (trigger ajustar_pedido_por_entregado) o al registrar un cobro.
