@@ -30,3 +30,9 @@ Empresas: Distribuidora MG (2deead6d), 0f476f87, f8bc6fdc.
   (33 productos, 2 negativos nuevos), pedidos previos PED-5037..5042 confirmado→entregado con saldo→0.
 - f8bc6fdc: 4 ventas recapturadas omitidas (VTA-2083=VTA-2090, VTA-2086=VTA-2085, VTA-2090=VTA-2087, VTA-2095=VTA-2136),
   folios VTA-2082..2113 ya usados en la nueva → reasignados a VTA-2175..2200 (folio viejo en notas), 79 movimientos de inventario.
+
+## Parte 01 — 2026-11-25 · md5 OK · se deshizo
+GPO ABARROTERO GAMA (5d2d9498): 20 ventas ($50,657.17, saldo $8,732.83, 243 renglones), 16 cobros ($41,924.34), 20 visitas.
+Folios VTA-9383..9403 ya usados en la nueva → VTA-9583..9602 (folio viejo en notas). Recapturada omitida: VTA-9388 $55.90
+= VTA-9528 nueva (24-nov); su cobro $55.90 queda como conflicto «venta_recapturada_en_nueva». Inventario Almacén General
+−1,407 piezas en 177 productos; 12 negativos nuevos (13 en total). 243 movimientos de inventario.
