@@ -63,3 +63,8 @@ Folios VTA-1466..1491 ya usados → VTA-1505..1530. Sin recapturas ni conflictos
 VTA-2173..2200. Recapturadas omitidas: VTA-2083=VTA-2090, VTA-2086=VTA-2085, VTA-2090=VTA-2087, VTA-2095=VTA-2136 (24-nov);
 sus 2 cobros ($116.50 y $916.50) quedan como conflicto «venta_recapturada_en_nueva». Inventario SD001 K −83 (41 productos),
 SD002 B −14 (12 productos), sin negativos. 79 movimientos.
+
+## Parte 06 regenerada (MAYAKIL, 0f476f87) — 2026-11-25 · md5 OK · se deshizo (plantilla recortada)
+2 ventas (VTA-1943→VTA-1958, VTA-1944→VTA-1959; $840, saldo 0), 4 renglones, 2 cobros ($840), 142 visitas (140 «sin compra»).
+Conflictos: cobros $168 (VTA-1941) y $182 (VTA-1239), ventas previas ya cobradas en la nueva el 23-nov con el mismo monto.
+Inventario «ALMACEN DANY TIERRAB» −51 (4 productos), sin negativos. 4 movimientos.
