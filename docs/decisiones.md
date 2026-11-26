@@ -467,3 +467,10 @@
 - **Impacto si se recalculara todo (ensayo deshecho, NO se aplica):** Tampico 90 pedidos $108.28 → $58,487.02 (87 en ruta), MG 69 $11,498 → $12,083.89, Multi 6 $0 → $497; Richard, Dylan, Renee, Reginata y Demo sin cambio. Entregas viejas sin validar (cargado desde sep/oct en Dylan, Reginata, Renee, Richard) ya cuentan como deuda.
 - **Saldos previos:** el dueño los deja como están («déjalos así, de aquí en adelante»): PED-5021/PED-5031 de MG y 47 pedidos aún sin entrega con saldo = total.
 - **Archivos:** `supabase/migrations/20261125010000_d067_saldo_desde_entrega.sql`, `docs/sql/2026-11-25_verificar_d067.sql`.
+
+## D-068 — El apartado de un pedido descuenta lo que ya va en entregas
+- **Fecha:** 2026-11-26 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Corregir y liberarlo»). Publicación pendiente de `CONFIRMO`.
+- **Problema (evidencia):** `fn_sync_apartado_linea` recreaba el apartado por la cantidad completa del renglón al editar un pedido ya surtido/entregado. Tampico PED-11679 (entregado el 23-nov 21:11 con ENT-11902, editado 23:08) volvió a apartar 90 pzas, entre ellas BOMBON GIGANTE C30 (el dueño lo atribuía a PED-11236, que no aparta nada). También PED-12610 (37), PED-12669 (37), PED-12621 (2) y Multi PED-0161 entregado (2).
+- **Decisión:** se aparta solo `cantidad del renglón − lo que ya va en entregas vigentes` (no canceladas ni no entregadas; mismo criterio que `trg_entrega_lineas_consume_apartado`). Se liberan las 170 pzas retenidas de más. No se tocan existencias, ventas ni entregas.
+- **Ensayo en producción (deshecho):** cambian solo esos 5 pedidos (47 renglones); el apartado del bombón queda en 0.
+- **Archivos:** `supabase/migrations/20261126010000_d068_apartado_descuenta_entregas.sql`.
