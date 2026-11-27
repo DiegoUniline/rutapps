@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Wrench } from 'lucide-react';
-import { calcularLineaAdmin } from '@/lib/adminEditVenta';
+import { calcularLineaAdmin, precioListaConImpuestos } from '@/lib/adminEditVenta';
 import { useExcedentePrompt } from '@/components/venta/ExcedenteDialog';
 import { ejecutarConExcedente } from '@/lib/excedente';
 
@@ -23,7 +23,7 @@ interface LineaEdit {
   iva_pct: number;
   ieps_pct: number;
   descuento_pct: number;
-  /** Precio unitario CON impuestos, ya neto de descuento (lo que se cobra). */
+  /** Precio unitario CON impuestos, antes del descuento. */
   brutoUnit: number;
 }
 
@@ -66,7 +66,7 @@ export function AdminEditVentaDialog({ venta, lineas, onSaved }: Props) {
           iva_pct: Number(l.iva_pct) || 0,
           ieps_pct: Number(l.ieps_pct) || 0,
           descuento_pct: Number(l.descuento_pct) || 0,
-          brutoUnit: cant > 0 ? r2((Number(l.total) || 0) / cant) : 0,
+          brutoUnit: precioListaConImpuestos(l),
         };
       }),
     );
@@ -173,7 +173,7 @@ export function AdminEditVentaDialog({ venta, lineas, onSaved }: Props) {
                   <tr>
                     <th className="text-left p-2">Producto</th>
                     <th className="text-right p-2">Cant.</th>
-                    <th className="text-right p-2">Precio c/imp.</th>
+                    <th className="text-right p-2">Precio c/imp. (antes de desc.)</th>
                     <th className="text-right p-2">Desc. %</th>
                     <th className="text-right p-2">Total</th>
                   </tr>
