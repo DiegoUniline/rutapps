@@ -297,6 +297,7 @@
 ## D-049 — Devoluciones (F1) y liquidación aprobada (F3): reglas del dueño
 - **Fecha:** 2026-11-20 · **Autor:** Diego León (dueño) · **Estado:** APROBADO (respuestas a la auditoría de devoluciones y liquidación móvil)
 - **Destino:** al devolver, el vendedor elige **por renglón, obligatorio**: «Vendible en camión» o «Merma en camión» (el motivo solo sugiere). La merma viaja con el camión y pasa a Mermas en la descarga (D-036). En escritorio se elige almacén.
+- **Nota:** el precio de la devolución hecha desde un pedido/venta lo cambia [D-070](#d-070) (2026-11-27).
 - **Producto, cantidad y precio:** la devolución **no se liga a la venta de origen**: cualquier producto, **sin tope de cantidad** (solo cantidad > 0), acreditada al **precio de la lista de precios del cliente**.
 - **Liquidación aprobada:** al aprobar se congela el efectivo esperado con su desglose; **reabrir solo con permiso**, registrando quién y por qué; el inventario se reajusta por diferencia.
 - **«Al almacén» en ruta:** se **quita**; el sobrante regresa con la descarga de la liquidación.
@@ -480,3 +481,9 @@
 - **Decisión:** al cerrar, Confirmado → Entregado; al reabrir, el estado vuelve a salir de las entregas (`fn_sync_status_pedido`). Se corrigen los 4 pedidos existentes.
 - **Inventario:** no se mueve. Los pedidos con entregas no mueven stock por estado (`fn_sync_venta_inventario` sale antes); ensayo en producción (deshecho): 0 filas de stock cambiadas, saldos iguales.
 - **Archivos:** `supabase/migrations/20261127010000_d069_pedido_cerrado_entregado.sql`.
+
+## D-070 — Devolución desde un pedido/venta: precio con que se vendió (modifica D-049)
+- **Fecha:** 2026-11-27 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Precio del pedido»).
+- **Problema (evidencia):** Tampico PED-12045, VELADORA LIMON ECON vendida como «Caja 20 pz» a $248 (precio especial de la presentación = $12.40/pz con IVA). La devolución tomaba el precio por pieza de la lista del cliente (mayor), por D-049.
+- **Decisión:** si la devolución se hace desde un pedido o venta, el producto que está en ese documento se acredita al **precio por pieza con que se vendió** (suma de totales con impuestos / cantidad; respeta caja/presentación, descuentos y promociones). Producto que no está en el documento y devoluciones sin documento (ruta, cliente suelto): **lista del cliente** (D-049 sin cambio).
+- **Archivos:** `src/lib/devolucionPrecio.ts` (`precioPorPiezaDeVenta`), `src/components/venta/DevolucionVentaModal.tsx`, `src/test/d070DevolucionPrecioVenta.test.ts`.

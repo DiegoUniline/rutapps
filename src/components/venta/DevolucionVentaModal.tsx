@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +9,7 @@ import {
   destinoSugerido, resumenDevolucion,
   type AccionDevolucionUI, type DestinoDevolucion,
 } from '@/lib/devolucionGuardado';
-import type { ProductoPrecioDevolucion } from '@/lib/devolucionPrecio';
+import { precioPorPiezaDeVenta, type ProductoPrecioDevolucion } from '@/lib/devolucionPrecio';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -58,14 +58,16 @@ interface Props {
 
 /**
  * Devolución desde escritorio (D-049): cualquier producto (los de la venta solo se
- * sugieren), sin tope, al precio de la lista del cliente; por renglón vendible
+ * sugieren), sin tope. Precio (D-070): el producto que está en esta venta se acredita al precio
+ * por pieza con que se vendió (total del renglón / cantidad, con impuestos; respeta precio de
+ * caja/presentación y descuentos); el que no está en la venta, al precio de la lista del cliente; por renglón vendible
  * (almacén elegido) o merma (almacén Mermas). Una sola vía: RPC registrar_devolucion.
  */
 export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
   const save = useSaveDevolucion();
-  const { precio, cargando: cargandoPrecios } = usePrecioDevolucionCliente(venta.cliente_id);
+  const { precio: precioLista, cargando: cargandoPrecios } = usePrecioDevolucionCliente(venta.cliente_id);
   const { data: mermaConfig } = useMermaMotivoConfig();
 
   const [renglones, setRenglones] = useState<Renglon[]>([]);
@@ -83,14 +85,18 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('venta_lineas')
-        .select(`producto_id, cantidad, productos!venta_lineas_producto_id_fkey(${SELECT_PRODUCTO})`)
+        .select(`producto_id, cantidad, total, productos!venta_lineas_producto_id_fkey(${SELECT_PRODUCTO})`)
         .eq('venta_id', venta.id);
       if (error) throw error;
-      const vistos = new Map<string, { producto: ProductoDev; vendida: number }>();
-      for (const l of (data ?? []) as unknown as { producto_id: string | null; cantidad: number | null; productos: ProductoDev | null }[]) {
+      const vistos = new Map<string, { producto: ProductoDev; vendida: number; importe: number }>();
+      for (const l of (data ?? []) as unknown as { producto_id: string | null; cantidad: number | null; total: number | null; productos: ProductoDev | null }[]) {
         if (!l.producto_id || !l.productos) continue;
         const prev = vistos.get(l.producto_id);
-        vistos.set(l.producto_id, { producto: l.productos, vendida: (prev?.vendida ?? 0) + (Number(l.cantidad) || 0) });
+        vistos.set(l.producto_id, {
+          producto: l.productos,
+          vendida: (prev?.vendida ?? 0) + (Number(l.cantidad) || 0),
+          importe: (prev?.importe ?? 0) + (Number(l.total) || 0),
+        });
       }
       return [...vistos.values()];
     },
@@ -139,6 +145,10 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
     },
   });
   const almacenesVendibles = (almacenes as { id: string; nombre: string; es_merma: boolean | null }[]).filter(a => !a.es_merma);
+
+  // D-070: precio por pieza de esta venta (con impuestos) para los productos que trae; los demás, lista del cliente.
+  const precioVenta = useMemo(() => precioPorPiezaDeVenta(productosVenta.map(pv => ({ producto_id: pv.producto.id, cantidad: pv.vendida, total: pv.importe }))), [productosVenta]);
+  const precio = useCallback((p: ProductoDev) => precioVenta.get(p.id) ?? precioLista(p), [precioVenta, precioLista]);
 
   const accion = ACCION_POR_DESTINO[destino];
   const lineas = useMemo(() => renglones.map(r => ({
@@ -309,7 +319,7 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
 
           {/* ¿Qué hacer con el valor? */}
           <div className="border border-border rounded-lg p-3 space-y-2">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase">¿Qué se le da al cliente? <span className="normal-case font-normal">(precio de su lista, con impuestos)</span></p>
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase">¿Qué se le da al cliente? <span className="normal-case font-normal">(precio de esta venta con impuestos; si el producto no está en la venta, el de su lista)</span></p>
             <label className="flex items-start gap-2 text-sm">
               <input type="radio" name="destino" className="mt-1" checked={destino === 'saldo_favor'} onChange={() => setDestino('saldo_favor')} />
               <span><strong>Nota de crédito</strong> — saldo a favor para próximas compras.</span>
