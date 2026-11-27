@@ -476,7 +476,7 @@
 - **Archivos:** `supabase/migrations/20261126010000_d068_apartado_descuenta_entregas.sql`.
 
 ## D-069 — Pedido «cerrado a lo entregado» queda Entregado
-- **Fecha:** 2026-11-27 · **Estado:** propuesto por auditoría a pedido del dueño; publicación pendiente de `CONFIRMO`.
+- **Fecha:** 2026-11-27 · **Estado:** **Aplicada 2026-11-27** (`CONFIRMO aplicar D-069 pedido cerrado entregado`).
 - **Problema (evidencia):** `cerrar_pedido_parcial` pone `cerrado_at` y recorta renglones a lo entregado pero no cambia el estado; desde D-034 `fn_sync_status_pedido` se salta los cerrados, así que quedan en Confirmado. Tampico PED-11679, PED-12610, PED-12621 y PED-12669 (cerrados 23–25 nov) seguían «Confirmado» y no contaban como entregados en reportes/dashboard (D-060).
 - **Decisión:** al cerrar, Confirmado → Entregado; al reabrir, el estado vuelve a salir de las entregas (`fn_sync_status_pedido`). Se corrigen los 4 pedidos existentes.
 - **Inventario:** no se mueve. Los pedidos con entregas no mueven stock por estado (`fn_sync_venta_inventario` sale antes); ensayo en producción (deshecho): 0 filas de stock cambiadas, saldos iguales.
