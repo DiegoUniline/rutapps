@@ -42,3 +42,22 @@ export function precioDevolucionCliente(
   };
   return buildSalePricingSnapshot(pf, resolveProductPricing(rules, pf, listaPrecioId ?? null)).displayPrice;
 }
+
+/**
+ * D-070: devolución desde una venta/pedido → precio por pieza con que se vendió en ese documento
+ * (suma de totales con impuestos / suma de cantidades del producto). Respeta precio de caja o
+ * presentación, descuentos y promociones. Producto sin cantidad vendida → no entra (usa la lista).
+ */
+export function precioPorPiezaDeVenta(
+  lineas: { producto_id: string | null; cantidad: number | null; total: number | null }[],
+): Map<string, number> {
+  const acc = new Map<string, { cant: number; importe: number }>();
+  for (const l of lineas) {
+    if (!l.producto_id) continue;
+    const prev = acc.get(l.producto_id) ?? { cant: 0, importe: 0 };
+    acc.set(l.producto_id, { cant: prev.cant + (Number(l.cantidad) || 0), importe: prev.importe + (Number(l.total) || 0) });
+  }
+  const m = new Map<string, number>();
+  for (const [id, v] of acc) if (v.cant > 0) m.set(id, Math.round((v.importe / v.cant) * 100) / 100);
+  return m;
+}
