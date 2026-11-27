@@ -153,3 +153,13 @@ filas sin pagos/facturas (D-035). Folios y notas reasignados quedan como evidenc
 - Ensayo total: solo esos 5 entran; recapturas y conflictos iguales que en la primera carga. Aplicado:
   PED-7713..7717 → **PED-7823..7827** ($1,081, $1,260, $950, $10,224 confirmados; $1,684.24 borrador; total $15,199.24).
 - Verificado: segunda corrida 0 filas, sin folios duplicados. `recup_tmp` borrado.
+
+## Tercera carga (2026-11-27, export de las 09:59)
+- Nuevo en la vieja: Dylan — Rodrigo CEL. 50549871, 26-nov 18:25–19:42, 11 ventas $9,672.38 con 11 cobros, 11 visitas y 5 clientes;
+  Super Dulces — Brandon Rangel, 25-nov, 1 venta $206.70; Dofa — Jesus Camacho, 25-nov, 1 venta $94.
+- Se cargó solo lo nuevo (mismo generador y misma función verificada por md5). Producto «Galleta chiky 14u» (alta en la vieja tras el corte,
+  91f637bb) → «galleta chiky 14 u» de la nueva (e7100f94, código 621, mismo precio $22.50).
+- Aplicado: Dylan VTA-1492..1502 → **VTA-1611..1621**, CLI-0865..0869 → CLI-0902..0906; Super Dulces VTA-2114 → **VTA-2329**.
+  Dofa VTA-1951 ya estaba recapturada en la nueva (VTA-1986): omitida junto con su cobro.
+- Verificado: segunda corrida 0 filas; sin folios duplicados; Rodrigo con 11 ventas fecha 26-nov saldo 0. `recup_tmp` borrado.
+- Causa: el celular de Rodrigo tiene instalada también la app vieja y el 26 capturó en ella.
