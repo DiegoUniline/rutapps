@@ -487,3 +487,11 @@
 - **Problema (evidencia):** Tampico PED-12045, VELADORA LIMON ECON vendida como «Caja 20 pz» a $248 (precio especial de la presentación = $12.40/pz con IVA). La devolución tomaba el precio por pieza de la lista del cliente (mayor), por D-049.
 - **Decisión:** si la devolución se hace desde un pedido o venta, el producto que está en ese documento se acredita al **precio por pieza con que se vendió** (suma de totales con impuestos / cantidad; respeta caja/presentación, descuentos y promociones). Producto que no está en el documento y devoluciones sin documento (ruta, cliente suelto): **lista del cliente** (D-049 sin cambio).
 - **Archivos:** `src/lib/devolucionPrecio.ts` (`precioPorPiezaDeVenta`), `src/components/venta/DevolucionVentaModal.tsx`, `src/test/d070DevolucionPrecioVenta.test.ts`.
+
+## D-071 — Total de existencias en productos: al cerrar la operación y solo si cambió
+- **Fecha:** 2026-11-28 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Aplicar y recalcular»). Publicación pendiente de `CONFIRMO`.
+- **Problema (evidencia):** aviso de CPU alto en Supabase. `pg_stat_statements` (desde 24-nov): Realtime 55 % del tiempo de BD; `productos` es la tabla más escrita (47,636 updates en 4 días) porque `recalc_producto_stock_total` reescribe `productos.cantidad` en cada cambio de `stock_almacen`, también en traspasos/cargas/surtidos donde el total no cambia (2 escrituras), y cada escritura se avisa por Realtime.
+- **Decisión:** el trigger pasa a constraint trigger DEFERRED (recalcula al cerrar la operación) y solo escribe si el total cambió. No cambia el cálculo del stock ni pantallas.
+- **Total desfasado:** 3,188 productos con total ≠ suma de almacenes; 3,155 son de empresas sin movimientos ni stock por almacén (datos importados: Cuates, La Central, Sabritas, Kosecha…) → **no se tocan** (🧭 criterio: ponerlos en 0 borraría su único dato de existencia). Se recalculan solo los de empresas con stock por almacén y movimientos en 30 días: 26 (Dylan, Global Trade, GAMA, Grupo Imperio).
+- **Ensayo en producción (deshecho):** traspaso −3/+3 → producto NO reescrito; venta −2 → total 132 → 130; 26 recalculados.
+- **Archivos:** `supabase/migrations/20261128010000_d071_stock_total_productos.sql`.
