@@ -489,7 +489,7 @@
 - **Archivos:** `src/lib/devolucionPrecio.ts` (`precioPorPiezaDeVenta`), `src/components/venta/DevolucionVentaModal.tsx`, `src/test/d070DevolucionPrecioVenta.test.ts`.
 
 ## D-071 — Total de existencias en productos: al cerrar la operación y solo si cambió
-- **Fecha:** 2026-11-28 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Aplicar y recalcular»). Publicación pendiente de `CONFIRMO`.
+- **Fecha:** 2026-11-28 · **Autor:** Diego León (dueño) · **Estado:** APROBADO («Aplicar y recalcular»). **Aplicada 2026-11-28** (`CONFIRMO aplicar D-071 stock productos`). Línea base para medir: 28-nov 16:24 UTC, productos 50,483 cambios · stock_almacen 24,392.
 - **Problema (evidencia):** aviso de CPU alto en Supabase. `pg_stat_statements` (desde 24-nov): Realtime 55 % del tiempo de BD; `productos` es la tabla más escrita (47,636 updates en 4 días) porque `recalc_producto_stock_total` reescribe `productos.cantidad` en cada cambio de `stock_almacen`, también en traspasos/cargas/surtidos donde el total no cambia (2 escrituras), y cada escritura se avisa por Realtime.
 - **Decisión:** el trigger pasa a constraint trigger DEFERRED (recalcula al cerrar la operación) y solo escribe si el total cambió. No cambia el cálculo del stock ni pantallas.
 - **Total desfasado:** 3,188 productos con total ≠ suma de almacenes; 3,155 son de empresas sin movimientos ni stock por almacén (datos importados: Cuates, La Central, Sabritas, Kosecha…) → **no se tocan** (🧭 criterio: ponerlos en 0 borraría su único dato de existencia). Se recalculan solo los de empresas con stock por almacén y movimientos en 30 días: 26 (Dylan, Global Trade, GAMA, Grupo Imperio).
