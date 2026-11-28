@@ -89,6 +89,15 @@ describe('programarRefrescoRemoto (cambios de otro dispositivo)', () => {
     expect(invalida(['ventas', 'e1', 'conteo'])).toBe(true);
   });
 
+  it('el resumen de totales de Ventas también espera hasta 30 s (no cada 5 s)', () => {
+    sembrar(['ventas-resumen', 'e1']);
+    programarRefrescoRemoto(qc, { tablas: ['clientes'] }); // clientes sí lo marca (mapa central)
+    vi.advanceTimersByTime(INTERVALO_REMOTO_MS);
+    expect(invalida(['ventas-resumen', 'e1'])).toBe(false);
+    vi.advanceTimersByTime(CONTEO_REMOTO_MS);
+    expect(invalida(['ventas-resumen', 'e1'])).toBe(true);
+  });
+
   it('omite lo que ya se recargó después del evento', () => {
     programarRefrescoRemoto(qc, { tablas: ['ventas'] });
     vi.advanceTimersByTime(10);

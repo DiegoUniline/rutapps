@@ -9,8 +9,9 @@
  *   - Agrupa: todos los eventos de una ventana producen UNA invalidación; como máximo una cada
  *     INTERVALO_MS por QueryClient, así cada consulta se recarga a lo más una vez por intervalo.
  *   - Solo se re-descargan las consultas visibles; las demás quedan marcadas y se recargan al abrirlas.
- *   - Los números de pestañas (consultas cuya clave termina en 'conteo') se recargan como máximo
- *     cada CONTEO_MS (recontar en cada venta remota no escala).
+ *   - Los números de pestañas (consultas cuya clave termina en 'conteo') y los resúmenes pesados
+ *     (RESUMENES_PESADOS: totales del periodo en Ventas) se recargan como máximo cada CONTEO_MS
+ *     (recontar/re-sumar el mes en cada venta remota no escala: era ~13 % del CPU de la BD).
  *   - Se omiten las consultas que ya tienen datos posteriores al último evento.
  *   - `productos` no se expande con el mapa: sus eventos remotos son casi siempre el total de stock
  *     que mueve un trigger; recargar todas las pantallas que leen productos por cada venta no escala.
@@ -51,7 +52,9 @@ function estadoDe(qc: QueryClient): Estado {
   return st;
 }
 
-const esConteo = (k: QueryKey) => k[k.length - 1] === 'conteo';
+/** Consultas de totales del periodo: caras (agregan todo el mes) y no necesitan refrescarse cada 5 s. */
+const RESUMENES_PESADOS = new Set(['ventas-resumen', 'venta-lineas-resumen']);
+const esConteo = (k: QueryKey) => k[k.length - 1] === 'conteo' || (typeof k[0] === 'string' && RESUMENES_PESADOS.has(k[0]));
 
 function coincide(q: Query, prefijos: Set<string>, explicitas: QueryKey[]): boolean {
   const k0 = q.queryKey[0];
